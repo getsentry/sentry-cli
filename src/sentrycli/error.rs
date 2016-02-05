@@ -93,12 +93,15 @@ impl error::Error for CliError {
                     "abort with error code"
                 }
             },
-            ErrorRepr::BasicError(..) => "generic usage error",
+            ErrorRepr::BasicError(ref msg) => &msg,
             ErrorRepr::IoError(ref err) => err.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
-        None
+        match self.repr {
+            ErrorRepr::IoError(ref err) => Some(&*err),
+            _ => None,
+        }
     }
 }
