@@ -1,0 +1,22 @@
+[package]
+name = "sentry-cli"
+version = "0.1.0"
+authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
+
+[lib]
+name = "sentrycli"
+path = "src/sentrycli/lib.rs"
+
+[[bin]]
+name = "sentry-cli"
+
+[dependencies]
+hyper = "*"
+multipart = "*"
+zip = "*"
+url = "*"
+mime = "*"
+uuid = "*"
+walkdir = "*"
+argparse = "*"
+rustc-serialize = "*"
