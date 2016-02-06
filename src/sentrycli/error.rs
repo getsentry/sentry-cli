@@ -1,8 +1,13 @@
 use std::error;
+use std::process;
 use std::fmt;
 use std::io;
 
+use std::io::Write;
+
+use clap;
 use hyper;
+use serde_json;
 use url;
 use walkdir;
 use zip;
@@ -14,15 +19,19 @@ pub struct CliError {
 
 #[derive(Debug)]
 enum ErrorRepr {
+    ClapError(clap::Error),
     BasicError(String),
     IoError(io::Error),
-    Abort(i32),
 }
 
-impl From<io::Error> for CliError {
-    fn from(err: io::Error) -> CliError {
-        CliError {
-            repr: ErrorRepr::IoError(err),
+macro_rules! wrap_error {
+    ($ty:ty, $wrapper:expr) => {
+        impl From<$ty> for CliError {
+            fn from(err: $ty) -> CliError {
+                CliError {
+                    repr: $wrapper(err)
+                }
+            }
         }
     }
 }
@@ -39,18 +48,15 @@ macro_rules! basic_error {
     }
 }
 
+wrap_error!(io::Error, ErrorRepr::IoError);
+wrap_error!(clap::Error, ErrorRepr::ClapError);
 basic_error!(zip::result::ZipError, "could not zip");
 basic_error!(walkdir::Error, "could not walk path");
-basic_error!(url::ParseError, "could not parse url");
-basic_error!(hyper::error::Error, "could not perform http request");
+basic_error!(url::ParseError, "could not parse URL");
+basic_error!(hyper::error::Error, "could not perform HTTP request");
+basic_error!(serde_json::Error, "failed to parse JSON");
 
 impl CliError {
-
-    pub fn abort_with_exit_code(code: i32) -> CliError {
-        CliError {
-            repr: ErrorRepr::Abort(code),
-        }
-    }
 
     pub fn unknown_command(msg: &str) -> CliError {
         CliError {
@@ -58,17 +64,13 @@ impl CliError {
         }
     }
 
-    pub fn is_silent(&self) -> bool {
+    pub fn exit(&self) -> ! {
         match self.repr {
-            ErrorRepr::Abort(..) => true,
-            _ => false
-        }
-    }
-
-    pub fn exit_code(&self) -> i32 {
-        match self.repr {
-            ErrorRepr::Abort(code) => code,
-            _ => 1,
+            ErrorRepr::ClapError(ref err) => err.exit(),
+            _ => {
+                writeln!(&mut io::stderr(), "error: {}", self).ok();
+                process::exit(1);
+            },
         }
     }
 }
@@ -76,9 +78,9 @@ impl CliError {
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.repr {
-            ErrorRepr::Abort(..) => Ok(()),
             ErrorRepr::BasicError(ref msg) => write!(f, "{}", msg),
             ErrorRepr::IoError(ref err) => write!(f, "i/o failure: {}", err),
+            ErrorRepr::ClapError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -86,21 +88,16 @@ impl fmt::Display for CliError {
 impl error::Error for CliError {
     fn description(&self) -> &str {
         match self.repr {
-            ErrorRepr::Abort(code) => {
-                if code == 0 {
-                    "abort with success code"
-                } else {
-                    "abort with error code"
-                }
-            },
             ErrorRepr::BasicError(ref msg) => &msg,
             ErrorRepr::IoError(ref err) => err.description(),
+            ErrorRepr::ClapError(ref err) => err.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match self.repr {
             ErrorRepr::IoError(ref err) => Some(&*err),
+            ErrorRepr::ClapError(ref err) => Some(&*err),
             _ => None,
         }
     }

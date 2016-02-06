@@ -1,28 +1,25 @@
-use std::io;
 use std::env;
 use std::process;
 
-use argparse;
-use url::Url;
+use clap::{Arg, App, AppSettings};
 use hyper::client::request::Request;
-use hyper::net::Fresh;
-use hyper::method::Method;
 use hyper::header::{Authorization, Basic};
+use hyper::method::Method;
+use hyper::net::Fresh;
+use url::Url;
 
-use super::{CliResult, CliError};
+use super::CliResult;
 
 #[derive(Debug)]
 pub struct Config {
     token: String,
     url: String,
-    verbose: bool,
 }
 
 impl Config {
 
     pub fn api_request(&self, method: Method, path: &str) -> CliResult<Request<Fresh>> {
         let url = try!(Url::parse(&format!("{}/api/0{}", self.url.trim_right_matches("/"), path)));
-        println!("{}", url);
         let mut request = try!(Request::new(method, url));
         {
             let mut headers = request.headers_mut();
@@ -36,74 +33,74 @@ impl Config {
 }
 
 macro_rules! each_subcommand {
-    ($mac:ident) => ({
+    ($mac:ident) => {
         $mac!(upload_dsym);
-    })
-}
-
-pub fn parse_args_or_abort(ap: &argparse::ArgumentParser, args: Vec<String>) -> CliResult<()> {
-    match ap.parse(args, &mut io::stdout(), &mut io::stderr()) {
-        Ok(()) => Ok(()),
-        Err(code) => Err(CliError::abort_with_exit_code(code)),
     }
 }
+
+macro_rules! import_subcommand {
+    ($name:ident) => {
+        mod $name;
+    }
+}
+
+each_subcommand!(import_subcommand);
 
 pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
-    let prog_name = args[0].clone();
-    let mut show_version = false;
-    let mut subcommand = "".to_owned();
-    let mut subcommand_args : Vec<String> = vec![];
+    let mut app = App::new("sentry-cli")
+        .author("Sentry")
+        .version(env!("CARGO_PKG_VERSION"))
+        .about("Command line utility for Sentry")
+        .setting(AppSettings::SubcommandRequired)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::VersionlessSubcommands)
+        .setting(AppSettings::UnifiedHelpMessage)
+        .arg(Arg::with_name("url")
+             .value_name("URL")
+             .long("url")
+             .help("The sentry API URL"))
+        .arg(Arg::with_name("token")
+             .value_name("TOKEN")
+             .long("token")
+             .help("The sentry API token to use"));
 
-    {
-        let mut ap = argparse::ArgumentParser::new();
-        ap.set_description("Sentry command line utility.");
-        ap.refer(&mut show_version)
-            .add_option(&["---version"], argparse::StoreTrue,
-                        "print the version and exit");
-        ap.refer(&mut config.verbose)
-            .add_option(&["-v", "--verbose"], argparse::StoreTrue,
-                        "enable verbose mode");
-        ap.refer(&mut config.url)
-            .add_option(&["--url"], argparse::Store,
-                        "the sentry API url");
-        ap.refer(&mut config.token)
-            .add_option(&["--token"], argparse::Store,
-                        "the sentry api token to use");
-        ap.refer(&mut subcommand)
-            .required()
-            .add_argument("command", argparse::Store,
-                          "the command to run");
-        ap.refer(&mut subcommand_args)
-            .add_argument("arguments", argparse::List,
-                          "arguments for the subcommand");
-        ap.stop_on_first_argument(true);
-        try!(parse_args_or_abort(&ap, args));
+    macro_rules! add_subcommand {
+        ($name:ident) => {{
+            let cmd = stringify!($name).replace("_", "-");
+            let mut sub_app = App::new(cmd).setting(AppSettings::UnifiedHelpMessage);
+            sub_app = $name::make_app(sub_app);
+            app = app.subcommand(sub_app);
+        }}
     }
 
-    if show_version {
-        println!("sentry-cli {}", super::get_version());
-        return Ok(());
+    each_subcommand!(add_subcommand);
+
+    let matches = try!(app.get_matches_from_safe(args));
+
+    if let Some(url) = matches.value_of("url") {
+        config.url = url.to_owned();
+    }
+    if let Some(token) = matches.value_of("token") {
+        config.token = token.to_owned();
     }
 
-    macro_rules! cmd {
-        ($name:ident) => {
-            if subcommand == stringify!($name).replace("_", "-") {
-                mod $name;
-                subcommand_args.insert(0, format!("{} {}", prog_name, subcommand));
-                return $name::execute(subcommand_args, &config);
+    macro_rules! execute_subcommand {
+        ($name:ident) => {{
+            let cmd = stringify!($name).replace("_", "-");
+            if let Some(sub_matches) = matches.subcommand_matches(cmd) {
+                return $name::execute(&sub_matches, &config);
             }
-        }
+        }}
     }
+    each_subcommand!(execute_subcommand);
 
-    each_subcommand!(cmd);
-    Err(CliError::unknown_command(&subcommand))
+    panic!("Should never reach this point");
 }
 
 pub fn run() -> CliResult<()> {
     let mut cfg = Config {
         token: env::var("SENTRY_TOKEN").unwrap_or("".to_owned()),
         url: "https://api.getsentry.com/".to_owned(),
-        verbose: false,
     };
     execute(env::args().collect(), &mut cfg)
 }
@@ -114,10 +111,7 @@ pub fn main() -> ! {
             process::exit(0);
         },
         Err(ref err) => {
-            if !err.is_silent() {
-                println!("error: {}", err);
-            }
-            process::exit(err.exit_code());
+            err.exit();
         }
     }
 }
