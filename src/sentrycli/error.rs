@@ -56,20 +56,30 @@ basic_error!(url::ParseError, "could not parse URL");
 basic_error!(hyper::error::Error, "could not perform HTTP request");
 basic_error!(serde_json::Error, "failed to parse JSON");
 
-impl CliError {
-
-    pub fn unknown_command(msg: &str) -> CliError {
+impl From<String> for CliError {
+    fn from(err: String) -> CliError {
         CliError {
-            repr: ErrorRepr::BasicError(format!("unknown command '{}'", msg)),
+            repr: ErrorRepr::BasicError(err)
         }
     }
+}
+
+impl<'a> From<&'a str> for CliError {
+    fn from(err: &'a str) -> CliError {
+        CliError {
+            repr: ErrorRepr::BasicError(err.to_owned())
+        }
+    }
+}
+
+impl CliError {
 
     pub fn exit(&self) -> ! {
         match self.repr {
             ErrorRepr::ClapError(ref err) => err.exit(),
             _ => {
                 writeln!(&mut io::stderr(), "error: {}", self).ok();
-                process::exit(1);
+                process::exit(1)
             },
         }
     }

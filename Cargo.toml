@@ -11,7 +11,7 @@ path = "src/sentrycli/lib.rs"
 name = "sentry-cli"
 
 [dependencies]
-clap = "2.0.5"
+clap = { version = "2.0.5", default-features = false, features = ["suggestions"] }
 hyper = "0.7.2"
 mime = "0.1.1"
 multipart = "0.3.1"
