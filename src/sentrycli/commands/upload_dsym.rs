@@ -80,7 +80,7 @@ fn make_archive<P: AsRef<Path>>(path: P, use_dsymutil: bool) -> CliResult<TempFi
 
     let it = WalkDir::new(&path).into_iter();
 
-    let arc_base = Path::new("DebugSymbols.dSYM");
+    let arc_base = Path::new("DebugSymbols");
 
     for dent_res in it {
         let dent = try!(dent_res);
