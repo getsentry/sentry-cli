@@ -12,7 +12,6 @@ impl TempFile {
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
         path.push(Uuid::new_v4().to_hyphenated_string());
-        try!(fs::File::create(&path));
         Ok(TempFile {
             path: path
         })
