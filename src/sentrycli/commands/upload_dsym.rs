@@ -2,6 +2,7 @@ use std::io;
 use std::path::Path;
 use std::fs::File;
 use std::collections::HashMap;
+use std::process::{Command, Stdio};
 
 use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
@@ -9,10 +10,12 @@ use multipart::client::Multipart;
 use serde_json;
 use walkdir::WalkDir;
 use zip;
+use which::which;
 
 use super::super::CliResult;
 use super::super::utils::TempFile;
 use super::Config;
+use super::super::macho::is_macho_file;
 
 enum UploadTarget {
     Global,
@@ -54,7 +57,23 @@ struct DSymFile {
     cpu_name: String,
 }
 
-fn make_archive<P: AsRef<Path>>(path: P) -> CliResult<TempFile> {
+fn invoke_dsymutil(path: &Path) -> CliResult<TempFile> {
+    let tf = try!(TempFile::new());
+    let out = try!(Command::new("dsymutil")
+        .arg("-o")
+        .arg(&tf.path())
+        .arg("--flat")
+        .arg(&path)
+        .stderr(Stdio::null())
+        .output());
+    if out.status.success() {
+        Ok(tf)
+    } else {
+        fail!("dsymutil failed to extract symbols");
+    }
+}
+
+fn make_archive<P: AsRef<Path>>(path: P, use_dsymutil: bool) -> CliResult<TempFile> {
     let tf = try!(TempFile::new());
     let file = try!(File::create(&tf.path()));
     let mut zip = zip::ZipWriter::new(file);
@@ -66,14 +85,20 @@ fn make_archive<P: AsRef<Path>>(path: P) -> CliResult<TempFile> {
     for dent_res in it {
         let dent = try!(dent_res);
         let md = try!(dent.metadata());
-        if md.is_file() {
+        if md.is_file() && is_macho_file(dent.path()) {
             let name = arc_base.join(dent.path().strip_prefix(&path).unwrap());
             try!(zip.start_file(
                 name.to_string_lossy().into_owned(),
                 zip::CompressionMethod::Deflated));
-            let mut f = try!(File::open(dent.path()));
             println!("  {}", name.display());
-            try!(io::copy(&mut f, &mut zip));
+            if use_dsymutil {
+                let sf = try!(invoke_dsymutil(dent.path()));
+                let mut f = try!(File::open(sf.path()));
+                try!(io::copy(&mut f, &mut zip));
+            } else {
+                let mut f = try!(File::open(dent.path()));
+                try!(io::copy(&mut f, &mut zip));
+            }
         }
     }
 
@@ -111,6 +136,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .short("g")
              .help("Uploads the dsyms globally. This can only be done \
                     with super admin access for the Sentry installation"))
+        .arg(Arg::with_name("use_dsymutil")
+             .long("use-dsymutil")
+             .help("Invoke dsymutil on encountered macho binaries to extract \
+                    the symbols before uploading.  This requires the dsymutil \
+                    binary to be available."))
         .arg(Arg::with_name("path")
              .value_name("PATH")
              .help("The path to the debug symbols")
@@ -131,9 +161,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
             project: matches.value_of("project").unwrap().to_owned(),
         }
     };
+    let use_dsymutil = matches.is_present("use_dsymutil");
 
+    if use_dsymutil {
+        if let Err(_) = which("dsymutil") {
+            fail!("dsymutil not installed but required for operation.");
+        } else {
+            println!("Extracting symbols with dsymutil.");
+        }
+    }
     println!("Creating archive from {}...", path);
-    let tf = try!(make_archive(path));
+    let tf = try!(make_archive(path, use_dsymutil));
 
     println!("Uploading archive ...");
     let rv = try!(upload_dsyms(&tf, config, &target));

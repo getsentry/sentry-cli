@@ -11,6 +11,7 @@ extern crate walkdir;
 extern crate zip;
 extern crate serde;
 extern crate serde_json;
+extern crate which;
 
 // what we export
 pub use error::CliError;
@@ -21,6 +22,7 @@ mod macros;
 mod commands;
 mod error;
 mod utils;
+mod macho;
 
 pub fn main() -> ! {
     commands::main();
