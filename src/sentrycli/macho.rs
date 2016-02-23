@@ -12,7 +12,10 @@ const MAGIC_64 : &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
 const MAGIC_CIGAM64 : &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
 
-pub fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> CliResult<bool> {
+// this function can return an error if the file is smaller than the magic.
+// Use the `is_macho_file` instead which does not fail which is actually
+// much better for how this function is used within this library.
+fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> CliResult<bool> {
     let mut f = try!(File::open(&path));
     let mut magic : [u8; 4] = [0; 4];
     try!(f.read_exact(&mut magic));
