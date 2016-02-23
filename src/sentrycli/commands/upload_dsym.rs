@@ -17,6 +17,8 @@ use super::super::utils::TempFile;
 use super::Config;
 use super::super::macho::is_macho_file;
 
+const BATCH_SIZE : u32 = 10;
+
 enum UploadTarget {
     Global,
     Project {
@@ -142,7 +144,7 @@ impl Iterator for BatchIter {
                         }
                         target.item_count += 1;
                     }
-                    if self.target.as_ref().unwrap().item_count > 10 {
+                    if self.target.as_ref().unwrap().item_count > BATCH_SIZE {
                         return Some(Ok(self.target.take().unwrap().tf));
                     }
                 }
@@ -150,7 +152,7 @@ impl Iterator for BatchIter {
                 break;
             }
         }
-        None
+        self.target.take().map(|val| Ok(val.tf))
     }
 }
 
