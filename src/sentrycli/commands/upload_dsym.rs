@@ -1,5 +1,5 @@
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
@@ -8,7 +8,7 @@ use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
 use multipart::client::Multipart;
 use serde_json;
-use walkdir::WalkDir;
+use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
 use which::which;
 
@@ -73,38 +73,85 @@ fn invoke_dsymutil(path: &Path) -> CliResult<TempFile> {
     }
 }
 
-fn make_archive<P: AsRef<Path>>(path: P, use_dsymutil: bool) -> CliResult<TempFile> {
-    let tf = try!(TempFile::new());
-    let file = try!(File::create(&tf.path()));
-    let mut zip = zip::ZipWriter::new(file);
+struct BatchIterTarget {
+    pub tf: TempFile,
+    pub zip: zip::ZipWriter<File>,
+    pub item_count: u32,
+}
 
-    let it = WalkDir::new(&path).into_iter();
+struct BatchIter {
+    path: PathBuf,
+    wd_iter: WalkDirIter,
+    use_dsymutil: bool,
+    target: Option<BatchIterTarget>,
+}
 
-    let arc_base = Path::new("DebugSymbols");
-
-    for dent_res in it {
-        let dent = try!(dent_res);
-        let md = try!(dent.metadata());
-        if md.is_file() && is_macho_file(dent.path()) {
-            let name = arc_base.join(dent.path().strip_prefix(&path).unwrap());
-            try!(zip.start_file(
-                name.to_string_lossy().into_owned(),
-                zip::CompressionMethod::Deflated));
-            println!("  {}", name.display());
-            if use_dsymutil {
-                let sf = try!(invoke_dsymutil(dent.path()));
-                let mut f = try!(File::open(sf.path()));
-                try!(io::copy(&mut f, &mut zip));
-            } else {
-                let mut f = try!(File::open(dent.path()));
-                try!(io::copy(&mut f, &mut zip));
-            }
+impl BatchIter {
+    pub fn new<P: AsRef<Path>>(path: P, use_dsymutil: bool) -> BatchIter {
+        BatchIter {
+            path: path.as_ref().to_path_buf(),
+            wd_iter: WalkDir::new(&path).into_iter(),
+            use_dsymutil: use_dsymutil,
+            target: None,
         }
     }
 
-    try!(zip.finish());
-    
-    Ok(tf)
+    fn ensure_target(&mut self) -> CliResult<()> {
+        match self.target {
+            Some(_) => Ok(()),
+            None => {
+                println!("Creating new batch:");
+                let tf = try!(TempFile::new());
+                let f = try!(File::create(tf.path()));
+                self.target = Some(BatchIterTarget {
+                    tf: tf,
+                    zip: zip::ZipWriter::new(f),
+                    item_count: 0,
+                });
+                Ok(())
+            }
+        }
+    }
+}
+
+impl Iterator for BatchIter {
+    type Item = CliResult<TempFile>;
+
+    fn next(&mut self) -> Option<CliResult<TempFile>> {
+        loop {
+            if let Some(dent_res) = self.wd_iter.next() {
+                let dent = iter_try!(dent_res);
+                let md = iter_try!(dent.metadata());
+                if md.is_file() && is_macho_file(dent.path()) {
+                    iter_try!(self.ensure_target());
+                    {
+                        let target = &mut self.target.as_mut().unwrap();
+                        let arc_base = Path::new("DebugSymbols");
+                        let name = arc_base.join(dent.path().strip_prefix(&self.path).unwrap());
+                        iter_try!(target.zip.start_file(
+                            name.to_string_lossy().into_owned(),
+                            zip::CompressionMethod::Deflated));
+                        println!("  {}", name.display());
+                        if self.use_dsymutil {
+                            let sf = iter_try!(invoke_dsymutil(dent.path()));
+                            let mut f = iter_try!(File::open(sf.path()));
+                            iter_try!(io::copy(&mut f, &mut target.zip));
+                        } else {
+                            let mut f = iter_try!(File::open(dent.path()));
+                            iter_try!(io::copy(&mut f, &mut target.zip));
+                        }
+                        target.item_count += 1;
+                    }
+                    if self.target.as_ref().unwrap().item_count > 10 {
+                        return Some(Ok(self.target.take().unwrap().tf));
+                    }
+                }
+            } else {
+                break;
+            }
+        }
+        None
+    }
 }
 
 fn upload_dsyms(tf: &TempFile, config: &Config,
@@ -170,20 +217,23 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
             println!("Extracting symbols with dsymutil.");
         }
     }
-    println!("Creating archive from {}...", path);
-    let tf = try!(make_archive(path, use_dsymutil));
 
-    println!("Uploading archive ...");
-    let rv = try!(upload_dsyms(&tf, config, &target));
+    println!("Creating archives from {}...", path);
 
-    if rv.len() == 0 {
-        fail!("Server did not accept any debug symbols.");
-    } else {
-        println!("");
-        println!("Accepted debug symbols:");
-        for df in rv {
-            println!("  {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+    let iter = BatchIter::new(path, use_dsymutil);
+    for tf_res in iter {
+        let tf = try!(tf_res);
+        println!("Uploading archive ...");
+        let rv = try!(upload_dsyms(&tf, config, &target));
+        if rv.len() == 0 {
+            fail!("Server did not accept any debug symbols.");
+        } else {
+            println!("Accepted debug symbols:");
+            for df in rv {
+                println!("  {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+            }
         }
     }
+
     Ok(())
 }
