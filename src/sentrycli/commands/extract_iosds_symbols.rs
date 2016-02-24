@@ -95,8 +95,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> 
         });
 
     if output.exists() {
-        fail!(format!("Cannot proceed because the output path ({}) already exists.",
-                      output.display()));
+        fail!("Cannot proceed because the output path ({}) already exists.",
+              output.display());
     }
 
     if which("dsymutil").is_err() {
