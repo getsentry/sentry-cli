@@ -50,6 +50,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
     app
         .about("extract iOS device support symbols")
+        .after_help("This command extracts debug symbols from the iOS Device Support \
+                     folder of the system for a given version of IOS and stores them \
+                     in a new folder.  This can then later be uploaded into the \
+                     global symbol store of a Sentry installation.")
         .arg(Arg::with_name("version")
              .value_name("VERSION")
              .help("The iOS version to convert symbols for.")
