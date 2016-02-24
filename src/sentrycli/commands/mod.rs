@@ -58,6 +58,7 @@ impl Config {
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dsym);
+        $mac!(extract_iosds_symbols);
     }
 }
 
@@ -140,7 +141,7 @@ pub fn run() -> CliResult<()> {
     execute(env::args().collect(), &mut cfg)
 }
 
-pub fn main() -> ! {
+pub fn main() {
     match run() {
         Ok(()) => process::exit(0),
         Err(ref err) => err.exit(),

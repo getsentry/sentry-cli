@@ -2,15 +2,14 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::collections::HashMap;
-use std::process::{Command, Stdio};
 
 use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
+use mime;
 use multipart::client::Multipart;
 use serde_json;
 use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
-use which::which;
 
 use super::super::CliResult;
 use super::super::utils::TempFile;
@@ -59,23 +58,7 @@ struct DSymFile {
     cpu_name: String,
 }
 
-fn invoke_dsymutil(path: &Path) -> CliResult<TempFile> {
-    let tf = try!(TempFile::new());
-    let out = try!(Command::new("dsymutil")
-        .arg("-o")
-        .arg(&tf.path())
-        .arg("--flat")
-        .arg(&path)
-        .stderr(Stdio::null())
-        .output());
-    if out.status.success() {
-        Ok(tf)
-    } else {
-        fail!("dsymutil failed to extract symbols");
-    }
-}
-
-struct BatchIterTarget {
+struct BatchIterBatch {
     pub tf: TempFile,
     pub zip: zip::ZipWriter<File>,
     pub item_count: u32,
@@ -84,34 +67,17 @@ struct BatchIterTarget {
 struct BatchIter {
     path: PathBuf,
     wd_iter: WalkDirIter,
-    use_dsymutil: bool,
-    target: Option<BatchIterTarget>,
+    batch: Option<BatchIterBatch>,
+    batch_count: u32,
 }
 
 impl BatchIter {
-    pub fn new<P: AsRef<Path>>(path: P, use_dsymutil: bool) -> BatchIter {
+    pub fn new<P: AsRef<Path>>(path: P) -> BatchIter {
         BatchIter {
             path: path.as_ref().to_path_buf(),
             wd_iter: WalkDir::new(&path).into_iter(),
-            use_dsymutil: use_dsymutil,
-            target: None,
-        }
-    }
-
-    fn ensure_target(&mut self) -> CliResult<()> {
-        match self.target {
-            Some(_) => Ok(()),
-            None => {
-                println!("Creating new batch:");
-                let tf = try!(TempFile::new());
-                let f = try!(File::create(tf.path()));
-                self.target = Some(BatchIterTarget {
-                    tf: tf,
-                    zip: zip::ZipWriter::new(f),
-                    item_count: 0,
-                });
-                Ok(())
-            }
+            batch: None,
+            batch_count: 0
         }
     }
 }
@@ -125,34 +91,43 @@ impl Iterator for BatchIter {
                 let dent = iter_try!(dent_res);
                 let md = iter_try!(dent.metadata());
                 if md.is_file() && is_macho_file(dent.path()) {
-                    iter_try!(self.ensure_target());
-                    {
-                        let target = &mut self.target.as_mut().unwrap();
-                        let arc_base = Path::new("DebugSymbols");
-                        let name = arc_base.join(dent.path().strip_prefix(&self.path).unwrap());
-                        iter_try!(target.zip.start_file(
-                            name.to_string_lossy().into_owned(),
-                            zip::CompressionMethod::Deflated));
-                        println!("  {}", name.display());
-                        if self.use_dsymutil {
-                            let sf = iter_try!(invoke_dsymutil(dent.path()));
-                            let mut f = iter_try!(File::open(sf.path()));
-                            iter_try!(io::copy(&mut f, &mut target.zip));
-                        } else {
-                            let mut f = iter_try!(File::open(dent.path()));
-                            iter_try!(io::copy(&mut f, &mut target.zip));
-                        }
-                        target.item_count += 1;
-                    }
-                    if self.target.as_ref().unwrap().item_count > BATCH_SIZE {
-                        return Some(Ok(self.target.take().unwrap().tf));
+                    // if we don't have a batch yet, create a new one.  We fill
+                    // up to a fixed number of items into that batch before it
+                    // is being returned from the iterator.
+                    let batch = match self.batch {
+                        None => {
+                            self.batch_count += 1;
+                            println!("Creating batch #{}:", self.batch_count);
+                            let tf = iter_try!(TempFile::new());
+                            let zip = zip::ZipWriter::new(tf.open());
+                            self.batch = Some(BatchIterBatch {
+                                tf: tf,
+                                zip: zip,
+                                item_count: 0,
+                            });
+                            self.batch.as_mut().unwrap()
+                        },
+                        Some(ref mut val) => val,
+                    };
+
+                    let name = Path::new("DebugSymbols")
+                        .join(dent.path().strip_prefix(&self.path).unwrap());
+                    iter_try!(batch.zip.start_file(
+                        name.to_string_lossy().into_owned(),
+                        zip::CompressionMethod::Deflated));
+                    println!("  {}", name.display());
+                    let mut f = iter_try!(File::open(dent.path()));
+                    iter_try!(io::copy(&mut f, &mut batch.zip));
+                    batch.item_count += 1;
+                    if batch.item_count > BATCH_SIZE {
+                        break;
                     }
                 }
             } else {
                 break;
             }
         }
-        self.target.take().map(|val| Ok(val.tf))
+        self.batch.take().map(|val| Ok(val.tf))
     }
 }
 
@@ -160,7 +135,8 @@ fn upload_dsyms(tf: &TempFile, config: &Config,
                 target: &UploadTarget) -> CliResult<Vec<DSymFile>> {
     let req = try!(config.api_request(Method::Post, &target.get_api_path()));
     let mut mp = try!(Multipart::from_request_sized(req));
-    mp.write_file("file", &tf.path());
+    mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
+        "application/zip".parse::<mime::Mime>().ok());
     let mut resp = try!(mp.send());
     Ok(try!(serde_json::from_reader(&mut resp)))
 }
@@ -185,11 +161,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .short("g")
              .help("Uploads the dsyms globally. This can only be done \
                     with super admin access for the Sentry installation"))
-        .arg(Arg::with_name("use_dsymutil")
-             .long("use-dsymutil")
-             .help("Invoke dsymutil on encountered macho binaries to extract \
-                    the symbols before uploading.  This requires the dsymutil \
-                    binary to be available."))
         .arg(Arg::with_name("path")
              .value_name("PATH")
              .help("The path to the debug symbols")
@@ -210,19 +181,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
             project: matches.value_of("project").unwrap().to_owned(),
         }
     };
-    let use_dsymutil = matches.is_present("use_dsymutil");
 
-    if use_dsymutil {
-        if let Err(_) = which("dsymutil") {
-            fail!("dsymutil not installed but required for operation.");
-        } else {
-            println!("Extracting symbols with dsymutil.");
-        }
-    }
+    println!("Uploading symbols from {}...", path);
 
-    println!("Creating archives from {}...", path);
-
-    let iter = BatchIter::new(path, use_dsymutil);
+    let iter = BatchIter::new(path);
     for tf_res in iter {
         let tf = try!(tf_res);
         println!("Uploading archive ...");

@@ -12,6 +12,8 @@ use url;
 use walkdir;
 use zip;
 
+pub type CliResult<T> = Result<T, CliError>;
+
 #[derive(Debug)]
 pub struct CliError {
     repr: ErrorRepr,
