@@ -16,7 +16,7 @@ use super::super::utils::TempFile;
 use super::Config;
 use super::super::macho::is_macho_file;
 
-const BATCH_SIZE : u32 = 10;
+const BATCH_SIZE : u32 = 15;
 
 enum UploadTarget {
     Global,

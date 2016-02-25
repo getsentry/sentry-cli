@@ -9,13 +9,13 @@ extern crate hyper;
 extern crate libc;
 extern crate mime;
 extern crate multipart;
+extern crate serde;
+extern crate serde_json;
 extern crate url;
 extern crate uuid;
 extern crate walkdir;
-extern crate zip;
-extern crate serde;
-extern crate serde_json;
 extern crate which;
+extern crate zip;
 
 // what we export
 pub use error::{CliError, CliResult};
