@@ -11,14 +11,8 @@ use url::Url;
 use super::CliResult;
 
 #[derive(Debug)]
-pub enum Auth {
-    Token(String),
-    SystemAdminPassword(String)
-}
-
-#[derive(Debug)]
 pub struct Config {
-    auth: Option<Auth>,
+    api_key: Option<String>,
     url: String,
 }
 
@@ -31,24 +25,11 @@ impl Config {
         let mut request = try!(Request::new(method, url));
         {
             let mut headers = request.headers_mut();
-            match self.auth {
-                None => fail!("Missing authentication"),
-                Some(ref auth) => {
-                    match *auth {
-                        Auth::Token(ref token) => {
-                            headers.set(Authorization(Basic {
-                                username: token.clone(),
-                                password: None
-                            }));
-                        },
-                        Auth::SystemAdminPassword(ref pw) => {
-                            headers.set(Authorization(Basic {
-                                username: "admin".to_owned(),
-                                password: Some(pw.clone())
-                            }));
-                        }
-                    }
-                }
+            if let Some(ref api_key) = self.api_key {
+                headers.set(Authorization(Basic {
+                    username: api_key.clone(),
+                    password: None
+                }));
             }
         }
         Ok(request)
@@ -82,14 +63,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
              .value_name("URL")
              .long("url")
              .help("The sentry API URL"))
-        .arg(Arg::with_name("system_admin_password")
-             .value_name("PASSWORD")
-             .long("system-admin-password")
-             .help("Sign in as system super administrator."))
-        .arg(Arg::with_name("token")
-             .value_name("TOKEN")
-             .long("token")
-             .help("The sentry API token to use"));
+        .arg(Arg::with_name("api_key")
+             .value_name("API_KEY")
+             .long("api-key")
+             .help("The sentry API key to use"));
 
     macro_rules! add_subcommand {
         ($name:ident) => {{
@@ -106,11 +83,8 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     if let Some(url) = matches.value_of("url") {
         config.url = url.to_owned();
     }
-    if let Some(token) = matches.value_of("token") {
-        config.auth = Some(Auth::Token(token.to_owned()));
-    }
-    if let Some(password) = matches.value_of("system_admin_password") {
-        config.auth = Some(Auth::SystemAdminPassword(password.to_owned()));
+    if let Some(api_key) = matches.value_of("api_key") {
+        config.api_key = Some(api_key.to_owned());
     }
 
     macro_rules! execute_subcommand {
@@ -127,15 +101,13 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
 }
 
 pub fn run() -> CliResult<()> {
-    let auth = if let Ok(token) = env::var("SENTRY_TOKEN") {
-        Some(Auth::Token(token.to_owned()))
-    } else if let Ok(password) = env::var("SENTRY_SYSTEM_ADMIN_PASSWORD") {
-        Some(Auth::SystemAdminPassword(password.to_owned()))
+    let api_key = if let Ok(api_key) = env::var("SENTRY_TOKEN") {
+        Some(api_key.to_owned())
     } else {
         None
     };
     let mut cfg = Config {
-        auth: auth,
+        api_key: api_key,
         url: "https://api.getsentry.com/".to_owned(),
     };
     execute(env::args().collect(), &mut cfg)
