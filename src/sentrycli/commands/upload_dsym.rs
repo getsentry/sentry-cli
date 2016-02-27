@@ -17,26 +17,6 @@ use super::super::macho::is_macho_file;
 
 const BATCH_SIZE : u32 = 15;
 
-enum UploadTarget {
-    Global,
-    Project {
-        org: String,
-        project: String
-    }
-}
-
-impl UploadTarget {
-
-    pub fn get_api_path(&self) -> String {
-        match *self {
-            UploadTarget::Global => "/system/global-dsyms/".to_owned(),
-            UploadTarget::Project { ref org, ref project } => {
-                format!("/projects/{}/{}/files/dsyms/", org, project)
-            }
-        }
-    }
-}
-
 
 #[derive(Debug, Deserialize)]
 struct DSymFile {
@@ -121,8 +101,8 @@ impl Iterator for BatchIter {
 }
 
 fn upload_dsyms(tf: &TempFile, config: &Config,
-                target: &UploadTarget) -> CliResult<Vec<DSymFile>> {
-    let req = try!(config.api_request(Method::Post, &target.get_api_path()));
+                api_path: &str) -> CliResult<Vec<DSymFile>> {
+    let req = try!(config.api_request(Method::Post, api_path));
     let mut mp = try!(Multipart::from_request_sized(req));
     mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
         "application/zip".parse::<mime::Mime>().ok());
@@ -159,16 +139,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let path = matches.value_of("path").unwrap();
-    let target = if matches.is_present("global") {
-        UploadTarget::Global
+    let api_path = if matches.is_present("global") {
+        "/system/global-dsyms/".to_owned()
     } else {
         if !matches.is_present("org") || !matches.is_present("project") {
             fail!("For non global uploads both organization and project are required");
         }
-        UploadTarget::Project {
-            org: matches.value_of("org").unwrap().to_owned(),
-            project: matches.value_of("project").unwrap().to_owned(),
-        }
+        format!("/projects/{}/{}/files/dsyms/",
+                matches.value_of("org").unwrap(),
+                matches.value_of("project").unwrap())
     };
 
     println!("Uploading symbols from {}...", path);
@@ -177,7 +156,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     for tf_res in iter {
         let tf = try!(tf_res);
         println!("Uploading archive ...");
-        let rv = try!(upload_dsyms(&tf, config, &target));
+        let rv = try!(upload_dsyms(&tf, config, &api_path));
         if rv.len() == 0 {
             fail!("Server did not accept any debug symbols.");
         } else {
