@@ -2,11 +2,9 @@ use std::io;
 use std::fs;
 use std::env;
 use std::io::Seek;
-use std::os::unix::io::{AsRawFd, FromRawFd};
 use uuid::Uuid;
 use chan;
 use chan_signal::{notify, Signal};
-use libc;
 
 pub struct TempFile {
     f: fs::File,
@@ -27,15 +25,8 @@ impl TempFile {
         })
     }
 
-    pub fn dup<T: FromRawFd>(&self) -> T {
-        let raw_fd = self.f.as_raw_fd();
-        unsafe {
-            FromRawFd::from_raw_fd(libc::dup(raw_fd))
-        }
-    }
-
     pub fn open(&self) -> fs::File {
-        let mut f : fs::File = self.dup();
+        let mut f = self.f.try_clone().unwrap();
         let _ = f.seek(io::SeekFrom::Start(0));
         f
     }

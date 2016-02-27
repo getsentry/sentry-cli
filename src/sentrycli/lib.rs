@@ -1,4 +1,4 @@
-#![feature(custom_derive, plugin)]
+#![feature(custom_derive, plugin, file_try_clone)]
 #![plugin(serde_macros)]
 
 #[macro_use]
@@ -6,7 +6,6 @@ extern crate chan;
 extern crate chan_signal;
 extern crate clap;
 extern crate hyper;
-extern crate libc;
 extern crate mime;
 extern crate multipart;
 extern crate serde;

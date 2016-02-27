@@ -85,8 +85,8 @@ impl Iterator for BatchIter {
                         name.to_string_lossy().into_owned(),
                         zip::CompressionMethod::Deflated));
                     println!("  {}", name.display());
-                    let mut f = iter_try!(File::open(dent.path()));
-                    iter_try!(io::copy(&mut f, &mut batch.zip));
+                    iter_try!(io::copy(&mut iter_try!(File::open(dent.path())),
+                                       &mut batch.zip));
                     batch.item_count += 1;
                     if batch.item_count > BATCH_SIZE {
                         break;
@@ -152,8 +152,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
 
     println!("Uploading symbols from {}...", path);
 
-    let iter = BatchIter::new(path);
-    for tf_res in iter {
+    for tf_res in BatchIter::new(path) {
         let tf = try!(tf_res);
         println!("Uploading archive ...");
         let rv = try!(upload_dsyms(&tf, config, &api_path));

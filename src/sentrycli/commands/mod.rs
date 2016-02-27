@@ -19,20 +19,20 @@ pub struct Config {
 impl Config {
 
     pub fn api_request(&self, method: Method, path: &str)
-            -> CliResult<Request<Fresh>> {
+        -> CliResult<Request<Fresh>>
+    {
         let url = try!(Url::parse(&format!(
             "{}/api/0{}", self.url.trim_right_matches("/"), path)));
-        let mut request = try!(Request::new(method, url));
+        let mut req = try!(Request::new(method, url));
         {
-            let mut headers = request.headers_mut();
             if let Some(ref api_key) = self.api_key {
-                headers.set(Authorization(Basic {
+                req.headers_mut().set(Authorization(Basic {
                     username: api_key.clone(),
                     password: None
                 }));
             }
         }
-        Ok(request)
+        Ok(req)
     }
 }
 
@@ -44,11 +44,8 @@ macro_rules! each_subcommand {
 }
 
 macro_rules! import_subcommand {
-    ($name:ident) => {
-        mod $name;
-    }
+    ($name:ident) => { mod $name; }
 }
-
 each_subcommand!(import_subcommand);
 
 pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
@@ -75,7 +72,6 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
                     .setting(AppSettings::UnifiedHelpMessage)));
         }}
     }
-
     each_subcommand!(add_subcommand);
 
     let matches = try!(app.get_matches_from_safe(args));
@@ -101,16 +97,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
 }
 
 pub fn run() -> CliResult<()> {
-    let api_key = if let Ok(api_key) = env::var("SENTRY_TOKEN") {
-        Some(api_key.to_owned())
-    } else {
-        None
-    };
-    let mut cfg = Config {
-        api_key: api_key,
+    execute(env::args().collect(), &mut Config {
+        api_key: env::var("SENTRY_TOKEN").ok().to_owned(),
         url: "https://api.getsentry.com/".to_owned(),
-    };
-    execute(env::args().collect(), &mut cfg)
+    })
 }
 
 pub fn main() {

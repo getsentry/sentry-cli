@@ -20,11 +20,10 @@ fn invoke_dsymutil(path: &Path, output_path: &Path) -> CliResult<()> {
         .arg(&path)
         .stderr(Stdio::null())
         .status());
-    if status.success() {
-        Ok(())
-    } else {
+    if !status.success() {
         fail!("dsymutil failed to extract symbols");
     }
+    Ok(())
 }
 
 fn extract_symbols(src: &Path, dst: &Path) -> CliResult<()> {

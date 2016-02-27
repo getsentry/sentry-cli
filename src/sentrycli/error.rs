@@ -23,19 +23,6 @@ pub struct CliError {
 enum ErrorRepr {
     ClapError(clap::Error),
     BasicError(String),
-    IoError(io::Error),
-}
-
-macro_rules! wrap_error {
-    ($ty:ty, $wrapper:expr) => {
-        impl From<$ty> for CliError {
-            fn from(err: $ty) -> CliError {
-                CliError {
-                    repr: $wrapper(err)
-                }
-            }
-        }
-    }
 }
 
 macro_rules! basic_error {
@@ -50,13 +37,20 @@ macro_rules! basic_error {
     }
 }
 
-wrap_error!(io::Error, ErrorRepr::IoError);
-wrap_error!(clap::Error, ErrorRepr::ClapError);
+basic_error!(io::Error, "i/o failure");
 basic_error!(zip::result::ZipError, "could not zip");
 basic_error!(walkdir::Error, "could not walk path");
 basic_error!(url::ParseError, "could not parse URL");
 basic_error!(hyper::error::Error, "could not perform HTTP request");
 basic_error!(serde_json::Error, "failed to parse JSON");
+
+impl From<clap::Error> for CliError {
+    fn from(err: clap::Error) -> CliError {
+        CliError {
+            repr: ErrorRepr::ClapError(err)
+        }
+    }
+}
 
 impl From<String> for CliError {
     fn from(err: String) -> CliError {
@@ -91,7 +85,6 @@ impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.repr {
             ErrorRepr::BasicError(ref msg) => write!(f, "{}", msg),
-            ErrorRepr::IoError(ref err) => write!(f, "i/o failure: {}", err),
             ErrorRepr::ClapError(ref err) => write!(f, "{}", err),
         }
     }
@@ -101,14 +94,12 @@ impl error::Error for CliError {
     fn description(&self) -> &str {
         match self.repr {
             ErrorRepr::BasicError(ref msg) => &msg,
-            ErrorRepr::IoError(ref err) => err.description(),
             ErrorRepr::ClapError(ref err) => err.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match self.repr {
-            ErrorRepr::IoError(ref err) => Some(&*err),
             ErrorRepr::ClapError(ref err) => Some(&*err),
             _ => None,
         }
