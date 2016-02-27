@@ -13,13 +13,13 @@ name = "sentry-cli"
 [dependencies]
 chan = "0.1.14"
 chan-signal = "0.1.5"
-clap = { version = "2.0.5", default-features = false, features = ["suggestions"] }
+clap = { version = "2.1.2", default-features = false, features = ["suggestions"] }
 hyper = "0.7.2"
 mime = "0.1.1"
 multipart = "0.3.1"
-serde = "0.6.11"
-serde_json = "0.6.0"
-serde_macros = "0.6.11"
+serde = "0.7.0"
+serde_json = "0.7.0"
+serde_macros = "0.7.0"
 url = "0.5.4"
 uuid = "0.1.18"
 walkdir = "0.1.5"

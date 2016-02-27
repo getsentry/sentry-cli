@@ -1,7 +1,6 @@
 use std::io;
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::collections::HashMap;
 
 use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
@@ -39,21 +38,11 @@ impl UploadTarget {
 }
 
 
-// XXX: when serde 0.7 lands we can remove the unused ones here.
-// Currently we need them as it does otherwise error out on parsing :(
 #[derive(Debug, Deserialize)]
 struct DSymFile {
-    id: String,
-    sha1: String,
     uuid: String,
-    size: i64,
     #[serde(rename="objectName")]
     object_name: String,
-    #[serde(rename="symbolType")]
-    symbol_type: String,
-    headers: HashMap<String, String>,
-    #[serde(rename="dateCreated")]
-    date_created: String,
     #[serde(rename="cpuName")]
     cpu_name: String,
 }
