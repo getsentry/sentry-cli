@@ -1,14 +1,19 @@
 use std::env;
 use std::process;
+use std::io;
 
 use clap::{Arg, App, AppSettings};
 use hyper::client::request::Request;
-use hyper::header::{Authorization, Basic};
+use hyper::client::response::Response;
+use hyper::header::{Authorization, Basic, ContentType, ContentLength};
 use hyper::method::Method;
 use hyper::net::Fresh;
 use url::Url;
+use serde::Serialize;
+use serde_json;
 
-use super::CliResult;
+use CliResult;
+use utils::make_subcommand;
 
 #[derive(Debug)]
 pub struct Config {
@@ -18,7 +23,7 @@ pub struct Config {
 
 impl Config {
 
-    pub fn api_request(&self, method: Method, path: &str)
+    pub fn prepare_api_request(&self, method: Method, path: &str)
         -> CliResult<Request<Fresh>>
     {
         let url = try!(Url::parse(&format!(
@@ -34,12 +39,38 @@ impl Config {
         }
         Ok(req)
     }
+
+    pub fn api_request(&self, method: Method, path: &str)
+        -> CliResult<Response>
+    {
+        let req = try!(self.prepare_api_request(method, path));
+        Ok(try!(try!(req.start()).send()))
+    }
+
+    pub fn json_api_request<T: Serialize>(&self, method: Method, path: &str, body: &T)
+        -> CliResult<Response>
+    {
+        let mut req = try!(self.prepare_api_request(method, path));
+        let mut body_bytes : Vec<u8> = vec![];
+        try!(serde_json::to_writer(&mut body_bytes, &body));
+
+        {
+            let mut headers = req.headers_mut();
+            headers.set(ContentType(mime!(Application/Json)));
+            headers.set(ContentLength(body_bytes.len() as u64));
+        }
+
+        let mut req = try!(req.start());
+        try!(io::copy(&mut &body_bytes[..], &mut req));
+        Ok(try!(req.send()))
+    }
 }
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dsym);
         $mac!(extract_iosds_symbols);
+        $mac!(releases);
     }
 }
 
@@ -68,8 +99,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     macro_rules! add_subcommand {
         ($name:ident) => {{
             app = app.subcommand($name::make_app(
-                App::new(stringify!($name).replace("_", "-"))
-                    .setting(AppSettings::UnifiedHelpMessage)));
+                make_subcommand(&stringify!($name).replace("_", "-"))));
         }}
     }
     each_subcommand!(add_subcommand);

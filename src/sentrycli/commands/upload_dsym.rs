@@ -10,10 +10,10 @@ use serde_json;
 use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
 
-use super::super::CliResult;
-use super::super::utils::TempFile;
-use super::Config;
-use super::super::macho::is_macho_file;
+use CliResult;
+use utils::{TempFile, get_org_and_project};
+use macho::is_macho_file;
+use commands::Config;
 
 const BATCH_SIZE : u32 = 15;
 
@@ -102,7 +102,7 @@ impl Iterator for BatchIter {
 
 fn upload_dsyms(tf: &TempFile, config: &Config,
                 api_path: &str) -> CliResult<Vec<DSymFile>> {
-    let req = try!(config.api_request(Method::Post, api_path));
+    let req = try!(config.prepare_api_request(Method::Post, api_path));
     let mut mp = try!(Multipart::from_request_sized(req));
     mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
         "application/zip".parse::<mime::Mime>().ok());
@@ -142,12 +142,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let api_path = if matches.is_present("global") {
         "/system/global-dsyms/".to_owned()
     } else {
-        if !matches.is_present("org") || !matches.is_present("project") {
-            fail!("For non global uploads both organization and project are required");
-        }
-        format!("/projects/{}/{}/files/dsyms/",
-                matches.value_of("org").unwrap(),
-                matches.value_of("project").unwrap())
+        let (org, project) = try!(get_org_and_project(matches));
+        format!("/projects/{}/{}/files/dsyms/", org, project)
     };
 
     println!("Uploading symbols from {}...", path);

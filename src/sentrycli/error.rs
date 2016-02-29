@@ -3,7 +3,7 @@ use std::process;
 use std::fmt;
 use std::io;
 
-use std::io::Write;
+use std::io::{Read, Write};
 
 use clap;
 use hyper;
@@ -16,11 +16,11 @@ pub type CliResult<T> = Result<T, CliError>;
 
 #[derive(Debug)]
 pub struct CliError {
-    repr: ErrorRepr,
+    repr: CliErrorRepr,
 }
 
 #[derive(Debug)]
-enum ErrorRepr {
+enum CliErrorRepr {
     ClapError(clap::Error),
     BasicError(String),
 }
@@ -30,7 +30,7 @@ macro_rules! basic_error {
         impl From<$ty> for CliError {
             fn from(err: $ty) -> CliError {
                 CliError {
-                    repr: ErrorRepr::BasicError(format!("{}: {}", $msg, err))
+                    repr: CliErrorRepr::BasicError(format!("{}: {}", $msg, err))
                 }
             }
         }
@@ -44,10 +44,21 @@ basic_error!(url::ParseError, "could not parse URL");
 basic_error!(hyper::error::Error, "could not perform HTTP request");
 basic_error!(serde_json::Error, "failed to parse JSON");
 
+impl From<hyper::client::response::Response> for CliError {
+    fn from(mut resp: hyper::client::response::Response) -> CliError {
+        let mut err = String::new();
+        resp.read_to_string(&mut err).ok();
+        CliError {
+            repr: CliErrorRepr::BasicError(format!(
+                "request failed ({}, {})", resp.status, err))
+        }
+    }
+}
+
 impl From<clap::Error> for CliError {
     fn from(err: clap::Error) -> CliError {
         CliError {
-            repr: ErrorRepr::ClapError(err)
+            repr: CliErrorRepr::ClapError(err)
         }
     }
 }
@@ -55,7 +66,7 @@ impl From<clap::Error> for CliError {
 impl From<String> for CliError {
     fn from(err: String) -> CliError {
         CliError {
-            repr: ErrorRepr::BasicError(err)
+            repr: CliErrorRepr::BasicError(err)
         }
     }
 }
@@ -63,7 +74,7 @@ impl From<String> for CliError {
 impl<'a> From<&'a str> for CliError {
     fn from(err: &'a str) -> CliError {
         CliError {
-            repr: ErrorRepr::BasicError(err.to_owned())
+            repr: CliErrorRepr::BasicError(err.to_owned())
         }
     }
 }
@@ -72,7 +83,7 @@ impl CliError {
 
     pub fn exit(&self) -> ! {
         match self.repr {
-            ErrorRepr::ClapError(ref err) => err.exit(),
+            CliErrorRepr::ClapError(ref err) => err.exit(),
             _ => {
                 writeln!(&mut io::stderr(), "error: {}", self).ok();
                 process::exit(1)
@@ -84,8 +95,8 @@ impl CliError {
 impl fmt::Display for CliError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.repr {
-            ErrorRepr::BasicError(ref msg) => write!(f, "{}", msg),
-            ErrorRepr::ClapError(ref err) => write!(f, "{}", err),
+            CliErrorRepr::BasicError(ref msg) => write!(f, "{}", msg),
+            CliErrorRepr::ClapError(ref err) => write!(f, "{}", err),
         }
     }
 }
@@ -93,14 +104,14 @@ impl fmt::Display for CliError {
 impl error::Error for CliError {
     fn description(&self) -> &str {
         match self.repr {
-            ErrorRepr::BasicError(ref msg) => &msg,
-            ErrorRepr::ClapError(ref err) => err.description(),
+            CliErrorRepr::BasicError(ref msg) => &msg,
+            CliErrorRepr::ClapError(ref err) => err.description(),
         }
     }
 
     fn cause(&self) -> Option<&error::Error> {
         match self.repr {
-            ErrorRepr::ClapError(ref err) => Some(&*err),
+            CliErrorRepr::ClapError(ref err) => Some(&*err),
             _ => None,
         }
     }

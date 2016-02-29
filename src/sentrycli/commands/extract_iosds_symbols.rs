@@ -7,9 +7,9 @@ use clap::{App, Arg, ArgMatches};
 use walkdir::WalkDir;
 use which::which;
 
-use super::super::CliResult;
-use super::Config;
-use super::super::macho::is_macho_file;
+use CliResult;
+use commands::Config;
+use macho::is_macho_file;
 
 
 fn invoke_dsymutil(path: &Path, output_path: &Path) -> CliResult<()> {
