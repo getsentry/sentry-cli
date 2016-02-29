@@ -1,5 +1,6 @@
 use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
+use hyper::status::StatusCode;
 use serde_json;
 
 use CliResult;
@@ -32,9 +33,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
         .subcommand(make_subcommand("new")
                 .about("Create a new release")
                 .arg(Arg::with_name("version")
-                     .long("version")
                      .value_name("VERSION")
                      .required(true)
+                     .index(1)
                      .help("The version identifier for this release"))
                 .arg(Arg::with_name("ref")
                      .long("ref")
@@ -47,9 +48,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
         .subcommand(make_subcommand("delete")
                 .about("Delete a release")
                 .arg(Arg::with_name("version")
-                     .long("version")
                      .value_name("VERSION")
                      .required(true)
+                     .index(1)
                      .help("The version to delete")))
 }
 
@@ -67,7 +68,7 @@ pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
         fail!(resp);
     } else {
         let info_rv : ReleaseInfo = try!(serde_json::from_reader(&mut resp));
-        println!("{}", info_rv.version);
+        println!("Created release {}.", info_rv.version);
     }
     Ok(())
 }
@@ -77,10 +78,12 @@ pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
     let version = matches.value_of("version").unwrap();
     let resp = try!(config.api_request(
         Method::Delete, &format!("/projects/{}/{}/releases/{}/", org, project, version)));
-    if !resp.status.is_success() {
+    if resp.status == StatusCode::NotFound {
+        println!("Did nothing. Release with this version ({}) does not exist.", version);
+    } else if !resp.status.is_success() {
         fail!(resp);
     } else {
-        println!("Deleted!");
+        println!("Deleted release {}!", version);
     }
     Ok(())
 }
