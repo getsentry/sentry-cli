@@ -122,11 +122,11 @@ fn find_missing_files(config: &Config, files: Vec<LocalFile>, api_path: &str)
 }
 
 fn zip_up(files: &[LocalFile]) -> CliResult<TempFile> {
-    println!("  >> Uploading a batch of missing files ...");
+    println!("  Uploading a batch of missing files ...");
     let tf = try!(TempFile::new());
     let mut zip = zip::ZipWriter::new(tf.open());
     for ref file in files {
-        println!("  >>   {}", file.arc_name);
+        println!("    {}", file.arc_name);
         try!(zip.start_file(file.arc_name.clone(),
             zip::CompressionMethod::Deflated));
         try!(io::copy(&mut try!(File::open(file.path.clone())), &mut zip));
@@ -189,14 +189,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         if missing.len() == 0 {
             continue;
         }
-        println!("Uploading archive ...");
+        println!("Detected missing files");
         let rv = try!(upload_dsyms(&missing, config, &api_path));
-        if rv.len() == 0 {
-            fail!("Server did not accept any debug symbols.");
-        } else {
-            println!("Accepted debug symbols:");
+        if rv.len() > 0 {
+            println!("  Accepted debug symbols:");
             for df in rv {
-                println!("  {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+                println!("    {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
             }
         }
     }
