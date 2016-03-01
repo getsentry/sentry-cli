@@ -1,10 +1,12 @@
 use std::io;
 use std::fs;
 use std::env;
-use std::io::Seek;
+use std::path::Path;
+use std::io::{Read, Seek};
 
 use uuid::Uuid;
 use chan;
+use sha1::Sha1;
 use chan_signal::{notify, Signal};
 use clap::{App, AppSettings, ArgMatches};
 
@@ -69,4 +71,18 @@ pub fn get_org_and_project(matches: &ArgMatches) -> CliResult<(String, String)> 
             .or_else(|| env::var("SENTRY_PROJECT").ok())
             .ok_or("A project slug is required (provide with --project)"))
     ))
+}
+
+pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
+    let mut sha = Sha1::new();
+    let mut f = try!(fs::File::open(path));
+    let mut buf = [0u8; 16384];
+    loop {
+        let read = try!(f.read(&mut buf));
+        if read == 0 {
+            break;
+        }
+        sha.update(&buf[..read]);
+    }
+    Ok(sha.hexdigest())
 }

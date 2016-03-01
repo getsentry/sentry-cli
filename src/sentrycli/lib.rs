@@ -16,6 +16,7 @@ extern crate uuid;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
+extern crate sha1;
 
 // what we export
 pub use error::{CliError, CliResult};
