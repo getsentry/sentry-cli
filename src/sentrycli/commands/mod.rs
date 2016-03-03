@@ -129,7 +129,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
 pub fn run() -> CliResult<()> {
     execute(env::args().collect(), &mut Config {
         api_key: env::var("SENTRY_TOKEN").ok(),
-        url: "https://api.getsentry.com/".to_owned(),
+        url: "https://app.getsentry.com/".to_owned(),
     })
 }
 

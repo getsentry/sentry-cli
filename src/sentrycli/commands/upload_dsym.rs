@@ -142,6 +142,9 @@ fn upload_dsyms(files: &[LocalFile], config: &Config,
     mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
         "application/zip".parse::<mime::Mime>().ok());
     let mut resp = try!(mp.send());
+    if !resp.status.is_success() {
+        fail!(resp);
+    }
     Ok(try!(serde_json::from_reader(&mut resp)))
 }
 
