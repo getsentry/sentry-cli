@@ -186,8 +186,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     println!("Uploading symbols from {}...", path);
 
     for batch_res in BatchIter::new(path) {
-        let batch = batch_res?;
-        let missing = find_missing_files(config, batch, &api_path)?;
+        let missing = find_missing_files(config, batch_res?, &api_path)?;
         if missing.len() == 0 {
             continue;
         }
