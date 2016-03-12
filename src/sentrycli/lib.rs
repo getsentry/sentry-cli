@@ -1,4 +1,4 @@
-#![feature(custom_derive, plugin, file_try_clone)]
+#![feature(custom_derive, plugin, file_try_clone, question_mark)]
 #![plugin(serde_macros)]
 
 #[macro_use]

@@ -100,7 +100,7 @@ fn find_missing_files(config: &Config, files: Vec<LocalFile>, api_path: &str)
         url.push_str("checksums=");
         url.push_str(&file.checksum);
     }
-    let mut resp = try!(config.api_request(Method::Get, &url));
+    let mut resp = config.api_request(Method::Get, &url)?;
 
     // This happens if the sentry installation we're connecting to does not
     // have that endpoint.  In that case just continue.  Any other HTTP
@@ -110,8 +110,7 @@ fn find_missing_files(config: &Config, files: Vec<LocalFile>, api_path: &str)
         return Ok(files);
     }
 
-    let state : MissingChecksumsResponse = try!(
-        serde_json::from_reader(&mut resp));
+    let state : MissingChecksumsResponse = serde_json::from_reader(&mut resp)?;
     let mut rv = vec![];
     for file in files.into_iter() {
         if state.missing.contains(&file.checksum) {
@@ -123,29 +122,29 @@ fn find_missing_files(config: &Config, files: Vec<LocalFile>, api_path: &str)
 
 fn zip_up(files: &[LocalFile]) -> CliResult<TempFile> {
     println!("  Uploading a batch of missing files ...");
-    let tf = try!(TempFile::new());
+    let tf = TempFile::new()?;
     let mut zip = zip::ZipWriter::new(tf.open());
     for ref file in files {
         println!("    {}", file.arc_name);
-        try!(zip.start_file(file.arc_name.clone(),
-            zip::CompressionMethod::Deflated));
-        try!(io::copy(&mut try!(File::open(file.path.clone())), &mut zip));
+        zip.start_file(file.arc_name.clone(),
+            zip::CompressionMethod::Deflated)?;
+        io::copy(&mut File::open(file.path.clone())?, &mut zip)?;
     }
     Ok(tf)
 }
 
 fn upload_dsyms(files: &[LocalFile], config: &Config,
                 api_path: &str) -> CliResult<Vec<DSymFile>> {
-    let tf = try!(zip_up(files));
-    let req = try!(config.prepare_api_request(Method::Post, api_path));
-    let mut mp = try!(Multipart::from_request_sized(req));
+    let tf = zip_up(files)?;
+    let req = config.prepare_api_request(Method::Post, api_path)?;
+    let mut mp = Multipart::from_request_sized(req)?;
     mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
         "application/zip".parse::<mime::Mime>().ok());
-    let mut resp = try!(mp.send());
+    let mut resp = mp.send()?;
     if !resp.status.is_success() {
         fail!(resp);
     }
-    Ok(try!(serde_json::from_reader(&mut resp)))
+    Ok(serde_json::from_reader(&mut resp)?)
 }
 
 
@@ -180,20 +179,20 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let api_path = if matches.is_present("global") {
         "/system/global-dsyms/".to_owned()
     } else {
-        let (org, project) = try!(get_org_and_project(matches));
+        let (org, project) = get_org_and_project(matches)?;
         format!("/projects/{}/{}/files/dsyms/", org, project)
     };
 
     println!("Uploading symbols from {}...", path);
 
     for batch_res in BatchIter::new(path) {
-        let batch = try!(batch_res);
-        let missing = try!(find_missing_files(config, batch, &api_path));
+        let batch = batch_res?;
+        let missing = find_missing_files(config, batch, &api_path)?;
         if missing.len() == 0 {
             continue;
         }
         println!("Detected missing files");
-        let rv = try!(upload_dsyms(&missing, config, &api_path));
+        let rv = upload_dsyms(&missing, config, &api_path)?;
         if rv.len() > 0 {
             println!("  Accepted debug symbols:");
             for df in rv {

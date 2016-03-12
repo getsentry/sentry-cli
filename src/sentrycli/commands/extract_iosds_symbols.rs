@@ -13,13 +13,13 @@ use macho::is_macho_file;
 
 
 fn invoke_dsymutil(path: &Path, output_path: &Path) -> CliResult<()> {
-    let status = try!(Command::new("dsymutil")
+    let status = Command::new("dsymutil")
         .arg("-o")
         .arg(output_path)
         .arg("--flat")
         .arg(&path)
         .stderr(Stdio::null())
-        .status());
+        .status()?;
     if !status.success() {
         fail!("dsymutil failed to extract symbols");
     }
@@ -28,16 +28,16 @@ fn invoke_dsymutil(path: &Path, output_path: &Path) -> CliResult<()> {
 
 fn extract_symbols(src: &Path, dst: &Path) -> CliResult<()> {
     for dent_rv in WalkDir::new(src) {
-        let dent = try!(dent_rv);
-        let md = try!(dent.metadata());
+        let dent = dent_rv?;
+        let md = dent.metadata()?;
         if !md.is_file() || !is_macho_file(dent.path()) {
             continue;
         }
 
         let local_name = dent.path().strip_prefix(&src).unwrap();
         let full_path = dst.join(local_name);
-        try!(fs::create_dir_all(&full_path.parent().unwrap()));
-        try!(invoke_dsymutil(dent.path(), &full_path));
+        fs::create_dir_all(&full_path.parent().unwrap())?;
+        invoke_dsymutil(dent.path(), &full_path)?;
 
         println!("  {}", local_name.display());
     }
@@ -79,7 +79,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> 
             path.push("Library/Developer/Xcode/iOS DeviceSupport");
             path
         });
-    let source_path = try!(try!(base_path.read_dir()).filter_map(|ent_rv| {
+    let source_path = base_path.read_dir()?.filter_map(|ent_rv| {
         if let Ok(ent) = ent_rv {
             let name = ent.file_name();
             if name.to_string_lossy().split_whitespace().nth(0) == Some(version) {
@@ -88,7 +88,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> 
         }
         None
     }).next().ok_or_else(|| format!("Could not find symbols for iOS version {} in {}",
-                                    version, base_path.display())));
+                                    version, base_path.display()))?;
     let output = matches.value_of("output")
         .map(|p| PathBuf::from(p))
         .unwrap_or_else(|| {
@@ -111,7 +111,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> 
     println!("  Source path: {}", source_path.display());
     println!("  Output path: {}", output.display());
 
-    try!(extract_symbols(&source_path, &output));
+    extract_symbols(&source_path, &output)?;
 
     println!("All done!");
 

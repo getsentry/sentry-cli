@@ -61,13 +61,13 @@ pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
         reference: matches.value_of("ref").map(|x| x.to_owned()),
         url: matches.value_of("url").map(|x| x.to_owned()),
     };
-    let mut resp = try!(config.json_api_request(
+    let mut resp = config.json_api_request(
         Method::Post, &format!("/projects/{}/{}/releases/", org, project),
-        &info));
+        &info)?;
     if !resp.status.is_success() {
         fail!(resp);
     } else {
-        let info_rv : ReleaseInfo = try!(serde_json::from_reader(&mut resp));
+        let info_rv : ReleaseInfo = serde_json::from_reader(&mut resp)?;
         println!("Created release {}.", info_rv.version);
     }
     Ok(())
@@ -76,8 +76,8 @@ pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
 pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
                           org: &str, project: &str) -> CliResult<()> {
     let version = matches.value_of("version").unwrap();
-    let resp = try!(config.api_request(
-        Method::Delete, &format!("/projects/{}/{}/releases/{}/", org, project, version)));
+    let resp = config.api_request(
+        Method::Delete, &format!("/projects/{}/{}/releases/{}/", org, project, version))?;
     if resp.status == StatusCode::NotFound {
         println!("Did nothing. Release with this version ({}) does not exist.", version);
     } else if !resp.status.is_success() {
@@ -90,11 +90,11 @@ pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
-        let (org, project) = try!(get_org_and_project(matches));
+        let (org, project) = get_org_and_project(matches)?;
         return execute_new(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
-        let (org, project) = try!(get_org_and_project(matches));
+        let (org, project) = get_org_and_project(matches)?;
         return execute_delete(sub_matches, config, &org, &project);
     }
 

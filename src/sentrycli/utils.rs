@@ -62,23 +62,23 @@ pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
 
 pub fn get_org_and_project(matches: &ArgMatches) -> CliResult<(String, String)> {
     Ok((
-        try!(matches
+        matches
             .value_of("org").map(|x| x.to_owned())
             .or_else(|| env::var("SENTRY_ORG").ok())
-            .ok_or("An organization slug is required (provide with --org)")),
-        try!(matches
+            .ok_or("An organization slug is required (provide with --org)")?,
+        matches
             .value_of("project").map(|x| x.to_owned())
             .or_else(|| env::var("SENTRY_PROJECT").ok())
-            .ok_or("A project slug is required (provide with --project)"))
+            .ok_or("A project slug is required (provide with --project)")?
     ))
 }
 
 pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
     let mut sha = Sha1::new();
-    let mut f = try!(fs::File::open(path));
+    let mut f = fs::File::open(path)?;
     let mut buf = [0u8; 16384];
     loop {
-        let read = try!(f.read(&mut buf));
+        let read = f.read(&mut buf)?;
         if read == 0 {
             break;
         }

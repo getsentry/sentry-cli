@@ -16,9 +16,9 @@ const MAGIC_CIGAM64 : &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 // Use the `is_macho_file` instead which does not fail which is actually
 // much better for how this function is used within this library.
 fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> CliResult<bool> {
-    let mut f = try!(File::open(&path));
+    let mut f = File::open(&path)?;
     let mut magic : [u8; 4] = [0; 4];
-    try!(f.read_exact(&mut magic));
+    f.read_exact(&mut magic)?;
     Ok(match &magic {
         FAT_MAGIC | MAGIC | MAGIC_CIGAM | MAGIC_64 | MAGIC_CIGAM64 => true,
         _ => false

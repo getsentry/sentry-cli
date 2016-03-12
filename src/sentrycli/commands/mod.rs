@@ -26,9 +26,9 @@ impl Config {
     pub fn prepare_api_request(&self, method: Method, path: &str)
         -> CliResult<Request<Fresh>>
     {
-        let url = try!(Url::parse(&format!(
-            "{}/api/0{}", self.url.trim_right_matches("/"), path)));
-        let mut req = try!(Request::new(method, url));
+        let url = Url::parse(&format!(
+            "{}/api/0{}", self.url.trim_right_matches("/"), path))?;
+        let mut req = Request::new(method, url)?;
         {
             if let Some(ref api_key) = self.api_key {
                 req.headers_mut().set(Authorization(Basic {
@@ -43,16 +43,16 @@ impl Config {
     pub fn api_request(&self, method: Method, path: &str)
         -> CliResult<Response>
     {
-        let req = try!(self.prepare_api_request(method, path));
-        Ok(try!(try!(req.start()).send()))
+        let req = self.prepare_api_request(method, path)?;
+        Ok(req.start()?.send()?)
     }
 
     pub fn json_api_request<T: Serialize>(&self, method: Method, path: &str, body: &T)
         -> CliResult<Response>
     {
-        let mut req = try!(self.prepare_api_request(method, path));
+        let mut req = self.prepare_api_request(method, path)?;
         let mut body_bytes : Vec<u8> = vec![];
-        try!(serde_json::to_writer(&mut body_bytes, &body));
+        serde_json::to_writer(&mut body_bytes, &body)?;
 
         {
             let mut headers = req.headers_mut();
@@ -60,9 +60,9 @@ impl Config {
             headers.set(ContentLength(body_bytes.len() as u64));
         }
 
-        let mut req = try!(req.start());
-        try!(io::copy(&mut &body_bytes[..], &mut req));
-        Ok(try!(req.send()))
+        let mut req = req.start()?;
+        io::copy(&mut &body_bytes[..], &mut req)?;
+        Ok(req.send()?)
     }
 }
 
@@ -104,7 +104,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     }
     each_subcommand!(add_subcommand);
 
-    let matches = try!(app.get_matches_from_safe(args));
+    let matches = app.get_matches_from_safe(args)?;
 
     if let Some(url) = matches.value_of("url") {
         config.url = url.to_owned();
