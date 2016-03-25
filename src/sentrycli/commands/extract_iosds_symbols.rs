@@ -21,7 +21,7 @@ fn invoke_dsymutil(path: &Path, output_path: &Path) -> CliResult<()> {
         .stderr(Stdio::null())
         .status()?;
     if !status.success() {
-        fail!("dsymutil failed to extract symbols");
+        println!("    warning: dsymutil failed to extract symbols");
     }
     Ok(())
 }
