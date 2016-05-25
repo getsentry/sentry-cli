@@ -5,7 +5,7 @@ use std::io;
 use clap::{Arg, App, AppSettings};
 use hyper::client::request::Request;
 use hyper::client::response::Response;
-use hyper::header::{Authorization, Basic, ContentType, ContentLength};
+use hyper::header::{Authorization, Basic, Bearer, ContentType, ContentLength};
 use hyper::method::Method;
 use hyper::net::Fresh;
 use url::Url;
@@ -16,8 +16,15 @@ use CliResult;
 use utils::make_subcommand;
 
 #[derive(Debug)]
+pub enum Auth {
+    Key(String),
+    Token(String),
+    Unauthorized
+}
+
+#[derive(Debug)]
 pub struct Config {
-    api_key: Option<String>,
+    auth: Auth,
     url: String,
 }
 
@@ -30,11 +37,19 @@ impl Config {
             "{}/api/0{}", self.url.trim_right_matches("/"), path))?;
         let mut req = Request::new(method, url)?;
         {
-            if let Some(ref api_key) = self.api_key {
-                req.headers_mut().set(Authorization(Basic {
-                    username: api_key.clone(),
-                    password: None
-                }));
+            match self.auth {
+                Auth::Key(ref api_key) => {
+                    req.headers_mut().set(Authorization(Basic {
+                        username: api_key.clone(),
+                        password: None
+                    }));
+                },
+                Auth::Token(ref token) => {
+                    req.headers_mut().set(Authorization(Bearer {
+                        token: token.clone()
+                    }));
+                },
+                Auth::Unauthorized => {},
             }
         }
         Ok(req)
@@ -91,6 +106,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
              .value_name("URL")
              .long("url")
              .help("The sentry API URL"))
+        .arg(Arg::with_name("auth_token")
+             .value_name("AUTH_TOKEN")
+             .long("auth-token")
+             .help("The sentry auth token to use"))
         .arg(Arg::with_name("api_key")
              .value_name("API_KEY")
              .long("api-key")
@@ -110,7 +129,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
         config.url = url.to_owned();
     }
     if let Some(api_key) = matches.value_of("api_key") {
-        config.api_key = Some(api_key.to_owned());
+        config.auth = Auth::Key(api_key.to_owned());
+    }
+    if let Some(auth_token) = matches.value_of("auth_token") {
+        config.auth = Auth::Token(auth_token.to_owned());
     }
 
     macro_rules! execute_subcommand {
@@ -128,7 +150,12 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
 
 pub fn run() -> CliResult<()> {
     execute(env::args().collect(), &mut Config {
-        api_key: env::var("SENTRY_TOKEN").ok(),
+        auth: match env::var("SENTRY_TOKEN").ok() {
+            Some(ref val) => {
+                Auth::Token(val.to_owned())
+            },
+            None => Auth::Unauthorized
+        },
         url: "https://app.getsentry.com/".to_owned(),
     })
 }
