@@ -1,7 +1,10 @@
 use std::io;
+use std::fs;
+use std::env;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::mem;
+use std::ffi::OsStr;
 use std::collections::HashSet;
 
 use clap::{App, Arg, ArgMatches};
@@ -147,6 +150,20 @@ fn upload_dsyms(files: &[LocalFile], config: &Config,
     Ok(serde_json::from_reader(&mut resp)?)
 }
 
+fn get_paths_from_env() -> CliResult<Vec<PathBuf>> {
+    let mut rv = vec![];
+    if let Some(base_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
+        for entry in fs::read_dir(base_path)? {
+            let entry = entry?;
+            if entry.path().extension() == Some(OsStr::new("dSYM")) &&
+                fs::metadata(entry.path())?.is_dir() {
+                rv.push(entry.path().to_path_buf());
+            }
+        }
+    }
+    Ok(rv)
+}
+
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
@@ -167,15 +184,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .short("g")
              .help("Uploads the dsyms globally. This can only be done \
                     with super admin access for the Sentry installation"))
-        .arg(Arg::with_name("path")
+        .arg(Arg::with_name("paths")
              .value_name("PATH")
              .help("The path to the debug symbols")
-             .required(true)
+             .multiple(true)
              .index(1))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
-    let path = matches.value_of("path").unwrap();
+    let paths = match matches.values_of("paths") {
+        Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
+        None => get_paths_from_env()?,
+    };
     let api_path = if matches.is_present("global") {
         "/system/global-dsyms/".to_owned()
     } else {
@@ -183,19 +203,25 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         format!("/projects/{}/{}/files/dsyms/", org, project)
     };
 
-    println!("Uploading symbols from {}...", path);
+    println!("Uploading symbols");
+    if paths.len() == 0 {
+        println!("Warning: no paths were provided.");
+    }
 
-    for batch_res in BatchIter::new(path) {
-        let missing = find_missing_files(config, batch_res?, &api_path)?;
-        if missing.len() == 0 {
-            continue;
-        }
-        println!("Detected missing files");
-        let rv = upload_dsyms(&missing, config, &api_path)?;
-        if rv.len() > 0 {
-            println!("  Accepted debug symbols:");
-            for df in rv {
-                println!("    {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+    for path in paths {
+        println!("Finding symbols in {}...", path.display());
+        for batch_res in BatchIter::new(path) {
+            let missing = find_missing_files(config, batch_res?, &api_path)?;
+            if missing.len() == 0 {
+                continue;
+            }
+            println!("Detected missing files");
+            let rv = upload_dsyms(&missing, config, &api_path)?;
+            if rv.len() > 0 {
+                println!("  Accepted debug symbols:");
+                for df in rv {
+                    println!("    {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+                }
             }
         }
     }
