@@ -94,6 +94,24 @@ macro_rules! import_subcommand {
 }
 each_subcommand!(import_subcommand);
 
+fn get_default_auth() -> Auth {
+    if let Some(ref val) = env::var("SENTRY_AUTH_TOKEN").ok() {
+        Auth::Token(val.to_owned())
+    } else if let Some(ref val) = env::var("SENTRY_API_KEY").ok() {
+        Auth::Key(val.to_owned())
+    } else {
+        Auth::Unauthorized
+    }
+}
+
+fn get_default_url() -> String {
+    if let Some(ref val) = env::var("SENTRY_URL").ok() {
+        val.to_owned()
+    } else {
+        "https://app.getsentry.com/".to_owned()
+    }
+}
+
 pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     let mut app = App::new("sentry-cli")
         .author("Sentry")
@@ -150,13 +168,8 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
 
 pub fn run() -> CliResult<()> {
     execute(env::args().collect(), &mut Config {
-        auth: match env::var("SENTRY_TOKEN").ok() {
-            Some(ref val) => {
-                Auth::Token(val.to_owned())
-            },
-            None => Auth::Unauthorized
-        },
-        url: "https://app.getsentry.com/".to_owned(),
+        auth: get_default_auth(),
+        url: get_default_url(),
     })
 }
 
