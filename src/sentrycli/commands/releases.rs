@@ -98,5 +98,5 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         return execute_delete(sub_matches, config, &org, &project);
     }
 
-    Ok(())
+    fail!("Missing subcommand. Use --help to show commands.");
 }
