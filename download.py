@@ -7,6 +7,9 @@ import urllib
 import tempfile
 import subprocess
 
+if not sys.stdin.isatty():
+    sys.stdin = open('/dev/tty', 'r')
+
 
 INSTALL_PATH = '/usr/local/bin/sentry-cli'
 META_URL = 'https://api.github.com/repos/getsentry/sentry-cli/releases/latest'
