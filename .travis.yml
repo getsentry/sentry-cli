@@ -2,12 +2,15 @@ language: generic
 
 addons:
   apt:
-    packages: gcc-multilib
+    packages:
+      - gcc-multilib
+      - libssl-dev
 
 matrix:
   include:
     - env: TARGET=i686-unknown-linux-gnu
     - env: TARGET=x86_64-unknown-linux-gnu
+    #- env: TARGET=x86_64-apple-darwin
 
 install:
   - export PATH="$PATH:$HOME/.cargo/bin"
