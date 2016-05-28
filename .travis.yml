@@ -9,6 +9,10 @@ addons:
 matrix:
   include:
     - env: TARGET=i686-unknown-linux-gnu
+      addons:
+        apt:
+          packages:
+            - libssl-dev:i386
     - env: TARGET=x86_64-unknown-linux-gnu
     #- env: TARGET=x86_64-apple-darwin
 
