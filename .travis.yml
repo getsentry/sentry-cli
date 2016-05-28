@@ -13,7 +13,7 @@ matrix:
         apt:
           packages:
             - libssl-dev:i386
-            - gcc-4.8-multilib
+            - gcc-4.6-multilib
             - ia32-libs
 
     - env: TARGET=x86_64-unknown-linux-gnu
