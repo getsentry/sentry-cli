@@ -116,7 +116,6 @@ fn get_default_url() -> String {
 
 pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     let mut app = App::new("sentry-cli")
-        .author("Sentry")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Command line utility for Sentry")
         .setting(AppSettings::SubcommandRequiredElseHelp)
