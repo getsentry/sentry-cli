@@ -13,6 +13,7 @@ matrix:
         apt:
           packages:
             - libssl-dev:i386
+            - libgcc:i386
     - env: TARGET=x86_64-unknown-linux-gnu
     #- env: TARGET=x86_64-apple-darwin
 
