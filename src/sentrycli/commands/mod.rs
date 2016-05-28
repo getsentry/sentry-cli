@@ -118,7 +118,6 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     let mut app = App::new("sentry-cli")
         .version(env!("CARGO_PKG_VERSION"))
         .about("Command line utility for Sentry")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::UnifiedHelpMessage)
         .arg(Arg::with_name("url")

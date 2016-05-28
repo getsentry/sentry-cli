@@ -1,13 +1,18 @@
+use std::path::{Path, PathBuf};
+use std::ffi::OsStr;
+
 use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
 use hyper::status::StatusCode;
+use multipart::client::Multipart;
 use serde_json;
+use walkdir::WalkDir;
 
 use CliResult;
 use commands::Config;
 use utils::{make_subcommand, get_org_and_project};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 struct NewRelease {
     version: String,
     #[serde(rename="ref", skip_serializing_if="Option::is_none")]
@@ -16,7 +21,7 @@ struct NewRelease {
     url: Option<String>
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct ReleaseInfo {
     version: String,
     #[serde(rename="ref")]
@@ -28,6 +33,13 @@ struct ReleaseInfo {
     date_released: Option<String>,
     #[serde(rename="newGroups")]
     new_groups: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct Artifact {
+    sha1: String,
+    name: String,
+    size: u64,
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -68,6 +80,31 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .help("The version to delete")))
         .subcommand(make_subcommand("list")
                 .about("list the most recent releases"))
+        .subcommand(make_subcommand("upload-sourcemaps")
+                .about("Uploads sourcemap information for a given release")
+                .arg(Arg::with_name("release")
+                     .short("r")
+                     .long("release")
+                     .value_name("VERSION")
+                     .required(true)
+                     .help("The version identifier of the release to use"))
+                .arg(Arg::with_name("paths")
+                     .value_name("PATHS")
+                     .index(1)
+                     .required(true)
+                     .multiple(true)
+                     .help("The files to upload"))
+                .arg(Arg::with_name("url_prefix")
+                     .short("u")
+                     .long("url-prefix")
+                     .required(true)
+                     .value_name("PREFIX")
+                     .help("The URL prefix to prepend to all filenames"))
+                .arg(Arg::with_name("extensions")
+                     .long("ext")
+                     .short("x")
+                     .multiple(true)
+                     .help("Add a file extension to the list of files to upload.")))
 }
 
 pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
@@ -104,7 +141,7 @@ pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-pub fn execute_list<'a>(matches: &ArgMatches<'a>, config: &Config,
+pub fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
                         org: &str, project: &str) -> CliResult<()> {
     let mut resp = config.api_request(
         Method::Get, &format!("/projects/{}/{}/releases/", org, project))?;
@@ -123,6 +160,64 @@ pub fn execute_list<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
+fn upload_sourcemap(local_path: &Path, url: &str, config: &Config, version: &str,
+                    org: &str, project: &str) -> CliResult<Option<Artifact>> {
+    let req = config.prepare_api_request(Method::Post,
+        &format!("/projects/{}/{}/releases/{}/files/", org, project, version))?;
+    let mut mp = Multipart::from_request_sized(req)?;
+    mp.write_file("file", &local_path)?;
+    mp.write_text("header", "Content-Type:text/plain; encoding=utf-8")?;
+    mp.write_text("name", url)?;
+    let mut resp = mp.send()?;
+    if resp.status == StatusCode::Conflict {
+        Ok(None)
+    } else if !resp.status.is_success() {
+        fail!(resp);
+    } else {
+        Ok(Some(serde_json::from_reader(&mut resp)?))
+    }
+}
+
+pub fn execute_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
+                                     org: &str, project: &str) -> CliResult<()> {
+    let mut resp = config.api_request(
+        Method::Get, &format!("/projects/{}/{}/releases/{}/", org, project,
+                              matches.value_of("release").unwrap()))?;
+    if !resp.status.is_success() {
+        fail!(resp);
+    }
+    let release : ReleaseInfo = serde_json::from_reader(&mut resp)?;
+    let url_prefix = matches.value_of("url_prefix").unwrap().trim_right_matches("/");
+    let paths = matches.values_of("paths").unwrap();
+    let extensions = match matches.values_of("extensions") {
+        Some(matches) => matches.map(|ext| OsStr::new(ext.trim_left_matches("."))).collect(),
+        None => vec![OsStr::new("js"), OsStr::new("map")],
+    };
+
+    println!("Uploading sourcemaps for release {}", release.version);
+
+    for path in paths {
+        let path = PathBuf::from(&path);
+        for dent in WalkDir::new(&path) {
+            let dent = dent?;
+            let extension = dent.path().extension();
+            if !extensions.iter().any(|ext| Some(*ext) == extension) {
+                continue;
+            }
+            let local_path = dent.path().strip_prefix(&path).unwrap();
+            let url = format!("{}/{}", url_prefix, local_path.display());
+            println!("{} -> {}", local_path.display(), url);
+            if let Some(artifact) = upload_sourcemap(dent.path(), &url, config,
+                                                     &release.version, org, project)? {
+                println!("  {} {} bytes", artifact.sha1, artifact.size);
+            } else {
+                println!("  already present");
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         let (org, project) = get_org_and_project(matches)?;
@@ -135,6 +230,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         let (org, project) = get_org_and_project(matches)?;
         return execute_list(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
+        let (org, project) = get_org_and_project(matches)?;
+        return execute_upload_sourcemaps(sub_matches, config, &org, &project);
     }
     fail!("A command is required.  Use --help to see which are available.");
 }

@@ -57,7 +57,9 @@ pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
 }
 
 pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
-    App::new(name).setting(AppSettings::UnifiedHelpMessage)
+    App::new(name)
+        .setting(AppSettings::UnifiedHelpMessage)
+        .setting(AppSettings::DisableVersion)
 }
 
 pub fn get_org_and_project(matches: &ArgMatches) -> CliResult<(String, String)> {

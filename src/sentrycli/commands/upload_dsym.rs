@@ -141,8 +141,8 @@ fn upload_dsyms(files: &[LocalFile], config: &Config,
     let tf = zip_up(files)?;
     let req = config.prepare_api_request(Method::Post, api_path)?;
     let mut mp = Multipart::from_request_sized(req)?;
-    try!(mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
-        "application/zip".parse::<mime::Mime>().ok()));
+    mp.write_stream("file", &mut tf.open(), Some("archive.zip"),
+        "application/zip".parse::<mime::Mime>().ok())?;
     let mut resp = mp.send()?;
     if !resp.status.is_success() {
         fail!(resp);
