@@ -2,7 +2,7 @@ use std::io;
 use std::fs;
 use std::env;
 use std::path::Path;
-use std::io::{Read, Seek};
+use std::io::{Read, Write, Seek};
 
 use uuid::Uuid;
 use chan;
@@ -89,4 +89,22 @@ pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
 
 pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
     fs::OpenOptions::new().write(true).open(&path).map(|_| true).unwrap_or(false)
+}
+
+pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
+    loop {
+        print!("{} [y/n] ", message);
+        io::stdout().flush()?;
+
+        let mut buf = String::new();
+        io::stdin().read_line(&mut buf)?;
+        let input = buf.trim();
+
+        if input == "y" {
+            return Ok(true);
+        } else if input == "n" {
+            return Ok(false);
+        }
+        println!("invalid input!");
+    }
 }

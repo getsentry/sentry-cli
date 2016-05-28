@@ -87,6 +87,7 @@ macro_rules! each_subcommand {
         $mac!(extract_iosds_symbols);
         $mac!(releases);
         $mac!(update);
+        $mac!(uninstall);
     }
 }
 
