@@ -1,6 +1,6 @@
 use std::fs;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
@@ -71,15 +71,6 @@ fn get_latest_release() -> CliResult<ReleaseInfo> {
     fail!("Could not find download URL for updates.");
 }
 
-fn locate_executable_for_update() -> CliResult<PathBuf> {
-    let exe = env::current_exe()?;
-    let meta = fs::metadata(&exe)?;
-    if meta.permissions().readonly() {
-        fail!("The executable at '{}' cannot be changed.", exe.display());
-    }
-    Ok(exe)
-}
-
 fn download_url<P: AsRef<Path>>(url: &Url, dst: P) -> CliResult<()> {
     let mut client = Client::new();
     client.set_redirect_policy(RedirectPolicy::FollowAll);
@@ -125,10 +116,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 }
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
-    let exe = locate_executable_for_update()?;
-    let download_base = exe.parent().ok_or("Could not determine parent directory")?;
+    let exe = env::current_exe()?;
+    let need_sudo = fs::metadata(&exe)?.permissions().readonly();
     let latest_release = get_latest_release()?;
-    let tmp_path = download_base.join(".sentry-cli.part");
+    let tmp_path = if need_sudo {
+        env::temp_dir().join(".sentry-cli.part")
+    } else {
+        exe.parent().unwrap().join(".sentry-cli.part")
+    };
     let current_version = env!("CARGO_PKG_VERSION");
     println!("Latest release is {}", latest_release.version);
 
@@ -138,7 +133,6 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
     }
 
     println!("Executable location: {}", exe.display());
-    println!("Download location: {}", tmp_path.display());
     println!("Download URL: {}", latest_release.download_url);
 
     match download_url(&latest_release.download_url, &tmp_path) {
@@ -152,7 +146,18 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
     let mut perm = fs::metadata(&tmp_path)?.permissions();
     perm.set_mode(0o755);
     fs::set_permissions(&tmp_path, perm)?;
-    fs::rename(&tmp_path, &exe)?;
+
+    if need_sudo {
+        println!("Need to sudo to overwrite {}", exe.display());
+        Command::new("sudo")
+            .arg("-k")
+            .arg("mv")
+            .arg(&tmp_path)
+            .arg(&exe)
+            .status()?;
+    } else {
+        fs::rename(&tmp_path, &exe)?;
+    }
     println!("Updated!");
 
     Ok(())
