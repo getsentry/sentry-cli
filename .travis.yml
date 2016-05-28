@@ -1,18 +1,17 @@
 language: generic
 
+addons:
+  apt:
+    packages: gcc-multilib
+
 matrix:
   include:
     - env: TARGET=i686-unknown-linux-gnu
-      addons:
-        apt:
-          packages: *i686
-
+    - env: TARGET=x86_64-unknown-linux-gnu
 
 install:
   - export PATH="$PATH:$HOME/.cargo/bin"
-  - export STAGING_DIR="$HOME/openwrt"
   - bash .ci/install.sh
-  - export PATH="$PATH:$(find $STAGING_DIR -maxdepth 1 -name 'toolchain*' -print -quit)/bin"
 
 script:
   - bash .ci/script.sh
