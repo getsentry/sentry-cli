@@ -1,4 +1,4 @@
-use clap::{App, Arg, ArgMatches};
+use clap::{App, Arg, ArgMatches, AppSettings};
 use hyper::method::Method;
 use hyper::status::StatusCode;
 use serde_json;
@@ -30,6 +30,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .long("project")
              .short("p")
              .help("The project slug"))
+        .setting(AppSettings::ArgRequiredElseHelp)
         .subcommand(make_subcommand("new")
                 .about("Create a new release")
                 .arg(Arg::with_name("version")
@@ -97,6 +98,5 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         let (org, project) = get_org_and_project(matches)?;
         return execute_delete(sub_matches, config, &org, &project);
     }
-
-    fail!("Missing subcommand. Use --help to show commands.");
+    Ok(())
 }

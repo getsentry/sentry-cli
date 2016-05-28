@@ -13,7 +13,7 @@ name = "sentry-cli"
 [dependencies]
 chan = "0.1.14"
 chan-signal = "0.1.5"
-clap = { version = "2.1.2", default-features = false, features = ["suggestions"] }
+clap = { version = "2.5.1", default-features = false, features = ["suggestions"] }
 hyper = "0.8.0"
 mime = "^0.2"
 multipart = "0.6.0-alpha"
