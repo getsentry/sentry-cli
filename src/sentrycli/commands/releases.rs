@@ -1,4 +1,4 @@
-use clap::{App, Arg, ArgMatches, AppSettings};
+use clap::{App, Arg, ArgMatches};
 use hyper::method::Method;
 use hyper::status::StatusCode;
 use serde_json;
@@ -8,12 +8,26 @@ use commands::Config;
 use utils::{make_subcommand, get_org_and_project};
 
 #[derive(Debug, Serialize, Deserialize)]
-struct ReleaseInfo {
+struct NewRelease {
     version: String,
     #[serde(rename="ref", skip_serializing_if="Option::is_none")]
     reference: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
+    url: Option<String>
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ReleaseInfo {
+    version: String,
+    #[serde(rename="ref")]
+    reference: Option<String>,
     url: Option<String>,
+    #[serde(rename="dateCreated")]
+    date_created: String,
+    #[serde(rename="dateReleased")]
+    date_released: Option<String>,
+    #[serde(rename="newGroups")]
+    new_groups: u64,
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -30,7 +44,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .long("project")
              .short("p")
              .help("The project slug"))
-        .setting(AppSettings::ArgRequiredElseHelp)
         .subcommand(make_subcommand("new")
                 .about("Create a new release")
                 .arg(Arg::with_name("version")
@@ -53,18 +66,20 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .required(true)
                      .index(1)
                      .help("The version to delete")))
+        .subcommand(make_subcommand("list")
+                .about("list the most recent releases"))
 }
 
 pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
                        org: &str, project: &str) -> CliResult<()> {
-    let info = ReleaseInfo {
+    let release = NewRelease {
         version: matches.value_of("version").unwrap().to_owned(),
         reference: matches.value_of("ref").map(|x| x.to_owned()),
         url: matches.value_of("url").map(|x| x.to_owned()),
     };
     let mut resp = config.json_api_request(
         Method::Post, &format!("/projects/{}/{}/releases/", org, project),
-        &info)?;
+        &release)?;
     if !resp.status.is_success() {
         fail!(resp);
     } else {
@@ -89,6 +104,25 @@ pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
+pub fn execute_list<'a>(matches: &ArgMatches<'a>, config: &Config,
+                        org: &str, project: &str) -> CliResult<()> {
+    let mut resp = config.api_request(
+        Method::Get, &format!("/projects/{}/{}/releases/", org, project))?;
+    if !resp.status.is_success() {
+        fail!(resp);
+    } else {
+        let infos : Vec<ReleaseInfo> = serde_json::from_reader(&mut resp)?;
+        for info in infos {
+            println!("[{}] {}: {} ({} new groups)",
+                     info.date_released.unwrap_or("              unreleased".into()),
+                     info.version,
+                     info.reference.unwrap_or("-".into()),
+                     info.new_groups);
+        }
+    }
+    Ok(())
+}
+
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         let (org, project) = get_org_and_project(matches)?;
@@ -98,5 +132,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         let (org, project) = get_org_and_project(matches)?;
         return execute_delete(sub_matches, config, &org, &project);
     }
-    Ok(())
+    if let Some(sub_matches) = matches.subcommand_matches("list") {
+        let (org, project) = get_org_and_project(matches)?;
+        return execute_list(sub_matches, config, &org, &project);
+    }
+    fail!("A command is required.  Use --help to see which are available.");
 }
