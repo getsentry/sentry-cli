@@ -86,3 +86,7 @@ pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
     }
     Ok(sha.hexdigest())
 }
+
+pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
+    fs::OpenOptions::new().write(true).open(&path).map(|_| true).unwrap_or(false)
+}

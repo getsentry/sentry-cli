@@ -13,6 +13,7 @@ use hyper::method::Method;
 use url::Url;
 use serde_json;
 
+use utils;
 use CliResult;
 use commands::Config;
 
@@ -117,7 +118,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
     let exe = env::current_exe()?;
-    let need_sudo = fs::metadata(&exe)?.permissions().readonly();
+    let need_sudo = !utils::is_writable(&exe);
     let latest_release = get_latest_release()?;
     let tmp_path = if need_sudo {
         env::temp_dir().join(".sentry-cli.part")
@@ -132,8 +133,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
         return Ok(());
     }
 
-    println!("Executable location: {}", exe.display());
-    println!("Download URL: {}", latest_release.download_url);
+    println!("Updating executable at {}", exe.display());
 
     match download_url(&latest_release.download_url, &tmp_path) {
         Err(err) => {
