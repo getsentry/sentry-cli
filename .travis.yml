@@ -17,6 +17,7 @@ matrix:
             - libgcc:i386
             - glibc:i386
             - glibc-devel:i386
+            - ia32-libs
 
     - env: TARGET=x86_64-unknown-linux-gnu
     #- env: TARGET=x86_64-apple-darwin
