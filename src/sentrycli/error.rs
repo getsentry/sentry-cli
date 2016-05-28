@@ -4,6 +4,7 @@ use std::fmt;
 use std::io;
 
 use std::io::{Read, Write};
+use std::string::FromUtf8Error;
 
 use clap;
 use hyper;
@@ -43,6 +44,7 @@ basic_error!(walkdir::Error, "could not walk path");
 basic_error!(url::ParseError, "could not parse URL");
 basic_error!(hyper::error::Error, "could not perform HTTP request");
 basic_error!(serde_json::Error, "failed to parse JSON");
+basic_error!(FromUtf8Error, "invalid UTF-8");
 
 impl From<hyper::client::response::Response> for CliError {
     fn from(mut resp: hyper::client::response::Response) -> CliError {

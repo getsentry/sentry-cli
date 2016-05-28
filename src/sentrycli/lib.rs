@@ -30,6 +30,7 @@ mod error;
 mod utils;
 mod macho;
 
+
 pub fn main() {
     if let Some(signal) = utils::run_or_interrupt(commands::main) {
         if signal == Signal::INT {

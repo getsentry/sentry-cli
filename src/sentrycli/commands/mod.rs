@@ -86,6 +86,7 @@ macro_rules! each_subcommand {
         $mac!(upload_dsym);
         $mac!(extract_iosds_symbols);
         $mac!(releases);
+        $mac!(update);
     }
 }
 
