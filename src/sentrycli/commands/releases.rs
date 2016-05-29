@@ -236,4 +236,5 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         let (org, project) = get_org_and_project(matches)?;
         return execute_upload_sourcemaps(sub_matches, config, &org, &project);
     }
+    unreachable!();
 }

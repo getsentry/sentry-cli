@@ -163,6 +163,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
         }}
     }
     each_subcommand!(execute_subcommand);
+    unreachable!();
 }
 
 pub fn run() -> CliResult<()> {
