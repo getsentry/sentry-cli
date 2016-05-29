@@ -9,7 +9,6 @@ matrix:
         apt:
           packages:
             - gcc-multilib
-            - libssl-dev
             - libssl-dev:i386
             - libc6:i386
             - libdrm-intel1:i386
