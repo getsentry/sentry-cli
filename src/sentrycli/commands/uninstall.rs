@@ -26,7 +26,8 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
         println!("Need to sudo to uninstall {}", exe.display());
         Command::new("sudo")
             .arg("-k")
-            .arg("rm -f")
+            .arg("rm")
+            .arg("-f")
             .arg(&exe)
             .status()?;
     } else {
