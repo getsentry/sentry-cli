@@ -1,5 +1,3 @@
 #!/bin/bash
-virtualenv .venv
-.venv/bin/activate
-pip install requests
+pip install --user requests
 python ./.ci/upload-release.py

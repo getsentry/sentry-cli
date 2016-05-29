@@ -45,5 +45,6 @@ script:
 deploy:
   provider: script
   script: .ci/deploy.sh
+  skip_cleanup: true
   on:
     tags: true
