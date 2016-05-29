@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches};
 use hyper::method::Method;
 use hyper::status::StatusCode;
 use multipart::client::Multipart;
@@ -46,6 +46,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
     app
         .about("manage releases on Sentry")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(Arg::with_name("org")
              .value_name("ORG")
              .long("org")
@@ -235,5 +236,4 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         let (org, project) = get_org_and_project(matches)?;
         return execute_upload_sourcemaps(sub_matches, config, &org, &project);
     }
-    fail!("A command is required.  Use --help to see which are available.");
 }

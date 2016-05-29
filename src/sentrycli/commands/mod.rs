@@ -120,6 +120,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
         .about("Command line utility for Sentry")
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::UnifiedHelpMessage)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(Arg::with_name("url")
              .value_name("URL")
              .long("url")
@@ -162,8 +163,6 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
         }}
     }
     each_subcommand!(execute_subcommand);
-
-    panic!("Should never reach this point");
 }
 
 pub fn run() -> CliResult<()> {
