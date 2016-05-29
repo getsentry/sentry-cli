@@ -1,6 +1,8 @@
+use std::fs;
 use std::env;
-use std::process;
 use std::io;
+use std::process;
+use std::path::PathBuf;
 
 use clap::{Arg, App, AppSettings};
 use hyper::client::request::Request;
@@ -11,6 +13,7 @@ use hyper::net::Fresh;
 use url::Url;
 use serde::Serialize;
 use serde_json;
+use ini::Ini;
 
 use CliResult;
 use utils::make_subcommand;
@@ -22,10 +25,10 @@ pub enum Auth {
     Unauthorized
 }
 
-#[derive(Debug)]
 pub struct Config {
-    auth: Auth,
-    url: String,
+    pub auth: Auth,
+    pub url: String,
+    pub ini: Ini,
 }
 
 impl Config {
@@ -96,18 +99,65 @@ macro_rules! import_subcommand {
 }
 each_subcommand!(import_subcommand);
 
-fn get_default_auth() -> Auth {
+fn find_project_config_file() -> Option<PathBuf> {
+    env::current_dir().ok().and_then(|mut path| {
+        loop {
+            path.push(".sentryclirc");
+            if path.exists() {
+                return Some(path);
+            }
+            path.pop();
+            if !path.pop() {
+                return None;
+            }
+        }
+    })
+}
+
+fn load_cli_config() -> CliResult<Ini> {
+    let mut home = env::home_dir().ok_or("Could not find home dir")?;
+    home.push(".sentryclirc");
+    let mut rv = match fs::File::open(&home) {
+        Ok(mut file) => Ini::read_from(&mut file)?,
+        Err(err) => {
+            if err.kind() == io::ErrorKind::NotFound {
+                Ini::new()
+            } else {
+                fail!(err);
+            }
+        }
+    };
+
+    if let Some(project_config_path) = find_project_config_file() {
+        let ini = Ini::read_from(&mut fs::File::open(&project_config_path)?)?;
+        for (section, props) in ini.iter() {
+            for (key, value) in props {
+                rv.set_to(section.clone(), key.clone(), value.to_owned());
+            }
+        }
+    }
+
+    Ok(rv)
+}
+
+fn get_default_auth(ini: &Ini) -> Auth {
     if let Some(ref val) = env::var("SENTRY_AUTH_TOKEN").ok() {
         Auth::Token(val.to_owned())
     } else if let Some(ref val) = env::var("SENTRY_API_KEY").ok() {
+        Auth::Key(val.to_owned())
+    } else if let Some(val) = ini.get_from(Some("auth"), "token") {
+        Auth::Token(val.to_owned())
+    } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
         Auth::Key(val.to_owned())
     } else {
         Auth::Unauthorized
     }
 }
 
-fn get_default_url() -> String {
+fn get_default_url(ini: &Ini) -> String {
     if let Some(ref val) = env::var("SENTRY_URL").ok() {
+        val.to_owned()
+    } else if let Some(val) = ini.get_from(Some("defaults"), "url") {
         val.to_owned()
     } else {
         "https://app.getsentry.com/".to_owned()
@@ -167,9 +217,11 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
 }
 
 pub fn run() -> CliResult<()> {
+    let ini = load_cli_config()?;
     execute(env::args().collect(), &mut Config {
-        auth: get_default_auth(),
-        url: get_default_url(),
+        auth: get_default_auth(&ini),
+        url: get_default_url(&ini),
+        ini: ini,
     })
 }
 

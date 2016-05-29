@@ -199,7 +199,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let api_path = if matches.is_present("global") {
         "/system/global-dsyms/".to_owned()
     } else {
-        let (org, project) = get_org_and_project(matches)?;
+        let (org, project) = get_org_and_project(config, matches)?;
         format!("/projects/{}/{}/files/dsyms/", org, project)
     };
 

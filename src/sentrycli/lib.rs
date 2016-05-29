@@ -6,6 +6,7 @@ extern crate chan;
 extern crate chan_signal;
 extern crate clap;
 extern crate hyper;
+extern crate ini;
 #[macro_use]
 extern crate mime;
 extern crate mime_guess;

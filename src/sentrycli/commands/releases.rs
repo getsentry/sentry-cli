@@ -341,19 +341,19 @@ pub fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
-        let (org, project) = get_org_and_project(matches)?;
+        let (org, project) = get_org_and_project(config, matches)?;
         return execute_new(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
-        let (org, project) = get_org_and_project(matches)?;
+        let (org, project) = get_org_and_project(config, matches)?;
         return execute_delete(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("list") {
-        let (org, project) = get_org_and_project(matches)?;
+        let (org, project) = get_org_and_project(config, matches)?;
         return execute_list(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("files") {
-        let (org, project) = get_org_and_project(matches)?;
+        let (org, project) = get_org_and_project(config, matches)?;
         return execute_files(sub_matches, config, &org, &project);
     }
     unreachable!();

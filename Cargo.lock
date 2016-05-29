@@ -1,6 +1,6 @@
 [root]
 name = "sentry-cli"
-version = "0.5.1"
+version = "0.6.0"
 dependencies = [
  "chan 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "chan-signal 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -9,6 +9,7 @@ dependencies = [
  "mime 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime_guess 1.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "multipart 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rust-ini 0.9.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_macros 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -456,6 +457,14 @@ dependencies = [
 name = "regex-syntax"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "rust-ini"
+version = "0.9.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "rustc-serialize"

@@ -10,6 +10,7 @@ use sha1::Sha1;
 use chan_signal::{notify, Signal};
 use clap::{App, AppSettings, ArgMatches};
 
+use commands::Config;
 use CliResult;
 
 pub struct TempFile {
@@ -62,15 +63,18 @@ pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
         .setting(AppSettings::DisableVersion)
 }
 
-pub fn get_org_and_project(matches: &ArgMatches) -> CliResult<(String, String)> {
+pub fn get_org_and_project(config: &Config, matches: &ArgMatches)
+    -> CliResult<(String, String)> {
     Ok((
         matches
             .value_of("org").map(|x| x.to_owned())
             .or_else(|| env::var("SENTRY_ORG").ok())
+            .or_else(|| config.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
             .ok_or("An organization slug is required (provide with --org)")?,
         matches
             .value_of("project").map(|x| x.to_owned())
             .or_else(|| env::var("SENTRY_PROJECT").ok())
+            .or_else(|| config.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
             .ok_or("A project slug is required (provide with --project)")?
     ))
 }
