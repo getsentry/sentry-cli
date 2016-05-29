@@ -50,6 +50,7 @@ def ensure_release():
     resp = api_request('POST', 'repos/%s/releases' % REPO, json={
         'tag_name': TAG,
         'name': 'sentry-cli %s' % TAG,
+        'draft': True,
     })
     if resp.status_code != 422:
         resp.raise_for_status()
