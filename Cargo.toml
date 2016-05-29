@@ -1,6 +1,6 @@
 [package]
 name = "sentry-cli"
-version = "0.5.1"
+version = "0.6.0"
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 
 [lib]
