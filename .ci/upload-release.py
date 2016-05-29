@@ -4,6 +4,10 @@ import sys
 import urlparse
 import requests
 
+import urllib3
+urllib3.disable_warnings()
+
+
 AUTH_USERNAME = 'getsentry-bot'
 AUTH_TOKEN = os.environ['GITHUB_AUTH_TOKEN']
 AUTH = (AUTH_USERNAME, AUTH_TOKEN)
@@ -11,12 +15,6 @@ TAG = os.environ.get('TRAVIS_TAG') or os.environ.get('BUILD_TAG')
 TARGET = os.environ.get('TARGET')
 BIN_TYPE = os.environ.get('BIN_TYPE', 'release')
 REPO = 'getsentry/sentry-cli'
-
-
-def format_tag(tag):
-    if tag[-2:] == '.0':
-        return tag[:-2]
-    return tag
 
 
 def log(message, *args):
@@ -51,7 +49,7 @@ def get_target_executable_name():
 def ensure_release():
     resp = api_request('POST', 'repos/%s/releases' % REPO, json={
         'tag_name': TAG,
-        'name': 'sentry-cli %s' % format_tag(TAG),
+        'name': 'sentry-cli %s' % TAG,
     })
     if resp.status_code != 422:
         resp.raise_for_status()
