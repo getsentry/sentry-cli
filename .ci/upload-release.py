@@ -3,7 +3,6 @@ import os
 import sys
 import urlparse
 import requests
-import subprocess
 
 AUTH_USERNAME = 'getsentry-bot'
 AUTH_TOKEN = os.environ['GITHUB_AUTH_TOKEN']
@@ -43,8 +42,9 @@ def find_executable():
 
 
 def get_target_executable_name():
-    p = subprocess.Popen(['uname', '-sm'], stdout=subprocess.PIPE)
-    platform, arch = p.communicate()[0].strip().split(' ', 1)
+    bits = TARGET.split('-')
+    platform = bits[2].title()
+    arch = bits[0]
     return 'sentry-cli-%s-%s' % (platform, arch)
 
 
