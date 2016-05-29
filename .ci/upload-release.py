@@ -28,7 +28,8 @@ def log(message, *args):
 
 def api_request(method, path, **kwargs):
     url = urlparse.urljoin('https://api.github.com/', path.lstrip('/'))
-    return requests.request(method, url, auth=AUTH, **kwargs)
+    # default travis python does not have SNI
+    return requests.request(method, url, auth=AUTH, verify=False, **kwargs)
 
 
 def find_executable():
