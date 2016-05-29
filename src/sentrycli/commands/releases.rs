@@ -6,6 +6,8 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use hyper::method::Method;
 use hyper::status::StatusCode;
 use multipart::client::Multipart;
+use mime::{Mime, TopLevel};
+use mime_guess::guess_mime_type_opt;
 use serde_json;
 use walkdir::WalkDir;
 
@@ -44,14 +46,28 @@ struct Artifact {
     size: u64,
 }
 
-fn upload_sourcemap(local_path: &Path, url: &str, config: &Config, version: &str,
-                    org: &str, project: &str) -> CliResult<Option<Artifact>> {
+fn get_content_type(mime: Mime) -> String {
+    format!("{}{}", mime, match mime {
+        Mime(TopLevel::Text, _, _) => {
+            "; charset=utf-8"
+        },
+        _ => "",
+    })
+}
+
+fn upload_file(config: &Config, org: &str, project: &str, version: &str,
+               local_path: &Path, name: &str) -> CliResult<Option<Artifact>> {
     let req = config.prepare_api_request(Method::Post,
         &format!("/projects/{}/{}/releases/{}/files/", org, project, version))?;
     let mut mp = Multipart::from_request_sized(req)?;
+    let mimetype = guess_mime_type_opt(local_path).or_else(|| {
+        guess_mime_type_opt(&Path::new(name))
+    }).or_else(|| {
+        "application/octet-stream".parse().ok()
+    }).unwrap();
     mp.write_file("file", &local_path)?;
-    mp.write_text("header", "Content-Type:text/plain; encoding=utf-8")?;
-    mp.write_text("name", url)?;
+    mp.write_text("header", &format!("Content-Type:{}", get_content_type(mimetype)))?;
+    mp.write_text("name", name)?;
     let mut resp = mp.send()?;
     if resp.status == StatusCode::Conflict {
         Ok(None)
@@ -65,6 +81,7 @@ fn upload_sourcemap(local_path: &Path, url: &str, config: &Config, version: &str
 fn list_files(config: &Config, org: &str, project: &str, release: &str) -> CliResult<Vec<Artifact>> {
     let mut resp = config.api_request(
         Method::Get, &format!("/projects/{}/{}/releases/{}/files/", org, project, release))?;
+    // XXX: handle pagination
     if !resp.status.is_success() {
         fail!(resp);
     }
@@ -112,6 +129,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
             .about("list the most recent releases"))
         .subcommand(make_subcommand("files")
             .about("manage release artifact files")
+            .setting(AppSettings::SubcommandRequiredElseHelp)
             .arg(Arg::with_name("version")
                  .value_name("VERSION")
                  .required(true)
@@ -130,6 +148,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .index(1)
                      .multiple(true)
                      .help("a list of filenames to delete.")))
+            .subcommand(make_subcommand("upload")
+                .about("Uploads a file for a given release")
+                .arg(Arg::with_name("path")
+                     .value_name("PATH")
+                     .index(1)
+                     .required(true)
+                     .help("The file to upload"))
+                .arg(Arg::with_name("name")
+                     .index(2)
+                     .value_name("NAME")
+                     .help("The name of the file on the server.")))
             .subcommand(make_subcommand("upload-sourcemaps")
                 .about("Uploads sourcemap information for a given release")
                 .arg(Arg::with_name("paths")
@@ -236,6 +265,23 @@ pub fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
+pub fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
+                                org: &str, project: &str, version: &str) -> CliResult<()> {
+    let path = Path::new(matches.value_of("path").unwrap());
+    let name = match matches.value_of("name") {
+        Some(name) => name,
+        None => Path::new(path).file_name()
+            .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
+    };
+    if let Some(artifact) = upload_file(config, org, project, &version,
+                                        &path, &name)? {
+        println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
+    } else {
+        fail!("File already present!");
+    }
+    Ok(())
+}
+
 pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
                                            org: &str, project: &str, version: &str) -> CliResult<()> {
     let mut resp = config.api_request(
@@ -264,9 +310,9 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
             let local_path = dent.path().strip_prefix(&path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
             println!("{} -> {}", local_path.display(), url);
-            if let Some(artifact) = upload_sourcemap(dent.path(), &url, config,
-                                                     &release.version, org, project)? {
-                println!("  {} {} bytes", artifact.sha1, artifact.size);
+            if let Some(artifact) = upload_file(config, org, project, &release.version,
+                                                dent.path(), &url)? {
+                println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");
             }
@@ -283,6 +329,9 @@ pub fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         return execute_files_delete(sub_matches, config, org, project, release);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("upload") {
+        return execute_files_upload(sub_matches, config, org, project, release);
     }
     if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
         return execute_files_upload_sourcemaps(sub_matches, config, org, project, release);

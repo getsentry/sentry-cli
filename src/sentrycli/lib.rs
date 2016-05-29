@@ -8,6 +8,7 @@ extern crate clap;
 extern crate hyper;
 #[macro_use]
 extern crate mime;
+extern crate mime_guess;
 extern crate multipart;
 extern crate serde;
 extern crate serde_json;

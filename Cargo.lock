@@ -7,6 +7,7 @@ dependencies = [
  "clap 2.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyper 0.8.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "mime 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mime_guess 1.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "multipart 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
