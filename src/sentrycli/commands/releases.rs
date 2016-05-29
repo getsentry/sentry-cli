@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
+use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use hyper::method::Method;
@@ -37,9 +38,37 @@ struct ReleaseInfo {
 
 #[derive(Debug, Deserialize)]
 struct Artifact {
+    id: String,
     sha1: String,
     name: String,
     size: u64,
+}
+
+fn upload_sourcemap(local_path: &Path, url: &str, config: &Config, version: &str,
+                    org: &str, project: &str) -> CliResult<Option<Artifact>> {
+    let req = config.prepare_api_request(Method::Post,
+        &format!("/projects/{}/{}/releases/{}/files/", org, project, version))?;
+    let mut mp = Multipart::from_request_sized(req)?;
+    mp.write_file("file", &local_path)?;
+    mp.write_text("header", "Content-Type:text/plain; encoding=utf-8")?;
+    mp.write_text("name", url)?;
+    let mut resp = mp.send()?;
+    if resp.status == StatusCode::Conflict {
+        Ok(None)
+    } else if !resp.status.is_success() {
+        fail!(resp);
+    } else {
+        Ok(Some(serde_json::from_reader(&mut resp)?))
+    }
+}
+
+fn list_files(config: &Config, org: &str, project: &str, release: &str) -> CliResult<Vec<Artifact>> {
+    let mut resp = config.api_request(
+        Method::Get, &format!("/projects/{}/{}/releases/{}/files/", org, project, release))?;
+    if !resp.status.is_success() {
+        fail!(resp);
+    }
+    Ok(serde_json::from_reader(&mut resp)?)
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -58,37 +87,51 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .short("p")
              .help("The project slug"))
         .subcommand(make_subcommand("new")
-                .about("Create a new release")
-                .arg(Arg::with_name("version")
-                     .value_name("VERSION")
-                     .required(true)
-                     .index(1)
-                     .help("The version identifier for this release"))
-                .arg(Arg::with_name("ref")
-                     .long("ref")
-                     .value_name("REF")
-                     .help("Optional commit reference (commit hash)"))
-                .arg(Arg::with_name("url")
-                     .long("url")
-                     .value_name("URL")
-                     .help("Optional URL to the release for information purposes")))
+            .about("Create a new release")
+            .arg(Arg::with_name("version")
+                 .value_name("VERSION")
+                 .required(true)
+                 .index(1)
+                 .help("The version identifier for this release"))
+            .arg(Arg::with_name("ref")
+                 .long("ref")
+                 .value_name("REF")
+                 .help("Optional commit reference (commit hash)"))
+            .arg(Arg::with_name("url")
+                 .long("url")
+                 .value_name("URL")
+                 .help("Optional URL to the release for information purposes")))
         .subcommand(make_subcommand("delete")
-                .about("Delete a release")
-                .arg(Arg::with_name("version")
-                     .value_name("VERSION")
-                     .required(true)
-                     .index(1)
-                     .help("The version to delete")))
+            .about("Delete a release")
+            .arg(Arg::with_name("version")
+                 .value_name("VERSION")
+                 .required(true)
+                 .index(1)
+                 .help("The version to delete")))
         .subcommand(make_subcommand("list")
-                .about("list the most recent releases"))
-        .subcommand(make_subcommand("upload-sourcemaps")
+            .about("list the most recent releases"))
+        .subcommand(make_subcommand("files")
+            .about("manage release artifact files")
+            .arg(Arg::with_name("version")
+                 .value_name("VERSION")
+                 .required(true)
+                 .index(1)
+                 .help("The release to manage the files of"))
+            .subcommand(make_subcommand("list")
+                .about("List all release files"))
+            .subcommand(make_subcommand("delete")
+                .about("Delete a release file")
+                .arg(Arg::with_name("all")
+                     .short("A")
+                     .long("all")
+                     .help("deletes all files"))
+                .arg(Arg::with_name("names")
+                     .value_name("NAMES")
+                     .index(1)
+                     .multiple(true)
+                     .help("a list of filenames to delete.")))
+            .subcommand(make_subcommand("upload-sourcemaps")
                 .about("Uploads sourcemap information for a given release")
-                .arg(Arg::with_name("release")
-                     .short("r")
-                     .long("release")
-                     .value_name("VERSION")
-                     .required(true)
-                     .help("The version identifier of the release to use"))
                 .arg(Arg::with_name("paths")
                      .value_name("PATHS")
                      .index(1)
@@ -105,7 +148,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .long("ext")
                      .short("x")
                      .multiple(true)
-                     .help("Add a file extension to the list of files to upload.")))
+                     .help("Add a file extension to the list of files to upload."))))
 }
 
 pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
@@ -161,29 +204,42 @@ pub fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-fn upload_sourcemap(local_path: &Path, url: &str, config: &Config, version: &str,
-                    org: &str, project: &str) -> CliResult<Option<Artifact>> {
-    let req = config.prepare_api_request(Method::Post,
-        &format!("/projects/{}/{}/releases/{}/files/", org, project, version))?;
-    let mut mp = Multipart::from_request_sized(req)?;
-    mp.write_file("file", &local_path)?;
-    mp.write_text("header", "Content-Type:text/plain; encoding=utf-8")?;
-    mp.write_text("name", url)?;
-    let mut resp = mp.send()?;
-    if resp.status == StatusCode::Conflict {
-        Ok(None)
-    } else if !resp.status.is_success() {
-        fail!(resp);
-    } else {
-        Ok(Some(serde_json::from_reader(&mut resp)?))
+pub fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
+                              org: &str, project: &str, release: &str) -> CliResult<()> {
+    for artifact in list_files(config, org, project, release)? {
+        println!("{}  ({} bytes)", artifact.name, artifact.size);
     }
+    Ok(())
 }
 
-pub fn execute_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
-                                     org: &str, project: &str) -> CliResult<()> {
+pub fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
+                                org: &str, project: &str, release: &str) -> CliResult<()> {
+    let files : HashSet<String> = match matches.values_of("names") {
+        Some(paths) => paths.map(|x| x.into()).collect(),
+        None => HashSet::new(),
+    };
+    for file in list_files(config, org, project, release)? {
+        if !(matches.is_present("all") || files.contains(&file.name)) {
+            continue;
+        }
+        let resp = config.api_request(
+            Method::Delete, &format!("/projects/{}/{}/releases/{}/files/{}/",
+                                     org, project, release, file.id))?;
+        if resp.status == StatusCode::NotFound {
+            continue;
+        } else if !resp.status.is_success() {
+            fail!(resp);
+        } else {
+            println!("D {}", file.name);
+        }
+    }
+    Ok(())
+}
+
+pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
+                                           org: &str, project: &str, version: &str) -> CliResult<()> {
     let mut resp = config.api_request(
-        Method::Get, &format!("/projects/{}/{}/releases/{}/", org, project,
-                              matches.value_of("release").unwrap()))?;
+        Method::Get, &format!("/projects/{}/{}/releases/{}/", org, project, version))?;
     if !resp.status.is_success() {
         fail!(resp);
     }
@@ -219,6 +275,21 @@ pub fn execute_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
+pub fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
+                         org: &str, project: &str) -> CliResult<()> {
+    let release = matches.value_of("version").unwrap();
+    if let Some(sub_matches) = matches.subcommand_matches("list") {
+        return execute_files_list(sub_matches, config, org, project, release);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("delete") {
+        return execute_files_delete(sub_matches, config, org, project, release);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
+        return execute_files_upload_sourcemaps(sub_matches, config, org, project, release);
+    }
+    unreachable!();
+}
+
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         let (org, project) = get_org_and_project(matches)?;
@@ -232,9 +303,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         let (org, project) = get_org_and_project(matches)?;
         return execute_list(sub_matches, config, &org, &project);
     }
-    if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
+    if let Some(sub_matches) = matches.subcommand_matches("files") {
         let (org, project) = get_org_and_project(matches)?;
-        return execute_upload_sourcemaps(sub_matches, config, &org, &project);
+        return execute_files(sub_matches, config, &org, &project);
     }
     unreachable!();
 }
