@@ -4,7 +4,7 @@ import sys
 import urlparse
 import requests
 
-import urllib3
+from requests.packages import urllib3
 urllib3.disable_warnings()
 
 
