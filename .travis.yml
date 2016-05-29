@@ -8,7 +8,7 @@ addons:
 
 matrix:
   include:
-    - env: TARGET=i686-unknown-linux-gnu RUST_PATH=/usr/lib/gcc/i686-linux-gnu/4.6
+    - env: TARGET=i686-unknown-linux-gnu
       addons:
         apt:
           packages:
