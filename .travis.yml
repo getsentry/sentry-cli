@@ -28,6 +28,7 @@ matrix:
             - libstdc++6:i386
             - libtxc-dxtn-s2tc0:i386
             - zlib1g:i386
+            - gcc-4.6-multilib
 
     - env: TARGET=x86_64-unknown-linux-gnu
     #- env: TARGET=x86_64-apple-darwin
