@@ -40,4 +40,10 @@ install:
   - bash .ci/install.sh
 
 script:
-  - bash .ci/script.sh
+  - bash .ci/build.sh
+
+deploy:
+  provider: script
+  script: .ci/deploy.sh
+  on:
+    tags: true
