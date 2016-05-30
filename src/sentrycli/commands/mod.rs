@@ -4,7 +4,7 @@ use std::io;
 use std::process;
 use std::path::PathBuf;
 
-use clap::{Arg, App, AppSettings};
+use clap::{Arg, App, AppSettings, ArgMatches};
 use hyper::client::request::Request;
 use hyper::client::response::Response;
 use hyper::header::{Authorization, Basic, Bearer, ContentType, ContentLength};
@@ -81,6 +81,21 @@ impl Config {
         let mut req = req.start()?;
         io::copy(&mut &body_bytes[..], &mut req)?;
         Ok(req.send()?)
+    }
+
+    pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {
+        Ok((
+            matches
+                .value_of("org").map(|x| x.to_owned())
+                .or_else(|| env::var("SENTRY_ORG").ok())
+                .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
+                .ok_or("An organization slug is required (provide with --org)")?,
+            matches
+                .value_of("project").map(|x| x.to_owned())
+                .or_else(|| env::var("SENTRY_PROJECT").ok())
+                .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
+                .ok_or("A project slug is required (provide with --project)")?
+        ))
     }
 }
 

@@ -16,7 +16,7 @@ use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
 
 use CliResult;
-use utils::{TempFile, get_org_and_project, get_sha1_checksum};
+use utils::{TempFile, get_sha1_checksum};
 use macho::is_macho_file;
 use commands::Config;
 
@@ -199,7 +199,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let api_path = if matches.is_present("global") {
         "/system/global-dsyms/".to_owned()
     } else {
-        let (org, project) = get_org_and_project(config, matches)?;
+        let (org, project) = config.get_org_and_project(matches)?;
         format!("/projects/{}/{}/files/dsyms/", org, project)
     };
 
