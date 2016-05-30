@@ -25,6 +25,16 @@ pub enum Auth {
     Unauthorized
 }
 
+impl Auth {
+    fn describe(&self) -> &str {
+        match *self {
+            Auth::Key(_) => "API Key",
+            Auth::Token(_) => "Auth Token",
+            Auth::Unauthorized => "Unauthorized",
+        }
+    }
+}
+
 pub struct Config {
     pub auth: Auth,
     pub url: String,
@@ -97,6 +107,15 @@ impl Config {
                 .ok_or("A project slug is required (provide with --project)")?
         ))
     }
+
+    pub fn get_org_and_project_defaults(&self) -> (Option<String>, Option<String>) {
+        (
+            env::var("SENTRY_ORG").ok()
+                .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned())),
+            env::var("SENTRY_PROJECT").ok()
+                .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
+        )
+    }
 }
 
 macro_rules! each_subcommand {
@@ -106,6 +125,7 @@ macro_rules! each_subcommand {
         $mac!(releases);
         $mac!(update);
         $mac!(uninstall);
+        $mac!(info);
     }
 }
 
