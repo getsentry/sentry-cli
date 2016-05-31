@@ -300,14 +300,24 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
     println!("Uploading sourcemaps for release {}", release.version);
 
     for path in paths {
-        let path = PathBuf::from(&path);
-        for dent in WalkDir::new(&path) {
+        // if we start walking over something that is an actual file then
+        // the directory iterator yields that path and terminates.  We
+        // handle that case here specifically to figure out what the path is
+        // we should strip off.
+        let walk_path = PathBuf::from(&path);
+        let base_path = if walk_path.is_file() {
+            walk_path.parent().unwrap()
+        } else {
+            walk_path.as_path()
+        };
+
+        for dent in WalkDir::new(&walk_path) {
             let dent = dent?;
             let extension = dent.path().extension();
             if !extensions.iter().any(|ext| Some(*ext) == extension) {
                 continue;
             }
-            let local_path = dent.path().strip_prefix(&path).unwrap();
+            let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
             println!("{} -> {}", local_path.display(), url);
             if let Some(artifact) = upload_file(config, org, project, &release.version,
@@ -318,6 +328,7 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
             }
         }
     }
+
     Ok(())
 }
 
