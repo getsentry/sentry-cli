@@ -1,6 +1,7 @@
-#![feature(custom_derive, plugin, question_mark)]
+#![feature(custom_derive, plugin, question_mark, alloc_system)]
 #![plugin(serde_macros)]
 
+extern crate alloc_system;
 #[macro_use]
 extern crate chan;
 extern crate chan_signal;
