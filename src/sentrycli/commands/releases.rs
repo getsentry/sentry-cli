@@ -176,6 +176,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                 .arg(Arg::with_name("extensions")
                      .long("ext")
                      .short("x")
+                     .value_name("EXT")
                      .multiple(true)
                      .help("Add a file extension to the list of files to upload."))))
 }
@@ -305,17 +306,19 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
         // handle that case here specifically to figure out what the path is
         // we should strip off.
         let walk_path = PathBuf::from(&path);
-        let base_path = if walk_path.is_file() {
-            walk_path.parent().unwrap()
+        let (base_path, skip_ext_test) = if walk_path.is_file() {
+            (walk_path.parent().unwrap(), true)
         } else {
-            walk_path.as_path()
+            (walk_path.as_path(), false)
         };
 
         for dent in WalkDir::new(&walk_path) {
             let dent = dent?;
-            let extension = dent.path().extension();
-            if !extensions.iter().any(|ext| Some(*ext) == extension) {
-                continue;
+            if !skip_ext_test {
+                let extension = dent.path().extension();
+                if !extensions.iter().any(|ext| Some(*ext) == extension) {
+                    continue;
+                }
             }
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
