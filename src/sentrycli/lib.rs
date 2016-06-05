@@ -33,6 +33,7 @@ mod commands;
 mod error;
 mod utils;
 mod macho;
+mod sourcemaps;
 
 
 pub fn main() {

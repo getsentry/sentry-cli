@@ -13,6 +13,7 @@ use serde_json;
 use url;
 use walkdir;
 use zip;
+use sourcemap;
 
 pub type CliResult<T> = Result<T, CliError>;
 
@@ -47,6 +48,7 @@ basic_error!(hyper::error::Error, "could not perform HTTP request");
 basic_error!(serde_json::Error, "failed to parse JSON");
 basic_error!(FromUtf8Error, "invalid UTF-8");
 basic_error!(ini::Error, "ini error");
+basic_error!(sourcemap::Error, "sourcemap error");
 
 impl From<hyper::client::response::Response> for CliError {
     fn from(mut resp: hyper::client::response::Response) -> CliError {

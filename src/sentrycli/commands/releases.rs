@@ -14,6 +14,7 @@ use walkdir::WalkDir;
 use CliResult;
 use commands::Config;
 use utils::make_subcommand;
+use sourcemaps::SourceMapValidator;
 
 #[derive(Debug, Serialize)]
 struct NewRelease {
@@ -173,6 +174,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .required(true)
                      .value_name("PREFIX")
                      .help("The URL prefix to prepend to all filenames"))
+                .arg(Arg::with_name("validate")
+                     .long("validate")
+                     .help("Enable basic sourcemap validation"))
+                .arg(Arg::with_name("verbose")
+                     .long("verbose")
+                     .short("verbose")
+                     .help("Enable verbose mode"))
                 .arg(Arg::with_name("extensions")
                      .long("ext")
                      .short("x")
@@ -298,7 +306,7 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
         None => vec![OsStr::new("js"), OsStr::new("map")],
     };
 
-    println!("Uploading sourcemaps for release {}", release.version);
+    let mut to_process = vec![];
 
     for path in paths {
         // if we start walking over something that is an actual file then
@@ -322,13 +330,29 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
             }
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
-            println!("{} -> {}", local_path.display(), url);
-            if let Some(artifact) = upload_file(config, org, project, &release.version,
-                                                dent.path(), &url)? {
-                println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
-            } else {
-                println!("  already present");
-            }
+            to_process.push((url, local_path.to_path_buf(),
+                             dent.path().to_path_buf()));
+        }
+    }
+
+    if matches.is_present("validate") {
+        println!("Running with sourcemap validation");
+        let mut validator = SourceMapValidator::new(matches.is_present("verbose"));
+        for &(ref url, _, ref path) in to_process.iter() {
+            validator.consider_file(path, url);
+        }
+        validator.validate_sources()?;
+    }
+
+    println!("Uploading sourcemaps for release {}", release.version);
+    for (url, local_path, path) in to_process {
+        println!("{} -> {}", local_path.display(), url);
+        if let Some(artifact) = upload_file(config, org, project,
+                                            &release.version,
+                                            &path, &url)? {
+            println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
+        } else {
+            println!("  already present");
         }
     }
 

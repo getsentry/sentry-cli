@@ -542,7 +542,7 @@ dependencies = [
 [[package]]
 name = "sourcemap"
 version = "0.2.0"
-source = "git+https://github.com/mitsuhiko/rust-sourcemap#095bc03c8d29bf1772b02385f689d437786c6dd5"
+source = "git+https://github.com/mitsuhiko/rust-sourcemap#df1bafb0ec59265b45e58f858e0b824a2a33681a"
 dependencies = [
  "base64 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
