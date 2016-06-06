@@ -151,13 +151,16 @@ impl SourceMapValidator {
         sources.sort_by_key(|x| &x.url);
 
         for source in sources.iter() {
-            if source.ty == SourceType::Script {
-                if let Err(err) = self.validate_script(&mut log, &source) {
-                    log.error(&source, format!("failed to process: {}", err));
-                }
-            } else if source.ty == SourceType::SourceMap {
-                if let Err(err) = self.validate_sourcemap(&mut log, &source) {
-                    log.error(&source, format!("failed to process: {}", err));
+            match source.ty {
+                SourceType::Script => {
+                    if let Err(err) = self.validate_script(&mut log, &source) {
+                        log.error(&source, format!("failed to process: {}", err));
+                    }
+                },
+                SourceType::SourceMap => {
+                    if let Err(err) = self.validate_sourcemap(&mut log, &source) {
+                        log.error(&source, format!("failed to process: {}", err));
+                    }
                 }
             }
         }
