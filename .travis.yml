@@ -42,6 +42,11 @@ install:
 script:
   - bash .ci/build.sh
 
+cache:
+  directories:
+    - $HOME/.cargo
+    - $TRAVIS_BUILD_DIR/target
+
 deploy:
   provider: script
   script: .ci/deploy.sh
