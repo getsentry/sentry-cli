@@ -115,8 +115,10 @@ impl SourceMapValidator {
         if let Some(url) = reference.get_url() {
             let full_url = join_url(&source.url, url)?;
             log.info(source, format!("sourcemap at {}", full_url));
-        } else {
+        } else if source.url.ends_with(".min.js") {
             log.error(source, "missing sourcemap!".into());
+        } else {
+            log.warn(source, "no sourcemap reference".into());
         }
         Ok(())
     }
