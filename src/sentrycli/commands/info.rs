@@ -6,23 +6,23 @@ use CliResult;
 use commands::Config;
 
 #[derive(Deserialize)]
-struct Auth {
-    scopes: Vec<String>,
+pub struct Auth {
+    pub scopes: Vec<String>,
 }
 
 #[derive(Deserialize)]
-struct User {
-    email: String,
-    id: String,
+pub struct User {
+    pub email: String,
+    pub id: String,
 }
 
 #[derive(Deserialize)]
-struct AuthInfo {
-    auth: Auth,
-    user: Option<User>,
+pub struct AuthInfo {
+    pub auth: Auth,
+    pub user: Option<User>,
 }
 
-fn get_user_info(config: &Config) -> CliResult<AuthInfo> {
+pub fn get_user_info(config: &Config) -> CliResult<AuthInfo> {
     let mut resp = config.api_request(Method::Get, "/")?;
     if !resp.status.is_success() {
         fail!(resp);

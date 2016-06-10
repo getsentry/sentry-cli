@@ -21,6 +21,7 @@ extern crate which;
 extern crate zip;
 extern crate sha1;
 extern crate sourcemap;
+extern crate open;
 
 // what we export
 pub use error::{CliError, CliResult};
@@ -31,9 +32,11 @@ mod macros;
 
 mod commands;
 mod error;
+mod config;
 mod utils;
 mod macho;
 mod sourcemaps;
+mod constants;
 
 
 pub fn main() {
