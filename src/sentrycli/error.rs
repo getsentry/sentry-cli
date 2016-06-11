@@ -2,9 +2,11 @@ use std::error;
 use std::process;
 use std::fmt;
 use std::io;
-
 use std::io::{Read, Write};
 use std::string::FromUtf8Error;
+
+use hyper::status::StatusCode;
+use hyper::header::ContentType;
 
 use ini::ini;
 use clap;
@@ -25,7 +27,13 @@ pub struct CliError {
 #[derive(Debug)]
 enum CliErrorRepr {
     ClapError(clap::Error),
+    HyperResponse(StatusCode, String),
     BasicError(String),
+}
+
+#[derive(Debug, Deserialize)]
+struct ErrorInfo {
+    detail: Option<String>,
 }
 
 macro_rules! basic_error {
@@ -52,11 +60,21 @@ basic_error!(sourcemap::Error, "sourcemap error");
 
 impl From<hyper::client::response::Response> for CliError {
     fn from(mut resp: hyper::client::response::Response) -> CliError {
-        let mut err = String::new();
-        resp.read_to_string(&mut err).ok();
+        let mut err = None;
+        let mut body = String::new();
+        resp.read_to_string(&mut body).ok();
+
+        if resp.headers.get::<ContentType>() == Some(&ContentType::json()) {
+            let rv : serde_json::Result<ErrorInfo> = serde_json::from_reader(body.as_bytes());
+            if let Ok(error_info) = rv {
+                err = error_info.detail;
+            }
+        }
+        if err.is_none() {
+            err = Some(body);
+        }
         CliError {
-            repr: CliErrorRepr::BasicError(format!(
-                "request failed ({}, {})", resp.status, err))
+            repr: CliErrorRepr::HyperResponse(resp.status, err.unwrap())
         }
     }
 }
@@ -90,6 +108,14 @@ impl CliError {
     pub fn exit(&self) -> ! {
         match self.repr {
             CliErrorRepr::ClapError(ref err) => err.exit(),
+            CliErrorRepr::HyperResponse(status, _) => {
+                writeln!(&mut io::stderr(), "error: {}", self).ok();
+                if status == StatusCode::Unauthorized {
+                    writeln!(&mut io::stderr(), "").ok();
+                    writeln!(&mut io::stderr(), "You can use 'sentry-cli login' to sign in.").ok();
+                }
+                process::exit(1)
+            },
             _ => {
                 writeln!(&mut io::stderr(), "error: {}", self).ok();
                 process::exit(1)
@@ -103,6 +129,9 @@ impl fmt::Display for CliError {
         match self.repr {
             CliErrorRepr::BasicError(ref msg) => write!(f, "{}", msg),
             CliErrorRepr::ClapError(ref err) => write!(f, "{}", err),
+            CliErrorRepr::HyperResponse(status, ref err) => {
+                write!(f, "request failed ({}: {})", status, err)
+            },
         }
     }
 }
@@ -112,6 +141,7 @@ impl error::Error for CliError {
         match self.repr {
             CliErrorRepr::BasicError(ref msg) => &msg,
             CliErrorRepr::ClapError(ref err) => err.description(),
+            CliErrorRepr::HyperResponse(_, _) => "HTTP response error",
         }
     }
 
