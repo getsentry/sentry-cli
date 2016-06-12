@@ -11,7 +11,8 @@ urllib3.disable_warnings()
 AUTH_USERNAME = 'getsentry-bot'
 AUTH_TOKEN = os.environ['GITHUB_AUTH_TOKEN']
 AUTH = (AUTH_USERNAME, AUTH_TOKEN)
-TAG = os.environ.get('TRAVIS_TAG') or os.environ.get('BUILD_TAG')
+TAG = os.environ.get('TRAVIS_TAG') or \
+    os.environ.get('APPVEYOR_REPO_TAG_NAME') or os.environ.get('BUILD_TAG')
 TARGET = os.environ.get('TARGET')
 BIN_TYPE = os.environ.get('BIN_TYPE', 'release')
 REPO = 'getsentry/sentry-cli'
