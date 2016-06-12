@@ -15,7 +15,7 @@ use hyper::header::{Authorization, Basic, Bearer, ContentType, ContentLength, Us
 use hyper::net::Fresh;
 
 use CliResult;
-use constants::{DEFAULT_URL, PROTOCOL_VERSION};
+use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
 use event::Event;
 
 #[derive(Deserialize)]
@@ -92,7 +92,7 @@ impl Dsn {
             sentry_key={}, \
             sentry_secret={}",
             ts,
-            env!("CARGO_PKG_VERSION"),
+            VERSION,
             PROTOCOL_VERSION,
             self.client_id,
             self.secret)
@@ -178,7 +178,7 @@ impl Config {
         serde_json::to_writer(&mut body_bytes, &event)?;
         {
             let mut headers = req.headers_mut();
-            headers.set(UserAgent(format!("sentry-cli/{}", env!("CARGO_PKG_VERSION"))));
+            headers.set(UserAgent(format!("sentry-cli/{}", VERSION)));
             headers.set(ContentType(mime!(Application/Json)));
             headers.set(ContentLength(body_bytes.len() as u64));
             headers.set_raw("X-Sentry-Auth", vec![

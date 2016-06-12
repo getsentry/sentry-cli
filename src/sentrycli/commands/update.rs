@@ -16,6 +16,7 @@ use serde_json;
 use utils;
 use CliResult;
 use commands::Config;
+use constants::VERSION;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Asset {
@@ -117,7 +118,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 }
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
-    let current_version = env!("CARGO_PKG_VERSION");
     let exe = env::current_exe()?;
     let need_sudo = !utils::is_writable(&exe);
     let latest_release = get_latest_release()?;
@@ -128,7 +128,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
     };
 
     println!("Latest release is {}", latest_release.version);
-    if latest_release.version == current_version {
+    if latest_release.version == VERSION {
         println!("Already up to date!");
         return Ok(());
     }

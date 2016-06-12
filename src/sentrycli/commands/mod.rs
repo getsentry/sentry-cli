@@ -4,6 +4,7 @@ use std::process;
 use clap::{Arg, App, AppSettings};
 
 use CliResult;
+use constants::VERSION;
 use utils::make_subcommand;
 pub use config::{Config, Auth};
 
@@ -26,7 +27,7 @@ each_subcommand!(import_subcommand);
 
 pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     let mut app = App::new("sentry-cli")
-        .version(env!("CARGO_PKG_VERSION"))
+        .version(VERSION)
         .about("Command line utility for Sentry")
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::UnifiedHelpMessage)
