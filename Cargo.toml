@@ -27,6 +27,7 @@ walkdir = "0.1.5"
 which = "0.1.0"
 zip = "0.1.15"
 sha1 = "0.1.1"
+itertools = "0.4.15"
 rust-ini = { git = "https://github.com/getsentry/rust-ini", rev = "45720c10afdba72e4ed6d6548d981548fbe0db96" }
 open = "1.1.1"
 sourcemap = { version = "0.2.0", default-features = false, features = ["nightly"] }

@@ -8,6 +8,7 @@ extern crate chan_signal;
 extern crate clap;
 extern crate hyper;
 extern crate ini;
+extern crate itertools;
 #[macro_use]
 extern crate mime;
 extern crate mime_guess;
@@ -31,6 +32,7 @@ use chan_signal::Signal;
 mod macros;
 
 mod commands;
+mod event;
 mod error;
 mod config;
 mod utils;

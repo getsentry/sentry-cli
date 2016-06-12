@@ -1,6 +1,7 @@
 use std::io;
 use std::fs;
 use std::env;
+use std::time;
 use std::path::Path;
 use std::io::{Read, Write, Seek};
 
@@ -109,4 +110,9 @@ pub fn prompt(message: &str) -> io::Result<String> {
             return Ok(input.to_owned());
         }
     }
+}
+
+pub fn to_timestamp(tm: time::SystemTime) -> f64 {
+    let duration = tm.duration_since(time::UNIX_EPOCH).unwrap();
+    (duration.as_secs() as f64) + (duration.subsec_nanos() as f64 / 1e09)
 }

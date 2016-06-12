@@ -16,6 +16,7 @@ macro_rules! each_subcommand {
         $mac!(uninstall);
         $mac!(info);
         $mac!(login);
+        $mac!(send_event);
     }
 }
 

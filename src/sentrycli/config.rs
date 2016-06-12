@@ -11,11 +11,17 @@ use ini::Ini;
 use hyper::method::Method;
 use hyper::client::request::Request;
 use hyper::client::response::Response;
-use hyper::header::{Authorization, Basic, Bearer, ContentType, ContentLength};
+use hyper::header::{Authorization, Basic, Bearer, ContentType, ContentLength, UserAgent};
 use hyper::net::Fresh;
 
 use CliResult;
-use constants::DEFAULT_URL;
+use constants::{DEFAULT_URL, PROTOCOL_VERSION};
+use event::Event;
+
+#[derive(Deserialize)]
+pub struct EventInfo {
+    id: String,
+}
 
 #[derive(Debug, Clone)]
 pub enum Auth {
@@ -34,11 +40,71 @@ impl Auth {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct Dsn {
+    host: String,
+    protocol: String,
+    port: u16,
+    client_id: String,
+    secret: String,
+    project_id: u64,
+}
+
+impl Dsn {
+
+    fn from_str(dsn: &str) -> CliResult<Dsn> {
+        let url = Url::parse(dsn)?;
+        let project_id = if let Some(components) = url.path() {
+            if components.len() != 1 {
+                fail!("invalid dsn: invalid project ID");
+            }
+            components[0].parse().or(Err("invalid dsn: invalid project id"))?
+        } else {
+            fail!("invalid dsn: missing project ID");
+        };
+        if !(url.scheme == "http" || url.scheme == "https") {
+            fail!(format!("invalid dsn: unknown protocol '{}'", url.scheme));
+        }
+
+        Ok(Dsn {
+            protocol: url.scheme.clone(),
+            host: url.serialize_host().ok_or("invalid dsn: missing host")?,
+            port: url.port_or_default().unwrap(),
+            client_id: url.username().ok_or("invalid dsn: missing client id")?.into(),
+            secret: url.password().ok_or("invalid dsn: missing secret")?.into(),
+            project_id: project_id,
+        })
+    }
+
+    pub fn get_submit_url(&self) -> Url {
+        Url::parse(&format!("{}://{}:{}/api/{}/store/",
+                            self.protocol,
+                            self.host,
+                            self.port,
+                            self.project_id)).unwrap()
+    }
+
+    pub fn get_auth_header(&self, ts: f64) -> String {
+        format!("Sentry \
+            sentry_timestamp={}, \
+            sentry_client=sentry-cli/{}, \
+            sentry_version={}, \
+            sentry_key={}, \
+            sentry_secret={}",
+            ts,
+            env!("CARGO_PKG_VERSION"),
+            PROTOCOL_VERSION,
+            self.client_id,
+            self.secret)
+    }
+}
+
 #[derive(Clone)]
 pub struct Config {
     pub filename: PathBuf,
     pub auth: Auth,
     pub url: String,
+    pub dsn: Option<Dsn>,
     pub ini: Ini,
 }
 
@@ -50,6 +116,7 @@ impl Config {
             filename: filename,
             auth: get_default_auth(&ini),
             url: get_default_url(&ini),
+            dsn: get_default_dsn(&ini)?,
             ini: ini,
         })
     }
@@ -102,6 +169,30 @@ impl Config {
         let mut req = req.start()?;
         io::copy(&mut &body_bytes[..], &mut req)?;
         Ok(req.send()?)
+    }
+
+    pub fn send_event(&self, event: &Event) -> CliResult<String> {
+        let dsn = self.dsn.as_ref().ok_or("no dsn provided")?;
+        let mut req = Request::new(Method::Post, dsn.get_submit_url())?;
+        let mut body_bytes : Vec<u8> = vec![];
+        serde_json::to_writer(&mut body_bytes, &event)?;
+        {
+            let mut headers = req.headers_mut();
+            headers.set(UserAgent(format!("sentry-cli/{}", env!("CARGO_PKG_VERSION"))));
+            headers.set(ContentType(mime!(Application/Json)));
+            headers.set(ContentLength(body_bytes.len() as u64));
+            headers.set_raw("X-Sentry-Auth", vec![
+                dsn.get_auth_header(event.timestamp).as_bytes().into()]);
+        }
+        let mut req = req.start()?;
+        io::copy(&mut &body_bytes[..], &mut req)?;
+        let mut resp = req.send()?;
+        if !resp.status.is_success() {
+            fail!(resp);
+        } else {
+            let event : EventInfo = serde_json::from_reader(&mut resp)?;
+            Ok(event.id)
+        }
     }
 
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {
@@ -192,5 +283,15 @@ fn get_default_url(ini: &Ini) -> String {
         val.to_owned()
     } else {
         DEFAULT_URL.to_owned()
+    }
+}
+
+fn get_default_dsn(ini: &Ini) -> CliResult<Option<Dsn>> {
+    if let Some(ref val) = env::var("SENTRY_DSN").ok() {
+        Ok(Some(Dsn::from_str(val)?))
+    } else if let Some(val) = ini.get_from(Some("auth"), "dsn") {
+        Ok(Some(Dsn::from_str(val)?))
+    } else {
+        Ok(None)
     }
 }
