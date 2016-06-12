@@ -1,4 +1,8 @@
 environment:
+  OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
+  OPENSSL_LIB_DIR: C:\OpenSSL\lib
+  OPENSSL_LIBS: ssleay32:libeay32
+
   matrix:
   - TARGET: i686-pc-windows-gnu
     MINGW_URL: https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.2/threads-win32/dwarf/i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z/download
@@ -27,6 +31,10 @@ install:
   - if defined MINGW_ARCHIVE appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_ARCHIVE%"
   - if defined MINGW_ARCHIVE 7z x -y "%MINGW_ARCHIVE%" > nul
   - if defined MINGW_ARCHIVE set PATH=%CD%\%MINGW_DIR%\bin;C:\msys64\usr\bin;%PATH%
+
+  # Open SSL
+  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
+  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
 
   # let's see what we got
   - where gcc rustc cargo
