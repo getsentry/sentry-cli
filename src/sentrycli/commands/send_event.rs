@@ -69,7 +69,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
         }
     }
 
-    let event_id = config.send_event(&event)?;
-    println!("Event sent: {}", event_id);
+    // handle errors here locally so that we do not get the extra "use sentry-cli
+    // login" to sign in which would be in appropriate here.
+    match config.send_event(&event) {
+        Ok(event_id) => {
+            println!("Event sent: {}", event_id);
+        },
+        Err(err) => {
+            println!("error: could not send event: {}", err);
+        }
+    };
+
     Ok(())
 }
