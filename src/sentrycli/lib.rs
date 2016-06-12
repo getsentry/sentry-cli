@@ -2,8 +2,10 @@
 #![plugin(serde_macros)]
 
 extern crate alloc_system;
+#[cfg(not(windows))]
 #[macro_use]
 extern crate chan;
+#[cfg(not(windows))]
 extern crate chan_signal;
 extern crate clap;
 extern crate hyper;
@@ -27,8 +29,6 @@ extern crate open;
 // what we export
 pub use error::{CliError, CliResult};
 
-use chan_signal::Signal;
-
 mod macros;
 
 mod commands;
@@ -41,10 +41,17 @@ mod sourcemaps;
 mod constants;
 
 
+#[cfg(not(windows))]
 pub fn main() {
     if let Some(signal) = utils::run_or_interrupt(commands::main) {
+        use chan_signal::Signal;
         if signal == Signal::INT {
             println!("Interrupted!");
         }
     }
+}
+
+#[cfg(windows)]
+pub fn main() {
+    commands::main();
 }

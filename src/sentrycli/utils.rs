@@ -8,10 +8,12 @@ use std::io::{Read, Write, Seek};
 use uuid::Uuid;
 use chan;
 use sha1::Sha1;
-use chan_signal::{notify, Signal};
 use clap::{App, AppSettings};
 
 use CliResult;
+
+#[cfg(not(windows))]
+use chan_signal::{notify, Signal};
 
 pub struct TempFile {
     f: fs::File,
@@ -39,6 +41,7 @@ impl TempFile {
     }
 }
 
+#[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
     where F: FnOnce() -> (), F: Send + 'static
 {

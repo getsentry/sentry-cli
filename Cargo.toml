@@ -11,8 +11,6 @@ path = "src/sentrycli/lib.rs"
 name = "sentry-cli"
 
 [dependencies]
-chan = "0.1.14"
-chan-signal = "0.1.5"
 clap = { version = "2.5.2", default-features = false, features = ["suggestions", "wrap_help"] }
 hyper = "0.8.0"
 mime = "^0.2"
@@ -31,3 +29,7 @@ itertools = "0.4.15"
 rust-ini = { git = "https://github.com/getsentry/rust-ini", rev = "45720c10afdba72e4ed6d6548d981548fbe0db96" }
 open = "1.1.1"
 sourcemap = { version = "0.2.0", default-features = false, features = ["nightly"] }
+
+[target."cfg(not(windows))".dependencies]
+chan = "0.1.14"
+chan-signal = "0.1.5"
