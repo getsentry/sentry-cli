@@ -31,11 +31,15 @@ def api_request(method, path, **kwargs):
 
 
 def find_executable():
+    if sys.platform.startswith('win'):
+        ext = '.exe'
+    else:
+        ext = ''
     if TARGET:
-        path = os.path.join('target', TARGET, BIN_TYPE, 'sentry-cli')
+        path = os.path.join('target', TARGET, BIN_TYPE, 'sentry-cli' + ext)
         if os.path.isfile(path):
             return path
-    path = os.path.join('target', BIN_TYPE, 'sentry-cli')
+    path = os.path.join('target', BIN_TYPE, 'sentry-cli' + ext)
     if os.path.isfile(path):
         return path
 
