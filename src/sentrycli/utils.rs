@@ -96,7 +96,7 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> io::Result<()> {
     }
 
     #[cfg(windows)]
-    fn exec<P: AsRef<Path>>(path: P) -> io::Result<()> {
+    fn exec<P: AsRef<Path>>(_path: P) -> io::Result<()> {
         Ok(())
     }
 
@@ -137,4 +137,12 @@ pub fn prompt(message: &str) -> io::Result<String> {
 pub fn to_timestamp(tm: time::SystemTime) -> f64 {
     let duration = tm.duration_since(time::UNIX_EPOCH).unwrap();
     (duration.as_secs() as f64) + (duration.subsec_nanos() as f64 / 1e09)
+}
+
+pub fn capitalize_string(s: &str) -> String {
+    use std::ascii::AsciiExt;
+    let mut bytes = s.as_bytes().to_vec();
+    bytes.make_ascii_lowercase();
+    bytes[0] = bytes[0].to_ascii_uppercase();
+    String::from_utf8(bytes).unwrap()
 }

@@ -15,7 +15,7 @@ use serde_json;
 use utils;
 use CliResult;
 use commands::Config;
-use constants::VERSION;
+use constants::{VERSION, PLATFORM, ARCH};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Asset {
@@ -36,12 +36,7 @@ struct ReleaseInfo {
 
 
 fn get_asset_name() -> CliResult<String> {
-    let p = Command::new("uname").arg("-sm").output()?;
-    let output = String::from_utf8(p.stdout)?;
-    let mut iter = output.trim().split(' ');
-    let platform = iter.next().unwrap_or("unknown");
-    let arch = iter.next().unwrap_or("unknown");
-    Ok(format!("sentry-cli-{}-{}", platform, arch))
+    Ok(format!("sentry-cli-{}-{}", utils::capitalize_string(PLATFORM), ARCH))
 }
 
 fn get_latest_release() -> CliResult<ReleaseInfo> {
@@ -118,7 +113,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
     let exe = env::current_exe()?;
-    let need_sudo = !utils::is_writable(&exe);
+    let need_sudo = cfg!(not(windows)) && !utils::is_writable(&exe);
     let latest_release = get_latest_release()?;
     let tmp_path = if need_sudo {
         env::temp_dir().join(".sentry-cli.part")

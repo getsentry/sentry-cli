@@ -22,7 +22,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
         return Ok(());
     }
 
-    if !utils::is_writable(&exe) {
+    if cfg!(not(windows)) && !utils::is_writable(&exe) {
         println!("Need to sudo to uninstall {}", exe.display());
         Command::new("sudo")
             .arg("-k")

@@ -2,6 +2,7 @@
 name = "sentry-cli"
 version = "0.11.0"
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
+build = "build.rs"
 
 [lib]
 name = "sentrycli"
