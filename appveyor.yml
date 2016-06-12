@@ -9,10 +9,13 @@ environment:
     MINGW_URL: https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.2/threads-win32/dwarf/i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z/download
     MINGW_ARCHIVE: i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z
     MINGW_DIR: mingw32
+    BITS: 32
   #- TARGET: x86_64-pc-windows-gnu
-  #  MSYS_BITS: 64
+  #  BITS: 64
   #- TARGET: i686-pc-windows-msvc
+  #  BITS: 32
   #- TARGET: x86_64-pc-windows-msvc
+  #  BITS: 64
 
 install:
   # Install rust, x86_64-pc-windows-msvc host
@@ -26,7 +29,7 @@ install:
   - if NOT "%TARGET%" == "x86_64-pc-windows-msvc" rustup target add %TARGET%
 
   # Use the system msys if we can
-  - if defined MSYS_BITS set PATH=C:\msys64\mingw%MSYS_BITS%\bin;C:\msys64\usr\bin;%PATH%
+  - set PATH=C:\msys64\mingw%BITS%\bin;C:\msys64\usr\bin;%PATH%
 
   # download a custom compiler otherwise
   - if defined MINGW_ARCHIVE appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_ARCHIVE%"
