@@ -2,6 +2,7 @@ environment:
   OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
   OPENSSL_LIB_DIR: C:\OpenSSL\lib
   OPENSSL_LIBS: ssleay32:libeay32
+  OPENSSL_STATIC: '1'
 
   matrix:
   - TARGET: i686-pc-windows-gnu
