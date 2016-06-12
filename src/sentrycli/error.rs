@@ -34,6 +34,7 @@ enum CliErrorRepr {
 #[derive(Debug, Deserialize)]
 struct ErrorInfo {
     detail: Option<String>,
+    error: Option<String>,
 }
 
 macro_rules! basic_error {
@@ -67,7 +68,7 @@ impl From<hyper::client::response::Response> for CliError {
         if resp.headers.get::<ContentType>() == Some(&ContentType::json()) {
             let rv : serde_json::Result<ErrorInfo> = serde_json::from_reader(body.as_bytes());
             if let Ok(error_info) = rv {
-                err = error_info.detail;
+                err = error_info.detail.or(error_info.error);
             }
         }
         if err.is_none() {
