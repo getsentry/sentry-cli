@@ -6,7 +6,6 @@ use std::path::Path;
 use std::io::{Read, Write, Seek};
 
 use uuid::Uuid;
-use chan;
 use sha1::Sha1;
 use clap::{App, AppSettings};
 
@@ -45,6 +44,7 @@ impl TempFile {
 pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
     where F: FnOnce() -> (), F: Send + 'static
 {
+    use chan;
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);
