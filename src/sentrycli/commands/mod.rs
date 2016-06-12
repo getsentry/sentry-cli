@@ -10,7 +10,6 @@ pub use config::{Config, Auth};
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dsym);
-        $mac!(extract_iosds_symbols);
         $mac!(releases);
         $mac!(update);
         $mac!(uninstall);
