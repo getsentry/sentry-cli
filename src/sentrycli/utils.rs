@@ -84,6 +84,23 @@ pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
     fs::OpenOptions::new().write(true).open(&path).map(|_| true).unwrap_or(false)
 }
 
+pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> io::Result<()> {
+    #[cfg(not(windows))]
+    fn exec(path: &Path) -> io::Result<()> {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perm = fs::metadata(&tmp_path)?.permissions();
+        perm.set_mode(0o755);
+        fs::set_permissions(&tmp_path, perm)
+    }
+
+    #[cfg(windows)]
+    fn exec(path: &Path) -> io::Result<()> {
+        Ok(())
+    }
+
+    exec(path)
+}
+
 pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
     loop {
         print!("{} [y/n] ", message);

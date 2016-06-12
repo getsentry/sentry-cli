@@ -3,7 +3,6 @@ use std::env;
 use std::path::Path;
 use std::process::Command;
 use std::io::{Read, Write};
-use std::os::unix::fs::PermissionsExt;
 
 use clap::{App, ArgMatches};
 use hyper::client::{Client, RedirectPolicy};
@@ -143,9 +142,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
         Ok(()) => {},
     }
 
-    let mut perm = fs::metadata(&tmp_path)?.permissions();
-    perm.set_mode(0o755);
-    fs::set_permissions(&tmp_path, perm)?;
+    utils::set_executable_mode(&tmp_path)?;
 
     if need_sudo {
         println!("Need to sudo to overwrite {}", exe.display());
