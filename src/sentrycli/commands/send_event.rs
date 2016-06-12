@@ -8,7 +8,7 @@ use event::Event;
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
     app
-        .about("sends an event to sentry")
+        .about("sends an event to Sentry")
         .arg(Arg::with_name("level")
              .value_name("LEVEL")
              .long("level")
