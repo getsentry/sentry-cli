@@ -1,3 +1,7 @@
+cache:
+  - 'target -> Cargo.lock'
+  - 'C:\Users\appveyor\.cargo -> Cargo.lock'
+
 environment:
   OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
   OPENSSL_LIB_DIR: C:\OpenSSL\lib
