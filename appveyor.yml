@@ -3,6 +3,7 @@ cache:
   - 'C:\Users\appveyor\.cargo'
 
 environment:
+  TARGET: i686-pc-windows-msvc
   GITHUB_AUTH_TOKEN:
     secure: OIMAVZAsCzaNv3emTg9MlxxuA0vi2lwJM41cEtTjb9p1CQbDEO3riYwcVzLDjhZi
 
@@ -12,7 +13,7 @@ install:
   - curl -sSf -o rustup-init.exe https://dev-static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe
   - rustup-init.exe -y
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-  - rustup default nightly-2016-05-22-i686-pc-windows-msvc
+  - rustup default nightly-2016-05-22-%TARGET%
 
   # let's see what we got
   - where rustc cargo
