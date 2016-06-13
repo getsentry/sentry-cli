@@ -3,17 +3,8 @@ cache:
   - 'C:\Users\appveyor\.cargo'
 
 environment:
-  OPENSSL_INCLUDE_DIR: C:\OpenSSL\include
-  OPENSSL_LIB_DIR: C:\OpenSSL\lib\VC
-  OPENSSL_LIBS: ssleay32MT:libeay32MT
-  OPENSSL_STATIC: '1'
   GITHUB_AUTH_TOKEN:
     secure: OIMAVZAsCzaNv3emTg9MlxxuA0vi2lwJM41cEtTjb9p1CQbDEO3riYwcVzLDjhZi
-  TARGET: i686-pc-windows-gnu
-  MINGW_URL: https://sourceforge.net/projects/mingw-w64/files/Toolchains%20targetting%20Win32/Personal%20Builds/mingw-builds/4.9.2/threads-win32/dwarf/i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z/download
-  MINGW_ARCHIVE: i686-4.9.2-release-win32-dwarf-rt_v4-rev4.7z
-  MINGW_DIR: mingw32
-  BITS: 32
 
 install:
   # Install rust, x86_64-pc-windows-msvc host
@@ -21,19 +12,10 @@ install:
   - curl -sSf -o rustup-init.exe https://dev-static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe
   - rustup-init.exe -y
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-  - rustup default nightly-2016-05-22-%TARGET%
-
-  # download a custom compiler
-  - appveyor DownloadFile "%MINGW_URL%" -FileName "%MINGW_ARCHIVE%"
-  - 7z x -y "%MINGW_ARCHIVE%" > nul
-  - set PATH=%CD%\%MINGW_DIR%\bin;C:\msys64\usr\bin;%PATH%
-
-  # OpenSSL
-  - ps: Start-FileDownload "http://slproweb.com/download/Win${env:BITS}OpenSSL-1_0_2h.exe"
-  - Win%BITS%OpenSSL-1_0_2h.exe /SILENT /VERYSILENT /SP- /DIR="C:\OpenSSL"
+  - rustup default nightly-2016-05-22-i686-pc-windows-msvc
 
   # let's see what we got
-  - where gcc rustc cargo
+  - where rustc cargo
   - rustc -vV
   - cargo -vV
   - set CARGO_TARGET_DIR=%CD%\target
@@ -41,7 +23,7 @@ install:
 build: false
 
 test_script:
-  - cargo build --release
+  - powershell -File build-win.ps1
 
 after_test:
   - powershell -File .ci/deploy.ps1
