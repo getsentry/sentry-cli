@@ -17,6 +17,11 @@ TARGET = os.environ.get('TARGET')
 BIN_TYPE = os.environ.get('BIN_TYPE', 'release')
 REPO = 'getsentry/sentry-cli'
 
+if sys.platform.startswith('win'):
+    EXT = '.exe'
+else:
+    EXT = ''
+
 
 def log(message, *args):
     if args:
@@ -31,15 +36,11 @@ def api_request(method, path, **kwargs):
 
 
 def find_executable():
-    if sys.platform.startswith('win'):
-        ext = '.exe'
-    else:
-        ext = ''
     if TARGET:
-        path = os.path.join('target', TARGET, BIN_TYPE, 'sentry-cli' + ext)
+        path = os.path.join('target', TARGET, BIN_TYPE, 'sentry-cli' + EXT)
         if os.path.isfile(path):
             return path
-    path = os.path.join('target', BIN_TYPE, 'sentry-cli' + ext)
+    path = os.path.join('target', BIN_TYPE, 'sentry-cli' + EXT)
     if os.path.isfile(path):
         return path
 
@@ -48,7 +49,7 @@ def get_target_executable_name():
     bits = TARGET.split('-')
     platform = bits[2].title()
     arch = bits[0]
-    return 'sentry-cli-%s-%s' % (platform, arch)
+    return 'sentry-cli-%s-%s%s' % (platform, arch, EXT)
 
 
 def ensure_release():

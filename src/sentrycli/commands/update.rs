@@ -15,7 +15,7 @@ use serde_json;
 use utils;
 use CliResult;
 use commands::Config;
-use constants::{VERSION, PLATFORM, ARCH};
+use constants::{VERSION, PLATFORM, ARCH, EXT};
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Asset {
@@ -36,7 +36,8 @@ struct ReleaseInfo {
 
 
 fn get_asset_name() -> CliResult<String> {
-    Ok(format!("sentry-cli-{}-{}", utils::capitalize_string(PLATFORM), ARCH))
+    Ok(format!("sentry-cli-{}-{}{}",
+               utils::capitalize_string(PLATFORM), ARCH, EXT))
 }
 
 fn get_latest_release() -> CliResult<ReleaseInfo> {
