@@ -25,6 +25,7 @@ extern crate zip;
 extern crate sha1;
 extern crate sourcemap;
 extern crate open;
+extern crate runas;
 
 // what we export
 pub use error::{CliError, CliResult};

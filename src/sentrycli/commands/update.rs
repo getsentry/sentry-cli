@@ -1,16 +1,16 @@
 use std::fs;
 use std::env;
 use std::path::Path;
-use std::process::Command;
 use std::io::{Read, Write};
 
-use clap::{App, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use hyper::client::{Client, RedirectPolicy};
 use hyper::client::request::Request;
 use hyper::header::{UserAgent, ContentLength};
 use hyper::method::Method;
 use url::Url;
 use serde_json;
+use runas;
 
 use utils;
 use CliResult;
@@ -106,17 +106,69 @@ fn download_url<P: AsRef<Path>>(url: &Url, dst: P) -> CliResult<()> {
     Ok(())
 }
 
+#[cfg(windows)]
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> CliResult<()>
+{
+    // so on windows you can rename a running executable but you cannot delete it.
+    // we move the old executable to a temporary location (this most likely only
+    // works if they are on the same FS) and then put the new in place.  This
+    // will leave the old executable in the temp path lying around so let's hope
+    // that windows cleans up temp files there (spoiler: it does not)
+    let tmp = env::temp_dir().join(".sentry-cli.tmp");
+
+    if elevate {
+        runas::Command::new("cmd")
+            .arg("/c")
+            .arg("move")
+            .arg(&exe)
+            .arg(&tmp)
+            .arg("&")
+            .arg("move")
+            .arg(&downloaded_path)
+            .arg(&exe)
+            .arg("&")
+            .arg("del")
+            .arg(&tmp)
+            .status()?;
+    } else {
+        fs::rename(&exe, &tmp)?;
+        fs::rename(&downloaded_path, &exe)?;
+        fs::remove_file(&tmp).ok();
+    }
+
+    Ok(())
+}
+
+#[cfg(not(windows))]
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> CliResult<()>
+{
+    if elevate {
+        println!("Need to sudo to overwrite {}", exe.display());
+        runas::Command::new("mv")
+            .arg(&downloaded_path)
+            .arg(&exe)
+            .status()?;
+    } else {
+        fs::rename(&tmp_path, &exe)?;
+    }
+    Ok(())
+}
+
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
     app
         .about("update the sentry-cli executable")
+        .arg(Arg::with_name("force")
+             .long("force")
+             .short("f")
+             .help("Force the update even if already current."))
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
     let exe = env::current_exe()?;
-    let need_sudo = cfg!(not(windows)) && !utils::is_writable(&exe);
+    let elevate = !utils::is_writable(&exe);
     let latest_release = get_latest_release()?;
-    let tmp_path = if need_sudo {
+    let tmp_path = if elevate {
         env::temp_dir().join(".sentry-cli.part")
     } else {
         exe.parent().unwrap().join(".sentry-cli.part")
@@ -124,8 +176,12 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
 
     println!("Latest release is {}", latest_release.version);
     if latest_release.version == VERSION {
-        println!("Already up to date!");
-        return Ok(());
+        if matches.is_present("force") {
+            println!("Forcing update");
+        } else {
+            println!("Already up to date!");
+            return Ok(());
+        }
     }
 
     println!("Updating executable at {}", exe.display());
@@ -140,17 +196,8 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
 
     utils::set_executable_mode(&tmp_path)?;
 
-    if need_sudo {
-        println!("Need to sudo to overwrite {}", exe.display());
-        Command::new("sudo")
-            .arg("-k")
-            .arg("mv")
-            .arg(&tmp_path)
-            .arg(&exe)
-            .status()?;
-    } else {
-        fs::rename(&tmp_path, &exe)?;
-    }
+    rename_exe(&exe, &tmp_path, elevate)?;
+
     println!("Updated!");
 
     Ok(())

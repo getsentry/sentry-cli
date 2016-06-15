@@ -11,6 +11,7 @@ dependencies = [
  "mime_guess 1.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "multipart 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "open 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "runas 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-ini 0.9.4 (git+https://github.com/getsentry/rust-ini?rev=45720c10afdba72e4ed6d6548d981548fbe0db96)",
  "serde 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -475,6 +476,14 @@ dependencies = [
 name = "regex-syntax"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "runas"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "rust-ini"
