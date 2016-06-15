@@ -2,7 +2,6 @@ use std::io;
 use std::fs;
 use std::env;
 use std::time;
-use std::process;
 use std::path::Path;
 use std::io::{Read, Write, Seek};
 
@@ -102,60 +101,6 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> io::Result<()> {
     }
 
     exec(path)
-}
-
-pub fn escape_win_shell_arg(arg) -> String {
-    if arg.len() == 0 {
-        "\"\""
-    } else if arg.find(&[' ', '\t', '"']).is_none() {
-        arg
-    } else {
-        let mut rv = String::with_capacity(rv.len() + 2);
-        rv.push('"');
-        for c in arg.chars() {
-            match c {
-                '\\' => rv.push("\\\\"),
-                '"' => rv.push("\\\""),
-                c => rv.push(c)
-            }
-        }
-        rv.push('"');
-        rv
-    }
-}
-
-pub fn run_elevated(cmd: &str, args: &[&str]) -> io::Result<process::ExitStatus> {
-    #[cfg(not(windows))]
-    fn run(cmd: &str, args: &[&str]) -> io::Result<process::ExitStatus> {
-        Command::new("sudo")
-            .arg("-k")
-            .arg(command)
-            .args(args)
-            .status()
-    }
-    #[cfg(windows)]
-    fn run(cmd: &str, args: &[&str]) -> io::Result<process::ExitStatus> {
-        use std::ptr::null;
-        use std::ffi::OsStr;
-        use std::os::windows::ffi::OsStrExt;
-        use ole32::CoInitializeEx;
-        use shell32::ShellExecuteW;
-        use winapi::objbase::{COINIT_APARTMENTTHREADED, COINIT_DISABLE_OLE1DDE};
-        use winapi::winuser::SW_HIDE;
-
-        pub mut params = String::new();
-        for arg in args {
-            params.push(' ');
-            params.push(escape_shell_arg(arg));
-        }
-
-        let file = OsStr::new(cmd).encode_wide().chain(Some(0)).collect::<Vec<_>>();
-        let params = OsStr::new(params).encode_wide().chain(Some(0)).collect::<Vec<_>>();
-        CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
-        ShellExecuteW(null(), "runas", &file, &params, null(), SW_HIDE);
-    }
-
-    run(cmd, args)
 }
 
 pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
