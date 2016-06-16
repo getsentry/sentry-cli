@@ -149,7 +149,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> CliResult<()
             .arg(&exe)
             .status()?;
     } else {
-        fs::rename(&tmp_path, &exe)?;
+        fs::rename(&downloaded_path, &exe)?;
     }
     Ok(())
 }

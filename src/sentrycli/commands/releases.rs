@@ -171,7 +171,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                 .arg(Arg::with_name("url_prefix")
                      .short("u")
                      .long("url-prefix")
-                     .required(true)
                      .value_name("PREFIX")
                      .help("The URL prefix to prepend to all filenames"))
                 .arg(Arg::with_name("validate")
@@ -299,7 +298,7 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
         fail!(resp);
     }
     let release : ReleaseInfo = serde_json::from_reader(&mut resp)?;
-    let url_prefix = matches.value_of("url_prefix").unwrap().trim_right_matches("/");
+    let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();
     let extensions = match matches.values_of("extensions") {
         Some(matches) => matches.map(|ext| OsStr::new(ext.trim_left_matches("."))).collect(),
