@@ -8,7 +8,21 @@ use sourcemap;
 use CliResult;
 
 fn join_url(base_url: &str, url: &str) -> CliResult<String> {
-    Ok(Url::parse(base_url)?.join(url)?.to_string())
+    if base_url.starts_with("~/") {
+        match Url::parse(&format!("http://{}", base_url))?.join(url) {
+            Ok(url) => {
+                let rv = url.to_string();
+                if rv.starts_with("http://~/") {
+                    Ok(format!("~/{}", &rv[9..]))
+                } else {
+                    Ok(rv)
+                }
+            },
+            Err(x) => fail!(x)
+        }
+    } else {
+        Ok(Url::parse(base_url)?.join(url)?.to_string())
+    }
 }
 
 
