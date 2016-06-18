@@ -36,7 +36,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> 
     println!("to create a token now.");
     println!("");
     println!("Sentry server: {}", Url::parse(&config.url)?
-             .serialize_host().unwrap_or("<unknown>".into()));
+             .host_str().unwrap_or("<unknown>"));
 
     if prompt_to_continue("Open browser now?")? {
         if open::that(&token_url).is_err() {

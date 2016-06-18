@@ -13,14 +13,14 @@ name = "sentry-cli"
 
 [dependencies]
 clap = { version = "2.5.2", default-features = false, features = ["suggestions", "wrap_help"] }
-hyper = "0.8.0"
+hyper = "0.9.8"
 mime = "^0.2"
 mime_guess = "1.6.1"
-multipart = "0.6.0-alpha"
+multipart = { git = "https://github.com/mitsuhiko/multipart", rev = "753149b474a075d04f3c82ced941622dceac6757" }
 serde = "0.7.5"
 serde_json = "0.7.1"
 serde_macros = "0.7.5"
-url = "0.5.4"
+url = "1.1.1"
 uuid = "0.1.18"
 walkdir = "0.1.5"
 which = "0.1.0"

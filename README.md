@@ -20,7 +20,7 @@ following nightly version is known to work: `2016-05-22`
 
 Use rustup to compile:
 
-    $ rustup override set nightly-2016-05-22
+    $ rustup override set nightly-2016-06-15
     $ cargo build
 
 In case you get OpenSSL errors you need to compile with the path to the

@@ -54,7 +54,8 @@ impl Dsn {
 
     fn from_str(dsn: &str) -> CliResult<Dsn> {
         let url = Url::parse(dsn)?;
-        let project_id = if let Some(components) = url.path() {
+        let project_id = if let Some(component_iter) = url.path_segments() {
+            let components : Vec<_> = component_iter.collect();
             if components.len() != 1 {
                 fail!("invalid dsn: invalid project ID");
             }
@@ -62,15 +63,19 @@ impl Dsn {
         } else {
             fail!("invalid dsn: missing project ID");
         };
-        if !(url.scheme == "http" || url.scheme == "https") {
-            fail!(format!("invalid dsn: unknown protocol '{}'", url.scheme));
+        if !(url.scheme() == "http" || url.scheme() == "https") {
+            fail!(format!("invalid dsn: unknown protocol '{}'", url.scheme()));
+        }
+
+        if url.username() == "" {
+            fail!("invalid dsn: missing client id");
         }
 
         Ok(Dsn {
-            protocol: url.scheme.clone(),
-            host: url.serialize_host().ok_or("invalid dsn: missing host")?,
-            port: url.port_or_default().unwrap(),
-            client_id: url.username().ok_or("invalid dsn: missing client id")?.into(),
+            protocol: url.scheme().into(),
+            host: url.host_str().ok_or("invalid dsn: missing host")?.into(),
+            port: url.port_or_known_default().unwrap(),
+            client_id: url.username().into(),
             secret: url.password().ok_or("invalid dsn: missing secret")?.into(),
             project_id: project_id,
         })
