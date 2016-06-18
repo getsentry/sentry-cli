@@ -27,7 +27,7 @@ which = "0.1.0"
 zip = "0.1.15"
 sha1 = "0.1.1"
 itertools = "0.4.15"
-rust-ini = { git = "https://github.com/getsentry/rust-ini", rev = "45720c10afdba72e4ed6d6548d981548fbe0db96" }
+rust-ini = "0.9.5"
 open = "1.1.1"
 runas = "0.1.0"
 sourcemap = { version = "0.3.1", default-features = false, features = ["nightly"] }
