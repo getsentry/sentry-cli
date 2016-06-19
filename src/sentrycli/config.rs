@@ -113,6 +113,10 @@ impl Config {
         })
     }
 
+    pub fn has_insecure_server(&self) -> bool {
+        self.url.starts_with("http://")
+    }
+
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {
         Ok((
             matches

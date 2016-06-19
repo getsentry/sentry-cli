@@ -93,7 +93,7 @@ impl<'a> Api<'a> {
                                version: &str, local_path: &Path, name: &str)
         -> ApiResult<Option<Artifact>>
     {
-        self.handle.reset();
+        self.reset();
         let mut form = curl::easy::Form::new();
         form.part("file").file(local_path).add()?;
         form.part("name").contents(name.as_bytes()).add()?;
@@ -191,7 +191,7 @@ impl<'a> Api<'a> {
     pub fn upload_dsyms(&mut self, org: &str, project: &str, file: &Path)
         -> ApiResult<Vec<DSymFile>>
     {
-        self.handle.reset();
+        self.reset();
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
         let headers = self.make_headers();
@@ -201,7 +201,7 @@ impl<'a> Api<'a> {
     }
 
     pub fn send_event(&mut self, event: &Event) -> ApiResult<String> {
-        self.handle.reset();
+        self.reset();
         let dsn = self.config.dsn.as_ref().ok_or(Error::NoDsn)?;
         let mut headers = self.make_headers();
         headers.append(&format!("X-Sentry-Auth: {}",
@@ -216,21 +216,21 @@ impl<'a> Api<'a> {
     }
 
     pub fn get(&mut self, path: &str) -> ApiResult<ApiResponse> {
-        self.handle.reset();
+        self.reset();
         self.handle.get(true)?;
         let headers = self.make_headers();
         self.req(path, Body::Empty, headers)
     }
 
     pub fn delete(&mut self, path: &str) -> ApiResult<ApiResponse> {
-        self.handle.reset();
+        self.reset();
         self.handle.custom_request("DELETE")?;
         let headers = self.make_headers();
         self.req(path, Body::Empty, headers)
     }
 
     pub fn post<S: Serialize>(&mut self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.handle.reset();
+        self.reset();
         self.handle.custom_request("POST")?;
         let mut body_bytes : Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)?;
@@ -239,7 +239,7 @@ impl<'a> Api<'a> {
     }
 
     pub fn download(&mut self, url: &str, dst: &mut fs::File) -> ApiResult<()> {
-        self.handle.reset();
+        self.reset();
         self.handle.url(&url)?;
         let headers = self.make_headers();
         self.handle.http_headers(headers)?;
@@ -294,6 +294,17 @@ impl<'a> Api<'a> {
             headers: headers,
             body: out,
         })
+    }
+
+    fn reset(&mut self) {
+        self.handle.reset();
+
+        // keepalive is broken on our dev server.  Since this makes local development
+        // quite frustrating we disable keepalive (handle reuse) when we connect to
+        // unprotected servers where it does not matter that much.
+        if self.config.has_insecure_server() {
+            self.handle.forbid_reuse(true).ok();
+        }
     }
 
     fn make_headers(&self) -> curl::easy::List {
