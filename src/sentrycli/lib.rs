@@ -7,6 +7,7 @@ extern crate alloc_system;
 extern crate chan;
 #[cfg(not(windows))]
 extern crate chan_signal;
+extern crate curl;
 extern crate clap;
 extern crate hyper;
 extern crate ini;
@@ -32,6 +33,7 @@ pub use error::{CliError, CliResult};
 
 mod macros;
 
+mod api;
 mod commands;
 mod event;
 mod error;

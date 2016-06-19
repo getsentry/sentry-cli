@@ -5,8 +5,8 @@ use std::fs::OpenOptions;
 
 use CliResult;
 use commands::{Config, Auth};
-use commands::info::get_user_info;
 use utils::{prompt, prompt_to_continue};
+use api::Api;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
@@ -50,7 +50,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> 
 
         let mut test_cfg = config.clone();
         test_cfg.auth = Auth::Token(token.clone());
-        match get_user_info(&test_cfg) {
+        match Api::new(&test_cfg).get_auth_info() {
             Ok(info) => {
                 // we can unwrap here somewhat safely because we do not permit
                 // signing in with legacy non user bound api keys here.

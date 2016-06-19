@@ -2,34 +2,9 @@ use clap::{App, ArgMatches};
 use hyper::method::Method;
 use serde_json;
 
+use api::Api;
 use CliResult;
 use commands::Config;
-
-#[derive(Deserialize)]
-pub struct Auth {
-    pub scopes: Vec<String>,
-}
-
-#[derive(Deserialize)]
-pub struct User {
-    pub email: String,
-    pub id: String,
-}
-
-#[derive(Deserialize)]
-pub struct AuthInfo {
-    pub auth: Auth,
-    pub user: Option<User>,
-}
-
-pub fn get_user_info(config: &Config) -> CliResult<AuthInfo> {
-    let mut resp = config.api_request(Method::Get, "/")?;
-    if !resp.status.is_success() {
-        fail!(resp);
-    } else {
-        Ok(serde_json::from_reader(&mut resp)?)
-    }
-}
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
@@ -46,7 +21,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> 
 
     println!("Authentication Info:");
     println!("  Method:        {}", config.auth.describe());
-    match get_user_info(&config) {
+    match Api::new(config).get_auth_info() {
         Ok(info) => {
             if let Some(ref user) = info.user {
                 println!("  User:          {} (id={})", user.email, user.id);
