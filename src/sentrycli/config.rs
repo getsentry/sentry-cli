@@ -3,7 +3,6 @@ use std::fs;
 use std::env;
 use std::path::PathBuf;
 
-use serde::Serialize;
 use serde_json;
 use clap::ArgMatches;
 use url::Url;
@@ -156,24 +155,6 @@ impl Config {
     {
         let req = self.prepare_api_request(method, path)?;
         Ok(req.start()?.send()?)
-    }
-
-    pub fn json_api_request<T: Serialize>(&self, method: Method, path: &str, body: &T)
-        -> CliResult<Response>
-    {
-        let mut req = self.prepare_api_request(method, path)?;
-        let mut body_bytes : Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &body)?;
-
-        {
-            let mut headers = req.headers_mut();
-            headers.set(ContentType(mime!(Application/Json)));
-            headers.set(ContentLength(body_bytes.len() as u64));
-        }
-
-        let mut req = req.start()?;
-        io::copy(&mut &body_bytes[..], &mut req)?;
-        Ok(req.send()?)
     }
 
     pub fn send_event(&self, event: &Event) -> CliResult<String> {

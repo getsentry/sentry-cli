@@ -30,7 +30,7 @@ itertools = "0.4.15"
 rust-ini = "0.9.5"
 open = "1.1.1"
 runas = "0.1.0"
-curl = "0.3.0"
+curl = { git = "https://github.com/alexcrichton/curl-rust", rev = "8b4a2273d6a271715b049e9731c18a3ff7b5b19a" }
 sourcemap = { version = "0.3.1", default-features = false, features = ["nightly"] }
 
 [target."cfg(not(windows))".dependencies]

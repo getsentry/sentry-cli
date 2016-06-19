@@ -3,27 +3,13 @@ use std::ffi::OsStr;
 use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use hyper::method::Method;
-use hyper::status::StatusCode;
-use multipart::client::Multipart;
-use mime::{Mime, TopLevel};
-use mime_guess::guess_mime_type_opt;
-use serde_json;
 use walkdir::WalkDir;
 
 use CliResult;
+use api::{Api, NewRelease};
 use commands::Config;
 use utils::make_subcommand;
 use sourcemaps::SourceMapValidator;
-
-#[derive(Debug, Serialize)]
-struct NewRelease {
-    version: String,
-    #[serde(rename="ref", skip_serializing_if="Option::is_none")]
-    reference: Option<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
-    url: Option<String>
-}
 
 #[derive(Debug, Deserialize)]
 struct ReleaseInfo {
@@ -45,48 +31,6 @@ struct Artifact {
     sha1: String,
     name: String,
     size: u64,
-}
-
-fn get_content_type(mime: Mime) -> String {
-    format!("{}{}", mime, match mime {
-        Mime(TopLevel::Text, _, _) => {
-            "; charset=utf-8"
-        },
-        _ => "",
-    })
-}
-
-fn upload_file(config: &Config, org: &str, project: &str, version: &str,
-               local_path: &Path, name: &str) -> CliResult<Option<Artifact>> {
-    let req = config.prepare_api_request(Method::Post,
-        &format!("/projects/{}/{}/releases/{}/files/", org, project, version))?;
-    let mut mp = Multipart::from_request_sized(req)?;
-    let mimetype = guess_mime_type_opt(local_path).or_else(|| {
-        guess_mime_type_opt(&Path::new(name))
-    }).or_else(|| {
-        "application/octet-stream".parse().ok()
-    }).unwrap();
-    mp.write_file("file", &local_path)?;
-    mp.write_text("header", &format!("Content-Type:{}", get_content_type(mimetype)))?;
-    mp.write_text("name", name)?;
-    let mut resp = mp.send()?;
-    if resp.status == StatusCode::Conflict {
-        Ok(None)
-    } else if !resp.status.is_success() {
-        fail!(resp);
-    } else {
-        Ok(Some(serde_json::from_reader(&mut resp)?))
-    }
-}
-
-fn list_files(config: &Config, org: &str, project: &str, release: &str) -> CliResult<Vec<Artifact>> {
-    let mut resp = config.api_request(
-        Method::Get, &format!("/projects/{}/{}/releases/{}/files/", org, project, release))?;
-    // XXX: handle pagination
-    if !resp.status.is_success() {
-        fail!(resp);
-    }
-    Ok(serde_json::from_reader(&mut resp)?)
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -190,60 +134,41 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 
 pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
                        org: &str, project: &str) -> CliResult<()> {
-    let release = NewRelease {
+    let info_rv = Api::new(config).new_release(org, project, &NewRelease {
         version: matches.value_of("version").unwrap().to_owned(),
         reference: matches.value_of("ref").map(|x| x.to_owned()),
         url: matches.value_of("url").map(|x| x.to_owned()),
-    };
-    let mut resp = config.json_api_request(
-        Method::Post, &format!("/projects/{}/{}/releases/", org, project),
-        &release)?;
-    if !resp.status.is_success() {
-        fail!(resp);
-    } else {
-        let info_rv : ReleaseInfo = serde_json::from_reader(&mut resp)?;
-        println!("Created release {}.", info_rv.version);
-    }
+    })?;
+    println!("Created release {}.", info_rv.version);
     Ok(())
 }
 
 pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
                           org: &str, project: &str) -> CliResult<()> {
     let version = matches.value_of("version").unwrap();
-    let resp = config.api_request(
-        Method::Delete, &format!("/projects/{}/{}/releases/{}/", org, project, version))?;
-    if resp.status == StatusCode::NotFound {
-        println!("Did nothing. Release with this version ({}) does not exist.", version);
-    } else if !resp.status.is_success() {
-        fail!(resp);
-    } else {
+    if Api::new(config).delete_release(org, project, version)? {
         println!("Deleted release {}!", version);
+    } else {
+        println!("Did nothing. Release with this version ({}) does not exist.", version);
     }
     Ok(())
 }
 
 pub fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
                         org: &str, project: &str) -> CliResult<()> {
-    let mut resp = config.api_request(
-        Method::Get, &format!("/projects/{}/{}/releases/", org, project))?;
-    if !resp.status.is_success() {
-        fail!(resp);
-    } else {
-        let infos : Vec<ReleaseInfo> = serde_json::from_reader(&mut resp)?;
-        for info in infos {
-            println!("[{}] {}: {} ({} new groups)",
-                     info.date_released.unwrap_or("              unreleased".into()),
-                     info.version,
-                     info.reference.unwrap_or("-".into()),
-                     info.new_groups);
-        }
+    for info in Api::new(config).list_releases(org, project)? {
+        println!("[{}] {}: {} ({} new groups)",
+                 info.date_released.unwrap_or("              unreleased".into()),
+                 info.version,
+                 info.reference.unwrap_or("-".into()),
+                 info.new_groups);
     }
     Ok(())
 }
 
 pub fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
                               org: &str, project: &str, release: &str) -> CliResult<()> {
-    for artifact in list_files(config, org, project, release)? {
+    for artifact in Api::new(config).list_release_files(org, project, release)? {
         println!("{}  ({} bytes)", artifact.name, artifact.size);
     }
     Ok(())
@@ -255,18 +180,12 @@ pub fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
-    for file in list_files(config, org, project, release)? {
+    let mut api = Api::new(config);
+    for file in api.list_release_files(org, project, release)? {
         if !(matches.is_present("all") || files.contains(&file.name)) {
             continue;
         }
-        let resp = config.api_request(
-            Method::Delete, &format!("/projects/{}/{}/releases/{}/files/{}/",
-                                     org, project, release, file.id))?;
-        if resp.status == StatusCode::NotFound {
-            continue;
-        } else if !resp.status.is_success() {
-            fail!(resp);
-        } else {
+        if api.delete_release_file(org, project, release, &file.id)? {
             println!("D {}", file.name);
         }
     }
@@ -281,8 +200,8 @@ pub fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
         None => Path::new(path).file_name()
             .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
     };
-    if let Some(artifact) = upload_file(config, org, project, &version,
-                                        &path, &name)? {
+    if let Some(artifact) = Api::new(config).upload_release_file(
+        org, project, &version, &path, &name)? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");
@@ -292,12 +211,8 @@ pub fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
 
 pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
                                            org: &str, project: &str, version: &str) -> CliResult<()> {
-    let mut resp = config.api_request(
-        Method::Get, &format!("/projects/{}/{}/releases/{}/", org, project, version))?;
-    if !resp.status.is_success() {
-        fail!(resp);
-    }
-    let release : ReleaseInfo = serde_json::from_reader(&mut resp)?;
+    let mut api = Api::new(config);
+    let release = api.get_release(org, project, version)?.ok_or("release not found")?;
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();
     let extensions = match matches.values_of("extensions") {
@@ -346,9 +261,8 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
     println!("Uploading sourcemaps for release {}", release.version);
     for (url, local_path, path) in to_process {
         println!("{} -> {}", local_path.display(), url);
-        if let Some(artifact) = upload_file(config, org, project,
-                                            &release.version,
-                                            &path, &url)? {
+        if let Some(artifact) = api.upload_release_file(
+            org, project, &release.version, &path, &url)? {
             println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
         } else {
             println!("  already present");

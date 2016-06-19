@@ -1,6 +1,4 @@
 use clap::{App, ArgMatches};
-use hyper::method::Method;
-use serde_json;
 
 use api::Api;
 use CliResult;

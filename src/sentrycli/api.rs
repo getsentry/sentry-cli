@@ -1,25 +1,42 @@
 use std::io;
 use std::io::Read;
 use std::fmt;
+use std::path::Path;
 use std::ascii::AsciiExt;
 
-use serde::Deserialize;
+use serde::{Serialize, Deserialize};
 use serde_json;
-
+use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
 
 use config::{Config, Auth};
 
+
+struct UrlArg<A: fmt::Display>(A);
+
+impl<A: fmt::Display> fmt::Display for UrlArg<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let val = format!("{}", self.0);
+        utf8_percent_encode(&val, DEFAULT_ENCODE_SET).fmt(f)
+    }
+}
 
 pub struct Api<'a> {
     config: &'a Config,
     handle: curl::easy::Easy,
 }
 
+enum Body {
+    Empty,
+    Json(Vec<u8>),
+    Form(curl::easy::Form),
+}
+
 #[derive(Debug)]
 pub enum Error {
     Http(u32, String),
     Curl(curl::Error),
+    Form(curl::FormError),
     Io(io::Error),
     Json(serde_json::Error),
 }
@@ -45,16 +62,107 @@ impl<'a> Api<'a> {
         Ok(self.get("/")?.convert()?)
     }
 
-    pub fn get(&mut self, path: &str) -> ApiResult<ApiResponse> {
-        self.handle.get(true)?;
-        self.request(path, None)
+    pub fn list_release_files(&mut self, org: &str, project: &str,
+                              release: &str) -> ApiResult<Vec<Artifact>> {
+        Ok(self.get(&format!("/projects/{}/{}/releases/{}/files/",
+                             UrlArg(org), UrlArg(project),
+                             UrlArg(release)))?.convert()?)
     }
 
-    fn request(&mut self, path: &str, body: Option<&[u8]>) -> ApiResult<ApiResponse> {
+    pub fn delete_release_file(&mut self, org: &str, project: &str, version: &str,
+                               file_id: &str)
+        -> ApiResult<bool>
+    {
+        let resp = self.delete(&format!("/projects/{}/{}/releases/{}/files/{}/",
+                                        UrlArg(org), UrlArg(project),
+                                        UrlArg(version), UrlArg(file_id)))?;
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.to_result().map(|_| true)
+        }
+    }
+
+    pub fn upload_release_file(&mut self, org: &str, project: &str,
+                               version: &str, local_path: &Path, name: &str)
+        -> ApiResult<Option<Artifact>>
+    {
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(local_path).add()?;
+        // XXX: guess type here
+        form.part("header")
+            .contents(b"Content-Type:application/octet-stream").add()?;
+        form.part("name").contents(name.as_bytes()).add()?;
+
+        let resp = self.req(&format!("/projects/{}/{}/releases/{}/files/",
+                                     UrlArg(org), UrlArg(project),
+                                     UrlArg(version)), Body::Form(form))?;
+        if resp.status() == 409 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    pub fn new_release(&mut self, org: &str, project: &str,
+                       release: &NewRelease) -> ApiResult<ReleaseInfo> {
+        Ok(self.post(&format!("/projects/{}/{}/releases/",
+                              UrlArg(org), UrlArg(project)), release)?.convert()?)
+    }
+
+    pub fn delete_release(&mut self, org: &str, project: &str, version: &str)
+        -> ApiResult<bool>
+    {
+        let resp = self.delete(&format!("/projects/{}/{}/releases/{}/",
+                                        UrlArg(org), UrlArg(project),
+                                        UrlArg(version)))?;
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.to_result().map(|_| true)
+        }
+    }
+
+    pub fn get_release(&mut self, org: &str, project: &str, version: &str)
+        -> ApiResult<Option<ReleaseInfo>> {
+        let resp = self.get(&format!("/projects/{}/{}/releases/{}/",
+                                     UrlArg(org), UrlArg(project), UrlArg(version)))?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    pub fn list_releases(&mut self, org: &str, project: &str)
+        -> ApiResult<Vec<ReleaseInfo>> {
+        Ok(self.get(&format!("/projects/{}/{}/releases/",
+                             UrlArg(org), UrlArg(project)))?.convert()?)
+    }
+
+    fn get(&mut self, path: &str) -> ApiResult<ApiResponse> {
+        self.handle.get(true)?;
+        self.req(path, Body::Empty)
+    }
+
+    fn delete(&mut self, path: &str) -> ApiResult<ApiResponse> {
+        self.handle.custom_request("DELETE")?;
+        self.req(path, Body::Empty)
+    }
+
+    fn post<S: Serialize>(&mut self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.handle.custom_request("POST")?;
+        let mut body_bytes : Vec<u8> = vec![];
+        serde_json::to_writer(&mut body_bytes, &body)?;
+        self.req(path, Body::Json(body_bytes))
+    }
+
+    fn req(&mut self, path: &str, body: Body) -> ApiResult<ApiResponse> {
         self.handle.url(&format!("{}/api/0/{}",
             self.config.url.trim_right_matches('/'),
             path.trim_left_matches('/')))?;
         let mut headers = curl::easy::List::new();
+        headers.append("Expect:")?;
         match self.config.auth {
             Auth::Key(ref key) => {
                 self.handle.username(key)?;
@@ -64,9 +172,23 @@ impl<'a> Api<'a> {
             }
             Auth::Unauthorized => {}
         }
+
+        let body_bytes = match body {
+            Body::Empty => None,
+            Body::Json(bytes) => {
+                headers.append("Content-Type: application/json")?;
+                Some(bytes)
+            },
+            Body::Form(form) => {
+                self.handle.httppost(form)?;
+                None
+            }
+        };
+
         self.handle.http_headers(headers)?;
-        match body {
-            Some(mut body) => {
+        match body_bytes {
+            Some(body) => {
+                let mut body = &body[..];
                 self.handle.upload(true)?;
                 self.handle.in_filesize(body.len() as u64)?;
                 handle_req(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))
@@ -78,6 +200,7 @@ impl<'a> Api<'a> {
     }
 }
 
+#[allow(dead_code)]
 pub struct Headers<'a> {
     lines: &'a [String],
     idx: usize,
@@ -141,6 +264,7 @@ impl ApiResponse {
     }
 
     /// Iterates over the headers.
+    #[allow(dead_code)]
     pub fn headers(&self) -> Headers {
         Headers {
             lines: &self.headers[..],
@@ -149,6 +273,7 @@ impl ApiResponse {
     }
 
     /// Looks up the first matching header for a key.
+    #[allow(dead_code)]
     pub fn get_header(&self, key: &str) -> Option<&str> {
         for (header_key, header_value) in self.headers() {
             if header_key.eq_ignore_ascii_case(key) {
@@ -185,6 +310,12 @@ fn handle_req(handle: &mut curl::easy::Easy,
 }
 
 
+impl From<curl::FormError> for Error {
+    fn from(err: curl::FormError) -> Error {
+        Error::Form(err)
+    }
+}
+
 impl From<curl::Error> for Error {
     fn from(err: curl::Error) -> Error {
         Error::Curl(err)
@@ -203,6 +334,7 @@ impl fmt::Display for Error {
             Error::Http(status, ref msg) => write!(f, "http error: {} ({})",
                                                    msg, status),
             Error::Curl(ref err) => write!(f, "http error: {}", err),
+            Error::Form(ref err) => write!(f, "http form error: {}", err),
             Error::Io(ref err) => write!(f, "io error: {}", err),
             Error::Json(ref err) => write!(f, "bad json: {}", err),
         }
@@ -230,4 +362,35 @@ pub struct User {
 pub struct AuthInfo {
     pub auth: AuthDetails,
     pub user: Option<User>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Artifact {
+    pub id: String,
+    pub sha1: String,
+    pub name: String,
+    pub size: u64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct NewRelease {
+    pub version: String,
+    #[serde(rename="ref", skip_serializing_if="Option::is_none")]
+    pub reference: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub url: Option<String>
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ReleaseInfo {
+    pub version: String,
+    #[serde(rename="ref")]
+    pub reference: Option<String>,
+    pub url: Option<String>,
+    #[serde(rename="dateCreated")]
+    pub date_created: String,
+    #[serde(rename="dateReleased")]
+    pub date_released: Option<String>,
+    #[serde(rename="newGroups")]
+    pub new_groups: u64,
 }
