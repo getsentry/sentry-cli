@@ -9,13 +9,8 @@ extern crate chan;
 extern crate chan_signal;
 extern crate curl;
 extern crate clap;
-extern crate hyper;
 extern crate ini;
 extern crate itertools;
-#[macro_use]
-extern crate mime;
-extern crate mime_guess;
-extern crate multipart;
 extern crate serde;
 extern crate serde_json;
 extern crate url;

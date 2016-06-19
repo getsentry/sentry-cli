@@ -13,10 +13,6 @@ name = "sentry-cli"
 
 [dependencies]
 clap = { version = "2.5.2", default-features = false, features = ["suggestions", "wrap_help"] }
-hyper = "0.9.8"
-mime = "^0.2"
-mime_guess = "1.6.1"
-multipart = { git = "https://github.com/mitsuhiko/multipart", rev = "753149b474a075d04f3c82ced941622dceac6757" }
 serde = "0.7.5"
 serde_json = "0.7.1"
 serde_macros = "0.7.5"

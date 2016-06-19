@@ -1,15 +1,20 @@
 use std::io;
-use std::io::Read;
+use std::fs;
+use std::io::{Read, Write};
 use std::fmt;
 use std::path::Path;
 use std::ascii::AsciiExt;
+use std::collections::HashSet;
 
 use serde::{Serialize, Deserialize};
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
 
+use utils;
+use event::Event;
 use config::{Config, Auth};
+use constants::{PLATFORM, ARCH, EXT, VERSION};
 
 
 struct UrlArg<A: fmt::Display>(A);
@@ -39,6 +44,7 @@ pub enum Error {
     Form(curl::FormError),
     Io(io::Error),
     Json(serde_json::Error),
+    NoDsn,
 }
 
 pub type ApiResult<T> = Result<T, Error>;
@@ -87,6 +93,7 @@ impl<'a> Api<'a> {
                                version: &str, local_path: &Path, name: &str)
         -> ApiResult<Option<Artifact>>
     {
+        self.handle.reset();
         let mut form = curl::easy::Form::new();
         form.part("file").file(local_path).add()?;
         // XXX: guess type here
@@ -94,9 +101,11 @@ impl<'a> Api<'a> {
             .contents(b"Content-Type:application/octet-stream").add()?;
         form.part("name").contents(name.as_bytes()).add()?;
 
+        let headers = self.make_headers();
         let resp = self.req(&format!("/projects/{}/{}/releases/{}/files/",
                                      UrlArg(org), UrlArg(project),
-                                     UrlArg(version)), Body::Form(form))?;
+                                     UrlArg(version)), Body::Form(form),
+                                     headers)?;
         if resp.status() == 409 {
             Ok(None)
         } else {
@@ -140,37 +149,132 @@ impl<'a> Api<'a> {
                              UrlArg(org), UrlArg(project)))?.convert()?)
     }
 
-    fn get(&mut self, path: &str) -> ApiResult<ApiResponse> {
+    pub fn get_latest_sentrycli_release(&mut self)
+        -> ApiResult<Option<SentryCliRelease>>
+    {
+        let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
+        let ref_name = format!("sentry-cli-{}-{}{}",
+           utils::capitalize_string(PLATFORM), ARCH, EXT);
+
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            let resp = resp.to_result()?;
+            let info : GitHubRelease = resp.convert()?;
+            for asset in info.assets {
+                if asset.name == ref_name {
+                    return Ok(Some(SentryCliRelease {
+                        version: info.tag_name,
+                        download_url: asset.browser_download_url,
+                    }));
+                }
+            }
+            Ok(None)
+        }
+    }
+
+    pub fn find_missing_dsym_checksums(&mut self, org: &str, project: &str,
+                                       checksums: &Vec<&str>)
+        -> ApiResult<HashSet<String>>
+    {
+        let mut url = format!("/projects/{}/{}/files/dsyms/unknown/?",
+                              UrlArg(org), UrlArg(project));
+        for (idx, checksum) in checksums.iter().enumerate() {
+            if idx > 0 {
+                url.push('&');
+            }
+            url.push_str("checksums=");
+            url.push_str(checksum);
+        }
+
+        let state : MissingChecksumsResponse = self.get(&url)?.convert()?;
+        Ok(state.missing)
+    }
+
+    pub fn upload_dsyms(&mut self, org: &str, project: &str, file: &Path)
+        -> ApiResult<Vec<DSymFile>>
+    {
+        self.handle.reset();
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(file).add()?;
+        let headers = self.make_headers();
+        Ok(self.req(&format!("/projects/{}/{}/files/dsyms/",
+                             UrlArg(org), UrlArg(project)), Body::Form(form),
+                             headers)?.convert()?)
+    }
+
+    pub fn send_event(&mut self, event: &Event) -> ApiResult<String> {
+        self.handle.reset();
+        let dsn = self.config.dsn.as_ref().ok_or(Error::NoDsn)?;
+        let mut headers = self.make_headers();
+        headers.append(&format!("X-Sentry-Auth: {}",
+                                dsn.get_auth_header(event.timestamp)))?;
+
+        self.handle.custom_request("POST")?;
+        let mut body_bytes : Vec<u8> = vec![];
+        serde_json::to_writer(&mut body_bytes, &event)?;
+        let event : EventInfo = self.req(&dsn.get_submit_url(),
+            Body::Json(body_bytes), headers)?.convert()?;
+        Ok(event.id)
+    }
+
+    pub fn get(&mut self, path: &str) -> ApiResult<ApiResponse> {
+        self.handle.reset();
         self.handle.get(true)?;
-        self.req(path, Body::Empty)
+        let headers = self.make_headers();
+        self.req(path, Body::Empty, headers)
     }
 
-    fn delete(&mut self, path: &str) -> ApiResult<ApiResponse> {
+    pub fn delete(&mut self, path: &str) -> ApiResult<ApiResponse> {
+        self.handle.reset();
         self.handle.custom_request("DELETE")?;
-        self.req(path, Body::Empty)
+        let headers = self.make_headers();
+        self.req(path, Body::Empty, headers)
     }
 
-    fn post<S: Serialize>(&mut self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+    pub fn post<S: Serialize>(&mut self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.handle.reset();
         self.handle.custom_request("POST")?;
         let mut body_bytes : Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)?;
-        self.req(path, Body::Json(body_bytes))
+        let headers = self.make_headers();
+        self.req(path, Body::Json(body_bytes), headers)
     }
 
-    fn req(&mut self, path: &str, body: Body) -> ApiResult<ApiResponse> {
-        self.handle.url(&format!("{}/api/0/{}",
-            self.config.url.trim_right_matches('/'),
-            path.trim_left_matches('/')))?;
-        let mut headers = curl::easy::List::new();
-        headers.append("Expect:")?;
-        match self.config.auth {
-            Auth::Key(ref key) => {
-                self.handle.username(key)?;
+    pub fn download(&mut self, url: &str, dst: &mut fs::File) -> ApiResult<()> {
+        self.handle.reset();
+        self.handle.url(&url)?;
+        let headers = self.make_headers();
+        self.handle.http_headers(headers)?;
+        self.handle.follow_location(true)?;
+        self.handle.progress(true)?;
+        let (_, _) = send_req(&mut self.handle, dst, None)?;
+        Ok(())
+    }
+
+    fn req(&mut self, path: &str, body: Body, mut headers: curl::easy::List)
+        -> ApiResult<ApiResponse>
+    {
+        let (url, want_auth) = if path.starts_with("http://") ||
+                                  path.starts_with("https://") {
+            (path.into(), false)
+        } else {
+            (format!("{}/api/0/{}",
+                     self.config.url.trim_right_matches('/'),
+                     path.trim_left_matches('/')), true)
+        };
+        self.handle.url(&url)?;
+
+        if want_auth {
+            match self.config.auth {
+                Auth::Key(ref key) => {
+                    self.handle.username(key)?;
+                }
+                Auth::Token(ref token) => {
+                    headers.append(&format!("Authorization: Bearer {}", token))?;
+                }
+                Auth::Unauthorized => {}
             }
-            Auth::Token(ref token) => {
-                headers.append(&format!("Authorization: Bearer {}", token))?;
-            }
-            Auth::Unauthorized => {}
         }
 
         let body_bytes = match body {
@@ -186,18 +290,64 @@ impl<'a> Api<'a> {
         };
 
         self.handle.http_headers(headers)?;
-        match body_bytes {
-            Some(body) => {
-                let mut body = &body[..];
-                self.handle.upload(true)?;
-                self.handle.in_filesize(body.len() as u64)?;
-                handle_req(&mut self.handle, &mut |buf| body.read(buf).unwrap_or(0))
-            },
-            None => {
-                handle_req(&mut self.handle, &mut |_| 0)
-            }
+        let mut out : Vec<u8> = vec![];
+        let (status, headers) = send_req(&mut self.handle, &mut out, body_bytes)?;
+        Ok(ApiResponse {
+            status: status,
+            headers: headers,
+            body: out,
+        })
+    }
+
+    fn make_headers(&self) -> curl::easy::List {
+        let mut headers = curl::easy::List::new();
+        headers.append("Expect:").ok();
+        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
+        headers
+    }
+}
+
+fn send_req<W: Write>(handle: &mut curl::easy::Easy,
+                      out: &mut W, body: Option<Vec<u8>>)
+    -> ApiResult<(u32, Vec<String>)>
+{
+    match body {
+        Some(body) => {
+            let mut body = &body[..];
+            handle.upload(true)?;
+            handle.in_filesize(body.len() as u64)?;
+            handle_req(handle, out,
+                       &mut |buf| body.read(buf).unwrap_or(0))
+        },
+        None => {
+            handle_req(handle, out, &mut |_| 0)
         }
     }
+}
+
+fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
+                        out: &mut W,
+                        read: &mut FnMut(&mut [u8]) -> usize)
+    -> ApiResult<(u32, Vec<String>)>
+{
+    let mut headers = Vec::new();
+    {
+        let mut handle = handle.transfer();
+        handle.read_function(|buf| Ok(read(buf)))?;
+        handle.write_function(|data| {
+            Ok(match out.write_all(data) {
+                Ok(_) => data.len(),
+                Err(_) => 0,
+            })
+        })?;
+        handle.header_function(|data| {
+            headers.push(String::from_utf8_lossy(data).into_owned());
+            true
+        })?;
+        handle.perform()?;
+    }
+
+    Ok((handle.response_code()?, headers))
 }
 
 #[allow(dead_code)]
@@ -284,31 +434,6 @@ impl ApiResponse {
     }
 }
 
-fn handle_req(handle: &mut curl::easy::Easy,
-              read: &mut FnMut(&mut [u8]) -> usize) -> ApiResult<ApiResponse> {
-    let mut headers = Vec::new();
-    let mut body = Vec::new();
-    {
-        let mut handle = handle.transfer();
-        handle.read_function(|buf| Ok(read(buf)))?;
-        handle.write_function(|data| {
-            body.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        handle.header_function(|data| {
-            headers.push(String::from_utf8_lossy(data).into_owned());
-            true
-        })?;
-        handle.perform()?;
-    }
-
-    Ok(ApiResponse {
-        status: handle.response_code()?,
-        headers: headers,
-        body: body,
-    })
-}
-
 
 impl From<curl::FormError> for Error {
     fn from(err: curl::FormError) -> Error {
@@ -337,6 +462,7 @@ impl fmt::Display for Error {
             Error::Form(ref err) => write!(f, "http form error: {}", err),
             Error::Io(ref err) => write!(f, "io error: {}", err),
             Error::Json(ref err) => write!(f, "bad json: {}", err),
+            Error::NoDsn => write!(f, "no dsn provided"),
         }
     }
 }
@@ -393,4 +519,40 @@ pub struct ReleaseInfo {
     pub date_released: Option<String>,
     #[serde(rename="newGroups")]
     pub new_groups: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct GitHubAsset {
+    browser_download_url: String,
+    name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+    assets: Vec<GitHubAsset>,
+}
+
+pub struct SentryCliRelease {
+    pub version: String,
+    pub download_url: String,
+}
+
+#[derive(Deserialize)]
+struct EventInfo {
+    id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct DSymFile {
+    pub uuid: String,
+    #[serde(rename="objectName")]
+    pub object_name: String,
+    #[serde(rename="cpuName")]
+    pub cpu_name: String,
+}
+
+#[derive(Deserialize)]
+struct MissingChecksumsResponse {
+    missing: HashSet<String>,
 }

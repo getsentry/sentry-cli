@@ -3,24 +3,12 @@ use std::fs;
 use std::env;
 use std::path::PathBuf;
 
-use serde_json;
 use clap::ArgMatches;
 use url::Url;
 use ini::Ini;
-use hyper::method::Method;
-use hyper::client::request::Request;
-use hyper::client::response::Response;
-use hyper::header::{Authorization, Basic, Bearer, ContentType, ContentLength, UserAgent};
-use hyper::net::Fresh;
 
 use CliResult;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
-use event::Event;
-
-#[derive(Deserialize)]
-pub struct EventInfo {
-    id: String,
-}
 
 #[derive(Debug, Clone)]
 pub enum Auth {
@@ -80,12 +68,12 @@ impl Dsn {
         })
     }
 
-    pub fn get_submit_url(&self) -> Url {
-        Url::parse(&format!("{}://{}:{}/api/{}/store/",
-                            self.protocol,
-                            self.host,
-                            self.port,
-                            self.project_id)).unwrap()
+    pub fn get_submit_url(&self) -> String {
+        format!("{}://{}:{}/api/{}/store/",
+                self.protocol,
+                self.host,
+                self.port,
+                self.project_id)
     }
 
     pub fn get_auth_header(&self, ts: f64) -> String {
@@ -123,62 +111,6 @@ impl Config {
             dsn: get_default_dsn(&ini)?,
             ini: ini,
         })
-    }
-
-    pub fn prepare_api_request(&self, method: Method, path: &str)
-        -> CliResult<Request<Fresh>>
-    {
-        let url = Url::parse(&format!(
-            "{}/api/0{}", self.url.trim_right_matches("/"), path))?;
-        let mut req = Request::new(method, url)?;
-        {
-            match self.auth {
-                Auth::Key(ref api_key) => {
-                    req.headers_mut().set(Authorization(Basic {
-                        username: api_key.clone(),
-                        password: None
-                    }));
-                },
-                Auth::Token(ref token) => {
-                    req.headers_mut().set(Authorization(Bearer {
-                        token: token.clone()
-                    }));
-                },
-                Auth::Unauthorized => {},
-            }
-        }
-        Ok(req)
-    }
-
-    pub fn api_request(&self, method: Method, path: &str)
-        -> CliResult<Response>
-    {
-        let req = self.prepare_api_request(method, path)?;
-        Ok(req.start()?.send()?)
-    }
-
-    pub fn send_event(&self, event: &Event) -> CliResult<String> {
-        let dsn = self.dsn.as_ref().ok_or("no dsn provided")?;
-        let mut req = Request::new(Method::Post, dsn.get_submit_url())?;
-        let mut body_bytes : Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &event)?;
-        {
-            let mut headers = req.headers_mut();
-            headers.set(UserAgent(format!("sentry-cli/{}", VERSION)));
-            headers.set(ContentType(mime!(Application/Json)));
-            headers.set(ContentLength(body_bytes.len() as u64));
-            headers.set_raw("X-Sentry-Auth", vec![
-                dsn.get_auth_header(event.timestamp).as_bytes().into()]);
-        }
-        let mut req = req.start()?;
-        io::copy(&mut &body_bytes[..], &mut req)?;
-        let mut resp = req.send()?;
-        if !resp.status.is_success() {
-            fail!(resp);
-        } else {
-            let event : EventInfo = serde_json::from_reader(&mut resp)?;
-            Ok(event.id)
-        }
     }
 
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {

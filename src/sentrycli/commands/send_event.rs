@@ -4,6 +4,7 @@ use itertools::Itertools;
 use CliResult;
 use commands::Config;
 use event::Event;
+use api::Api;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
@@ -71,7 +72,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
     // login" to sign in which would be in appropriate here.
-    match config.send_event(&event) {
+    match Api::new(config).send_event(&event) {
         Ok(event_id) => {
             println!("Event sent: {}", event_id);
         },

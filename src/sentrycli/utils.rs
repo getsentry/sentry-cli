@@ -1,8 +1,9 @@
 use std::io;
 use std::fs;
+use std::mem;
 use std::env;
 use std::time;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek};
 
 use uuid::Uuid;
@@ -15,7 +16,8 @@ use CliResult;
 use chan_signal::{notify, Signal};
 
 pub struct TempFile {
-    f: fs::File,
+    f: Option<fs::File>,
+    path: PathBuf,
 }
 
 impl TempFile {
@@ -27,16 +29,27 @@ impl TempFile {
             .write(true)
             .create(true)
             .open(&path).unwrap();
-        let _ = fs::remove_file(&path);
         Ok(TempFile {
-            f: f
+            f: Some(f),
+            path: path.to_path_buf(),
         })
     }
 
     pub fn open(&self) -> fs::File {
-        let mut f = self.f.try_clone().unwrap();
+        let mut f = self.f.as_ref().unwrap().try_clone().unwrap();
         let _ = f.seek(io::SeekFrom::Start(0));
         f
+    }
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl Drop for TempFile {
+    fn drop(&mut self) {
+        mem::drop(self.f.take());
+        let _ = fs::remove_file(&self.path);
     }
 }
 
