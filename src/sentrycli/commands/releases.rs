@@ -11,27 +11,6 @@ use commands::Config;
 use utils::make_subcommand;
 use sourcemaps::SourceMapValidator;
 
-#[derive(Debug, Deserialize)]
-struct ReleaseInfo {
-    version: String,
-    #[serde(rename="ref")]
-    reference: Option<String>,
-    url: Option<String>,
-    #[serde(rename="dateCreated")]
-    date_created: String,
-    #[serde(rename="dateReleased")]
-    date_released: Option<String>,
-    #[serde(rename="newGroups")]
-    new_groups: u64,
-}
-
-#[derive(Debug, Deserialize)]
-struct Artifact {
-    id: String,
-    sha1: String,
-    name: String,
-    size: u64,
-}
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
