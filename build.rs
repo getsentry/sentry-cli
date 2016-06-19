@@ -17,11 +17,4 @@ fn main() {
 
     write!(f, "pub const PLATFORM : &'static str = \"{}\";\n", platform).ok();
     write!(f, "pub const ARCH : &'static str = \"{}\";\n", arch).ok();
-
-    // we need this when linking openssl statically
-    if platform == "windows" {
-        println!("cargo:rustc-link-lib=gdi32");
-        println!("cargo:rustc-link-lib=user32");
-        println!("cargo:rustc-link-lib=advapi32");
-    }
 }

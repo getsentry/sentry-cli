@@ -25,7 +25,7 @@ install:
 build: false
 
 test_script:
-  - powershell -File build-win.ps1
+  - cargo build --release --target i686-pc-windows-msvc
 
 after_test:
   - powershell -File .ci/deploy.ps1

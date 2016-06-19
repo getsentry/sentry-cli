@@ -96,9 +96,6 @@ impl<'a> Api<'a> {
         self.handle.reset();
         let mut form = curl::easy::Form::new();
         form.part("file").file(local_path).add()?;
-        // XXX: guess type here
-        form.part("header")
-            .contents(b"Content-Type:application/octet-stream").add()?;
         form.part("name").contents(name.as_bytes()).add()?;
 
         let headers = self.make_headers();
