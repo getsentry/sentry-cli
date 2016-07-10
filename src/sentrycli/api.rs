@@ -424,7 +424,7 @@ impl ApiResponse {
     /// Deserializes the response body into the given type
     pub fn deserialize<T: Deserialize>(&self) -> ApiResult<T> {
         Ok(serde_json::from_reader(match self.body {
-            Some(ref body) => &body[..],
+            Some(ref body) => &body,
             None => &b""[..],
         })?)
     }
