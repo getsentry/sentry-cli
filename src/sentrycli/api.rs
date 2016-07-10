@@ -75,6 +75,9 @@ impl<'a> Api<'a> {
 
     // Low Level Methods
 
+    /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
+    /// URL is just a path then it's relative to the configured API host
+    /// and authentication is automatically enabled.
     pub fn request(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
         if !self.config.allow_keepalive() {
@@ -92,20 +95,22 @@ impl<'a> Api<'a> {
         ApiRequest::new(handle, method, &url, auth)
     }
 
-    // Convenience Methods
-
+    /// Convenience method that performs a `GET` request.
     pub fn get(&self, path: &str) -> ApiResult<ApiResponse> {
         self.request(Method::Get, path)?.send()
     }
 
+    /// Convenience method that performs a `DELETE` request.
     pub fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
         self.request(Method::Delete, path)?.send()
     }
 
+    /// Convenience method that performs a `POST` request with JSON data.
     pub fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
         self.request(Method::Post, path)?.with_json_body(body)?.send()
     }
 
+    /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
         Ok(self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)?)
     }
@@ -432,9 +437,7 @@ impl ApiResponse {
     /// Like `deserialize` but consumes the response and will convert
     /// failed requests into proper errors.
     pub fn convert<T: Deserialize>(self) -> ApiResult<T> {
-        self.to_result().and_then(|x| {
-            x.deserialize()
-        })
+        self.to_result().and_then(|x| x.deserialize())
     }
 
     /// Iterates over the headers.
