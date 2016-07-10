@@ -19,11 +19,20 @@ use config::{Config, Auth};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
 
 
-struct UrlArg<A: fmt::Display>(A);
+struct PathArg<A: fmt::Display>(A);
 
-impl<A: fmt::Display> fmt::Display for UrlArg<A> {
+impl<A: fmt::Display> fmt::Display for PathArg<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let val = format!("{}", self.0);
+        // if we put values into the path we need to url encode them.  However
+        // special care needs to be taken for any slash character or path
+        // segments that would end up as ".." or "." for security reasons.
+        // Since we cannot handle slashes there we just replace them with the
+        // unicode replacement character as a quick workaround.  This will
+        // typically result in 404s from the server.
+        let mut val = format!("{}", self.0).replace('/', "\u{fffd}");
+        if val == ".." || val == "." {
+            val = "\u{fffd}".into();
+        }
         utf8_percent_encode(&val, DEFAULT_ENCODE_SET).fmt(f)
     }
 }
@@ -124,8 +133,8 @@ impl<'a> Api<'a> {
     pub fn list_release_files(&self, org: &str, project: &str,
                               release: &str) -> ApiResult<Vec<Artifact>> {
         Ok(self.get(&format!("/projects/{}/{}/releases/{}/files/",
-                             UrlArg(org), UrlArg(project),
-                             UrlArg(release)))?.convert()?)
+                             PathArg(org), PathArg(project),
+                             PathArg(release)))?.convert()?)
     }
 
     pub fn delete_release_file(&self, org: &str, project: &str, version: &str,
@@ -133,8 +142,8 @@ impl<'a> Api<'a> {
         -> ApiResult<bool>
     {
         let resp = self.delete(&format!("/projects/{}/{}/releases/{}/files/{}/",
-                                        UrlArg(org), UrlArg(project),
-                                        UrlArg(version), UrlArg(file_id)))?;
+                                        PathArg(org), PathArg(project),
+                                        PathArg(version), PathArg(file_id)))?;
         if resp.status() == 404 {
             Ok(false)
         } else {
@@ -147,8 +156,8 @@ impl<'a> Api<'a> {
         -> ApiResult<Option<Artifact>>
     {
         let path = format!("/projects/{}/{}/releases/{}/files/",
-                           UrlArg(org), UrlArg(project),
-                           UrlArg(version));
+                           PathArg(org), PathArg(project),
+                           PathArg(version));
         let mut form = curl::easy::Form::new();
         form.part("file").file(local_path).add()?;
         form.part("name").contents(name.as_bytes()).add()?;
@@ -164,15 +173,15 @@ impl<'a> Api<'a> {
     pub fn new_release(&self, org: &str, project: &str,
                        release: &NewRelease) -> ApiResult<ReleaseInfo> {
         Ok(self.post(&format!("/projects/{}/{}/releases/",
-                              UrlArg(org), UrlArg(project)), release)?.convert()?)
+                              PathArg(org), PathArg(project)), release)?.convert()?)
     }
 
     pub fn delete_release(&self, org: &str, project: &str, version: &str)
         -> ApiResult<bool>
     {
         let resp = self.delete(&format!("/projects/{}/{}/releases/{}/",
-                                        UrlArg(org), UrlArg(project),
-                                        UrlArg(version)))?;
+                                        PathArg(org), PathArg(project),
+                                        PathArg(version)))?;
         if resp.status() == 404 {
             Ok(false)
         } else {
@@ -183,7 +192,7 @@ impl<'a> Api<'a> {
     pub fn get_release(&self, org: &str, project: &str, version: &str)
         -> ApiResult<Option<ReleaseInfo>> {
         let resp = self.get(&format!("/projects/{}/{}/releases/{}/",
-                                     UrlArg(org), UrlArg(project), UrlArg(version)))?;
+                                     PathArg(org), PathArg(project), PathArg(version)))?;
         if resp.status() == 404 {
             Ok(None)
         } else {
@@ -194,7 +203,7 @@ impl<'a> Api<'a> {
     pub fn list_releases(&self, org: &str, project: &str)
         -> ApiResult<Vec<ReleaseInfo>> {
         Ok(self.get(&format!("/projects/{}/{}/releases/",
-                             UrlArg(org), UrlArg(project)))?.convert()?)
+                             PathArg(org), PathArg(project)))?.convert()?)
     }
 
     pub fn get_latest_sentrycli_release(&self)
@@ -226,7 +235,7 @@ impl<'a> Api<'a> {
         -> ApiResult<HashSet<String>>
     {
         let mut url = format!("/projects/{}/{}/files/dsyms/unknown/?",
-                              UrlArg(org), UrlArg(project));
+                              PathArg(org), PathArg(project));
         for (idx, checksum) in checksums.iter().enumerate() {
             if idx > 0 {
                 url.push('&');
@@ -242,7 +251,7 @@ impl<'a> Api<'a> {
     pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path)
         -> ApiResult<Vec<DSymFile>>
     {
-        let path = format!("/projects/{}/{}/files/dsyms/", UrlArg(org), UrlArg(project));
+        let path = format!("/projects/{}/{}/files/dsyms/", PathArg(org), PathArg(project));
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
         Ok(self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()?)
