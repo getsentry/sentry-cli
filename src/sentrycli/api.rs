@@ -228,8 +228,7 @@ impl<'a> Api<'a> {
         if resp.status() == 404 {
             Ok(None)
         } else {
-            let resp = resp.to_result()?;
-            let info : GitHubRelease = resp.convert()?;
+            let info : GitHubRelease = resp.to_result()?.convert()?;
             for asset in info.assets {
                 if asset.name == ref_name {
                     return Ok(Some(SentryCliRelease {
