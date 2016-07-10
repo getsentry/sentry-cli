@@ -14,17 +14,6 @@ use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
 pub enum Auth {
     Key(String),
     Token(String),
-    Unauthorized
-}
-
-impl Auth {
-    pub fn describe(&self) -> &str {
-        match *self {
-            Auth::Key(_) => "API Key",
-            Auth::Token(_) => "Auth Token",
-            Auth::Unauthorized => "Unauthorized",
-        }
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -94,7 +83,7 @@ impl Dsn {
 #[derive(Clone)]
 pub struct Config {
     pub filename: PathBuf,
-    pub auth: Auth,
+    pub auth: Option<Auth>,
     pub url: String,
     pub dsn: Option<Dsn>,
     pub ini: Ini,
@@ -111,6 +100,17 @@ impl Config {
             dsn: get_default_dsn(&ini)?,
             ini: ini,
         })
+    }
+
+    pub fn allow_keepalive(&self) -> bool {
+        let val = self.ini.get_from(Some("http"), "keepalive");
+        match val {
+            // keepalive is broken on our dev server.  Since this makes local development
+            // quite frustrating we disable keepalive (handle reuse) when we connect to
+            // unprotected servers where it does not matter that much.
+            None => !self.has_insecure_server(),
+            Some(val) => val == "true",
+        }
     }
 
     pub fn has_insecure_server(&self) -> bool {
@@ -184,17 +184,17 @@ fn load_cli_config() -> CliResult<(PathBuf, Ini)> {
     }
 }
 
-fn get_default_auth(ini: &Ini) -> Auth {
+fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Some(ref val) = env::var("SENTRY_AUTH_TOKEN").ok() {
-        Auth::Token(val.to_owned())
+        Some(Auth::Token(val.to_owned()))
     } else if let Some(ref val) = env::var("SENTRY_API_KEY").ok() {
-        Auth::Key(val.to_owned())
+        Some(Auth::Key(val.to_owned()))
     } else if let Some(val) = ini.get_from(Some("auth"), "token") {
-        Auth::Token(val.to_owned())
+        Some(Auth::Token(val.to_owned()))
     } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
-        Auth::Key(val.to_owned())
+        Some(Auth::Key(val.to_owned()))
     } else {
-        Auth::Unauthorized
+        None
     }
 }
 

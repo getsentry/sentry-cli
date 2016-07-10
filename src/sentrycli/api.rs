@@ -6,6 +6,7 @@ use std::cell::{RefMut, RefCell};
 use std::path::Path;
 use std::ascii::AsciiExt;
 use std::collections::HashSet;
+use std::borrow::Cow;
 
 use serde::{Serialize, Deserialize};
 use serde_json;
@@ -51,10 +52,8 @@ pub enum Method {
 }
 
 pub struct ApiRequest<'a> {
-    config: &'a Config,
     handle: RefMut<'a, curl::easy::Easy>,
     headers: curl::easy::List,
-    url: String,
     body: Option<Vec<u8>>,
 }
 
@@ -66,6 +65,38 @@ pub struct ApiResponse {
 }
 
 impl<'a> ApiRequest<'a> {
+    fn new(mut handle: RefMut<'a, curl::easy::Easy>,
+           method: Method, url: &str, auth: Option<&Auth>)
+        -> ApiResult<ApiRequest<'a>>
+    {
+        let mut headers = curl::easy::List::new();
+        headers.append("Expect:").ok();
+        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
+
+        match method {
+            Method::Get => handle.get(true)?,
+            Method::Post => handle.custom_request("POST")?,
+            Method::Delete => handle.custom_request("DELETE")?,
+        }
+
+        handle.url(&url)?;
+        match auth {
+            None => {},
+            Some(&Auth::Key(ref key)) => {
+                handle.username(key)?;
+            }
+            Some(&Auth::Token(ref token)) => {
+                headers.append(&format!("Authorization: Bearer {}", token))?;
+            }
+        }
+
+        Ok(ApiRequest {
+            handle: handle,
+            headers: headers,
+            body: None,
+        })
+    }
+
     pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<ApiRequest<'a>> {
         self.headers.append(&format!("{}: {}", key, value))?;
         Ok(self)
@@ -91,28 +122,6 @@ impl<'a> ApiRequest<'a> {
     }
 
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
-        let (url, want_auth) = if self.url.starts_with("http://") ||
-                                  self.url.starts_with("https://") {
-            (self.url.clone(), false)
-        } else {
-            (format!("{}/api/0/{}",
-                     self.config.url.trim_right_matches('/'),
-                     self.url.trim_left_matches('/')), true)
-        };
-        self.handle.url(&url)?;
-
-        if want_auth {
-            match self.config.auth {
-                Auth::Key(ref key) => {
-                    self.handle.username(key)?;
-                }
-                Auth::Token(ref token) => {
-                    self.headers.append(&format!("Authorization: Bearer {}", token))?;
-                }
-                Auth::Unauthorized => {}
-            }
-        }
-
         self.handle.http_headers(self.headers)?;
         let (status, headers) = send_req(&mut self.handle, out, self.body)?;
         Ok(ApiResponse {
@@ -142,31 +151,19 @@ impl<'a> Api<'a> {
 
     pub fn request(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
-
-        // keepalive is broken on our dev server.  Since this makes local development
-        // quite frustrating we disable keepalive (handle reuse) when we connect to
-        // unprotected servers where it does not matter that much.
-        if self.config.has_insecure_server() {
+        if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();
         }
-
-        let mut headers = curl::easy::List::new();
-        headers.append("Expect:").ok();
-        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
-
-        match method {
-            Method::Get => handle.get(true)?,
-            Method::Post => handle.custom_request("POST")?,
-            Method::Delete => handle.custom_request("DELETE")?,
-        }
-
-        Ok(ApiRequest {
-            config: self.config,
-            handle: handle,
-            headers: headers,
-            url: url.into(),
-            body: None,
-        })
+        let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
+            (Cow::Borrowed(url), None)
+        } else {
+            (
+                Cow::Owned(format!("{}/api/0/{}", self.config.url.trim_right_matches('/'),
+                                   url.trim_left_matches('/'))),
+                self.config.auth.as_ref()
+            )
+        };
+        ApiRequest::new(handle, method, &url, auth)
     }
 
     // Convenience Methods

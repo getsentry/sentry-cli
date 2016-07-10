@@ -2,12 +2,20 @@ use clap::{App, ArgMatches};
 
 use api::Api;
 use CliResult;
-use commands::Config;
+use commands::{Auth, Config};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
     app
         .about("print out information about the sentry server")
+}
+
+fn describe_auth(auth: Option<&Auth>) -> &str {
+    match auth {
+        None => "Unauthorized",
+        Some(&Auth::Token(_)) => "Auth Token",
+        Some(&Auth::Key(_)) => "API Key",
+    }
 }
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
@@ -18,7 +26,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> 
     println!("");
 
     println!("Authentication Info:");
-    println!("  Method:        {}", config.auth.describe());
+    println!("  Method:        {}", describe_auth(config.auth.as_ref()));
     match Api::new(config).get_auth_info() {
         Ok(info) => {
             if let Some(ref user) = info.user {

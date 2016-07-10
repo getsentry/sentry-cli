@@ -59,10 +59,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
         config.url = url.to_owned();
     }
     if let Some(api_key) = matches.value_of("api_key") {
-        config.auth = Auth::Key(api_key.to_owned());
+        config.auth = Some(Auth::Key(api_key.to_owned()));
     }
     if let Some(auth_token) = matches.value_of("auth_token") {
-        config.auth = Auth::Token(auth_token.to_owned());
+        config.auth = Some(Auth::Token(auth_token.to_owned()));
     }
 
     macro_rules! execute_subcommand {

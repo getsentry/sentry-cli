@@ -49,7 +49,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> 
         token = prompt("Enter your token")?;
 
         let mut test_cfg = config.clone();
-        test_cfg.auth = Auth::Token(token.clone());
+        test_cfg.auth = Some(Auth::Token(token.clone()));
         match Api::new(&test_cfg).get_auth_info() {
             Ok(info) => {
                 // we can unwrap here somewhat safely because we do not permit
