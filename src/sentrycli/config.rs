@@ -113,8 +113,28 @@ impl Config {
         }
     }
 
+    pub fn get_proxy_url(&self) -> Option<&str> {
+        self.ini.get_from(Some("http"), "proxy_url")
+    }
+
+    pub fn get_proxy_username(&self) -> Option<&str> {
+        self.ini.get_from(Some("http"), "proxy_username")
+    }
+
+    pub fn get_proxy_password(&self) -> Option<&str> {
+        self.ini.get_from(Some("http"), "proxy_password")
+    }
+
     pub fn has_insecure_server(&self) -> bool {
         self.url.starts_with("http://")
+    }
+
+    pub fn should_verify_ssl(&self) -> bool {
+        let val = self.ini.get_from(Some("http"), "verify_ssl");
+        match val {
+            None => true,
+            Some(val) => val == "true",
+        }
     }
 
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {

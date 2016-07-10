@@ -101,6 +101,18 @@ impl<'a> Api<'a> {
                 self.config.auth.as_ref()
             )
         };
+
+        if let Some(proxy_url) = self.config.get_proxy_url() {
+            handle.proxy(proxy_url)?;
+        }
+        if let Some(proxy_username) = self.config.get_proxy_username() {
+            handle.proxy_username(proxy_username)?;
+        }
+        if let Some(proxy_password) = self.config.get_proxy_password() {
+            handle.proxy_password(proxy_password)?;
+        }
+        handle.ssl_verify_host(self.config.should_verify_ssl())?;
+
         ApiRequest::new(handle, method, &url, auth)
     }
 
