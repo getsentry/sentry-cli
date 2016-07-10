@@ -2,6 +2,7 @@ use std::io;
 use std::fs;
 use std::io::{Read, Write};
 use std::fmt;
+use std::cell::{RefMut, RefCell};
 use std::path::Path;
 use std::ascii::AsciiExt;
 use std::collections::HashSet;
@@ -28,13 +29,7 @@ impl<A: fmt::Display> fmt::Display for UrlArg<A> {
 
 pub struct Api<'a> {
     config: &'a Config,
-    handle: curl::easy::Easy,
-}
-
-enum Body {
-    Empty,
-    Json(Vec<u8>),
-    Form(curl::easy::Form),
+    shared_handle: RefCell<curl::easy::Easy>,
 }
 
 #[derive(Debug)]
@@ -49,33 +44,163 @@ pub enum Error {
 
 pub type ApiResult<T> = Result<T, Error>;
 
+pub enum Method {
+    Get,
+    Post,
+    Delete,
+}
+
+pub struct ApiRequest<'a> {
+    config: &'a Config,
+    handle: RefMut<'a, curl::easy::Easy>,
+    headers: curl::easy::List,
+    url: String,
+    body: Option<Vec<u8>>,
+}
+
 #[derive(Clone, Debug)]
 pub struct ApiResponse {
     status: u32,
     headers: Vec<String>,
-    body: Vec<u8>,
+    body: Option<Vec<u8>>,
+}
+
+impl<'a> ApiRequest<'a> {
+    pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<ApiRequest<'a>> {
+        self.headers.append(&format!("{}: {}", key, value))?;
+        Ok(self)
+    }
+
+    pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
+        let mut body_bytes : Vec<u8> = vec![];
+        serde_json::to_writer(&mut body_bytes, &body)?;
+        self.body = Some(body_bytes);
+        self.headers.append("Content-Type: application/json")?;
+        Ok(self)
+    }
+
+    pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
+        self.handle.httppost(form)?;
+        self.body = None;
+        Ok(self)
+    }
+
+    pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
+        self.handle.follow_location(val)?;
+        Ok(self)
+    }
+
+    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
+        let (url, want_auth) = if self.url.starts_with("http://") ||
+                                  self.url.starts_with("https://") {
+            (self.url.clone(), false)
+        } else {
+            (format!("{}/api/0/{}",
+                     self.config.url.trim_right_matches('/'),
+                     self.url.trim_left_matches('/')), true)
+        };
+        self.handle.url(&url)?;
+
+        if want_auth {
+            match self.config.auth {
+                Auth::Key(ref key) => {
+                    self.handle.username(key)?;
+                }
+                Auth::Token(ref token) => {
+                    self.headers.append(&format!("Authorization: Bearer {}", token))?;
+                }
+                Auth::Unauthorized => {}
+            }
+        }
+
+        self.handle.http_headers(self.headers)?;
+        let (status, headers) = send_req(&mut self.handle, out, self.body)?;
+        Ok(ApiResponse {
+            status: status,
+            headers: headers,
+            body: None,
+        })
+    }
+
+    pub fn send(self) -> ApiResult<ApiResponse> {
+        let mut out = vec![];
+        let mut rv = self.send_into(&mut out)?;
+        rv.body = Some(out);
+        Ok(rv)
+    }
 }
 
 impl<'a> Api<'a> {
     pub fn new(config: &'a Config) -> Api<'a> {
         Api {
             config: config,
-            handle: curl::easy::Easy::new(),
+            shared_handle: RefCell::new(curl::easy::Easy::new()),
         }
     }
 
-    pub fn get_auth_info(&mut self) -> ApiResult<AuthInfo> {
+    // Low Level Methods
+
+    pub fn request(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
+        let mut handle = self.shared_handle.borrow_mut();
+
+        // keepalive is broken on our dev server.  Since this makes local development
+        // quite frustrating we disable keepalive (handle reuse) when we connect to
+        // unprotected servers where it does not matter that much.
+        if self.config.has_insecure_server() {
+            handle.forbid_reuse(true).ok();
+        }
+
+        let mut headers = curl::easy::List::new();
+        headers.append("Expect:").ok();
+        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
+
+        match method {
+            Method::Get => handle.get(true)?,
+            Method::Post => handle.custom_request("POST")?,
+            Method::Delete => handle.custom_request("DELETE")?,
+        }
+
+        Ok(ApiRequest {
+            config: self.config,
+            handle: handle,
+            headers: headers,
+            url: url.into(),
+            body: None,
+        })
+    }
+
+    // Convenience Methods
+
+    pub fn get(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.request(Method::Get, path)?.send()
+    }
+
+    pub fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.request(Method::Delete, path)?.send()
+    }
+
+    pub fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.request(Method::Post, path)?.with_json_body(body)?.send()
+    }
+
+    pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
+        Ok(self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)?)
+    }
+
+    // High Level Methods
+
+    pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
         Ok(self.get("/")?.convert()?)
     }
 
-    pub fn list_release_files(&mut self, org: &str, project: &str,
+    pub fn list_release_files(&self, org: &str, project: &str,
                               release: &str) -> ApiResult<Vec<Artifact>> {
         Ok(self.get(&format!("/projects/{}/{}/releases/{}/files/",
                              UrlArg(org), UrlArg(project),
                              UrlArg(release)))?.convert()?)
     }
 
-    pub fn delete_release_file(&mut self, org: &str, project: &str, version: &str,
+    pub fn delete_release_file(&self, org: &str, project: &str, version: &str,
                                file_id: &str)
         -> ApiResult<bool>
     {
@@ -89,20 +214,18 @@ impl<'a> Api<'a> {
         }
     }
 
-    pub fn upload_release_file(&mut self, org: &str, project: &str,
+    pub fn upload_release_file(&self, org: &str, project: &str,
                                version: &str, local_path: &Path, name: &str)
         -> ApiResult<Option<Artifact>>
     {
-        self.reset();
+        let path = format!("/projects/{}/{}/releases/{}/files/",
+                           UrlArg(org), UrlArg(project),
+                           UrlArg(version));
         let mut form = curl::easy::Form::new();
         form.part("file").file(local_path).add()?;
         form.part("name").contents(name.as_bytes()).add()?;
 
-        let headers = self.make_headers();
-        let resp = self.req(&format!("/projects/{}/{}/releases/{}/files/",
-                                     UrlArg(org), UrlArg(project),
-                                     UrlArg(version)), Body::Form(form),
-                                     headers)?;
+        let resp = self.request(Method::Post, &path)?.with_form_data(form)?.send()?;
         if resp.status() == 409 {
             Ok(None)
         } else {
@@ -110,13 +233,13 @@ impl<'a> Api<'a> {
         }
     }
 
-    pub fn new_release(&mut self, org: &str, project: &str,
+    pub fn new_release(&self, org: &str, project: &str,
                        release: &NewRelease) -> ApiResult<ReleaseInfo> {
         Ok(self.post(&format!("/projects/{}/{}/releases/",
                               UrlArg(org), UrlArg(project)), release)?.convert()?)
     }
 
-    pub fn delete_release(&mut self, org: &str, project: &str, version: &str)
+    pub fn delete_release(&self, org: &str, project: &str, version: &str)
         -> ApiResult<bool>
     {
         let resp = self.delete(&format!("/projects/{}/{}/releases/{}/",
@@ -129,7 +252,7 @@ impl<'a> Api<'a> {
         }
     }
 
-    pub fn get_release(&mut self, org: &str, project: &str, version: &str)
+    pub fn get_release(&self, org: &str, project: &str, version: &str)
         -> ApiResult<Option<ReleaseInfo>> {
         let resp = self.get(&format!("/projects/{}/{}/releases/{}/",
                                      UrlArg(org), UrlArg(project), UrlArg(version)))?;
@@ -140,13 +263,13 @@ impl<'a> Api<'a> {
         }
     }
 
-    pub fn list_releases(&mut self, org: &str, project: &str)
+    pub fn list_releases(&self, org: &str, project: &str)
         -> ApiResult<Vec<ReleaseInfo>> {
         Ok(self.get(&format!("/projects/{}/{}/releases/",
                              UrlArg(org), UrlArg(project)))?.convert()?)
     }
 
-    pub fn get_latest_sentrycli_release(&mut self)
+    pub fn get_latest_sentrycli_release(&self)
         -> ApiResult<Option<SentryCliRelease>>
     {
         let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
@@ -170,7 +293,7 @@ impl<'a> Api<'a> {
         }
     }
 
-    pub fn find_missing_dsym_checksums(&mut self, org: &str, project: &str,
+    pub fn find_missing_dsym_checksums(&self, org: &str, project: &str,
                                        checksums: &Vec<&str>)
         -> ApiResult<HashSet<String>>
     {
@@ -188,130 +311,22 @@ impl<'a> Api<'a> {
         Ok(state.missing)
     }
 
-    pub fn upload_dsyms(&mut self, org: &str, project: &str, file: &Path)
+    pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path)
         -> ApiResult<Vec<DSymFile>>
     {
-        self.reset();
+        let path = format!("/projects/{}/{}/files/dsyms/", UrlArg(org), UrlArg(project));
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
-        let headers = self.make_headers();
-        Ok(self.req(&format!("/projects/{}/{}/files/dsyms/",
-                             UrlArg(org), UrlArg(project)), Body::Form(form),
-                             headers)?.convert()?)
+        Ok(self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()?)
     }
 
-    pub fn send_event(&mut self, event: &Event) -> ApiResult<String> {
-        self.reset();
+    pub fn send_event(&self, event: &Event) -> ApiResult<String> {
         let dsn = self.config.dsn.as_ref().ok_or(Error::NoDsn)?;
-        let mut headers = self.make_headers();
-        headers.append(&format!("X-Sentry-Auth: {}",
-                                dsn.get_auth_header(event.timestamp)))?;
-
-        self.handle.custom_request("POST")?;
-        let mut body_bytes : Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &event)?;
-        let event : EventInfo = self.req(&dsn.get_submit_url(),
-            Body::Json(body_bytes), headers)?.convert()?;
+        let event : EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
+            .with_header("X-Sentry-Auth", &dsn.get_auth_header(event.timestamp))?
+            .with_json_body(&event)?
+            .send()?.convert()?;
         Ok(event.id)
-    }
-
-    pub fn get(&mut self, path: &str) -> ApiResult<ApiResponse> {
-        self.reset();
-        self.handle.get(true)?;
-        let headers = self.make_headers();
-        self.req(path, Body::Empty, headers)
-    }
-
-    pub fn delete(&mut self, path: &str) -> ApiResult<ApiResponse> {
-        self.reset();
-        self.handle.custom_request("DELETE")?;
-        let headers = self.make_headers();
-        self.req(path, Body::Empty, headers)
-    }
-
-    pub fn post<S: Serialize>(&mut self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.reset();
-        self.handle.custom_request("POST")?;
-        let mut body_bytes : Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &body)?;
-        let headers = self.make_headers();
-        self.req(path, Body::Json(body_bytes), headers)
-    }
-
-    pub fn download(&mut self, url: &str, dst: &mut fs::File) -> ApiResult<()> {
-        self.reset();
-        self.handle.url(&url)?;
-        let headers = self.make_headers();
-        self.handle.http_headers(headers)?;
-        self.handle.follow_location(true)?;
-        self.handle.progress(true)?;
-        let (_, _) = send_req(&mut self.handle, dst, None)?;
-        Ok(())
-    }
-
-    fn req(&mut self, path: &str, body: Body, mut headers: curl::easy::List)
-        -> ApiResult<ApiResponse>
-    {
-        let (url, want_auth) = if path.starts_with("http://") ||
-                                  path.starts_with("https://") {
-            (path.into(), false)
-        } else {
-            (format!("{}/api/0/{}",
-                     self.config.url.trim_right_matches('/'),
-                     path.trim_left_matches('/')), true)
-        };
-        self.handle.url(&url)?;
-
-        if want_auth {
-            match self.config.auth {
-                Auth::Key(ref key) => {
-                    self.handle.username(key)?;
-                }
-                Auth::Token(ref token) => {
-                    headers.append(&format!("Authorization: Bearer {}", token))?;
-                }
-                Auth::Unauthorized => {}
-            }
-        }
-
-        let body_bytes = match body {
-            Body::Empty => None,
-            Body::Json(bytes) => {
-                headers.append("Content-Type: application/json")?;
-                Some(bytes)
-            },
-            Body::Form(form) => {
-                self.handle.httppost(form)?;
-                None
-            }
-        };
-
-        self.handle.http_headers(headers)?;
-        let mut out : Vec<u8> = vec![];
-        let (status, headers) = send_req(&mut self.handle, &mut out, body_bytes)?;
-        Ok(ApiResponse {
-            status: status,
-            headers: headers,
-            body: out,
-        })
-    }
-
-    fn reset(&mut self) {
-        self.handle.reset();
-
-        // keepalive is broken on our dev server.  Since this makes local development
-        // quite frustrating we disable keepalive (handle reuse) when we connect to
-        // unprotected servers where it does not matter that much.
-        if self.config.has_insecure_server() {
-            self.handle.forbid_reuse(true).ok();
-        }
-    }
-
-    fn make_headers(&self) -> curl::easy::List {
-        let mut headers = curl::easy::List::new();
-        headers.append("Expect:").ok();
-        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
-        headers
     }
 }
 
@@ -410,7 +425,10 @@ impl ApiResponse {
 
     /// Deserializes the response body into the given type
     pub fn deserialize<T: Deserialize>(&self) -> ApiResult<T> {
-        Ok(serde_json::from_reader(&self.body[..])?)
+        Ok(serde_json::from_reader(match self.body {
+            Some(ref body) => &body[..],
+            None => &b""[..],
+        })?)
     }
 
     /// Like `deserialize` but consumes the response and will convert

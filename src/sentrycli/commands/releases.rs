@@ -159,7 +159,7 @@ pub fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
-    let mut api = Api::new(config);
+    let api = Api::new(config);
     for file in api.list_release_files(org, project, release)? {
         if !(matches.is_present("all") || files.contains(&file.name)) {
             continue;
@@ -190,7 +190,7 @@ pub fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
 
 pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
                                            org: &str, project: &str, version: &str) -> CliResult<()> {
-    let mut api = Api::new(config);
+    let api = Api::new(config);
     let release = api.get_release(org, project, version)?.ok_or("release not found")?;
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();

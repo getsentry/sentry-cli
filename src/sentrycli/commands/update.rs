@@ -71,7 +71,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
-    let mut api = Api::new(config);
+    let api = Api::new(config);
     let exe = env::current_exe()?;
     let elevate = !utils::is_writable(&exe);
     let latest_release = match api.get_latest_sentrycli_release()? {
@@ -98,7 +98,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
 
     let mut f = fs::File::create(&tmp_path)?;
     match api.download(&latest_release.download_url, &mut f) {
-        Ok(()) => {},
+        Ok(_) => {},
         Err(err) => {
             fs::remove_file(tmp_path).ok();
             fail!(err);
