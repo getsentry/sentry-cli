@@ -45,6 +45,7 @@ pub enum Error {
 
 pub type ApiResult<T> = Result<T, Error>;
 
+#[derive(PartialEq, Debug)]
 pub enum Method {
     Get,
     Post,
@@ -62,81 +63,6 @@ pub struct ApiResponse {
     status: u32,
     headers: Vec<String>,
     body: Option<Vec<u8>>,
-}
-
-impl<'a> ApiRequest<'a> {
-    fn new(mut handle: RefMut<'a, curl::easy::Easy>,
-           method: Method, url: &str, auth: Option<&Auth>)
-        -> ApiResult<ApiRequest<'a>>
-    {
-        let mut headers = curl::easy::List::new();
-        headers.append("Expect:").ok();
-        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
-
-        match method {
-            Method::Get => handle.get(true)?,
-            Method::Post => handle.custom_request("POST")?,
-            Method::Delete => handle.custom_request("DELETE")?,
-        }
-
-        handle.url(&url)?;
-        match auth {
-            None => {},
-            Some(&Auth::Key(ref key)) => {
-                handle.username(key)?;
-            }
-            Some(&Auth::Token(ref token)) => {
-                headers.append(&format!("Authorization: Bearer {}", token))?;
-            }
-        }
-
-        Ok(ApiRequest {
-            handle: handle,
-            headers: headers,
-            body: None,
-        })
-    }
-
-    pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<ApiRequest<'a>> {
-        self.headers.append(&format!("{}: {}", key, value))?;
-        Ok(self)
-    }
-
-    pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
-        let mut body_bytes : Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &body)?;
-        self.body = Some(body_bytes);
-        self.headers.append("Content-Type: application/json")?;
-        Ok(self)
-    }
-
-    pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
-        self.handle.httppost(form)?;
-        self.body = None;
-        Ok(self)
-    }
-
-    pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
-        self.handle.follow_location(val)?;
-        Ok(self)
-    }
-
-    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
-        self.handle.http_headers(self.headers)?;
-        let (status, headers) = send_req(&mut self.handle, out, self.body)?;
-        Ok(ApiResponse {
-            status: status,
-            headers: headers,
-            body: None,
-        })
-    }
-
-    pub fn send(self) -> ApiResult<ApiResponse> {
-        let mut out = vec![];
-        let mut rv = self.send_into(&mut out)?;
-        rv.body = Some(out);
-        Ok(rv)
-    }
 }
 
 impl<'a> Api<'a> {
@@ -387,6 +313,81 @@ impl<'a> Iterator for Headers<'a> {
                 None => (&line[..], "")
             }
         })
+    }
+}
+
+impl<'a> ApiRequest<'a> {
+    fn new(mut handle: RefMut<'a, curl::easy::Easy>,
+           method: Method, url: &str, auth: Option<&Auth>)
+        -> ApiResult<ApiRequest<'a>>
+    {
+        let mut headers = curl::easy::List::new();
+        headers.append("Expect:").ok();
+        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
+
+        match method {
+            Method::Get => handle.get(true)?,
+            Method::Post => handle.custom_request("POST")?,
+            Method::Delete => handle.custom_request("DELETE")?,
+        }
+
+        handle.url(&url)?;
+        match auth {
+            None => {},
+            Some(&Auth::Key(ref key)) => {
+                handle.username(key)?;
+            }
+            Some(&Auth::Token(ref token)) => {
+                headers.append(&format!("Authorization: Bearer {}", token))?;
+            }
+        }
+
+        Ok(ApiRequest {
+            handle: handle,
+            headers: headers,
+            body: None,
+        })
+    }
+
+    pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<ApiRequest<'a>> {
+        self.headers.append(&format!("{}: {}", key, value))?;
+        Ok(self)
+    }
+
+    pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
+        let mut body_bytes : Vec<u8> = vec![];
+        serde_json::to_writer(&mut body_bytes, &body)?;
+        self.body = Some(body_bytes);
+        self.headers.append("Content-Type: application/json")?;
+        Ok(self)
+    }
+
+    pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
+        self.handle.httppost(form)?;
+        self.body = None;
+        Ok(self)
+    }
+
+    pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
+        self.handle.follow_location(val)?;
+        Ok(self)
+    }
+
+    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
+        self.handle.http_headers(self.headers)?;
+        let (status, headers) = send_req(&mut self.handle, out, self.body)?;
+        Ok(ApiResponse {
+            status: status,
+            headers: headers,
+            body: None,
+        })
+    }
+
+    pub fn send(self) -> ApiResult<ApiResponse> {
+        let mut out = vec![];
+        let mut rv = self.send_into(&mut out)?;
+        rv.body = Some(out);
+        Ok(rv)
     }
 }
 
