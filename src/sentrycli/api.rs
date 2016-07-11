@@ -133,20 +133,20 @@ impl<'a> Api<'a> {
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
-        Ok(self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)?)
+        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)
     }
 
     // High Level Methods
 
     pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
-        Ok(self.get("/")?.convert()?)
+        self.get("/")?.convert()
     }
 
     pub fn list_release_files(&self, org: &str, project: &str,
                               release: &str) -> ApiResult<Vec<Artifact>> {
-        Ok(self.get(&format!("/projects/{}/{}/releases/{}/files/",
-                             PathArg(org), PathArg(project),
-                             PathArg(release)))?.convert()?)
+        self.get(&format!("/projects/{}/{}/releases/{}/files/",
+                          PathArg(org), PathArg(project),
+                          PathArg(release)))?.convert()
     }
 
     pub fn delete_release_file(&self, org: &str, project: &str, version: &str,
@@ -265,7 +265,7 @@ impl<'a> Api<'a> {
         let path = format!("/projects/{}/{}/files/dsyms/", PathArg(org), PathArg(project));
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
-        Ok(self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()?)
+        self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()
     }
 
     pub fn send_event(&self, event: &Event) -> ApiResult<String> {
