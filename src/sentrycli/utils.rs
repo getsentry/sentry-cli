@@ -90,7 +90,7 @@ pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
         }
         sha.update(&buf[..read]);
     }
-    Ok(sha.hexdigest())
+    Ok(sha.digest().to_string())
 }
 
 pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {

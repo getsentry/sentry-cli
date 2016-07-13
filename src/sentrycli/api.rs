@@ -184,8 +184,8 @@ impl<'a> Api<'a> {
 
     pub fn new_release(&self, org: &str, project: &str,
                        release: &NewRelease) -> ApiResult<ReleaseInfo> {
-        Ok(self.post(&format!("/projects/{}/{}/releases/",
-                              PathArg(org), PathArg(project)), release)?.convert()?)
+        self.post(&format!("/projects/{}/{}/releases/",
+                           PathArg(org), PathArg(project)), release)?.convert()
     }
 
     pub fn delete_release(&self, org: &str, project: &str, version: &str)
@@ -214,8 +214,8 @@ impl<'a> Api<'a> {
 
     pub fn list_releases(&self, org: &str, project: &str)
         -> ApiResult<Vec<ReleaseInfo>> {
-        Ok(self.get(&format!("/projects/{}/{}/releases/",
-                             PathArg(org), PathArg(project)))?.convert()?)
+        self.get(&format!("/projects/{}/{}/releases/",
+                          PathArg(org), PathArg(project)))?.convert()
     }
 
     pub fn get_latest_sentrycli_release(&self)
