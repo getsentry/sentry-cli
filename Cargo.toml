@@ -1,6 +1,6 @@
 [package]
 name = "sentry-cli"
-version = "0.16.0"
+version = "0.16.1"
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 
