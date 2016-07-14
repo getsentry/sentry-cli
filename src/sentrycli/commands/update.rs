@@ -74,6 +74,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let api = Api::new(config);
     let exe = env::current_exe()?;
     let elevate = !utils::is_writable(&exe);
+
+    info!("expecting elevation for update: {}", elevate);
+
     let latest_release = match api.get_latest_sentrycli_release()? {
         Some(release) => release,
         None => fail!("Could not find download URL for updates."),

@@ -22,6 +22,9 @@ extern crate sha1;
 extern crate sourcemap;
 extern crate open;
 extern crate runas;
+extern crate term;
+#[macro_use]
+extern crate log;
 
 // what we export
 pub use error::{CliError, CliResult};

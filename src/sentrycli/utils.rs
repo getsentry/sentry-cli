@@ -6,6 +6,8 @@ use std::time;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek};
 
+use term;
+use log;
 use uuid::Uuid;
 use sha1::Sha1;
 use clap::{App, AppSettings};
@@ -14,6 +16,28 @@ use CliResult;
 
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
+
+pub struct Logger;
+
+impl log::Log for Logger {
+    fn enabled(&self, _metadata: &log::LogMetadata) -> bool {
+        true
+    }
+    fn log(&self, record: &log::LogRecord) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        let mut term = term::stderr().unwrap();
+        term.fg(match record.level() {
+            log::LogLevel::Error | log::LogLevel::Warn => term::color::RED,
+            log::LogLevel::Info => term::color::CYAN,
+            log::LogLevel::Debug | log::LogLevel::Trace => term::color::YELLOW,
+        }).ok();
+        writeln!(term, "[{}] {} {}", record.level(),
+                 record.target(), record.args()).ok();
+        term.reset().ok();
+    }
+}
 
 pub struct TempFile {
     f: Option<fs::File>,

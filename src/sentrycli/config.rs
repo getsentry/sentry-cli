@@ -3,6 +3,7 @@ use std::fs;
 use std::env;
 use std::path::PathBuf;
 
+use log;
 use clap::ArgMatches;
 use url::Url;
 use ini::Ini;
@@ -86,6 +87,7 @@ pub struct Config {
     pub auth: Option<Auth>,
     pub url: String,
     pub dsn: Option<Dsn>,
+    pub log_level: log::LogLevelFilter,
     pub ini: Ini,
 }
 
@@ -98,6 +100,7 @@ impl Config {
             auth: get_default_auth(&ini),
             url: get_default_url(&ini),
             dsn: get_default_dsn(&ini)?,
+            log_level: get_default_log_level(&ini)?,
             ini: ini,
         })
     }
@@ -236,4 +239,20 @@ fn get_default_dsn(ini: &Ini) -> CliResult<Option<Dsn>> {
     } else {
         Ok(None)
     }
+}
+
+fn get_default_log_level(ini: &Ini) -> CliResult<log::LogLevelFilter> {
+    if let Ok(level_str) = env::var("SENTRY_LOG_LEVEL") {
+        if let Ok(level) = level_str.parse() {
+            return Ok(level);
+        }
+    }
+
+    if let Some(level_str) = ini.get_from(Some("log"), "level") {
+        if let Ok(level) = level_str.parse() {
+            return Ok(level);
+        }
+    }
+
+    Ok(log::LogLevelFilter::Warn)
 }

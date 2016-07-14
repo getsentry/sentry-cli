@@ -20,6 +20,8 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
     let (project, org) = config.get_org_and_project_defaults();
+    let info_rv = Api::new(config).get_auth_info();
+
     println!("Sentry Server:   {}", config.url);
     println!("Organization:    {}", project.unwrap_or("-".into()));
     println!("Project:         {}", org.unwrap_or("-".into()));
@@ -27,7 +29,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> 
 
     println!("Authentication Info:");
     println!("  Method:        {}", describe_auth(config.auth.as_ref()));
-    match Api::new(config).get_auth_info() {
+    match info_rv {
         Ok(info) => {
             if let Some(ref user) = info.user {
                 println!("  User:          {} (id={})", user.email, user.id);

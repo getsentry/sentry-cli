@@ -61,6 +61,16 @@ pub enum Method {
     Delete,
 }
 
+impl fmt::Display for Method {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            Method::Get => write!(f, "GET"),
+            Method::Post => write!(f, "POST"),
+            Method::Delete => write!(f, "DELETE"),
+        }
+    }
+}
+
 pub struct ApiRequest<'a> {
     handle: RefMut<'a, curl::easy::Easy>,
     headers: curl::easy::List,
@@ -224,12 +234,14 @@ impl<'a> Api<'a> {
         let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
         let ref_name = format!("sentry-cli-{}-{}{}",
            utils::capitalize_string(PLATFORM), ARCH, EXT);
+        info!("Looking for file named: {}", ref_name);
 
         if resp.status() == 404 {
             Ok(None)
         } else {
             let info : GitHubRelease = resp.to_result()?.convert()?;
             for asset in info.assets {
+                info!("Found asset {}", asset.name);
                 if asset.name == ref_name {
                     return Ok(Some(SentryCliRelease {
                         version: info.tag_name,
@@ -237,6 +249,7 @@ impl<'a> Api<'a> {
                     }));
                 }
             }
+            warn!("Unable to find release file");
             Ok(None)
         }
     }
@@ -346,6 +359,8 @@ impl<'a> ApiRequest<'a> {
            method: Method, url: &str, auth: Option<&Auth>)
         -> ApiResult<ApiRequest<'a>>
     {
+        info!("request {} {}", method, url);
+
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
         headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
@@ -361,9 +376,11 @@ impl<'a> ApiRequest<'a> {
             None => {},
             Some(&Auth::Key(ref key)) => {
                 handle.username(key)?;
+                info!("using key based authentication");
             }
             Some(&Auth::Token(ref token)) => {
                 headers.append(&format!("Authorization: Bearer {}", token))?;
+                info!("using token authentication");
             }
         }
 
@@ -382,18 +399,21 @@ impl<'a> ApiRequest<'a> {
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
         let mut body_bytes : Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)?;
+        info!("sending JSON data ({} bytes)", body_bytes.len());
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
         Ok(self)
     }
 
     pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
+        info!("sending form data");
         self.handle.httppost(form)?;
         self.body = None;
         Ok(self)
     }
 
     pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
+        info!("follow redirects: {}", val);
         self.handle.follow_location(val)?;
         Ok(self)
     }
@@ -401,6 +421,7 @@ impl<'a> ApiRequest<'a> {
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
         let (status, headers) = send_req(&mut self.handle, out, self.body)?;
+        info!("response: {}", status);
         Ok(ApiResponse {
             status: status,
             headers: headers,
