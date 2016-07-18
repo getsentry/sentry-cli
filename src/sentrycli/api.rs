@@ -58,6 +58,7 @@ pub type ApiResult<T> = Result<T, Error>;
 pub enum Method {
     Get,
     Post,
+    Put,
     Delete,
 }
 
@@ -66,6 +67,7 @@ impl fmt::Display for Method {
         match *self {
             Method::Get => write!(f, "GET"),
             Method::Post => write!(f, "POST"),
+            Method::Put => write!(f, "PUT"),
             Method::Delete => write!(f, "DELETE"),
         }
     }
@@ -139,6 +141,11 @@ impl<'a> Api<'a> {
     /// Convenience method that performs a `POST` request with JSON data.
     pub fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
         self.request(Method::Post, path)?.with_json_body(body)?.send()
+    }
+
+    /// Convenience method that performs a `PUT` request with JSON data.
+    pub fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.request(Method::Put, path)?.with_json_body(body)?.send()
     }
 
     /// Convenience method that downloads a file into the given file object.
@@ -223,9 +230,23 @@ impl<'a> Api<'a> {
     }
 
     pub fn list_releases(&self, org: &str, project: &str)
-        -> ApiResult<Vec<ReleaseInfo>> {
+        -> ApiResult<Vec<ReleaseInfo>>
+    {
         self.get(&format!("/projects/{}/{}/releases/",
                           PathArg(org), PathArg(project)))?.convert()
+    }
+
+    pub fn bulk_update_issue(&self, org: &str, project: &str,
+                             filter: &IssueFilter, changes: &IssueChanges)
+        -> ApiResult<bool>
+    {
+        let qs = match filter.get_query_string() {
+            None => { return Ok(false); },
+            Some(qs) => qs,
+        };
+        self.put(&format!("/projects/{}/{}/issues/?{}",
+                          PathArg(org), PathArg(project), qs), changes)?
+            .to_result().map(|_| true)
     }
 
     pub fn get_latest_sentrycli_release(&self)
@@ -368,6 +389,7 @@ impl<'a> ApiRequest<'a> {
         match method {
             Method::Get => handle.get(true)?,
             Method::Post => handle.custom_request("POST")?,
+            Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,
         }
 
@@ -623,4 +645,41 @@ pub struct DSymFile {
 #[derive(Deserialize)]
 struct MissingChecksumsResponse {
     missing: HashSet<String>,
+}
+
+#[derive(Serialize, Default)]
+pub struct IssueChanges {
+    #[serde(rename="status")]
+    pub new_status: Option<String>,
+    #[serde(rename="snoozeDuration")]
+    pub snooze_duration: Option<i64>,
+}
+
+pub enum IssueFilter {
+    Empty,
+    All,
+    ExplicitIds(Vec<u64>),
+    Status(String),
+}
+
+impl IssueFilter {
+    fn get_query_string(&self) -> Option<String> {
+        let mut rv = vec![];
+        match *self {
+            IssueFilter::Empty => { return None; },
+            IssueFilter::All => {}
+            IssueFilter::ExplicitIds(ref ids) => {
+                if ids.is_empty() {
+                    return None;
+                }
+                for id in ids {
+                    rv.push(format!("id={}", id));
+                }
+            }
+            IssueFilter::Status(ref status) => {
+                rv.push(format!("status={}", status));
+            }
+        }
+        Some(rv.join("&"))
+    }
 }

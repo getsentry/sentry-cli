@@ -13,6 +13,7 @@ macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dsym);
         $mac!(releases);
+        $mac!(issues);
         $mac!(update);
         $mac!(uninstall);
         $mac!(info);
