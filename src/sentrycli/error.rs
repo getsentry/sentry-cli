@@ -1,3 +1,4 @@
+//! Implements the generic error type for the library.
 use std::error;
 use std::process;
 use std::fmt;
@@ -15,8 +16,10 @@ use sourcemap;
 
 use api;
 
+/// Common result type.
 pub type CliResult<T> = Result<T, CliError>;
 
+/// The error type for this library.
 #[derive(Debug)]
 pub struct CliError {
     repr: CliErrorRepr,
@@ -82,6 +85,7 @@ impl<'a> From<&'a str> for CliError {
 
 impl CliError {
 
+    /// Exists the process and prints out the error if needed.
     pub fn exit(&self) -> ! {
         match self.repr {
             CliErrorRepr::ClapError(ref err) => err.exit(),

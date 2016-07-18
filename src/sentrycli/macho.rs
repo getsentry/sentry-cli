@@ -1,3 +1,4 @@
+//! Provides support for working with macho binaries.
 use std::path::Path;
 use std::fs::File;
 use std::io::Read;
@@ -12,9 +13,9 @@ const MAGIC_64 : &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
 const MAGIC_CIGAM64 : &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
 
-// this function can return an error if the file is smaller than the magic.
-// Use the `is_macho_file` instead which does not fail which is actually
-// much better for how this function is used within this library.
+/// this function can return an error if the file is smaller than the magic.
+/// Use the `is_macho_file` instead which does not fail which is actually
+/// much better for how this function is used within this library.
 fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> CliResult<bool> {
     let mut f = File::open(&path)?;
     let mut magic : [u8; 4] = [0; 4];
@@ -25,6 +26,8 @@ fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> CliResult<bool> {
     })
 }
 
+/// Simplified check for if a file is a macho binary.  Returns `true` if it
+/// is or `false` if it's not (or the file does not exist etc.)
 pub fn is_macho_file<P: AsRef<Path>>(path: P) -> bool {
     is_macho_file_as_result(path).unwrap_or(false)
 }

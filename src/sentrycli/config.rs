@@ -1,3 +1,4 @@
+//! This module implements config access.
 use std::io;
 use std::fs;
 use std::env;
@@ -11,24 +12,27 @@ use ini::Ini;
 use CliResult;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
 
+/// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
     Key(String),
     Token(String),
 }
 
+/// Represents a DSN
 #[derive(Debug, Clone)]
 pub struct Dsn {
-    host: String,
-    protocol: String,
-    port: u16,
-    client_id: String,
-    secret: String,
-    project_id: u64,
+    pub host: String,
+    pub protocol: String,
+    pub port: u16,
+    pub client_id: String,
+    pub secret: String,
+    pub project_id: u64,
 }
 
 impl Dsn {
 
+    /// Parses a Dsn from a given string.
     fn from_str(dsn: &str) -> CliResult<Dsn> {
         let url = Url::parse(dsn)?;
         let project_id = if let Some(component_iter) = url.path_segments() {
@@ -58,6 +62,7 @@ impl Dsn {
         })
     }
 
+    /// Returns the URL where events should be sent.
     pub fn get_submit_url(&self) -> String {
         format!("{}://{}:{}/api/{}/store/",
                 self.protocol,
@@ -66,6 +71,7 @@ impl Dsn {
                 self.project_id)
     }
 
+    /// Returns the given auth header (ts is the timestamp of the event)
     pub fn get_auth_header(&self, ts: f64) -> String {
         format!("Sentry \
             sentry_timestamp={}, \
@@ -81,6 +87,7 @@ impl Dsn {
     }
 }
 
+/// Represents the `sentry-cli` config.
 #[derive(Clone)]
 pub struct Config {
     pub filename: PathBuf,
@@ -93,6 +100,7 @@ pub struct Config {
 
 impl Config {
 
+    /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> CliResult<Config> {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
@@ -105,6 +113,9 @@ impl Config {
         })
     }
 
+    /// Indicates whether keepalive support should be enabled.  This
+    /// mostly corresponds to an ini config but also has some sensible
+    /// default handling.
     pub fn allow_keepalive(&self) -> bool {
         let val = self.ini.get_from(Some("http"), "keepalive");
         match val {
@@ -116,22 +127,27 @@ impl Config {
         }
     }
 
+    /// Returns the proxy URL if defined.
     pub fn get_proxy_url(&self) -> Option<&str> {
         self.ini.get_from(Some("http"), "proxy_url")
     }
 
+    /// Returns the proxy username if defined.
     pub fn get_proxy_username(&self) -> Option<&str> {
         self.ini.get_from(Some("http"), "proxy_username")
     }
 
+    /// Returns the proxy password if defined.
     pub fn get_proxy_password(&self) -> Option<&str> {
         self.ini.get_from(Some("http"), "proxy_password")
     }
 
+    /// Indicates if SSL is enabled or disabled for the server.
     pub fn has_insecure_server(&self) -> bool {
         self.url.starts_with("http://")
     }
 
+    /// Indicates whether SSL verification should be on or off.
     pub fn should_verify_ssl(&self) -> bool {
         let val = self.ini.get_from(Some("http"), "verify_ssl");
         match val {
@@ -140,6 +156,9 @@ impl Config {
         }
     }
 
+    /// Given a match object from clap, this returns a tuple in the
+    /// form `(org, project)` which can either come from the match
+    /// object or some defaults (envvar, ini etc.).
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {
         Ok((
             matches
@@ -155,6 +174,7 @@ impl Config {
         ))
     }
 
+    /// Returns the defaults for org and project.
     pub fn get_org_and_project_defaults(&self) -> (Option<String>, Option<String>) {
         (
             env::var("SENTRY_ORG").ok()
@@ -164,6 +184,7 @@ impl Config {
         )
     }
 }
+
 fn find_project_config_file() -> Option<PathBuf> {
     env::current_dir().ok().and_then(|mut path| {
         loop {

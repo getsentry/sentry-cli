@@ -1,3 +1,8 @@
+//! This module implements the API access to the Sentry API as well
+//! as some other APIs we interact with.  In particular it can talk
+//! to the GitHub API to figure out if there are new releases of the
+//! sentry-cli tool.
+
 use std::io;
 use std::fs;
 use std::io::{Read, Write};
@@ -19,7 +24,14 @@ use config::{Config, Auth};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
 
 
-struct PathArg<A: fmt::Display>(A);
+/// Wrapper that escapes arguments for URL path segments.
+///
+/// Example:
+///
+/// ```rust
+/// format!("/foo/bar/{}/", PathArg("foo bar"))
+/// ```
+pub struct PathArg<A: fmt::Display>(A);
 
 impl<A: fmt::Display> fmt::Display for PathArg<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -37,11 +49,13 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
     }
 }
 
+/// Helper for the API access.
 pub struct Api<'a> {
     config: &'a Config,
     shared_handle: RefCell<curl::easy::Easy>,
 }
 
+/// Represents API errors.
 #[derive(Debug)]
 pub enum Error {
     Http(u32, String),
@@ -52,8 +66,10 @@ pub enum Error {
     NoDsn,
 }
 
+/// Shortcut alias for results of this module.
 pub type ApiResult<T> = Result<T, Error>;
 
+/// Represents an HTTP method that is used by the API.
 #[derive(PartialEq, Debug)]
 pub enum Method {
     Get,
@@ -73,12 +89,15 @@ impl fmt::Display for Method {
     }
 }
 
+/// Represents an API request.  This can be customized before
+/// sending but only sent once.
 pub struct ApiRequest<'a> {
     handle: RefMut<'a, curl::easy::Easy>,
     headers: curl::easy::List,
     body: Option<Vec<u8>>,
 }
 
+/// Represents an API response.
 #[derive(Clone, Debug)]
 pub struct ApiResponse {
     status: u32,
@@ -87,6 +106,10 @@ pub struct ApiResponse {
 }
 
 impl<'a> Api<'a> {
+
+    /// Creates a new API access helper for the given config.  For as long
+    /// as it lives HTTP keepalive can be used.  When the object is recreated
+    /// new connections will be established.
     pub fn new(config: &'a Config) -> Api<'a> {
         Api {
             config: config,
@@ -155,10 +178,13 @@ impl<'a> Api<'a> {
 
     // High Level Methods
 
+    /// Performs an API request to verify the authentication status of the
+    /// current token.
     pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
         self.get("/")?.convert()
     }
 
+    /// Lists all the release file for the given `release`.
     pub fn list_release_files(&self, org: &str, project: &str,
                               release: &str) -> ApiResult<Vec<Artifact>> {
         self.get(&format!("/projects/{}/{}/releases/{}/files/",
@@ -166,6 +192,8 @@ impl<'a> Api<'a> {
                           PathArg(release)))?.convert()
     }
 
+    /// Deletes a single release file.  Returns `true` if the file was
+    /// deleted or `false` otherwise.
     pub fn delete_release_file(&self, org: &str, project: &str, version: &str,
                                file_id: &str)
         -> ApiResult<bool>
@@ -180,6 +208,8 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// Uploads a new release file.  The file is loaded directly from the file
+    /// system and uploaded as `name`.
     pub fn upload_release_file(&self, org: &str, project: &str,
                                version: &str, local_path: &Path, name: &str)
         -> ApiResult<Option<Artifact>>
@@ -199,12 +229,15 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// Creates a new release.
     pub fn new_release(&self, org: &str, project: &str,
                        release: &NewRelease) -> ApiResult<ReleaseInfo> {
         self.post(&format!("/projects/{}/{}/releases/",
                            PathArg(org), PathArg(project)), release)?.convert()
     }
 
+    /// Deletes an already existing release.  Returns `true` if it was deleted
+    /// or `false` if not.
     pub fn delete_release(&self, org: &str, project: &str, version: &str)
         -> ApiResult<bool>
     {
@@ -218,6 +251,8 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// Looks up a release and returns it.  If it does not exist `None`
+    /// will be returned.
     pub fn get_release(&self, org: &str, project: &str, version: &str)
         -> ApiResult<Option<ReleaseInfo>> {
         let resp = self.get(&format!("/projects/{}/{}/releases/{}/",
@@ -229,6 +264,8 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// Returns a list of releases for a given project.  This is currently a
+    /// capped list by what the server deems an acceptable default limit.
     pub fn list_releases(&self, org: &str, project: &str)
         -> ApiResult<Vec<ReleaseInfo>>
     {
@@ -236,6 +273,8 @@ impl<'a> Api<'a> {
                           PathArg(org), PathArg(project)))?.convert()
     }
 
+    /// Updates a bunch of issues within a project that match a provided filter
+    /// and performs `changes` changes.
     pub fn bulk_update_issue(&self, org: &str, project: &str,
                              filter: &IssueFilter, changes: &IssueChanges)
         -> ApiResult<bool>
@@ -249,6 +288,7 @@ impl<'a> Api<'a> {
             .to_result().map(|_| true)
     }
 
+    /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self)
         -> ApiResult<Option<SentryCliRelease>>
     {
@@ -275,6 +315,8 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// Given a list of checksums for Dsym files this returns a list of those
+    /// that do not exist for the project yet.
     pub fn find_missing_dsym_checksums(&self, org: &str, project: &str,
                                        checksums: &Vec<&str>)
         -> ApiResult<HashSet<String>>
@@ -293,6 +335,7 @@ impl<'a> Api<'a> {
         Ok(state.missing)
     }
 
+    /// Uploads a dsym file from the given path.
     pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path)
         -> ApiResult<Vec<DSymFile>>
     {
@@ -302,6 +345,8 @@ impl<'a> Api<'a> {
         self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()
     }
 
+    /// Sends a single Sentry event.  The return value is the ID of the event
+    /// that was sent.
     pub fn send_event(&self, event: &Event) -> ApiResult<String> {
         let dsn = self.config.dsn.as_ref().ok_or(Error::NoDsn)?;
         let event : EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
@@ -355,6 +400,7 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
     Ok((handle.response_code()?, headers))
 }
 
+/// Iterator over response headers
 #[allow(dead_code)]
 pub struct Headers<'a> {
     lines: &'a [String],
@@ -413,11 +459,13 @@ impl<'a> ApiRequest<'a> {
         })
     }
 
+    /// adds a specific header to the request
     pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<ApiRequest<'a>> {
         self.headers.append(&format!("{}: {}", key, value))?;
         Ok(self)
     }
 
+    /// sets the JSON request body for the request.
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
         let mut body_bytes : Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)?;
@@ -427,6 +475,7 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
+    /// attaches some form data to the request.
     pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
         info!("sending form data");
         self.handle.httppost(form)?;
@@ -434,12 +483,15 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
+    /// enables or disables redirects.  The default is off.
     pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
         info!("follow redirects: {}", val);
         self.handle.follow_location(val)?;
         Ok(self)
     }
 
+    /// Sends the request and writes response data into the given file
+    /// instead of the response object's in memory buffer.
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
         let (status, headers) = send_req(&mut self.handle, out, self.body)?;
@@ -451,6 +503,7 @@ impl<'a> ApiRequest<'a> {
         })
     }
 
+    /// Sends the request and reads the response body into the response object.
     pub fn send(self) -> ApiResult<ApiResponse> {
         let mut out = vec![];
         let mut rv = self.send_into(&mut out)?;
@@ -563,23 +616,27 @@ struct ErrorInfo {
     error: Option<String>,
 }
 
+/// Provides the auth details (access scopes)
 #[derive(Deserialize, Debug)]
 pub struct AuthDetails {
     pub scopes: Vec<String>,
 }
 
+/// Indicates which user signed in
 #[derive(Deserialize, Debug)]
 pub struct User {
     pub email: String,
     pub id: String,
 }
 
+/// Provides the authentication information
 #[derive(Deserialize, Debug)]
 pub struct AuthInfo {
     pub auth: AuthDetails,
     pub user: Option<User>,
 }
 
+/// A release artifact
 #[derive(Deserialize, Debug)]
 pub struct Artifact {
     pub id: String,
@@ -588,6 +645,7 @@ pub struct Artifact {
     pub size: u64,
 }
 
+/// Information for new releases
 #[derive(Debug, Serialize)]
 pub struct NewRelease {
     pub version: String,
@@ -597,6 +655,7 @@ pub struct NewRelease {
     pub url: Option<String>
 }
 
+/// Provides all release information from already existing releases
 #[derive(Debug, Deserialize)]
 pub struct ReleaseInfo {
     pub version: String,
@@ -623,6 +682,7 @@ struct GitHubRelease {
     assets: Vec<GitHubAsset>,
 }
 
+/// Information about sentry CLI releases
 pub struct SentryCliRelease {
     pub version: String,
     pub download_url: String,
@@ -633,6 +693,7 @@ struct EventInfo {
     id: String,
 }
 
+/// Structure of DSym files.
 #[derive(Debug, Deserialize)]
 pub struct DSymFile {
     pub uuid: String,
@@ -647,6 +708,7 @@ struct MissingChecksumsResponse {
     missing: HashSet<String>,
 }
 
+/// Change information for issue bulk updates.
 #[derive(Serialize, Default)]
 pub struct IssueChanges {
     #[serde(rename="status")]
@@ -655,10 +717,15 @@ pub struct IssueChanges {
     pub snooze_duration: Option<i64>,
 }
 
+/// Filters for issue bulk requests.
 pub enum IssueFilter {
+    /// Match no issues
     Empty,
+    /// Match on all issues
     All,
+    /// Match on the issues with the given IDs
     ExplicitIds(Vec<u64>),
+    /// Match on issues with the given status
     Status(String),
 }
 

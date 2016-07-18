@@ -1,3 +1,4 @@
+//! Various utility functionality.
 use std::io;
 use std::fs;
 use std::mem;
@@ -17,6 +18,7 @@ use CliResult;
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
 
+/// A simple logger
 pub struct Logger;
 
 impl log::Log for Logger {
@@ -39,12 +41,14 @@ impl log::Log for Logger {
     }
 }
 
+/// Helper for temporary file access
 pub struct TempFile {
     f: Option<fs::File>,
     path: PathBuf,
 }
 
 impl TempFile {
+    /// Creates a new tempfile.
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
         path.push(Uuid::new_v4().to_hyphenated_string());
@@ -59,12 +63,14 @@ impl TempFile {
         })
     }
 
+    /// Opens the tempfile
     pub fn open(&self) -> fs::File {
         let mut f = self.f.as_ref().unwrap().try_clone().unwrap();
         let _ = f.seek(io::SeekFrom::Start(0));
         f
     }
 
+    /// Returns the path to the tempfile
     pub fn path(&self) -> &Path {
         &self.path
     }
@@ -77,6 +83,8 @@ impl Drop for TempFile {
     }
 }
 
+/// On non windows platforms this runs the function until it's
+/// being interrupted by a signal.
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
     where F: FnOnce() -> (), F: Send + 'static
@@ -97,12 +105,14 @@ pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
     rv
 }
 
+/// Helper function to create a clap app for subcommands
 pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
     App::new(name)
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::DisableVersion)
 }
 
+/// Given a path returns the SHA1 checksum for it.
 pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
     let mut sha = Sha1::new();
     let mut f = fs::File::open(path)?;
@@ -117,6 +127,7 @@ pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
     Ok(sha.digest().to_string())
 }
 
+/// Checks if a path is writable.
 pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
     fs::OpenOptions::new().write(true).open(&path).map(|_| true).unwrap_or(false)
 }
@@ -140,6 +151,7 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> io::Result<()> {
     exec(path)
 }
 
+/// Prints a message and loops until yes or no is entered.
 pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
     loop {
         print!("{} [y/n] ", message);
@@ -158,6 +170,7 @@ pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
     }
 }
 
+/// Prompts for input and returns it.
 pub fn prompt(message: &str) -> io::Result<String> {
     loop {
         print!("{}: ", message);
@@ -171,11 +184,13 @@ pub fn prompt(message: &str) -> io::Result<String> {
     }
 }
 
+/// Given a system time returns the unix timestamp as f64
 pub fn to_timestamp(tm: time::SystemTime) -> f64 {
     let duration = tm.duration_since(time::UNIX_EPOCH).unwrap();
     (duration.as_secs() as f64) + (duration.subsec_nanos() as f64 / 1e09)
 }
 
+/// Capitalizes a string and returns it.
 pub fn capitalize_string(s: &str) -> String {
     use std::ascii::AsciiExt;
     let mut bytes = s.as_bytes().to_vec();

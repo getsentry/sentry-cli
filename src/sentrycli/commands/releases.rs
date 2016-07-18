@@ -1,3 +1,4 @@
+//! Implements a command for managing releases.
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use std::collections::HashSet;
@@ -7,7 +8,7 @@ use walkdir::WalkDir;
 
 use CliResult;
 use api::{Api, NewRelease};
-use commands::Config;
+use config::Config;
 use utils::make_subcommand;
 use sourcemaps::SourceMapValidator;
 
@@ -111,8 +112,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .help("Add a file extension to the list of files to upload."))))
 }
 
-pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
-                       org: &str, project: &str) -> CliResult<()> {
+fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
+                   org: &str, project: &str) -> CliResult<()> {
     let info_rv = Api::new(config).new_release(org, project, &NewRelease {
         version: matches.value_of("version").unwrap().to_owned(),
         reference: matches.value_of("ref").map(|x| x.to_owned()),
@@ -122,8 +123,8 @@ pub fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
-                          org: &str, project: &str) -> CliResult<()> {
+fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
+                      org: &str, project: &str) -> CliResult<()> {
     let version = matches.value_of("version").unwrap();
     if Api::new(config).delete_release(org, project, version)? {
         println!("Deleted release {}!", version);
@@ -133,8 +134,8 @@ pub fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-pub fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
-                        org: &str, project: &str) -> CliResult<()> {
+fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
+                    org: &str, project: &str) -> CliResult<()> {
     for info in Api::new(config).list_releases(org, project)? {
         println!("[{}] {}: {} ({} new groups)",
                  info.date_released.unwrap_or("              unreleased".into()),
@@ -145,16 +146,16 @@ pub fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-pub fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
-                              org: &str, project: &str, release: &str) -> CliResult<()> {
+fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
+                          org: &str, project: &str, release: &str) -> CliResult<()> {
     for artifact in Api::new(config).list_release_files(org, project, release)? {
         println!("{}  ({} bytes)", artifact.name, artifact.size);
     }
     Ok(())
 }
 
-pub fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
-                                org: &str, project: &str, release: &str) -> CliResult<()> {
+fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
+                            org: &str, project: &str, release: &str) -> CliResult<()> {
     let files : HashSet<String> = match matches.values_of("names") {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
@@ -171,8 +172,8 @@ pub fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-pub fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
-                                org: &str, project: &str, version: &str) -> CliResult<()> {
+fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
+                            org: &str, project: &str, version: &str) -> CliResult<()> {
     let path = Path::new(matches.value_of("path").unwrap());
     let name = match matches.value_of("name") {
         Some(name) => name,
@@ -188,8 +189,8 @@ pub fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
     Ok(())
 }
 
-pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
-                                           org: &str, project: &str, version: &str) -> CliResult<()> {
+fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
+                                       org: &str, project: &str, version: &str) -> CliResult<()> {
     let api = Api::new(config);
     let release = api.get_release(org, project, version)?.ok_or("release not found")?;
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
@@ -251,8 +252,8 @@ pub fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Co
     Ok(())
 }
 
-pub fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
-                         org: &str, project: &str) -> CliResult<()> {
+fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
+                     org: &str, project: &str) -> CliResult<()> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_files_list(sub_matches, config, org, project, release);

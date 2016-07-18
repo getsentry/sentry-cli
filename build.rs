@@ -15,6 +15,8 @@ fn main() {
     target_bits.next();
     let platform = target_bits.next().unwrap();
 
+    write!(f, "/// The platform identifier\n").ok();
     write!(f, "pub const PLATFORM : &'static str = \"{}\";\n", platform).ok();
+    write!(f, "/// The CPU architecture identifier\n").ok();
     write!(f, "pub const ARCH : &'static str = \"{}\";\n", arch).ok();
 }

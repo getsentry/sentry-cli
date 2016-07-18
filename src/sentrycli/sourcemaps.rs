@@ -1,3 +1,4 @@
+//! Provides sourcemap validation functionality.
 use std::fs;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -51,6 +52,7 @@ struct Source {
     ty: SourceType,
 }
 
+/// Validates sourcemaps.
 pub struct SourceMapValidator {
     sources: HashMap<String, Source>,
     verbose: bool,
@@ -99,6 +101,8 @@ impl Log {
 }
 
 impl SourceMapValidator {
+    /// Creates a new sourcemap validator.  If it's set to verbose
+    /// it prints the progress to stdout.
     pub fn new(verbose: bool) -> SourceMapValidator {
         SourceMapValidator {
             sources: HashMap::new(),
@@ -106,6 +110,7 @@ impl SourceMapValidator {
         }
     }
 
+    /// Adds a file for consideration.
     pub fn consider_file(&mut self, path: &Path, url: &str) -> bool {
         let ty = match path.extension().and_then(|x| x.to_str()) {
             Some("js") => SourceType::Script,
@@ -159,6 +164,7 @@ impl SourceMapValidator {
         Ok(())
     }
 
+    /// Validates all sources within.
     pub fn validate_sources(&self) -> CliResult<()> {
         let mut log = Log::new(self.verbose);
         let mut sources : Vec<_> = self.sources.iter().map(|x| x.1).collect();

@@ -1,3 +1,7 @@
+//! This is the library that powers the `sentry-cli` tool.  The primary
+//! exported function is `main` which is directly invoked from the
+//! compiled binrary that links against this library.
+
 #![feature(custom_derive, plugin, question_mark, alloc_system)]
 #![plugin(serde_macros)]
 
@@ -31,19 +35,19 @@ pub use error::{CliError, CliResult};
 
 mod macros;
 
-mod api;
-mod commands;
-mod event;
-mod error;
-mod config;
-mod utils;
-mod macho;
-mod sourcemaps;
-mod constants;
+pub mod api;
+pub mod commands;
+pub mod event;
+pub mod error;
+pub mod config;
+pub mod utils;
+pub mod macho;
+pub mod sourcemaps;
+pub mod constants;
 
 
 #[cfg(not(windows))]
-pub fn main() {
+fn real_main() {
     if let Some(signal) = utils::run_or_interrupt(commands::main) {
         use chan_signal::Signal;
         if signal == Signal::INT {
@@ -53,6 +57,11 @@ pub fn main() {
 }
 
 #[cfg(windows)]
-pub fn main() {
+fn real_main() {
     commands::main();
+}
+
+/// Executes the command line application and exits the process.
+pub fn main() {
+    real_main();
 }

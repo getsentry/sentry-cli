@@ -1,8 +1,9 @@
+//! Implements a command for issue management.
 use clap::{App, AppSettings, Arg, ArgMatches};
 
 use CliResult;
 use api::{Api, IssueFilter, IssueChanges};
-use commands::Config;
+use config::Config;
 use utils::make_subcommand;
 
 

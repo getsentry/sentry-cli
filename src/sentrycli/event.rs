@@ -1,3 +1,4 @@
+//! Provides support for sending events to Sentry.
 use std::time::SystemTime;
 use std::collections::HashMap;
 use std::process::Command;
@@ -6,28 +7,7 @@ use CliResult;
 use utils::to_timestamp;
 
 
-#[derive(Serialize)]
-pub struct Device {
-    name: String,
-    version: String,
-    #[serde(skip_serializing_if="Option::is_none")]
-    build: Option<String>,
-}
-
-impl Device {
-    pub fn current() -> CliResult<Device> {
-        let p = Command::new("uname").arg("-sr").output()?;
-        let output = String::from_utf8(p.stdout)?;
-        let mut iter = output.trim().splitn(2, ' ');
-        Ok(Device {
-            name: iter.next().unwrap_or("Unknown").into(),
-            version: iter.next().unwrap_or("?").into(),
-            build: None,
-        })
-    }
-}
-
-
+/// Represents a Sentry event.
 #[derive(Serialize)]
 pub struct Event {
     pub tags: HashMap<String, String>,
@@ -39,8 +19,6 @@ pub struct Event {
     pub message: Option<String>,
     pub platform: String,
     pub timestamp: f64,
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub device: Option<Device>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub server_name: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
@@ -62,7 +40,6 @@ impl Event {
             message: None,
             platform: "other".into(),
             timestamp: to_timestamp(SystemTime::now()),
-            device: Device::current().ok(),
             server_name: get_server_name().ok(),
             release: None,
         }

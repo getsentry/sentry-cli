@@ -1,3 +1,5 @@
+//! This module implements the root command of the CLI tool.
+
 use std::env;
 use std::process;
 
@@ -7,7 +9,8 @@ use clap::{Arg, App, AppSettings};
 use CliResult;
 use constants::VERSION;
 use utils::{make_subcommand, Logger};
-pub use config::{Config, Auth};
+use config::{Config, Auth};
+
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -23,10 +26,12 @@ macro_rules! each_subcommand {
 }
 
 macro_rules! import_subcommand {
-    ($name:ident) => { mod $name; }
+    ($name:ident) => { pub mod $name; }
 }
 each_subcommand!(import_subcommand);
 
+/// Given an argument vector and a `Config` this executes the
+/// command line and returns the result.
 pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     let mut app = App::new("sentry-cli")
         .version(VERSION)
@@ -96,10 +101,11 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     unreachable!();
 }
 
-pub fn run() -> CliResult<()> {
+fn run() -> CliResult<()> {
     execute(env::args().collect(), &mut Config::from_cli_config()?)
 }
 
+/// Executes the command line application and exists the process.
 pub fn main() {
     match run() {
         Ok(()) => process::exit(0),

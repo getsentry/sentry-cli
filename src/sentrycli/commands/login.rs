@@ -1,10 +1,11 @@
+//! Implements a command for signing in.
 use clap::{App, ArgMatches};
 use open;
 use url::Url;
 use std::fs::OpenOptions;
 
 use CliResult;
-use commands::{Config, Auth};
+use config::{Config, Auth};
 use utils::{prompt, prompt_to_continue};
 use api::Api;
 

@@ -1,8 +1,9 @@
+//! Implements a command for showing infos from Sentry.
 use clap::{App, ArgMatches};
 
 use api::Api;
 use CliResult;
-use commands::{Auth, Config};
+use config::{Auth, Config};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {

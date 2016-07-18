@@ -1,3 +1,4 @@
+//! Implements a command for updating `sentry-cli`
 use std::fs;
 use std::env;
 use std::path::Path;
@@ -8,7 +9,7 @@ use runas;
 use api::Api;
 use utils;
 use CliResult;
-use commands::Config;
+use config::Config;
 use constants::VERSION;
 
 

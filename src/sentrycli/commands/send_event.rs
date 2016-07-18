@@ -1,8 +1,9 @@
+//! Implements a command for sending events to Sentry.
 use clap::{App, Arg, ArgMatches};
 use itertools::Itertools;
 
 use CliResult;
-use commands::Config;
+use config::Config;
 use event::Event;
 use api::Api;
 

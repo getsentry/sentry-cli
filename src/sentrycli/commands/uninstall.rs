@@ -1,9 +1,10 @@
+//! Implements a command for uninstalling `sentry-cli`
 use std::env;
 
 use clap::{App, ArgMatches};
 
 use CliResult;
-use commands::Config;
+use config::Config;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {

@@ -1,3 +1,5 @@
+//! Implements a command for uploading dsym files.
+
 use std::io;
 use std::fs;
 use std::env;
@@ -14,7 +16,7 @@ use CliResult;
 use api::{Api, DSymFile};
 use utils::{TempFile, get_sha1_checksum};
 use macho::is_macho_file;
-use commands::Config;
+use config::Config;
 
 const BATCH_SIZE : usize = 15;
 
