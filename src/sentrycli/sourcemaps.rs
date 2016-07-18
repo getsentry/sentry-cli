@@ -3,6 +3,7 @@ use std::fs;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
+use term;
 use url::Url;
 use sourcemap;
 
@@ -74,17 +75,24 @@ impl Log {
     }
 
     pub fn log(&mut self, source: &Source, level: LogLevel, message: String) {
+        let mut term = term::stderr().unwrap();
+        match level {
+            LogLevel::Error => { term.fg(term::color::RED).ok(); }
+            LogLevel::Warning => { term.fg(term::color::YELLOW).ok(); }
+            LogLevel::Info => {}
+        }
         if self.last_source.as_ref() != Some(&source.url) {
             self.last_source = Some(source.url.clone());
-            println!("  {}", source.url);
+            writeln!(term, "  {}", source.url).ok();
         }
         if level.is_insignificant() && !self.verbose {
             return;
         }
-        println!("    {:?}: {}", level, &message);
+        writeln!(term, "    {:?}: {}", level, &message).ok();
         if level == LogLevel::Error {
             self.failed = true;
         }
+        term.reset().ok();
     }
 
     pub fn error(&mut self, source: &Source, message: String) {
