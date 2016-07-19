@@ -28,7 +28,7 @@ open = "1.1.1"
 runas = "0.1.0"
 log = "0.3.6"
 term = "0.4.4"
-curl = { git = "https://github.com/alexcrichton/curl-rust", rev = "8b4a2273d6a271715b049e9731c18a3ff7b5b19a" }
+curl = "0.3.1"
 sourcemap = { version = "0.3.1", default-features = false, features = ["nightly"] }
 
 [target."cfg(not(windows))".dependencies]

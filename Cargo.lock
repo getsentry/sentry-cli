@@ -5,7 +5,7 @@ dependencies = [
  "chan 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "chan-signal 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "curl 0.3.0 (git+https://github.com/alexcrichton/curl-rust?rev=8b4a2273d6a271715b049e9731c18a3ff7b5b19a)",
+ "curl 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.4.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "open 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -104,18 +104,18 @@ dependencies = [
 
 [[package]]
 name = "curl"
-version = "0.3.0"
-source = "git+https://github.com/alexcrichton/curl-rust?rev=8b4a2273d6a271715b049e9731c18a3ff7b5b19a#8b4a2273d6a271715b049e9731c18a3ff7b5b19a"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "curl-sys 0.2.0 (git+https://github.com/alexcrichton/curl-rust?rev=8b4a2273d6a271715b049e9731c18a3ff7b5b19a)",
+ "curl-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-sys 0.7.13 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "curl-sys"
-version = "0.2.0"
-source = "git+https://github.com/alexcrichton/curl-rust?rev=8b4a2273d6a271715b049e9731c18a3ff7b5b19a#8b4a2273d6a271715b049e9731c18a3ff7b5b19a"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gcc 0.3.28 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
