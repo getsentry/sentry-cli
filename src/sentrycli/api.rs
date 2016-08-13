@@ -28,7 +28,7 @@ use constants::{PLATFORM, ARCH, EXT, VERSION};
 ///
 /// Example:
 ///
-/// ```rust
+/// ```rust,no_run
 /// format!("/foo/bar/{}/", PathArg("foo bar"))
 /// ```
 pub struct PathArg<A: fmt::Display>(A);
