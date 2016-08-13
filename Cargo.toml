@@ -13,9 +13,9 @@ name = "sentry-cli"
 
 [dependencies]
 clap = { version = "2.9.2", default-features = false, features = ["suggestions", "wrap_help"] }
-serde = "0.7.5"
-serde_json = "0.7.1"
-serde_macros = "0.7.5"
+serde = "0.8.1"
+serde_json = "0.8.1"
+serde_macros = "0.8.1"
 url = "1.1.1"
 uuid = "0.1.18"
 walkdir = "0.1.5"
@@ -29,7 +29,7 @@ runas = "0.1.0"
 log = "0.3.6"
 term = "0.4.4"
 curl = "0.3.1"
-sourcemap = { version = "0.3.1", default-features = false, features = ["nightly"] }
+sourcemap = { version = "0.4.0", default-features = false, features = ["nightly"] }
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1.14"

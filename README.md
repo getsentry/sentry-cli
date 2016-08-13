@@ -16,11 +16,11 @@ Documentation [can be found here](https://docs.getsentry.com/hosted/learn/cli/)
 
 In case you want to compile this yourself you need to run a nightly build of
 Rust.  We keep the lock file in the repo so that builds are stable.  The
-following nightly version is known to work: `2016-05-22`
+following nightly version is known to work: `2016-08-11`
 
 Use rustup to compile:
 
-    $ rustup override set nightly-2016-06-15
+    $ rustup override set nightly-2016-08-11
     $ cargo build
 
 In case you get OpenSSL errors you need to compile with the path to the
