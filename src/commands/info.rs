@@ -1,8 +1,8 @@
 //! Implements a command for showing infos from Sentry.
 use clap::{App, ArgMatches};
 
+use prelude::*;
 use api::Api;
-use CliResult;
 use config::{Auth, Config};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -19,7 +19,7 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
     }
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let (project, org) = config.get_org_and_project_defaults();
     let info_rv = Api::new(config).get_auth_info();
 

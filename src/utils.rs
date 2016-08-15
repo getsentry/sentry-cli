@@ -13,7 +13,7 @@ use uuid::Uuid;
 use sha1::Sha1;
 use clap::{App, AppSettings};
 
-use CliResult;
+use prelude::*;
 
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
@@ -113,7 +113,7 @@ pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
 }
 
 /// Given a path returns the SHA1 checksum for it.
-pub fn get_sha1_checksum(path: &Path) -> CliResult<String> {
+pub fn get_sha1_checksum(path: &Path) -> Result<String> {
     let mut sha = Sha1::new();
     let mut f = fs::File::open(path)?;
     let mut buf = [0u8; 16384];

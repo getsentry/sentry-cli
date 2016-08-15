@@ -7,6 +7,7 @@ use std::io;
 use std::fs;
 use std::io::{Read, Write};
 use std::fmt;
+use std::error;
 use std::cell::{RefMut, RefCell};
 use std::path::Path;
 use std::ascii::AsciiExt;
@@ -577,6 +578,12 @@ impl ApiResponse {
     }
 }
 
+
+impl error::Error for Error {
+    fn description(&self) -> &str {
+        "api error"
+    }
+}
 
 impl From<curl::FormError> for Error {
     fn from(err: curl::FormError) -> Error {

@@ -4,7 +4,7 @@ use open;
 use url::Url;
 use std::fs::OpenOptions;
 
-use CliResult;
+use prelude::*;
 use config::{Config, Auth};
 use utils::{prompt, prompt_to_continue};
 use api::Api;
@@ -15,7 +15,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
         .about("helper that assists in signin in with sentry.")
 }
 
-fn update_config(config: &Config, token: &str) -> CliResult<()> {
+fn update_config(config: &Config, token: &str) -> Result<()> {
     let mut new_cfg = config.clone();
 
     new_cfg.ini.set_to(Some("defaults"), "url".into(), config.url.clone());
@@ -29,7 +29,7 @@ fn update_config(config: &Config, token: &str) -> CliResult<()> {
     Ok(())
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let token_url = format!("{}/api/", config.url.trim_right_matches('/'));
 
     println!("This helps you signing in your sentry-cli with an authentication token.");

@@ -6,15 +6,15 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches};
 use runas;
 
+use prelude::*;
 use api::Api;
 use utils;
-use CliResult;
 use config::Config;
 use constants::VERSION;
 
 
 #[cfg(windows)]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> CliResult<()>
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
 {
     // so on windows you can rename a running executable but you cannot delete it.
     // we move the old executable to a temporary location (this most likely only
@@ -47,7 +47,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> CliResult<()
 }
 
 #[cfg(not(windows))]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> CliResult<()>
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
 {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
@@ -71,7 +71,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .help("Force the update even if already current."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let api = Api::new(config);
     let exe = env::current_exe()?;
     let elevate = !utils::is_writable(&exe);

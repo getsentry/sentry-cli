@@ -3,7 +3,7 @@ use std::env;
 
 use clap::{App, ArgMatches};
 
-use CliResult;
+use prelude::*;
 use config::Config;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -13,7 +13,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 }
 
 #[cfg(windows)]
-pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     let exe = env::current_exe()?;
     println!("Cannot uninstall on Windows :(");
     println!("");
@@ -22,7 +22,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()>
 }
 
 #[cfg(not(windows))]
-pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> CliResult<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     use std::fs;
     use runas;
     use utils;

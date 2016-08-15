@@ -3,7 +3,7 @@ use std::time::SystemTime;
 use std::collections::HashMap;
 use std::process::Command;
 
-use CliResult;
+use prelude::*;
 use utils::to_timestamp;
 
 
@@ -25,7 +25,7 @@ pub struct Event {
     pub release: Option<String>,
 }
 
-fn get_server_name() -> CliResult<String> {
+fn get_server_name() -> Result<String> {
     let p = Command::new("uname").arg("-n").output()?;
     Ok(String::from_utf8(p.stdout)?.trim().to_owned())
 }

@@ -7,9 +7,9 @@ use term;
 use url::Url;
 use sourcemap;
 
-use CliResult;
+use prelude::*;
 
-fn join_url(base_url: &str, url: &str) -> CliResult<String> {
+fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
         match Url::parse(&format!("http://{}", base_url))?.join(url) {
             Ok(url) => {
@@ -133,7 +133,7 @@ impl SourceMapValidator {
         true
     }
 
-    fn validate_script(&self, log: &mut Log, source: &Source) -> CliResult<()> {
+    fn validate_script(&self, log: &mut Log, source: &Source) -> Result<()> {
         let f = fs::File::open(&source.file_path)?;
         let reference = sourcemap::locate_sourcemap_reference(&f)?;
         if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
@@ -150,7 +150,7 @@ impl SourceMapValidator {
         Ok(())
     }
 
-    fn validate_sourcemap(&self, log: &mut Log, source: &Source) -> CliResult<()> {
+    fn validate_sourcemap(&self, log: &mut Log, source: &Source) -> Result<()> {
         let f = fs::File::open(&source.file_path)?;
         match sourcemap::decode(&f)? {
             sourcemap::DecodedMap::Regular(sm) => {
@@ -173,7 +173,7 @@ impl SourceMapValidator {
     }
 
     /// Validates all sources within.
-    pub fn validate_sources(&self) -> CliResult<()> {
+    pub fn validate_sources(&self) -> Result<()> {
         let mut log = Log::new(self.verbose);
         let mut sources : Vec<_> = self.sources.iter().map(|x| x.1).collect();
         sources.sort_by_key(|x| &x.url);

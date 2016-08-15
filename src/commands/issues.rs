@@ -1,7 +1,7 @@
 //! Implements a command for issue management.
 use clap::{App, AppSettings, Arg, ArgMatches};
 
-use CliResult;
+use prelude::*;
 use api::{Api, IssueFilter, IssueChanges};
 use config::Config;
 use utils::make_subcommand;
@@ -49,7 +49,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
             .about("Bulk unresolve all matching issues"))
 }
 
-fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> CliResult<IssueFilter> {
+fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter> {
     if matches.is_present("all") {
         return Ok(IssueFilter::All);
     }
@@ -59,10 +59,7 @@ fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> CliResult<IssueFilte
     let mut ids = vec![];
     if let Some(values) = matches.values_of("id") {
         for value in values {
-            ids.push(match value.parse() {
-                Ok(x) => x,
-                Err(_) => { fail!("Invalid issue ID"); }
-            });
+            ids.push(value.parse().chain_err(|| "Invalid issue ID")?);
         }
     }
 
@@ -74,7 +71,7 @@ fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> CliResult<IssueFilte
 }
 
 fn execute_change(config: &Config, org: &str, project: &str, filter: &IssueFilter,
-                  changes: &IssueChanges) -> CliResult<()> {
+                  changes: &IssueChanges) -> Result<()> {
     if Api::new(config).bulk_update_issue(org, project, filter, changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
@@ -86,7 +83,7 @@ fn execute_change(config: &Config, org: &str, project: &str, filter: &IssueFilte
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let filter = get_filter_from_matches(matches)?;
     let mut changes: IssueChanges = Default::default();

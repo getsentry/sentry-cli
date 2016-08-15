@@ -3,7 +3,7 @@ use std::path::Path;
 use std::fs::File;
 use std::io::Read;
 
-use super::CliResult;
+use prelude::*;
 
 
 const FAT_MAGIC : &'static [u8; 4] = b"\xca\xfe\xba\xbe";
@@ -16,7 +16,7 @@ const MAGIC_CIGAM64 : &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 /// this function can return an error if the file is smaller than the magic.
 /// Use the `is_macho_file` instead which does not fail which is actually
 /// much better for how this function is used within this library.
-fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> CliResult<bool> {
+fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> Result<bool> {
     let mut f = File::open(&path)?;
     let mut magic : [u8; 4] = [0; 4];
     f.read_exact(&mut magic)?;

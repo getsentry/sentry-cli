@@ -6,7 +6,7 @@ use std::collections::HashSet;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
 
-use CliResult;
+use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
 use utils::make_subcommand;
@@ -113,7 +113,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 }
 
 fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
-                   org: &str, project: &str) -> CliResult<()> {
+                   org: &str, project: &str) -> Result<()> {
     let info_rv = Api::new(config).new_release(org, project, &NewRelease {
         version: matches.value_of("version").unwrap().to_owned(),
         reference: matches.value_of("ref").map(|x| x.to_owned()),
@@ -124,7 +124,7 @@ fn execute_new<'a>(matches: &ArgMatches<'a>, config: &Config,
 }
 
 fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
-                      org: &str, project: &str) -> CliResult<()> {
+                      org: &str, project: &str) -> Result<()> {
     let version = matches.value_of("version").unwrap();
     if Api::new(config).delete_release(org, project, version)? {
         println!("Deleted release {}!", version);
@@ -135,7 +135,7 @@ fn execute_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
 }
 
 fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
-                    org: &str, project: &str) -> CliResult<()> {
+                    org: &str, project: &str) -> Result<()> {
     for info in Api::new(config).list_releases(org, project)? {
         println!("[{}] {}: {} ({} new groups)",
                  info.date_released.unwrap_or("              unreleased".into()),
@@ -147,7 +147,7 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
 }
 
 fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
-                          org: &str, project: &str, release: &str) -> CliResult<()> {
+                          org: &str, project: &str, release: &str) -> Result<()> {
     for artifact in Api::new(config).list_release_files(org, project, release)? {
         println!("{}  ({} bytes)", artifact.name, artifact.size);
     }
@@ -155,7 +155,7 @@ fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
 }
 
 fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
-                            org: &str, project: &str, release: &str) -> CliResult<()> {
+                            org: &str, project: &str, release: &str) -> Result<()> {
     let files : HashSet<String> = match matches.values_of("names") {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
@@ -173,7 +173,7 @@ fn execute_files_delete<'a>(matches: &ArgMatches<'a>, config: &Config,
 }
 
 fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
-                            org: &str, project: &str, version: &str) -> CliResult<()> {
+                            org: &str, project: &str, version: &str) -> Result<()> {
     let path = Path::new(matches.value_of("path").unwrap());
     let name = match matches.value_of("name") {
         Some(name) => name,
@@ -190,7 +190,7 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
 }
 
 fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config,
-                                       org: &str, project: &str, version: &str) -> CliResult<()> {
+                                       org: &str, project: &str, version: &str) -> Result<()> {
     let api = Api::new(config);
     let release = api.get_release(org, project, version)?.ok_or("release not found")?;
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
@@ -253,7 +253,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
 }
 
 fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
-                     org: &str, project: &str) -> CliResult<()> {
+                     org: &str, project: &str) -> Result<()> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_files_list(sub_matches, config, org, project, release);
@@ -270,7 +270,7 @@ fn execute_files<'a>(matches: &ArgMatches<'a>, config: &Config,
     unreachable!();
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_new(sub_matches, config, &org, &project);

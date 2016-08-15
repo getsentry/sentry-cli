@@ -2,7 +2,7 @@
 use clap::{App, Arg, ArgMatches};
 use itertools::Itertools;
 
-use CliResult;
+use prelude::*;
 use config::Config;
 use event::Event;
 use api::Api;
@@ -46,7 +46,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .help("Adds extra information (key:value) to the event."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let mut event = Event::new();
     event.level = matches.value_of("level").unwrap_or("error").into();
     event.release = matches.value_of("release").map(|x| x.into());

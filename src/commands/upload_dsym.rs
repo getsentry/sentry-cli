@@ -12,7 +12,7 @@ use clap::{App, Arg, ArgMatches};
 use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
 
-use CliResult;
+use prelude::*;
 use api::{Api, DSymFile};
 use utils::{TempFile, get_sha1_checksum};
 use macho::is_macho_file;
@@ -44,9 +44,9 @@ impl BatchIter {
 }
 
 impl Iterator for BatchIter {
-    type Item = CliResult<Vec<LocalFile>>;
+    type Item = Result<Vec<LocalFile>>;
 
-    fn next(&mut self) -> Option<CliResult<Vec<LocalFile>>> {
+    fn next(&mut self) -> Option<Result<Vec<LocalFile>>> {
         loop {
             if let Some(dent_res) = self.wd_iter.next() {
                 let dent = iter_try!(dent_res);
@@ -77,7 +77,7 @@ impl Iterator for BatchIter {
 }
 
 fn find_missing_files(api: &mut Api, files: Vec<LocalFile>, org: &str, project: &str)
-    -> CliResult<Vec<LocalFile>>
+    -> Result<Vec<LocalFile>>
 {
     let missing = {
         let checksums : Vec<_> = files.iter().map(|ref x| x.checksum.as_str()).collect();
@@ -92,7 +92,7 @@ fn find_missing_files(api: &mut Api, files: Vec<LocalFile>, org: &str, project: 
     Ok(rv)
 }
 
-fn zip_up(files: &[LocalFile]) -> CliResult<TempFile> {
+fn zip_up(files: &[LocalFile]) -> Result<TempFile> {
     println!("  Uploading a batch of missing files ...");
     let tf = TempFile::new()?;
     let mut zip = zip::ZipWriter::new(tf.open());
@@ -106,12 +106,12 @@ fn zip_up(files: &[LocalFile]) -> CliResult<TempFile> {
 }
 
 fn upload_dsyms(api: &mut Api, files: &[LocalFile],
-                org: &str, project: &str) -> CliResult<Vec<DSymFile>> {
+                org: &str, project: &str) -> Result<Vec<DSymFile>> {
     let tf = zip_up(files)?;
     Ok(api.upload_dsyms(org, project, tf.path())?)
 }
 
-fn get_paths_from_env() -> CliResult<Vec<PathBuf>> {
+fn get_paths_from_env() -> Result<Vec<PathBuf>> {
     let mut rv = vec![];
     if let Some(base_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
         for entry in fs::read_dir(base_path)? {
@@ -147,7 +147,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
              .index(1))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> CliResult<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
         None => get_paths_from_env()?,

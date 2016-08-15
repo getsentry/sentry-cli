@@ -9,7 +9,7 @@ use clap::ArgMatches;
 use url::Url;
 use ini::Ini;
 
-use CliResult;
+use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
 
 /// Represents the auth information
@@ -33,7 +33,7 @@ pub struct Dsn {
 impl Dsn {
 
     /// Parses a Dsn from a given string.
-    fn from_str(dsn: &str) -> CliResult<Dsn> {
+    fn from_str(dsn: &str) -> Result<Dsn> {
         let url = Url::parse(dsn)?;
         let project_id = if let Some(component_iter) = url.path_segments() {
             let components : Vec<_> = component_iter.collect();
@@ -101,7 +101,7 @@ pub struct Config {
 impl Config {
 
     /// Loads the CLI config from the default location and returns it.
-    pub fn from_cli_config() -> CliResult<Config> {
+    pub fn from_cli_config() -> Result<Config> {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
             filename: filename,
@@ -159,7 +159,7 @@ impl Config {
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
-    pub fn get_org_and_project(&self, matches: &ArgMatches) -> CliResult<(String, String)> {
+    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
         Ok((
             matches
                 .value_of("org").map(|x| x.to_owned())
@@ -200,7 +200,7 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-fn load_cli_config() -> CliResult<(PathBuf, Ini)> {
+fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let mut home_fn = env::home_dir().ok_or("Could not find home dir")?;
     home_fn.push(".sentryclirc");
 
@@ -252,7 +252,7 @@ fn get_default_url(ini: &Ini) -> String {
     }
 }
 
-fn get_default_dsn(ini: &Ini) -> CliResult<Option<Dsn>> {
+fn get_default_dsn(ini: &Ini) -> Result<Option<Dsn>> {
     if let Some(ref val) = env::var("SENTRY_DSN").ok() {
         Ok(Some(Dsn::from_str(val)?))
     } else if let Some(val) = ini.get_from(Some("auth"), "dsn") {
@@ -262,7 +262,7 @@ fn get_default_dsn(ini: &Ini) -> CliResult<Option<Dsn>> {
     }
 }
 
-fn get_default_log_level(ini: &Ini) -> CliResult<log::LogLevelFilter> {
+fn get_default_log_level(ini: &Ini) -> Result<log::LogLevelFilter> {
     if let Ok(level_str) = env::var("SENTRY_LOG_LEVEL") {
         if let Ok(level) = level_str.parse() {
             return Ok(level);

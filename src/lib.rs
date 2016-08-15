@@ -4,6 +4,7 @@
 
 #![feature(custom_derive, plugin, question_mark, alloc_system)]
 #![plugin(serde_macros)]
+#![recursion_limit = "1024"]
 
 extern crate alloc_system;
 #[cfg(not(windows))]
@@ -28,17 +29,17 @@ extern crate open;
 extern crate runas;
 extern crate term;
 #[macro_use]
+extern crate error_chain;
+#[macro_use]
 extern crate log;
-
-// what we export
-pub use error::{CliError, CliResult};
 
 mod macros;
 
+pub mod prelude;
 pub mod api;
 pub mod commands;
 pub mod event;
-pub mod error;
+pub mod errors;
 pub mod config;
 pub mod utils;
 pub mod macho;

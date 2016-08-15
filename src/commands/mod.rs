@@ -1,12 +1,14 @@
 //! This module implements the root command of the CLI tool.
 
+use std::io;
+use std::io::Write;
 use std::env;
 use std::process;
 
 use log;
 use clap::{Arg, App, AppSettings};
 
-use CliResult;
+use prelude::*;
 use constants::VERSION;
 use utils::{make_subcommand, Logger};
 use config::{Config, Auth};
@@ -32,7 +34,7 @@ each_subcommand!(import_subcommand);
 
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
-pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
+pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     let mut app = App::new("sentry-cli")
         .version(VERSION)
         .about("Command line utility for Sentry")
@@ -93,7 +95,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
             if let Some(sub_matches) = matches.subcommand_matches(cmd) {
-                return $name::execute(&sub_matches, &config);
+                return Ok($name::execute(&sub_matches, &config)?);
             }
         }}
     }
@@ -101,7 +103,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> CliResult<()> {
     unreachable!();
 }
 
-fn run() -> CliResult<()> {
+fn run() -> Result<()> {
     execute(env::args().collect(), &mut Config::from_cli_config()?)
 }
 
@@ -109,6 +111,19 @@ fn run() -> CliResult<()> {
 pub fn main() {
     match run() {
         Ok(()) => process::exit(0),
-        Err(ref err) => err.exit(),
+        Err(err) => {
+            if let &ErrorKind::ClapError(ref clap_err) = err.kind() {
+                clap_err.exit();
+            }
+
+            writeln!(&mut io::stderr(), "error: {}", err).ok();
+
+            if env::var("RUST_BACKTRACE") == Ok("1".into()) {
+                writeln!(&mut io::stderr(), "").ok();
+                writeln!(&mut io::stderr(), "{:?}", err.backtrace()).ok();
+            }
+
+            process::exit(1);
+        }
     }
 }
