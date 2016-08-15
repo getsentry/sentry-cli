@@ -26,12 +26,6 @@ use constants::{PLATFORM, ARCH, EXT, VERSION};
 
 
 /// Wrapper that escapes arguments for URL path segments.
-///
-/// Example:
-///
-/// ```rust,no_run
-/// format!("/foo/bar/{}/", PathArg("foo bar"))
-/// ```
 pub struct PathArg<A: fmt::Display>(A);
 
 impl<A: fmt::Display> fmt::Display for PathArg<A> {
