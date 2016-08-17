@@ -21,7 +21,7 @@ use curl;
 
 use utils;
 use event::Event;
-use config::{Config, Auth};
+use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
 
 
@@ -342,8 +342,7 @@ impl<'a> Api<'a> {
 
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
-    pub fn send_event(&self, event: &Event) -> ApiResult<String> {
-        let dsn = self.config.dsn.as_ref().ok_or(Error::NoDsn)?;
+    pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
         let event : EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
             .with_header("X-Sentry-Auth", &dsn.get_auth_header(event.timestamp))?
             .with_json_body(&event)?

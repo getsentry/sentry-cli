@@ -71,9 +71,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
+    let dsn = config.get_dsn()?;
+
     // handle errors here locally so that we do not get the extra "use sentry-cli
     // login" to sign in which would be in appropriate here.
-    match Api::new(config).send_event(&event) {
+    match Api::new(config).send_event(&dsn, &event) {
         Ok(event_id) => {
             println!("Event sent: {}", event_id);
         },

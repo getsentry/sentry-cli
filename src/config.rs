@@ -93,7 +93,6 @@ pub struct Config {
     pub filename: PathBuf,
     pub auth: Option<Auth>,
     pub url: String,
-    pub dsn: Option<Dsn>,
     pub log_level: log::LogLevelFilter,
     pub ini: Ini,
 }
@@ -107,7 +106,6 @@ impl Config {
             filename: filename,
             auth: get_default_auth(&ini),
             url: get_default_url(&ini),
-            dsn: get_default_dsn(&ini)?,
             log_level: get_default_log_level(&ini)?,
             ini: ini,
         })
@@ -183,6 +181,17 @@ impl Config {
                 .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
         )
     }
+
+    /// Return the DSN
+    pub fn get_dsn(&self) -> Result<Dsn> {
+        if let Some(ref val) = env::var("SENTRY_DSN").ok() {
+            Dsn::from_str(val)
+        } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
+            Dsn::from_str(val)
+        } else {
+            fail!("No DSN provided");
+        }
+    }
 }
 
 fn find_project_config_file() -> Option<PathBuf> {
@@ -249,16 +258,6 @@ fn get_default_url(ini: &Ini) -> String {
         val.to_owned()
     } else {
         DEFAULT_URL.to_owned()
-    }
-}
-
-fn get_default_dsn(ini: &Ini) -> Result<Option<Dsn>> {
-    if let Some(ref val) = env::var("SENTRY_DSN").ok() {
-        Ok(Some(Dsn::from_str(val)?))
-    } else if let Some(val) = ini.get_from(Some("auth"), "dsn") {
-        Ok(Some(Dsn::from_str(val)?))
-    } else {
-        Ok(None)
     }
 }
 
