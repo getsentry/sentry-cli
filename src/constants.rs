@@ -1,7 +1,7 @@
 //! Provides some useful constants.
 
 /// The default API URL
-pub const DEFAULT_URL : &'static str = "https://app.getsentry.com/";
+pub const DEFAULT_URL : &'static str = "https://sentry.io/";
 
 /// The protocol version of the library.
 pub const PROTOCOL_VERSION : u32 = 6;
