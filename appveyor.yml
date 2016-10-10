@@ -14,7 +14,7 @@ install:
   - curl -sSf -o rustup-init.exe https://dev-static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe
   - rustup-init.exe -y
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-  - rustup default nightly-2016-08-11-%TARGET%
+  - rustup default nightly-2016-10-08-%TARGET%
 
   # let's see what we got
   - where rustc cargo

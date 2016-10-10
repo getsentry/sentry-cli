@@ -7,9 +7,9 @@ build = "build.rs"
 [dependencies]
 clap = { version = "2.9.2", default-features = false, features = ["suggestions", "wrap_help"] }
 error-chain = "0.4"
-serde = "0.8.1"
-serde_json = "0.8.1"
-serde_macros = "0.8.1"
+serde = "0.8"
+serde_json = "0.8"
+serde_derive = "0.8"
 url = "1.1.1"
 uuid = "0.1.18"
 walkdir = "0.1.5"
@@ -22,8 +22,8 @@ open = "1.1.1"
 runas = "0.1.0"
 log = "0.3.6"
 term = "0.4.4"
-curl = "0.3.1"
-sourcemap = { version = "0.4.0", default-features = false, features = ["nightly"] }
+curl = "0.3.7"
+sourcemap = { version = "0.5.0", default-features = false, features = ["nightly"] }
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1.14"

@@ -2,8 +2,8 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binrary that links against this library.
 
-#![feature(custom_derive, plugin, question_mark, alloc_system)]
-#![plugin(serde_macros)]
+#![feature(proc_macro, plugin, question_mark, alloc_system)]
+#![plugin(serde_derive)]
 #![recursion_limit = "1024"]
 
 extern crate alloc_system;
@@ -16,6 +16,7 @@ extern crate curl;
 extern crate clap;
 extern crate ini;
 extern crate itertools;
+#[macro_use] extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate url;
