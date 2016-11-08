@@ -18,7 +18,7 @@ install:
   - bash .ci/install.sh
 
 script:
-  - mkdir target
+  - mkdir -p target
   - if [ ! -z "$DOCKER" ]; then
       docker run
         --entrypoint bash
