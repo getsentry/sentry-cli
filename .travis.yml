@@ -8,33 +8,8 @@ matrix:
   include:
     - os: linux
       env: TARGET=i686-unknown-linux-gnu DOCKER=alexcrichton/rust-slave-dist:2015-10-20b
-      addons:
-        apt:
-          packages:
-            - gcc-multilib
-            - libssl-dev:i386
-            - libc6:i386
-            - libdrm-intel1:i386
-            - libdrm-nouveau2:i386
-            - libdrm-radeon1:i386
-            - libdrm2:i386
-            - libelf1:i386
-            - libexpat1:i386
-            - libffi6:i386
-            - libgcc1:i386
-            - libglapi-mesa:i386
-            - libllvm3.3:i386
-            - libpciaccess0:i386
-            - libstdc++6:i386
-            - zlib1g:i386
-            - gcc-4.6-multilib
-
     - os: linux
       env: TARGET=x86_64-unknown-linux-gnu DOCKER=alexcrichton/rust-slave-dist:2015-10-20b
-      addons:
-        apt:
-          packages:
-            - libssl-dev
     - os: osx
       env: TARGET=x86_64-apple-darwin
 
