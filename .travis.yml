@@ -1,10 +1,13 @@
 language: generic
-sudo: false
+sudo: required
+dist: trusty
+services:
+  - docker
 
 matrix:
   include:
     - os: linux
-      env: TARGET=i686-unknown-linux-gnu
+      env: TARGET=i686-unknown-linux-gnu DOCKER=alexcrichton/rust-slave-dist:2015-10-20b
       addons:
         apt:
           packages:
@@ -27,7 +30,7 @@ matrix:
             - gcc-4.6-multilib
 
     - os: linux
-      env: TARGET=x86_64-unknown-linux-gnu
+      env: TARGET=x86_64-unknown-linux-gnu DOCKER=alexcrichton/rust-slave-dist:2015-10-20b
       addons:
         apt:
           packages:
@@ -40,7 +43,21 @@ install:
   - bash .ci/install.sh
 
 script:
-  - bash .ci/build.sh
+  - mkdir target
+  - if [ ! -z "$DOCKER" ]; then
+      docker run
+        --entrypoint bash
+        -u `id -u`:`id -g`
+        -v $HOME/rust:/travis-rust:ro
+        -v `pwd`:/buildslave:ro
+        -v `pwd`/target:/buildslave/target
+        -e TARGET=$TARGET
+        -e SKIP_TESTS=$SKIP_TESTS
+        -it $DOCKER
+        .ci/build-docker.sh;
+    else
+      PATH=$HOME/rust/bin:$PATH sh .ci/build.sh;
+    fi
 
 cache:
   directories:
