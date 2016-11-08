@@ -3,4 +3,6 @@ set -ex
 
 rustc --version
 cargo --version
-cargo build --release
+
+rustup target add $TARGET || true
+cargo build --target $TARGET --release
