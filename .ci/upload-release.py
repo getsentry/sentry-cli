@@ -4,8 +4,11 @@ import sys
 import urlparse
 import requests
 
-from requests.packages import urllib3
-urllib3.disable_warnings()
+try:
+    from requests.packages import urllib3
+    urllib3.disable_warnings()
+except ImportError:
+    pass
 
 
 AUTH_USERNAME = 'getsentry-bot'
