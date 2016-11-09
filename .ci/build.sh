@@ -4,4 +4,4 @@ set -ex
 rustc --version
 cargo --version
 
-cargo build --release
+cargo build --release --target=$TARGET
