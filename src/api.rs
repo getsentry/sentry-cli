@@ -527,6 +527,15 @@ impl ApiResponse {
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
     pub fn to_result(self) -> ApiResult<ApiResponse> {
+        let mut headers_out = String::from("");
+        for header in self.headers() {
+            headers_out.push_str(&header.0);
+            headers_out.push_str(&header.1);
+        }
+        debug!("headers:\n{}", headers_out);
+        if let Some(ref body) = self.body {
+            debug!("body: {}", String::from_utf8_lossy(body));
+        }
         if self.ok() {
             return Ok(self);
         }
