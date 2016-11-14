@@ -222,6 +222,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
                     continue;
                 }
             }
+            debug!("found: {} ({} bytes)", dent.path().display(), dent.metadata().unwrap().len());
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
             to_process.push((url, local_path.to_path_buf(),
