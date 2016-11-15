@@ -1,5 +1,7 @@
 //! Provides sourcemap validation functionality.
 use std::fs;
+use std::io;
+use std::io::Write;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -75,24 +77,35 @@ impl Log {
     }
 
     pub fn log(&mut self, source: &Source, level: LogLevel, message: String) {
-        let mut term = term::stderr().unwrap();
-        match level {
-            LogLevel::Error => { term.fg(term::color::RED).ok(); }
-            LogLevel::Warning => { term.fg(term::color::YELLOW).ok(); }
-            LogLevel::Info => {}
-        }
+        let mut out_term;
+        let mut out_stderr;
+        let mut w = if let Some(mut term) = term::stderr() {
+            match level {
+                LogLevel::Error => { term.fg(term::color::RED).ok(); }
+                LogLevel::Warning => { term.fg(term::color::YELLOW).ok(); }
+                LogLevel::Info => {}
+            }
+            out_term = term;
+            &mut out_term as &mut Write
+        } else {
+            out_stderr = io::stderr();
+            &mut out_stderr as &mut Write
+        };
+
         if self.last_source.as_ref() != Some(&source.url) {
             self.last_source = Some(source.url.clone());
-            writeln!(term, "  {}", source.url).ok();
+            writeln!(w, "  {}", source.url).ok();
         }
         if level.is_insignificant() && !self.verbose {
             return;
         }
-        writeln!(term, "    {:?}: {}", level, &message).ok();
+        writeln!(w, "    {:?}: {}", level, &message).ok();
         if level == LogLevel::Error {
             self.failed = true;
         }
-        term.reset().ok();
+        if let Some(mut term) = term::stderr() {
+            term.reset().ok();
+        }
     }
 
     pub fn error(&mut self, source: &Source, message: String) {

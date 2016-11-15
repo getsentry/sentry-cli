@@ -29,15 +29,27 @@ impl log::Log for Logger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        let mut term = term::stderr().unwrap();
-        term.fg(match record.level() {
-            log::LogLevel::Error | log::LogLevel::Warn => term::color::RED,
-            log::LogLevel::Info => term::color::CYAN,
-            log::LogLevel::Debug | log::LogLevel::Trace => term::color::YELLOW,
-        }).ok();
-        writeln!(term, "[{}] {} {}", record.level(),
+
+        let mut out_term;
+        let mut out_stderr;
+
+        let mut w = if let Some(mut term) = term::stderr() {
+            term.fg(match record.level() {
+                log::LogLevel::Error | log::LogLevel::Warn => term::color::RED,
+                log::LogLevel::Info => term::color::CYAN,
+                log::LogLevel::Debug | log::LogLevel::Trace => term::color::YELLOW,
+            }).ok();
+            out_term = term;
+            &mut out_term as &mut Write
+        } else {
+            out_stderr = io::stderr();
+            &mut out_stderr as &mut Write
+        };
+        writeln!(w, "[{}] {} {}", record.level(),
                  record.target(), record.args()).ok();
-        term.reset().ok();
+        if let Some(mut term) = term::stderr() {
+            term.reset().ok();
+        }
     }
 }
 
