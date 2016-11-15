@@ -410,8 +410,8 @@ impl<'a> Iterator for Headers<'a> {
         self.lines.get(self.idx).map(|line| {
             self.idx += 1;
             match line.find(':') {
-                Some(i) => (&line[..i], line[i..].trim_left_matches(' ')),
-                None => (&line[..], "")
+                Some(i) => (&line[..i], line[i+1..].trim()),
+                None => (line[..].trim(), "")
             }
         })
     }
@@ -527,6 +527,20 @@ impl ApiResponse {
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
     pub fn to_result(self) -> ApiResult<ApiResponse> {
+        let mut headers_out = String::from("");
+        for (header_key, header_value) in self.headers() {
+            if header_key.len() > 0 {
+                if header_value.len() > 0 {
+                    headers_out.push_str(&format!("{}: {}\n", header_key, header_value));
+                } else {
+                    headers_out.push_str(&format!("{}\n", header_key))
+                }
+            }
+        }
+        debug!("headers:\n{}", headers_out);
+        if let Some(ref body) = self.body {
+            debug!("body: {}", String::from_utf8_lossy(body));
+        }
         if self.ok() {
             return Ok(self);
         }
