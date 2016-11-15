@@ -527,17 +527,12 @@ impl ApiResponse {
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
     pub fn to_result(self) -> ApiResult<ApiResponse> {
-        let mut headers_out = String::from("");
+        debug!("headers:");
         for (header_key, header_value) in self.headers() {
-            if header_key.len() > 0 {
-                if header_value.len() > 0 {
-                    headers_out.push_str(&format!("{}: {}\n", header_key, header_value));
-                } else {
-                    headers_out.push_str(&format!("{}\n", header_key))
-                }
+            if header_value.len() > 0 {
+                debug!("  {}: {}", header_key, header_value);
             }
         }
-        debug!("headers:\n{}", headers_out);
         if let Some(ref body) = self.body {
             debug!("body: {}", String::from_utf8_lossy(body));
         }
