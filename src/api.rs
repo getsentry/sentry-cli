@@ -121,9 +121,8 @@ impl<'a> Api<'a> {
         let mut handle = self.shared_handle.borrow_mut();
         if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();
-        } else {
-            handle.reset();
         }
+        handle.reset();
         let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
             (Cow::Borrowed(url), None)
         } else {
