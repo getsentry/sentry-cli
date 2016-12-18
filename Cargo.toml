@@ -10,7 +10,7 @@ error-chain = "0.4"
 serde = "0.8"
 serde_json = "0.8"
 serde_derive = "0.8"
-url = "1.1.1"
+url = "1.2.4"
 uuid = "0.1.18"
 walkdir = "0.1.5"
 which = "0.1.0"
@@ -23,7 +23,7 @@ runas = "0.1.0"
 log = "0.3.6"
 term = "0.4.4"
 curl = "0.4.0"
-sourcemap = { version = "0.7.1", default-features = false, features = ["nightly"] }
+sourcemap = { version = "0.9.0", default-features = false, features = ["nightly"] }
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1.14"
