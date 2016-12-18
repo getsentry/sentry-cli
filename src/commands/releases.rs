@@ -197,7 +197,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
     let paths = matches.values_of("paths").unwrap();
     let extensions = match matches.values_of("extensions") {
         Some(matches) => matches.map(|ext| OsStr::new(ext.trim_left_matches("."))).collect(),
-        None => vec![OsStr::new("js"), OsStr::new("map")],
+        None => vec![OsStr::new("js"), OsStr::new("map"), OsStr::new("bundle")],
     };
 
     let mut to_process = vec![];
