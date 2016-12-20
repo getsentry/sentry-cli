@@ -29,6 +29,7 @@ extern crate sourcemap;
 extern crate open;
 extern crate runas;
 extern crate term;
+extern crate might_be_minified;
 #[macro_use]
 extern crate error_chain;
 #[macro_use]

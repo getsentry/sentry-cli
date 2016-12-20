@@ -23,6 +23,7 @@ runas = "0.1.0"
 log = "0.3.6"
 term = "0.4.4"
 curl = "0.4.0"
+might-be-minified = "0.1.0"
 sourcemap = { version = "0.10.0", default-features = false, features = ["nightly"] }
 
 [target."cfg(not(windows))".dependencies]

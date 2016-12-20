@@ -249,7 +249,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
     }
 
     println!("Uploading sourcemaps for release {}", release.version);
-    processor.upload(&api, &org, &project, &release.version);
+    processor.upload(&api, &org, &project, &release.version)?;
 
     Ok(())
 }

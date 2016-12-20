@@ -2,7 +2,7 @@
 use std::fs;
 use std::io;
 use std::env;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -12,6 +12,7 @@ use url::Url;
 use api::Api;
 use sourcemap;
 use sourcemap::is_sourcemap;
+use might_be_minified;
 
 use prelude::*;
 
@@ -148,15 +149,17 @@ impl SourceMapProcessor {
     }
 
     fn validate_script(&self, source: &Source) -> Result<()> {
-        let f = fs::File::open(&source.file_path)?;
-        let reference = sourcemap::locate_sourcemap_reference(&f)?;
+        let mut f = fs::File::open(&source.file_path)?;
+        let mut contents = String::new();
+        try!(f.read_to_string(&mut contents));
+        let reference = sourcemap::locate_sourcemap_reference_slice(contents.as_bytes())?;
         if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
             self.log.warn(source, "encountered a legacy reference".into());
         }
         if let Some(url) = reference.get_url() {
             let full_url = join_url(&source.url, url)?;
             self.log.info(source, format!("sourcemap at {}", full_url));
-        } else if source.url.ends_with(".min.js") {
+        } else if might_be_minified::analyze_str(&contents).is_likely_minified() {
             self.log.error(source, "missing sourcemap!".into());
         } else {
             self.log.warn(source, "no sourcemap reference".into());
@@ -229,8 +232,8 @@ impl SourceMapProcessor {
         let here = env::current_dir()?;
         for (_, source) in self.sources.iter() {
             let display_path = here.strip_prefix(&here);
-            println!("{} -> {}", display_path.unwrap_or(
-                source.file_path.as_path()).display(), &source.url);
+            println!("{} -> {}", display_path.as_ref().unwrap_or(
+                &source.file_path.as_path()).display(), &source.url);
             if let Some(artifact) = api.upload_release_file(
                 org, project, &release, &source.file_path, &source.url)? {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
