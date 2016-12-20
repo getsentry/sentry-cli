@@ -1,6 +1,7 @@
 //! Provides sourcemap validation functionality.
 use std::fs;
 use std::io;
+use std::env;
 use std::io::Write;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -132,17 +133,16 @@ impl SourceMapProcessor {
     }
 
     /// Adds a new file for processing.
-    pub fn add(&mut self, url: &str, local_path: &Path, path: &Path) -> Result<()> {
+    pub fn add(&mut self, url: &str, path: &Path) -> Result<()> {
         let mut f = fs::File::open(&path)?;
-        let ty = if is_sourcemap(&mut f) {
-            SourceType::SourceMap
-        } else {
-            SourceType::Script
-        };
         self.sources.insert(url.to_owned(), Source {
             url: url.to_owned(),
             file_path: path.to_path_buf(),
-            ty: ty,
+            ty: if is_sourcemap(&mut f) {
+                SourceType::SourceMap
+            } else {
+                SourceType::Script
+            },
         });
         Ok(())
     }
@@ -223,16 +223,21 @@ impl SourceMapProcessor {
     }
 
     /// Uploads all files
-    pub fn upload(&self, _api: &Api) -> Result<()> {
-        // for (url, local_path, path) in to_process {
-        //     println!("{} -> {}", local_path.display(), url);
-        //     if let Some(artifact) = api.upload_release_file(
-        //         org, project, &release.version, &path, &url)? {
-        //         println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
-        //     } else {
-        //         println!("  already present");
-        //     }
-        // }
+    pub fn upload(&self, api: &Api, org: &str, project: &str, release: &str)
+        -> Result<()>
+    {
+        let here = env::current_dir()?;
+        for (_, source) in self.sources.iter() {
+            let display_path = here.strip_prefix(&here);
+            println!("{} -> {}", display_path.unwrap_or(
+                source.file_path.as_path()).display(), &source.url);
+            if let Some(artifact) = api.upload_release_file(
+                org, project, &release, &source.file_path, &source.url)? {
+                println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
+            } else {
+                println!("  already present");
+            }
+        }
         Ok(())
     }
 }

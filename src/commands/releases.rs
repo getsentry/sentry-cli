@@ -235,7 +235,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
             debug!("found: {} ({} bytes)", dent.path().display(), dent.metadata().unwrap().len());
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
-            processor.add(&url, local_path, dent.path())?;
+            processor.add(&url, dent.path())?;
         }
     }
 
@@ -249,7 +249,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
     }
 
     println!("Uploading sourcemaps for release {}", release.version);
-    processor.upload(&api);
+    processor.upload(&api, &org, &project, &release.version);
 
     Ok(())
 }
