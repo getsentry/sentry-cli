@@ -2,12 +2,15 @@
 use std::fs;
 use std::io;
 use std::io::Write;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use term;
 use url::Url;
+use api::Api;
 use sourcemap;
+use sourcemap::is_sourcemap;
 
 use prelude::*;
 
@@ -55,28 +58,25 @@ struct Source {
     ty: SourceType,
 }
 
-/// Validates sourcemaps.
-pub struct SourceMapValidator {
-    sources: HashMap<String, Source>,
+struct Log {
+    last_source: RefCell<Option<String>>,
     verbose: bool,
 }
 
-struct Log {
-    pub failed: bool,
-    last_source: Option<String>,
-    verbose: bool,
+pub struct SourceMapProcessor {
+    sources: HashMap<String, Source>,
+    log: Log,
 }
 
 impl Log {
     pub fn new(verbose: bool) -> Log {
         Log {
-            failed: false,
-            last_source: None,
+            last_source: RefCell::new(None),
             verbose: verbose,
         }
     }
 
-    pub fn log(&mut self, source: &Source, level: LogLevel, message: String) {
+    pub fn log(&self, source: &Source, level: LogLevel, message: String) {
         let mut out_term;
         let mut out_stderr;
         let mut w = if let Some(mut term) = term::stderr() {
@@ -92,78 +92,79 @@ impl Log {
             &mut out_stderr as &mut Write
         };
 
-        if self.last_source.as_ref() != Some(&source.url) {
-            self.last_source = Some(source.url.clone());
-            writeln!(w, "  {}", source.url).ok();
+        {
+            let mut last_source = self.last_source.borrow_mut();
+            if last_source.as_ref() != Some(&source.url) {
+                *last_source = Some(source.url.clone());
+                writeln!(w, "  {}", source.url).ok();
+            }
         }
         if level.is_insignificant() && !self.verbose {
             return;
         }
         writeln!(w, "    {:?}: {}", level, &message).ok();
-        if level == LogLevel::Error {
-            self.failed = true;
-        }
         if let Some(mut term) = term::stderr() {
             term.reset().ok();
         }
     }
 
-    pub fn error(&mut self, source: &Source, message: String) {
+    pub fn error(&self, source: &Source, message: String) {
         self.log(source, LogLevel::Error, message);
     }
 
-    pub fn warn(&mut self, source: &Source, message: String) {
+    pub fn warn(&self, source: &Source, message: String) {
         self.log(source, LogLevel::Warning, message);
     }
 
-    pub fn info(&mut self, source: &Source, message: String) {
+    pub fn info(&self, source: &Source, message: String) {
         self.log(source, LogLevel::Info, message);
     }
 }
 
-impl SourceMapValidator {
+impl SourceMapProcessor {
     /// Creates a new sourcemap validator.  If it's set to verbose
     /// it prints the progress to stdout.
-    pub fn new(verbose: bool) -> SourceMapValidator {
-        SourceMapValidator {
+    pub fn new(verbose: bool) -> SourceMapProcessor {
+        SourceMapProcessor {
             sources: HashMap::new(),
-            verbose: verbose,
+            log: Log::new(verbose),
         }
     }
 
-    /// Adds a file for consideration.
-    pub fn consider_file(&mut self, path: &Path, url: &str) -> bool {
-        let ty = match path.extension().and_then(|x| x.to_str()) {
-            Some("js") => SourceType::Script,
-            Some("map") => SourceType::SourceMap,
-            _ => { return false; }
+    /// Adds a new file for processing.
+    pub fn add(&mut self, url: &str, local_path: &Path, path: &Path) -> Result<()> {
+        let mut f = fs::File::open(&path)?;
+        let ty = if is_sourcemap(&mut f) {
+            SourceType::SourceMap
+        } else {
+            SourceType::Script
         };
         self.sources.insert(url.to_owned(), Source {
             url: url.to_owned(),
             file_path: path.to_path_buf(),
             ty: ty,
         });
-        true
+        Ok(())
     }
 
-    fn validate_script(&self, log: &mut Log, source: &Source) -> Result<()> {
+    fn validate_script(&self, source: &Source) -> Result<()> {
         let f = fs::File::open(&source.file_path)?;
         let reference = sourcemap::locate_sourcemap_reference(&f)?;
         if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
-            log.warn(source, "encountered a legacy reference".into());
+            self.log.warn(source, "encountered a legacy reference".into());
         }
         if let Some(url) = reference.get_url() {
             let full_url = join_url(&source.url, url)?;
-            log.info(source, format!("sourcemap at {}", full_url));
+            self.log.info(source, format!("sourcemap at {}", full_url));
         } else if source.url.ends_with(".min.js") {
-            log.error(source, "missing sourcemap!".into());
+            self.log.error(source, "missing sourcemap!".into());
         } else {
-            log.warn(source, "no sourcemap reference".into());
+            self.log.warn(source, "no sourcemap reference".into());
         }
         Ok(())
     }
 
-    fn validate_sourcemap(&self, log: &mut Log, source: &Source) -> Result<()> {
+    fn validate_sourcemap(&self, source: &Source) -> Result<()> {
         let f = fs::File::open(&source.file_path)?;
         match sourcemap::decode(&f)? {
             sourcemap::DecodedMap::Regular(sm) => {
@@ -171,44 +172,67 @@ impl SourceMapValidator {
                     let source_url = sm.get_source(idx).unwrap_or("??");
                     if sm.get_source_contents(idx).is_some() ||
                        self.sources.get(source_url).is_some() {
-                        log.info(source, format!("found source ({})", source_url));
+                        self.log.info(source, format!("found source ({})", source_url));
                     } else {
-                        log.warn(source, format!("missing sourcecode ({})", source_url));
+                        self.log.warn(source, format!("missing sourcecode ({})", source_url));
                     }
                 }
             },
             sourcemap::DecodedMap::Index(_) => {
-                log.warn(source, "encountered indexed sourcemap. We 
-                         cannot validate those.".into());
+                self.log.warn(source, "encountered indexed sourcemap. We 
+                              cannot validate those.".into());
             }
         }
         Ok(())
     }
 
     /// Validates all sources within.
-    pub fn validate_sources(&self) -> Result<()> {
-        let mut log = Log::new(self.verbose);
+    pub fn validate_all(&self) -> Result<()> {
         let mut sources : Vec<_> = self.sources.iter().map(|x| x.1).collect();
         sources.sort_by_key(|x| &x.url);
+        let mut failed = false;
 
         for source in sources.iter() {
             match source.ty {
                 SourceType::Script => {
-                    if let Err(err) = self.validate_script(&mut log, &source) {
-                        log.error(&source, format!("failed to process: {}", err));
+                    if let Err(err) = self.validate_script(&source) {
+                        self.log.error(&source, format!("failed to process: {}", err));
+                        failed = true;
                     }
                 },
                 SourceType::SourceMap => {
-                    if let Err(err) = self.validate_sourcemap(&mut log, &source) {
-                        log.error(&source, format!("failed to process: {}", err));
+                    if let Err(err) = self.validate_sourcemap(&source) {
+                        self.log.error(&source, format!("failed to process: {}", err));
+                        failed = true;
                     }
                 }
             }
         }
-        if log.failed {
+        if failed {
             fail!("Encountered problems when validating sourcemaps.");
         }
         println!("All Good!");
+        Ok(())
+    }
+
+    /// Automatically rewrite all sourcemaps.
+    ///
+    /// This inlines sources, flattens indexes and skips individual uploads.
+    pub fn auto_rewrite(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    /// Uploads all files
+    pub fn upload(&self, _api: &Api) -> Result<()> {
+        // for (url, local_path, path) in to_process {
+        //     println!("{} -> {}", local_path.display(), url);
+        //     if let Some(artifact) = api.upload_release_file(
+        //         org, project, &release.version, &path, &url)? {
+        //         println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
+        //     } else {
+        //         println!("  already present");
+        //     }
+        // }
         Ok(())
     }
 }

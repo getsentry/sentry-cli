@@ -44,7 +44,7 @@ pub mod errors;
 pub mod config;
 pub mod utils;
 pub mod macho;
-pub mod sourcemaps;
+pub mod sourcemaputils;
 pub mod constants;
 
 
