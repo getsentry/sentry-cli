@@ -9,9 +9,8 @@ use std::path::{Path, PathBuf};
 
 use term;
 use url::Url;
-use api::Api;
+use api::{Api, FileContents};
 use sourcemap;
-use sourcemap::is_sourcemap;
 use might_be_minified;
 
 use prelude::*;
@@ -57,7 +56,9 @@ impl LogLevel {
 struct Source {
     url: String,
     file_path: PathBuf,
+    contents: String,
     ty: SourceType,
+    skip_upload: bool,
 }
 
 struct Log {
@@ -136,30 +137,33 @@ impl SourceMapProcessor {
     /// Adds a new file for processing.
     pub fn add(&mut self, url: &str, path: &Path) -> Result<()> {
         let mut f = fs::File::open(&path)?;
+        let mut contents = String::new();
+        try!(f.read_to_string(&mut contents));
+        let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
+            SourceType::SourceMap
+        } else {
+            SourceType::Script
+        };
         self.sources.insert(url.to_owned(), Source {
             url: url.to_owned(),
             file_path: path.to_path_buf(),
-            ty: if is_sourcemap(&mut f) {
-                SourceType::SourceMap
-            } else {
-                SourceType::Script
-            },
+            contents: contents,
+            ty: ty,
+            skip_upload: false,
         });
         Ok(())
     }
 
     fn validate_script(&self, source: &Source) -> Result<()> {
-        let mut f = fs::File::open(&source.file_path)?;
-        let mut contents = String::new();
-        try!(f.read_to_string(&mut contents));
-        let reference = sourcemap::locate_sourcemap_reference_slice(contents.as_bytes())?;
+        let reference = sourcemap::locate_sourcemap_reference_slice(
+            source.contents.as_bytes())?;
         if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
             self.log.warn(source, "encountered a legacy reference".into());
         }
         if let Some(url) = reference.get_url() {
             let full_url = join_url(&source.url, url)?;
             self.log.info(source, format!("sourcemap at {}", full_url));
-        } else if might_be_minified::analyze_str(&contents).is_likely_minified() {
+        } else if might_be_minified::analyze_str(&source.contents).is_likely_minified() {
             self.log.error(source, "missing sourcemap!".into());
         } else {
             self.log.warn(source, "no sourcemap reference".into());
@@ -168,8 +172,7 @@ impl SourceMapProcessor {
     }
 
     fn validate_sourcemap(&self, source: &Source) -> Result<()> {
-        let f = fs::File::open(&source.file_path)?;
-        match sourcemap::decode(&f)? {
+        match sourcemap::decode_slice(source.contents.as_bytes())? {
             sourcemap::DecodedMap::Regular(sm) => {
                 for idx in 0..sm.get_source_count() {
                     let source_url = sm.get_source(idx).unwrap_or("??");
@@ -222,6 +225,25 @@ impl SourceMapProcessor {
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
     pub fn auto_rewrite(&mut self) -> Result<()> {
+        for (_, source) in self.sources.iter_mut() {
+            if source.ty == SourceType::SourceMap {
+                let options = sourcemap::RewriteOptions {
+                    load_local_source_contents: true,
+                    ..Default::default()
+                };
+                let sm = match sourcemap::decode_slice(source.contents.as_bytes())? {
+                    sourcemap::DecodedMap::Regular(sm) => {
+                        sm.rewrite(&options)?
+                    }
+                    sourcemap::DecodedMap::Index(smi) => {
+                        smi.flatten_and_rewrite(&options)?
+                    }
+                };
+                let mut new_source : Vec<u8> = Vec::new();
+                sm.to_writer(&mut new_source)?;
+                source.contents = String::from_utf8(new_source)?;
+            }
+        }
         Ok(())
     }
 
@@ -231,11 +253,16 @@ impl SourceMapProcessor {
     {
         let here = env::current_dir()?;
         for (_, source) in self.sources.iter() {
+            if source.skip_upload {
+                continue;
+            }
             let display_path = here.strip_prefix(&here);
             println!("{} -> {}", display_path.as_ref().unwrap_or(
                 &source.file_path.as_path()).display(), &source.url);
             if let Some(artifact) = api.upload_release_file(
-                org, project, &release, &source.file_path, &source.url)? {
+                org, project, &release, FileContents::FromBytes(
+                    source.contents.as_bytes()),
+                &source.url)? {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");

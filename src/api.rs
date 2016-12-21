@@ -50,6 +50,12 @@ pub struct Api<'a> {
     shared_handle: RefCell<curl::easy::Easy>,
 }
 
+/// Represents file contents temporarily
+pub enum FileContents<'a> {
+    FromPath(&'a Path),
+    FromBytes(&'a [u8]),
+}
+
 /// Represents API errors.
 #[derive(Debug)]
 pub enum Error {
@@ -207,14 +213,23 @@ impl<'a> Api<'a> {
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
     pub fn upload_release_file(&self, org: &str, project: &str,
-                               version: &str, local_path: &Path, name: &str)
+                               version: &str, contents: FileContents, name: &str)
         -> ApiResult<Option<Artifact>>
     {
         let path = format!("/projects/{}/{}/releases/{}/files/",
                            PathArg(org), PathArg(project),
                            PathArg(version));
         let mut form = curl::easy::Form::new();
-        form.part("file").file(local_path).add()?;
+        match contents {
+            FileContents::FromPath(path) => {
+                form.part("file").file(path).add()?;
+            }
+            FileContents::FromBytes(bytes) => {
+                let filename = Path::new(name).file_name()
+                    .and_then(|x| x.to_str()).unwrap_or("unknown.bin");
+                form.part("file").buffer(filename, bytes.to_vec()).add()?;
+            }
+        }
         form.part("name").contents(name.as_bytes()).add()?;
 
         let resp = self.request(Method::Post, &path)?.with_form_data(form)?.send()?;

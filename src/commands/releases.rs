@@ -7,7 +7,7 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
 
 use prelude::*;
-use api::{Api, NewRelease};
+use api::{Api, NewRelease, FileContents};
 use config::Config;
 use utils::make_subcommand;
 use sourcemaputils::SourceMapProcessor;
@@ -190,7 +190,7 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
             .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
     };
     if let Some(artifact) = Api::new(config).upload_release_file(
-        org, project, &version, &path, &name)? {
+        org, project, &version, FileContents::FromPath(&path), &name)? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");
@@ -245,7 +245,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
     }
 
     if matches.is_present("auto_rewrite") {
-        processor.auto_rewrite();
+        processor.auto_rewrite()?;
     }
 
     println!("Uploading sourcemaps for release {}", release.version);
