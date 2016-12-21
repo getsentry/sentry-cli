@@ -7,10 +7,10 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
 
 use prelude::*;
-use api::{Api, NewRelease};
+use api::{Api, NewRelease, FileContents};
 use config::Config;
 use utils::make_subcommand;
-use sourcemaps::SourceMapValidator;
+use sourcemaputils::SourceMapProcessor;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
@@ -100,6 +100,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                 .arg(Arg::with_name("validate")
                      .long("validate")
                      .help("Enable basic sourcemap validation"))
+                .arg(Arg::with_name("auto_rewrite")
+                     .long("auto-rewrite")
+                     .help("Enables automatic rewriting of matching sourcemaps \
+                            so that indexed maps are flattened and missing \
+                            sources are inlined if possible.  This fundamentally \
+                            changes the upload process to be based on sourcemaps \
+                            and minified files exclusively and comes in handy for \
+                            setups like react-native that generate sourcemaps that \
+                            would otherwise not work for sentry."))
                 .arg(Arg::with_name("verbose")
                      .long("verbose")
                      .short("verbose")
@@ -181,7 +190,7 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
             .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
     };
     if let Some(artifact) = Api::new(config).upload_release_file(
-        org, project, &version, &path, &name)? {
+        org, project, &version, FileContents::FromPath(&path), &name)? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");
@@ -197,10 +206,12 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
     let paths = matches.values_of("paths").unwrap();
     let extensions = match matches.values_of("extensions") {
         Some(matches) => matches.map(|ext| OsStr::new(ext.trim_left_matches("."))).collect(),
-        None => vec![OsStr::new("js"), OsStr::new("map")],
+        None => vec![OsStr::new("js"), OsStr::new("map"),
+                     OsStr::new("jsbundle"), OsStr::new("bundle")],
     };
 
-    let mut to_process = vec![];
+    let mut processor = SourceMapProcessor::new(
+        matches.is_present("verbose"));
 
     for path in paths {
         // if we start walking over something that is an actual file then
@@ -225,30 +236,21 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
             debug!("found: {} ({} bytes)", dent.path().display(), dent.metadata().unwrap().len());
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, local_path.display());
-            to_process.push((url, local_path.to_path_buf(),
-                             dent.path().to_path_buf()));
+            processor.add(&url, dent.path())?;
         }
     }
 
     if matches.is_present("validate") {
         println!("Running with sourcemap validation");
-        let mut validator = SourceMapValidator::new(matches.is_present("verbose"));
-        for &(ref url, _, ref path) in to_process.iter() {
-            validator.consider_file(path, url);
-        }
-        validator.validate_sources()?;
+        processor.validate_all()?;
+    }
+
+    if matches.is_present("auto_rewrite") {
+        processor.auto_rewrite()?;
     }
 
     println!("Uploading sourcemaps for release {}", release.version);
-    for (url, local_path, path) in to_process {
-        println!("{} -> {}", local_path.display(), url);
-        if let Some(artifact) = api.upload_release_file(
-            org, project, &release.version, &path, &url)? {
-            println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
-        } else {
-            println!("  already present");
-        }
-    }
+    processor.upload(&api, &org, &project, &release.version)?;
 
     Ok(())
 }
