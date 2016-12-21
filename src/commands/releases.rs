@@ -100,9 +100,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                 .arg(Arg::with_name("validate")
                      .long("validate")
                      .help("Enable basic sourcemap validation"))
-                .arg(Arg::with_name("auto_rewrite")
-                     .long("auto-rewrite")
-                     .help("Enables automatic rewriting of matching sourcemaps \
+                .arg(Arg::with_name("rewrite")
+                     .long("rewrite")
+                     .help("Enables rewriting of matching sourcemaps \
                             so that indexed maps are flattened and missing \
                             sources are inlined if possible.  This fundamentally \
                             changes the upload process to be based on sourcemaps \
@@ -245,8 +245,8 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
         processor.validate_all()?;
     }
 
-    if matches.is_present("auto_rewrite") {
-        processor.auto_rewrite()?;
+    if matches.is_present("rewrite") {
+        processor.rewrite()?;
     }
 
     println!("Uploading sourcemaps for release {}", release.version);
