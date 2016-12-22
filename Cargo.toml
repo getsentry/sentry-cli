@@ -6,10 +6,10 @@ build = "build.rs"
 
 [dependencies]
 clap = { version = "2.9.2", default-features = false, features = ["suggestions", "wrap_help"] }
-error-chain = "0.4"
-serde = "0.8"
-serde_json = "0.8"
-serde_derive = "0.8"
+error-chain = "0.7.1"
+serde = "*"
+serde_json = "*"
+serde_derive = "*"
 url = "1.2.4"
 uuid = "0.1.18"
 walkdir = "0.1.5"
