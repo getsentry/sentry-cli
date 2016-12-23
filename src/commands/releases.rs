@@ -109,6 +109,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                             and minified files exclusively and comes in handy for \
                             setups like react-native that generate sourcemaps that \
                             would otherwise not work for sentry."))
+                .arg(Arg::with_name("strip_prefix")
+                     .long("strip-prefix")
+                     .value_name("PREFIX")
+                     .multiple(true)
+                     .help("When passed all sources that start with the given prefix \
+                            will have that prefix stripped from the filename.  This \
+                            requires --rewrite to be enabled."))
+                .arg(Arg::with_name("strip_common_prefix")
+                     .long("strip-common-prefix")
+                     .help("Similar to --strip-prefix but strips the most common \
+                            prefix on all sources."))
                 .arg(Arg::with_name("verbose")
                      .long("verbose")
                      .short("verbose")
@@ -246,7 +257,14 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
     }
 
     if matches.is_present("rewrite") {
-        processor.rewrite()?;
+        let mut prefixes : Vec<&str> = match matches.values_of("strip_prefix") {
+            Some(paths) => paths.collect(),
+            None => vec![]
+        };
+        if matches.is_present("strip_common_prefix") {
+            prefixes.push("~");
+        }
+        processor.rewrite(&prefixes)?;
     }
 
     println!("Uploading sourcemaps for release {}", release.version);

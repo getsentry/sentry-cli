@@ -224,11 +224,12 @@ impl SourceMapProcessor {
     /// Automatically rewrite all sourcemaps.
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
-    pub fn rewrite(&mut self) -> Result<()> {
+    pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
         for (_, source) in self.sources.iter_mut() {
             if source.ty == SourceType::SourceMap {
                 let options = sourcemap::RewriteOptions {
                     load_local_source_contents: true,
+                    strip_prefixes: prefixes,
                     ..Default::default()
                 };
                 let sm = match sourcemap::decode_slice(source.contents.as_bytes())? {
