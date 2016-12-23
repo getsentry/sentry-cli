@@ -13,16 +13,16 @@ use api;
 
 error_chain! {
     foreign_links {
-        io::Error, IoError;
-        zip::result::ZipError, ZipError;
-        walkdir::Error, WalkDirError;
-        url::ParseError, UrlError;
-        serde_json::Error, JsonError;
-        string::FromUtf8Error, FromUtf8Error;
-        ini::Error, IniError;
-        sourcemap::Error, SourceMapError;
-        clap::Error, ClapError;
+        IoError(io::Error);
+        ZipError(zip::result::ZipError);
+        WalkDirError(walkdir::Error);
+        UrlError(url::ParseError);
+        JsonError(serde_json::Error);
+        FromUtf8Error(string::FromUtf8Error);
+        IniError(ini::Error);
+        SourceMapError(sourcemap::Error);
+        ClapError(clap::Error);
 
-        api::Error, ApiError;
+        ApiError(api::Error);
     }
 }
