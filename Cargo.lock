@@ -1,6 +1,6 @@
 [root]
 name = "sentry-cli"
-version = "0.19.5"
+version = "0.20.0"
 dependencies = [
  "chan 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "chan-signal 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
