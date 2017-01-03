@@ -185,7 +185,7 @@ impl SourceMapProcessor {
                 }
             },
             sourcemap::DecodedMap::Index(_) => {
-                self.log.warn(source, "encountered indexed sourcemap. We 
+                self.log.warn(source, "encountered indexed sourcemap. We \
                               cannot validate those.".into());
             }
         }
