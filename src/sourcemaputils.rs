@@ -142,14 +142,12 @@ impl SourceMapProcessor {
         try!(f.read_to_string(&mut contents));
         let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
             SourceType::SourceMap
+        } else if path.file_name().and_then(|x| x.to_str())
+            .map(|x| x.contains(".min.")).unwrap_or(false) ||
+            might_be_minified::analyze_str(&contents).is_likely_minified() {
+            SourceType::MinifiedScript
         } else {
-            if path.file_name().and_then(|x| x.to_str())
-                .map(|x| x.contains(".min.")).unwrap_or(false) ||
-                might_be_minified::analyze_str(&contents).is_likely_minified() {
-                SourceType::MinifiedScript
-            } else {
-                SourceType::Script
-            }
+            SourceType::Script
         };
 
         self.sources.insert(url.to_owned(), Source {
