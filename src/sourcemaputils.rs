@@ -37,6 +37,7 @@ fn join_url(base_url: &str, url: &str) -> Result<String> {
 #[derive(PartialEq)]
 enum SourceType {
     Script,
+    MinifiedScript,
     SourceMap,
 }
 
@@ -142,8 +143,15 @@ impl SourceMapProcessor {
         let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
             SourceType::SourceMap
         } else {
-            SourceType::Script
+            if path.file_name().and_then(|x| x.to_str())
+                .map(|x| x.contains(".min.")).unwrap_or(false) ||
+                might_be_minified::analyze_str(&contents).is_likely_minified() {
+                SourceType::MinifiedScript
+            } else {
+                SourceType::Script
+            }
         };
+
         self.sources.insert(url.to_owned(), Source {
             url: url.to_owned(),
             file_path: path.to_path_buf(),
@@ -163,7 +171,7 @@ impl SourceMapProcessor {
         if let Some(url) = reference.get_url() {
             let full_url = join_url(&source.url, url)?;
             self.log.info(source, format!("sourcemap at {}", full_url));
-        } else if might_be_minified::analyze_str(&source.contents).is_likely_minified() {
+        } else if source.ty == SourceType::MinifiedScript {
             self.log.error(source, "missing sourcemap!".into());
         } else {
             self.log.warn(source, "no sourcemap reference".into());
@@ -200,7 +208,7 @@ impl SourceMapProcessor {
 
         for source in sources.iter() {
             match source.ty {
-                SourceType::Script => {
+                SourceType::Script | SourceType::MinifiedScript => {
                     if let Err(err) = self.validate_script(&source) {
                         self.log.error(&source, format!("failed to process: {}", err));
                         failed = true;
