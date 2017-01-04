@@ -183,7 +183,11 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
 fn execute_files_list<'a>(_matches: &ArgMatches<'a>, config: &Config,
                           org: &str, project: &str, release: &str) -> Result<()> {
     for artifact in Api::new(config).list_release_files(org, project, release)? {
-        println!("{}  ({} bytes)", artifact.name, artifact.size);
+        print!("{}  ({} bytes)", artifact.name, artifact.size);
+        if let Some(sm_ref) = artifact.get_sourcemap_reference() {
+            print!("  -> sourcemap: {}", sm_ref);
+        }
+        println!("");
     }
     Ok(())
 }

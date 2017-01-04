@@ -11,7 +11,7 @@ use std::error;
 use std::cell::{RefMut, RefCell};
 use std::path::Path;
 use std::ascii::AsciiExt;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::borrow::Cow;
 
 use serde::{Serialize, Deserialize};
@@ -676,6 +676,29 @@ pub struct Artifact {
     pub sha1: String,
     pub name: String,
     pub size: u64,
+    pub headers: HashMap<String, String>,
+}
+
+impl Artifact {
+    pub fn get_header<'a, 'b>(&'a self, key: &'b str) -> Option<&'a str> {
+        let ikey = key.to_lowercase();
+        for (k, v) in self.headers.iter() {
+            if k.to_lowercase() == ikey {
+                return Some(v.as_str());
+            }
+        }
+        None
+    }
+
+    pub fn get_sourcemap_reference(&self) -> Option<&str> {
+        for (k, v) in self.headers.iter() {
+            let ki = &k.to_lowercase();
+            if ki == "sourcemap" || ki == "x-sourcemap" {
+                return Some(v.as_str());
+            }
+        }
+        None
+    }
 }
 
 /// Information for new releases
