@@ -100,6 +100,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                 .arg(Arg::with_name("validate")
                      .long("validate")
                      .help("Enable basic sourcemap validation"))
+                .arg(Arg::with_name("no_sourcemap_reference")
+                     .long("no-sourcemap-reference")
+                     .help("Disables the emitting of automatic sourcemap references. \
+                            By default the tool will store a 'Sourcemap' header with \
+                            minified files so that sourcemaps are located automatically \
+                            if the tool can detect a link. If this causes issues it can \
+                            be disabled."))
                 .arg(Arg::with_name("rewrite")
                      .long("rewrite")
                      .help("Enables rewriting of matching sourcemaps \
@@ -265,6 +272,10 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
             prefixes.push("~");
         }
         processor.rewrite(&prefixes)?;
+    }
+
+    if !matches.is_present("no_sourcemap_reference") {
+        processor.add_sourcemap_references()?;
     }
 
     println!("Uploading sourcemaps for release {}", release.version);

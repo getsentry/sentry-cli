@@ -4,7 +4,8 @@ use std::io;
 use std::env;
 use std::io::{Read, Write};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashSet, HashMap};
+use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
 use term;
@@ -31,6 +32,70 @@ fn join_url(base_url: &str, url: &str) -> Result<String> {
     } else {
         Ok(Url::parse(base_url)?.join(url)?.to_string())
     }
+}
+
+fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
+    let mut part_iter = url.rsplitn(2, '/');
+    let mut path = part_iter.next();
+    let (filename, ext) = part_iter.next().or_else(|| path.take()).map(|x| {
+        let mut fn_iter = x.splitn(2, '.');
+        (fn_iter.next(), fn_iter.next())
+    }).unwrap_or_else(|| (None, None));
+    (path, filename.unwrap_or(""), ext)
+}
+
+fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String {
+    let mut rv = String::new();
+    if let Some(path) = path {
+        rv.push_str(path);
+        rv.push('/');
+    }
+    rv.push_str(basename);
+    if let Some(ext) = ext {
+        rv.push('.');
+        rv.push_str(ext);
+    }
+    rv
+}
+
+fn find_sourcemap_reference(
+    sourcemaps: &HashSet<String>, min_url: &str) -> Result<String>
+{
+    // if there is only one sourcemap in total we just assume that's the one.
+    // We just need to make sure that we fix up the reference if we need to
+    // (eg: ~/ -> /).
+    if sourcemaps.len() == 1 {
+        let rv = sourcemaps.iter().next().unwrap();
+        if rv.starts_with("~/") {
+            return Ok(rv[2..].to_string());
+        }
+        return Ok(rv.to_string());
+    }
+
+    let (path, basename, ext) = split_url(min_url);
+
+    // foo.min.js -> foo.map
+    if sourcemaps.contains(&unsplit_url(path, basename, Some("map"))) {
+        return Ok(unsplit_url(None, basename, Some("map")));
+    }
+
+    if let Some(ext) = ext.as_ref() {
+        // foo.min.js -> foo.min.js.map
+        let new_ext = format!("{}.map", ext);
+        if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
+            return Ok(unsplit_url(None, basename, Some(&new_ext)));
+        }
+
+        // foo.min.js -> foo.js.map
+        if ext.starts_with("min.") {
+            let new_ext = format!("{}.map", &ext[4..]);
+            if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
+                return Ok(unsplit_url(None, basename, Some(&new_ext)));
+            }
+        }
+    }
+
+    fail!("Could not auto-detect referenced sourcemap for {}.", min_url);
 }
 
 
@@ -60,6 +125,7 @@ struct Source {
     contents: String,
     ty: SourceType,
     skip_upload: bool,
+    headers: Vec<(String, String)>,
 }
 
 struct Log {
@@ -156,6 +222,7 @@ impl SourceMapProcessor {
             contents: contents,
             ty: ty,
             skip_upload: false,
+            headers: vec![],
         });
         Ok(())
     }
@@ -232,24 +299,41 @@ impl SourceMapProcessor {
     /// This inlines sources, flattens indexes and skips individual uploads.
     pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
         for (_, source) in self.sources.iter_mut() {
-            if source.ty == SourceType::SourceMap {
-                let options = sourcemap::RewriteOptions {
-                    load_local_source_contents: true,
-                    strip_prefixes: prefixes,
-                    ..Default::default()
-                };
-                let sm = match sourcemap::decode_slice(source.contents.as_bytes())? {
-                    sourcemap::DecodedMap::Regular(sm) => {
-                        sm.rewrite(&options)?
-                    }
-                    sourcemap::DecodedMap::Index(smi) => {
-                        smi.flatten_and_rewrite(&options)?
-                    }
-                };
-                let mut new_source : Vec<u8> = Vec::new();
-                sm.to_writer(&mut new_source)?;
-                source.contents = String::from_utf8(new_source)?;
+            if source.ty != SourceType::SourceMap {
+                continue;
             }
+            let options = sourcemap::RewriteOptions {
+                load_local_source_contents: true,
+                strip_prefixes: prefixes,
+                ..Default::default()
+            };
+            let sm = match sourcemap::decode_slice(source.contents.as_bytes())? {
+                sourcemap::DecodedMap::Regular(sm) => {
+                    sm.rewrite(&options)?
+                }
+                sourcemap::DecodedMap::Index(smi) => {
+                    smi.flatten_and_rewrite(&options)?
+                }
+            };
+            let mut new_source : Vec<u8> = Vec::new();
+            sm.to_writer(&mut new_source)?;
+            source.contents = String::from_utf8(new_source)?;
+        }
+        Ok(())
+    }
+
+    /// Adds sourcemap references to all minified files
+    pub fn add_sourcemap_references(&mut self) -> Result<()> {
+        let sourcemaps = HashSet::from_iter(self.sources.iter()
+            .map(|x| x.1)
+            .filter(|x| x.ty == SourceType::SourceMap)
+            .map(|x| x.url.to_string()));
+        for (_, source) in self.sources.iter_mut() {
+            if source.ty != SourceType::MinifiedScript {
+                continue;
+            }
+            let target_url = find_sourcemap_reference(&sourcemaps, &source.url)?;
+            source.headers.push(("Sourcemap".to_string(), target_url));
         }
         Ok(())
     }
