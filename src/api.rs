@@ -214,7 +214,7 @@ impl<'a> Api<'a> {
     /// system and uploaded as `name`.
     pub fn upload_release_file(&self, org: &str, project: &str,
                                version: &str, contents: FileContents, name: &str,
-                               headers: Option<&[(&str, &str)]>)
+                               headers: Option<&[(String, String)]>)
         -> ApiResult<Option<Artifact>>
     {
         let path = format!("/projects/{}/{}/releases/{}/files/",
@@ -234,7 +234,7 @@ impl<'a> Api<'a> {
         form.part("name").contents(name.as_bytes()).add()?;
 
         if let Some(headers) = headers {
-            for &(key, value) in headers {
+            for &(ref key, ref value) in headers {
                 form.part("header").contents(
                     format!("{}:{}", key, value).as_bytes()).add()?;
             }

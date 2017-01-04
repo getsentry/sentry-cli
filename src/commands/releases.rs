@@ -75,6 +75,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .help("a list of filenames to delete.")))
             .subcommand(make_subcommand("upload")
                 .about("Uploads a file for a given release")
+                .arg(Arg::with_name("headers")
+                     .long("header")
+                     .short("H")
+                     .value_name("KEY VALUE")
+                     .multiple(true)
+                     .number_of_values(1)
+                     .help("Stores a header with this file"))
                 .arg(Arg::with_name("path")
                      .value_name("PATH")
                      .index(1)
@@ -207,8 +214,21 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
         None => Path::new(path).file_name()
             .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
     };
+    let mut headers = vec![];
+    if let Some(header_list) = matches.values_of("header") {
+        for header in header_list {
+            if !header.contains(':') {
+                fail!("Invalid header. Needs to be in key:value format");
+            }
+            let mut iter = header.splitn(2, ':');
+            let key = iter.next().unwrap();
+            let value = iter.next().unwrap();
+            headers.push((key.trim().to_string(), value.trim().to_string()));
+        }
+    };
     if let Some(artifact) = Api::new(config).upload_release_file(
-        org, project, &version, FileContents::FromPath(&path), &name, None)? {
+        org, project, &version, FileContents::FromPath(&path),
+        &name, Some(&headers[..]))? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");

@@ -36,11 +36,11 @@ fn join_url(base_url: &str, url: &str) -> Result<String> {
 
 fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
     let mut part_iter = url.rsplitn(2, '/');
-    let mut path = part_iter.next();
-    let (filename, ext) = part_iter.next().or_else(|| path.take()).map(|x| {
+    let (filename, ext) = part_iter.next().map(|x| {
         let mut fn_iter = x.splitn(2, '.');
         (fn_iter.next(), fn_iter.next())
-    }).unwrap_or_else(|| (None, None));
+    }).unwrap_or((None, None));
+    let mut path = part_iter.next();
     (path, filename.unwrap_or(""), ext)
 }
 
@@ -57,6 +57,7 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     }
     rv
 }
+
 
 fn find_sourcemap_reference(
     sourcemaps: &HashSet<String>, min_url: &str) -> Result<String>
@@ -332,8 +333,17 @@ impl SourceMapProcessor {
             if source.ty != SourceType::MinifiedScript {
                 continue;
             }
-            let target_url = find_sourcemap_reference(&sourcemaps, &source.url)?;
-            source.headers.push(("Sourcemap".to_string(), target_url));
+            // we silently ignore when we can't find a sourcemap. Maybwe we should
+            // log this.
+            match find_sourcemap_reference(&sourcemaps, &source.url) {
+                Ok(target_url) => {
+                    source.headers.push(("Sourcemap".to_string(), target_url));
+                },
+                Err(err) => {
+                    self.log.warn(source, "could not determine a \
+                                  sourcemap reference".into());
+                }
+            }
         }
         Ok(())
     }
@@ -353,7 +363,7 @@ impl SourceMapProcessor {
             if let Some(artifact) = api.upload_release_file(
                 org, project, &release, FileContents::FromBytes(
                     source.contents.as_bytes()),
-                &source.url, None)? {
+                &source.url, Some(source.headers.as_slice()))? {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");
@@ -361,4 +371,21 @@ impl SourceMapProcessor {
         }
         Ok(())
     }
+}
+
+
+#[test]
+fn test_split_url() {
+    assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
+    assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
+    assert_eq!(split_url("foo"), (None, "foo", None));
+    assert_eq!(split_url("/foo"), (Some(""), "foo", None));
+}
+
+#[test]
+fn test_unsplit_url() {
+    assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
+    assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
+    assert_eq!(&unsplit_url(None, "foo", None), "foo");
+    assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
 }
