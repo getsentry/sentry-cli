@@ -75,6 +75,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                      .help("a list of filenames to delete.")))
             .subcommand(make_subcommand("upload")
                 .about("Uploads a file for a given release")
+                .arg(Arg::with_name("headers")
+                     .long("header")
+                     .short("H")
+                     .value_name("KEY VALUE")
+                     .multiple(true)
+                     .number_of_values(1)
+                     .help("Stores a header with this file"))
                 .arg(Arg::with_name("path")
                      .value_name("PATH")
                      .index(1)
@@ -100,6 +107,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
                 .arg(Arg::with_name("validate")
                      .long("validate")
                      .help("Enable basic sourcemap validation"))
+                .arg(Arg::with_name("no_sourcemap_reference")
+                     .long("no-sourcemap-reference")
+                     .help("Disables the emitting of automatic sourcemap references. \
+                            By default the tool will store a 'Sourcemap' header with \
+                            minified files so that sourcemaps are located automatically \
+                            if the tool can detect a link. If this causes issues it can \
+                            be disabled."))
                 .arg(Arg::with_name("rewrite")
                      .long("rewrite")
                      .help("Enables rewriting of matching sourcemaps \
@@ -200,8 +214,21 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
         None => Path::new(path).file_name()
             .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
     };
+    let mut headers = vec![];
+    if let Some(header_list) = matches.values_of("header") {
+        for header in header_list {
+            if !header.contains(':') {
+                fail!("Invalid header. Needs to be in key:value format");
+            }
+            let mut iter = header.splitn(2, ':');
+            let key = iter.next().unwrap();
+            let value = iter.next().unwrap();
+            headers.push((key.trim().to_string(), value.trim().to_string()));
+        }
+    };
     if let Some(artifact) = Api::new(config).upload_release_file(
-        org, project, &version, FileContents::FromPath(&path), &name)? {
+        org, project, &version, FileContents::FromPath(&path),
+        &name, Some(&headers[..]))? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");
@@ -265,6 +292,10 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>, config: &Config
             prefixes.push("~");
         }
         processor.rewrite(&prefixes)?;
+    }
+
+    if !matches.is_present("no_sourcemap_reference") {
+        processor.add_sourcemap_references()?;
     }
 
     println!("Uploading sourcemaps for release {}", release.version);
