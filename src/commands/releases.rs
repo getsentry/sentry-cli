@@ -208,7 +208,7 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>, config: &Config,
             .and_then(|x| x.to_str()).ok_or("No filename provided.")?,
     };
     if let Some(artifact) = Api::new(config).upload_release_file(
-        org, project, &version, FileContents::FromPath(&path), &name)? {
+        org, project, &version, FileContents::FromPath(&path), &name, None)? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");

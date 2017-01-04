@@ -213,7 +213,8 @@ impl<'a> Api<'a> {
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
     pub fn upload_release_file(&self, org: &str, project: &str,
-                               version: &str, contents: FileContents, name: &str)
+                               version: &str, contents: FileContents, name: &str,
+                               headers: Option<&[(&str, &str)]>)
         -> ApiResult<Option<Artifact>>
     {
         let path = format!("/projects/{}/{}/releases/{}/files/",
@@ -231,6 +232,13 @@ impl<'a> Api<'a> {
             }
         }
         form.part("name").contents(name.as_bytes()).add()?;
+
+        if let Some(headers) = headers {
+            for &(key, value) in headers {
+                form.part("header").contents(
+                    format!("{}:{}", key, value).as_bytes()).add()?;
+            }
+        }
 
         let resp = self.request(Method::Post, &path)?.with_form_data(form)?.send()?;
         if resp.status() == 409 {

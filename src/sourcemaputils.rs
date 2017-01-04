@@ -353,7 +353,7 @@ impl SourceMapProcessor {
             if let Some(artifact) = api.upload_release_file(
                 org, project, &release, FileContents::FromBytes(
                     source.contents.as_bytes()),
-                &source.url)? {
+                &source.url, None)? {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");
