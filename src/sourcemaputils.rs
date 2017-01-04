@@ -1,6 +1,7 @@
 //! Provides sourcemap validation functionality.
 use std::fs;
 use std::io;
+use std::fmt;
 use std::env;
 use std::io::{Read, Write};
 use std::cell::RefCell;
@@ -40,7 +41,7 @@ fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
         let mut fn_iter = x.splitn(2, '.');
         (fn_iter.next(), fn_iter.next())
     }).unwrap_or((None, None));
-    let mut path = part_iter.next();
+    let path = part_iter.next();
     (path, filename.unwrap_or(""), ext)
 }
 
@@ -106,6 +107,17 @@ enum SourceType {
     MinifiedScript,
     SourceMap,
 }
+
+impl fmt::Display for SourceType {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            SourceType::Script => write!(f, "script"),
+            SourceType::MinifiedScript => write!(f, "minified script"),
+            SourceType::SourceMap => write!(f, "sourcemap"),
+        }
+    }
+}
+
 
 #[derive(PartialEq, Debug)]
 enum LogLevel {
@@ -340,8 +352,8 @@ impl SourceMapProcessor {
                     source.headers.push(("Sourcemap".to_string(), target_url));
                 },
                 Err(err) => {
-                    self.log.warn(source, "could not determine a \
-                                  sourcemap reference".into());
+                    self.log.warn(source, format!("could not determine a \
+                                  sourcemap reference ({})", err));
                 }
             }
         }
@@ -358,8 +370,9 @@ impl SourceMapProcessor {
                 continue;
             }
             let display_path = here.strip_prefix(&here);
-            println!("{} -> {}", display_path.as_ref().unwrap_or(
-                &source.file_path.as_path()).display(), &source.url);
+            println!("{} -> {} [{}]", display_path.as_ref().unwrap_or(
+                &source.file_path.as_path()).display(), &source.url,
+                source.ty);
             if let Some(artifact) = api.upload_release_file(
                 org, project, &release, FileContents::FromBytes(
                     source.contents.as_bytes()),
