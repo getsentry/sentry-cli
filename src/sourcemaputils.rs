@@ -59,6 +59,18 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     rv
 }
 
+pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item=(&'a String, &'a String)>>(
+    headers: I) -> Option<&'a str>
+{
+    for (k, v) in headers {
+        let ki = &k.to_lowercase();
+        if ki == "sourcemap" || ki == "x-sourcemap" {
+            return Some(v.as_str());
+        }
+    }
+    None
+}
+
 
 fn find_sourcemap_reference(
     sourcemaps: &HashSet<String>, min_url: &str) -> Result<String>
@@ -74,6 +86,7 @@ fn find_sourcemap_reference(
         return Ok(rv.to_string());
     }
 
+    let map_ext = "map";
     let (path, basename, ext) = split_url(min_url);
 
     // foo.min.js -> foo.map
@@ -83,14 +96,26 @@ fn find_sourcemap_reference(
 
     if let Some(ext) = ext.as_ref() {
         // foo.min.js -> foo.min.js.map
-        let new_ext = format!("{}.map", ext);
+        let new_ext = format!("{}.{}", ext, map_ext);
         if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
             return Ok(unsplit_url(None, basename, Some(&new_ext)));
         }
 
         // foo.min.js -> foo.js.map
         if ext.starts_with("min.") {
-            let new_ext = format!("{}.map", &ext[4..]);
+            let new_ext = format!("{}.{}", &ext[4..], map_ext);
+            if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
+                return Ok(unsplit_url(None, basename, Some(&new_ext)));
+            }
+        }
+
+        // foo.min.js -> foo.min.map
+        let mut parts : Vec<_> = ext.split('.').collect();
+        if parts.len() > 1 {
+            let parts_len = parts.len();
+            parts[parts_len - 1] = &map_ext;
+            let new_ext = parts.join(".");
+            println!("{:?}", unsplit_url(path, basename, Some(&new_ext)));
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
                 return Ok(unsplit_url(None, basename, Some(&new_ext)));
             }
@@ -380,6 +405,12 @@ impl SourceMapProcessor {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");
+            }
+            if source.ty == SourceType::MinifiedScript {
+                if let Some(sm_ref) = get_sourcemap_reference_from_headers(
+                    source.headers.iter().map(|&(ref k, ref v)| (k, v))) {
+                    println!("  -> sourcemap: {}", sm_ref);
+                }
             }
         }
         Ok(())

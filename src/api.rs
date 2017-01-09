@@ -23,6 +23,7 @@ use utils;
 use event::Event;
 use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
+use sourcemaputils::get_sourcemap_reference_from_headers;
 
 
 /// Wrapper that escapes arguments for URL path segments.
@@ -691,13 +692,7 @@ impl Artifact {
     }
 
     pub fn get_sourcemap_reference(&self) -> Option<&str> {
-        for (k, v) in self.headers.iter() {
-            let ki = &k.to_lowercase();
-            if ki == "sourcemap" || ki == "x-sourcemap" {
-                return Some(v.as_str());
-            }
-        }
-        None
+        get_sourcemap_reference_from_headers(self.headers.iter())
     }
 }
 
