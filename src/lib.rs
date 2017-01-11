@@ -13,7 +13,8 @@ extern crate curl;
 extern crate clap;
 extern crate ini;
 extern crate itertools;
-#[macro_use] extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
 extern crate url;

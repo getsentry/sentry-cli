@@ -35,18 +35,23 @@ impl log::Log for Logger {
 
         let mut w = if let Some(mut term) = term::stderr() {
             term.fg(match record.level() {
-                log::LogLevel::Error | log::LogLevel::Warn => term::color::RED,
-                log::LogLevel::Info => term::color::CYAN,
-                log::LogLevel::Debug | log::LogLevel::Trace => term::color::YELLOW,
-            }).ok();
+                    log::LogLevel::Error | log::LogLevel::Warn => term::color::RED,
+                    log::LogLevel::Info => term::color::CYAN,
+                    log::LogLevel::Debug | log::LogLevel::Trace => term::color::YELLOW,
+                })
+                .ok();
             out_term = term;
             &mut out_term as &mut Write
         } else {
             out_stderr = io::stderr();
             &mut out_stderr as &mut Write
         };
-        writeln!(w, "[{}] {} {}", record.level(),
-                 record.target(), record.args()).ok();
+        writeln!(w,
+                 "[{}] {} {}",
+                 record.level(),
+                 record.target(),
+                 record.args())
+            .ok();
         if let Some(mut term) = term::stderr() {
             term.reset().ok();
         }
@@ -68,7 +73,8 @@ impl TempFile {
             .read(true)
             .write(true)
             .create(true)
-            .open(&path).unwrap();
+            .open(&path)
+            .unwrap();
         Ok(TempFile {
             f: Some(f),
             path: path.to_path_buf(),
@@ -99,7 +105,8 @@ impl Drop for TempFile {
 /// being interrupted by a signal.
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
-    where F: FnOnce() -> (), F: Send + 'static
+    where F: FnOnce() -> (),
+          F: Send + 'static
 {
     use chan;
     let run = |_sdone: chan::Sender<()>| f();

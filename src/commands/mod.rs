@@ -42,21 +42,21 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(Arg::with_name("url")
-             .value_name("URL")
-             .long("url")
-             .help("The sentry API URL"))
+            .value_name("URL")
+            .long("url")
+            .help("The sentry API URL"))
         .arg(Arg::with_name("auth_token")
-             .value_name("AUTH_TOKEN")
-             .long("auth-token")
-             .help("The sentry auth token to use"))
+            .value_name("AUTH_TOKEN")
+            .long("auth-token")
+            .help("The sentry auth token to use"))
         .arg(Arg::with_name("api_key")
-             .value_name("API_KEY")
-             .long("api-key")
-             .help("The sentry API key to use"))
+            .value_name("API_KEY")
+            .long("api-key")
+            .help("The sentry API key to use"))
         .arg(Arg::with_name("log_level")
-             .value_name("LOG_LEVEL")
-             .long("log-level")
-             .help("The log level for the sentrycli"));
+            .value_name("LOG_LEVEL")
+            .long("log-level")
+            .help("The log level for the sentrycli"));
 
     macro_rules! add_subcommand {
         ($name:ident) => {{
@@ -79,7 +79,9 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     }
     if let Some(level_str) = matches.value_of("log_level") {
         match level_str.parse() {
-            Ok(level) => { config.log_level = level; }
+            Ok(level) => {
+                config.log_level = level;
+            }
             Err(_) => {
                 fail!("Unknown log level: {}", level_str);
             }
@@ -87,9 +89,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     }
 
     log::set_logger(|max_log_level| {
-        max_log_level.set(config.log_level);
-        Box::new(Logger)
-    }).ok();
+            max_log_level.set(config.log_level);
+            Box::new(Logger)
+        })
+        .ok();
 
     macro_rules! execute_subcommand {
         ($name:ident) => {{

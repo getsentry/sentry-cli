@@ -31,12 +31,11 @@ pub struct Dsn {
 }
 
 impl Dsn {
-
     /// Parses a Dsn from a given string.
     fn from_str(dsn: &str) -> Result<Dsn> {
         let url = Url::parse(dsn)?;
         let project_id = if let Some(component_iter) = url.path_segments() {
-            let components : Vec<_> = component_iter.collect();
+            let components: Vec<_> = component_iter.collect();
             if components.len() != 1 {
                 fail!("invalid dsn: invalid project ID");
             }
@@ -79,11 +78,11 @@ impl Dsn {
             sentry_version={}, \
             sentry_key={}, \
             sentry_secret={}",
-            ts,
-            VERSION,
-            PROTOCOL_VERSION,
-            self.client_id,
-            self.secret)
+                ts,
+                VERSION,
+                PROTOCOL_VERSION,
+                self.client_id,
+                self.secret)
     }
 }
 
@@ -98,7 +97,6 @@ pub struct Config {
 }
 
 impl Config {
-
     /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> Result<Config> {
         let (filename, ini) = load_cli_config()?;
@@ -158,28 +156,26 @@ impl Config {
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
-        Ok((
-            matches
-                .value_of("org").map(|x| x.to_owned())
+        Ok((matches.value_of("org")
+                .map(|x| x.to_owned())
                 .or_else(|| env::var("SENTRY_ORG").ok())
                 .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
                 .ok_or("An organization slug is required (provide with --org)")?,
-            matches
-                .value_of("project").map(|x| x.to_owned())
+            matches.value_of("project")
+                .map(|x| x.to_owned())
                 .or_else(|| env::var("SENTRY_PROJECT").ok())
                 .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
-                .ok_or("A project slug is required (provide with --project)")?
-        ))
+                .ok_or("A project slug is required (provide with --project)")?))
     }
 
     /// Returns the defaults for org and project.
     pub fn get_org_and_project_defaults(&self) -> (Option<String>, Option<String>) {
-        (
-            env::var("SENTRY_ORG").ok()
-                .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned())),
-            env::var("SENTRY_PROJECT").ok()
-                .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
-        )
+        (env::var("SENTRY_ORG")
+             .ok()
+             .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned())),
+         env::var("SENTRY_PROJECT")
+             .ok()
+             .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned())))
     }
 
     /// Return the DSN

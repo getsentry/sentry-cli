@@ -108,7 +108,6 @@ pub struct ApiResponse {
 }
 
 impl<'a> Api<'a> {
-
     /// Creates a new API access helper for the given config.  For as long
     /// as it lives HTTP keepalive can be used.  When the object is recreated
     /// new connections will be established.
@@ -133,11 +132,10 @@ impl<'a> Api<'a> {
         let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
             (Cow::Borrowed(url), None)
         } else {
-            (
-                Cow::Owned(format!("{}/api/0/{}", self.config.url.trim_right_matches('/'),
-                                   url.trim_left_matches('/'))),
-                self.config.auth.as_ref()
-            )
+            (Cow::Owned(format!("{}/api/0/{}",
+                                self.config.url.trim_right_matches('/'),
+                                url.trim_left_matches('/'))),
+             self.config.auth.as_ref())
         };
 
         if let Some(proxy_url) = self.config.get_proxy_url() {
@@ -188,22 +186,31 @@ impl<'a> Api<'a> {
     }
 
     /// Lists all the release file for the given `release`.
-    pub fn list_release_files(&self, org: &str, project: &str,
-                              release: &str) -> ApiResult<Vec<Artifact>> {
+    pub fn list_release_files(&self,
+                              org: &str,
+                              project: &str,
+                              release: &str)
+                              -> ApiResult<Vec<Artifact>> {
         self.get(&format!("/projects/{}/{}/releases/{}/files/",
-                          PathArg(org), PathArg(project),
-                          PathArg(release)))?.convert()
+                          PathArg(org),
+                          PathArg(project),
+                          PathArg(release)))?
+            .convert()
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
     /// deleted or `false` otherwise.
-    pub fn delete_release_file(&self, org: &str, project: &str, version: &str,
+    pub fn delete_release_file(&self,
+                               org: &str,
+                               project: &str,
+                               version: &str,
                                file_id: &str)
-        -> ApiResult<bool>
-    {
+                               -> ApiResult<bool> {
         let resp = self.delete(&format!("/projects/{}/{}/releases/{}/files/{}/",
-                                        PathArg(org), PathArg(project),
-                                        PathArg(version), PathArg(file_id)))?;
+                             PathArg(org),
+                             PathArg(project),
+                             PathArg(version),
+                             PathArg(file_id)))?;
         if resp.status() == 404 {
             Ok(false)
         } else {
@@ -213,13 +220,17 @@ impl<'a> Api<'a> {
 
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
-    pub fn upload_release_file(&self, org: &str, project: &str,
-                               version: &str, contents: FileContents, name: &str,
+    pub fn upload_release_file(&self,
+                               org: &str,
+                               project: &str,
+                               version: &str,
+                               contents: FileContents,
+                               name: &str,
                                headers: Option<&[(String, String)]>)
-        -> ApiResult<Option<Artifact>>
-    {
+                               -> ApiResult<Option<Artifact>> {
         let path = format!("/projects/{}/{}/releases/{}/files/",
-                           PathArg(org), PathArg(project),
+                           PathArg(org),
+                           PathArg(project),
                            PathArg(version));
         let mut form = curl::easy::Form::new();
         match contents {
@@ -227,8 +238,10 @@ impl<'a> Api<'a> {
                 form.part("file").file(path).add()?;
             }
             FileContents::FromBytes(bytes) => {
-                let filename = Path::new(name).file_name()
-                    .and_then(|x| x.to_str()).unwrap_or("unknown.bin");
+                let filename = Path::new(name)
+                    .file_name()
+                    .and_then(|x| x.to_str())
+                    .unwrap_or("unknown.bin");
                 form.part("file").buffer(filename, bytes.to_vec()).add()?;
             }
         }
@@ -236,8 +249,9 @@ impl<'a> Api<'a> {
 
         if let Some(headers) = headers {
             for &(ref key, ref value) in headers {
-                form.part("header").contents(
-                    format!("{}:{}", key, value).as_bytes()).add()?;
+                form.part("header")
+                    .contents(format!("{}:{}", key, value).as_bytes())
+                    .add()?;
             }
         }
 
@@ -250,20 +264,23 @@ impl<'a> Api<'a> {
     }
 
     /// Creates a new release.
-    pub fn new_release(&self, org: &str, project: &str,
-                       release: &NewRelease) -> ApiResult<ReleaseInfo> {
-        self.post(&format!("/projects/{}/{}/releases/",
-                           PathArg(org), PathArg(project)), release)?.convert()
+    pub fn new_release(&self,
+                       org: &str,
+                       project: &str,
+                       release: &NewRelease)
+                       -> ApiResult<ReleaseInfo> {
+        self.post(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)),
+                  release)?
+            .convert()
     }
 
     /// Deletes an already existing release.  Returns `true` if it was deleted
     /// or `false` if not.
-    pub fn delete_release(&self, org: &str, project: &str, version: &str)
-        -> ApiResult<bool>
-    {
+    pub fn delete_release(&self, org: &str, project: &str, version: &str) -> ApiResult<bool> {
         let resp = self.delete(&format!("/projects/{}/{}/releases/{}/",
-                                        PathArg(org), PathArg(project),
-                                        PathArg(version)))?;
+                             PathArg(org),
+                             PathArg(project),
+                             PathArg(version)))?;
         if resp.status() == 404 {
             Ok(false)
         } else {
@@ -273,10 +290,15 @@ impl<'a> Api<'a> {
 
     /// Looks up a release and returns it.  If it does not exist `None`
     /// will be returned.
-    pub fn get_release(&self, org: &str, project: &str, version: &str)
-        -> ApiResult<Option<ReleaseInfo>> {
+    pub fn get_release(&self,
+                       org: &str,
+                       project: &str,
+                       version: &str)
+                       -> ApiResult<Option<ReleaseInfo>> {
         let resp = self.get(&format!("/projects/{}/{}/releases/{}/",
-                                     PathArg(org), PathArg(project), PathArg(version)))?;
+                          PathArg(org),
+                          PathArg(project),
+                          PathArg(version)))?;
         if resp.status() == 404 {
             Ok(None)
         } else {
@@ -286,41 +308,47 @@ impl<'a> Api<'a> {
 
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str, project: &str)
-        -> ApiResult<Vec<ReleaseInfo>>
-    {
-        self.get(&format!("/projects/{}/{}/releases/",
-                          PathArg(org), PathArg(project)))?.convert()
+    pub fn list_releases(&self, org: &str, project: &str) -> ApiResult<Vec<ReleaseInfo>> {
+        self.get(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)))?
+            .convert()
     }
 
     /// Updates a bunch of issues within a project that match a provided filter
     /// and performs `changes` changes.
-    pub fn bulk_update_issue(&self, org: &str, project: &str,
-                             filter: &IssueFilter, changes: &IssueChanges)
-        -> ApiResult<bool>
-    {
+    pub fn bulk_update_issue(&self,
+                             org: &str,
+                             project: &str,
+                             filter: &IssueFilter,
+                             changes: &IssueChanges)
+                             -> ApiResult<bool> {
         let qs = match filter.get_query_string() {
-            None => { return Ok(false); },
+            None => {
+                return Ok(false);
+            }
             Some(qs) => qs,
         };
         self.put(&format!("/projects/{}/{}/issues/?{}",
-                          PathArg(org), PathArg(project), qs), changes)?
-            .to_result().map(|_| true)
+                          PathArg(org),
+                          PathArg(project),
+                          qs),
+                 changes)?
+            .to_result()
+            .map(|_| true)
     }
 
     /// Finds the latest release for sentry-cli on GitHub.
-    pub fn get_latest_sentrycli_release(&self)
-        -> ApiResult<Option<SentryCliRelease>>
-    {
+    pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
         let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
         let ref_name = format!("sentry-cli-{}-{}{}",
-           utils::capitalize_string(PLATFORM), ARCH, EXT);
+                               utils::capitalize_string(PLATFORM),
+                               ARCH,
+                               EXT);
         info!("Looking for file named: {}", ref_name);
 
         if resp.status() == 404 {
             Ok(None)
         } else {
-            let info : GitHubRelease = resp.to_result()?.convert()?;
+            let info: GitHubRelease = resp.to_result()?.convert()?;
             for asset in info.assets {
                 info!("Found asset {}", asset.name);
                 if asset.name == ref_name {
@@ -337,12 +365,14 @@ impl<'a> Api<'a> {
 
     /// Given a list of checksums for Dsym files this returns a list of those
     /// that do not exist for the project yet.
-    pub fn find_missing_dsym_checksums(&self, org: &str, project: &str,
+    pub fn find_missing_dsym_checksums(&self,
+                                       org: &str,
+                                       project: &str,
                                        checksums: &Vec<&str>)
-        -> ApiResult<HashSet<String>>
-    {
+                                       -> ApiResult<HashSet<String>> {
         let mut url = format!("/projects/{}/{}/files/dsyms/unknown/?",
-                              PathArg(org), PathArg(project));
+                              PathArg(org),
+                              PathArg(project));
         for (idx, checksum) in checksums.iter().enumerate() {
             if idx > 0 {
                 url.push('&');
@@ -351,15 +381,15 @@ impl<'a> Api<'a> {
             url.push_str(checksum);
         }
 
-        let state : MissingChecksumsResponse = self.get(&url)?.convert()?;
+        let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
         Ok(state.missing)
     }
 
     /// Uploads a dsym file from the given path.
-    pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path)
-        -> ApiResult<Vec<DSymFile>>
-    {
-        let path = format!("/projects/{}/{}/files/dsyms/", PathArg(org), PathArg(project));
+    pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path) -> ApiResult<Vec<DSymFile>> {
+        let path = format!("/projects/{}/{}/files/dsyms/",
+                           PathArg(org),
+                           PathArg(project));
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
         self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()
@@ -368,51 +398,48 @@ impl<'a> Api<'a> {
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
     pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
-        let event : EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
+        let event: EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
             .with_header("X-Sentry-Auth", &dsn.get_auth_header(event.timestamp))?
             .with_json_body(&event)?
-            .send()?.convert()?;
+            .send()?
+            .convert()?;
         Ok(event.id)
     }
 }
 
 fn send_req<W: Write>(handle: &mut curl::easy::Easy,
-                      out: &mut W, body: Option<Vec<u8>>)
-    -> ApiResult<(u32, Vec<String>)>
-{
+                      out: &mut W,
+                      body: Option<Vec<u8>>)
+                      -> ApiResult<(u32, Vec<String>)> {
     match body {
         Some(body) => {
             let mut body = &body[..];
             handle.upload(true)?;
             handle.in_filesize(body.len() as u64)?;
-            handle_req(handle, out,
-                       &mut |buf| body.read(buf).unwrap_or(0))
-        },
-        None => {
-            handle_req(handle, out, &mut |_| 0)
+            handle_req(handle, out, &mut |buf| body.read(buf).unwrap_or(0))
         }
+        None => handle_req(handle, out, &mut |_| 0),
     }
 }
 
 fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                         out: &mut W,
                         read: &mut FnMut(&mut [u8]) -> usize)
-    -> ApiResult<(u32, Vec<String>)>
-{
+                        -> ApiResult<(u32, Vec<String>)> {
     let mut headers = Vec::new();
     {
         let mut handle = handle.transfer();
         handle.read_function(|buf| Ok(read(buf)))?;
         handle.write_function(|data| {
-            Ok(match out.write_all(data) {
-                Ok(_) => data.len(),
-                Err(_) => 0,
-            })
-        })?;
+                Ok(match out.write_all(data) {
+                    Ok(_) => data.len(),
+                    Err(_) => 0,
+                })
+            })?;
         handle.header_function(|data| {
-            headers.push(String::from_utf8_lossy(data).into_owned());
-            true
-        })?;
+                headers.push(String::from_utf8_lossy(data).into_owned());
+                true
+            })?;
         handle.perform()?;
     }
 
@@ -433,8 +460,8 @@ impl<'a> Iterator for Headers<'a> {
         self.lines.get(self.idx).map(|line| {
             self.idx += 1;
             match line.find(':') {
-                Some(i) => (&line[..i], line[i+1..].trim()),
-                None => (line[..].trim(), "")
+                Some(i) => (&line[..i], line[i + 1..].trim()),
+                None => (line[..].trim(), ""),
             }
         })
     }
@@ -442,9 +469,10 @@ impl<'a> Iterator for Headers<'a> {
 
 impl<'a> ApiRequest<'a> {
     fn new(mut handle: RefMut<'a, curl::easy::Easy>,
-           method: Method, url: &str, auth: Option<&Auth>)
-        -> ApiResult<ApiRequest<'a>>
-    {
+           method: Method,
+           url: &str,
+           auth: Option<&Auth>)
+           -> ApiResult<ApiRequest<'a>> {
         info!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
@@ -460,7 +488,7 @@ impl<'a> ApiRequest<'a> {
 
         handle.url(&url)?;
         match auth {
-            None => {},
+            None => {}
             Some(&Auth::Key(ref key)) => {
                 handle.username(key)?;
                 info!("using key based authentication");
@@ -486,7 +514,7 @@ impl<'a> ApiRequest<'a> {
 
     /// sets the JSON request body for the request.
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
-        let mut body_bytes : Vec<u8> = vec![];
+        let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)?;
         info!("sending JSON data ({} bytes)", body_bytes.len());
         self.body = Some(body_bytes);
@@ -633,8 +661,7 @@ impl From<serde_json::Error> for Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            Error::Http(status, ref msg) => write!(f, "http error: {} ({})",
-                                                   msg, status),
+            Error::Http(status, ref msg) => write!(f, "http error: {} ({})", msg, status),
             Error::Curl(ref err) => write!(f, "http error: {}", err),
             Error::Form(ref err) => write!(f, "http form error: {}", err),
             Error::Io(ref err) => write!(f, "io error: {}", err),
@@ -703,7 +730,7 @@ pub struct NewRelease {
     #[serde(rename="ref", skip_serializing_if="Option::is_none")]
     pub reference: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
-    pub url: Option<String>
+    pub url: Option<String>,
 }
 
 /// Provides all release information from already existing releases
@@ -784,7 +811,9 @@ impl IssueFilter {
     fn get_query_string(&self) -> Option<String> {
         let mut rv = vec![];
         match *self {
-            IssueFilter::Empty => { return None; },
+            IssueFilter::Empty => {
+                return None;
+            }
             IssueFilter::All => {}
             IssueFilter::ExplicitIds(ref ids) => {
                 if ids.is_empty() {

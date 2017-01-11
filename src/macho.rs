@@ -6,11 +6,11 @@ use std::io::Read;
 use prelude::*;
 
 
-const FAT_MAGIC : &'static [u8; 4] = b"\xca\xfe\xba\xbe";
-const MAGIC : &'static [u8; 4] = b"\xfe\xed\xfa\xce";
-const MAGIC_CIGAM : &'static [u8; 4] = b"\xce\xfa\xed\xfe";
-const MAGIC_64 : &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
-const MAGIC_CIGAM64 : &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
+const FAT_MAGIC: &'static [u8; 4] = b"\xca\xfe\xba\xbe";
+const MAGIC: &'static [u8; 4] = b"\xfe\xed\xfa\xce";
+const MAGIC_CIGAM: &'static [u8; 4] = b"\xce\xfa\xed\xfe";
+const MAGIC_64: &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
+const MAGIC_CIGAM64: &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
 
 /// this function can return an error if the file is smaller than the magic.
@@ -18,11 +18,11 @@ const MAGIC_CIGAM64 : &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 /// much better for how this function is used within this library.
 fn is_macho_file_as_result<P: AsRef<Path>>(path: P) -> Result<bool> {
     let mut f = File::open(&path)?;
-    let mut magic : [u8; 4] = [0; 4];
+    let mut magic: [u8; 4] = [0; 4];
     f.read_exact(&mut magic)?;
     Ok(match &magic {
         FAT_MAGIC | MAGIC | MAGIC_CIGAM | MAGIC_64 | MAGIC_CIGAM64 => true,
-        _ => false
+        _ => false,
     })
 }
 

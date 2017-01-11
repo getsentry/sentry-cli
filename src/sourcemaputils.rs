@@ -27,8 +27,8 @@ fn join_url(base_url: &str, url: &str) -> Result<String> {
                 } else {
                     Ok(rv)
                 }
-            },
-            Err(x) => fail!(x)
+            }
+            Err(x) => fail!(x),
         }
     } else {
         Ok(Url::parse(base_url)?.join(url)?.to_string())
@@ -37,10 +37,12 @@ fn join_url(base_url: &str, url: &str) -> Result<String> {
 
 fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
     let mut part_iter = url.rsplitn(2, '/');
-    let (filename, ext) = part_iter.next().map(|x| {
-        let mut fn_iter = x.splitn(2, '.');
-        (fn_iter.next(), fn_iter.next())
-    }).unwrap_or((None, None));
+    let (filename, ext) = part_iter.next()
+        .map(|x| {
+            let mut fn_iter = x.splitn(2, '.');
+            (fn_iter.next(), fn_iter.next())
+        })
+        .unwrap_or((None, None));
     let path = part_iter.next();
     (path, filename.unwrap_or(""), ext)
 }
@@ -59,9 +61,9 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     rv
 }
 
-pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item=(&'a String, &'a String)>>(
-    headers: I) -> Option<&'a str>
-{
+pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, &'a String)>>
+    (headers: I)
+     -> Option<&'a str> {
     for (k, v) in headers {
         let ki = &k.to_lowercase();
         if ki == "sourcemap" || ki == "x-sourcemap" {
@@ -72,9 +74,7 @@ pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item=(&'a String, &'
 }
 
 
-fn find_sourcemap_reference(
-    sourcemaps: &HashSet<String>, min_url: &str) -> Result<String>
-{
+fn find_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String> {
     // if there is only one sourcemap in total we just assume that's the one.
     // We just need to make sure that we fix up the reference if we need to
     // (eg: ~/ -> /).
@@ -110,7 +110,7 @@ fn find_sourcemap_reference(
         }
 
         // foo.min.js -> foo.min.map
-        let mut parts : Vec<_> = ext.split('.').collect();
+        let mut parts: Vec<_> = ext.split('.').collect();
         if parts.len() > 1 {
             let parts_len = parts.len();
             parts[parts_len - 1] = &map_ext;
@@ -122,7 +122,8 @@ fn find_sourcemap_reference(
         }
     }
 
-    fail!("Could not auto-detect referenced sourcemap for {}.", min_url);
+    fail!("Could not auto-detect referenced sourcemap for {}.",
+          min_url);
 }
 
 
@@ -189,8 +190,12 @@ impl Log {
         let mut out_stderr;
         let mut w = if let Some(mut term) = term::stderr() {
             match level {
-                LogLevel::Error => { term.fg(term::color::RED).ok(); }
-                LogLevel::Warning => { term.fg(term::color::YELLOW).ok(); }
+                LogLevel::Error => {
+                    term.fg(term::color::RED).ok();
+                }
+                LogLevel::Warning => {
+                    term.fg(term::color::YELLOW).ok();
+                }
                 LogLevel::Info => {}
             }
             out_term = term;
@@ -246,28 +251,30 @@ impl SourceMapProcessor {
         try!(f.read_to_string(&mut contents));
         let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
             SourceType::SourceMap
-        } else if path.file_name().and_then(|x| x.to_str())
-            .map(|x| x.contains(".min.")).unwrap_or(false) ||
-            might_be_minified::analyze_str(&contents).is_likely_minified() {
+        } else if path.file_name()
+            .and_then(|x| x.to_str())
+            .map(|x| x.contains(".min."))
+            .unwrap_or(false) ||
+                           might_be_minified::analyze_str(&contents).is_likely_minified() {
             SourceType::MinifiedScript
         } else {
             SourceType::Script
         };
 
-        self.sources.insert(url.to_owned(), Source {
-            url: url.to_owned(),
-            file_path: path.to_path_buf(),
-            contents: contents,
-            ty: ty,
-            skip_upload: false,
-            headers: vec![],
-        });
+        self.sources.insert(url.to_owned(),
+                            Source {
+                                url: url.to_owned(),
+                                file_path: path.to_path_buf(),
+                                contents: contents,
+                                ty: ty,
+                                skip_upload: false,
+                                headers: vec![],
+                            });
         Ok(())
     }
 
     fn validate_script(&self, source: &Source) -> Result<()> {
-        let reference = sourcemap::locate_sourcemap_reference_slice(
-            source.contents.as_bytes())?;
+        let reference = sourcemap::locate_sourcemap_reference_slice(source.contents.as_bytes())?;
         if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
             self.log.warn(source, "encountered a legacy reference".into());
         }
@@ -294,10 +301,10 @@ impl SourceMapProcessor {
                         self.log.warn(source, format!("missing sourcecode ({})", source_url));
                     }
                 }
-            },
+            }
             sourcemap::DecodedMap::Index(_) => {
-                self.log.warn(source, "encountered indexed sourcemap. We \
-                              cannot validate those.".into());
+                self.log.warn(source,
+                              "encountered indexed sourcemap. We cannot validate those.".into());
             }
         }
         Ok(())
@@ -305,18 +312,19 @@ impl SourceMapProcessor {
 
     /// Validates all sources within.
     pub fn validate_all(&self) -> Result<()> {
-        let mut sources : Vec<_> = self.sources.iter().map(|x| x.1).collect();
+        let mut sources: Vec<_> = self.sources.iter().map(|x| x.1).collect();
         sources.sort_by_key(|x| &x.url);
         let mut failed = false;
 
         for source in sources.iter() {
             match source.ty {
-                SourceType::Script | SourceType::MinifiedScript => {
+                SourceType::Script |
+                SourceType::MinifiedScript => {
                     if let Err(err) = self.validate_script(&source) {
                         self.log.error(&source, format!("failed to process: {}", err));
                         failed = true;
                     }
-                },
+                }
                 SourceType::SourceMap => {
                     if let Err(err) = self.validate_sourcemap(&source) {
                         self.log.error(&source, format!("failed to process: {}", err));
@@ -346,14 +354,10 @@ impl SourceMapProcessor {
                 ..Default::default()
             };
             let sm = match sourcemap::decode_slice(source.contents.as_bytes())? {
-                sourcemap::DecodedMap::Regular(sm) => {
-                    sm.rewrite(&options)?
-                }
-                sourcemap::DecodedMap::Index(smi) => {
-                    smi.flatten_and_rewrite(&options)?
-                }
+                sourcemap::DecodedMap::Regular(sm) => sm.rewrite(&options)?,
+                sourcemap::DecodedMap::Index(smi) => smi.flatten_and_rewrite(&options)?,
             };
-            let mut new_source : Vec<u8> = Vec::new();
+            let mut new_source: Vec<u8> = Vec::new();
             sm.to_writer(&mut new_source)?;
             source.contents = String::from_utf8(new_source)?;
         }
@@ -362,7 +366,8 @@ impl SourceMapProcessor {
 
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
-        let sourcemaps = HashSet::from_iter(self.sources.iter()
+        let sourcemaps = HashSet::from_iter(self.sources
+            .iter()
             .map(|x| x.1)
             .filter(|x| x.ty == SourceType::SourceMap)
             .map(|x| x.url.to_string()));
@@ -375,10 +380,10 @@ impl SourceMapProcessor {
             match find_sourcemap_reference(&sourcemaps, &source.url) {
                 Ok(target_url) => {
                     source.headers.push(("Sourcemap".to_string(), target_url));
-                },
+                }
                 Err(err) => {
-                    self.log.warn(source, format!("could not determine a \
-                                  sourcemap reference ({})", err));
+                    self.log.warn(source,
+                                  format!("could not determine a sourcemap reference ({})", err));
                 }
             }
         }
@@ -386,29 +391,33 @@ impl SourceMapProcessor {
     }
 
     /// Uploads all files
-    pub fn upload(&self, api: &Api, org: &str, project: &str, release: &str)
-        -> Result<()>
-    {
+    pub fn upload(&self, api: &Api, org: &str, project: &str, release: &str) -> Result<()> {
         let here = env::current_dir()?;
         for (_, source) in self.sources.iter() {
             if source.skip_upload {
                 continue;
             }
             let display_path = here.strip_prefix(&here);
-            println!("{} -> {} [{}]", display_path.as_ref().unwrap_or(
-                &source.file_path.as_path()).display(), &source.url,
-                source.ty);
-            if let Some(artifact) = api.upload_release_file(
-                org, project, &release, FileContents::FromBytes(
-                    source.contents.as_bytes()),
-                &source.url, Some(source.headers.as_slice()))? {
+            println!("{} -> {} [{}]",
+                     display_path.as_ref()
+                         .unwrap_or(&source.file_path.as_path())
+                         .display(),
+                     &source.url,
+                     source.ty);
+            if let Some(artifact) = api.upload_release_file(org,
+                                     project,
+                                     &release,
+                                     FileContents::FromBytes(source.contents.as_bytes()),
+                                     &source.url,
+                                     Some(source.headers.as_slice()))? {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");
             }
             if source.ty == SourceType::MinifiedScript {
-                if let Some(sm_ref) = get_sourcemap_reference_from_headers(
-                    source.headers.iter().map(|&(ref k, ref v)| (k, v))) {
+                if let Some(sm_ref) = get_sourcemap_reference_from_headers(source.headers
+                    .iter()
+                    .map(|&(ref k, ref v)| (k, v))) {
                     println!("  -> sourcemap: {}", sm_ref);
                 }
             }
