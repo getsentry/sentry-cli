@@ -114,7 +114,7 @@ fn upload_dsyms(api: &mut Api, files: &[LocalFile],
 fn get_paths_from_env() -> Result<Vec<PathBuf>> {
     let mut rv = vec![];
     if let Some(base_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
-        for entry in fs::read_dir(base_path)? {
+        for entry in WalkDir::new(base_path) {
             let entry = entry?;
             if entry.path().extension() == Some(OsStr::new("dSYM")) &&
                 fs::metadata(entry.path())?.is_dir() {
@@ -124,7 +124,6 @@ fn get_paths_from_env() -> Result<Vec<PathBuf>> {
     }
     Ok(rv)
 }
-
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
 {
