@@ -12,7 +12,7 @@ macro_rules! fail {
         return Err(::std::convert::From::from($expr));
     );
     ($expr:expr $(, $more:expr)+) => (
-        return fail!(format!($expr, $($more),*))
+        fail!(format!($expr, $($more),*))
     )
 }
 

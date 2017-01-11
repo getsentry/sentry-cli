@@ -2,11 +2,8 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binrary that links against this library.
 
-#![feature(proc_macro, plugin, question_mark, alloc_system)]
-#![plugin(serde_derive)]
 #![recursion_limit = "1024"]
 
-extern crate alloc_system;
 #[cfg(not(windows))]
 #[macro_use]
 extern crate chan;
