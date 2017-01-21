@@ -6,7 +6,10 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::mem;
+use std::io::{Write, Seek};
 use std::ffi::OsStr;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use clap::{App, Arg, ArgMatches};
 use walkdir::{WalkDir, Iter as WalkDirIter};
@@ -14,23 +17,49 @@ use zip;
 
 use prelude::*;
 use api::{Api, DSymFile};
-use utils::{TempFile, get_sha1_checksum};
+use utils::{TempFile, get_sha1_checksum, is_zip_file};
 use macho::is_macho_file;
 use config::Config;
 
-const BATCH_SIZE : usize = 15;
+const BATCH_SIZE: usize = 15;
 
+enum DSymVar {
+    FsFile(PathBuf),
+    ZipFile(Rc<RefCell<Option<zip::ZipArchive<fs::File>>>>, usize),
+}
 
-struct LocalFile {
-    path: PathBuf,
+struct DSymRef {
+    var: DSymVar,
     arc_name: String,
     checksum: String,
+}
+
+impl DSymRef {
+    pub fn add_to_archive<W: Write + Seek>(&self, mut zip: &mut zip::ZipWriter<W>) -> Result<()> {
+        zip.start_file(self.arc_name.clone(), zip::CompressionMethod::Deflated)?;
+        match self.var {
+            DSymVar::FsFile(ref p) => {
+                io::copy(&mut File::open(&p)?, &mut zip)?;
+            }
+            DSymVar::ZipFile(ref rc, idx) => {
+                let rc = rc.clone();
+                let mut opt_archive = rc.borrow_mut();
+                if let Some(ref mut archive) = *opt_archive {
+                    let mut af = archive.by_index(idx)?;
+                    io::copy(&mut af, &mut zip)?;
+                }
+            }
+        }
+        Ok(())
+    }
 }
 
 struct BatchIter {
     path: PathBuf,
     wd_iter: WalkDirIter,
-    batch: Vec<LocalFile>,
+    batch: Vec<DSymRef>,
+    open_zip: Rc<RefCell<Option<zip::ZipArchive<fs::File>>>>,
+    open_zip_index: usize,
 }
 
 impl BatchIter {
@@ -39,35 +68,72 @@ impl BatchIter {
             path: path.as_ref().to_path_buf(),
             wd_iter: WalkDir::new(&path).into_iter(),
             batch: vec![],
+            open_zip: Rc::new(RefCell::new(None)),
+            open_zip_index: 0,
         }
     }
 }
 
 impl Iterator for BatchIter {
-    type Item = Result<Vec<LocalFile>>;
+    type Item = Result<Vec<DSymRef>>;
 
-    fn next(&mut self) -> Option<Result<Vec<LocalFile>>> {
+    fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
+        let mut free_zip = false;
         loop {
-            if let Some(dent_res) = self.wd_iter.next() {
+            if let Some(ref mut archive) = *self.open_zip.borrow_mut() {
+                if self.open_zip_index >= archive.len() {
+                    free_zip = true;
+                } else {
+                    let is_macho = {
+                        let mut f = iter_try!(archive.by_index(self.open_zip_index));
+                        is_macho_file(&mut f)
+                    };
+                    if is_macho {
+                        let mut f = iter_try!(archive.by_index(self.open_zip_index));
+                        let name = Path::new("DebugSymbols").join(f.name());
+                        println!("  {} (from zip)", name.display());
+                        self.batch.push(DSymRef {
+                            var: DSymVar::ZipFile(self.open_zip.clone(), self.open_zip_index),
+                            arc_name: name.to_string_lossy().into_owned(),
+                            checksum: iter_try!(get_sha1_checksum(&mut f)),
+                        });
+                    }
+                    self.open_zip_index += 1;
+                }
+            } else if let Some(dent_res) = self.wd_iter.next() {
                 let dent = iter_try!(dent_res);
                 let md = iter_try!(dent.metadata());
-                if md.is_file() && is_macho_file(dent.path()) {
-                    let name = Path::new("DebugSymbols")
-                        .join(dent.path().strip_prefix(&self.path).unwrap());
-                    println!("  {}", name.display());
-                    self.batch.push(LocalFile {
-                        path: dent.path().to_path_buf(),
-                        arc_name: name.to_string_lossy().into_owned(),
-                        checksum: iter_try!(get_sha1_checksum(dent.path())),
-                    });
-                    if self.batch.len() > BATCH_SIZE {
-                        break;
+                if md.is_file() {
+                    let mut f = iter_try!(fs::File::open(&dent.path()));
+                    if is_macho_file(&mut f) {
+                        let name = Path::new("DebugSymbols")
+                            .join(dent.path().strip_prefix(&self.path).unwrap());
+                        println!("  {}", name.display());
+                        self.batch.push(DSymRef {
+                            var: DSymVar::FsFile(dent.path().to_path_buf()),
+                            arc_name: name.to_string_lossy().into_owned(),
+                            checksum: iter_try!(get_sha1_checksum(
+                                &mut iter_try!(fs::File::open(dent.path())))),
+                        });
+                        if self.batch.len() > BATCH_SIZE {
+                            break;
+                        }
+                    } else if is_zip_file(&mut f) {
+                        let f = iter_try!(fs::File::open(dent.path()));
+                        let archive = iter_try!(zip::ZipArchive::new(f));
+                        *self.open_zip.borrow_mut() = Some(archive);
+                        self.open_zip_index = 0;
                     }
                 }
             } else {
                 break;
             }
         }
+
+        if free_zip {
+            *self.open_zip.borrow_mut() = None;
+        }
+
         if self.batch.len() == 0 {
             None
         } else {
@@ -76,38 +142,41 @@ impl Iterator for BatchIter {
     }
 }
 
-fn find_missing_files(api: &mut Api, files: Vec<LocalFile>, org: &str, project: &str)
-    -> Result<Vec<LocalFile>>
-{
+fn find_missing_files(api: &mut Api,
+                      refs: Vec<DSymRef>,
+                      org: &str,
+                      project: &str)
+                      -> Result<Vec<DSymRef>> {
     let missing = {
-        let checksums : Vec<_> = files.iter().map(|ref x| x.checksum.as_str()).collect();
+        let checksums: Vec<_> = refs.iter().map(|ref x| x.checksum.as_str()).collect();
         api.find_missing_dsym_checksums(org, project, &checksums)?
     };
     let mut rv = vec![];
-    for file in files.into_iter() {
-        if missing.contains(&file.checksum) {
-            rv.push(file)
+    for r in refs.into_iter() {
+        if missing.contains(&r.checksum) {
+            rv.push(r)
         }
     }
     Ok(rv)
 }
 
-fn zip_up(files: &[LocalFile]) -> Result<TempFile> {
+fn zip_up(refs: &[DSymRef]) -> Result<TempFile> {
     println!("  Uploading a batch of missing files ...");
     let tf = TempFile::new()?;
     let mut zip = zip::ZipWriter::new(tf.open());
-    for ref file in files {
-        println!("    {}", file.arc_name);
-        zip.start_file(file.arc_name.clone(),
-            zip::CompressionMethod::Deflated)?;
-        io::copy(&mut File::open(file.path.clone())?, &mut zip)?;
+    for ref r in refs {
+        println!("    {}", r.arc_name);
+        r.add_to_archive(&mut zip)?;
     }
     Ok(tf)
 }
 
-fn upload_dsyms(api: &mut Api, files: &[LocalFile],
-                org: &str, project: &str) -> Result<Vec<DSymFile>> {
-    let tf = zip_up(files)?;
+fn upload_dsyms(api: &mut Api,
+                refs: &[DSymRef],
+                org: &str,
+                project: &str)
+                -> Result<Vec<DSymFile>> {
+    let tf = zip_up(refs)?;
     Ok(api.upload_dsyms(org, project, tf.path())?)
 }
 
@@ -117,7 +186,7 @@ fn get_paths_from_env() -> Result<Vec<PathBuf>> {
         for entry in WalkDir::new(base_path) {
             let entry = entry?;
             if entry.path().extension() == Some(OsStr::new("dSYM")) &&
-                fs::metadata(entry.path())?.is_dir() {
+               fs::metadata(entry.path())?.is_dir() {
                 rv.push(entry.path().to_path_buf());
             }
         }
@@ -125,25 +194,23 @@ fn get_paths_from_env() -> Result<Vec<PathBuf>> {
     Ok(rv)
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("uploads debug symbols to a project")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("uploads debug symbols to a project")
         .arg(Arg::with_name("org")
-             .value_name("ORG")
-             .long("org")
-             .short("o")
-             .help("The organization slug"))
+            .value_name("ORG")
+            .long("org")
+            .short("o")
+            .help("The organization slug"))
         .arg(Arg::with_name("project")
-             .value_name("PROJECT")
-             .long("project")
-             .short("p")
-             .help("The project slug"))
+            .value_name("PROJECT")
+            .long("project")
+            .short("p")
+            .help("The project slug"))
         .arg(Arg::with_name("paths")
-             .value_name("PATH")
-             .help("The path to the debug symbols")
-             .multiple(true)
-             .index(1))
+            .value_name("PATH")
+            .help("The path to the debug symbols")
+            .multiple(true)
+            .index(1))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {

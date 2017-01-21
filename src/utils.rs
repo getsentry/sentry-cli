@@ -5,13 +5,14 @@ use std::mem;
 use std::env;
 use std::time;
 use std::path::{Path, PathBuf};
-use std::io::{Read, Write, Seek};
+use std::io::{Read, Write, Seek, SeekFrom};
 
 use term;
 use log;
 use uuid::Uuid;
 use sha1::Sha1;
 use clap::{App, AppSettings};
+use zip::ZipArchive;
 
 use prelude::*;
 
@@ -84,7 +85,7 @@ impl TempFile {
     /// Opens the tempfile
     pub fn open(&self) -> fs::File {
         let mut f = self.f.as_ref().unwrap().try_clone().unwrap();
-        let _ = f.seek(io::SeekFrom::Start(0));
+        let _ = f.seek(SeekFrom::Start(0));
         f
     }
 
@@ -132,12 +133,11 @@ pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
 }
 
 /// Given a path returns the SHA1 checksum for it.
-pub fn get_sha1_checksum(path: &Path) -> Result<String> {
+pub fn get_sha1_checksum<R: Read>(mut rdr: R) -> Result<String> {
     let mut sha = Sha1::new();
-    let mut f = fs::File::open(path)?;
     let mut buf = [0u8; 16384];
     loop {
-        let read = f.read(&mut buf)?;
+        let read = rdr.read(&mut buf)?;
         if read == 0 {
             break;
         }
@@ -216,4 +216,18 @@ pub fn capitalize_string(s: &str) -> String {
     bytes.make_ascii_lowercase();
     bytes[0] = bytes[0].to_ascii_uppercase();
     String::from_utf8(bytes).unwrap()
+}
+
+/// Checks if a file is a zip file and returns a result
+pub fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<()> {
+    ZipArchive::new(&mut rdr)?;
+    Ok(())
+}
+
+/// Checks if a file is a zip file but only returns a bool
+pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
+    match is_zip_file_as_result(rdr) {
+        Ok(_) => true,
+        Err(_) => false,
+    }
 }
