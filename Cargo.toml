@@ -25,6 +25,7 @@ term = "0.4.4"
 curl = "0.4.0"
 might-be-minified = "0.1.0"
 sourcemap = "0.13.0"
+backtrace = "0.3.0"
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1.14"

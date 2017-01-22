@@ -12,6 +12,7 @@ extern crate chan_signal;
 extern crate curl;
 extern crate clap;
 extern crate ini;
+extern crate backtrace;
 extern crate itertools;
 #[macro_use]
 extern crate serde_derive;
@@ -62,7 +63,43 @@ fn real_main() {
     commands::main();
 }
 
+fn init_backtrace() {
+    use backtrace::Backtrace;
+    use std::panic;
+    use std::thread;
+
+    panic::set_hook(Box::new(|info| {
+        let backtrace = Backtrace::new();
+
+        let thread = thread::current();
+        let thread = thread.name().unwrap_or("unnamed");
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => {
+                match info.payload().downcast_ref::<String>() {
+                    Some(s) => &**s,
+                    None => "Box<Any>",
+                }
+            }
+        };
+
+        match info.location() {
+            Some(location) => {
+                println!("thread '{}' panicked at '{}': {}:{}\n\n{:?}",
+                         thread,
+                         msg,
+                         location.file(),
+                         location.line(),
+                         backtrace);
+            }
+            None => println!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+        }
+    }));
+}
+
 /// Executes the command line application and exits the process.
 pub fn main() {
+    init_backtrace();
     real_main();
 }
