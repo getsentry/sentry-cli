@@ -7,46 +7,42 @@ use config::Config;
 use utils::make_subcommand;
 
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("manage issues in Sentry")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("manage issues in Sentry")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(Arg::with_name("org")
-             .value_name("ORG")
-             .long("org")
-             .short("o")
-             .help("The organization slug"))
+            .value_name("ORG")
+            .long("org")
+            .short("o")
+            .help("The organization slug"))
         .arg(Arg::with_name("project")
-             .value_name("PROJECT")
-             .long("project")
-             .short("p")
-             .help("The project slug"))
+            .value_name("PROJECT")
+            .long("project")
+            .short("p")
+            .help("The project slug"))
         .arg(Arg::with_name("status")
-             .long("status")
-             .short("s")
-             .value_name("STATUS")
-             .possible_values(&["resolved", "muted", "unresolved"])
-             .help("Only changes issues with this status"))
+            .long("status")
+            .short("s")
+            .value_name("STATUS")
+            .possible_values(&["resolved", "muted", "unresolved"])
+            .help("Only changes issues with this status"))
         .arg(Arg::with_name("all")
-             .long("all")
-             .short("a")
-             .help("Selects all issues (this might be limited)"))
+            .long("all")
+            .short("a")
+            .help("Selects all issues (this might be limited)"))
         .arg(Arg::with_name("id")
-             .multiple(true)
-             .short("i")
-             .long("id")
-             .help("Explicit issue IDs to resolve"))
+            .multiple(true)
+            .short("i")
+            .long("id")
+            .help("Explicit issue IDs to resolve"))
         .subcommand(make_subcommand("resolve")
             .about("Bulk resolve all matching issues")
             .arg(Arg::with_name("next_release")
-                 .long("next-release")
-                 .short("n")
-                 .help("Resolve in next release only")))
-        .subcommand(make_subcommand("mute")
-            .about("Bulk mute all matching issues"))
-        .subcommand(make_subcommand("unresolve")
-            .about("Bulk unresolve all matching issues"))
+                .long("next-release")
+                .short("n")
+                .help("Resolve in next release only")))
+        .subcommand(make_subcommand("mute").about("Bulk mute all matching issues"))
+        .subcommand(make_subcommand("unresolve").about("Bulk unresolve all matching issues"))
 }
 
 fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter> {
@@ -70,8 +66,12 @@ fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter> 
     }
 }
 
-fn execute_change(config: &Config, org: &str, project: &str, filter: &IssueFilter,
-                  changes: &IssueChanges) -> Result<()> {
+fn execute_change(config: &Config,
+                  org: &str,
+                  project: &str,
+                  filter: &IssueFilter,
+                  changes: &IssueChanges)
+                  -> Result<()> {
     if Api::new(config).bulk_update_issue(org, project, filter, changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {

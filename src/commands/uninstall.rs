@@ -6,10 +6,8 @@ use clap::{App, ArgMatches};
 use prelude::*;
 use config::Config;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("uninstalls the sentry-cli executable")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("uninstalls the sentry-cli executable")
 }
 
 #[cfg(windows)]
@@ -36,8 +34,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
 
     if !utils::is_writable(&exe) {
         println!("Need to sudo to uninstall {}", exe.display());
-        runas::Command::new("rm")
-            .arg("-f")
+        runas::Command::new("rm").arg("-f")
             .arg(&exe)
             .status()?;
     } else {

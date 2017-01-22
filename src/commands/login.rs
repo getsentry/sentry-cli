@@ -9,10 +9,8 @@ use config::{Config, Auth};
 use utils::{prompt, prompt_to_continue};
 use api::Api;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("helper that assists in signin in with sentry.")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("helper that assists in signin in with sentry.")
 }
 
 fn update_config(config: &Config, token: &str) -> Result<()> {
@@ -22,8 +20,10 @@ fn update_config(config: &Config, token: &str) -> Result<()> {
     new_cfg.ini.set_to(Some("auth"), "token".into(), token.into());
     new_cfg.ini.delete_from(Some("auth"), "api_key");
 
-    let mut file = OpenOptions::new()
-        .write(true).truncate(true).create(true).open(&new_cfg.filename)?;
+    let mut file = OpenOptions::new().write(true)
+        .truncate(true)
+        .create(true)
+        .open(&new_cfg.filename)?;
     new_cfg.ini.write_to(&mut file)?;
 
     Ok(())
@@ -36,8 +36,11 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     println!("If you do not yet have a token ready we can bring up a browser for you");
     println!("to create a token now.");
     println!("");
-    println!("Sentry server: {}", Url::parse(&config.url)?
-             .host_str().unwrap_or("<unknown>"));
+    println!("Sentry server: {}",
+             Url::parse(&config.url)
+                 ?
+                 .host_str()
+                 .unwrap_or("<unknown>"));
 
     if prompt_to_continue("Open browser now?")? {
         if open::that(&token_url).is_err() {
@@ -57,7 +60,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                 // signing in with legacy non user bound api keys here.
                 println!("Valid token for user {}", info.user.unwrap().email);
                 break;
-            },
+            }
             Err(err) => {
                 println!("Invalid token: {}", err);
             }

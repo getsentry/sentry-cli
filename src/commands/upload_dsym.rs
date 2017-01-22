@@ -47,6 +47,8 @@ impl DSymRef {
                 if let Some(ref mut archive) = *opt_archive {
                     let mut af = archive.by_index(idx)?;
                     io::copy(&mut af, &mut zip)?;
+                } else {
+                    panic!("zip file went away");
                 }
             }
         }
@@ -69,7 +71,7 @@ impl BatchIter {
             wd_iter: WalkDir::new(&path).into_iter(),
             batch: vec![],
             open_zip: Rc::new(RefCell::new(None)),
-            open_zip_index: 0,
+            open_zip_index: !0,
         }
     }
 }
@@ -78,11 +80,23 @@ impl Iterator for BatchIter {
     type Item = Result<Vec<DSymRef>>;
 
     fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
-        let mut free_zip = false;
+        println!("  Creating DSym batch");
+        let mut show_zip_continue = true;
         loop {
-            if let Some(ref mut archive) = *self.open_zip.borrow_mut() {
+            if self.open_zip_index == !0 {
+                *self.open_zip.borrow_mut() = None;
+            }
+
+            if self.open_zip_index != !0 {
+                let mut archive_ptr = self.open_zip.borrow_mut();
+                let mut archive = archive_ptr.as_mut().unwrap();
+                if show_zip_continue {
+                    println!("    Continue with zip archive");
+                    show_zip_continue = false;
+                }
                 if self.open_zip_index >= archive.len() {
-                    free_zip = true;
+                    self.open_zip_index = !0;
+                    break;
                 } else {
                     let is_macho = {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
@@ -91,12 +105,15 @@ impl Iterator for BatchIter {
                     if is_macho {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
                         let name = Path::new("DebugSymbols").join(f.name());
-                        println!("  {} (from zip)", name.display());
+                        println!("      {}", name.display());
                         self.batch.push(DSymRef {
                             var: DSymVar::ZipFile(self.open_zip.clone(), self.open_zip_index),
                             arc_name: name.to_string_lossy().into_owned(),
                             checksum: iter_try!(get_sha1_checksum(&mut f)),
                         });
+                        if self.batch.len() > BATCH_SIZE {
+                            break;
+                        }
                     }
                     self.open_zip_index += 1;
                 }
@@ -108,7 +125,7 @@ impl Iterator for BatchIter {
                     if is_macho_file(&mut f) {
                         let name = Path::new("DebugSymbols")
                             .join(dent.path().strip_prefix(&self.path).unwrap());
-                        println!("  {}", name.display());
+                        println!("    {}", name.display());
                         self.batch.push(DSymRef {
                             var: DSymVar::FsFile(dent.path().to_path_buf()),
                             arc_name: name.to_string_lossy().into_owned(),
@@ -119,19 +136,21 @@ impl Iterator for BatchIter {
                             break;
                         }
                     } else if is_zip_file(&mut f) {
+                        println!("    {} (zip archive)", dent.path().display());
+                        show_zip_continue = false;
                         let f = iter_try!(fs::File::open(dent.path()));
-                        let archive = iter_try!(zip::ZipArchive::new(f));
-                        *self.open_zip.borrow_mut() = Some(archive);
+                        *self.open_zip.borrow_mut() = Some(iter_try!(zip::ZipArchive::new(f)));
                         self.open_zip_index = 0;
+                        // whenever we switch the zip we need to yield because we
+                        // might have references to an earlier zip
+                        if self.batch.len() > 0 {
+                            break;
+                        }
                     }
                 }
             } else {
                 break;
             }
-        }
-
-        if free_zip {
-            *self.open_zip.borrow_mut() = None;
         }
 
         if self.batch.len() == 0 {
@@ -229,11 +248,13 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     for path in paths {
         println!("Finding symbols in {}...", path.display());
         for batch_res in BatchIter::new(path) {
+            println!("Detecting dsyms to upload");
             let missing = find_missing_files(&mut api, batch_res?, &org, &project)?;
             if missing.len() == 0 {
+                println!("  No dsyms missing on server");
                 continue;
             }
-            println!("Detected missing files");
+            println!("Detected {} missing dsym(s)", missing.len());
             let rv = upload_dsyms(&mut api, &missing, &org, &project)?;
             if rv.len() > 0 {
                 println!("  Accepted debug symbols:");

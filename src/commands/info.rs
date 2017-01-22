@@ -5,10 +5,8 @@ use prelude::*;
 use api::Api;
 use config::{Auth, Config};
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("print out information about the sentry server")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("print out information about the sentry server")
 }
 
 fn describe_auth(auth: Option<&Auth>) -> &str {
@@ -39,7 +37,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             for scope in info.auth.scopes {
                 println!("    * {}", scope);
             }
-        },
+        }
         Err(err) => {
             println!("  (cannot auth: {})", err);
         }

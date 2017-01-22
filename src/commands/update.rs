@@ -14,8 +14,7 @@ use constants::VERSION;
 
 
 #[cfg(windows)]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
-{
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     // so on windows you can rename a running executable but you cannot delete it.
     // we move the old executable to a temporary location (this most likely only
     // works if they are on the same FS) and then put the new in place.  This
@@ -24,8 +23,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
     let tmp = env::temp_dir().join(".sentry-cli.tmp");
 
     if elevate {
-        runas::Command::new("cmd")
-            .arg("/c")
+        runas::Command::new("cmd").arg("/c")
             .arg("move")
             .arg(&exe)
             .arg(&tmp)
@@ -47,12 +45,10 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
 }
 
 #[cfg(not(windows))]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
-{
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
-        runas::Command::new("mv")
-            .arg(&downloaded_path)
+        runas::Command::new("mv").arg(&downloaded_path)
             .arg(&exe)
             .status()?;
     } else {
@@ -61,14 +57,12 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()>
     Ok(())
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("update the sentry-cli executable")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("update the sentry-cli executable")
         .arg(Arg::with_name("force")
-             .long("force")
-             .short("f")
-             .help("Force the update even if already current."))
+            .long("force")
+            .short("f")
+            .help("Force the update even if already current."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -102,11 +96,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     let mut f = fs::File::create(&tmp_path)?;
     match api.download(&latest_release.download_url, &mut f) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(err) => {
             fs::remove_file(tmp_path).ok();
             fail!(err);
-        },
+        }
     };
 
     utils::set_executable_mode(&tmp_path)?;

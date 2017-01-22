@@ -7,43 +7,41 @@ use config::Config;
 use event::Event;
 use api::Api;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b>
-{
-    app
-        .about("sends an event to Sentry")
+pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.about("sends an event to Sentry")
         .arg(Arg::with_name("level")
-             .value_name("LEVEL")
-             .long("level")
-             .short("l")
-             .help("Set the log level. Defaults to error"))
+            .value_name("LEVEL")
+            .long("level")
+            .short("l")
+            .help("Set the log level. Defaults to error"))
         .arg(Arg::with_name("release")
-             .value_name("RELEASE")
-             .long("release")
-             .short("r")
-             .help("Set the release."))
+            .value_name("RELEASE")
+            .long("release")
+            .short("r")
+            .help("Set the release."))
         .arg(Arg::with_name("message")
-             .value_name("MESSAGE")
-             .long("message")
-             .short("m")
-             .multiple(true)
-             .help("Set the message to log"))
+            .value_name("MESSAGE")
+            .long("message")
+            .short("m")
+            .multiple(true)
+            .help("Set the message to log"))
         .arg(Arg::with_name("platform")
-             .value_name("PLATFORM")
-             .long("platform")
-             .short("p")
-             .help("Overrides the default 'other' platform"))
+            .value_name("PLATFORM")
+            .long("platform")
+            .short("p")
+            .help("Overrides the default 'other' platform"))
         .arg(Arg::with_name("tags")
-             .value_name("TAG")
-             .long("tag")
-             .short("t")
-             .multiple(true)
-             .help("Adds a tag (key:value) to the event."))
+            .value_name("TAG")
+            .long("tag")
+            .short("t")
+            .multiple(true)
+            .help("Adds a tag (key:value) to the event."))
         .arg(Arg::with_name("extra")
-             .value_name("EXTRA")
-             .long("extra")
-             .short("e")
-             .multiple(true)
-             .help("Adds extra information (key:value) to the event."))
+            .value_name("EXTRA")
+            .long("extra")
+            .short("e")
+            .multiple(true)
+            .help("Adds extra information (key:value) to the event."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -78,7 +76,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     match Api::new(config).send_event(&dsn, &event) {
         Ok(event_id) => {
             println!("Event sent: {}", event_id);
-        },
+        }
         Err(err) => {
             println!("error: could not send event: {}", err);
         }
