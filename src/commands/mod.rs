@@ -27,10 +27,16 @@ macro_rules! each_subcommand {
     }
 }
 
-macro_rules! import_subcommand {
-    ($name:ident) => { pub mod $name; }
-}
-each_subcommand!(import_subcommand);
+// it would be great if this could be a macro expansion as well
+// but rust bug #37663 breaks location information then.
+pub mod upload_dsym;
+pub mod releases;
+pub mod issues;
+pub mod update;
+pub mod uninstall;
+pub mod info;
+pub mod login;
+pub mod send_event;
 
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
