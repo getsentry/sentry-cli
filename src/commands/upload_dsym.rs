@@ -96,7 +96,6 @@ impl Iterator for BatchIter {
                 }
                 if self.open_zip_index >= archive.len() {
                     self.open_zip_index = !0;
-                    break;
                 } else {
                     let is_macho = {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
@@ -121,8 +120,7 @@ impl Iterator for BatchIter {
                 let dent = iter_try!(dent_res);
                 let md = iter_try!(dent.metadata());
                 if md.is_file() {
-                    let mut f = iter_try!(fs::File::open(&dent.path()));
-                    if is_macho_file(&mut f) {
+                    if is_macho_file(iter_try!(fs::File::open(&dent.path()))) {
                         let name = Path::new("DebugSymbols")
                             .join(dent.path().strip_prefix(&self.path).unwrap());
                         println!("    {}", name.display());
@@ -135,7 +133,7 @@ impl Iterator for BatchIter {
                         if self.batch.len() > BATCH_SIZE {
                             break;
                         }
-                    } else if is_zip_file(&mut f) {
+                    } else if is_zip_file(iter_try!(fs::File::open(&dent.path()))) {
                         println!("    {} (zip archive)", dent.path().display());
                         show_zip_continue = false;
                         let f = iter_try!(fs::File::open(dent.path()));
