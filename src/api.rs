@@ -395,6 +395,19 @@ impl<'a> Api<'a> {
         self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()
     }
 
+    /// Triggers reprocessing for a project
+    pub fn trigger_reprocessing(&self, org: &str, project: &str) -> ApiResult<bool> {
+        let path = format!("/projects/{}/{}/reprocessing/",
+                           PathArg(org),
+                           PathArg(project));
+        let resp = self.request(Method::Post, &path)?.send()?;
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.to_result().map(|_| true)
+        }
+    }
+
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
     pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
