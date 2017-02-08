@@ -228,6 +228,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("The path to the debug symbols")
             .multiple(true)
             .index(1))
+        .arg(Arg::with_name("no_reprocessing")
+             .long("no-reprocessing")
+             .help("Does not trigger reprocessing after upload"))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -261,6 +264,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                 }
             }
         }
+    }
+
+    // If wanted trigger reprocessing
+    if !matches.is_present("no_reprocessing") {
+        if api.trigger_reprocessing(&org, &project)? {
+            println!("Triggered reprocessing");
+        } else {
+            println!("Server does not support reprocessing. Not triggering.");
+        }
+    } else {
+        println!("Skipped reprocessing.");
     }
 
     Ok(())
