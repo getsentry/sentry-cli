@@ -48,7 +48,6 @@ impl DSymRef {
                     let mut af = archive.by_index(idx)?;
                     io::copy(&mut af, &mut zip)?;
                 } else {
-                    writeln!(&mut io::stderr(), "error: zip file went away").ok();
                     panic!("zip file went away");
                 }
             }
