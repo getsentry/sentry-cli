@@ -96,6 +96,9 @@ impl Iterator for BatchIter {
                 }
                 if self.open_zip_index >= archive.len() {
                     self.open_zip_index = !0;
+                    if self.batch.len() != 0 {
+                        break;
+                    }
                 } else {
                     let is_macho = {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));

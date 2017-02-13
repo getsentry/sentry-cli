@@ -47,6 +47,7 @@ pub mod macho;
 pub mod sourcemaputils;
 pub mod constants;
 
+use std::io::Write;
 
 #[cfg(not(windows))]
 fn real_main() {
@@ -86,14 +87,14 @@ fn init_backtrace() {
 
         match info.location() {
             Some(location) => {
-                println!("thread '{}' panicked at '{}': {}:{}\n\n{:?}",
+                println_stderr!("thread '{}' panicked at '{}': {}:{}\n\n{:?}",
                          thread,
                          msg,
                          location.file(),
                          location.line(),
                          backtrace);
             }
-            None => println!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+            None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
         }
     }));
 }
