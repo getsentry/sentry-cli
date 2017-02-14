@@ -144,7 +144,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 #[cfg(windows)]
 fn path_as_url(path: &Path) -> String {
-    path.display().to_string().replace('\\', '/')
+    path.display().to_string().replace("\\", "/")
 }
 
 #[cfg(not(windows))]
