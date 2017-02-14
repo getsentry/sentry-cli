@@ -142,6 +142,16 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("Add a file extension to the list of files to upload."))))
 }
 
+#[cfg(windows)]
+fn path_as_url(path: &Path) -> String {
+    path.display().to_string().replace('\\', '/')
+}
+
+#[cfg(not(windows))]
+fn path_as_url(path: &Path) -> String {
+    path.display().to_string()
+}
+
 fn execute_new<'a>(matches: &ArgMatches<'a>,
                    config: &Config,
                    org: &str,
@@ -309,7 +319,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
                    dent.path().display(),
                    dent.metadata().unwrap().len());
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
-            let url = format!("{}/{}", url_prefix, local_path.display());
+            let url = format!("{}/{}", url_prefix, path_as_url(local_path));
             processor.add(&url, dent.path())?;
         }
     }
