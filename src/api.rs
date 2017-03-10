@@ -737,7 +737,7 @@ impl Artifact {
 }
 
 /// Information for new releases
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct NewRelease {
     pub version: String,
     #[serde(rename="ref", skip_serializing_if="Option::is_none")]

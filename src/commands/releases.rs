@@ -283,7 +283,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
                                        version: &str)
                                        -> Result<()> {
     let api = Api::new(config);
-    let release = api.get_release(org, project, version)?.ok_or("release not found")?;
+
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();
     let extensions = match matches.values_of("extensions") {
@@ -344,6 +344,11 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
         processor.add_sourcemap_references()?;
     }
 
+    // make sure the release exists
+    let release = api.new_release(&org, &project, &NewRelease {
+        version: version.into(),
+        ..Default::default()
+    })?;
     println!("Uploading sourcemaps for release {}", release.version);
     processor.upload(&api, &org, &project, &release.version)?;
 
