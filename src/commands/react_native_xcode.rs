@@ -135,7 +135,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                                .unwrap().to_string_lossy()), &bundle_path)?;
         processor.add(&format!("~/{}", sourcemap_path.file_name()
                                .unwrap().to_string_lossy()), &sourcemap_path)?;
-        processor.rewrite(&vec!["&"])?;
+        processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
 
         let release = api.new_release(&org, &project, &NewRelease {
