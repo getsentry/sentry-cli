@@ -88,16 +88,23 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         base.join("../node_modules/react-native/packager/react-native-xcode.sh")
     }.canonicalize()?;
 
+    info!("Using react-native build script at {}", base.display());
+
     // in case we are in debug mode we directly dispatch to the script
     // and exit out early.
     if !should_wrap {
+        info!("Running in debug mode, skipping script wrapping.");
         let rv = process::Command::new(&script).spawn()?.wait()?;
         propagate_exit_status(rv);
         return Ok(());
     }
 
+    info!("Parsing Info.plist");
     let plist = load_info_plist(&base)?;
+    info!("Parse result from Info.plist: {:?}", &plist);
     let report_file = TempFile::new()?;
+    let node = find_node();
+    info!("Using node interpreter '{}'", &node);
 
     // this invokes via an indirection of sentry-cli our wrap_call() below.
     // What is happening behind the scenes is that we switch out NODE_BINARY
@@ -114,7 +121,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     // upload process.
     let rv = process::Command::new(&script)
         .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
-        .env("SENTRY_RN_REAL_NODE_BINARY", &find_node())
+        .env("SENTRY_RN_REAL_NODE_BINARY", &node)
         .env("SENTRY_RN_SOURCEMAP_REPORT", report_file.path().to_str().unwrap())
         .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
         .spawn()?
@@ -128,7 +135,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if report.bundle_path.is_some() && report.sourcemap_path.is_some() {
         println!("Processing react-native sourcemaps for Sentry upload.");
         let bundle_path = report.bundle_path.unwrap();
+        info!("  bundle path: {}", bundle_path.display());
         let sourcemap_path = report.sourcemap_path.unwrap();
+        info!("  sourcemap path: {}", sourcemap_path.display());
 
         let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
         processor.add(&format!("~/{}", bundle_path.file_name()
