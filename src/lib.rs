@@ -28,6 +28,7 @@ extern crate sourcemap;
 extern crate open;
 extern crate runas;
 extern crate term;
+extern crate plist;
 extern crate might_be_minified;
 #[macro_use]
 extern crate error_chain;
@@ -44,6 +45,7 @@ pub mod errors;
 pub mod config;
 pub mod utils;
 pub mod macho;
+pub mod xcode;
 pub mod sourcemaputils;
 pub mod constants;
 
