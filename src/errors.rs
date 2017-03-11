@@ -7,6 +7,7 @@ use serde_json;
 use url;
 use walkdir;
 use zip;
+use plist;
 use sourcemap;
 
 use api;
@@ -22,6 +23,7 @@ error_chain! {
         ini::Error, IniError;
         sourcemap::Error, SourceMapError;
         clap::Error, ClapError;
+        plist::Error, PListError;
 
         api::Error, ApiError;
     }

@@ -4,6 +4,7 @@ use std::fs;
 use std::mem;
 use std::env;
 use std::time;
+use std::process;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek, SeekFrom};
 
@@ -229,5 +230,16 @@ pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
     match is_zip_file_as_result(rdr) {
         Ok(_) => true,
         Err(_) => false,
+    }
+}
+
+/// Propagate an exit status outwarts
+pub fn propagate_exit_status(status: process::ExitStatus) {
+    if !status.success() {
+        if let Some(code) = status.code() {
+            process::exit(code);
+        } else {
+            process::exit(1);
+        }
     }
 }

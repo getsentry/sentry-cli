@@ -24,6 +24,7 @@ macro_rules! each_subcommand {
         $mac!(info);
         $mac!(login);
         $mac!(send_event);
+        $mac!(react_native_xcode);
     }
 }
 
@@ -37,10 +38,20 @@ pub mod uninstall;
 pub mod info;
 pub mod login;
 pub mod send_event;
+pub mod react_native_xcode;
 
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
 pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
+    // special case for the xcode integration for react native.  For more
+    // information see commands/react_native_xcode.rs
+    if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
+        env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
+        if &val == "1" {
+            return react_native_xcode::wrap_call();
+        }
+    }
+
     let mut app = App::new("sentry-cli")
         .version(VERSION)
         .about("Command line utility for Sentry")
