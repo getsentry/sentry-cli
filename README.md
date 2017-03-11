@@ -15,11 +15,10 @@ Documentation [can be found here](https://docs.sentry.io/hosted/learn/cli/)
 ## Compiling
 
 In case you want to compile this yourself you need to build this with Rust
-1.15.  If it's not stable yet, anything after beta 3 will work.
+1.15 or later.
 
 Use rustup to compile:
 
-    $ rustup override set beta
     $ cargo build
 
 In case you get OpenSSL errors you need to compile with the path to the
