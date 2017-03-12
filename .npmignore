@@ -1,0 +1,11 @@
+# .npmignore
+
+# ignore all
+*
+
+# unignore desired files
+!package.json
+!README.md
+!License
+!bin/
+!bin/*
