@@ -13,6 +13,13 @@ use constants::VERSION;
 use utils::{make_subcommand, Logger};
 use config::{Config, Auth};
 
+const ABOUT: &'static str = "
+Command line utility for Sentry.
+
+This tool helps you managing remote resources on a Sentry server like
+sourcemaps, debug symbols, releases or similar.  Use `--help` on the
+subcommands to learn more about them.";
+
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -54,14 +61,15 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 
     let mut app = App::new("sentry-cli")
         .version(VERSION)
-        .about("Command line utility for Sentry")
+        .about(ABOUT)
+        .max_term_width(100)
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(Arg::with_name("url")
             .value_name("URL")
             .long("url")
-            .help("The sentry API URL"))
+            .help("The sentry API URL{n}defaults to https://sentry.io/"))
         .arg(Arg::with_name("auth_token")
             .value_name("AUTH_TOKEN")
             .long("auth-token")
@@ -73,7 +81,8 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
         .arg(Arg::with_name("log_level")
             .value_name("LOG_LEVEL")
             .long("log-level")
-            .help("The log level for the sentrycli"));
+            .help("The log level for sentry-cli{n}\
+                   (valid levels: TRACE, DEBUG, INFO, WARN, ERROR)"));
 
     macro_rules! add_subcommand {
         ($name:ident) => {{

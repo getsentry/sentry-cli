@@ -129,6 +129,7 @@ pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
 /// Helper function to create a clap app for subcommands
 pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
     App::new(name)
+        .max_term_width(100)
         .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::DisableVersion)
 }
