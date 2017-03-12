@@ -10,7 +10,7 @@ use std::io::{Read, Write, Seek, SeekFrom};
 
 use term;
 use log;
-use uuid::Uuid;
+use uuid::{Uuid, UuidVersion};
 use sha1::Sha1;
 use clap::{App, AppSettings};
 use zip::ZipArchive;
@@ -70,7 +70,7 @@ impl TempFile {
     /// Creates a new tempfile.
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
-        path.push(Uuid::new_v4().to_hyphenated_string());
+        path.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
         let f = fs::OpenOptions::new()
             .read(true)
             .write(true)

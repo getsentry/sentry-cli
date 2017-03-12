@@ -36,7 +36,7 @@ struct DSymRef {
 
 impl DSymRef {
     pub fn add_to_archive<W: Write + Seek>(&self, mut zip: &mut zip::ZipWriter<W>) -> Result<()> {
-        zip.start_file(self.arc_name.clone(), zip::CompressionMethod::Deflated)?;
+        zip.start_file(self.arc_name.clone(), zip::write::FileOptions::default())?;
         match self.var {
             DSymVar::FsFile(ref p) => {
                 io::copy(&mut File::open(&p)?, &mut zip)?;
