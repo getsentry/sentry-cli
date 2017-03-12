@@ -14,17 +14,16 @@ use api;
 
 error_chain! {
     foreign_links {
-        io::Error, IoError;
-        zip::result::ZipError, ZipError;
-        walkdir::Error, WalkDirError;
-        url::ParseError, UrlError;
-        serde_json::Error, JsonError;
-        string::FromUtf8Error, FromUtf8Error;
-        ini::Error, IniError;
-        sourcemap::Error, SourceMapError;
-        clap::Error, ClapError;
-        plist::Error, PListError;
-
-        api::Error, ApiError;
+        Io(io::Error);
+        Zip(zip::result::ZipError);
+        WalkDir(walkdir::Error);
+        UrlParse(url::ParseError);
+        Json(serde_json::Error);
+        FromUtf8(string::FromUtf8Error);
+        Ini(ini::Error);
+        SourceMap(sourcemap::Error);
+        Clap(clap::Error);
+        PList(plist::Error);
+        Api(api::Error);
     }
 }

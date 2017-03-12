@@ -6,7 +6,7 @@ build = "build.rs"
 
 [dependencies]
 clap = { version = "2.9.2", default-features = false, features = ["suggestions", "wrap_help"] }
-error-chain = "0.4"
+error-chain = "0.10.0"
 serde = "0.9"
 serde_json = "0.9"
 serde_derive = "0.9"

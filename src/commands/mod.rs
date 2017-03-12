@@ -132,7 +132,7 @@ pub fn main() {
     match run() {
         Ok(()) => process::exit(0),
         Err(err) => {
-            if let &ErrorKind::ClapError(ref clap_err) = err.kind() {
+            if let &ErrorKind::Clap(ref clap_err) = err.kind() {
                 clap_err.exit();
             }
 
