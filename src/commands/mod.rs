@@ -50,17 +50,34 @@ pub mod send_event;
 #[cfg(target_os="macos")]
 pub mod react_native_xcode;
 
+fn preexecute_hooks() -> Result<()> {
+    sentry_react_native_xcode_wrap()?;
+
+    return Ok(());
+
+    #[cfg(target_os="macos")]
+    fn sentry_react_native_xcode_wrap() -> Result<()> {
+        if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
+            env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
+            if &val == "1" {
+                return react_native_xcode::wrap_call();
+            }
+        }
+        Ok(())
+    }
+
+    #[cfg(not(target_os="macos"))]
+    fn sentry_react_native_xcode_wrap() -> Result<()> {
+        Ok(())
+    }
+}
+
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
 pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     // special case for the xcode integration for react native.  For more
     // information see commands/react_native_xcode.rs
-    if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
-        env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
-        if &val == "1" {
-            return react_native_xcode::wrap_call();
-        }
-    }
+    preexecute_hooks()?;
 
     let mut app = App::new("sentry-cli")
         .version(VERSION)
