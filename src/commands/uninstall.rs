@@ -1,14 +1,29 @@
 //! Implements a command for uninstalling `sentry-cli`
 use std::env;
 
-use clap::{App, ArgMatches};
+use clap::{App, ArgMatches, AppSettings};
 
 use prelude::*;
 use config::Config;
 use utils::is_homebrew_install;
 
+#[cfg(windows)]
+fn is_hidden() -> bool {
+    true
+}
+
+#[cfg(not(windows))]
+fn is_hidden() -> bool {
+    is_homebrew_install()
+}
+
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uninstalls the sentry-cli executable")
+        .settings(&if is_hidden() {
+            vec![AppSettings::Hidden]
+        } else {
+            vec![]
+        })
 }
 
 #[cfg(windows)]

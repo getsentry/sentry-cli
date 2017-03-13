@@ -3,7 +3,7 @@ use std::fs;
 use std::env;
 use std::path::Path;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, Arg, ArgMatches, AppSettings};
 use runas;
 
 use prelude::*;
@@ -12,7 +12,6 @@ use utils;
 use config::Config;
 use constants::VERSION;
 use utils::is_homebrew_install;
-
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
@@ -60,6 +59,11 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("update the sentry-cli executable")
+        .settings(&if is_homebrew_install() {
+            vec![AppSettings::Hidden]
+        } else {
+            vec![]
+        })
         .arg(Arg::with_name("force")
             .long("force")
             .short("f")
