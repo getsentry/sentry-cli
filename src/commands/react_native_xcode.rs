@@ -44,7 +44,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("build_script")
              .value_name("BUILD_SCRIPT")
              .index(1)
-             .help("Optional path to the build script"))
+             .help("Optional path to the build script{n}{n}\
+                    This is the path to the react-native-xcode.sh script you want \
+                    to use.  By default the bundled build script is used.")
 }
 
 fn load_info_plist<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
@@ -74,16 +76,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::new(config);
     let should_wrap = matches.is_present("force") || match env::var("CONFIGURATION") {
-        Ok(config) => {
-            if &config == "Debug" {
-                false
-            } else {
-                true
-            }
-        }
-        Err(_) => {
-            return Err("Need to run this from Xcode".into());
-        }
+        Ok(config) => &config != "Debug",
+        Err(_) => { return Err("Need to run this from Xcode".into()); }
     };
     let base = env::current_dir()?;
     let script = if let Some(path) = matches.value_of("build_script") {
