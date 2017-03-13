@@ -4,7 +4,6 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use prelude::*;
 use api::{Api, IssueFilter, IssueChanges};
 use config::Config;
-use utils::make_subcommand;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -35,14 +34,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .short("i")
             .long("id")
             .help("Explicit issue IDs to resolve"))
-        .subcommand(make_subcommand("resolve")
+        .subcommand(App::new("resolve")
             .about("Bulk resolve all matching issues")
             .arg(Arg::with_name("next_release")
                 .long("next-release")
                 .short("n")
                 .help("Resolve in next release only")))
-        .subcommand(make_subcommand("mute").about("Bulk mute all matching issues"))
-        .subcommand(make_subcommand("unresolve").about("Bulk unresolve all matching issues"))
+        .subcommand(App::new("mute").about("Bulk mute all matching issues"))
+        .subcommand(App::new("unresolve").about("Bulk unresolve all matching issues"))
 }
 
 fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter> {

@@ -10,7 +10,7 @@ use clap::{Arg, App, AppSettings};
 
 use prelude::*;
 use constants::VERSION;
-use utils::{make_subcommand, Logger};
+use utils::Logger;
 use config::{Config, Auth};
 
 const ABOUT: &'static str = "
@@ -84,8 +84,8 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
         .about(ABOUT)
         .max_term_width(100)
         .setting(AppSettings::VersionlessSubcommands)
-        .setting(AppSettings::UnifiedHelpMessage)
         .setting(AppSettings::SubcommandRequiredElseHelp)
+        .global_setting(AppSettings::UnifiedHelpMessage)
         .arg(Arg::with_name("url")
             .value_name("URL")
             .long("url")
@@ -107,7 +107,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     macro_rules! add_subcommand {
         ($name:ident) => {{
             app = app.subcommand($name::make_app(
-                make_subcommand(&stringify!($name).replace("_", "-"))));
+                App::new(stringify!($name).replace("_", "-").as_str())));
         }}
     }
     each_subcommand!(add_subcommand);

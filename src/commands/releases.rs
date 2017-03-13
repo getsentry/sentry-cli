@@ -9,7 +9,6 @@ use walkdir::WalkDir;
 use prelude::*;
 use api::{Api, NewRelease, FileContents};
 use config::Config;
-use utils::make_subcommand;
 use sourcemaputils::SourceMapProcessor;
 
 
@@ -26,7 +25,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("project")
             .short("p")
             .help("The project slug"))
-        .subcommand(make_subcommand("new")
+        .subcommand(App::new("new")
             .about("Create a new release")
             .arg(Arg::with_name("version")
                 .value_name("VERSION")
@@ -41,15 +40,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .long("url")
                 .value_name("URL")
                 .help("Optional URL to the release for information purposes")))
-        .subcommand(make_subcommand("delete")
+        .subcommand(App::new("delete")
             .about("Delete a release")
             .arg(Arg::with_name("version")
                 .value_name("VERSION")
                 .required(true)
                 .index(1)
                 .help("The version to delete")))
-        .subcommand(make_subcommand("list").about("list the most recent releases"))
-        .subcommand(make_subcommand("files")
+        .subcommand(App::new("list").about("list the most recent releases"))
+        .subcommand(App::new("files")
             .about("manage release artifact files")
             .setting(AppSettings::SubcommandRequiredElseHelp)
             .arg(Arg::with_name("version")
@@ -57,8 +56,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .required(true)
                 .index(1)
                 .help("The release to manage the files of"))
-            .subcommand(make_subcommand("list").about("List all release files"))
-            .subcommand(make_subcommand("delete")
+            .subcommand(App::new("list").about("List all release files"))
+            .subcommand(App::new("delete")
                 .about("Delete a release file")
                 .arg(Arg::with_name("all")
                     .short("A")
@@ -69,7 +68,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .index(1)
                     .multiple(true)
                     .help("a list of filenames to delete.")))
-            .subcommand(make_subcommand("upload")
+            .subcommand(App::new("upload")
                 .about("Uploads a file for a given release")
                 .arg(Arg::with_name("headers")
                     .long("header")
@@ -87,7 +86,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .index(2)
                     .value_name("NAME")
                     .help("The name of the file on the server.")))
-            .subcommand(make_subcommand("upload-sourcemaps")
+            .subcommand(App::new("upload-sourcemaps")
                 .about("Uploads sourcemap information for a given release")
                 .arg(Arg::with_name("paths")
                     .value_name("PATHS")

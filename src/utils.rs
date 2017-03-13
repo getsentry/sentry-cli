@@ -126,14 +126,6 @@ pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
     rv
 }
 
-/// Helper function to create a clap app for subcommands
-pub fn make_subcommand<'a, 'b: 'a>(name: &str) -> App<'a, 'b> {
-    App::new(name)
-        .max_term_width(100)
-        .setting(AppSettings::UnifiedHelpMessage)
-        .setting(AppSettings::DisableVersion)
-}
-
 /// Given a path returns the SHA1 checksum for it.
 pub fn get_sha1_checksum<R: Read>(mut rdr: R) -> Result<String> {
     let mut sha = Sha1::new();
