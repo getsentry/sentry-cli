@@ -244,3 +244,15 @@ pub fn propagate_exit_status(status: process::ExitStatus) {
         }
     }
 }
+
+/// Checks if we were installed from homebrew
+pub fn is_homebrew_install_result() -> Result<bool> {
+    let mut exe = env::current_exe()?.canonicalize()?;
+    exe.pop();
+    exe.push("INSTALL_RECEIPT.json");
+    Ok(exe.is_file())
+}
+
+pub fn is_homebrew_install() -> bool {
+    is_homebrew_install_result().unwrap_or(false)
+}

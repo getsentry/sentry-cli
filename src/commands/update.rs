@@ -11,6 +11,7 @@ use api::Api;
 use utils;
 use config::Config;
 use constants::VERSION;
+use utils::is_homebrew_install;
 
 
 #[cfg(windows)]
@@ -69,6 +70,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let api = Api::new(config);
     let exe = env::current_exe()?;
     let elevate = !utils::is_writable(&exe);
+
+    if is_homebrew_install() {
+        println!("This installation of sentry-cli is managed through homebrew");
+        println!("Please use homebrew to update sentry-cli");
+        return Ok(())
+    }
 
     info!("expecting elevation for update: {}", elevate);
 

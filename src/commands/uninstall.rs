@@ -5,6 +5,7 @@ use clap::{App, ArgMatches};
 
 use prelude::*;
 use config::Config;
+use utils::is_homebrew_install;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uninstalls the sentry-cli executable")
@@ -24,6 +25,12 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     use std::fs;
     use runas;
     use utils;
+
+    if is_homebrew_install() {
+        println!("This installation of sentry-cli is managed through homebrew");
+        println!("Please use homebrew to uninstall sentry-cli");
+        return Ok(())
+    }
 
     let exe = env::current_exe()?;
 
