@@ -31,6 +31,7 @@ macro_rules! each_subcommand {
         $mac!(info);
         $mac!(login);
         $mac!(send_event);
+        #[cfg(target_os="macos")]
         $mac!(react_native_xcode);
     }
 }
@@ -45,6 +46,8 @@ pub mod uninstall;
 pub mod info;
 pub mod login;
 pub mod send_event;
+
+#[cfg(target_os="macos")]
 pub mod react_native_xcode;
 
 /// Given an argument vector and a `Config` this executes the
