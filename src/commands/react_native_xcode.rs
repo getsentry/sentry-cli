@@ -37,6 +37,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("verbose")
             .short("verbose")
             .help("Enable verbose mode"))
+        .arg(Arg::with_name("force")
+             .long("force")
+             .short("f")
+             .help("Forces the script to run, even in Debug configuration"))
         .arg(Arg::with_name("build_script")
              .value_name("BUILD_SCRIPT")
              .index(1)
@@ -69,7 +73,7 @@ fn find_node() -> String {
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::new(config);
-    let should_wrap = match env::var("CONFIGURATION") {
+    let should_wrap = matches.is_present("force") || match env::var("CONFIGURATION") {
         Ok(config) => {
             if &config == "Debug" {
                 false
