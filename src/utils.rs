@@ -253,6 +253,7 @@ pub fn is_homebrew_install_result() -> Result<bool> {
     Ok(exe.is_file())
 }
 
+/// Checks if we were installed from homebrew
 pub fn is_homebrew_install() -> bool {
     is_homebrew_install_result().unwrap_or(false)
 }
