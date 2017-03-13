@@ -46,7 +46,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .index(1)
              .help("Optional path to the build script{n}{n}\
                     This is the path to the react-native-xcode.sh script you want \
-                    to use.  By default the bundled build script is used.")
+                    to use.  By default the bundled build script is used."))
 }
 
 fn load_info_plist<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
