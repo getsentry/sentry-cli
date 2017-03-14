@@ -41,7 +41,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("force")
              .long("force")
              .short("f")
-             .help("Forces the script to run, even in Debug configuration"))
+             .help("Forces the script to run, even in Debug configuration.  This rarely \
+                    does what you want because the default build script does not actually \
+                    produce any information that the sentry build tool could pick up on."))
         .arg(Arg::with_name("allow_fetch")
              .long("allow-fetch")
              .help("Enable sourcemap fetching from the packager.  If this is enabled \
