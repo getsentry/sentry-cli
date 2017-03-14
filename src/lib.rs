@@ -36,6 +36,7 @@ extern crate error_chain;
 extern crate log;
 #[macro_use]
 extern crate if_chain;
+extern crate chrono;
 
 mod macros;
 

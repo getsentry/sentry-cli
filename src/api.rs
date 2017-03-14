@@ -8,6 +8,7 @@ use std::fs;
 use std::io::{Read, Write};
 use std::fmt;
 use std::error;
+use std::thread;
 use std::cell::{RefMut, RefCell};
 use std::path::Path;
 use std::ascii::AsciiExt;
@@ -18,6 +19,7 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
+use chrono::{Duration, UTC};
 
 use utils;
 use event::Event;
@@ -75,6 +77,7 @@ pub type ApiResult<T> = Result<T, Error>;
 #[derive(PartialEq, Debug)]
 pub enum Method {
     Get,
+    Head,
     Post,
     Put,
     Delete,
@@ -84,6 +87,7 @@ impl fmt::Display for Method {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Method::Get => write!(f, "GET"),
+            Method::Head => write!(f, "HEAD"),
             Method::Post => write!(f, "POST"),
             Method::Put => write!(f, "PUT"),
             Method::Delete => write!(f, "DELETE"),
@@ -175,6 +179,27 @@ impl<'a> Api<'a> {
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
         self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)
+    }
+
+    /// Convenience method that waits for a few seconds until a resource
+    /// becomes available.
+    pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
+        let started = UTC::now();
+        loop {
+            match self.request(Method::Get, &url)?.send() {
+                Ok(_) => { return Ok(true); }
+                Err(err) => {
+                    match err {
+                        Error::Http(..) | Error::Curl(..) => {}
+                        err => { return Err(err); }
+                    }
+                }
+            }
+            thread::sleep(Duration::milliseconds(500).to_std().unwrap());
+            if UTC::now() - started > duration {
+                return Ok(false);
+            }
+        }
     }
 
     // High Level Methods
@@ -494,6 +519,11 @@ impl<'a> ApiRequest<'a> {
 
         match method {
             Method::Get => handle.get(true)?,
+            Method::Head => {
+                handle.get(true)?;
+                handle.custom_request("HEAD")?;
+                handle.nobody(true)?;
+            },
             Method::Post => handle.custom_request("POST")?,
             Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,

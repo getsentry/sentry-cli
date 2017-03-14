@@ -7,6 +7,7 @@ use std::process;
 use clap::{App, Arg, ArgMatches};
 use walkdir::WalkDir;
 use serde_json;
+use chrono::Duration;
 
 use prelude::*;
 use api::{Api, NewRelease};
@@ -148,6 +149,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         sourcemap_file = TempFile::new()?;
         sourcemap_path = sourcemap_file.path().to_path_buf();
         sourcemap_url = "~/index.ios.map".to_string();
+
+        // wait up to 10 seconds for the server to be up.
+        if !api.wait_until_available(url, Duration::seconds(10))? {
+            return Err("Error: react-native packager did not respond in time".into());
+        }
 
         api.download(&format!("{}/index.ios.bundle?platform=ios&dev=true", url),
                      &mut bundle_file.open())?;
