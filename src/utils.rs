@@ -12,7 +12,6 @@ use term;
 use log;
 use uuid::{Uuid, UuidVersion};
 use sha1::Sha1;
-use clap::{App, AppSettings};
 use zip::ZipArchive;
 
 use prelude::*;

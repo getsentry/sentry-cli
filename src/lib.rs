@@ -34,6 +34,8 @@ extern crate might_be_minified;
 extern crate error_chain;
 #[macro_use]
 extern crate log;
+#[macro_use]
+extern crate if_chain;
 
 mod macros;
 

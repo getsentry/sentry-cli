@@ -41,6 +41,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .long("force")
              .short("f")
              .help("Forces the script to run, even in Debug configuration"))
+        .arg(Arg::with_name("allow_fetch")
+             .long("allow-fetch")
+             .help("Enable sourcemap fetching from the packager.  If this is enabled \
+                    the react native packager needs to run and sourcemaps are downloade \
+                    from it if the simulator platform is detected."))
+        .arg(Arg::with_name("fetch_from")
+             .long("fetch-from")
+             .value_name("URL")
+             .help("When fetching is enabled this is the URL where fetches can be made \
+                    from.  The default is http://127.0.0.1:8081/ where the react-native \
+                    packager runs by default."))
         .arg(Arg::with_name("build_script")
              .value_name("BUILD_SCRIPT")
              .index(1)
@@ -86,11 +97,26 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         base.join("../node_modules/react-native/packager/react-native-xcode.sh")
     }.canonicalize()?;
 
-    info!("Using react-native build script at {}", base.display());
+    // if we allow fetching and we detect a simulator run, then we need to switch
+    // to simulator mode.
+    let fetch_url;
+    if_chain! {
+        if matches.is_present("allow_fetch");
+        if let Ok(val) = env::var("PLATFORM_NAME");
+        if val.ends_with("simulator");
+        then {
+            let url = matches.value_of("fetch_from").unwrap_or("http://127.0.0.1:8081/");
+            info!("Fetching sourcemaps from {}", url);
+            fetch_url = Some(url);
+        } else {
+            info!("Using react-native build script at {}", base.display());
+            fetch_url = None;
+        }
+    }
 
     // in case we are in debug mode we directly dispatch to the script
     // and exit out early.
-    if !should_wrap {
+    if !should_wrap && fetch_url.is_none() {
         info!("Running in debug mode, skipping script wrapping.");
         let rv = process::Command::new(&script).spawn()?.wait()?;
         propagate_exit_status(rv);
@@ -104,6 +130,33 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
 
+    let bundle_path;
+    let sourcemap_path;
+    let bundle_url;
+    let sourcemap_url;
+    let bundle_file;
+    let sourcemap_file;
+
+    // If we have a fetch URL we need to fetch them from there now.  In that
+    // case we do indeed fetch it right from the running packager and then
+    // store it in temporary files for later consumption.
+    if let Some(url) = fetch_url {
+        let url = url.trim_right_matches('/');
+        bundle_file = TempFile::new()?;
+        bundle_path = bundle_file.path().to_path_buf();
+        bundle_url = "~/index.ios.bundle".to_string();
+        sourcemap_file = TempFile::new()?;
+        sourcemap_path = sourcemap_file.path().to_path_buf();
+        sourcemap_url = "~/index.ios.map".to_string();
+
+        api.download(&format!("{}/index.ios.bundle?platform=ios&dev=true", url),
+                     &mut bundle_file.open())?;
+        api.download(&format!("{}/index.ios.map?platform=ios&dev=true", url),
+                     &mut sourcemap_file.open())?;
+
+    // This is the case where we need to hook into the release process to
+    // collect sourcemaps when they are generated.
+    // 
     // this invokes via an indirection of sentry-cli our wrap_call() below.
     // What is happening behind the scenes is that we switch out NODE_BINARY
     // for ourselves which is what the react-native build script normally
@@ -117,41 +170,48 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     //
     // With that we we then have all the information we need to invoke the
     // upload process.
-    let rv = process::Command::new(&script)
-        .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
-        .env("SENTRY_RN_REAL_NODE_BINARY", &node)
-        .env("SENTRY_RN_SOURCEMAP_REPORT", report_file.path().to_str().unwrap())
-        .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
-        .spawn()?
-        .wait()?;
-    propagate_exit_status(rv);
+    } else {
+        let rv = process::Command::new(&script)
+            .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
+            .env("SENTRY_RN_REAL_NODE_BINARY", &node)
+            .env("SENTRY_RN_SOURCEMAP_REPORT", report_file.path().to_str().unwrap())
+            .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
+            .spawn()?
+            .wait()?;
+        propagate_exit_status(rv);
+        let mut f = fs::File::open(report_file.path())?;
+        let report : SourceMapReport = serde_json::from_reader(&mut f)?;
+        if report.bundle_path.is_none() || report.sourcemap_path.is_none() {
+            println!("Warning: build produced no sourcemaps.");
+            return Ok(());
+        }
 
-    let mut f = fs::File::open(report_file.path())?;
-    let report : SourceMapReport = serde_json::from_reader(&mut f)?;
-
-    // if the report is complete, we can now upload sourcemaps
-    if report.bundle_path.is_some() && report.sourcemap_path.is_some() {
-        println!("Processing react-native sourcemaps for Sentry upload.");
-        let bundle_path = report.bundle_path.unwrap();
-        info!("  bundle path: {}", bundle_path.display());
-        let sourcemap_path = report.sourcemap_path.unwrap();
-        info!("  sourcemap path: {}", sourcemap_path.display());
-
-        let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
-        processor.add(&format!("~/{}", bundle_path.file_name()
-                               .unwrap().to_string_lossy()), &bundle_path)?;
-        processor.add(&format!("~/{}", sourcemap_path.file_name()
-                               .unwrap().to_string_lossy()), &sourcemap_path)?;
-        processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
-        processor.add_sourcemap_references()?;
-
-        let release = api.new_release(&org, &project, &NewRelease {
-            version: plist.release_name(),
-            ..Default::default()
-        })?;
-        println!("Uploading sourcemaps for release {}", release.version);
-        processor.upload(&api, &org, &project, &release.version)?;
+        bundle_path = report.bundle_path.unwrap();
+        bundle_url = format!("~/{}", bundle_path.file_name()
+                             .unwrap().to_string_lossy());
+        sourcemap_path = report.sourcemap_path.unwrap();
+        sourcemap_url = format!("~/{}", sourcemap_path.file_name()
+                                .unwrap().to_string_lossy());
     }
+
+    // now that we have all the data, we can now process and upload the
+    // sourcemaps.
+    println!("Processing react-native sourcemaps for Sentry upload.");
+    info!("  bundle path: {}", bundle_path.display());
+    info!("  sourcemap path: {}", sourcemap_path.display());
+
+    let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
+    processor.add(&bundle_url, &bundle_path)?;
+    processor.add(&sourcemap_url, &sourcemap_path)?;
+    processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
+    processor.add_sourcemap_references()?;
+
+    let release = api.new_release(&org, &project, &NewRelease {
+        version: plist.release_name(),
+        ..Default::default()
+    })?;
+    println!("Uploading sourcemaps for release {}", release.version);
+    processor.upload(&api, &org, &project, &release.version)?;
 
     Ok(())
 }

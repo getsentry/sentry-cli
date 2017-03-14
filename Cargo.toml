@@ -24,9 +24,10 @@ log = "0.3"
 term = "0.4"
 curl = "0.4"
 might-be-minified = "0.1"
-sourcemap = "0.15"
+sourcemap = "0.15.1"
 backtrace = "0.3.0"
 plist = "0.1.2"
+if_chain = "^0.1.2"
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1"
