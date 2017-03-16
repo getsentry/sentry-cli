@@ -19,7 +19,7 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
-use chrono::{Duration, UTC};
+use chrono::{Duration, DateTime, UTC};
 
 use utils;
 use event::Event;
@@ -196,7 +196,7 @@ impl<'a> Api<'a> {
                 }
             }
             thread::sleep(Duration::milliseconds(500).to_std().unwrap());
-            if UTC::now() - started > duration {
+            if UTC::now() - duration > started {
                 return Ok(false);
             }
         }
@@ -296,6 +296,18 @@ impl<'a> Api<'a> {
                        -> ApiResult<ReleaseInfo> {
         self.post(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)),
                   release)?
+            .convert()
+    }
+
+    /// Updates a release.
+    pub fn update_release(&self,
+                          org: &str,
+                          project: &str,
+                          version: &str,
+                          release: &UpdatedRelease)
+                          -> ApiResult<ReleaseInfo> {
+        self.put(&format!("/projects/{}/{}/releases/{}/", PathArg(org), PathArg(project),
+                          PathArg(version)), release)?
             .convert()
     }
 
@@ -774,6 +786,21 @@ pub struct NewRelease {
     pub reference: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
+    #[serde(rename="dateReleased")]
+    pub date_released: Option<DateTime<UTC>>,
+}
+
+/// Changes to a release
+#[derive(Debug, Serialize, Default)]
+pub struct UpdatedRelease {
+    #[serde(rename="ref", skip_serializing_if="Option::is_none")]
+    pub reference: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub url: Option<String>,
+    #[serde(rename="dateStarted")]
+    pub date_started: Option<DateTime<UTC>>,
+    #[serde(rename="dateReleased")]
+    pub date_released: Option<DateTime<UTC>>,
 }
 
 /// Provides all release information from already existing releases

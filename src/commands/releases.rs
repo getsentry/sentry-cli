@@ -5,9 +5,10 @@ use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
+use chrono::{DateTime, UTC};
 
 use prelude::*;
-use api::{Api, NewRelease, FileContents};
+use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
 
@@ -47,6 +48,20 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .required(true)
                 .index(1)
                 .help("The version to delete")))
+        .subcommand(App::new("finalize")
+            .about("Marks a release as finalized and released.")
+            .arg(Arg::with_name("version")
+                .value_name("VERSION")
+                .required(true)
+                .index(1)
+                .help("The version to set to released"))
+            .arg(Arg::with_name("started")
+                 .long("started")
+                 .value_name("DATE")
+                 .help("If set the release start date is set to this value."))
+            .arg(Arg::with_name("released")
+                 .long("released")
+                 .value_name("DATE")))
         .subcommand(App::new("list").about("list the most recent releases"))
         .subcommand(App::new("files")
             .about("manage release artifact files")
@@ -171,8 +186,37 @@ fn execute_new<'a>(matches: &ArgMatches<'a>,
             version: validate_version(matches.value_of("version").unwrap())?.to_owned(),
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
+            date_released: None,
+            ..Default::default()
         })?;
     println!("Created release {}.", info_rv.version);
+    Ok(())
+}
+
+fn execute_finalize<'a>(matches: &ArgMatches<'a>,
+                        config: &Config,
+                        org: &str,
+                        project: &str)
+                        -> Result<()> {
+    fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<UTC>>> {
+        match value {
+            None => Ok(if now_default { Some(UTC::now()) } else { None }),
+            Some(value) => Ok(Some(value.parse().chain_err(
+                || Error::from("Invalid date format."))?))
+        }
+    }
+
+    let info_rv = Api::new(config).update_release(org,
+        project,
+        matches.value_of("version").unwrap(),
+        &UpdatedRelease {
+            reference: matches.value_of("ref").map(|x| x.to_owned()),
+            url: matches.value_of("url").map(|x| x.to_owned()),
+            date_started: get_date(matches.value_of("started"), false)?,
+            date_released: get_date(matches.value_of("released"), true)?,
+            ..Default::default()
+        })?;
+    println!("Finalized release {}.", info_rv.version);
     Ok(())
 }
 
@@ -390,6 +434,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_new(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("finalize") {
+        let (org, project) = config.get_org_and_project(matches)?;
+        return execute_finalize(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         let (org, project) = config.get_org_and_project(matches)?;

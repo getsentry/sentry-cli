@@ -28,7 +28,7 @@ sourcemap = "0.15.1"
 backtrace = "0.3.0"
 plist = "0.1.2"
 if_chain = "^0.1.2"
-chrono = "^0.2.25"
+chrono = { version = "^0.3.0", features = ["serde"] }
 regex = "0.1.80"
 lazy_static = "0.2.4"
 
