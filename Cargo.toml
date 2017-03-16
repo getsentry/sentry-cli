@@ -5,7 +5,8 @@ authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 
 [dependencies]
-clap = { version = "2.19", default-features = false, features = ["suggestions", "wrap_help"] }
+#clap = { version = "2.21.1", default-features = false, features = ["suggestions", "wrap_help"] }
+clap = { git = "https://github.com/mitsuhiko/clap-rs", rev = "e06689fc26d759c9797a19766d3589d6cab273aa", default-features = false, features = ["suggestions", "wrap_help"] }
 error-chain = "0.10"
 serde = "0.9"
 serde_json = "0.9"
