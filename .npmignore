@@ -7,5 +7,6 @@
 !package.json
 !README.md
 !License
+!install-sentry-cli
 !bin/
 !bin/*
