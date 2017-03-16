@@ -811,9 +811,9 @@ pub struct ReleaseInfo {
     pub reference: Option<String>,
     pub url: Option<String>,
     #[serde(rename="dateCreated")]
-    pub date_created: String,
+    pub date_created: DateTime<UTC>,
     #[serde(rename="dateReleased")]
-    pub date_released: Option<String>,
+    pub date_released: Option<DateTime<UTC>>,
     #[serde(rename="newGroups")]
     pub new_groups: u64,
 }

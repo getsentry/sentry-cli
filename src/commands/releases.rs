@@ -2,10 +2,12 @@
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use std::collections::HashSet;
+use std::fmt;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
 use chrono::{DateTime, UTC};
+use regex::Regex;
 
 use prelude::*;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
@@ -156,6 +158,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("Add a file extension to the list of files to upload."))))
 }
 
+fn strip_version(version: &str) -> &str {
+    lazy_static! {
+        static ref SHA_RE: Regex = Regex::new(r"^[a-fA-F0-9]{40}$").unwrap();
+    }
+    if SHA_RE.is_match(version) {
+        &version[..12]
+    } else {
+        version
+    }
+}
+
 fn validate_version(version: &str) -> Result<&str> {
     if version.len() == 0 || version == "." || version == ".." ||
        version.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..]).is_some() {
@@ -240,11 +253,14 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>,
                     org: &str,
                     project: &str)
                     -> Result<()> {
+    println!("RELEASED                     VERSION       NEW EVENTS");
+    println!("=====================================================");
     for info in Api::new(config).list_releases(org, project)? {
-        println!("[{}] {}: {} ({} new groups)",
-                 info.date_released.unwrap_or("              unreleased".into()),
-                 info.version,
-                 info.reference.unwrap_or("-".into()),
+        println!("{: ^27}  {: <12}  {}",
+                 info.date_released.as_ref()
+                    .map(|x| x as &fmt::Display)
+                    .unwrap_or(&"(unreleased)" as &fmt::Display),
+                 strip_version(&info.version),
                  info.new_groups);
     }
     Ok(())
