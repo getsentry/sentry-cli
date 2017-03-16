@@ -37,6 +37,9 @@ extern crate log;
 #[macro_use]
 extern crate if_chain;
 extern crate chrono;
+extern crate regex;
+#[macro_use]
+extern crate lazy_static;
 
 mod macros;
 

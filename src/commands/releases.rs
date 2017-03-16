@@ -141,6 +141,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("Add a file extension to the list of files to upload."))))
 }
 
+fn validate_version(version: &str) -> Result<&str> {
+    if version.len() == 0 || version == "." || version == ".." ||
+       version.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..]).is_some() {
+        return Err(format!("Invalid release version '{}'", version).into());
+    }
+    Ok(version)
+}
+
 #[cfg(windows)]
 fn path_as_url(path: &Path) -> String {
     path.display().to_string().replace("\\", "/")
@@ -157,12 +165,12 @@ fn execute_new<'a>(matches: &ArgMatches<'a>,
                    project: &str)
                    -> Result<()> {
     let info_rv = Api::new(config).new_release(org,
-                     project,
-                     &NewRelease {
-                         version: matches.value_of("version").unwrap().to_owned(),
-                         reference: matches.value_of("ref").map(|x| x.to_owned()),
-                         url: matches.value_of("url").map(|x| x.to_owned()),
-                     })?;
+        project,
+        &NewRelease {
+            version: validate_version(matches.value_of("version").unwrap())?.to_owned(),
+            reference: matches.value_of("ref").map(|x| x.to_owned()),
+            url: matches.value_of("url").map(|x| x.to_owned()),
+        })?;
     println!("Created release {}.", info_rv.version);
     Ok(())
 }
@@ -172,7 +180,7 @@ fn execute_delete<'a>(matches: &ArgMatches<'a>,
                       org: &str,
                       project: &str)
                       -> Result<()> {
-    let version = matches.value_of("version").unwrap();
+    let version = validate_version(matches.value_of("version").unwrap())?;
     if Api::new(config).delete_release(org, project, version)? {
         println!("Deleted release {}!", version);
     } else {
@@ -241,6 +249,7 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>,
                             project: &str,
                             version: &str)
                             -> Result<()> {
+    let version = validate_version(version)?;
     let path = Path::new(matches.value_of("path").unwrap());
     let name = match matches.value_of("name") {
         Some(name) => name,
@@ -281,6 +290,7 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
                                        project: &str,
                                        version: &str)
                                        -> Result<()> {
+    let version = validate_version(version)?;
     let api = Api::new(config);
 
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
@@ -359,7 +369,7 @@ fn execute_files<'a>(matches: &ArgMatches<'a>,
                      org: &str,
                      project: &str)
                      -> Result<()> {
-    let release = matches.value_of("version").unwrap();
+    let release = validate_version(matches.value_of("version").unwrap())?;
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_files_list(sub_matches, config, org, project, release);
     }
