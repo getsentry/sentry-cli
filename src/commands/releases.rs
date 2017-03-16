@@ -144,7 +144,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 fn validate_version(version: &str) -> Result<&str> {
     if version.len() == 0 || version == "." || version == ".." ||
        version.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..]).is_some() {
-        return Err(format!("Invalid release version '{}'", version).into());
+        return Err(format!("Invalid release version '{}'. Slashes and certain \
+                            whitespace characters are not permitted.", version).into());
     }
     Ok(version)
 }
