@@ -1,6 +1,6 @@
 [package]
 name = "sentry-cli"
-version = "0.27.1"
+version = "0.28.0"
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 
@@ -32,6 +32,7 @@ if_chain = "^0.1.2"
 chrono = { version = "^0.3.0", features = ["serde"] }
 regex = "0.1.80"
 lazy_static = "0.2.4"
+pbr = "0.3.1"
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1"

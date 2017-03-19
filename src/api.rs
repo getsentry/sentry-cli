@@ -14,12 +14,15 @@ use std::path::Path;
 use std::ascii::AsciiExt;
 use std::collections::{HashSet, HashMap};
 use std::borrow::Cow;
+use std::rc::Rc;
 
 use serde::{Serialize, Deserialize};
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
+use regex::Regex;
 use chrono::{Duration, DateTime, UTC};
+use pbr;
 
 use utils;
 use event::Event;
@@ -178,7 +181,13 @@ impl<'a> Api<'a> {
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)
+        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst, false)
+    }
+
+    /// Convenience method that downloads a file into the given file object
+    /// and show a progress bar
+    pub fn download_with_progress(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
+        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst, true)
     }
 
     /// Convenience method that waits for a few seconds until a resource
@@ -459,38 +468,70 @@ impl<'a> Api<'a> {
 
 fn send_req<W: Write>(handle: &mut curl::easy::Easy,
                       out: &mut W,
-                      body: Option<Vec<u8>>)
+                      body: Option<Vec<u8>>,
+                      progress: bool)
                       -> ApiResult<(u32, Vec<String>)> {
     match body {
         Some(body) => {
             let mut body = &body[..];
             handle.upload(true)?;
             handle.in_filesize(body.len() as u64)?;
-            handle_req(handle, out, &mut |buf| body.read(buf).unwrap_or(0))
+            handle_req(handle, out, progress, &mut |buf| body.read(buf).unwrap_or(0))
         }
-        None => handle_req(handle, out, &mut |_| 0),
+        None => handle_req(handle, out, progress, &mut |_| 0),
     }
 }
 
 fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                         out: &mut W,
+                        progress: bool,
                         read: &mut FnMut(&mut [u8]) -> usize)
                         -> ApiResult<(u32, Vec<String>)> {
+    lazy_static! {
+        static ref CONTENT_LENGTH_RE: Regex = Regex::new(
+            r"(?i)^content-length:\s*(\d+)\s*$").unwrap();
+    }
     let mut headers = Vec::new();
+    let pb : Rc<RefCell<Option<pbr::ProgressBar<io::Stdout>>>> = Rc::new(RefCell::new(None));
     {
+        let mut headers = &mut headers;
         let mut handle = handle.transfer();
         handle.read_function(|buf| Ok(read(buf)))?;
-        handle.write_function(|data| {
-                Ok(match out.write_all(data) {
-                    Ok(_) => data.len(),
-                    Err(_) => 0,
-                })
-            })?;
-        handle.header_function(|data| {
-                headers.push(String::from_utf8_lossy(data).into_owned());
-                true
-            })?;
+        let pb_write = pb.clone();
+        handle.write_function(move |data| {
+            let len = match out.write_all(data) {
+                Ok(_) => data.len(),
+                Err(_) => 0,
+            };
+            if let Some(ref mut pb) = *pb_write.borrow_mut() {
+                pb.add(len as u64);
+            }
+            Ok(len)
+        })?;
+        let pb_header = pb.clone();
+        handle.header_function(move |data| {
+            let header = String::from_utf8_lossy(data).into_owned();
+            if_chain! {
+                if progress;
+                if let Some(caps) = CONTENT_LENGTH_RE.captures(&header);
+                if let Ok(length) = caps[1].parse::<u64>();
+                then {
+                    let mut pb = pbr::ProgressBar::new(length);
+                    if !cfg!(windows) {
+                        pb.format("[■□□]");
+                    }
+                    pb.set_units(pbr::Units::Bytes);
+                    *pb_header.borrow_mut() = Some(pb);
+                }
+            }
+            headers.push(header);
+            true
+        })?;
         handle.perform()?;
+    }
+
+    if progress && pb.borrow_mut().is_some() {
+        println!("");
     }
 
     Ok((handle.response_code()?, headers))
@@ -594,9 +635,9 @@ impl<'a> ApiRequest<'a> {
 
     /// Sends the request and writes response data into the given file
     /// instead of the response object's in memory buffer.
-    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
+    pub fn send_into<W: Write>(mut self, out: &mut W, progress: bool) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
-        let (status, headers) = send_req(&mut self.handle, out, self.body)?;
+        let (status, headers) = send_req(&mut self.handle, out, self.body, progress)?;
         info!("response: {}", status);
         Ok(ApiResponse {
             status: status,
@@ -608,7 +649,7 @@ impl<'a> ApiRequest<'a> {
     /// Sends the request and reads the response body into the response object.
     pub fn send(self) -> ApiResult<ApiResponse> {
         let mut out = vec![];
-        let mut rv = self.send_into(&mut out)?;
+        let mut rv = self.send_into(&mut out, false)?;
         rv.body = Some(out);
         Ok(rv)
     }

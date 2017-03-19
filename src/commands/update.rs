@@ -106,7 +106,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     println!("Updating executable at {}", exe.display());
 
     let mut f = fs::File::create(&tmp_path)?;
-    match api.download(&latest_release.download_url, &mut f) {
+    match api.download_with_progress(&latest_release.download_url, &mut f) {
         Ok(_) => {}
         Err(err) => {
             fs::remove_file(tmp_path).ok();

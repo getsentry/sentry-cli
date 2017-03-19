@@ -40,6 +40,7 @@ extern crate chrono;
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
+extern crate pbr;
 
 mod macros;
 
