@@ -253,9 +253,10 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>,
                     org: &str,
                     project: &str)
                     -> Result<()> {
+    let releases = Api::new(config).list_releases(org, project)?;
     println!("RELEASED                     VERSION       NEW EVENTS");
     println!("=====================================================");
-    for info in Api::new(config).list_releases(org, project)? {
+    for info in releases {
         println!("{: ^27}  {: <12}  {}",
                  info.date_released.as_ref()
                     .map(|x| x as &fmt::Display)
