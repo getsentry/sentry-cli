@@ -1,5 +1,5 @@
 {
-  "name": "sentry-cli",
+  "name": "sentry-cli-binary",
   "version": "0.28.0",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
@@ -8,7 +8,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/getsentry/sentry-cli.git"
+    "url": "https://github.com/getsentry/sentry-cli"
   },
   "keywords": [
     "sentry",
