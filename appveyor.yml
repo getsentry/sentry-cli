@@ -9,6 +9,7 @@ environment:
     secure: OIMAVZAsCzaNv3emTg9MlxxuA0vi2lwJM41cEtTjb9p1CQbDEO3riYwcVzLDjhZi
 
 install:
+  - set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
   # Install rust, x86_64-pc-windows-msvc host
   # FIXME: switch back to win.rustup.rs
   - curl -sSf -o rustup-init.exe https://dev-static.rust-lang.org/rustup/dist/i686-pc-windows-gnu/rustup-init.exe
