@@ -13,7 +13,7 @@ use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
 use xcode::InfoPlist;
-use utils::{TempFile, propagate_exit_status};
+use utils::{ArgExt, TempFile, propagate_exit_status};
 use sourcemaputils::SourceMapProcessor;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
@@ -24,16 +24,7 @@ struct SourceMapReport {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uploads react-native projects from within an xcode build step")
-        .arg(Arg::with_name("org")
-            .value_name("ORG")
-            .long("org")
-            .short("o")
-            .help("The organization slug"))
-        .arg(Arg::with_name("project")
-            .value_name("PROJECT")
-            .long("project")
-            .short("p")
-            .help("The project slug"))
+        .org_project_args()
         .arg(Arg::with_name("verbose")
             .long("verbose")
             .short("verbose")

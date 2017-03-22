@@ -4,21 +4,13 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use prelude::*;
 use api::{Api, IssueFilter, IssueChanges};
 use config::Config;
+use utils::ArgExt;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("manage issues in Sentry")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .arg(Arg::with_name("org")
-            .value_name("ORG")
-            .long("org")
-            .short("o")
-            .help("The organization slug"))
-        .arg(Arg::with_name("project")
-            .value_name("PROJECT")
-            .long("project")
-            .short("p")
-            .help("The project slug"))
+        .org_project_args()
         .arg(Arg::with_name("status")
             .long("status")
             .short("s")

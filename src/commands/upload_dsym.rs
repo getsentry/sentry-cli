@@ -17,7 +17,7 @@ use zip;
 
 use prelude::*;
 use api::{Api, DSymFile};
-use utils::{TempFile, get_sha1_checksum, is_zip_file};
+use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file};
 use macho::is_macho_file;
 use config::Config;
 
@@ -216,16 +216,7 @@ fn get_paths_from_env() -> Result<Vec<PathBuf>> {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uploads debug symbols to a project")
-        .arg(Arg::with_name("org")
-            .value_name("ORG")
-            .long("org")
-            .short("o")
-            .help("The organization slug"))
-        .arg(Arg::with_name("project")
-            .value_name("PROJECT")
-            .long("project")
-            .short("p")
-            .help("The project slug"))
+        .org_project_args()
         .arg(Arg::with_name("paths")
             .value_name("PATH")
             .help("The path to the debug symbols")

@@ -13,21 +13,13 @@ use prelude::*;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
+use utils::ArgExt;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("manage releases on Sentry")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .arg(Arg::with_name("org")
-            .value_name("ORG")
-            .long("org")
-            .short("o")
-            .help("The organization slug"))
-        .arg(Arg::with_name("project")
-            .value_name("PROJECT")
-            .long("project")
-            .short("p")
-            .help("The project slug"))
+        .org_project_args()
         .subcommand(App::new("new")
             .about("Create a new release")
             .arg(Arg::with_name("version")

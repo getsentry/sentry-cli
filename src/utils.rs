@@ -5,9 +5,11 @@ use std::mem;
 use std::env;
 use std::time;
 use std::process;
+use std::result::Result as StdResult;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek, SeekFrom};
 
+use clap;
 use term;
 use log;
 use uuid::{Uuid, UuidVersion};
@@ -56,6 +58,52 @@ impl log::Log for Logger {
         if let Some(mut term) = term::stderr() {
             term.reset().ok();
         }
+    }
+}
+
+fn validate_org(v: String) -> StdResult<(), String> {
+    if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {
+        return Err("invalid value for organization. Use the URL \
+                    slug and not the name!".into())
+    } else {
+        Ok(())
+    }
+}
+
+fn validate_project(v: String) -> StdResult<(), String> {
+    if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {
+        return Err("invalid value for project. Use the URL \
+                    slug and not the name!".into())
+    } else {
+        Ok(())
+    }
+}
+
+pub trait ArgExt: Sized {
+    fn org_arg(self) -> Self;
+    fn project_arg(self) -> Self;
+    fn org_project_args(self) -> Self {
+        self.org_arg().project_arg()
+    }
+}
+
+impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
+    fn org_arg(self) -> clap::App<'a, 'b> {
+        self.arg(clap::Arg::with_name("org")
+            .value_name("ORG")
+            .long("org")
+            .short("o")
+            .validator(validate_org)
+            .help("The organization slug"))
+    }
+
+    fn project_arg(self) -> clap::App<'a, 'b> {
+        self.arg(clap::Arg::with_name("project")
+            .value_name("PROJECT")
+            .long("project")
+            .short("p")
+            .validator(validate_project)
+            .help("The project slug"))
     }
 }
 
