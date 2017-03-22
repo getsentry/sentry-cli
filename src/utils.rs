@@ -79,12 +79,23 @@ fn validate_project(v: String) -> StdResult<(), String> {
     }
 }
 
+fn validate_version(v: String) -> StdResult<(), String> {
+    if v.len() == 0 || &v == "." || &v == ".." ||
+       v.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..]).is_some() {
+        Err(format!("Invalid release version. Slashes and certain \
+                     whitespace characters are not permitted."))
+    } else {
+        Ok(())
+    }
+}
+
 pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
     fn project_arg(self) -> Self;
     fn org_project_args(self) -> Self {
         self.org_arg().project_arg()
     }
+    fn version_arg(self, index: u64) -> Self;
 }
 
 impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
@@ -104,6 +115,15 @@ impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
             .short("p")
             .validator(validate_project)
             .help("The project slug"))
+    }
+
+    fn version_arg(self, index: u64) -> clap::App<'a, 'b> {
+        self.arg(clap::Arg::with_name("version")
+            .value_name("VERSION")
+            .required(true)
+            .index(index)
+            .validator(validate_version)
+            .help("The version of the release"))
     }
 }
 

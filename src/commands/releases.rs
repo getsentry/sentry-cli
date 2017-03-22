@@ -22,11 +22,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .org_project_args()
         .subcommand(App::new("new")
             .about("Create a new release")
-            .arg(Arg::with_name("version")
-                .value_name("VERSION")
-                .required(true)
-                .index(1)
-                .help("The version identifier for this release"))
+            .version_arg(1)
             .arg(Arg::with_name("ref")
                 .long("ref")
                 .value_name("REF")
@@ -37,18 +33,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Optional URL to the release for information purposes")))
         .subcommand(App::new("delete")
             .about("Delete a release")
-            .arg(Arg::with_name("version")
-                .value_name("VERSION")
-                .required(true)
-                .index(1)
-                .help("The version to delete")))
+            .version_arg(1))
         .subcommand(App::new("finalize")
             .about("Marks a release as finalized and released.")
-            .arg(Arg::with_name("version")
-                .value_name("VERSION")
-                .required(true)
-                .index(1)
-                .help("The version to set to released"))
+            .version_arg(1)
             .arg(Arg::with_name("started")
                  .long("started")
                  .value_name("DATE")
@@ -60,11 +48,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("files")
             .about("manage release artifact files")
             .setting(AppSettings::SubcommandRequiredElseHelp)
-            .arg(Arg::with_name("version")
-                .value_name("VERSION")
-                .required(true)
-                .index(1)
-                .help("The release to manage the files of"))
+            .version_arg(1)
             .subcommand(App::new("list").about("List all release files"))
             .subcommand(App::new("delete")
                 .about("Delete a release file")
@@ -161,15 +145,6 @@ fn strip_version(version: &str) -> &str {
     }
 }
 
-fn validate_version(version: &str) -> Result<&str> {
-    if version.len() == 0 || version == "." || version == ".." ||
-       version.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..]).is_some() {
-        return Err(format!("Invalid release version '{}'. Slashes and certain \
-                            whitespace characters are not permitted.", version).into());
-    }
-    Ok(version)
-}
-
 #[cfg(windows)]
 fn path_as_url(path: &Path) -> String {
     path.display().to_string().replace("\\", "/")
@@ -188,7 +163,7 @@ fn execute_new<'a>(matches: &ArgMatches<'a>,
     let info_rv = Api::new(config).new_release(org,
         project,
         &NewRelease {
-            version: validate_version(matches.value_of("version").unwrap())?.to_owned(),
+            version: matches.value_of("version").unwrap().to_owned(),
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_released: None,
@@ -230,7 +205,7 @@ fn execute_delete<'a>(matches: &ArgMatches<'a>,
                       org: &str,
                       project: &str)
                       -> Result<()> {
-    let version = validate_version(matches.value_of("version").unwrap())?;
+    let version = matches.value_of("version").unwrap();
     if Api::new(config).delete_release(org, project, version)? {
         println!("Deleted release {}!", version);
     } else {
@@ -303,7 +278,6 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>,
                             project: &str,
                             version: &str)
                             -> Result<()> {
-    let version = validate_version(version)?;
     let path = Path::new(matches.value_of("path").unwrap());
     let name = match matches.value_of("name") {
         Some(name) => name,
@@ -344,7 +318,6 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
                                        project: &str,
                                        version: &str)
                                        -> Result<()> {
-    let version = validate_version(version)?;
     let api = Api::new(config);
 
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
@@ -423,7 +396,7 @@ fn execute_files<'a>(matches: &ArgMatches<'a>,
                      org: &str,
                      project: &str)
                      -> Result<()> {
-    let release = validate_version(matches.value_of("version").unwrap())?;
+    let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_files_list(sub_matches, config, org, project, release);
     }

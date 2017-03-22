@@ -70,6 +70,7 @@ pub enum Error {
     Form(curl::FormError),
     Io(io::Error),
     Json(serde_json::Error),
+    ResourceNotFound(&'static str),
     NoDsn,
 }
 
@@ -234,7 +235,7 @@ impl<'a> Api<'a> {
                           PathArg(org),
                           PathArg(project),
                           PathArg(release)))?
-            .convert()
+            .convert_rnf("release")
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
@@ -298,7 +299,7 @@ impl<'a> Api<'a> {
         if resp.status() == 409 {
             Ok(None)
         } else {
-            resp.convert()
+            resp.convert_rnf("release")
         }
     }
 
@@ -310,7 +311,7 @@ impl<'a> Api<'a> {
                        -> ApiResult<ReleaseInfo> {
         self.post(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)),
                   release)?
-            .convert()
+            .convert_rnf("organization or project")
     }
 
     /// Updates a release.
@@ -322,7 +323,7 @@ impl<'a> Api<'a> {
                           -> ApiResult<ReleaseInfo> {
         self.put(&format!("/projects/{}/{}/releases/{}/", PathArg(org), PathArg(project),
                           PathArg(version)), release)?
-            .convert()
+            .convert_rnf("release")
     }
 
     /// Deletes an already existing release.  Returns `true` if it was deleted
@@ -361,7 +362,7 @@ impl<'a> Api<'a> {
     /// capped list by what the server deems an acceptable default limit.
     pub fn list_releases(&self, org: &str, project: &str) -> ApiResult<Vec<ReleaseInfo>> {
         self.get(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)))?
-            .convert()
+            .convert_rnf("organization or project")
     }
 
     /// Updates a bunch of issues within a project that match a provided filter
@@ -713,6 +714,15 @@ impl ApiResponse {
         self.to_result().and_then(|x| x.deserialize())
     }
 
+    /// Like convert but produces resource not found errors.
+    pub fn convert_rnf<T: Deserialize>(self, resource: &'static str) -> ApiResult<T> {
+        if self.status() == 404 {
+            return Err(Error::ResourceNotFound(resource))
+        } else {
+            self.to_result().and_then(|x| x.deserialize())
+        }
+    }
+
     /// Iterates over the headers.
     #[allow(dead_code)]
     pub fn headers(&self) -> Headers {
@@ -767,6 +777,7 @@ impl fmt::Display for Error {
             Error::Form(ref err) => write!(f, "http form error: {}", err),
             Error::Io(ref err) => write!(f, "io error: {}", err),
             Error::Json(ref err) => write!(f, "bad json: {}", err),
+            Error::ResourceNotFound(res) => write!(f, "{} not found", res),
             Error::NoDsn => write!(f, "no dsn provided"),
         }
     }
