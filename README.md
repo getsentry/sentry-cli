@@ -6,9 +6,13 @@ fastlane tools.
 
 Binaries can be found under [Releases](https://github.com/getsentry/sentry-cli/releases/)
 
-You can also install it with everybody's favorite curl to bash::
+You can also install it with everybody's favorite curl to bash:
 
     curl -sL https://sentry.io/get-cli/ | bash
+
+Additionally you can also install this binary via npm:
+
+    npm install sentry-cli-binary
 
 Documentation [can be found here](https://docs.sentry.io/hosted/learn/cli/)
 
