@@ -1,0 +1,12 @@
+# .npmignore
+
+# ignore all
+*
+
+# unignore desired files
+!package.json
+!README.md
+!License
+!install-sentry-cli
+!bin/
+!bin/*

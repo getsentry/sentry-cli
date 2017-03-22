@@ -1,0 +1,110 @@
+#!/usr/bin/env node
+
+var os = require('os');
+var fs = require('fs');
+var assert = require('assert');
+var path = require('path');
+var platform = os.platform();
+var https = require('https');
+var arch = os.arch();
+var exec = require('child_process').exec;
+
+// src vars
+var releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
+var version = process.env.npm_package_version;
+var binaryPrefix = '/sentry-cli-';
+var platformOSX = 'Darwin';
+var platformWindows = 'Windows';
+var platformLinux = 'Linux';
+var archSuffix32bit = '-i686';
+var archSuffix64bit = '-x86_64';
+var windowsFileExt = '.exe';
+
+// output vars
+var outputDir = './bin';
+var outputName = 'sentry-cli';
+var outputPath = path.join(outputDir, outputName);
+
+var src = '';
+if (platform === 'darwin') { //OSX
+  // only x86_64 arch available
+  // if (arch.indexOf('64') > -1) { //64bit
+  src = releasesUrl + version + binaryPrefix + platformOSX + archSuffix64bit;
+  // } else { //32bit
+  //   src = releasesUrl + version + binaryPrefix + platformOSX + archSuffix32bit;
+  // }
+} else if (platform === 'win32') { //windows
+  // only i686 arch available for windows
+  // if (arch.indexOf('64') > -1) { //64bit
+  //   src = releasesUrl + version + binaryPrefix + platformWindows + archSuffix64bit + windowsFileExt;
+  // } else { //32bit
+  src = releasesUrl + version + binaryPrefix + platformWindows + archSuffix32bit + windowsFileExt;
+  // }
+} else { //linux
+  if (arch.indexOf('64') > -1) { //64bit
+    src = releasesUrl + version + binaryPrefix + platformLinux + archSuffix64bit;
+  } else { //32bit
+    src = releasesUrl + version + binaryPrefix + platformLinux + archSuffix32bit;
+  }
+}
+
+if (src === '') {
+  console.log('error: your platform and architecture (' + platform + '-' + arch + ') is unsupported.');
+  process.exit(1);
+}
+
+// Download the binary from the response
+function downloadBinary(res) {
+  var download = fs.createWriteStream(outputPath, {
+    mode: Number.parseInt('0755', 8) // - rwxr-xr-x 
+  });
+  res.pipe(download);
+  download.on('error', function (err) {
+    console.log(err);
+    process.exit(1);
+  });
+  download.on('close', function () {
+    exec(outputPath + ' --version', function (error, stdout, stderr) {
+      if (error) {
+        console.log('Something went wrong!');
+        console.error(error);
+        process.exit(1);
+      } else {
+        if (stdout.trim() !== outputName + ' ' + version) {
+          console.error('Warning! Unexpected ' + outputName + ' version: ' + stdout.trim().split(' ')[1] + ', expected ' + version + '!');
+        }
+        process.exit(0);
+      }
+    });
+  });
+}
+
+// Count redirects, just in case we get a loop.
+// Pretty sure this can't happen with the github releases URL
+var redirectCt = 0;
+function handleResponse(res) {
+  if (res.statusCode === 302) {
+    redirectCt++;
+    if (redirectCt > 10) {
+      console.log('error: Too many redirects!');
+      process.exit(1);
+    }
+    https.get(res.headers['Location'] || res.headers['location'], handleResponse)
+      .on('error', function (err) {
+        console.log(err);
+        process.exit(1);
+      });
+  } else if (res.statusCode >= 200 && res.statusCode < 300) {
+    downloadBinary(res);
+  } else {
+    console.log('Received ' + res.statusCode + ': ' + res.statusMessage);
+    process.exit(1);
+  }
+}
+
+// Start download
+https.get(src, handleResponse)
+  .on('error', function (err) {
+    console.log(err);
+    process.exit(1);
+  });
