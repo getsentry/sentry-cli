@@ -152,6 +152,16 @@ impl Config {
         }
     }
 
+    /// Controls the SSL revocation check on windows.  This can be used as a
+    /// workaround for misconfigured local SSL proxies.
+    pub fn disable_ssl_revocation_check(&self) -> bool {
+        let val = self.ini.get_from(Some("http"), "check_ssl_revoke");
+        match val {
+            None => true,
+            Some(val) => val == "true",
+        }
+    }
+
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).

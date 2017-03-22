@@ -136,6 +136,11 @@ impl<'a> Api<'a> {
             handle.forbid_reuse(true).ok();
         }
         handle.reset();
+        let mut ssl_opts = curl::easy::SslOpt::new();
+        if self.config.disable_ssl_revocation_check() {
+            ssl_opts.no_revoke(true);
+        }
+        handle.ssl_options(&ssl_opts)?;
         let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
             (Cow::Borrowed(url), None)
         } else {
