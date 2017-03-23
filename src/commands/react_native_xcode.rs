@@ -1,11 +1,10 @@
 //! Implements a command for uploading react-native projects.
 use std::env;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::process;
 
 use clap::{App, Arg, ArgMatches};
-use walkdir::WalkDir;
 use serde_json;
 use chrono::Duration;
 
@@ -52,20 +51,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Optional path to the build script{n}{n}\
                     This is the path to the react-native-xcode.sh script you want \
                     to use.  By default the bundled build script is used."))
-}
-
-fn load_info_plist<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
-    let fpl_fn = Some("info.plist".to_string());
-    for dent_res in WalkDir::new(path.as_ref()) {
-        let dent = dent_res?;
-        if dent.file_name().to_str().map(|x| x.to_lowercase()) == fpl_fn {
-            let md = dent.metadata()?;
-            if md.is_file() {
-                return Ok(InfoPlist::from_path(dent.path())?);
-            }
-        }
-    }
-    Err("Could not find info.plist".into())
 }
 
 fn find_node() -> String {
@@ -118,7 +103,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     info!("Parsing Info.plist");
-    let plist = load_info_plist(&base)?;
+    let plist = match InfoPlist::discover_from_path(&base)? {
+        Some(plist) => plist,
+        None => { return Err("Could not find info.plist".into()); }
+    };
     info!("Parse result from Info.plist: {:?}", &plist);
     let report_file = TempFile::new()?;
     let node = find_node();

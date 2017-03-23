@@ -20,6 +20,7 @@ use api::{Api, DSymFile};
 use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file};
 use macho::is_macho_file;
 use config::Config;
+use xcode::InfoPlist;
 
 const BATCH_SIZE: usize = 15;
 
@@ -222,6 +223,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("The path to the debug symbols")
             .multiple(true)
             .index(1))
+        .arg(Arg::with_name("info_plist")
+             .long("info-plist")
+             .value_name("PATH")
+             .help("Optional path to the Info.plist.  We will try to find this \
+                    automatically if run from xcode.  Providing this information \
+                    will associate the debug symbols with a specific ITC application \
+                    and build in Sentry."))
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
              .help("Does not trigger reprocessing after upload"))
@@ -231,6 +239,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
         None => get_paths_from_env()?,
+    };
+    let info_plist = match matches.value_of("info_plist") {
+        Some(path) => Some(InfoPlist::from_path(path)?),
+        None => InfoPlist::discover_from_env()?,
     };
     let (org, project) = config.get_org_and_project(matches)?;
     let mut api = Api::new(config);

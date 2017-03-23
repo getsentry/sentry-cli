@@ -5,6 +5,7 @@ use std::mem;
 use std::env;
 use std::time;
 use std::process;
+use std::borrow::Cow;
 use std::result::Result as StdResult;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek, SeekFrom};
@@ -15,6 +16,7 @@ use log;
 use uuid::{Uuid, UuidVersion};
 use sha1::Sha1;
 use zip::ZipArchive;
+use regex::{Regex, Captures};
 
 use prelude::*;
 
@@ -320,4 +322,22 @@ fn is_homebrew_install_result() -> Result<bool> {
 /// Checks if we were installed from homebrew
 pub fn is_homebrew_install() -> bool {
     is_homebrew_install_result().unwrap_or(false)
+}
+
+/// Expands environment variables in a string
+pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
+    lazy_static! {
+        static ref VAR_RE: Regex = Regex::new(
+            r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\))").unwrap();
+    }
+    VAR_RE.replace_all(s, |caps: &Captures| {
+        let key = &caps[1];
+        if key == "$" {
+            "$".into()
+        } else if &key[..1] == "(" {
+            env::var(&key[1..key.len() - 1]).unwrap_or("".into())
+        } else {
+            env::var(key).unwrap_or("".into())
+        }
+    })
 }
