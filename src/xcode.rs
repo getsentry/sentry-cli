@@ -1,5 +1,6 @@
 use std::fs;
 use std::env;
+use std::fmt;
 use std::path::Path;
 use std::io::BufReader;
 use std::borrow::Cow;
@@ -21,6 +22,12 @@ pub struct InfoPlist {
     version: String,
     #[serde(rename="CFBundleVersion")]
     build: String,
+}
+
+impl fmt::Display for InfoPlist {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{} ({})", self.name(), &self.version)
+    }
 }
 
 impl InfoPlist {

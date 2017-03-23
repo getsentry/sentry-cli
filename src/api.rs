@@ -29,6 +29,7 @@ use event::Event;
 use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
 use sourcemaputils::get_sourcemap_reference_from_headers;
+use xcode::InfoPlist;
 
 
 /// Wrapper that escapes arguments for URL path segments.
@@ -445,6 +446,30 @@ impl<'a> Api<'a> {
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
         self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()
+    }
+
+    /// Associate debug symbols with a build
+    pub fn associate_dsyms(&self, org: &str, project: &str,
+                           info_plist: &InfoPlist, checksums: Vec<String>)
+        -> ApiResult<Option<AssociateDsymsResponse>>
+    {
+        let data = AssociateDsyms {
+            platform: "apple".to_string(),
+            checksums: checksums,
+            name: info_plist.name().to_string(),
+            app_id: info_plist.bundle_id().to_string(),
+            version: info_plist.version().to_string(),
+            build: Some(info_plist.build().to_string()),
+        };
+        let path = format!("/projects/{}/{}/files/dsyms/associate/",
+                           PathArg(org),
+                           PathArg(project));
+        let resp = self.request(Method::Post, &path)?.with_json_body(&data)?.send()?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
     }
 
     /// Triggers reprocessing for a project
@@ -908,6 +933,17 @@ pub struct DSymFile {
     pub cpu_name: String,
 }
 
+#[derive(Serialize)]
+struct AssociateDsyms {
+    pub platform: String,
+    pub checksums: Vec<String>,
+    pub name: String,
+    #[serde(rename="appId")]
+    pub app_id: String,
+    pub version: String,
+    pub build: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct MissingChecksumsResponse {
     missing: HashSet<String>,
@@ -956,4 +992,10 @@ impl IssueFilter {
         }
         Some(rv.join("&"))
     }
+}
+
+#[derive(Deserialize)]
+pub struct AssociateDsymsResponse {
+    #[serde(rename="associatedDsymFiles")]
+    pub associated_dsyms: Vec<DSymFile>
 }

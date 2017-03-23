@@ -252,11 +252,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         println!("Warning: no paths were provided.");
     }
 
+    let mut all_dsym_checksums = vec![];
     for path in paths {
         println!("Finding symbols in {}...", path.display());
         for batch_res in BatchIter::new(path) {
+            let batch = batch_res?;
             println!("Detecting dsyms to upload");
-            let missing = find_missing_files(&mut api, batch_res?, &org, &project)?;
+            for dsym_ref in batch.iter() {
+                all_dsym_checksums.push(dsym_ref.checksum.clone());
+            }
+            let missing = find_missing_files(&mut api, batch, &org, &project)?;
             if missing.len() == 0 {
                 println!("  No dsyms missing on server");
                 continue;
@@ -267,6 +272,26 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                 println!("  Accepted debug symbols:");
                 for df in rv {
                     println!("    {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+                }
+            }
+        }
+    }
+
+    // associate the dsyms with the info plist data if available
+    if let Some(info_plist) = info_plist {
+        println!("Associating dsyms with {}", &info_plist);
+        match api.associate_dsyms(&org, &project, &info_plist, all_dsym_checksums)? {
+            None => {
+                println!("Server does not support dsym associations. Ignoring.");
+            }
+            Some(resp) => {
+                if resp.associated_dsyms.len() == 0 {
+                    println!("No new debug symbols to associate.");
+                } else {
+                    println!("Associated new debug symbols:");
+                    for df in resp.associated_dsyms.iter() {
+                        println!("  {} ({}; {})", df.uuid, df.object_name, df.cpu_name);
+                    }
                 }
             }
         }
