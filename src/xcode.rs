@@ -136,7 +136,7 @@ pub fn show_notification(title: &str, msg: &str) -> Result<()> {
             var App = Application.currentApplication();
             App.includeStandardAdditions = true;
             App.displayNotification($params.message, {
-                title: $params.title
+                withTitle: $params.title
             });
         ");
     }
