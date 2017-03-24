@@ -257,18 +257,6 @@ fn detect_detach() -> bool {
     false
 }
 
-#[cfg(target_os="macos")]
-fn daemonize() -> Result<TempFile> {
-    let tf = TempFile::new()?;
-    daemonize_redirect(Some(tf.path()), Some(tf.path()), ChdirMode::NoChdir).unwrap();
-    Ok(tf)
-}
-
-#[cfg(not(target_os="macos"))]
-fn daemonize() -> Result<TempFile> {
-    panic!("Cannot run detached on this platform");
-}
-
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
@@ -285,26 +273,45 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     // Optionally detach if run from xcode
     if !matches.is_present("force_foreground") && detect_detach() {
-        println!("Continue upload in background.");
-        xcode::show_notification("Sentry", "Debug symbols are being uploaded")?;
-        let output_file = daemonize()?;
-        if let Err(err) = do_upload(info_plist, &paths, matches, config) {
-            print_error(&err);
-            let show_more = xcode::show_critical_info("Sentry debug symbol upload failed", "\
-                Sentry could not upload the debug symbols. You can ignore this \
-                error or view details to attempt to resolve it. Ignoring it will \
-                cause your crashes not to be symbolicated properly.")?;
-            if show_more {
-                open::that(&output_file.path())?;
-                thread::sleep(Duration::from_millis(5000));
-            }
-        } else {
-            xcode::show_notification("Sentry", "Debug symbols were successfully uploaded.")?;
-        }
-        Ok(())
+        do_detached_upload(info_plist, &paths, matches, config)
     } else {
         do_upload(info_plist, &paths, matches, config)
     }
+}
+
+#[cfg(target_os="macos")]
+fn do_detached_upload<'a>(info_plist: Option<xcode::InfoPlist>, paths: &[PathBuf],
+                 matches: &ArgMatches<'a>, config: &Config)
+    -> Result<()>
+{
+    println!("Continue upload in background.");
+    xcode::show_notification("Sentry", "Debug symbols are being uploaded")?;
+    let output_file = TempFile::new()?;
+    daemonize_redirect(Some(output_file.path()), Some(output_file.path()),
+                       ChdirMode::NoChdir).unwrap();
+
+    if let Err(err) = do_upload(info_plist, &paths, matches, config) {
+        print_error(&err);
+        let show_more = xcode::show_critical_info("Sentry debug symbol upload failed", "\
+            Sentry could not upload the debug symbols. You can ignore this \
+            error or view details to attempt to resolve it. Ignoring it will \
+            cause your crashes not to be symbolicated properly.")?;
+        if show_more {
+            open::that(&output_file.path())?;
+            thread::sleep(Duration::from_millis(5000));
+        }
+    } else {
+        xcode::show_notification("Sentry", "Debug symbols were successfully uploaded.")?;
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os="macos"))]
+fn do_detached_upload<'a>(info_plist: Option<xcode::InfoPlist>, paths: &[PathBuf],
+                 matches: &ArgMatches<'a>, config: &Config)
+    -> Result<()>
+{
+    panic!("Cannot run detached on this platform");
 }
 
 fn do_upload<'a>(info_plist: Option<xcode::InfoPlist>, paths: &[PathBuf],
