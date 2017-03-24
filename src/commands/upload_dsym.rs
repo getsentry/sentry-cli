@@ -286,6 +286,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     // Optionally detach if run from xcode
     if !matches.is_present("force_foreground") && detect_detach() {
         println!("Continue upload in background.");
+        xcode::show_notification("Sentry", "Debug symbols are being uploaded")?;
         let output_file = daemonize()?;
         if let Err(err) = do_upload(info_plist, &paths, matches, config) {
             print_error(&err);
@@ -297,6 +298,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                 open::that(&output_file.path())?;
                 thread::sleep(Duration::from_millis(5000));
             }
+        } else {
+            xcode::show_notification("Sentry", "Debug symbols were successfully uploaded.")?;
         }
         Ok(())
     } else {

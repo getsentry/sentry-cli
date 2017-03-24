@@ -88,7 +88,7 @@ impl InfoPlist {
 /// Returns true if we were invoked from xcode
 #[cfg(target_os="macos")]
 pub fn launched_from_xcode() -> bool {
-    env::var("XCODE_VERSION_ACTUAL").is_ok()
+    env::var("XCODE_VERSION_ACTUAL").is_ok() && env::var("TERM").is_err()
 }
 
 /// Shows a dialog in xcode and blocks.  The dialog will have a title and a
@@ -126,4 +126,29 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool> {
     }).chain_err(|| "Failed to display Xcode dialog")?;
 
     Ok(&rv.button != "Ignore")
+}
+
+/// Shows a notification in xcode
+#[cfg(target_os="macos")]
+pub fn show_notification(title: &str, msg: &str) -> Result<()> {
+    lazy_static! {
+        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
+            var App = Application.currentApplication();
+            App.includeStandardAdditions = true;
+            App.displayNotification($params.message, {
+                title: $params.title
+            });
+        ");
+    }
+
+    #[derive(Serialize)]
+    struct NotificationParams<'a> {
+        title: &'a str,
+        message: &'a str,
+    }
+
+    Ok(SCRIPT.execute_with_params(NotificationParams {
+        title: title,
+        message: msg,
+    }).chain_err(|| "Failed to display Xcode notification")?)
 }
