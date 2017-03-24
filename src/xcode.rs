@@ -7,6 +7,8 @@ use std::borrow::Cow;
 
 use plist::serde::deserialize;
 use walkdir::WalkDir;
+#[cfg(target_os="macos")]
+use osascript;
 
 use prelude::*;
 use utils::expand_envvars;
@@ -81,4 +83,47 @@ impl InfoPlist {
     pub fn bundle_id<'a>(&'a self) -> Cow<'a, str> {
         expand_envvars(&self.bundle_id)
     }
+}
+
+/// Returns true if we were invoked from xcode
+#[cfg(target_os="macos")]
+pub fn launched_from_xcode() -> bool {
+    env::var("XCODE_VERSION_ACTUAL").is_ok()
+}
+
+/// Shows a dialog in xcode and blocks.  The dialog will have a title and a
+/// message as well as the buttons "Show details" and "Ignore".  Returns
+/// `true` if the `show details` button has been pressed.
+#[cfg(target_os="macos")]
+pub fn show_critical_info(title: &str, msg: &str) -> Result<bool> {
+    lazy_static! {
+        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
+            var App = Application('XCode');
+            App.includeStandardAdditions = true;
+            return App.displayAlert($params.title, {
+                message: $params.message,
+                as: \"critical\",
+                buttons: [\"Show details\", \"Ignore\"]
+            });
+        ");
+    }
+
+    #[derive(Serialize)]
+    struct AlertParams<'a> {
+        title: &'a str,
+        message: &'a str,
+    }
+
+    #[derive(Debug, Deserialize)]
+    struct AlertResult {
+        #[serde(rename="buttonReturned")]
+        button: String,
+    }
+
+    let rv: AlertResult = SCRIPT.execute_with_params(AlertParams {
+        title: title,
+        message: msg,
+    }).chain_err(|| "Failed to display Xcode dialog")?;
+
+    Ok(&rv.button != "Ignore")
 }

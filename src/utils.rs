@@ -341,3 +341,24 @@ pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
         }
     })
 }
+
+/// Helper that renders an error to stderr.
+pub fn print_error(err: &Error) {
+    use std::error::Error;
+
+    if let &ErrorKind::Clap(ref clap_err) = err.kind() {
+        clap_err.exit();
+    }
+
+    writeln!(&mut io::stderr(), "error: {}", err).ok();
+    let mut cause = err.cause();
+    while let Some(the_cause) = cause {
+        writeln!(&mut io::stderr(), "  caused by: {}", the_cause).ok();
+        cause = the_cause.cause();
+    }
+
+    if env::var("RUST_BACKTRACE") == Ok("1".into()) {
+        writeln!(&mut io::stderr(), "").ok();
+        writeln!(&mut io::stderr(), "{:?}", err.backtrace()).ok();
+    }
+}

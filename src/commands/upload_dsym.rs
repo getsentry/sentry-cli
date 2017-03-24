@@ -1,26 +1,31 @@
 //! Implements a command for uploading dsym files.
-
 use std::io;
 use std::fs;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::mem;
+use std::thread;
+use std::time::Duration;
 use std::io::{Write, Seek};
 use std::ffi::OsStr;
 use std::cell::RefCell;
 use std::rc::Rc;
 
+use open;
 use clap::{App, Arg, ArgMatches};
 use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
 
 use prelude::*;
 use api::{Api, DSymFile};
-use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file};
+use utils::{ArgExt, TempFile, print_error, get_sha1_checksum, is_zip_file};
 use macho::is_macho_file;
 use config::Config;
-use xcode::InfoPlist;
+use xcode;
+
+#[cfg(target_os="macos")]
+use unix_daemonize::{daemonize_redirect, ChdirMode};
 
 const BATCH_SIZE: usize = 15;
 
@@ -233,6 +238,35 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
              .help("Does not trigger reprocessing after upload"))
+        .arg(Arg::with_name("force_foreground")
+             .long("force-foreground")
+             .help("By default the upload process will when triggered from xcode \
+                    detach and continue in the background.  When an error happens \
+                    a dialog is shown.  If this parameter is passed Xcode will wait \
+                    for the process to finish before the build finishes and output \
+                    will be shown in the xcode build output."))
+}
+
+#[cfg(target_os="macos")]
+fn detect_detach() -> bool {
+    xcode::launched_from_xcode()
+}
+
+#[cfg(not(target_os="macos"))]
+fn detect_detach() -> bool {
+    false
+}
+
+#[cfg(target_os="macos")]
+fn daemonize() -> Result<TempFile> {
+    let tf = TempFile::new()?;
+    daemonize_redirect(Some(tf.path()), Some(tf.path()), ChdirMode::NoChdir).unwrap();
+    Ok(tf)
+}
+
+#[cfg(not(target_os="macos"))]
+fn daemonize() -> Result<TempFile> {
+    panic!("Cannot run detached on this platform");
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -241,17 +275,41 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         None => get_paths_from_env()?,
     };
     let info_plist = match matches.value_of("info_plist") {
-        Some(path) => Some(InfoPlist::from_path(path)?),
-        None => InfoPlist::discover_from_env()?,
+        Some(path) => Some(xcode::InfoPlist::from_path(path)?),
+        None => xcode::InfoPlist::discover_from_env()?,
     };
-    let (org, project) = config.get_org_and_project(matches)?;
-    let mut api = Api::new(config);
-
     println!("Uploading symbols");
     if paths.len() == 0 {
         println!("Warning: no paths were provided.");
     }
 
+    // Optionally detach if run from xcode
+    if !matches.is_present("force_foreground") && detect_detach() {
+        println!("Continue upload in background.");
+        let output_file = daemonize()?;
+        if let Err(err) = do_upload(info_plist, &paths, matches, config) {
+            print_error(&err);
+            let show_more = xcode::show_critical_info("Sentry debug symbol upload failed", "\
+                Sentry could not upload the debug symbols. You can ignore this \
+                error or view details to attempt to resolve it. Ignoring it will \
+                cause your crashes not to be symbolicated properly.")?;
+            if show_more {
+                open::that(&output_file.path())?;
+                thread::sleep(Duration::from_millis(5000));
+            }
+        }
+        Ok(())
+    } else {
+        do_upload(info_plist, &paths, matches, config)
+    }
+}
+
+fn do_upload<'a>(info_plist: Option<xcode::InfoPlist>, paths: &[PathBuf],
+                 matches: &ArgMatches<'a>, config: &Config)
+    -> Result<()>
+{
+    let (org, project) = config.get_org_and_project(matches)?;
+    let mut api = Api::new(config);
     let mut all_dsym_checksums = vec![];
     for path in paths {
         println!("Finding symbols in {}...", path.display());

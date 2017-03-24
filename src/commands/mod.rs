@@ -1,7 +1,5 @@
 //! This module implements the root command of the CLI tool.
 
-use std::io;
-use std::io::Write;
 use std::env;
 use std::process;
 
@@ -10,7 +8,7 @@ use clap::{Arg, App, AppSettings};
 
 use prelude::*;
 use constants::VERSION;
-use utils::Logger;
+use utils::{Logger, print_error};
 use config::{Config, Auth};
 
 const ABOUT: &'static str = "
@@ -162,24 +160,7 @@ pub fn main() {
     match run() {
         Ok(()) => process::exit(0),
         Err(err) => {
-            use std::error::Error;
-
-            if let &ErrorKind::Clap(ref clap_err) = err.kind() {
-                clap_err.exit();
-            }
-
-            writeln!(&mut io::stderr(), "error: {}", err).ok();
-            let mut cause = err.cause();
-            while let Some(the_cause) = cause {
-                writeln!(&mut io::stderr(), "  caused by: {}", the_cause).ok();
-                cause = the_cause.cause();
-            }
-
-            if env::var("RUST_BACKTRACE") == Ok("1".into()) {
-                writeln!(&mut io::stderr(), "").ok();
-                writeln!(&mut io::stderr(), "{:?}", err.backtrace()).ok();
-            }
-
+            print_error(&err);
             process::exit(1);
         }
     }
