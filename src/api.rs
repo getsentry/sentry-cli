@@ -830,7 +830,7 @@ pub struct User {
 /// Provides the authentication information
 #[derive(Deserialize, Debug)]
 pub struct AuthInfo {
-    pub auth: AuthDetails,
+    pub auth: Option<AuthDetails>,
     pub user: Option<User>,
 }
 
