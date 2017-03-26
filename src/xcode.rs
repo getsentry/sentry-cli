@@ -4,14 +4,19 @@ use std::fmt;
 use std::path::Path;
 use std::io::BufReader;
 use std::borrow::Cow;
+use std::thread;
+use std::time::Duration;
 
 use plist::serde::deserialize;
 use walkdir::WalkDir;
 #[cfg(target_os="macos")]
 use osascript;
+#[cfg(target_os="macos")]
+use unix_daemonize::{daemonize_redirect, ChdirMode};
+use open;
 
 use prelude::*;
-use utils::expand_envvars;
+use utils::{TempFile, expand_envvars, print_error};
 
 
 #[derive(Deserialize, Debug)]
@@ -82,6 +87,100 @@ impl InfoPlist {
 
     pub fn bundle_id<'a>(&'a self) -> Cow<'a, str> {
         expand_envvars(&self.bundle_id)
+    }
+}
+
+/// Helper struct that allows the current execution to detach from
+/// the xcode console and continue in the background.  This becomes
+/// a dummy shim for non xcode runs or platforms.
+pub struct MayDetach<'a> {
+    output_file: Option<TempFile>,
+    task_name: &'a str,
+}
+
+impl<'a> MayDetach<'a> {
+    fn new(task_name: &'a str) -> MayDetach<'a> {
+        MayDetach {
+            output_file: None,
+            task_name: task_name,
+        }
+    }
+
+    /// Returns true if we are deteached from xcode
+    pub fn is_detached(&self) -> bool {
+        self.output_file.is_some()
+    }
+
+    /// If we are launched from xcode this detaches us from the xcode console
+    /// and continues execution in the background.  From this moment on output
+    /// is captured and the user is notified with notifications.
+    #[cfg(target_os="macos")]
+    pub fn may_detach(&mut self) -> Result<bool> {
+        if !launched_from_xcode() {
+            return Ok(false);
+        }
+
+        println!("Continuing in background.");
+        show_notification("Sentry", &format!("{} starting", self.task_name))?;
+        let output_file = TempFile::new()?;
+        daemonize_redirect(Some(output_file.path()),
+                           Some(output_file.path()),
+                           ChdirMode::NoChdir).unwrap();
+        self.output_file = Some(output_file);
+        Ok(true)
+    }
+
+    /// For non mac platforms this just never detaches.
+    #[cfg(not(target_os="macos"))]
+    pub fn may_detach(&mut self) -> Result<bool> {
+        Ok(false)
+    }
+
+    /// Wraps the execution of a code block.  Does not detach until someone
+    /// calls into `may_detach`.
+    #[cfg(target_os="macos")]
+    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(task_name: &'a str, f: F) -> Result<T> {
+        let mut md = MayDetach::new(task_name);
+        match f(&mut md) {
+            Ok(x) => {
+                md.show_done()?;
+                Ok(x)
+            }
+            Err(err) => {
+                if let Some(ref output_file) = md.output_file {
+                    print_error(&err);
+                    if md.show_critical_info()? {
+                        open::that(&output_file.path())?;
+                        thread::sleep(Duration::from_millis(5000));
+                    }
+                }
+                Err(err)
+            }
+        }
+    }
+
+    /// Dummy wrap call that never detaches for non mac platforms.
+    #[cfg(not(target_os="macos"))]
+    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(task_name: &'a str, f: F) -> Result<T> {
+        f(&mut MayDetach::new(task_name))
+    }
+
+    #[cfg(target_os="macos")]
+    fn show_critical_info(&self) -> Result<bool> {
+        show_critical_info(
+            &format!("{} failed", self.task_name),
+            "The Sentry build step failed while running in the background. \
+             You can ignore this error or view details to attempt to resolve \
+             it. Ignoring it might cause your crashes not to be handled \
+             properly.")
+    }
+
+    #[cfg(target_os="macos")]
+    fn show_done(&self) -> Result<()> {
+        if self.is_detached() {
+            show_notification("Sentry", &format!("{} finished", self.task_name))?;
+        }
+        Ok(())
     }
 }
 
