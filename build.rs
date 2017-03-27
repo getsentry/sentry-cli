@@ -19,4 +19,5 @@ fn main() {
     write!(f, "pub const PLATFORM : &'static str = \"{}\";\n", platform).ok();
     write!(f, "/// The CPU architecture identifier\n").ok();
     write!(f, "pub const ARCH : &'static str = \"{}\";\n", arch).ok();
+    println!("cargo:rerun-if-changed=build.rs\n");
 }

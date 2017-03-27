@@ -30,7 +30,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("url")
                 .long("url")
                 .value_name("URL")
-                .help("Optional URL to the release for information purposes")))
+                .help("Optional URL to the release for information purposes"))
+            .arg(Arg::with_name("finalize")
+                 .long("finalize")
+                 .help("Immediately finalize the release (sets it to released)")))
         .subcommand(App::new("delete")
             .about("Delete a release")
             .version_arg(1))
@@ -166,7 +169,12 @@ fn execute_new<'a>(matches: &ArgMatches<'a>,
             version: matches.value_of("version").unwrap().to_owned(),
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
-            date_released: None,
+            date_started: Some(UTC::now()),
+            date_released: if matches.is_present("finalize") {
+                Some(UTC::now())
+            } else {
+                None
+            },
             ..Default::default()
         })?;
     println!("Created release {}.", info_rv.version);

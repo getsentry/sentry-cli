@@ -868,6 +868,8 @@ pub struct NewRelease {
     pub reference: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
+    #[serde(rename="dateStarted")]
+    pub date_started: Option<DateTime<UTC>>,
     #[serde(rename="dateReleased")]
     pub date_released: Option<DateTime<UTC>>,
 }
