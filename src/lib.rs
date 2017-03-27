@@ -46,6 +46,8 @@ extern crate osascript;
 #[cfg(target_os="macos")]
 extern crate unix_daemonize;
 extern crate dotenv;
+#[cfg(not(windows))]
+extern crate openssl_probe;
 
 mod macros;
 
@@ -65,6 +67,8 @@ use std::io::Write;
 
 #[cfg(not(windows))]
 fn real_main() {
+    use openssl_probe::init_ssl_cert_env_vars;
+    init_ssl_cert_env_vars();
     if let Some(signal) = utils::run_or_interrupt(commands::main) {
         use chan_signal::Signal;
         if signal == Signal::INT {
