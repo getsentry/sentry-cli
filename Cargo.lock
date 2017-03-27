@@ -8,6 +8,7 @@ dependencies = [
  "chrono 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.21.1 (git+https://github.com/mitsuhiko/clap-rs?rev=e06689fc26d759c9797a19766d3589d6cab273aa)",
  "curl 0.4.6 (git+https://github.com/alexcrichton/curl-rust?rev=a204473f1679330058cb518b27ce1ebb7fe8a91f)",
+ "dotenv 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "if_chain 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.5.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -221,6 +222,25 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "derive-error-chain"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syn 0.11.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "dotenv"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "derive-error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "regex 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -864,6 +884,8 @@ dependencies = [
 "checksum curl 0.4.6 (git+https://github.com/alexcrichton/curl-rust?rev=a204473f1679330058cb518b27ce1ebb7fe8a91f)" = "<none>"
 "checksum curl-sys 0.3.10 (git+https://github.com/alexcrichton/curl-rust?rev=a204473f1679330058cb518b27ce1ebb7fe8a91f)" = "<none>"
 "checksum dbghelp-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "97590ba53bcb8ac28279161ca943a924d1fd4a8fb3fa63302591647c4fc5b850"
+"checksum derive-error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5aa0793c7e314a5c8b4092ed60ce447627eb9790c610fa48d6df4f4f05064039"
+"checksum dotenv 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5f0b6bea196dc1effc0f5184ff71d4df7cc28b81ba81bcfb74b4c633d683ebda"
 "checksum dtoa 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "80c8b71fd71146990a9742fc06dcbbde19161a267e0ad4e572c35162f4578c90"
 "checksum either 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "63f94a35a9ca0d4178e85f0250373f2cea55c5d603e6993778d68a99b3d8071c"
 "checksum error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d9435d864e017c3c6afeac1654189b06cdb491cf2ff73dbf0d73b0f292f42ff8"

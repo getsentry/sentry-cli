@@ -45,6 +45,7 @@ extern crate pbr;
 extern crate osascript;
 #[cfg(target_os="macos")]
 extern crate unix_daemonize;
+extern crate dotenv;
 
 mod macros;
 
@@ -114,6 +115,7 @@ fn init_backtrace() {
 
 /// Executes the command line application and exits the process.
 pub fn main() {
+    dotenv::dotenv().ok();
     init_backtrace();
     real_main();
 }
