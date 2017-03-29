@@ -48,6 +48,7 @@ extern crate unix_daemonize;
 extern crate dotenv;
 #[cfg(not(windows))]
 extern crate openssl_probe;
+extern crate elementtree;
 
 mod macros;
 
@@ -60,6 +61,7 @@ pub mod config;
 pub mod utils;
 pub mod macho;
 pub mod xcode;
+pub mod gradle;
 pub mod sourcemaputils;
 pub mod constants;
 

@@ -31,6 +31,7 @@ macro_rules! each_subcommand {
         $mac!(send_event);
         #[cfg(target_os="macos")]
         $mac!(react_native_xcode);
+        $mac!(react_native_gradle);
     }
 }
 
@@ -47,6 +48,7 @@ pub mod send_event;
 
 #[cfg(target_os="macos")]
 pub mod react_native_xcode;
+pub mod react_native_gradle;
 
 fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();

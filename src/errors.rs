@@ -9,6 +9,7 @@ use walkdir;
 use zip;
 use plist;
 use sourcemap;
+use elementtree;
 
 use api;
 
@@ -25,5 +26,6 @@ error_chain! {
         Clap(clap::Error);
         PList(plist::Error);
         Api(api::Error);
+        Xml(elementtree::ParseError);
     }
 }
