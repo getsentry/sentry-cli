@@ -110,7 +110,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     info!("Parsing Info.plist");
-    let plist = match xcode::InfoPlist::discover_from_path(&base)? {
+    let plist = match xcode::InfoPlist::discover_from_env(&base)? {
         Some(plist) => plist,
         None => { return Err("Could not find info.plist".into()); }
     };
