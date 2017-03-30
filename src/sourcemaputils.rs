@@ -79,11 +79,8 @@ fn find_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Resu
     // We just need to make sure that we fix up the reference if we need to
     // (eg: ~/ -> /).
     if sourcemaps.len() == 1 {
-        let rv = sourcemaps.iter().next().unwrap();
-        if rv.starts_with("~/") {
-            return Ok(rv[2..].to_string());
-        }
-        return Ok(rv.to_string());
+        return Ok(sourcemap::make_relative_path(
+            min_url, sourcemaps.iter().next().unwrap()));
     }
 
     let map_ext = "map";

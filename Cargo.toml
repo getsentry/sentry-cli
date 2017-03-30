@@ -25,7 +25,7 @@ log = "0.3"
 term = "0.4"
 curl = { git = "https://github.com/alexcrichton/curl-rust", rev = "a204473f1679330058cb518b27ce1ebb7fe8a91f" }
 might-be-minified = "0.1"
-sourcemap = "0.15.1"
+sourcemap = "1.0.0"
 backtrace = "0.3.0"
 plist = "0.1.2"
 if_chain = "^0.1.2"
