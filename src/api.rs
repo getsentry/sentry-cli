@@ -485,6 +485,12 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// List all projects associated with an organization
+    pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
+        self.get(&format!("/organizations/{}/projects/", PathArg(org)))?
+            .convert_rnf("organization")
+    }
+
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let path = format!("/organizations/{}/repos/", PathArg(org));
@@ -1011,6 +1017,21 @@ impl IssueFilter {
 pub struct AssociateDsymsResponse {
     #[serde(rename="associatedDsymFiles")]
     pub associated_dsyms: Vec<DSymFile>
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Team {
+    pub id: String,
+    pub slug: String,
+    pub name: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Project {
+    pub id: String,
+    pub slug: String,
+    pub name: String,
+    pub team: Team,
 }
 
 #[derive(Deserialize, Debug)]
