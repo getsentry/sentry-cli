@@ -915,6 +915,8 @@ pub struct ReleaseInfo {
     pub date_created: DateTime<UTC>,
     #[serde(rename="dateReleased")]
     pub date_released: Option<DateTime<UTC>>,
+    #[serde(rename="lastEvent")]
+    pub last_event: Option<DateTime<UTC>>,
     #[serde(rename="newGroups")]
     pub new_groups: u64,
 }

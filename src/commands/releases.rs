@@ -13,7 +13,7 @@ use prelude::*;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
-use utils::{ArgExt, Table};
+use utils::{ArgExt, Table, HumanDuration};
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -230,16 +230,25 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>,
                     -> Result<()> {
     let releases = Api::new(config).list_releases(org, project)?;
     let mut table = Table::new();
-    table.title_row().add("Released").add("Version").add("New Events");
+    table.title_row()
+        .add("Released")
+        .add("Version")
+        .add("New Events")
+        .add("Last Event");
     for release_info in releases {
         let mut row = table.add_row();
-        if let Some(ref date) = release_info.date_released {
-            row.add(date);
+        if let Some(date) = release_info.date_released {
+            row.add(format!("{} ago", HumanDuration(UTC::now().signed_duration_since(date))));
         } else {
             row.add("(unreleased)");
         }
         row.add(strip_version(&release_info.version));
         row.add(release_info.new_groups);
+        if let Some(date) = release_info.last_event {
+            row.add(format!("{} ago", HumanDuration(UTC::now().signed_duration_since(date))));
+        } else {
+            row.add("-");
+        }
     }
     table.print();
     Ok(())
