@@ -162,15 +162,20 @@ impl Config {
         }
     }
 
+    /// Given a match object from clap, this returns the org from it.
+    pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
+        Ok(matches.value_of("org")
+               .map(|x| x.to_owned())
+               .or_else(|| env::var("SENTRY_ORG").ok())
+               .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
+               .ok_or("An organization slug is required (provide with --org)")?)
+    }
+
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
-        Ok((matches.value_of("org")
-                .map(|x| x.to_owned())
-                .or_else(|| env::var("SENTRY_ORG").ok())
-                .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
-                .ok_or("An organization slug is required (provide with --org)")?,
+        Ok((self.get_org(matches)?,
             matches.value_of("project")
                 .map(|x| x.to_owned())
                 .or_else(|| env::var("SENTRY_PROJECT").ok())

@@ -24,6 +24,7 @@ macro_rules! each_subcommand {
         $mac!(upload_dsym);
         $mac!(releases);
         $mac!(issues);
+        $mac!(repos);
         $mac!(update);
         $mac!(uninstall);
         $mac!(info);
@@ -40,6 +41,7 @@ macro_rules! each_subcommand {
 pub mod upload_dsym;
 pub mod releases;
 pub mod issues;
+pub mod repos;
 pub mod update;
 pub mod uninstall;
 pub mod info;

@@ -49,6 +49,7 @@ extern crate dotenv;
 #[cfg(not(windows))]
 extern crate openssl_probe;
 extern crate elementtree;
+extern crate prettytable;
 
 mod macros;
 

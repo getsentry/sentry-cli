@@ -13,7 +13,7 @@ use prelude::*;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
-use utils::ArgExt;
+use utils::{ArgExt, Table};
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -229,16 +229,19 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>,
                     project: &str)
                     -> Result<()> {
     let releases = Api::new(config).list_releases(org, project)?;
-    println!("RELEASED                     VERSION       NEW EVENTS");
-    println!("=====================================================");
-    for info in releases {
-        println!("{: ^27}  {: <12}  {}",
-                 info.date_released.as_ref()
-                    .map(|x| x as &fmt::Display)
-                    .unwrap_or(&"(unreleased)" as &fmt::Display),
-                 strip_version(&info.version),
-                 info.new_groups);
+    let mut table = Table::new();
+    table.title_row().add("Released").add("Version").add("New Events");
+    for release_info in releases {
+        let mut row = table.add_row();
+        if let Some(ref date) = release_info.date_released {
+            row.add(date);
+        } else {
+            row.add("(unreleased)");
+        }
+        row.add(strip_version(&release_info.version));
+        row.add(release_info.new_groups);
     }
+    table.print();
     Ok(())
 }
 

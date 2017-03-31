@@ -485,6 +485,17 @@ impl<'a> Api<'a> {
         }
     }
 
+    /// List all repos associated with an organization
+    pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
+        let path = format!("/organizations/{}/repos/", PathArg(org));
+        let resp = self.request(Method::Get, &path)?.send()?;
+        if resp.status() == 404 {
+            Ok(vec![])
+        } else {
+            Ok(resp.convert()?)
+        }
+    }
+
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
     pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
@@ -1000,4 +1011,21 @@ impl IssueFilter {
 pub struct AssociateDsymsResponse {
     #[serde(rename="associatedDsymFiles")]
     pub associated_dsyms: Vec<DSymFile>
+}
+
+#[derive(Deserialize, Debug)]
+pub struct RepoProvider {
+    pub id: String,
+    pub name: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Repo {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+    pub provider: RepoProvider,
+    pub status: String,
+    #[serde(rename="dateCreated")]
+    pub date_created: DateTime<UTC>,
 }
