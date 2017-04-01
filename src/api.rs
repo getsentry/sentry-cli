@@ -321,7 +321,8 @@ impl<'a> Api<'a> {
                           project: &str,
                           version: &str,
                           release: &UpdatedRelease)
-                          -> ApiResult<ReleaseInfo> {
+        -> ApiResult<ReleaseInfo>
+    {
         self.put(&format!("/projects/{}/{}/releases/{}/", PathArg(org), PathArg(project),
                           PathArg(version)), release)?
             .convert_rnf("release")
@@ -891,6 +892,15 @@ pub struct NewRelease {
     pub date_released: Option<DateTime<UTC>>,
 }
 
+/// A head commit on a release
+#[derive(Debug, Serialize, Default)]
+pub struct HeadCommit {
+    #[serde(rename="repository")]
+    pub repo: String,
+    #[serde(rename="current_id")]
+    pub current_id: String,
+}
+
 /// Changes to a release
 #[derive(Debug, Serialize, Default)]
 pub struct UpdatedRelease {
@@ -902,6 +912,8 @@ pub struct UpdatedRelease {
     pub date_started: Option<DateTime<UTC>>,
     #[serde(rename="dateReleased")]
     pub date_released: Option<DateTime<UTC>>,
+    #[serde(rename="head_commits")]
+    pub head_commits: Option<HeadCommit>,
 }
 
 /// Provides all release information from already existing releases
