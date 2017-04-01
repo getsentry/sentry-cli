@@ -1,5 +1,5 @@
 //! Implements a command for issue management.
-use clap::{App, AppSettings, Arg, ArgMatches};
+use crates::clap::{App, AppSettings, Arg, ArgMatches};
 
 use prelude::*;
 use api::{Api, IssueFilter, IssueChanges};

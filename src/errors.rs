@@ -1,15 +1,15 @@
 use std::io;
 use std::string;
 
-use ini::ini;
-use clap;
-use serde_json;
-use url;
-use walkdir;
-use zip;
-use plist;
-use sourcemap;
-use elementtree;
+use crates::ini::ini;
+use crates::clap;
+use crates::serde_json;
+use crates::url;
+use crates::walkdir;
+use crates::zip;
+use crates::plist;
+use crates::sourcemap;
+use crates::elementtree;
 
 use api;
 

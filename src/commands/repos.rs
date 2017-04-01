@@ -1,5 +1,5 @@
 //! Implements a command for managing repos.
-use clap::{App, AppSettings, Arg, ArgMatches};
+use crates::clap::{App, AppSettings, Arg, ArgMatches};
 
 use prelude::*;
 use config::Config;

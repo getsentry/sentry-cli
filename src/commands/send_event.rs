@@ -1,6 +1,6 @@
 //! Implements a command for sending events to Sentry.
-use clap::{App, Arg, ArgMatches};
-use itertools::Itertools;
+use crates::clap::{App, Arg, ArgMatches};
+use crates::itertools::Itertools;
 
 use prelude::*;
 use config::Config;

@@ -4,52 +4,51 @@
 
 #![recursion_limit = "1024"]
 
-#[cfg(not(windows))]
-#[macro_use]
-extern crate chan;
-#[cfg(not(windows))]
-extern crate chan_signal;
-extern crate curl;
-extern crate clap;
-extern crate ini;
-extern crate backtrace;
-extern crate itertools;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde;
-extern crate serde_json;
-extern crate url;
-extern crate uuid;
-extern crate walkdir;
-extern crate which;
-extern crate zip;
-extern crate sha1;
-extern crate sourcemap;
-extern crate open;
-extern crate runas;
-extern crate term;
-extern crate plist;
-extern crate might_be_minified;
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate if_chain;
-extern crate chrono;
-extern crate regex;
-#[macro_use]
-extern crate lazy_static;
-extern crate pbr;
-#[cfg(target_os="macos")]
-extern crate osascript;
-#[cfg(target_os="macos")]
-extern crate unix_daemonize;
-extern crate dotenv;
-#[cfg(not(windows))]
-extern crate openssl_probe;
-extern crate elementtree;
-extern crate prettytable;
+#[cfg(not(windows))] #[macro_use] extern crate chan as chan_crate;
+#[macro_use] extern crate error_chain as error_chain_crate;
+#[macro_use] extern crate serde_derive as serde_derive_crate;
+#[macro_use] extern crate log as log_crate;
+#[macro_use] extern crate if_chain as if_chain_crate;
+#[macro_use] extern crate lazy_static as lazy_static_crate;
+
+mod crates {
+    #[cfg(not(windows))]
+    pub mod chan { pub use chan_crate::*; }
+
+    #[cfg(not(windows))] pub extern crate chan_signal;
+    pub extern crate curl;
+    pub extern crate clap;
+    pub extern crate ini;
+    pub extern crate backtrace;
+    pub extern crate itertools;
+    pub extern crate serde;
+    pub extern crate serde_json;
+    pub extern crate url;
+    pub extern crate uuid;
+    pub extern crate walkdir;
+    pub extern crate which;
+    pub extern crate zip;
+    pub extern crate sha1;
+    pub extern crate sourcemap;
+    pub extern crate open;
+    pub extern crate runas;
+    pub extern crate term;
+    pub extern crate plist;
+    pub extern crate might_be_minified;
+    pub mod log { pub use log_crate::*; }
+    pub extern crate chrono;
+    pub extern crate regex;
+    pub extern crate pbr;
+    #[cfg(target_os="macos")]
+    pub extern crate osascript;
+    #[cfg(target_os="macos")]
+    pub extern crate unix_daemonize;
+    pub extern crate dotenv;
+    #[cfg(not(windows))]
+    pub extern crate openssl_probe;
+    pub extern crate elementtree;
+    pub extern crate prettytable;
+}
 
 mod macros;
 
@@ -70,10 +69,10 @@ use std::io::Write;
 
 #[cfg(not(windows))]
 fn real_main() {
-    use openssl_probe::init_ssl_cert_env_vars;
+    use crates::openssl_probe::init_ssl_cert_env_vars;
     init_ssl_cert_env_vars();
     if let Some(signal) = utils::run_or_interrupt(commands::main) {
-        use chan_signal::Signal;
+        use crates::chan_signal::Signal;
         if signal == Signal::INT {
             println!("Interrupted!");
         }
@@ -86,7 +85,7 @@ fn real_main() {
 }
 
 fn init_backtrace() {
-    use backtrace::Backtrace;
+    use crates::backtrace::Backtrace;
     use std::panic;
     use std::thread;
 
@@ -122,7 +121,7 @@ fn init_backtrace() {
 
 /// Executes the command line application and exits the process.
 pub fn main() {
-    dotenv::dotenv().ok();
+    crates::dotenv::dotenv().ok();
     init_backtrace();
     real_main();
 }

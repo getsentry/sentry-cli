@@ -1,4 +1,4 @@
-use clap::{App, ArgMatches, AppSettings};
+use crates::clap::{App, ArgMatches, AppSettings};
 
 use prelude::*;
 use config::Config;

@@ -1,7 +1,7 @@
 //! Implements a command for uninstalling `sentry-cli`
 use std::env;
 
-use clap::{App, ArgMatches, AppSettings};
+use crates::clap::{App, ArgMatches, AppSettings};
 
 use prelude::*;
 use config::Config;
@@ -38,7 +38,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
 #[cfg(not(windows))]
 pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     use std::fs;
-    use runas;
+    use crates::runas;
     use utils;
 
     if is_homebrew_install() {

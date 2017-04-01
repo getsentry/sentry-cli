@@ -4,9 +4,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::process;
 
-use clap::{App, Arg, ArgMatches};
-use serde_json;
-use chrono::Duration;
+use crates::clap::{App, Arg, ArgMatches};
+use crates::serde_json;
+use crates::chrono::Duration;
 
 use prelude::*;
 use api::{Api, NewRelease};

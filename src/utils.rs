@@ -12,20 +12,20 @@ use std::result::Result as StdResult;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek, SeekFrom};
 
-use clap;
-use term;
-use log;
-use uuid::{Uuid, UuidVersion};
-use sha1::Sha1;
-use zip::ZipArchive;
-use regex::{Regex, Captures};
-use prettytable;
-use chrono::Duration;
+use crates::clap;
+use crates::term;
+use crates::log;
+use crates::uuid::{Uuid, UuidVersion};
+use crates::sha1::Sha1;
+use crates::zip::ZipArchive;
+use crates::regex::{Regex, Captures};
+use crates::prettytable;
+use crates::chrono::Duration;
 
 use prelude::*;
 
 #[cfg(not(windows))]
-use chan_signal::{notify, Signal};
+use crates::chan_signal::{notify, Signal};
 
 /// Helper for formatting durations.
 pub struct HumanDuration(pub Duration);
@@ -266,7 +266,7 @@ pub fn run_or_interrupt<F>(f: F) -> Option<Signal>
     where F: FnOnce() -> (),
           F: Send + 'static
 {
-    use chan;
+    use crates::chan;
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);

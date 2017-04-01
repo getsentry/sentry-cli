@@ -7,13 +7,13 @@ use std::borrow::Cow;
 use std::thread;
 use std::time::Duration;
 
-use plist::serde::deserialize;
-use walkdir::WalkDir;
+use crates::plist::serde::deserialize;
+use crates::walkdir::WalkDir;
 #[cfg(target_os="macos")]
-use osascript;
+use crates::osascript;
 #[cfg(target_os="macos")]
-use unix_daemonize::{daemonize_redirect, ChdirMode};
-use open;
+use crates::unix_daemonize::{daemonize_redirect, ChdirMode};
+use crates::open;
 
 use prelude::*;
 use utils::{TempFile, expand_envvars, print_error};

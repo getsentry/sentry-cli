@@ -10,9 +10,9 @@ use std::ffi::OsStr;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use clap::{App, Arg, ArgMatches};
-use walkdir::{WalkDir, Iter as WalkDirIter};
-use zip;
+use crates::clap::{App, Arg, ArgMatches};
+use crates::walkdir::{WalkDir, Iter as WalkDirIter};
+use crates::zip;
 
 use prelude::*;
 use api::{Api, DSymFile};

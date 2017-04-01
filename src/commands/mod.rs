@@ -3,8 +3,8 @@
 use std::env;
 use std::process;
 
-use log;
-use clap::{Arg, App, AppSettings};
+use crates::log;
+use crates::clap::{Arg, App, AppSettings};
 
 use prelude::*;
 use constants::VERSION;

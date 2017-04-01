@@ -1,8 +1,9 @@
 //! Implements a command for signing in.
-use clap::{App, ArgMatches};
-use open;
-use url::Url;
 use std::fs::OpenOptions;
+
+use crates::clap::{App, ArgMatches};
+use crates::open;
+use crates::url::Url;
 
 use prelude::*;
 use config::{Config, Auth};

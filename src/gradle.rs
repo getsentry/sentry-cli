@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use elementtree::Element;
+use crates::elementtree::Element;
 
 use prelude::*;
 

@@ -3,8 +3,8 @@ use std::fs;
 use std::env;
 use std::path::Path;
 
-use clap::{App, Arg, ArgMatches, AppSettings};
-use runas;
+use crates::clap::{App, Arg, ArgMatches, AppSettings};
+use crates::runas;
 
 use prelude::*;
 use api::Api;

@@ -9,11 +9,12 @@ use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
-use term;
-use url::Url;
+use crates::term;
+use crates::url::Url;
+use crates::sourcemap;
+use crates::might_be_minified;
+
 use api::{Api, FileContents};
-use sourcemap;
-use might_be_minified;
 
 use prelude::*;
 
