@@ -328,6 +328,20 @@ impl<'a> Api<'a> {
             .convert_rnf("release")
     }
 
+    /// Sets release commits
+    pub fn set_release_head_commits(&self, org: &str, version: &str,
+                                    commits: Vec<HeadCommit>)
+        -> ApiResult<ReleaseInfo>
+    {
+        let update = UpdatedRelease {
+            head_commits: Some(commits),
+            ..Default::default()
+        };
+        self.put(&format!("/organizations/{}/releases/{}/", PathArg(org),
+                          PathArg(version)), &update)?
+            .convert_rnf("release")
+    }
+
     /// Deletes an already existing release.  Returns `true` if it was deleted
     /// or `false` if not.
     pub fn delete_release(&self, org: &str, project: &str, version: &str) -> ApiResult<bool> {
@@ -897,7 +911,7 @@ pub struct NewRelease {
 pub struct HeadCommit {
     #[serde(rename="repository")]
     pub repo: String,
-    #[serde(rename="current_id")]
+    #[serde(rename="currentId")]
     pub current_id: String,
 }
 
@@ -912,8 +926,8 @@ pub struct UpdatedRelease {
     pub date_started: Option<DateTime<UTC>>,
     #[serde(rename="dateReleased")]
     pub date_released: Option<DateTime<UTC>>,
-    #[serde(rename="head_commits")]
-    pub head_commits: Option<HeadCommit>,
+    #[serde(rename="headCommits")]
+    pub head_commits: Option<Vec<HeadCommit>>,
 }
 
 /// Provides all release information from already existing releases

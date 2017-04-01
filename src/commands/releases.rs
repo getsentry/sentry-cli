@@ -34,6 +34,21 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("finalize")
                  .long("finalize")
                  .help("Immediately finalize the release (sets it to released)")))
+        .subcommand(App::new("set-commits")
+            .about("Sets commits to a release")
+            .version_arg(1)
+            .arg(Arg::with_name("commits")
+                 .long("commit")
+                 .short("c")
+                 .value_name("REPO[@COMMIT]")
+                 .multiple(true)
+                 .help("This parameter defines a single commit for a repo as \
+                        identified by the repo name in the remote Sentry config. \
+                        If no commit has been specified sentry-cli will attempt \
+                        to auto discover that repository in the local git repo \
+                        and then use the HEAD commit.  This will either use the \
+                        current git repository or attempt to auto discover a \
+                        submodule with a compatible URL.")))
         .subcommand(App::new("delete")
             .about("Delete a release")
             .version_arg(1))
@@ -205,6 +220,16 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
             ..Default::default()
         })?;
     println!("Finalized release {}.", info_rv.version);
+    Ok(())
+}
+
+fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
+                           config: &Config,
+                           org: &str,
+                           project: &str)
+    -> Result<()>
+{
+    println!("Set commits");
     Ok(())
 }
 
@@ -440,6 +465,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("finalize") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_finalize(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
+        let (org, project) = config.get_org_and_project(matches)?;
+        return execute_set_commits(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         let (org, project) = config.get_org_and_project(matches)?;
