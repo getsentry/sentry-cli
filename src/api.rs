@@ -16,13 +16,13 @@ use std::collections::{HashSet, HashMap};
 use std::borrow::Cow;
 use std::rc::Rc;
 
-use serde::{Serialize, Deserialize};
-use serde_json;
-use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
-use curl;
-use regex::Regex;
-use chrono::{Duration, DateTime, UTC};
-use pbr;
+use crates::serde::{Serialize, Deserialize};
+use crates::serde_json;
+use crates::url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+use crates::curl;
+use crates::regex::Regex;
+use crates::chrono::{Duration, DateTime, UTC};
+use crates::pbr;
 
 use utils;
 use event::Event;

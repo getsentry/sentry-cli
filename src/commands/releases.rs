@@ -4,10 +4,10 @@ use std::ffi::OsStr;
 use std::collections::HashSet;
 use std::fmt;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
-use walkdir::WalkDir;
-use chrono::{DateTime, UTC};
-use regex::Regex;
+use crates::clap::{App, AppSettings, Arg, ArgMatches};
+use crates::walkdir::WalkDir;
+use crates::chrono::{DateTime, UTC};
+use crates::regex::Regex;
 
 use prelude::*;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};

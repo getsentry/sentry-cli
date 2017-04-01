@@ -1,5 +1,5 @@
 //! Implements a command for showing infos from Sentry.
-use clap::{App, ArgMatches};
+use crates::clap::{App, ArgMatches};
 
 use prelude::*;
 use api::Api;
