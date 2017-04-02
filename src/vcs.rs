@@ -17,8 +17,7 @@ pub struct CommitSpec {
 #[derive(Debug, PartialEq, Eq)]
 pub struct VcsUrl {
     pub provider: &'static str,
-    pub host: String,
-    pub path: String,
+    pub id: String,
 }
 
 impl CommitSpec {
@@ -58,26 +57,23 @@ impl VcsUrl {
         if let Some(caps) = GITHUB_URL_RE.captures(url) {
             VcsUrl {
                 provider: "github",
-                host: "github.com".into(),
-                path: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
+                id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
             }
         } else if let Some(caps) = GITHUB_SSH_RE.captures(url) {
             VcsUrl {
                 provider: "github",
-                host: "github.com".into(),
-                path: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
+                id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
             }
         } else {
             VcsUrl {
                 provider: "generic",
-                host: "".into(),
-                path: url.into(),
+                id: url.into(),
             }
         }
     }
 }
 
-pub fn is_matching_url(a: &str, b: &str) -> bool {
+fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
 
@@ -186,12 +182,10 @@ pub fn find_head_commits(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
 fn test_url_parsing() {
     assert_eq!(VcsUrl::parse("http://github.com/mitsuhiko/flask"), VcsUrl {
         provider: "github",
-        host: "github.com".into(),
         path: "mitsuhiko/flask".into(),
     });
     assert_eq!(VcsUrl::parse("git@github.com:mitsuhiko/flask.git"), VcsUrl {
         provider: "github",
-        host: "github.com".into(),
         path: "mitsuhiko/flask".into(),
     });
 }
