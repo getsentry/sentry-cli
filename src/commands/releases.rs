@@ -37,6 +37,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("set-commits")
             .about("Sets commits to a release")
             .version_arg(1)
+            .arg(Arg::with_name("auto")
+                 .long("auto")
+                 .help("This parameter enables completely automated commit management. \
+                        It requires that the command is run from within a git repository. \
+                        sentry-cli will then automatically find remotely configured \
+                        repositories and discover commits."))
             .arg(Arg::with_name("commits")
                  .long("commit")
                  .short("c")
@@ -240,18 +246,21 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     let repos = api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
 
-    if let Some(commits) = matches.values_of("commits") {
-        for spec in commits {
-            let commit_spec = vcs::CommitSpec::parse(spec)?;
-            if (&repos).iter().filter(|r| r.name == commit_spec.repo).next().is_some() {
-                commit_specs.push(commit_spec);
-            } else {
-                return Err(Error::from(format!("Unknown repo '{}'", commit_spec.repo)));
+    let head_commits = if matches.is_present("auto") {
+        vcs::find_head_commits(None, repos)?
+    } else {
+        if let Some(commits) = matches.values_of("commits") {
+            for spec in commits {
+                let commit_spec = vcs::CommitSpec::parse(spec)?;
+                if (&repos).iter().filter(|r| r.name == commit_spec.repo).next().is_some() {
+                    commit_specs.push(commit_spec);
+                } else {
+                    return Err(Error::from(format!("Unknown repo '{}'", commit_spec.repo)));
+                }
             }
         }
-    }
-
-    let head_commits = vcs::find_head_commits(commit_specs, repos)?;
+        vcs::find_head_commits(Some(commit_specs), repos)?
+    };
 
     let mut table = Table::new();
     table.title_row()
