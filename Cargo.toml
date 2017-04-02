@@ -35,15 +35,21 @@ pbr = "0.3.1"
 dotenv = "0.10.0"
 elementtree = "0.1.1"
 prettytable-rs = "0.6.0"
-git2 = "0.6.4"
+# As we currently do not need to use any of the networking features of
+# git2 (we only need local repo access) we can safely disable the default
+# features and use nothing instead.
+git2 = { version = "0.6.4", default-features = false, features = [] }
 
 [replace.'curl:0.4.6']
 git = "https://github.com/alexcrichton/curl-rust"
 rev = "a204473f1679330058cb518b27ce1ebb7fe8a91f"
 
-[replace.'curl-sys:0.3.10']
-git = "https://github.com/alexcrichton/curl-rust"
-rev = "a204473f1679330058cb518b27ce1ebb7fe8a91f"
+## This is currently disabled because we are not using any of the networking
+## features of git2.  If the default features are enabled there this
+## replacement is necessary.
+#[replace.'curl-sys:0.3.10']
+#git = "https://github.com/alexcrichton/curl-rust"
+#rev = "a204473f1679330058cb518b27ce1ebb7fe8a91f"
 
 [target.'cfg(not(windows))'.dependencies]
 chan = "0.1"

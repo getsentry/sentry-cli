@@ -253,12 +253,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "curl-sys"
-version = "0.3.10"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-replace = "curl-sys 0.3.10 (git+https://github.com/alexcrichton/curl-rust?rev=a204473f1679330058cb518b27ce1ebb7fe8a91f)"
-
-[[package]]
 name = "dbghelp-sys"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -357,8 +351,6 @@ dependencies = [
  "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "libgit2-sys 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl-probe 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl-sys 0.9.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -420,24 +412,9 @@ version = "0.6.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cmake 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "curl-sys 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "gcc 0.3.45 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "libssh2-sys 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "libz-sys 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl-sys 0.9.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "libssh2-sys"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "cmake 0.1.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
- "libz-sys 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)",
- "openssl-sys 0.9.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
@@ -1062,7 +1039,6 @@ dependencies = [
 "checksum curl 0.4.6 (git+https://github.com/alexcrichton/curl-rust?rev=a204473f1679330058cb518b27ce1ebb7fe8a91f)" = "<none>"
 "checksum curl 0.4.6 (registry+https://github.com/rust-lang/crates.io-index)" = "c90e1240ef340dd4027ade439e5c7c2064dd9dc652682117bd50d1486a3add7b"
 "checksum curl-sys 0.3.10 (git+https://github.com/alexcrichton/curl-rust?rev=a204473f1679330058cb518b27ce1ebb7fe8a91f)" = "<none>"
-"checksum curl-sys 0.3.10 (registry+https://github.com/rust-lang/crates.io-index)" = "c0d909dc402ae80b6f7b0118c039203436061b9d9a3ca5d2c2546d93e0a61aaa"
 "checksum dbghelp-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "97590ba53bcb8ac28279161ca943a924d1fd4a8fb3fa63302591647c4fc5b850"
 "checksum debug_unreachable 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "9a032eac705ca39214d169f83e3d3da290af06d8d1d344d1baad2fd002dca4b3"
 "checksum derive-error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "5aa0793c7e314a5c8b4092ed60ce447627eb9790c610fa48d6df4f4f05064039"
@@ -1085,7 +1061,6 @@ dependencies = [
 "checksum lazy_static 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "4732c563b9a21a406565c4747daa7b46742f082911ae4753f390dc9ec7ee1a97"
 "checksum libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)" = "88ee81885f9f04bff991e306fea7c1c60a5f0f9e409e99f6b40e3311a3363135"
 "checksum libgit2-sys 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)" = "d951fd5eccae07c74e8c2c1075b05ea1e43be7f8952245af8c2840d1480b1d95"
-"checksum libssh2-sys 0.2.5 (registry+https://github.com/rust-lang/crates.io-index)" = "91e135645c2e198a39552c8c7686bb5b83b1b99f64831c040a6c2798a1195934"
 "checksum libz-sys 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)" = "e5ee912a45d686d393d5ac87fac15ba0ba18daae14e8e7543c63ebf7fb7e970c"
 "checksum log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)" = "5141eca02775a762cc6cd564d8d2c50f67c0ea3a372cbf1c51592b3e029e10ad"
 "checksum matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "efd7622e3022e1a6eaa602c4cea8912254e5582c9c692e9167714182244801b1"

@@ -246,6 +246,11 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     let repos = api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
 
+    if repos.is_empty() {
+        return Err(Error::from("No repositories are configured in Sentry for \
+                                your organization."));
+    }
+
     let head_commits = if matches.is_present("auto") {
         vcs::find_head_commits(None, repos)?
     } else {
@@ -261,6 +266,12 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
         }
         vcs::find_head_commits(Some(commit_specs), repos)?
     };
+
+    if matches.is_present("auto") && head_commits.is_empty() {
+        return Err(Error::from("Could not determine any commits to be associated \
+                                automatically. You will have to explicitly provide \
+                                commits on the command line."));
+    }
 
     let mut table = Table::new();
     table.title_row()
