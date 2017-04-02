@@ -50,6 +50,7 @@ extern crate dotenv;
 extern crate openssl_probe;
 extern crate elementtree;
 extern crate prettytable;
+extern crate git2;
 
 mod macros;
 
@@ -65,6 +66,7 @@ pub mod xcode;
 pub mod gradle;
 pub mod sourcemaputils;
 pub mod constants;
+pub mod vcs;
 
 use std::io::Write;
 

@@ -1,5 +1,5 @@
 //! Implements a command for managing projects.
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, ArgMatches};
 
 use prelude::*;
 use config::Config;

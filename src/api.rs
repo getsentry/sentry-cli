@@ -912,7 +912,7 @@ pub struct HeadCommit {
     #[serde(rename="repository")]
     pub repo: String,
     #[serde(rename="currentId")]
-    pub current_id: String,
+    pub rev: String,
 }
 
 /// Changes to a release

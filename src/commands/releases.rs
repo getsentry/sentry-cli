@@ -2,7 +2,6 @@
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use std::collections::HashSet;
-use std::fmt;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
@@ -10,6 +9,7 @@ use chrono::{DateTime, UTC};
 use regex::Regex;
 
 use prelude::*;
+use vcs;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
@@ -40,7 +40,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("commits")
                  .long("commit")
                  .short("c")
-                 .value_name("REPO[@COMMIT]")
+                 .value_name("SPEC")
                  .multiple(true)
                  .help("This parameter defines a single commit for a repo as \
                         identified by the repo name in the remote Sentry config. \
@@ -48,7 +48,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         to auto discover that repository in the local git repo \
                         and then use the HEAD commit.  This will either use the \
                         current git repository or attempt to auto discover a \
-                        submodule with a compatible URL.")))
+                        submodule with a compatible URL.\n\n\
+                        The value can be provided as `REPO` in which case sentry-cli \
+                        will auto-discover the commit based on reachable repositories. \
+                        Alternatively it can be provided as `REPO#PATH` in which case \
+                        the current commit of the repository at the given PATH is \
+                        assumed.  To override the revision `@REV` can be appended \
+                        which will force the revision to a certain value.")))
         .subcommand(App::new("delete")
             .about("Delete a release")
             .version_arg(1))
@@ -229,7 +235,40 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
                            project: &str)
     -> Result<()>
 {
-    println!("Set commits");
+    let version = matches.value_of("version").unwrap();
+    let api = Api::new(config);
+    let repos = api.list_organization_repos(org)?;
+    let mut commit_specs = vec![];
+
+    if let Some(commits) = matches.values_of("commits") {
+        for spec in commits {
+            let commit_spec = vcs::CommitSpec::parse(spec)?;
+            if (&repos).iter().filter(|r| r.name == commit_spec.repo).next().is_some() {
+                commit_specs.push(commit_spec);
+            } else {
+                return Err(Error::from(format!("Unknown repo '{}'", commit_spec.repo)));
+            }
+        }
+    }
+
+    let head_commits = vcs::find_head_commits(commit_specs, repos)?;
+
+    let mut table = Table::new();
+    table.title_row()
+        .add("Repository")
+        .add("Revision");
+    for commit in &head_commits {
+        table.add_row().add(&commit.repo).add(&commit.rev);
+    }
+    table.print();
+
+    // make sure the release exists
+    api.new_release(&org, &project, &NewRelease {
+        version: version.into(),
+        ..Default::default()
+    })?;
+    api.set_release_head_commits(&org, version, head_commits)?;
+
     Ok(())
 }
 
