@@ -37,6 +37,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("set-commits")
             .about("Sets commits to a release")
             .version_arg(1)
+            .arg(Arg::with_name("clear")
+                 .long("clear")
+                 .help("If this is passed the commits will be cleared from the release."))
             .arg(Arg::with_name("auto")
                  .long("auto")
                  .help("This parameter enables completely automated commit management. \
@@ -252,7 +255,15 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     }
 
     let head_commits = if matches.is_present("auto") {
-        vcs::find_head_commits(None, repos)?
+        let commits = vcs::find_head_commits(None, repos)?;
+        if commits.is_empty() {
+            return Err(Error::from("Could not determine any commits to be associated \
+                                    automatically. You will have to explicitly provide \
+                                    commits on the command line."));
+        }
+        Some(commits)
+    } else if matches.is_present("clear") {
+        Some(vec![])
     } else {
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
@@ -264,30 +275,37 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
                 }
             }
         }
-        vcs::find_head_commits(Some(commit_specs), repos)?
+        let commits = vcs::find_head_commits(Some(commit_specs), repos)?;
+        if commits.is_empty() {
+            None
+        } else {
+            Some(commits)
+        }
     };
-
-    if matches.is_present("auto") && head_commits.is_empty() {
-        return Err(Error::from("Could not determine any commits to be associated \
-                                automatically. You will have to explicitly provide \
-                                commits on the command line."));
-    }
-
-    let mut table = Table::new();
-    table.title_row()
-        .add("Repository")
-        .add("Revision");
-    for commit in &head_commits {
-        table.add_row().add(&commit.repo).add(&commit.rev);
-    }
-    table.print();
 
     // make sure the release exists
     api.new_release(&org, &project, &NewRelease {
         version: version.into(),
         ..Default::default()
     })?;
-    api.set_release_head_commits(&org, version, head_commits)?;
+
+    if let Some(head_commits) = head_commits {
+        if head_commits.is_empty() {
+            println!("Clearing commits for release.");
+        } else {
+            let mut table = Table::new();
+            table.title_row()
+                .add("Repository")
+                .add("Revision");
+            for commit in &head_commits {
+                table.add_row().add(&commit.repo).add(&commit.rev);
+            }
+            table.print();
+        }
+        api.set_release_head_commits(&org, version, head_commits)?;
+    } else {
+        println!("No commits found. Leaving release alone.");
+    }
 
     Ok(())
 }
