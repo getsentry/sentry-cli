@@ -2,7 +2,6 @@
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 use std::collections::HashSet;
-use std::fmt;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
@@ -10,6 +9,7 @@ use chrono::{DateTime, UTC};
 use regex::Regex;
 
 use prelude::*;
+use vcs;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
@@ -34,6 +34,36 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("finalize")
                  .long("finalize")
                  .help("Immediately finalize the release (sets it to released)")))
+        .subcommand(App::new("set-commits")
+            .about("Sets commits to a release")
+            .version_arg(1)
+            .arg(Arg::with_name("clear")
+                 .long("clear")
+                 .help("If this is passed the commits will be cleared from the release."))
+            .arg(Arg::with_name("auto")
+                 .long("auto")
+                 .help("This parameter enables completely automated commit management. \
+                        It requires that the command is run from within a git repository. \
+                        sentry-cli will then automatically find remotely configured \
+                        repositories and discover commits."))
+            .arg(Arg::with_name("commits")
+                 .long("commit")
+                 .short("c")
+                 .value_name("SPEC")
+                 .multiple(true)
+                 .help("This parameter defines a single commit for a repo as \
+                        identified by the repo name in the remote Sentry config. \
+                        If no commit has been specified sentry-cli will attempt \
+                        to auto discover that repository in the local git repo \
+                        and then use the HEAD commit.  This will either use the \
+                        current git repository or attempt to auto discover a \
+                        submodule with a compatible URL.\n\n\
+                        The value can be provided as `REPO` in which case sentry-cli \
+                        will auto-discover the commit based on reachable repositories. \
+                        Alternatively it can be provided as `REPO#PATH` in which case \
+                        the current commit of the repository at the given PATH is \
+                        assumed.  To override the revision `@REV` can be appended \
+                        which will force the revision to a certain value.")))
         .subcommand(App::new("delete")
             .about("Delete a release")
             .version_arg(1))
@@ -205,6 +235,78 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
             ..Default::default()
         })?;
     println!("Finalized release {}.", info_rv.version);
+    Ok(())
+}
+
+fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
+                           config: &Config,
+                           org: &str,
+                           project: &str)
+    -> Result<()>
+{
+    let version = matches.value_of("version").unwrap();
+    let api = Api::new(config);
+    let repos = api.list_organization_repos(org)?;
+    let mut commit_specs = vec![];
+
+    if repos.is_empty() {
+        return Err(Error::from("No repositories are configured in Sentry for \
+                                your organization."));
+    }
+
+    let head_commits = if matches.is_present("auto") {
+        let commits = vcs::find_head_commits(None, repos)?;
+        if commits.is_empty() {
+            return Err(Error::from("Could not determine any commits to be associated \
+                                    automatically. You will have to explicitly provide \
+                                    commits on the command line."));
+        }
+        Some(commits)
+    } else if matches.is_present("clear") {
+        Some(vec![])
+    } else {
+        if let Some(commits) = matches.values_of("commits") {
+            for spec in commits {
+                let commit_spec = vcs::CommitSpec::parse(spec)?;
+                if (&repos).iter().filter(|r| r.name == commit_spec.repo).next().is_some() {
+                    commit_specs.push(commit_spec);
+                } else {
+                    return Err(Error::from(format!("Unknown repo '{}'", commit_spec.repo)));
+                }
+            }
+        }
+        let commits = vcs::find_head_commits(Some(commit_specs), repos)?;
+        if commits.is_empty() {
+            None
+        } else {
+            Some(commits)
+        }
+    };
+
+    // make sure the release exists
+    api.new_release(&org, &project, &NewRelease {
+        version: version.into(),
+        ..Default::default()
+    })?;
+
+    if let Some(head_commits) = head_commits {
+        if head_commits.is_empty() {
+            println!("Clearing commits for release.");
+        } else {
+            let mut table = Table::new();
+            table.title_row()
+                .add("Repository")
+                .add("Revision");
+            for commit in &head_commits {
+                table.add_row().add(&commit.repo).add(&commit.rev);
+            }
+            table.print();
+        }
+        api.set_release_head_commits(&org, version, head_commits)?;
+    } else {
+        println!("No commits found. Leaving release alone.");
+    }
+
     Ok(())
 }
 
@@ -440,6 +542,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("finalize") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_finalize(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
+        let (org, project) = config.get_org_and_project(matches)?;
+        return execute_set_commits(sub_matches, config, &org, &project);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         let (org, project) = config.get_org_and_project(matches)?;

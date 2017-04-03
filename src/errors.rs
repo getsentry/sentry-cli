@@ -10,6 +10,7 @@ use zip;
 use plist;
 use sourcemap;
 use elementtree;
+use git2;
 
 use api;
 
@@ -26,6 +27,7 @@ error_chain! {
         Clap(clap::Error);
         PList(plist::Error);
         Api(api::Error);
+        Git(git2::Error);
         Xml(elementtree::ParseError);
     }
 }
