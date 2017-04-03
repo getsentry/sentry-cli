@@ -22,7 +22,9 @@ exist:
 *   for mobile devices use ``VERSION_NUMBER`` or ``VERSION_NUMBER
     (BUILD_NUMBER)``.  So for instance ``1.0.0`` or ``1.0.0 (1234)``.
 *   if you use a DVCS we recommed using the identifying hash (eg: the
-    commit SHA, ``da39a3ee5e6b4b0d3255bfef95601890afd80709``)
+    commit SHA, ``da39a3ee5e6b4b0d3255bfef95601890afd80709``).  You can
+    let sentry-cli automatically determine this hash for supported
+    version control systems with ``sentry-cli releases propose-version``.
 *   if you tag releases we recommend using the release tag (eg:
     ``v1.0.0``).
 
