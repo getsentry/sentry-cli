@@ -13,7 +13,7 @@ use vcs;
 use api::{Api, NewRelease, UpdatedRelease, FileContents};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
-use utils::{ArgExt, Table, HumanDuration};
+use utils::{ArgExt, Table, HumanDuration, HumanSize};
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -362,13 +362,25 @@ fn execute_files_list<'a>(_matches: &ArgMatches<'a>,
                           project: &str,
                           release: &str)
                           -> Result<()> {
+    let mut table = Table::new();
+    table.title_row()
+        .add("Name")
+        .add("Sourcemap")
+        .add("Size");
+
     for artifact in Api::new(config).list_release_files(org, project, release)? {
-        print!("{}  ({} bytes)", artifact.name, artifact.size);
+        let mut row = table.add_row();
+        row.add(&artifact.name);
         if let Some(sm_ref) = artifact.get_sourcemap_reference() {
-            print!("  -> sourcemap: {}", sm_ref);
+            row.add(sm_ref);
+        } else {
+            row.add("");
         }
-        println!("");
+        row.add(HumanSize(artifact.size));
     }
+
+    table.print();
+
     Ok(())
 }
 

@@ -46,6 +46,20 @@ impl<'a> fmt::Display for HumanDuration {
     }
 }
 
+pub struct HumanSize(pub u64);
+
+impl<'a> fmt::Display for HumanSize {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use humansize::FileSize;
+        use humansize::file_size_opts::BINARY;
+        if let Ok(size) = self.0.file_size(BINARY).map(|x| x.replace(" ", "")) {
+            write!(f, "{}", size)
+        } else {
+            write!(f, "{}B", self.0)
+        }
+    }
+}
+
 /// A simple logger
 pub struct Logger;
 

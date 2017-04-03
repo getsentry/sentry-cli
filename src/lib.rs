@@ -51,6 +51,7 @@ extern crate openssl_probe;
 extern crate elementtree;
 extern crate prettytable;
 extern crate git2;
+extern crate humansize;
 
 mod macros;
 
