@@ -49,14 +49,44 @@ immediately finalize the release or you can separately later call
 managing releases as part of a build process::
 
     #!/bin/sh
-    sentry-cli releases new $VERSION
+    sentry-cli releases new "$VERSION"
     # do you build steps here
     # once you are done, finalize
-    sentry-cli releases finalize $VERSION
+    sentry-cli releases finalize "$VERSION"
+
+If you are using git you can ask sentry to determine ``$VERSION``::
+
+    #!/bin/sh
+    VERSION=`sentry-cli releases propose-version`
 
 Then the UI will reflect the time it took for the release to be created.
 You can also finalize it later when you pushed the release live (eg:
 deployed to your machines, enabled in the app store etc.).
+
+Commit Integration
+------------------
+
+If you have repositories configured with your sentry organization you can
+associate commits with your release.  This currently only works if you are
+using github but we are going to expand this later.
+
+There are two modes in which you can use this.  One is the fully automatic
+mode.  If you are deploying from a git repository and sentry-cli can
+discover the git repository from the current working directory you can
+set the commits with the ``--auto`` flag::
+
+    sentry-cli releases set-commits "$VERSION" --auto
+
+In case you are deploying without access to the git repository you can
+manually specify the commits instead.  To do this pass the ``-commit``
+parameter to the ``set-commits`` command in the format
+``REPO_NAME@REVISION``.  You can repeat this for as many repositories as
+you have::
+
+    sentry-cli releases set-commits "$VERISON" --commit "my-repo:deadbeef"
+
+To see which repos are available for the organization you can run
+``sentry-cli repos`` which will return a list of configured repositories.
 
 Managing Release Artifacts
 --------------------------
