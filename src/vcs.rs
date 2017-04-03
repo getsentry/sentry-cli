@@ -132,6 +132,13 @@ fn find_matching_head_commit(spec: &CommitSpec, repos: &[Repo], disable_discover
     Ok(None)
 }
 
+pub fn find_head_commit() -> Result<String>
+{
+    let repo = git2::Repository::open_from_env()?;
+    let head = repo.revparse_single("HEAD")?;
+    Ok(head.id().to_string())
+}
+
 /// Given commit specs and repos this returns a list of head commits
 /// from it.
 pub fn find_head_commits(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)

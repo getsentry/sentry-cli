@@ -34,6 +34,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("finalize")
                  .long("finalize")
                  .help("Immediately finalize the release (sets it to released)")))
+        .subcommand(App::new("propose-version")
+            .about("Proposes a version name for a new release"))
         .subcommand(App::new("set-commits")
             .about("Sets commits to a release")
             .version_arg(1)
@@ -235,6 +237,14 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
             ..Default::default()
         })?;
     println!("Finalized release {}.", info_rv.version);
+    Ok(())
+}
+
+fn execute_propose_version<'a>(_matches: &ArgMatches<'a>,
+                               _config: &Config)
+    -> Result<()>
+{
+    println!("{}", vcs::find_head_commit()?);
     Ok(())
 }
 
@@ -554,6 +564,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("finalize") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_finalize(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("propose-version") {
+        return execute_propose_version(sub_matches, config);
     }
     if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
         let (org, project) = config.get_org_and_project(matches)?;
