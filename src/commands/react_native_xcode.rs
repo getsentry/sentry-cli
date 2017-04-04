@@ -208,8 +208,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
 
-        let release = api.new_release(&org, &project, &NewRelease {
+        let release = api.new_release(&org, &NewRelease {
             version: plist.release_name(),
+            projects: vec![project.to_string()],
             ..Default::default()
         })?;
         println!("Uploading sourcemaps for release {}", release.version);

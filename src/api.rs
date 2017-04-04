@@ -307,25 +307,41 @@ impl<'a> Api<'a> {
     /// Creates a new release.
     pub fn new_release(&self,
                        org: &str,
-                       project: &str,
                        release: &NewRelease)
                        -> ApiResult<ReleaseInfo> {
-        self.post(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)),
-                  release)?
-            .convert_rnf("organization or project")
+        // for single project releases use the legacy endpoint that is project bound.
+        // This means we can support both old and new servers.
+        if release.projects.len() == 1 {
+            self.post(&format!("/projects/{}/{}/releases/", PathArg(org),
+                               PathArg(&release.projects[0])), release)?
+                .convert_rnf("organization or project")
+        } else {
+            self.post(&format!("/organizations/{}/releases/", PathArg(org)), release)?
+                .convert_rnf("organization")
+        }
     }
 
     /// Updates a release.
     pub fn update_release(&self,
                           org: &str,
-                          project: &str,
                           version: &str,
                           release: &UpdatedRelease)
         -> ApiResult<ReleaseInfo>
     {
-        self.put(&format!("/projects/{}/{}/releases/{}/", PathArg(org), PathArg(project),
-                          PathArg(version)), release)?
-            .convert_rnf("release")
+        if_chain! {
+            if let Some(ref projects) = release.projects;
+            if projects.len() == 1;
+            then {
+                self.put(&format!("/projects/{}/{}/releases/{}/", PathArg(org),
+                                  PathArg(&projects[0]),
+                                  PathArg(version)), release)?
+                    .convert_rnf("release")
+            } else {
+                self.put(&format!("/organizations/{}/releases/{}/", PathArg(org),
+                                  PathArg(version)), release)?
+                    .convert_rnf("release")
+            }
+        }
     }
 
     /// Sets release commits
@@ -916,6 +932,7 @@ pub struct NewRelease {
     pub version: String,
     #[serde(rename="ref", skip_serializing_if="Option::is_none")]
     pub reference: Option<String>,
+    pub projects: Vec<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
     #[serde(rename="dateStarted")]
@@ -938,6 +955,7 @@ pub struct HeadCommit {
 pub struct UpdatedRelease {
     #[serde(rename="ref", skip_serializing_if="Option::is_none")]
     pub reference: Option<String>,
+    pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
     #[serde(rename="dateStarted")]

@@ -244,9 +244,9 @@ fn execute_new<'a>(matches: &ArgMatches<'a>,
                    project: &str)
                    -> Result<()> {
     let info_rv = Api::new(config).new_release(org,
-        project,
         &NewRelease {
             version: matches.value_of("version").unwrap().to_owned(),
+            projects: vec![project.to_string()],
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: Some(UTC::now()),
@@ -274,9 +274,9 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
     }
 
     let info_rv = Api::new(config).update_release(org,
-        project,
         matches.value_of("version").unwrap(),
         &UpdatedRelease {
+            projects: Some(vec![project.to_string()]),
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: get_date(matches.value_of("started"), false)?,
@@ -341,8 +341,9 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     };
 
     // make sure the release exists
-    api.new_release(&org, &project, &NewRelease {
+    api.new_release(&org, &NewRelease {
         version: version.into(),
+        projects: vec![project.to_string()],
         ..Default::default()
     })?;
 
@@ -646,8 +647,9 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
     }
 
     // make sure the release exists
-    let release = api.new_release(&org, &project, &NewRelease {
+    let release = api.new_release(&org, &NewRelease {
         version: version.into(),
+        projects: vec![project.to_string()],
         ..Default::default()
     })?;
     println!("Uploading sourcemaps for release {}", release.version);
