@@ -14,13 +14,19 @@ use api::{Api, NewRelease, UpdatedRelease, FileContents, Deploy};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
 use utils::{ArgExt, Table, HumanDuration, HumanSize, validate_timestamp,
-            validate_seconds, get_timestamp};
+            validate_seconds, get_timestamp, validate_project};
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("manage releases on Sentry")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_project_args()
+        .org_arg()
+        .arg(Arg::with_name("project")
+            .hidden(true)
+            .value_name("PROJECT")
+            .long("project")
+            .short("p")
+            .validator(validate_project))
         .subcommand(App::new("new")
             .about("Create a new release")
             .version_arg(1)

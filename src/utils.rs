@@ -180,7 +180,7 @@ fn validate_org(v: String) -> StdResult<(), String> {
     }
 }
 
-fn validate_project(v: String) -> StdResult<(), String> {
+pub fn validate_project(v: String) -> StdResult<(), String> {
     if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {
         return Err("invalid value for project. Use the URL \
                     slug and not the name!".into())
@@ -229,9 +229,9 @@ pub fn get_timestamp(value: &str) -> Result<DateTime<UTC>> {
 
 pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
-    fn project_arg(self) -> Self;
+    fn project_arg(self, multiple: bool) -> Self;
     fn org_project_args(self) -> Self {
-        self.org_arg().project_arg()
+        self.org_arg().project_arg(false)
     }
     fn version_arg(self, index: u64) -> Self;
 }
@@ -246,11 +246,12 @@ impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
             .help("The organization slug"))
     }
 
-    fn project_arg(self) -> clap::App<'a, 'b> {
+    fn project_arg(self, multiple: bool) -> clap::App<'a, 'b> {
         self.arg(clap::Arg::with_name("project")
             .value_name("PROJECT")
             .long("project")
             .short("p")
+            .multiple(multiple)
             .validator(validate_project)
             .help("The project slug"))
     }
