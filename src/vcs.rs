@@ -4,7 +4,7 @@ use git2;
 use regex::Regex;
 
 use prelude::*;
-use api::{Repo, HeadCommit};
+use api::{Repo, Ref};
 
 
 #[derive(Debug)]
@@ -94,7 +94,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String> {
     Err(Error::from(format!("Could not find matching repository for {}", repo)))
 }
 
-fn find_matching_head_commit(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
+fn find_matching_head(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
     -> Result<Option<String>>
 {
     let (repo, discovery) = if let Some(ref path) = spec.path {
@@ -132,7 +132,7 @@ fn find_matching_head_commit(spec: &CommitSpec, repos: &[Repo], disable_discover
     Ok(None)
 }
 
-pub fn find_head_commit() -> Result<String>
+pub fn find_head() -> Result<String>
 {
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
@@ -141,8 +141,8 @@ pub fn find_head_commit() -> Result<String>
 
 /// Given commit specs and repos this returns a list of head commits
 /// from it.
-pub fn find_head_commits(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
-    -> Result<Vec<HeadCommit>>
+pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
+    -> Result<Vec<Ref>>
 {
     let mut rv = vec![];
 
@@ -152,14 +152,14 @@ pub fn find_head_commits(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
         for spec in &specs {
             let head = if let Some(ref rev) = spec.rev {
                 rev.clone()
-            } else if let Some(head) = find_matching_head_commit(
+            } else if let Some(head) = find_matching_head(
                 &spec, &repos[..], specs.len() == 1)? {
                 head
             } else {
                 return Err(Error::from(format!(
                     "Could not find HEAD commit for '{}'", &spec.repo)));
             };
-            rv.push(HeadCommit {
+            rv.push(Ref {
                 repo: spec.repo.clone(),
                 rev: head,
             });
@@ -168,13 +168,13 @@ pub fn find_head_commits(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
     // otherwise apply all the magic available
     } else {
         for repo in &repos {
-            if let Some(head) = find_matching_head_commit(
+            if let Some(head) = find_matching_head(
                 &CommitSpec {
                     repo: repo.name.to_string(),
                     path: None,
                     rev: None,
                 }, &repos[..], false)? {
-                rv.push(HeadCommit {
+                rv.push(Ref {
                     repo: repo.name.to_string(),
                     rev: head,
                 });

@@ -359,12 +359,12 @@ impl<'a> Api<'a> {
     }
 
     /// Sets release commits
-    pub fn set_release_head_commits(&self, org: &str, version: &str,
-                                    commits: Vec<HeadCommit>)
+    pub fn set_release_refs(&self, org: &str, version: &str,
+                            refs: Vec<Ref>)
         -> ApiResult<ReleaseInfo>
     {
         let update = UpdatedRelease {
-            head_commits: Some(commits),
+            refs: Some(refs),
             ..Default::default()
         };
         self.put(&format!("/organizations/{}/releases/{}/", PathArg(org),
@@ -957,8 +957,6 @@ impl Artifact {
 #[derive(Debug, Serialize, Default)]
 pub struct NewRelease {
     pub version: String,
-    #[serde(rename="ref", skip_serializing_if="Option::is_none")]
-    pub reference: Option<String>,
     pub projects: Vec<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
@@ -970,7 +968,7 @@ pub struct NewRelease {
 
 /// A head commit on a release
 #[derive(Debug, Serialize, Default)]
-pub struct HeadCommit {
+pub struct Ref {
     #[serde(rename="repository")]
     pub repo: String,
     #[serde(rename="currentId")]
@@ -980,8 +978,6 @@ pub struct HeadCommit {
 /// Changes to a release
 #[derive(Debug, Serialize, Default)]
 pub struct UpdatedRelease {
-    #[serde(rename="ref", skip_serializing_if="Option::is_none")]
-    pub reference: Option<String>,
     pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
@@ -989,16 +985,16 @@ pub struct UpdatedRelease {
     pub date_started: Option<DateTime<UTC>>,
     #[serde(rename="dateReleased")]
     pub date_released: Option<DateTime<UTC>>,
+    // XXX: this is being renamed to "refs" but for a while we want to
+    // continue with the old name which the server still supports.
     #[serde(rename="headCommits")]
-    pub head_commits: Option<Vec<HeadCommit>>,
+    pub refs: Option<Vec<Ref>>,
 }
 
 /// Provides all release information from already existing releases
 #[derive(Debug, Deserialize)]
 pub struct ReleaseInfo {
     pub version: String,
-    #[serde(rename="ref")]
-    pub reference: Option<String>,
     pub url: Option<String>,
     #[serde(rename="dateCreated")]
     pub date_created: DateTime<UTC>,

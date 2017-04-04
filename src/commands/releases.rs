@@ -63,10 +63,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .about("Create a new release")
             .version_arg(1)
             .projects_arg()
+            // this is deprecated and no longer does anything
             .arg(Arg::with_name("ref")
                 .long("ref")
                 .value_name("REF")
-                .help("Optional commit reference (commit hash)"))
+                .hidden(true)
+                .hidden(true))
             .arg(Arg::with_name("url")
                 .long("url")
                 .value_name("URL")
@@ -286,7 +288,6 @@ fn execute_new<'a>(ctx: &ReleaseContext,
         &NewRelease {
             version: matches.value_of("version").unwrap().to_owned(),
             projects: ctx.get_projects(matches)?,
-            reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: Some(UTC::now()),
             date_released: if matches.is_present("finalize") {
@@ -313,7 +314,6 @@ fn execute_finalize<'a>(ctx: &ReleaseContext,
         matches.value_of("version").unwrap(),
         &UpdatedRelease {
             projects: Some(ctx.get_projects(matches)?),
-            reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: get_date(matches.value_of("started"), false)?,
             date_released: get_date(matches.value_of("released"), true)?,
@@ -325,7 +325,7 @@ fn execute_finalize<'a>(ctx: &ReleaseContext,
 
 fn execute_propose_version<'a>() -> Result<()>
 {
-    println!("{}", vcs::find_head_commit()?);
+    println!("{}", vcs::find_head()?);
     Ok(())
 }
 
@@ -342,8 +342,8 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
                                 your organization."));
     }
 
-    let head_commits = if matches.is_present("auto") {
-        let commits = vcs::find_head_commits(None, repos)?;
+    let heads = if matches.is_present("auto") {
+        let commits = vcs::find_heads(None, repos)?;
         if commits.is_empty() {
             return Err(Error::from("Could not determine any commits to be associated \
                                     automatically. You will have to explicitly provide \
@@ -363,7 +363,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
                 }
             }
         }
-        let commits = vcs::find_head_commits(Some(commit_specs), repos)?;
+        let commits = vcs::find_heads(Some(commit_specs), repos)?;
         if commits.is_empty() {
             None
         } else {
@@ -378,20 +378,20 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
         ..Default::default()
     })?;
 
-    if let Some(head_commits) = head_commits {
-        if head_commits.is_empty() {
+    if let Some(heads) = heads {
+        if heads.is_empty() {
             println!("Clearing commits for release.");
         } else {
             let mut table = Table::new();
             table.title_row()
                 .add("Repository")
                 .add("Revision");
-            for commit in &head_commits {
+            for commit in &heads {
                 table.add_row().add(&commit.repo).add(&commit.rev);
             }
             table.print();
         }
-        ctx.api.set_release_head_commits(&org, version, head_commits)?;
+        ctx.api.set_release_refs(&org, version, heads)?;
     } else {
         println!("No commits found. Leaving release alone.");
     }
