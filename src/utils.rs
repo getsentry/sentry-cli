@@ -262,8 +262,10 @@ impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
             .long("project")
             .short("p")
             .multiple(true)
+            .number_of_values(1)
+            .required(false)
             .validator(validate_project)
-            .help("The project slug. THis can be supplied multiple times."))
+            .help("The project slug.  This can be supplied multiple times."))
     }
 
     fn version_arg(self, index: u64) -> clap::App<'a, 'b> {

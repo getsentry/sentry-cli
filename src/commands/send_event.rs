@@ -24,6 +24,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("message")
             .short("m")
             .multiple(true)
+            .number_of_values(1)
             .help("Set the message to log"))
         .arg(Arg::with_name("platform")
             .value_name("PLATFORM")
@@ -35,12 +36,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("tag")
             .short("t")
             .multiple(true)
+            .number_of_values(1)
             .help("Adds a tag (key:value) to the event."))
         .arg(Arg::with_name("extra")
             .value_name("EXTRA")
             .long("extra")
             .short("e")
             .multiple(true)
+            .number_of_values(1)
             .help("Adds extra information (key:value) to the event."))
 }
 
