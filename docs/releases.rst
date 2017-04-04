@@ -65,6 +65,8 @@ Then the UI will reflect the time it took for the release to be created.
 You can also finalize it later when you pushed the release live (eg:
 deployed to your machines, enabled in the app store etc.).
 
+.. _sentry-cli-commit-integration:
+
 Commit Integration
 ------------------
 
@@ -104,7 +106,7 @@ be used which itself provides various sub commands.
 Upload Files
 ````````````
 
-The most common use case is to upload files.  For the generic upload the 
+The most common use case is to upload files.  For the generic upload the
 ``sentry-cli releases files VERSION upload`` command can be used.  However
 since most release artifacts are JavaScript sourcemap related we have a
 :ref:`sentry-cli-sourcemaps` convenience method for that.
