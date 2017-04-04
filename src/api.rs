@@ -229,29 +229,40 @@ impl<'a> Api<'a> {
     /// Lists all the release file for the given `release`.
     pub fn list_release_files(&self,
                               org: &str,
-                              project: &str,
+                              project: Option<&str>,
                               release: &str)
                               -> ApiResult<Vec<Artifact>> {
-        self.get(&format!("/projects/{}/{}/releases/{}/files/",
-                          PathArg(org),
-                          PathArg(project),
-                          PathArg(release)))?
-            .convert_rnf("release")
+        if let Some(project) = project {
+            self.get(&format!("/projects/{}/{}/releases/{}/files/",
+                              PathArg(org),
+                              PathArg(project),
+                              PathArg(release)))?
+                .convert_rnf("release")
+        } else {
+            self.get(&format!("/organizations/{}/releases/{}/files/",
+                              PathArg(org),
+                              PathArg(release)))?
+                .convert_rnf("release")
+        }
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
     /// deleted or `false` otherwise.
     pub fn delete_release_file(&self,
                                org: &str,
-                               project: &str,
+                               project: Option<&str>,
                                version: &str,
                                file_id: &str)
                                -> ApiResult<bool> {
-        let resp = self.delete(&format!("/projects/{}/{}/releases/{}/files/{}/",
-                             PathArg(org),
-                             PathArg(project),
-                             PathArg(version),
-                             PathArg(file_id)))?;
+        let path = if let Some(project) = project {
+            format!("/projects/{}/{}/releases/{}/files/{}/",
+                    PathArg(org), PathArg(project), PathArg(version), PathArg(file_id))
+        } else {
+            format!("/organizations/{}/releases/{}/files/{}/",
+                    PathArg(org), PathArg(version), PathArg(file_id))
+        };
+
+        let resp = self.delete(&path)?;
         if resp.status() == 404 {
             Ok(false)
         } else {
@@ -263,16 +274,19 @@ impl<'a> Api<'a> {
     /// system and uploaded as `name`.
     pub fn upload_release_file(&self,
                                org: &str,
-                               project: &str,
+                               project: Option<&str>,
                                version: &str,
                                contents: FileContents,
                                name: &str,
                                headers: Option<&[(String, String)]>)
                                -> ApiResult<Option<Artifact>> {
-        let path = format!("/projects/{}/{}/releases/{}/files/",
-                           PathArg(org),
-                           PathArg(project),
-                           PathArg(version));
+        let path = if let Some(project) = project {
+            format!("/projects/{}/{}/releases/{}/files/", PathArg(org), PathArg(project),
+                    PathArg(version))
+        } else {
+            format!("/organizations/{}/releases/{}/files/", PathArg(org),
+                    PathArg(version))
+        };
         let mut form = curl::easy::Form::new();
         match contents {
             FileContents::FromPath(path) => {
