@@ -398,9 +398,16 @@ impl<'a> Api<'a> {
 
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str, project: &str) -> ApiResult<Vec<ReleaseInfo>> {
-        self.get(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)))?
-            .convert_rnf("organization or project")
+    pub fn list_releases(&self, org: &str, project: Option<&str>)
+        -> ApiResult<Vec<ReleaseInfo>>
+    {
+        if let Some(project) = project {
+            self.get(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)))?
+                .convert_rnf("organization or project")
+        } else {
+            self.get(&format!("/organizations/{}/releases/", PathArg(org)))?
+                .convert_rnf("organization")
+        }
     }
 
     /// Creates a new deploy for a release.

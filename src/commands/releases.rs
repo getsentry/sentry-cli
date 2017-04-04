@@ -462,7 +462,7 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>,
                     org: &str,
                     project: &str)
                     -> Result<()> {
-    let releases = Api::new(config).list_releases(org, project)?;
+    let releases = Api::new(config).list_releases(org, Some(project))?;
     let mut table = Table::new();
     table.title_row()
         .add("Released")
