@@ -1,3 +1,5 @@
+.. _sentry-cli-release-management:
+
 Release Management
 ==================
 

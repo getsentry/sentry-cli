@@ -20,7 +20,7 @@ use sha1::Sha1;
 use zip::ZipArchive;
 use regex::{Regex, Captures};
 use prettytable;
-use chrono::Duration;
+use chrono::{Duration, DateTime, UTC, TimeZone};
 
 use prelude::*;
 
@@ -189,6 +189,34 @@ fn validate_version(v: String) -> StdResult<(), String> {
                      whitespace characters are not permitted."))
     } else {
         Ok(())
+    }
+}
+
+pub fn validate_seconds(v: String) -> StdResult<(), String> {
+    if v.parse::<i64>().is_ok() {
+        Ok(())
+    } else {
+        Err(format!("Invalid value (seconds as integer required)"))
+    }
+}
+
+pub fn validate_timestamp(v: String) -> StdResult<(), String> {
+    if let Err(err) = get_timestamp(&v) {
+        Err(err.to_string())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn get_timestamp(value: &str) -> Result<DateTime<UTC>> {
+    if let Ok(int) = value.parse::<i64>() {
+        Ok(UTC.timestamp(int, 0))
+    } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
+        Ok(dt.with_timezone(&UTC))
+    } else if let Ok(dt) = DateTime::parse_from_rfc2822(value) {
+        Ok(dt.with_timezone(&UTC))
+    } else {
+        Err(Error::from("not in valid format. Unix timestamp or ISO 8601 date expected."))
     }
 }
 

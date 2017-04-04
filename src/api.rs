@@ -381,6 +381,15 @@ impl<'a> Api<'a> {
             .convert_rnf("organization or project")
     }
 
+    /// Creates a new deploy for a release.
+    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy)
+        -> ApiResult<Deploy>
+    {
+        self.post(&format!("/organizations/{}/releases/{}/deploys/",
+                           PathArg(org), PathArg(version)), deploy)?
+            .convert_rnf("organization or release")
+    }
+
     /// Updates a bunch of issues within a project that match a provided filter
     /// and performs `changes` changes.
     pub fn bulk_update_issue(&self,
@@ -1077,4 +1086,16 @@ pub struct Repo {
     pub status: String,
     #[serde(rename="dateCreated")]
     pub date_created: DateTime<UTC>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default)]
+pub struct Deploy {
+    #[serde(rename="environment")]
+    pub env: String,
+    pub name: Option<String>,
+    pub url: Option<String>,
+    #[serde(rename="dateStarted")]
+    pub started: Option<DateTime<UTC>>,
+    #[serde(rename="dateFinished")]
+    pub finished: Option<DateTime<UTC>>,
 }

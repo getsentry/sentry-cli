@@ -5,15 +5,16 @@ use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
-use chrono::{DateTime, UTC};
+use chrono::{DateTime, Duration, UTC};
 use regex::Regex;
 
 use prelude::*;
 use vcs;
-use api::{Api, NewRelease, UpdatedRelease, FileContents};
+use api::{Api, NewRelease, UpdatedRelease, FileContents, Deploy};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
-use utils::{ArgExt, Table, HumanDuration, HumanSize};
+use utils::{ArgExt, Table, HumanDuration, HumanSize, validate_timestamp,
+            validate_seconds, get_timestamp};
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -66,6 +67,45 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         the current commit of the repository at the given PATH is \
                         assumed.  To override the revision `@REV` can be appended \
                         which will force the revision to a certain value.")))
+        .subcommand(App::new("create-deploy")
+            .about("Creates a deploy for a release")
+            .version_arg(1)
+            .arg(Arg::with_name("env")
+                 .long("env")
+                 .short("e")
+                 .value_name("ENV")
+                 .required(true)
+                 .help("This sets the environment for this release.  This needs to be \
+                        provided.  Values that make sense here would be 'production' or \
+                        'staging'."))
+            .arg(Arg::with_name("name")
+                 .long("name")
+                 .short("n")
+                 .value_name("NAME")
+                 .help("An optional human visible name for this deploy."))
+            .arg(Arg::with_name("url")
+                 .long("url")
+                 .short("u")
+                 .value_name("URL")
+                 .help("An optional optional URL that points to the deployment."))
+            .arg(Arg::with_name("started")
+                 .long("started")
+                 .value_name("TIMESTAMP")
+                 .validator(validate_timestamp)
+                 .help("Optional unix timestamp when the deploy was started."))
+            .arg(Arg::with_name("finished")
+                 .long("finished")
+                 .value_name("TIMESTAMP")
+                 .validator(validate_timestamp)
+                 .help("Optional unix timestamp when the deploy was finished."))
+            .arg(Arg::with_name("time")
+                 .long("time")
+                 .short("t")
+                 .value_name("SECONDS")
+                 .validator(validate_seconds)
+                 .help("Alternatively to `--started` and `--finished` an optional \
+                        time in seconds that indicates how long it took for the \
+                        deploy to finish.")))
         .subcommand(App::new("delete")
             .about("Delete a release")
             .version_arg(1))
@@ -316,6 +356,47 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     } else {
         println!("No commits found. Leaving release alone.");
     }
+
+    Ok(())
+}
+
+fn execute_create_deploy<'a>(matches: &ArgMatches<'a>,
+                             config: &Config,
+                             org: &str)
+    -> Result<()>
+{
+    let version = matches.value_of("version").unwrap();
+    let api = Api::new(config);
+
+    let mut deploy = Deploy {
+        env: matches.value_of("env").unwrap().to_string(),
+        name: matches.value_of("name").map(|x| x.to_string()),
+        url: matches.value_of("url").map(|x| x.to_string()),
+        ..Default::default()
+    };
+
+    if let Some(value) = matches.value_of("time") {
+        let finished = UTC::now();
+        deploy.finished = Some(finished);
+        deploy.started = Some(finished - Duration::seconds(value.parse().unwrap()));
+    } else {
+        if let Some(finished_str) = matches.value_of("finished") {
+            deploy.finished = Some(get_timestamp(finished_str)?);
+        } else {
+            deploy.finished = Some(UTC::now());
+        }
+        if let Some(started_str) = matches.value_of("started") {
+            deploy.started = Some(get_timestamp(started_str)?);
+        }
+    }
+
+    let deploy = api.create_deploy(org, version, &deploy)?;
+    let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
+    if name == "" {
+        name = "unnamed";
+    }
+
+    println!("Created new deploy {} for '{}'", name, deploy.env);
 
     Ok(())
 }
@@ -571,6 +652,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_set_commits(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("create-deploy") {
+        let org = config.get_org(matches)?;
+        return execute_create_deploy(sub_matches, config, &org);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         let (org, project) = config.get_org_and_project(matches)?;
