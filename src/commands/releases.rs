@@ -448,7 +448,7 @@ fn execute_delete<'a>(matches: &ArgMatches<'a>,
                       project: &str)
                       -> Result<()> {
     let version = matches.value_of("version").unwrap();
-    if Api::new(config).delete_release(org, project, version)? {
+    if Api::new(config).delete_release(org, Some(project), version)? {
         println!("Deleted release {}!", version);
     } else {
         println!("Did nothing. Release with this version ({}) does not exist.",

@@ -359,12 +359,18 @@ impl<'a> Api<'a> {
     }
 
     /// Deletes an already existing release.  Returns `true` if it was deleted
-    /// or `false` if not.
-    pub fn delete_release(&self, org: &str, project: &str, version: &str) -> ApiResult<bool> {
-        let resp = self.delete(&format!("/projects/{}/{}/releases/{}/",
-                             PathArg(org),
-                             PathArg(project),
-                             PathArg(version)))?;
+    /// or `false` if not.  The project is needed to support the old deletion
+    /// API.
+    pub fn delete_release(&self, org: &str, project: Option<&str>,
+                          version: &str) -> ApiResult<bool> {
+        let resp = if let Some(project) = project {
+            self.delete(&format!("/projects/{}/{}/releases/{}/",
+                                 PathArg(org), PathArg(project),
+                                 PathArg(version)))?
+        } else {
+            self.delete(&format!("/organizations/{}/releases/{}/",
+                                 PathArg(org), PathArg(version)))?
+        };
         if resp.status() == 404 {
             Ok(false)
         } else {
