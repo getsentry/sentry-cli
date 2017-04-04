@@ -175,12 +175,20 @@ impl Config {
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
-        Ok((self.get_org(matches)?,
-            matches.value_of("project")
-                .map(|x| x.to_owned())
-                .or_else(|| env::var("SENTRY_PROJECT").ok())
-                .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
-                .ok_or("A project slug is required (provide with --project)")?))
+        let org = self.get_org(matches)?;
+        let project = if let Some(project) = matches.value_of("project") {
+            project.to_owned()
+        } else {
+            self.get_project_default()?
+        };
+        Ok((org, project))
+    }
+
+    /// Return the default value for a project.
+    pub fn get_project_default(&self) -> Result<String> {
+        Ok(env::var("SENTRY_PROJECT").ok()
+            .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
+            .ok_or("A project slug is required")?)
     }
 
     /// Returns the defaults for org and project.

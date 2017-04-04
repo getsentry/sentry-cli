@@ -17,6 +17,41 @@ use utils::{ArgExt, Table, HumanDuration, HumanSize, validate_timestamp,
             validate_seconds, get_timestamp, validate_project};
 
 
+struct ReleaseContext<'a> {
+    pub config: &'a Config,
+    pub org: String,
+    pub project_default: Option<&'a str>,
+}
+
+impl<'a> ReleaseContext<'a> {
+    pub fn get_org(&'a self) -> Result<&str> {
+        Ok(&self.org)
+    }
+
+    pub fn get_project_default(&'a self) -> Result<String> {
+        if let Some(ref proj) = self.project_default {
+            Ok(proj.to_string())
+        } else {
+            Ok(self.config.get_project_default()?)
+        }
+    }
+
+    pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>> {
+        if let Some(projects) = matches.values_of("projects") {
+             Ok(projects.map(|x| x.to_string()).collect())       
+        } else if let Some(project) = self.project_default {
+            Ok(vec![project.to_string()])
+        } else {
+            Ok(vec![self.config.get_project_default()?])
+        }
+    }
+
+    pub fn make_api(&'a self) -> Api<'a> {
+        Api::new(self.config)
+    }
+}
+
+
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("manage releases on Sentry")
         .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -30,6 +65,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("new")
             .about("Create a new release")
             .version_arg(1)
+            .projects_arg()
             .arg(Arg::with_name("ref")
                 .long("ref")
                 .value_name("REF")
@@ -244,15 +280,12 @@ fn path_as_url(path: &Path) -> String {
     path.display().to_string()
 }
 
-fn execute_new<'a>(matches: &ArgMatches<'a>,
-                   config: &Config,
-                   org: &str,
-                   project: &str)
-                   -> Result<()> {
-    let info_rv = Api::new(config).new_release(org,
+fn execute_new<'a>(ctx: &ReleaseContext,
+                   matches: &ArgMatches<'a>) -> Result<()> {
+    let info_rv = ctx.make_api().new_release(ctx.get_org()?,
         &NewRelease {
             version: matches.value_of("version").unwrap().to_owned(),
-            projects: vec![project.to_string()],
+            projects: ctx.get_projects(matches)?,
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: Some(UTC::now()),
@@ -267,11 +300,8 @@ fn execute_new<'a>(matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_finalize<'a>(matches: &ArgMatches<'a>,
-                        config: &Config,
-                        org: &str,
-                        project: &str)
-                        -> Result<()> {
+fn execute_finalize<'a>(ctx: &ReleaseContext,
+                        matches: &ArgMatches<'a>) -> Result<()> {
     fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<UTC>>> {
         match value {
             None => Ok(if now_default { Some(UTC::now()) } else { None }),
@@ -279,10 +309,10 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
         }
     }
 
-    let info_rv = Api::new(config).update_release(org,
+    let info_rv = ctx.make_api().update_release(ctx.get_org()?,
         matches.value_of("version").unwrap(),
         &UpdatedRelease {
-            projects: Some(vec![project.to_string()]),
+            projects: Some(ctx.get_projects(matches)?),
             reference: matches.value_of("ref").map(|x| x.to_owned()),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: get_date(matches.value_of("started"), false)?,
@@ -293,22 +323,18 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_propose_version<'a>(_matches: &ArgMatches<'a>,
-                               _config: &Config)
-    -> Result<()>
+fn execute_propose_version<'a>() -> Result<()>
 {
     println!("{}", vcs::find_head_commit()?);
     Ok(())
 }
 
-fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
-                           config: &Config,
-                           org: &str,
-                           project: &str)
-    -> Result<()>
+fn execute_set_commits<'a>(ctx: &ReleaseContext,
+                           matches: &ArgMatches<'a>) -> Result<()>
 {
     let version = matches.value_of("version").unwrap();
-    let api = Api::new(config);
+    let api = ctx.make_api();
+    let org = ctx.get_org()?;
     let repos = api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
 
@@ -349,7 +375,7 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     // make sure the release exists
     api.new_release(&org, &NewRelease {
         version: version.into(),
-        projects: vec![project.to_string()],
+        projects: ctx.get_projects(matches)?,
         ..Default::default()
     })?;
 
@@ -374,87 +400,11 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_deploys_new<'a>(matches: &ArgMatches<'a>,
-                           config: &Config,
-                           org: &str,
-                           version: &str)
-    -> Result<()>
-{
-    let api = Api::new(config);
-
-    let mut deploy = Deploy {
-        env: matches.value_of("env").unwrap().to_string(),
-        name: matches.value_of("name").map(|x| x.to_string()),
-        url: matches.value_of("url").map(|x| x.to_string()),
-        ..Default::default()
-    };
-
-    if let Some(value) = matches.value_of("time") {
-        let finished = UTC::now();
-        deploy.finished = Some(finished);
-        deploy.started = Some(finished - Duration::seconds(value.parse().unwrap()));
-    } else {
-        if let Some(finished_str) = matches.value_of("finished") {
-            deploy.finished = Some(get_timestamp(finished_str)?);
-        } else {
-            deploy.finished = Some(UTC::now());
-        }
-        if let Some(started_str) = matches.value_of("started") {
-            deploy.started = Some(get_timestamp(started_str)?);
-        }
-    }
-
-    let deploy = api.create_deploy(org, version, &deploy)?;
-    let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
-    if name == "" {
-        name = "unnamed";
-    }
-
-    println!("Created new deploy {} for '{}'", name, deploy.env);
-
-    Ok(())
-}
-
-fn execute_deploys_list<'a>(_matches: &ArgMatches<'a>,
-                            config: &Config,
-                            org: &str,
-                            version: &str)
-    -> Result<()>
-{
-    let api = Api::new(config);
-    let mut table = Table::new();
-    table.title_row()
-        .add("Environment")
-        .add("Name")
-        .add("Finished");
-
-    for deploy in api.list_deploys(org, version)? {
-        let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
-        if name == "" {
-            name = "unnamed";
-        }
-        table.add_row()
-            .add(deploy.env)
-            .add(name)
-            .add(HumanDuration(UTC::now().signed_duration_since(deploy.finished.unwrap())));
-    }
-
-    if table.is_empty() {
-        println!("No deploys found");
-    } else {
-        table.print();
-    }
-
-    Ok(())
-}
-
-fn execute_delete<'a>(matches: &ArgMatches<'a>,
-                      config: &Config,
-                      org: &str,
-                      project: &str)
-                      -> Result<()> {
+fn execute_delete<'a>(ctx: &ReleaseContext,
+                      matches: &ArgMatches<'a>) -> Result<()> {
     let version = matches.value_of("version").unwrap();
-    if Api::new(config).delete_release(org, Some(project), version)? {
+    let project = ctx.get_project_default().ok();
+    if ctx.make_api().delete_release(ctx.get_org()?, project.as_ref().map(|x| x.as_str()), version)? {
         println!("Deleted release {}!", version);
     } else {
         println!("Did nothing. Release with this version ({}) does not exist.",
@@ -463,12 +413,10 @@ fn execute_delete<'a>(matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_list<'a>(_matches: &ArgMatches<'a>,
-                    config: &Config,
-                    org: &str,
-                    project: &str)
-                    -> Result<()> {
-    let releases = Api::new(config).list_releases(org, Some(project))?;
+fn execute_list<'a>(ctx: &ReleaseContext,
+                    _matches: &ArgMatches<'a>) -> Result<()> {
+    let project = ctx.get_project_default().ok();
+    let releases = ctx.make_api().list_releases(ctx.get_org()?, project.as_ref().map(|x| x.as_str()))?;
     let mut table = Table::new();
     table.title_row()
         .add("Released")
@@ -494,10 +442,8 @@ fn execute_list<'a>(_matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_files_list<'a>(_matches: &ArgMatches<'a>,
-                          config: &Config,
-                          org: &str,
-                          project: &str,
+fn execute_files_list<'a>(ctx: &ReleaseContext,
+                          _matches: &ArgMatches<'a>,
                           release: &str)
                           -> Result<()> {
     let mut table = Table::new();
@@ -506,7 +452,10 @@ fn execute_files_list<'a>(_matches: &ArgMatches<'a>,
         .add("Sourcemap")
         .add("Size");
 
-    for artifact in Api::new(config).list_release_files(org, project, release)? {
+    let org = ctx.get_org()?;
+    let project = ctx.get_project_default().ok();
+    for artifact in ctx.make_api().list_release_files(
+            org, project.as_ref().map(|x| x.as_str()), release)? {
         let mut row = table.add_row();
         row.add(&artifact.name);
         if let Some(sm_ref) = artifact.get_sourcemap_reference() {
@@ -522,32 +471,30 @@ fn execute_files_list<'a>(_matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_files_delete<'a>(matches: &ArgMatches<'a>,
-                            config: &Config,
-                            org: &str,
-                            project: &str,
+fn execute_files_delete<'a>(ctx: &ReleaseContext,
+                            matches: &ArgMatches<'a>,
                             release: &str)
                             -> Result<()> {
     let files: HashSet<String> = match matches.values_of("names") {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
-    let api = Api::new(config);
-    for file in api.list_release_files(org, project, release)? {
+    let org = ctx.get_org()?;
+    let project = ctx.get_project_default().ok();
+    let api = ctx.make_api();
+    for file in api.list_release_files(org, project.as_ref().map(|x| x.as_str()), release)? {
         if !(matches.is_present("all") || files.contains(&file.name)) {
             continue;
         }
-        if api.delete_release_file(org, project, release, &file.id)? {
+        if api.delete_release_file(org, project.as_ref().map(|x| x.as_str()), release, &file.id)? {
             println!("D {}", file.name);
         }
     }
     Ok(())
 }
 
-fn execute_files_upload<'a>(matches: &ArgMatches<'a>,
-                            config: &Config,
-                            org: &str,
-                            project: &str,
+fn execute_files_upload<'a>(ctx: &ReleaseContext,
+                            matches: &ArgMatches<'a>,
                             version: &str)
                             -> Result<()> {
     let path = Path::new(matches.value_of("path").unwrap());
@@ -571,12 +518,11 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>,
             headers.push((key.trim().to_string(), value.trim().to_string()));
         }
     };
-    if let Some(artifact) = Api::new(config).upload_release_file(org,
-                             project,
-                             &version,
-                             FileContents::FromPath(&path),
-                             &name,
-                             Some(&headers[..]))? {
+    let org = ctx.get_org()?;
+    let project = ctx.get_project_default().ok();
+    if let Some(artifact) = ctx.make_api().upload_release_file(org,
+            project.as_ref().map(|x| x.as_str()), &version,
+            FileContents::FromPath(&path), &name, Some(&headers[..]))? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");
@@ -584,13 +530,11 @@ fn execute_files_upload<'a>(matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
-                                       config: &Config,
-                                       org: &str,
-                                       project: &str,
+fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
+                                       matches: &ArgMatches<'a>,
                                        version: &str)
                                        -> Result<()> {
-    let api = Api::new(config);
+    let api = ctx.make_api();
 
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();
@@ -652,84 +596,155 @@ fn execute_files_upload_sourcemaps<'a>(matches: &ArgMatches<'a>,
         processor.add_sourcemap_references()?;
     }
 
+    let org = ctx.get_org()?;
+
     // make sure the release exists
     let release = api.new_release(&org, &NewRelease {
         version: version.into(),
-        projects: vec![project.to_string()],
+        projects: ctx.get_projects(matches)?,
         ..Default::default()
     })?;
     println!("Uploading sourcemaps for release {}", release.version);
-    processor.upload(&api, &org, &project, &release.version)?;
+
+    let project = ctx.get_project_default().ok();
+    processor.upload(&api, org, project.as_ref().map(|x| x.as_str()), &release.version)?;
 
     Ok(())
 }
 
-fn execute_files<'a>(matches: &ArgMatches<'a>,
-                     config: &Config,
-                     org: &str,
-                     project: &str)
+fn execute_files<'a>(ctx: &ReleaseContext,
+                     matches: &ArgMatches<'a>)
                      -> Result<()> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("list") {
-        return execute_files_list(sub_matches, config, org, project, release);
+        return execute_files_list(ctx, sub_matches, release);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
-        return execute_files_delete(sub_matches, config, org, project, release);
+        return execute_files_delete(ctx, sub_matches, release);
     }
     if let Some(sub_matches) = matches.subcommand_matches("upload") {
-        return execute_files_upload(sub_matches, config, org, project, release);
+        return execute_files_upload(ctx, sub_matches, release);
     }
     if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
-        return execute_files_upload_sourcemaps(sub_matches, config, org, project, release);
+        return execute_files_upload_sourcemaps(ctx, sub_matches, release);
     }
     unreachable!();
 }
 
-fn execute_deploys<'a>(matches: &ArgMatches<'a>,
-                       config: &Config,
-                       org: &str)
-                       -> Result<()> {
+fn execute_deploys_new<'a>(ctx: &ReleaseContext,
+                           matches: &ArgMatches<'a>,
+                           version: &str)
+    -> Result<()>
+{
+    let api = ctx.make_api();
+
+    let mut deploy = Deploy {
+        env: matches.value_of("env").unwrap().to_string(),
+        name: matches.value_of("name").map(|x| x.to_string()),
+        url: matches.value_of("url").map(|x| x.to_string()),
+        ..Default::default()
+    };
+
+    if let Some(value) = matches.value_of("time") {
+        let finished = UTC::now();
+        deploy.finished = Some(finished);
+        deploy.started = Some(finished - Duration::seconds(value.parse().unwrap()));
+    } else {
+        if let Some(finished_str) = matches.value_of("finished") {
+            deploy.finished = Some(get_timestamp(finished_str)?);
+        } else {
+            deploy.finished = Some(UTC::now());
+        }
+        if let Some(started_str) = matches.value_of("started") {
+            deploy.started = Some(get_timestamp(started_str)?);
+        }
+    }
+
+    let org = ctx.get_org()?;
+    let deploy = api.create_deploy(org, version, &deploy)?;
+    let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
+    if name == "" {
+        name = "unnamed";
+    }
+
+    println!("Created new deploy {} for '{}'", name, deploy.env);
+
+    Ok(())
+}
+
+fn execute_deploys_list<'a>(ctx: &ReleaseContext,
+                            _matches: &ArgMatches<'a>,
+                            version: &str)
+    -> Result<()>
+{
+    let api = ctx.make_api();
+    let mut table = Table::new();
+    table.title_row()
+        .add("Environment")
+        .add("Name")
+        .add("Finished");
+
+    for deploy in api.list_deploys(ctx.get_org()?, version)? {
+        let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
+        if name == "" {
+            name = "unnamed";
+        }
+        table.add_row()
+            .add(deploy.env)
+            .add(name)
+            .add(HumanDuration(UTC::now().signed_duration_since(deploy.finished.unwrap())));
+    }
+
+    if table.is_empty() {
+        println!("No deploys found");
+    } else {
+        table.print();
+    }
+
+    Ok(())
+}
+
+fn execute_deploys<'a>(ctx: &ReleaseContext,
+                       matches: &ArgMatches<'a>) -> Result<()> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("new") {
-        return execute_deploys_new(sub_matches, config, org, release);
+        return execute_deploys_new(ctx, sub_matches, release);
     }
     if let Some(sub_matches) = matches.subcommand_matches("list") {
-        return execute_deploys_list(sub_matches, config, org, release);
+        return execute_deploys_list(ctx, sub_matches, release);
     }
     unreachable!();
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+    let ctx = ReleaseContext {
+        config: config,
+        org: config.get_org(matches)?,
+        project_default: matches.value_of("project"),
+    };
     if let Some(sub_matches) = matches.subcommand_matches("new") {
-        let (org, project) = config.get_org_and_project(matches)?;
-        return execute_new(sub_matches, config, &org, &project);
+        return execute_new(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("finalize") {
-        let (org, project) = config.get_org_and_project(matches)?;
-        return execute_finalize(sub_matches, config, &org, &project);
+        return execute_finalize(&ctx, sub_matches);
     }
-    if let Some(sub_matches) = matches.subcommand_matches("propose-version") {
-        return execute_propose_version(sub_matches, config);
+    if let Some(_sub_matches) = matches.subcommand_matches("propose-version") {
+        return execute_propose_version();
     }
     if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
-        let (org, project) = config.get_org_and_project(matches)?;
-        return execute_set_commits(sub_matches, config, &org, &project);
+        return execute_set_commits(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
-        let (org, project) = config.get_org_and_project(matches)?;
-        return execute_delete(sub_matches, config, &org, &project);
+        return execute_delete(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("list") {
-        let (org, project) = config.get_org_and_project(matches)?;
-        return execute_list(sub_matches, config, &org, &project);
+        return execute_list(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("files") {
-        let (org, project) = config.get_org_and_project(matches)?;
-        return execute_files(sub_matches, config, &org, &project);
+        return execute_files(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("deploys") {
-        let org = config.get_org(matches)?;
-        return execute_deploys(sub_matches, config, &org);
+        return execute_deploys(&ctx, sub_matches);
     }
     unreachable!();
 }
