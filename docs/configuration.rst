@@ -136,11 +136,14 @@ Explicit Options
 
 Lastly you can provide these values also explicitly with the command you
 are executing.  The parameters are always called ``--org`` or ``-o`` for
-the organization and ``--project`` or ``-p`` for the project.  For
-instance if you are managing releases you can use it like this::
+the organization and ``--project`` or ``-p`` for the project.
 
-    $ sentry-cli releases -o my-org -p my-project list
+Note that they do not always go to the same command.  For instance if you
+are managing releases (which are shared across the organization) you
+usuallys supply the organiation to the ``releases`` command but the
+projects to the subcommand on it::
 
-Note that if a command has subcommands the parameter needs to go to the
-first one (so for instance cannot define the parameter on the ``releases
-list`` command).
+    $ sentry-cli releases -o my-org new -p my-project 1.0
+
+For more information use the ``help`` command which will give you a
+documentation of all parameters.

@@ -226,3 +226,24 @@ at once::
 
     $ sentry-cli releases files VERSION delete NAME_OF_FILE
     $ sentry-cli releases files VERSION delete --all
+
+Creating Deploys
+----------------
+
+You can also associate deploys with releases.  To create a deploy you
+first create a release and then a deploy for it.  At the very least you
+should supply the "environment" the deploy goes to (production, staging
+etc.).  You can freely define this::
+
+    $ sentry-cli releases deploys VERSION new -e ENVIRONMENT
+
+Optionally you can also define how long the deploy took::
+
+    start=$(date +%s)
+    ...
+    now=$(date +%s)
+    sentry-cli releases deploys VERSION new -e ENVIRONMENT -t $((now-start))
+
+Deploys can be listed too (however they cannot be deleted)::
+
+    $ sentry-cli relases deploys VERSION list
