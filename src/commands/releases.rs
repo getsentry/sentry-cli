@@ -96,6 +96,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .short("c")
                  .value_name("SPEC")
                  .multiple(true)
+                 .number_of_values(1)
                  .help("This parameter defines a single commit for a repo as \
                         identified by the repo name in the remote Sentry config. \
                         If no commit has been specified sentry-cli will attempt \
@@ -196,6 +197,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("strip-prefix")
                     .value_name("PREFIX")
                     .multiple(true)
+                    .number_of_values(1)
                     .help("When passed all sources that start with the given prefix \
                             will have that prefix stripped from the filename.  This \
                             requires --rewrite to be enabled."))
@@ -212,6 +214,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .short("x")
                     .value_name("EXT")
                     .multiple(true)
+                    .number_of_values(1)
                     .help("Add a file extension to the list of files to upload."))))
         .subcommand(App::new("deploys")
             .about("Manages deploys for a release")

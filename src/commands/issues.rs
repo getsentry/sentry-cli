@@ -23,6 +23,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Selects all issues (this might be limited)"))
         .arg(Arg::with_name("id")
             .multiple(true)
+            .number_of_values(1)
             .short("i")
             .long("id")
             .help("Explicit issue IDs to resolve"))
