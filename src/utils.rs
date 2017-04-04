@@ -151,7 +151,14 @@ impl Table {
         &mut self.rows[idx]
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.rows.len() == 0
+    }
+
     pub fn print(&self) {
+        if self.is_empty() {
+            return;
+        }
         let mut tbl = prettytable::Table::new();
         tbl.set_format(*prettytable::format::consts::FORMAT_NO_LINESEP_WITH_TITLE);
         if let Some(ref title_row) = self.title_row {

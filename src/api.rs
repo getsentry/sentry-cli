@@ -390,6 +390,15 @@ impl<'a> Api<'a> {
             .convert_rnf("organization or release")
     }
 
+    /// Lists all deploys for a release
+    pub fn list_deploys(&self, org: &str, version: &str)
+        -> ApiResult<Vec<Deploy>>
+    {
+        self.get(&format!("/organizations/{}/releases/{}/deploys/",
+                          PathArg(org), PathArg(version)))?
+            .convert_rnf("organization or release")
+    }
+
     /// Updates a bunch of issues within a project that match a provided filter
     /// and performs `changes` changes.
     pub fn bulk_update_issue(&self,

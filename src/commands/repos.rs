@@ -34,7 +34,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             .add(&repo.url);
     }
 
-    table.print();
+    if table.is_empty() {
+        println!("No repos found");
+    } else {
+        table.print();
+    }
 
     Ok(())
 }

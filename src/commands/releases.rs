@@ -67,45 +67,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         the current commit of the repository at the given PATH is \
                         assumed.  To override the revision `@REV` can be appended \
                         which will force the revision to a certain value.")))
-        .subcommand(App::new("create-deploy")
-            .about("Creates a deploy for a release")
-            .version_arg(1)
-            .arg(Arg::with_name("env")
-                 .long("env")
-                 .short("e")
-                 .value_name("ENV")
-                 .required(true)
-                 .help("This sets the environment for this release.  This needs to be \
-                        provided.  Values that make sense here would be 'production' or \
-                        'staging'."))
-            .arg(Arg::with_name("name")
-                 .long("name")
-                 .short("n")
-                 .value_name("NAME")
-                 .help("An optional human visible name for this deploy."))
-            .arg(Arg::with_name("url")
-                 .long("url")
-                 .short("u")
-                 .value_name("URL")
-                 .help("An optional optional URL that points to the deployment."))
-            .arg(Arg::with_name("started")
-                 .long("started")
-                 .value_name("TIMESTAMP")
-                 .validator(validate_timestamp)
-                 .help("Optional unix timestamp when the deploy was started."))
-            .arg(Arg::with_name("finished")
-                 .long("finished")
-                 .value_name("TIMESTAMP")
-                 .validator(validate_timestamp)
-                 .help("Optional unix timestamp when the deploy was finished."))
-            .arg(Arg::with_name("time")
-                 .long("time")
-                 .short("t")
-                 .value_name("SECONDS")
-                 .validator(validate_seconds)
-                 .help("Alternatively to `--started` and `--finished` an optional \
-                        time in seconds that indicates how long it took for the \
-                        deploy to finish.")))
         .subcommand(App::new("delete")
             .about("Delete a release")
             .version_arg(1))
@@ -207,6 +168,50 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("EXT")
                     .multiple(true)
                     .help("Add a file extension to the list of files to upload."))))
+        .subcommand(App::new("deploys")
+            .about("Manages deploys for a release")
+            .setting(AppSettings::SubcommandRequiredElseHelp)
+            .version_arg(1)
+            .subcommand(App::new("new")
+                .about("Creates a deploy for a release")
+                .arg(Arg::with_name("env")
+                     .long("env")
+                     .short("e")
+                     .value_name("ENV")
+                     .required(true)
+                     .help("This sets the environment for this release.  This needs to be \
+                            provided.  Values that make sense here would be 'production' or \
+                            'staging'."))
+                .arg(Arg::with_name("name")
+                     .long("name")
+                     .short("n")
+                     .value_name("NAME")
+                     .help("An optional human visible name for this deploy."))
+                .arg(Arg::with_name("url")
+                     .long("url")
+                     .short("u")
+                     .value_name("URL")
+                     .help("An optional optional URL that points to the deployment."))
+                .arg(Arg::with_name("started")
+                     .long("started")
+                     .value_name("TIMESTAMP")
+                     .validator(validate_timestamp)
+                     .help("Optional unix timestamp when the deploy was started."))
+                .arg(Arg::with_name("finished")
+                     .long("finished")
+                     .value_name("TIMESTAMP")
+                     .validator(validate_timestamp)
+                     .help("Optional unix timestamp when the deploy was finished."))
+                .arg(Arg::with_name("time")
+                     .long("time")
+                     .short("t")
+                     .value_name("SECONDS")
+                     .validator(validate_seconds)
+                     .help("Alternatively to `--started` and `--finished` an optional \
+                            time in seconds that indicates how long it took for the \
+                            deploy to finish.")))
+            .subcommand(App::new("list")
+                .about("List all deploys of a release")))
 }
 
 fn strip_version(version: &str) -> &str {
@@ -360,12 +365,12 @@ fn execute_set_commits<'a>(matches: &ArgMatches<'a>,
     Ok(())
 }
 
-fn execute_create_deploy<'a>(matches: &ArgMatches<'a>,
-                             config: &Config,
-                             org: &str)
+fn execute_deploys_new<'a>(matches: &ArgMatches<'a>,
+                           config: &Config,
+                           org: &str,
+                           version: &str)
     -> Result<()>
 {
-    let version = matches.value_of("version").unwrap();
     let api = Api::new(config);
 
     let mut deploy = Deploy {
@@ -397,6 +402,39 @@ fn execute_create_deploy<'a>(matches: &ArgMatches<'a>,
     }
 
     println!("Created new deploy {} for '{}'", name, deploy.env);
+
+    Ok(())
+}
+
+fn execute_deploys_list<'a>(_matches: &ArgMatches<'a>,
+                            config: &Config,
+                            org: &str,
+                            version: &str)
+    -> Result<()>
+{
+    let api = Api::new(config);
+    let mut table = Table::new();
+    table.title_row()
+        .add("Environment")
+        .add("Name")
+        .add("Finished");
+
+    for deploy in api.list_deploys(org, version)? {
+        let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
+        if name == "" {
+            name = "unnamed";
+        }
+        table.add_row()
+            .add(deploy.env)
+            .add(name)
+            .add(HumanDuration(UTC::now().signed_duration_since(deploy.finished.unwrap())));
+    }
+
+    if table.is_empty() {
+        println!("No deploys found");
+    } else {
+        table.print();
+    }
 
     Ok(())
 }
@@ -637,6 +675,20 @@ fn execute_files<'a>(matches: &ArgMatches<'a>,
     unreachable!();
 }
 
+fn execute_deploys<'a>(matches: &ArgMatches<'a>,
+                       config: &Config,
+                       org: &str)
+                       -> Result<()> {
+    let release = matches.value_of("version").unwrap();
+    if let Some(sub_matches) = matches.subcommand_matches("new") {
+        return execute_deploys_new(sub_matches, config, org, release);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("list") {
+        return execute_deploys_list(sub_matches, config, org, release);
+    }
+    unreachable!();
+}
+
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         let (org, project) = config.get_org_and_project(matches)?;
@@ -653,10 +705,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_set_commits(sub_matches, config, &org, &project);
     }
-    if let Some(sub_matches) = matches.subcommand_matches("create-deploy") {
-        let org = config.get_org(matches)?;
-        return execute_create_deploy(sub_matches, config, &org);
-    }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_delete(sub_matches, config, &org, &project);
@@ -668,6 +716,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if let Some(sub_matches) = matches.subcommand_matches("files") {
         let (org, project) = config.get_org_and_project(matches)?;
         return execute_files(sub_matches, config, &org, &project);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("deploys") {
+        let org = config.get_org(matches)?;
+        return execute_deploys(sub_matches, config, &org);
     }
     unreachable!();
 }
