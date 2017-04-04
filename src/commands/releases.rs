@@ -75,11 +75,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .version_arg(1)
             .arg(Arg::with_name("started")
                  .long("started")
-                 .value_name("DATE")
+                 .validator(validate_timestamp)
+                 .value_name("TIMESTAMP")
                  .help("If set the release start date is set to this value."))
             .arg(Arg::with_name("released")
                  .long("released")
-                 .value_name("DATE")))
+                 .validator(validate_timestamp)
+                 .value_name("TIMESTAMP")
+                 .help("The releaes time (if not provided the current time is used).")))
         .subcommand(App::new("list").about("list the most recent releases"))
         .subcommand(App::new("files")
             .about("manage release artifact files")
@@ -266,8 +269,7 @@ fn execute_finalize<'a>(matches: &ArgMatches<'a>,
     fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<UTC>>> {
         match value {
             None => Ok(if now_default { Some(UTC::now()) } else { None }),
-            Some(value) => Ok(Some(value.parse().chain_err(
-                || Error::from("Invalid date format."))?))
+            Some(value) => Ok(Some(get_timestamp(value)?))
         }
     }
 
