@@ -166,8 +166,12 @@ pub fn main() {
     match run() {
         Ok(()) => process::exit(0),
         Err(err) => {
-            print_error(&err);
-            process::exit(1);
+            if let &ErrorKind::QuietExit(code) = err.kind() {
+                process::exit(code);
+            } else {
+                print_error(&err);
+                process::exit(1);
+            }
         }
     }
 }

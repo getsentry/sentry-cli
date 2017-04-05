@@ -125,7 +125,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .validator(validate_timestamp)
                  .value_name("TIMESTAMP")
                  .help("The releaes time (if not provided the current time is used).")))
-        .subcommand(App::new("list").about("list the most recent releases"))
+        .subcommand(App::new("list")
+            .about("list the most recent releases"))
+        .subcommand(App::new("info")
+            .about("Return information about a release")
+            .version_arg(1)
+            .arg(Arg::with_name("quiet")
+                .short("q")
+                .long("quiet")
+                .help("Do not print any output.  If this is passed the command can be \
+                       used to determine if a release already exists.  The exit status \
+                       will be 0 if the release exists or 1 otherwise.")))
         .subcommand(App::new("files")
             .about("manage release artifact files")
             .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -441,6 +451,49 @@ fn execute_list<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
+fn execute_info<'a>(ctx: &ReleaseContext,
+                    matches: &ArgMatches<'a>) -> Result<()> {
+    let version = matches.value_of("version").unwrap();
+    let org = ctx.get_org()?;
+    let project = ctx.get_project_default().ok();
+    let release = ctx.api.get_release(org, project.as_ref().map(|x| x.as_str()),
+                                      &version)?;
+
+    // quiet mode just exists
+    if matches.is_present("quiet") {
+        if release.is_none() {
+            return Err(ErrorKind::QuietExit(1).into());
+        }
+        return Ok(());
+    }
+
+    if let Some(release) = release {
+        let short_version = strip_version(&release.version);
+        let mut tbl = Table::new();
+        tbl.add_row()
+            .add("Version")
+            .add(short_version);
+        if short_version != &release.version {
+            tbl.add_row()
+                .add("Full version")
+                .add(&release.version);
+        }
+        tbl.add_row()
+            .add("Date created")
+            .add(&release.date_created);
+        if let Some(last_event) = release.last_event {
+            tbl.add_row()
+                .add("Last event")
+                .add(last_event);
+        }
+        tbl.print();
+    } else {
+        println!("No such release");
+        return Err(ErrorKind::QuietExit(1).into());
+    }
+    Ok(())
+}
+
 fn execute_files_list<'a>(ctx: &ReleaseContext,
                           _matches: &ArgMatches<'a>,
                           release: &str)
@@ -734,6 +787,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_list(&ctx, sub_matches);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("info") {
+        return execute_info(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("files") {
         return execute_files(&ctx, sub_matches);

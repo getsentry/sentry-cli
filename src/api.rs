@@ -396,13 +396,17 @@ impl<'a> Api<'a> {
     /// will be returned.
     pub fn get_release(&self,
                        org: &str,
-                       project: &str,
+                       project: Option<&str>,
                        version: &str)
                        -> ApiResult<Option<ReleaseInfo>> {
-        let resp = self.get(&format!("/projects/{}/{}/releases/{}/",
-                          PathArg(org),
-                          PathArg(project),
-                          PathArg(version)))?;
+        let path = if let Some(project) = project {
+            format!("/projects/{}/{}/releases/{}/", PathArg(org),
+                    PathArg(project), PathArg(version))
+        } else {
+            format!("/organizations/{}/releases/{}/", PathArg(org),
+                    PathArg(version))
+        };
+        let resp = self.get(&path)?;
         if resp.status() == 404 {
             Ok(None)
         } else {

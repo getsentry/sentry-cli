@@ -15,6 +15,12 @@ use git2;
 use api;
 
 error_chain! {
+    errors {
+        QuietExit(code: i32) {
+            description("sentry-cli quit")
+        }
+    }
+
     foreign_links {
         Io(io::Error);
         Zip(zip::result::ZipError);
