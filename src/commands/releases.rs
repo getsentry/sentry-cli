@@ -126,7 +126,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .value_name("TIMESTAMP")
                  .help("The releaes time (if not provided the current time is used).")))
         .subcommand(App::new("list")
-            .about("list the most recent releases"))
+            .about("list the most recent releases")
+            .arg(Arg::with_name("no_abbrev")
+                .long("no-abbrev")
+                .help("Do not abbreviate the release version")))
         .subcommand(App::new("info")
             .about("Return information about a release")
             .version_arg(1)
@@ -423,9 +426,10 @@ fn execute_delete<'a>(ctx: &ReleaseContext,
 }
 
 fn execute_list<'a>(ctx: &ReleaseContext,
-                    _matches: &ArgMatches<'a>) -> Result<()> {
+                    matches: &ArgMatches<'a>) -> Result<()> {
     let project = ctx.get_project_default().ok();
     let releases = ctx.api.list_releases(ctx.get_org()?, project.as_ref().map(|x| x.as_str()))?;
+    let abbrev = !matches.is_present("no_abbrev");
     let mut table = Table::new();
     table.title_row()
         .add("Released")
@@ -439,7 +443,11 @@ fn execute_list<'a>(ctx: &ReleaseContext,
         } else {
             row.add("(unreleased)");
         }
-        row.add(strip_version(&release_info.version));
+        if abbrev {
+            row.add(strip_version(&release_info.version));
+        } else {
+            row.add(&release_info.version);
+        }
         row.add(release_info.new_groups);
         if let Some(date) = release_info.last_event {
             row.add(format!("{} ago", HumanDuration(UTC::now().signed_duration_since(date))));
