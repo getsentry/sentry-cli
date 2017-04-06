@@ -228,6 +228,12 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
+fn load_env_defaults(ini: &mut Ini) {
+    if let Ok(proxy) = env::var("http_proxy") {
+        ini.set_to(Some("http"), "proxy_url".into(), proxy);
+    }
+}
+
 fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let mut home_fn = env::home_dir().ok_or("Could not find home dir")?;
     home_fn.push(".sentryclirc");
@@ -250,8 +256,10 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                 rv.set_to(section.clone(), key.clone(), value.to_owned());
             }
         }
+        load_env_defaults(&mut rv);
         Ok((project_config_path, rv))
     } else {
+        load_env_defaults(&mut rv);
         Ok((home_fn, rv))
     }
 }
