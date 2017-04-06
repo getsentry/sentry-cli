@@ -19,6 +19,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("release")
             .short("r")
             .help("Set the release."))
+        .arg(Arg::with_name("environment")
+            .value_name("ENVIRONMENT")
+            .long("env")
+            .short("E")
+            .help("Send with a specific environment."))
         .arg(Arg::with_name("message")
             .value_name("MESSAGE")
             .long("message")
@@ -53,6 +58,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     event.release = matches.value_of("release").map(|x| x.into());
     event.platform = matches.value_of("platform").unwrap_or("other").into();
     event.message = matches.values_of("message").map(|mut x| x.join("\n"));
+    event.environment = matches.value_of("environment").map(|x| x.into());
 
     if let Some(tags) = matches.values_of("tags") {
         for tag in tags {

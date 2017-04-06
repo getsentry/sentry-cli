@@ -23,6 +23,8 @@ pub struct Event {
     pub server_name: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub release: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none")]
+    pub environment: Option<String>,
 }
 
 fn get_server_name() -> Result<String> {
@@ -42,6 +44,7 @@ impl Event {
             timestamp: to_timestamp(SystemTime::now()),
             server_name: get_server_name().ok(),
             release: None,
+            environment: None,
         }
     }
 }
