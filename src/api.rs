@@ -964,9 +964,9 @@ pub struct NewRelease {
     pub projects: Vec<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename="dateStarted")]
+    #[serde(rename="dateStarted", skip_serializing_if="Option::is_none")]
     pub date_started: Option<DateTime<UTC>>,
-    #[serde(rename="dateReleased")]
+    #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
     pub date_released: Option<DateTime<UTC>>,
 }
 
@@ -982,16 +982,17 @@ pub struct Ref {
 /// Changes to a release
 #[derive(Debug, Serialize, Default)]
 pub struct UpdatedRelease {
+    #[serde(skip_serializing_if="Option::is_none")]
     pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename="dateStarted")]
+    #[serde(rename="dateStarted", skip_serializing_if="Option::is_none")]
     pub date_started: Option<DateTime<UTC>>,
-    #[serde(rename="dateReleased")]
+    #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
     pub date_released: Option<DateTime<UTC>>,
     // XXX: this is being renamed to "refs" but for a while we want to
     // continue with the old name which the server still supports.
-    #[serde(rename="headCommits")]
+    #[serde(rename="headCommits", skip_serializing_if="Option::is_none")]
     pub refs: Option<Vec<Ref>>,
 }
 
