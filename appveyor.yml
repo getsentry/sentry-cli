@@ -1,7 +1,7 @@
 cache:
   - 'target -> appveyor.yml'
   - 'vendor -> appveyor.yml'
-  - 'C:\Users\appveyor\.cargo'
+  - '%USERPROFILE%\.cargo'
 
 environment:
   TARGET: i686-pc-windows-msvc
