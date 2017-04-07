@@ -36,6 +36,9 @@ script:
       PATH=$HOME/rust/bin:$PATH sh .ci/build.sh;
     fi
 
+before_cache:
+  - chmod -R a+r $HOME/.cargo
+
 cache:
   directories:
     - $HOME/.cargo
