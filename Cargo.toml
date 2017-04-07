@@ -36,6 +36,7 @@ dotenv = "0.10.0"
 elementtree = "0.1.1"
 prettytable-rs = "0.6.0"
 humansize = "^1.0.0"
+java-properties = "1.0.0"
 # As we currently do not need to use any of the networking features of
 # git2 (we only need local repo access) we can safely disable the default
 # features and use nothing instead.

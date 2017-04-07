@@ -9,7 +9,7 @@ use clap::{Arg, App, AppSettings};
 use prelude::*;
 use constants::VERSION;
 use utils::{Logger, print_error};
-use config::{Config, Auth};
+use config::{Config, Auth, prepare_environment};
 
 const ABOUT: &'static str = "
 Command line utility for Sentry.
@@ -78,8 +78,6 @@ fn preexecute_hooks() -> Result<bool> {
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
 pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
-    config.configure_environment();
-
     // special case for the xcode integration for react native.  For more
     // information see commands/react_native_xcode.rs
     if preexecute_hooks()? {
@@ -121,6 +119,10 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 
     let matches = app.get_matches_from_safe(args)?;
 
+    if let Ok(path) = env::var("SENTRY_PROPERTIES") {
+        config.load_java_properties(&path)?;
+    }
+
     if let Some(url) = matches.value_of("url") {
         config.url = url.to_owned();
     }
@@ -142,10 +144,11 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     }
 
     log::set_logger(|max_log_level| {
-            max_log_level.set(config.log_level);
-            Box::new(Logger)
-        })
-        .ok();
+        max_log_level.set(config.log_level);
+        Box::new(Logger)
+    }).ok();
+
+    config.configure_environment();
 
     macro_rules! execute_subcommand {
         ($name:ident) => {{
@@ -160,6 +163,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 }
 
 fn run() -> Result<()> {
+    prepare_environment();
     execute(env::args().collect(), &mut Config::from_cli_config()?)
 }
 

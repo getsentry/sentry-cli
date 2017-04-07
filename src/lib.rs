@@ -52,6 +52,7 @@ extern crate elementtree;
 extern crate prettytable;
 extern crate git2;
 extern crate humansize;
+extern crate java_properties;
 
 mod macros;
 
