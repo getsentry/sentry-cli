@@ -7,14 +7,8 @@ use prelude::*;
 use config::Config;
 use utils::{is_homebrew_install, is_npm_install};
 
-#[cfg(windows)]
 fn is_hidden() -> bool {
-    true
-}
-
-#[cfg(not(windows))]
-fn is_hidden() -> bool {
-    is_homebrew_install() || is_npm_install()
+    cfg!(windows) || is_homebrew_install() || is_npm_install()
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -26,20 +20,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         })
 }
 
-#[cfg(windows)]
-pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
-    let exe = env::current_exe()?;
-    println!("Cannot uninstall on Windows :(");
-    println!("");
-    println!("Delete this file yourself: {}", exe.display());
-    Ok(())
-}
-
-#[cfg(not(windows))]
 pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     use std::fs;
     use runas;
     use utils;
+
+    let exe = env::current_exe()?;
 
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
@@ -51,8 +37,11 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
         println!("Please use npm/yarn to uninstall sentry-cli");
         return Ok(())
     }
-
-    let exe = env::current_exe()?;
+    if cfg!(windows) {
+        println!("Cannot uninstall on Windows :(");
+        println!("");
+        println!("Delete this file yourself: {}", exe.display());
+    }
 
     if !utils::prompt_to_continue("Do you really want to uninstall sentry-cli?")? {
         println!("Aborted!");

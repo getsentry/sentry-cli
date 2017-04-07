@@ -4,8 +4,6 @@ use std::fmt;
 use std::path::Path;
 use std::io::BufReader;
 use std::borrow::Cow;
-use std::thread;
-use std::time::Duration;
 
 use plist::serde::deserialize;
 use walkdir::WalkDir;
@@ -13,10 +11,9 @@ use walkdir::WalkDir;
 use osascript;
 #[cfg(target_os="macos")]
 use unix_daemonize::{daemonize_redirect, ChdirMode};
-use open;
 
 use prelude::*;
-use utils::{TempFile, expand_envvars, print_error};
+use utils::{TempFile, expand_envvars};
 
 
 #[derive(Deserialize, Debug)]
@@ -95,6 +92,7 @@ impl InfoPlist {
 /// a dummy shim for non xcode runs or platforms.
 pub struct MayDetach<'a> {
     output_file: Option<TempFile>,
+    #[allow(dead_code)]
     task_name: &'a str,
 }
 
@@ -140,6 +138,11 @@ impl<'a> MayDetach<'a> {
     /// calls into `may_detach`.
     #[cfg(target_os="macos")]
     pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(task_name: &'a str, f: F) -> Result<T> {
+        use std::time::Duration;
+        use std::thread;
+        use open;
+        use utils::print_error;
+
         let mut md = MayDetach::new(task_name);
         match f(&mut md) {
             Ok(x) => {
