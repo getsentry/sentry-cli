@@ -78,6 +78,8 @@ fn preexecute_hooks() -> Result<bool> {
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
 pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
+    config.configure_environment();
+
     // special case for the xcode integration for react native.  For more
     // information see commands/react_native_xcode.rs
     if preexecute_hooks()? {

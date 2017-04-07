@@ -73,8 +73,6 @@ use std::io::Write;
 
 #[cfg(not(windows))]
 fn real_main() {
-    use openssl_probe::init_ssl_cert_env_vars;
-    init_ssl_cert_env_vars();
     if let Some(signal) = utils::run_or_interrupt(commands::main) {
         use chan_signal::Signal;
         if signal == Signal::INT {

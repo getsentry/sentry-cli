@@ -4,6 +4,7 @@ use std::fs;
 use std::env;
 use std::path::PathBuf;
 
+use dotenv;
 use log;
 use clap::ArgMatches;
 use url::Url;
@@ -107,6 +108,19 @@ impl Config {
             log_level: get_default_log_level(&ini)?,
             ini: ini,
         })
+    }
+
+    /// Update the environment based on the config
+    pub fn configure_environment(&self) {
+        dotenv::dotenv().ok();
+        if let Some(proxy) = self.get_proxy_url() {
+            env::set_var("http_proxy", proxy);
+        }
+        #[cfg(not(windows))]
+        {
+            use openssl_probe::init_ssl_cert_env_vars;
+            init_ssl_cert_env_vars();
+        }
     }
 
     /// Indicates whether keepalive support should be enabled.  This
@@ -228,12 +242,6 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-fn load_env_defaults(ini: &mut Ini) {
-    if let Ok(proxy) = env::var("http_proxy") {
-        ini.set_to(Some("http"), "proxy_url".into(), proxy);
-    }
-}
-
 fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let mut home_fn = env::home_dir().ok_or("Could not find home dir")?;
     home_fn.push(".sentryclirc");
@@ -256,10 +264,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                 rv.set_to(section.clone(), key.clone(), value.to_owned());
             }
         }
-        load_env_defaults(&mut rv);
         Ok((project_config_path, rv))
     } else {
-        load_env_defaults(&mut rv);
         Ok((home_fn, rv))
     }
 }
