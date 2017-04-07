@@ -11,7 +11,7 @@ use api::Api;
 use utils;
 use config::Config;
 use constants::VERSION;
-use utils::is_homebrew_install;
+use utils::{is_homebrew_install, is_npm_install};
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
@@ -59,7 +59,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("update the sentry-cli executable")
-        .settings(&if is_homebrew_install() {
+        .settings(&if is_homebrew_install() || is_npm_install() {
             vec![AppSettings::Hidden]
         } else {
             vec![]
@@ -78,6 +78,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
         println!("Please use homebrew to update sentry-cli");
+        return Ok(())
+    }
+    if is_npm_install() {
+        println!("This installation of sentry-cli is managed through npm/yarn");
+        println!("Please use npm/yearn to update sentry-cli");
         return Ok(())
     }
 

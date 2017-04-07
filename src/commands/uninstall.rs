@@ -5,7 +5,7 @@ use clap::{App, ArgMatches, AppSettings};
 
 use prelude::*;
 use config::Config;
-use utils::is_homebrew_install;
+use utils::{is_homebrew_install, is_npm_install};
 
 #[cfg(windows)]
 fn is_hidden() -> bool {
@@ -14,7 +14,7 @@ fn is_hidden() -> bool {
 
 #[cfg(not(windows))]
 fn is_hidden() -> bool {
-    is_homebrew_install()
+    is_homebrew_install() || is_npm_install()
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -44,6 +44,11 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
         println!("Please use homebrew to uninstall sentry-cli");
+        return Ok(())
+    }
+    if is_npm_install() {
+        println!("This installation of sentry-cli is managed through npm/yarn");
+        println!("Please use npm/yarn to uninstall sentry-cli");
         return Ok(())
     }
 
