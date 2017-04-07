@@ -1,6 +1,5 @@
 cache:
   - 'target -> appveyor.yml'
-  - 'vendor -> appveyor.yml'
   - '%USERPROFILE%\.cargo'
 
 environment:
