@@ -271,6 +271,10 @@ fn find_project_config_file() -> Option<PathBuf> {
             if path.exists() {
                 return Some(path);
             }
+            path.set_file_name("sentrycli.ini");
+            if path.exists() {
+                return Some(path);
+            }
             path.pop();
             if !path.pop() {
                 return None;
