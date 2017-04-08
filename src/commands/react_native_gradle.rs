@@ -28,7 +28,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .long("release")
              .value_name("RELEASE")
              .required(true)
-             .help("The name of the release to publish"))
+             .multiple(true)
+             .help("The name of the release to publish. This can be supplied \
+                    multiple times."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -51,13 +53,15 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(&org, &NewRelease {
-        version: matches.value_of("release").unwrap().to_string(),
-        projects: vec![project.to_string()],
-        ..Default::default()
-    })?;
-    println!("Uploading sourcemaps for release {}", release.version);
-    processor.upload(&api, &org, Some(&project), &release.version)?;
+    for version in matches.values_of("release").unwrap() {
+        let release = api.new_release(&org, &NewRelease {
+            version: version.to_string(),
+            projects: vec![project.to_string()],
+            ..Default::default()
+        })?;
+        println!("Uploading sourcemaps for release {}", release.version);
+        processor.upload(&api, &org, Some(&project), &release.version)?;
+    }
 
     Ok(())
 }
