@@ -119,10 +119,6 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 
     let matches = app.get_matches_from_safe(args)?;
 
-    if let Ok(path) = env::var("SENTRY_PROPERTIES") {
-        config.load_java_properties(&path)?;
-    }
-
     if let Some(url) = matches.value_of("url") {
         config.url = url.to_owned();
     }

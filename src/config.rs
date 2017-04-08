@@ -2,7 +2,7 @@
 use std::io;
 use std::fs;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use dotenv;
 use log;
@@ -113,37 +113,6 @@ impl Config {
             log_level: get_default_log_level(&ini)?,
             ini: ini,
         })
-    }
-
-    /// Load config values from a java style .properties file.
-    pub fn load_java_properties<P: AsRef<Path>>(&mut self, p: P) -> Result<bool> {
-        let f = match fs::File::open(p) {
-            Ok(f) => f,
-            Err(err) => {
-                if err.kind() == io::ErrorKind::NotFound {
-                    return Ok(false);
-                }
-                return Err(err.into());
-            }
-        };
-
-        let props = match java_properties::read(f) {
-            Ok(props) => props,
-            Err(err) => {
-                return Err(Error::from(format!(
-                    "Could not load java style properties file: {}", err)));
-            }
-        };
-
-        for (key, value) in props {
-            let mut iter = key.rsplitn(2, '.');
-            if let Some(key) = iter.next() {
-                let section = iter.next();
-                self.ini.set_to(section, key.to_string(), value);
-            }
-        }
-
-        Ok(true)
     }
 
     /// Update the environment based on the config
@@ -298,17 +267,45 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
         }
     };
 
-    if let Some(project_config_path) = find_project_config_file() {
+    let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
         let ini = Ini::read_from(&mut fs::File::open(&project_config_path)?)?;
         for (section, props) in ini.iter() {
             for (key, value) in props {
                 rv.set_to(section.clone(), key.clone(), value.to_owned());
             }
         }
-        Ok((project_config_path, rv))
+        (project_config_path, rv)
     } else {
-        Ok((home_fn, rv))
+        (home_fn, rv)
+    };
+
+    if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
+        match fs::File::open(prop_path) {
+            Ok(f) => {
+                let props = match java_properties::read(f) {
+                    Ok(props) => props,
+                    Err(err) => {
+                        return Err(Error::from(format!(
+                            "Could not load java style properties file: {}", err)));
+                    }
+                };
+                for (key, value) in props {
+                    let mut iter = key.rsplitn(2, '.');
+                    if let Some(key) = iter.next() {
+                        let section = iter.next();
+                        rv.set_to(section, key.to_string(), value);
+                    }
+                }
+            },
+            Err(err) => {
+                if err.kind() != io::ErrorKind::NotFound {
+                    return Err(err.into());
+                }
+            }
+        }
     }
+
+    Ok((path, rv))
 }
 
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
