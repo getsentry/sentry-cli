@@ -12,6 +12,9 @@ use sourcemaputils::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uploads react-native projects from within a gradle build step")
+        // we intentionally hide this command because for all intents and purposes
+        // the user should not know it exists.  It's invoked exclusively by the
+        // gradle build step in react-native.
         .setting(AppSettings::Hidden)
         .org_project_args()
         .arg(Arg::with_name("sourcemap")
