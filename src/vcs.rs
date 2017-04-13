@@ -189,11 +189,11 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
 fn test_url_parsing() {
     assert_eq!(VcsUrl::parse("http://github.com/mitsuhiko/flask"), VcsUrl {
         provider: "github",
-        path: "mitsuhiko/flask".into(),
+        id: "mitsuhiko/flask".into(),
     });
     assert_eq!(VcsUrl::parse("git@github.com:mitsuhiko/flask.git"), VcsUrl {
         provider: "github",
-        path: "mitsuhiko/flask".into(),
+        id: "mitsuhiko/flask".into(),
     });
 }
 

@@ -487,6 +487,13 @@ pub fn is_npm_install() -> bool {
 
 /// Expands environment variables in a string
 pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
+    expand_vars(s, |key| {
+        env::var(key).unwrap_or("".into())
+    })
+}
+
+/// Expands variables in a string
+pub fn expand_vars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> {
     lazy_static! {
         static ref VAR_RE: Regex = Regex::new(
             r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\))").unwrap();
@@ -496,9 +503,9 @@ pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
         if key == "$" {
             "$".into()
         } else if &key[..1] == "(" {
-            env::var(&key[1..key.len() - 1]).unwrap_or("".into())
+            f(&key[1..key.len() - 1])
         } else {
-            env::var(key).unwrap_or("".into())
+            f(key)
         }
     })
 }
