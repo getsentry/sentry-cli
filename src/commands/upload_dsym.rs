@@ -222,6 +222,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("The path to the debug symbols")
             .multiple(true)
             .index(1))
+        .arg(Arg::with_name("uuids")
+             .value_name("UUID")
+             .long("uuid")
+             .help("Finds debug symbols by UUID.")
+             .multiple(true))
+        .arg(Arg::with_name("derived_data")
+             .long("derived-data")
+             .help("Search for debug symbols in derived data."))
         .arg(Arg::with_name("info_plist")
              .long("info-plist")
              .value_name("PATH")
@@ -242,10 +250,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let paths = match matches.values_of("paths") {
+    let mut paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
         None => get_paths_from_env()?,
     };
+    if_chain! {
+        if matches.is_present("derived_data");
+        if let Some(path) = env::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
+        if path.is_dir();
+        then {
+            paths.push(path);
+        }
+    }
     let info_plist = match matches.value_of("info_plist") {
         Some(path) => Some(xcode::InfoPlist::from_path(path)?),
         None => xcode::InfoPlist::discover_from_env()?,
