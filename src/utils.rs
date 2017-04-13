@@ -215,6 +215,14 @@ pub fn validate_timestamp(v: String) -> StdResult<(), String> {
     }
 }
 
+pub fn validate_uuid(s: String) -> StdResult<(), String> {
+    if Uuid::parse_str(&s).is_err() {
+        Err("Invalid UUID".to_string())
+    } else {
+        Ok(())
+    }
+}
+
 pub fn get_timestamp(value: &str) -> Result<DateTime<UTC>> {
     if let Ok(int) = value.parse::<i64>() {
         Ok(UTC.timestamp(int, 0))

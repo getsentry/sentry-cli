@@ -11,6 +11,7 @@ use plist;
 use sourcemap;
 use elementtree;
 use git2;
+use mach_object;
 
 use api;
 
@@ -35,5 +36,6 @@ error_chain! {
         Api(api::Error);
         Git(git2::Error);
         Xml(elementtree::ParseError);
+        MachO(mach_object::Error);
     }
 }

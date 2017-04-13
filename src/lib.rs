@@ -53,6 +53,8 @@ extern crate prettytable;
 extern crate git2;
 extern crate humansize;
 extern crate java_properties;
+extern crate mach_object;
+extern crate memmap;
 
 mod macros;
 
