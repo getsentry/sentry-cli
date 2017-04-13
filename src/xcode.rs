@@ -11,9 +11,10 @@ use walkdir::WalkDir;
 use osascript;
 #[cfg(target_os="macos")]
 use unix_daemonize::{daemonize_redirect, ChdirMode};
+use regex::Regex;
 
 use prelude::*;
-use utils::{TempFile, expand_envvars};
+use utils::{TempFile, expand_vars};
 
 
 #[derive(Deserialize, Debug)]
@@ -32,6 +33,28 @@ impl fmt::Display for InfoPlist {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({})", self.name(), &self.version)
     }
+}
+
+pub fn expand_xcodevars<'a>(s: &'a str) -> Cow<'a, str> {
+    lazy_static! {
+        static ref SEP_RE: Regex = Regex::new(r"[\s/]+").unwrap();
+    }
+    expand_vars(s, |key| {
+        if key == "" {
+            return "".into();
+        }
+        let mut iter = key.splitn(2, ':');
+        let value = env::var(iter.next().unwrap()).unwrap_or("".into());
+        match iter.next() {
+            Some("rfc1034identifier") => {
+                SEP_RE.replace_all(&value, "-").into_owned()
+            },
+            Some("identifier") => {
+                SEP_RE.replace_all(&value, "_").into_owned()
+            },
+            None | Some(_) => value
+        }
+    })
 }
 
 impl InfoPlist {
@@ -79,11 +102,11 @@ impl InfoPlist {
     }
 
     pub fn name<'a>(&'a self) -> Cow<'a, str> {
-        expand_envvars(&self.name)
+        expand_xcodevars(&self.name)
     }
 
     pub fn bundle_id<'a>(&'a self) -> Cow<'a, str> {
-        expand_envvars(&self.bundle_id)
+        expand_xcodevars(&self.bundle_id)
     }
 }
 
@@ -253,4 +276,13 @@ pub fn show_notification(title: &str, msg: &str) -> Result<()> {
         title: title,
         message: msg,
     }).chain_err(|| "Failed to display Xcode notification")?)
+}
+
+#[test]
+fn test_expansion() {
+    env::set_var("FOO_BAR", "foo bar baz / blah");
+    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B").to_string(),
+               "Afoo-bar-baz-blahB".to_string());
+    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B").to_string(),
+               "Afoo_bar_baz_blahB".to_string());
 }
