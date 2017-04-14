@@ -9,15 +9,18 @@ use std::io::{Write, Seek};
 use std::ffi::OsStr;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::collections::HashSet;
 
 use clap::{App, Arg, ArgMatches};
 use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
+use uuid::Uuid;
 
 use prelude::*;
 use api::{Api, DSymFile};
-use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file};
-use macho::is_macho_file;
+use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file, validate_uuid};
+use macho::{is_matching_macho_path, is_matching_macho_reader};
+use macho;
 use config::Config;
 use xcode;
 
@@ -56,27 +59,31 @@ impl DSymRef {
     }
 }
 
-struct BatchIter {
+struct BatchIter<'a> {
     path: PathBuf,
     wd_iter: WalkDirIter,
     batch: Vec<DSymRef>,
     open_zip: Rc<RefCell<Option<zip::ZipArchive<fs::File>>>>,
     open_zip_index: usize,
+    uuids: Option<&'a HashSet<Uuid>>,
+    allow_zips: bool,
 }
 
-impl BatchIter {
-    pub fn new<P: AsRef<Path>>(path: P) -> BatchIter {
+impl<'a> BatchIter<'a> {
+    pub fn new<P: AsRef<Path>>(path: P, uuids: Option<&'a HashSet<Uuid>>, allow_zips: bool) -> BatchIter<'a> {
         BatchIter {
             path: path.as_ref().to_path_buf(),
             wd_iter: WalkDir::new(&path).into_iter(),
             batch: vec![],
             open_zip: Rc::new(RefCell::new(None)),
             open_zip_index: !0,
+            uuids: uuids,
+            allow_zips: allow_zips,
         }
     }
 }
 
-impl Iterator for BatchIter {
+impl<'a> Iterator for BatchIter<'a> {
     type Item = Result<Vec<DSymRef>>;
 
     fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
@@ -100,11 +107,9 @@ impl Iterator for BatchIter {
                         break;
                     }
                 } else {
-                    let is_macho = {
-                        let mut f = iter_try!(archive.by_index(self.open_zip_index));
-                        is_macho_file(&mut f)
-                    };
-                    if is_macho {
+                    if iter_try!(is_matching_macho_reader(
+                            iter_try!(archive.by_index(self.open_zip_index)),
+                            self.uuids)) {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
                         let name = Path::new("DebugSymbols").join(f.name());
                         println!("      {}", name.display());
@@ -123,7 +128,7 @@ impl Iterator for BatchIter {
                 let dent = iter_try!(dent_res);
                 let md = iter_try!(dent.metadata());
                 if md.is_file() {
-                    if is_macho_file(iter_try!(fs::File::open(&dent.path()))) {
+                    if iter_try!(is_matching_macho_path(dent.path(), self.uuids)) {
                         let name = Path::new("DebugSymbols")
                             .join(dent.path().strip_prefix(&self.path).unwrap());
                         println!("    {}", name.display());
@@ -136,7 +141,7 @@ impl Iterator for BatchIter {
                         if self.batch.len() > BATCH_SIZE {
                             break;
                         }
-                    } else if is_zip_file(iter_try!(fs::File::open(&dent.path()))) {
+                    } else if self.allow_zips && is_zip_file(iter_try!(fs::File::open(&dent.path()))) {
                         println!("    {} (zip archive)", dent.path().display());
                         show_zip_continue = false;
                         let f = iter_try!(fs::File::open(dent.path()));
@@ -221,7 +226,21 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .value_name("PATH")
             .help("The path to the debug symbols")
             .multiple(true)
+            .number_of_values(1)
             .index(1))
+        .arg(Arg::with_name("uuids")
+             .value_name("UUID")
+             .long("uuid")
+             .help("Finds debug symbols by UUID.")
+             .validator(validate_uuid)
+             .multiple(true)
+             .number_of_values(1))
+        .arg(Arg::with_name("derived_data")
+             .long("derived-data")
+             .help("Search for debug symbols in derived data."))
+        .arg(Arg::with_name("no_zips")
+             .long("no-zips")
+             .help("Do not recursive into .zip files"))
         .arg(Arg::with_name("info_plist")
              .long("info-plist")
              .value_name("PATH")
@@ -242,10 +261,22 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let paths = match matches.values_of("paths") {
+    let zips = !matches.is_present("no_zips");
+    let mut paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
         None => get_paths_from_env()?,
     };
+    if_chain! {
+        if matches.is_present("derived_data");
+        if let Some(path) = env::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
+        if path.is_dir();
+        then {
+            paths.push(path);
+        }
+    }
+    let find_uuids = matches.values_of("uuids").map(|uuids| {
+        uuids.map(|s| Uuid::parse_str(s).unwrap()).collect::<HashSet<_>>()
+    });
     let info_plist = match matches.value_of("info_plist") {
         Some(path) => Some(xcode::InfoPlist::from_path(path)?),
         None => xcode::InfoPlist::discover_from_env()?,
@@ -267,7 +298,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         let mut all_dsym_checksums = vec![];
         for path in paths {
             println!("Finding symbols in {}...", path.display());
-            for batch_res in BatchIter::new(path) {
+            for batch_res in BatchIter::new(path, find_uuids.as_ref(), zips) {
                 let batch = batch_res?;
                 println!("Detecting dsyms to upload");
                 for dsym_ref in batch.iter() {
