@@ -60,7 +60,7 @@ pub fn is_matching_macho_reader<R: Read>(rdr: R, uuids: Option<&HashSet<Uuid>>) 
 }
 
 pub fn is_matching_macho_path<P: AsRef<Path>>(p: P, uuids: Option<&HashSet<Uuid>>) -> Result<bool> {
-    let mut f = File::open(p)?;
+    let f = File::open(p)?;
     if let Some(uuids) = uuids {
         let uuids_found = get_macho_uuids_from_file(&f)?;
         Ok(!uuids_found.is_empty() && uuids_found.is_subset(uuids))

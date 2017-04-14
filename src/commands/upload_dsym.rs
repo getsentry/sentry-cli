@@ -20,7 +20,6 @@ use prelude::*;
 use api::{Api, DSymFile};
 use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file, validate_uuid};
 use macho::{is_matching_macho_path, is_matching_macho_reader};
-use macho;
 use config::Config;
 use xcode;
 
