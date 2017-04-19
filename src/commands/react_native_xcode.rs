@@ -209,7 +209,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         processor.add_sourcemap_references()?;
 
         let release = api.new_release(&org, &NewRelease {
-            version: plist.version().to_string(),
+            version: format!("{}-{}", plist.bundle_id(), plist.version()),
             projects: vec![project.to_string()],
             ..Default::default()
         })?;
