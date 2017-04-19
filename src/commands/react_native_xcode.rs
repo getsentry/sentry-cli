@@ -209,12 +209,13 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         processor.add_sourcemap_references()?;
 
         let release = api.new_release(&org, &NewRelease {
-            version: plist.release_name(),
+            version: plist.version().to_string(),
             projects: vec![project.to_string()],
             ..Default::default()
         })?;
         println!("Uploading sourcemaps for release {}", release.version);
-        processor.upload(&api, &org, Some(&project), &release.version, None)?;
+        processor.upload(&api, &org, Some(&project), &release.version,
+                         Some(&plist.build()))?;
 
         Ok(())
     })

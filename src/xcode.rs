@@ -97,10 +97,6 @@ impl InfoPlist {
         &self.build
     }
 
-    pub fn release_name(&self) -> String {
-        format!("{} ({})", self.version, self.build)
-    }
-
     pub fn name<'a>(&'a self) -> Cow<'a, str> {
         expand_xcodevars(&self.name)
     }
