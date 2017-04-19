@@ -276,6 +276,7 @@ impl<'a> Api<'a> {
                                version: &str,
                                contents: FileContents,
                                name: &str,
+                               dist: Option<&str>,
                                headers: Option<&[(String, String)]>)
                                -> ApiResult<Option<Artifact>> {
         let path = if let Some(project) = project {
@@ -299,6 +300,9 @@ impl<'a> Api<'a> {
             }
         }
         form.part("name").contents(name.as_bytes()).add()?;
+        if let Some(dist) = dist {
+            form.part("distribution").contents(dist.as_bytes()).add()?;
+        }
 
         if let Some(headers) = headers {
             for &(ref key, ref value) in headers {
@@ -936,6 +940,8 @@ pub struct Artifact {
     pub sha1: String,
     pub name: String,
     pub size: u64,
+    #[serde(rename="distribution")]
+    pub dist: Option<String>,
     pub headers: HashMap<String, String>,
 }
 

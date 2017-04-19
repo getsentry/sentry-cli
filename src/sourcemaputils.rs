@@ -389,7 +389,7 @@ impl SourceMapProcessor {
 
     /// Uploads all files
     pub fn upload(&self, api: &Api, org: &str, project: Option<&str>,
-                  release: &str) -> Result<()> {
+                  release: &str, dist: Option<&str>) -> Result<()> {
         let here = env::current_dir()?;
         for (_, source) in self.sources.iter() {
             if source.skip_upload {
@@ -404,7 +404,7 @@ impl SourceMapProcessor {
                      source.ty);
             if let Some(artifact) = api.upload_release_file(org,
                     project, &release, FileContents::FromBytes(source.contents.as_bytes()),
-                    &source.url, Some(source.headers.as_slice()))? {
+                    &source.url, dist, Some(source.headers.as_slice()))? {
                 println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
             } else {
                 println!("  already present");

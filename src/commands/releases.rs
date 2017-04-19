@@ -157,6 +157,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("a list of filenames to delete.")))
             .subcommand(App::new("upload")
                 .about("Uploads a file for a given release")
+                .arg(Arg::with_name("dist")
+                    .long("distribution")
+                    .short("d")
+                    .value_name("DISTRIBUTION")
+                    .help("Optional distribution identifier for this file"))
                 .arg(Arg::with_name("headers")
                     .long("header")
                     .short("H")
@@ -186,6 +191,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("url-prefix")
                     .value_name("PREFIX")
                     .help("The URL prefix to prepend to all filenames"))
+                .arg(Arg::with_name("dist")
+                    .long("distribution")
+                    .short("d")
+                    .value_name("DISTRIBUTION")
+                    .help("Optional distribution identifier for the sourcemaps"))
                 .arg(Arg::with_name("validate")
                     .long("validate")
                     .help("Enable basic sourcemap validation"))
@@ -509,6 +519,7 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
     let mut table = Table::new();
     table.title_row()
         .add("Name")
+        .add("Distribution")
         .add("Sourcemap")
         .add("Size");
 
@@ -518,6 +529,11 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
             org, project.as_ref().map(|x| x.as_str()), release)? {
         let mut row = table.add_row();
         row.add(&artifact.name);
+        if let Some(ref dist) = artifact.dist {
+            row.add(dist);
+        } else {
+            row.add("(default)");
+        }
         if let Some(sm_ref) = artifact.get_sourcemap_reference() {
             row.add(sm_ref);
         } else {
@@ -565,6 +581,7 @@ fn execute_files_upload<'a>(ctx: &ReleaseContext,
                 .ok_or("No filename provided.")?
         }
     };
+    let dist = matches.value_of("dist");
     let mut headers = vec![];
     if let Some(header_list) = matches.values_of("header") {
         for header in header_list {
@@ -581,7 +598,7 @@ fn execute_files_upload<'a>(ctx: &ReleaseContext,
     let project = ctx.get_project_default().ok();
     if let Some(artifact) = ctx.api.upload_release_file(org,
             project.as_ref().map(|x| x.as_str()), &version,
-            FileContents::FromPath(&path), &name, Some(&headers[..]))? {
+            FileContents::FromPath(&path), &name, dist, Some(&headers[..]))? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
         fail!("File already present!");
@@ -601,6 +618,7 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
             vec![OsStr::new("js"), OsStr::new("map"), OsStr::new("jsbundle"), OsStr::new("bundle")]
         }
     };
+    let dist = matches.value_of("dist");
 
     let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
 
@@ -665,7 +683,7 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
 
     let project = ctx.get_project_default().ok();
     processor.upload(&ctx.api, org, project.as_ref().map(|x| x.as_str()),
-                     &release.version)?;
+                     &release.version, dist)?;
 
     Ok(())
 }

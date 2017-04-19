@@ -63,7 +63,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             ..Default::default()
         })?;
         println!("Uploading sourcemaps for release {}", release.version);
-        processor.upload(&api, &org, Some(&project), &release.version)?;
+        processor.upload(&api, &org, Some(&project), &release.version, None)?;
     }
 
     Ok(())
