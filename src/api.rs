@@ -301,7 +301,7 @@ impl<'a> Api<'a> {
         }
         form.part("name").contents(name.as_bytes()).add()?;
         if let Some(dist) = dist {
-            form.part("distribution").contents(dist.as_bytes()).add()?;
+            form.part("dist").contents(dist.as_bytes()).add()?;
         }
 
         if let Some(headers) = headers {
@@ -940,7 +940,6 @@ pub struct Artifact {
     pub sha1: String,
     pub name: String,
     pub size: u64,
-    #[serde(rename="distribution")]
     pub dist: Option<String>,
     pub headers: HashMap<String, String>,
 }
