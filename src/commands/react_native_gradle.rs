@@ -31,9 +31,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .long("release")
              .value_name("RELEASE")
              .required(true)
+             .help("The name of the release to publish."))
+        .arg(Arg::with_name("dist")
+             .long("distribution")
+             .value_name("DISTRIBUTION")
+             .required(true)
              .multiple(true)
-             .help("The name of the release to publish. This can be supplied \
-                    multiple times."))
+             .number_of_values(1)
+             .help("The names of the distirbutions to publish. Can be supplied multiple times."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -56,14 +61,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
-    for version in matches.values_of("release").unwrap() {
-        let release = api.new_release(&org, &NewRelease {
-            version: version.to_string(),
-            projects: vec![project.to_string()],
-            ..Default::default()
-        })?;
-        println!("Uploading sourcemaps for release {}", release.version);
-        processor.upload(&api, &org, Some(&project), &release.version, None)?;
+    let release = api.new_release(&org, &NewRelease {
+        version: matches.value_of("release").unwrap().to_string(),
+        projects: vec![project.to_string()],
+        ..Default::default()
+    })?;
+
+    for dist in matches.values_of("dist").unwrap() {
+        println!("Uploading sourcemaps for release {} distribution {}",
+                 &release.version, dist);
+        processor.upload(&api, &org, Some(&project), &release.version, Some(dist))?;
     }
 
     Ok(())
