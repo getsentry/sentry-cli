@@ -532,7 +532,7 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
         if let Some(ref dist) = artifact.dist {
             row.add(dist);
         } else {
-            row.add("(default)");
+            row.add("");
         }
         if let Some(sm_ref) = artifact.get_sourcemap_reference() {
             row.add(sm_ref);
