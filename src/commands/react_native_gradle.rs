@@ -58,7 +58,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
-    processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
+    processor.rewrite(&vec![base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
     let release = api.new_release(&org, &NewRelease {
