@@ -33,7 +33,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .required(true)
              .help("The name of the release to publish."))
         .arg(Arg::with_name("dist")
-             .long("distribution")
+             .long("dist")
              .value_name("DISTRIBUTION")
              .required(true)
              .multiple(true)
