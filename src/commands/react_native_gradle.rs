@@ -38,7 +38,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .required(true)
              .multiple(true)
              .number_of_values(1)
-             .help("The names of the distirbutions to publish. Can be supplied multiple times."))
+             .help("The names of the distributions to publish. Can be supplied multiple times."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
