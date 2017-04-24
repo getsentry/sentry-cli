@@ -1,0 +1,22 @@
+name: sentry-cli
+version: master
+summary: A command line utility to work with Sentry
+description: |
+  This is a Sentry command line client for some generic tasks. Right now this is
+  primarily used to upload debug symbols to Sentry if you are not using the
+  fastlane tools.
+
+grade: devel # must be 'stable' to release into candidate/stable channels
+confinement: strict
+
+apps:
+  sentry-cli:
+    command: sentry-cli
+    plugs: [network]
+
+parts:
+  sentry-cli:
+    source: .
+    plugin: rust
+    build-packages: [libssl-dev, cmake, pkg-config]
+    stage-packages: [libcurl3-gnutls]
