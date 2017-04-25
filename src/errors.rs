@@ -20,6 +20,9 @@ error_chain! {
         QuietExit(code: i32) {
             description("sentry-cli quit")
         }
+        NoMacho {
+            description("not a mach-o file")
+        }
     }
 
     foreign_links {

@@ -18,6 +18,22 @@ const MAGIC_64: &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
 const MAGIC_CIGAM64: &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
 
+pub fn get_uuids_for_path(path: &Path) -> Result<HashSet<Uuid>> {
+    let f = File::open(path)?;
+    if let Ok(mmap) = memmap::Mmap::open(&f, memmap::Protection::Read) {
+        get_macho_uuids_from_slice(unsafe { mmap.as_slice() })
+    } else {
+        Err(ErrorKind::NoMacho.into())
+    }
+}
+
+pub fn get_uuids_for_reader<R: Read>(mut rdr: R) -> Result<HashSet<Uuid>> {
+    let mut contents: Vec<u8> = vec![];
+    rdr.read_to_end(&mut contents)?;
+    get_macho_uuids_from_slice(&contents[..])
+}
+
+
 /// this function can return an error if the file is smaller than the magic.
 /// Use the `is_macho_file` instead which does not fail which is actually
 /// much better for how this function is used within this library.
@@ -36,45 +52,12 @@ pub fn is_macho_file<R: Read>(rdr: R) -> bool {
     is_macho_file_as_result(rdr).unwrap_or(false)
 }
 
-fn get_macho_uuids_from_file(f: &File) -> Result<HashSet<Uuid>> {
-    if let Ok(mmap) = memmap::Mmap::open(f, memmap::Protection::Read) {
-        get_macho_uuids_from_slice(unsafe { mmap.as_slice() })
-    } else {
-        Ok(HashSet::new())
-    }
-}
-
-fn get_macho_uuids_from_reader<R: Read>(mut rdr: R) -> Result<HashSet<Uuid>> {
-    let mut contents: Vec<u8> = vec![];
-    rdr.read_to_end(&mut contents)?;
-    get_macho_uuids_from_slice(&contents[..])
-}
-
-pub fn is_matching_macho_reader<R: Read>(rdr: R, uuids: Option<&HashSet<Uuid>>) -> Result<bool> {
-    if let Some(uuids) = uuids {
-        let uuids_found = get_macho_uuids_from_reader(rdr)?;
-        Ok(!uuids_found.is_empty() && uuids_found.is_subset(uuids))
-    } else {
-        Ok(is_macho_file(rdr))
-    }
-}
-
-pub fn is_matching_macho_path<P: AsRef<Path>>(p: P, uuids: Option<&HashSet<Uuid>>) -> Result<bool> {
-    let f = File::open(p)?;
-    if let Some(uuids) = uuids {
-        let uuids_found = get_macho_uuids_from_file(&f)?;
-        Ok(!uuids_found.is_empty() && uuids_found.is_subset(uuids))
-    } else {
-        Ok(is_macho_file(f))
-    }
-}
-
 fn get_macho_uuids_from_slice(slice: &[u8]) -> Result<HashSet<Uuid>> {
     let mut cursor = Cursor::new(slice);
     let mut uuids = HashSet::new();
 
     if !is_macho_file(&mut cursor) {
-        return Ok(uuids);
+        return Err(ErrorKind::NoMacho.into());
     }
     cursor.seek(SeekFrom::Start(0))?;
 

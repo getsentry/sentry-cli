@@ -19,9 +19,9 @@ use uuid::Uuid;
 use prelude::*;
 use api::{Api, DSymFile};
 use utils::{ArgExt, TempFile, get_sha1_checksum, is_zip_file, validate_uuid};
-use macho::{is_matching_macho_path, is_matching_macho_reader};
 use config::Config;
 use xcode;
+use macho;
 
 const BATCH_SIZE: usize = 15;
 
@@ -34,6 +34,7 @@ struct DSymRef {
     var: DSymVar,
     arc_name: String,
     checksum: String,
+    uuids: HashSet<Uuid>,
 }
 
 impl DSymRef {
@@ -69,7 +70,8 @@ struct BatchIter<'a> {
 }
 
 impl<'a> BatchIter<'a> {
-    pub fn new<P: AsRef<Path>>(path: P, uuids: Option<&'a HashSet<Uuid>>, allow_zips: bool) -> BatchIter<'a> {
+    pub fn new<P: AsRef<Path>>(path: P, uuids: Option<&'a HashSet<Uuid>>,
+                               allow_zips: bool) -> BatchIter<'a> {
         BatchIter {
             path: path.as_ref().to_path_buf(),
             wd_iter: WalkDir::new(&path).into_iter(),
@@ -87,6 +89,34 @@ impl<'a> Iterator for BatchIter<'a> {
 
     fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
         println!("  Creating DSym batch");
+
+        macro_rules! uuid_match {
+            ($load:expr) => {
+                match $load {
+                    Ok(uuids) => {
+                        if let Some(ref expected_uuids) = self.uuids {
+                            if !uuids.is_empty() && uuids.is_subset(expected_uuids) {
+                                Some(uuids)
+                            } else {
+                                None
+                            }
+                        } else if !uuids.is_empty() {
+                            Some(uuids)
+                        } else {
+                            None
+                        }
+                    }
+                    Err(err) => {
+                        if let &ErrorKind::NoMacho = err.kind() {
+                            None
+                        } else {
+                            return Some(Err(err));
+                        }
+                    }
+                }
+            }
+        }
+
         let mut show_zip_continue = true;
         loop {
             if self.open_zip_index == !0 {
@@ -106,9 +136,9 @@ impl<'a> Iterator for BatchIter<'a> {
                         break;
                     }
                 } else {
-                    if iter_try!(is_matching_macho_reader(
-                            iter_try!(archive.by_index(self.open_zip_index)),
-                            self.uuids)) {
+                    if let Some(uuids) = uuid_match!(macho::get_uuids_for_reader(
+                            iter_try!(archive.by_index(self.open_zip_index))))
+                    {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
                         let name = Path::new("DebugSymbols").join(f.name());
                         println!("      {}", name.display());
@@ -116,6 +146,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             var: DSymVar::ZipFile(self.open_zip.clone(), self.open_zip_index),
                             arc_name: name.to_string_lossy().into_owned(),
                             checksum: iter_try!(get_sha1_checksum(&mut f)),
+                            uuids: uuids,
                         });
                         if self.batch.len() > BATCH_SIZE {
                             break;
@@ -127,7 +158,8 @@ impl<'a> Iterator for BatchIter<'a> {
                 let dent = iter_try!(dent_res);
                 let md = iter_try!(dent.metadata());
                 if md.is_file() {
-                    if iter_try!(is_matching_macho_path(dent.path(), self.uuids)) {
+                    if let Some(uuids) = uuid_match!(macho::get_uuids_for_path(
+                            dent.path())) {
                         let name = Path::new("DebugSymbols")
                             .join(dent.path().strip_prefix(&self.path).unwrap());
                         println!("    {}", name.display());
@@ -136,6 +168,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             arc_name: name.to_string_lossy().into_owned(),
                             checksum: iter_try!(get_sha1_checksum(
                                 &mut iter_try!(fs::File::open(dent.path())))),
+                            uuids: uuids,
                         });
                         if self.batch.len() > BATCH_SIZE {
                             break;
@@ -234,6 +267,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .validator(validate_uuid)
              .multiple(true)
              .number_of_values(1))
+        .arg(Arg::with_name("require_all")
+             .long("require-all")
+             .help("When combined with --uuid this will error if not all \
+                    UUIDs could be found."))
         .arg(Arg::with_name("derived_data")
              .long("derived-data")
              .help("Search for debug symbols in derived data."))
@@ -276,6 +313,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let find_uuids = matches.values_of("uuids").map(|uuids| {
         uuids.map(|s| Uuid::parse_str(s).unwrap()).collect::<HashSet<_>>()
     });
+    let mut found_uuids: HashSet<Uuid> = HashSet::new();
     let info_plist = match matches.value_of("info_plist") {
         Some(path) => Some(xcode::InfoPlist::from_path(path)?),
         None => xcode::InfoPlist::discover_from_env()?,
@@ -302,6 +340,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                 println!("Detecting dsyms to upload");
                 for dsym_ref in batch.iter() {
                     all_dsym_checksums.push(dsym_ref.checksum.clone());
+                    found_uuids.extend(dsym_ref.uuids.iter());
                 }
                 let missing = find_missing_files(&mut api, batch, &org, &project)?;
                 if missing.len() == 0 {
@@ -348,6 +387,19 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             }
         } else {
             println!("Skipped reprocessing.");
+        }
+
+        // did we miss anything?
+        if let Some(ref find_uuids) = find_uuids {
+            let missing: HashSet<_> = find_uuids.difference(&found_uuids).collect();
+            if matches.is_present("require_all") && !missing.is_empty() {
+                println!("error: not all requested dsyms could be found");
+                println!("The following are missing:");
+                for uuid in &missing {
+                    println!("  {}", uuid);
+                }
+                return Err(ErrorKind::QuietExit(1).into());
+            }
         }
 
         Ok(())
