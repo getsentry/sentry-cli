@@ -50,6 +50,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .number_of_values(1)
             .help("Adds extra information (key:value) to the event."))
+        .arg(Arg::with_name("fingerprint")
+            .value_name("FINGERPRINT")
+            .long("fingerprint")
+            .short("f")
+            .multiple(true)
+            .number_of_values(1)
+            .help("Changes the fingerprint of the event"))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -76,6 +83,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             let value = split.next().ok_or("missing extra value")?;
             event.extra.insert(key.into(), value.into());
         }
+    }
+
+    if let Some(fingerprint) = matches.values_of("fingerprint") {
+        event.fingerprint = Some(fingerprint.map(|x| x.to_string()).collect());
     }
 
     let dsn = config.get_dsn()?;

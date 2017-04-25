@@ -14,7 +14,7 @@ pub struct Event {
     pub extra: HashMap<String, String>,
     pub level: String,
     #[serde(skip_serializing_if="Option::is_none")]
-    pub fingerprint: Option<String>,
+    pub fingerprint: Option<Vec<String>>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub message: Option<String>,
     pub platform: String,
