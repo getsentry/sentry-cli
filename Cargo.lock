@@ -35,7 +35,6 @@ dependencies = [
  "serde_json 0.9.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sourcemap 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "term 0.4.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",

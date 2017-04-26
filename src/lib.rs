@@ -27,7 +27,6 @@ extern crate sha1;
 extern crate sourcemap;
 extern crate open;
 extern crate runas;
-extern crate term;
 extern crate plist;
 extern crate might_be_minified;
 #[macro_use]

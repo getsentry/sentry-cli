@@ -13,7 +13,6 @@ use std::path::{Path, PathBuf};
 use std::io::{Read, Write, Seek, SeekFrom};
 
 use clap;
-use term;
 use log;
 use uuid::{Uuid, UuidVersion};
 use sha1::Sha1;
@@ -21,7 +20,7 @@ use zip::ZipArchive;
 use regex::{Regex, Captures};
 use prettytable;
 use chrono::{Duration, DateTime, UTC, TimeZone};
-use indicatif::{ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle, style, Color};
 
 use prelude::*;
 
@@ -65,32 +64,14 @@ impl log::Log for Logger {
         if !self.enabled(record.metadata()) {
             return;
         }
-
-        let mut out_term;
-        let mut out_stderr;
-
-        let mut w = if let Some(mut term) = term::stderr() {
-            term.fg(match record.level() {
-                    log::LogLevel::Error | log::LogLevel::Warn => term::color::RED,
-                    log::LogLevel::Info => term::color::CYAN,
-                    log::LogLevel::Debug | log::LogLevel::Trace => term::color::YELLOW,
-                })
-                .ok();
-            out_term = term;
-            &mut out_term as &mut Write
-        } else {
-            out_stderr = io::stderr();
-            &mut out_stderr as &mut Write
-        };
-        writeln!(w,
-                 "[{}] {} {}",
-                 record.level(),
-                 record.target(),
-                 record.args())
-            .ok();
-        if let Some(mut term) = term::stderr() {
-            term.reset().ok();
-        }
+        let msg = format!("[{}] {} {}", record.level(), record.target(), record.args());
+        writeln!(io::stderr(), "{}", style(msg).fg(
+            match record.level() {
+                log::LogLevel::Error | log::LogLevel::Warn => Color::Red,
+                log::LogLevel::Info => Color::Cyan,
+                log::LogLevel::Debug | log::LogLevel::Trace => Color::Yellow,
+            }
+        )).ok();
     }
 }
 

@@ -9,11 +9,12 @@ use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
-use term;
 use url::Url;
 use api::{Api, FileContents};
+
 use sourcemap;
 use might_be_minified;
+use indicatif::style;
 
 use prelude::*;
 
@@ -183,39 +184,25 @@ impl Log {
     }
 
     pub fn log(&self, source: &Source, level: LogLevel, message: String) {
-        let mut out_term;
-        let mut out_stderr;
-        let mut w = if let Some(mut term) = term::stderr() {
-            match level {
-                LogLevel::Error => {
-                    term.fg(term::color::RED).ok();
-                }
-                LogLevel::Warning => {
-                    term.fg(term::color::YELLOW).ok();
-                }
-                LogLevel::Info => {}
-            }
-            out_term = term;
-            &mut out_term as &mut Write
-        } else {
-            out_stderr = io::stderr();
-            &mut out_stderr as &mut Write
-        };
-
         {
             let mut last_source = self.last_source.borrow_mut();
             if last_source.as_ref() != Some(&source.url) {
                 *last_source = Some(source.url.clone());
-                writeln!(w, "  {}", source.url).ok();
+                writeln!(io::stderr(), "  {}", source.url).ok();
             }
         }
         if level.is_insignificant() && !self.verbose {
             return;
         }
-        writeln!(w, "    {:?}: {}", level, &message).ok();
-        if let Some(mut term) = term::stderr() {
-            term.reset().ok();
-        }
+
+        let mut msg = style(format!("{:?}: {}", level, message));
+        match level {
+            LogLevel::Error => { msg = msg.red(); },
+            LogLevel::Warning => { msg = msg.yellow(); },
+            _ => {},
+        };
+
+        writeln!(io::stderr(), "    {}", msg).ok();
     }
 
     pub fn error(&self, source: &Source, message: String) {
