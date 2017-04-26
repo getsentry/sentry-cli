@@ -22,13 +22,14 @@ use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
 use regex::Regex;
 use chrono::{Duration, DateTime, UTC};
-use pbr;
+use indicatif::ProgressBar;
 
 use utils;
 use event::Event;
 use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
 use sourcemaputils::get_sourcemap_reference_from_headers;
+use utils::make_download_progress_bar;
 use xcode::InfoPlist;
 
 
@@ -622,7 +623,7 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
             r"(?i)^content-length:\s*(\d+)\s*$").unwrap();
     }
     let mut headers = Vec::new();
-    let pb : Rc<RefCell<Option<pbr::ProgressBar<io::Stdout>>>> = Rc::new(RefCell::new(None));
+    let pb : Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
     {
         let mut headers = &mut headers;
         let mut handle = handle.transfer();
@@ -633,8 +634,8 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                 Ok(_) => data.len(),
                 Err(_) => 0,
             };
-            if let Some(ref mut pb) = *pb_write.borrow_mut() {
-                pb.add(len as u64);
+            if let Some(ref pb) = *pb_write.borrow() {
+                pb.inc(len as u64);
             }
             Ok(len)
         })?;
@@ -646,12 +647,7 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                 if let Some(caps) = CONTENT_LENGTH_RE.captures(&header);
                 if let Ok(length) = caps[1].parse::<u64>();
                 then {
-                    let mut pb = pbr::ProgressBar::new(length);
-                    if !cfg!(windows) {
-                        pb.format("[■□□]");
-                    }
-                    pb.set_units(pbr::Units::Bytes);
-                    *pb_header.borrow_mut() = Some(pb);
+                    *pb_header.borrow_mut() = Some(make_download_progress_bar(length));
                 }
             }
             headers.push(header);
@@ -660,8 +656,8 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
         handle.perform()?;
     }
 
-    if progress && pb.borrow_mut().is_some() {
-        println!("");
+    if progress && pb.borrow().is_some() {
+        pb.borrow().as_ref().unwrap().finish_and_clear();
     }
 
     Ok((handle.response_code()?, headers))

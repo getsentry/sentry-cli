@@ -40,7 +40,7 @@ extern crate chrono;
 extern crate regex;
 #[macro_use]
 extern crate lazy_static;
-extern crate pbr;
+extern crate indicatif;
 #[cfg(target_os="macos")]
 extern crate osascript;
 #[cfg(target_os="macos")]

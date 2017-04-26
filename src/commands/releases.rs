@@ -13,7 +13,8 @@ use vcs;
 use api::{Api, NewRelease, UpdatedRelease, FileContents, Deploy};
 use config::Config;
 use sourcemaputils::SourceMapProcessor;
-use utils::{ArgExt, Table, HumanDuration, HumanSize, validate_timestamp,
+use indicatif::HumanBytes;
+use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
             validate_seconds, get_timestamp, validate_project};
 
 
@@ -539,7 +540,7 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
         } else {
             row.add("");
         }
-        row.add(HumanSize(artifact.size));
+        row.add(HumanBytes(artifact.size));
     }
 
     table.print();

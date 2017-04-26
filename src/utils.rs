@@ -21,11 +21,19 @@ use zip::ZipArchive;
 use regex::{Regex, Captures};
 use prettytable;
 use chrono::{Duration, DateTime, UTC, TimeZone};
+use indicatif::{ProgressBar, ProgressStyle};
 
 use prelude::*;
 
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
+
+pub fn make_download_progress_bar(length: u64) -> ProgressBar {
+    let pb = ProgressBar::new(length);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{wide_bar}  {bytes}/{total_bytes} ({eta})"));
+    pb
+}
 
 /// Helper for formatting durations.
 pub struct HumanDuration(pub Duration);
@@ -43,20 +51,6 @@ impl<'a> fmt::Display for HumanDuration {
         try_write!(self.0.num_minutes(), "minute");
         try_write!(self.0.num_seconds(), "second");
         write!(f, "0 seconds")
-    }
-}
-
-pub struct HumanSize(pub u64);
-
-impl<'a> fmt::Display for HumanSize {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        use humansize::FileSize;
-        use humansize::file_size_opts::BINARY;
-        if let Ok(size) = self.0.file_size(BINARY).map(|x| x.replace(" ", "")) {
-            write!(f, "{}", size)
-        } else {
-            write!(f, "{}B", self.0)
-        }
     }
 }
 
