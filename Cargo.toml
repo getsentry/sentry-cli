@@ -30,7 +30,7 @@ if_chain = "^0.1.2"
 chrono = { version = "^0.3.0", features = ["serde"] }
 regex = "0.2"
 lazy_static = "0.2.4"
-indicatif = "0.3.1"
+indicatif = "0.3.3"
 dotenv = "0.10.0"
 elementtree = "0.1.1"
 prettytable-rs = "0.6.0"
@@ -45,7 +45,7 @@ git2 = { version = "0.6.4", default-features = false, features = [] }
 
 [replace.'curl:0.4.6']
 git = "https://github.com/alexcrichton/curl-rust"
-rev = "a204473f1679330058cb518b27ce1ebb7fe8a91f"
+rev = "9af0dbb6d0859a91e48af1d1d9777ae75c62dc1b"
 
 ## This is currently disabled because we are not using any of the networking
 ## features of git2.  If the default features are enabled there this

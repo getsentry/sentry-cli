@@ -16,23 +16,15 @@ use clap;
 use log;
 use uuid::{Uuid, UuidVersion};
 use sha1::Sha1;
-use zip::ZipArchive;
 use regex::{Regex, Captures};
 use prettytable;
 use chrono::{Duration, DateTime, UTC, TimeZone};
-use indicatif::{ProgressBar, ProgressStyle, style, Color};
+use indicatif::{style, Color, ProgressBar, ProgressStyle};
 
 use prelude::*;
 
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
-
-pub fn make_download_progress_bar(length: u64) -> ProgressBar {
-    let pb = ProgressBar::new(length);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{wide_bar}  {bytes}/{total_bytes} ({eta})"));
-    pb
-}
 
 /// Helper for formatting durations.
 pub struct HumanDuration(pub Duration);
@@ -414,15 +406,19 @@ pub fn capitalize_string(s: &str) -> String {
 }
 
 /// Checks if a file is a zip file and returns a result
-pub fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<()> {
-    ZipArchive::new(&mut rdr)?;
-    Ok(())
+pub fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<bool> {
+    let mut magic: [u8; 2] = [0; 2];
+    rdr.read_exact(&mut magic)?;
+    Ok(match &magic {
+        b"PK" => true,
+        _ => false
+    })
 }
 
 /// Checks if a file is a zip file but only returns a bool
 pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
     match is_zip_file_as_result(rdr) {
-        Ok(_) => true,
+        Ok(val) => val,
         Err(_) => false,
     }
 }
@@ -512,4 +508,33 @@ pub fn print_error(err: &Error) {
         writeln!(&mut io::stderr(), "").ok();
         writeln!(&mut io::stderr(), "{:?}", err.backtrace()).ok();
     }
+}
+
+/// Like ``io::copy`` but advances a progress bar set to bytes.
+pub fn copy_with_progress<R: ?Sized, W: ?Sized>(progress: &ProgressBar,
+                                                reader: &mut R, writer: &mut W)
+    -> io::Result<u64>
+    where R: Read, W: Write
+{
+    let mut buf = [0; 16384];
+    let mut written = 0;
+    loop {
+        let len = match reader.read(&mut buf) {
+            Ok(0) => return Ok(written),
+            Ok(len) => len,
+            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
+        writer.write_all(&buf[..len])?;
+        written += len as u64;
+        progress.inc(len as u64);
+    }
+}
+
+/// Creates a progress bar for byte stuff
+pub fn make_byte_progress_bar(length: u64) -> ProgressBar {
+    let pb = ProgressBar::new(length);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{wide_bar}  {bytes}/{total_bytes} ({eta})"));
+    pb
 }

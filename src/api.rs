@@ -20,7 +20,6 @@ use serde::{Serialize, Deserialize};
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
-use regex::Regex;
 use chrono::{Duration, DateTime, UTC};
 use indicatif::ProgressBar;
 
@@ -29,7 +28,6 @@ use event::Event;
 use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
 use sourcemaputils::get_sourcemap_reference_from_headers;
-use utils::make_download_progress_bar;
 use xcode::InfoPlist;
 
 
@@ -50,6 +48,14 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
         }
         utf8_percent_encode(&val, DEFAULT_ENCODE_SET).fmt(f)
     }
+}
+
+#[derive(PartialEq, Eq)]
+pub enum ProgressBarMode {
+    Disabled,
+    Request,
+    Response,
+    Both,
 }
 
 /// Helper for the API access.
@@ -107,6 +113,7 @@ pub struct ApiRequest<'a> {
     handle: RefMut<'a, curl::easy::Easy>,
     headers: curl::easy::List,
     body: Option<Vec<u8>>,
+    progress_bar_mode: ProgressBarMode,
 }
 
 /// Represents an API response.
@@ -187,13 +194,16 @@ impl<'a> Api<'a> {
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst, false)
+        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)
     }
 
     /// Convenience method that downloads a file into the given file object
     /// and show a progress bar
     pub fn download_with_progress(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst, true)
+        self.request(Method::Get, &url)?
+            .follow_location(true)?
+            .progress_bar_mode(ProgressBarMode::Response)?
+            .send_into(dst)
     }
 
     /// Convenience method that waits for a few seconds until a resource
@@ -528,7 +538,10 @@ impl<'a> Api<'a> {
                            PathArg(project));
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
-        self.request(Method::Post, &path)?.with_form_data(form)?.send()?.convert()
+        self.request(Method::Post, &path)?
+            .with_form_data(form)?
+            .progress_bar_mode(ProgressBarMode::Request)?
+            .send()?.convert()
     }
 
     /// Associate debug symbols with a build
@@ -600,63 +613,84 @@ impl<'a> Api<'a> {
 fn send_req<W: Write>(handle: &mut curl::easy::Easy,
                       out: &mut W,
                       body: Option<Vec<u8>>,
-                      progress: bool)
+                      progress_bar_mode: ProgressBarMode)
                       -> ApiResult<(u32, Vec<String>)> {
     match body {
         Some(body) => {
             let mut body = &body[..];
             handle.upload(true)?;
             handle.in_filesize(body.len() as u64)?;
-            handle_req(handle, out, progress, &mut |buf| body.read(buf).unwrap_or(0))
+            handle_req(handle, out, progress_bar_mode,
+                       &mut |buf| body.read(buf).unwrap_or(0))
         }
-        None => handle_req(handle, out, progress, &mut |_| 0),
+        None => handle_req(handle, out, progress_bar_mode, &mut |_| 0),
     }
 }
 
 fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                         out: &mut W,
-                        progress: bool,
+                        progress_bar_mode: ProgressBarMode,
                         read: &mut FnMut(&mut [u8]) -> usize)
                         -> ApiResult<(u32, Vec<String>)> {
-    lazy_static! {
-        static ref CONTENT_LENGTH_RE: Regex = Regex::new(
-            r"(?i)^content-length:\s*(\d+)\s*$").unwrap();
+    if progress_bar_mode != ProgressBarMode::Disabled {
+        handle.progress(true)?;
     }
+
     let mut headers = Vec::new();
     let pb : Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
     {
         let mut headers = &mut headers;
         let mut handle = handle.transfer();
-        handle.read_function(|buf| Ok(read(buf)))?;
-        let pb_write = pb.clone();
+
+        if progress_bar_mode != ProgressBarMode::Disabled {
+            let pb_progress = pb.clone();
+            handle.progress_function(move |a, b, c, d| {
+                let (down_len, down_pos, up_len, up_pos) =
+                    (a as u64, b as u64, c as u64, d as u64);
+                let mut pb = pb_progress.borrow_mut();
+                if up_len > 0 && (progress_bar_mode == ProgressBarMode::Request ||
+                                  progress_bar_mode == ProgressBarMode::Both) {
+                    if up_pos < up_len {
+                        if pb.is_none() {
+                            *pb = Some(utils::make_byte_progress_bar(up_len));
+                        }
+                        pb.as_ref().unwrap().set_position(up_pos);
+                    } else if pb.is_some() {
+                        pb.take().unwrap().finish_and_clear();
+                    }
+                }
+                if down_len > 0 && (progress_bar_mode == ProgressBarMode::Response ||
+                                    progress_bar_mode == ProgressBarMode::Both) {
+                    if down_pos < down_len {
+                        if pb.is_none() {
+                            *pb = Some(utils::make_byte_progress_bar(down_len));
+                        }
+                        pb.as_ref().unwrap().set_position(down_pos);
+                    } else {
+                        pb.take().unwrap().finish_and_clear();
+                    }
+                }
+                true
+            })?;
+        }
+
+        handle.read_function(move |buf| Ok(read(buf)))?;
+
         handle.write_function(move |data| {
-            let len = match out.write_all(data) {
+            Ok(match out.write_all(data) {
                 Ok(_) => data.len(),
                 Err(_) => 0,
-            };
-            if let Some(ref pb) = *pb_write.borrow() {
-                pb.inc(len as u64);
-            }
-            Ok(len)
+            })
         })?;
-        let pb_header = pb.clone();
+
         handle.header_function(move |data| {
-            let header = String::from_utf8_lossy(data).into_owned();
-            if_chain! {
-                if progress;
-                if let Some(caps) = CONTENT_LENGTH_RE.captures(&header);
-                if let Ok(length) = caps[1].parse::<u64>();
-                then {
-                    *pb_header.borrow_mut() = Some(make_download_progress_bar(length));
-                }
-            }
-            headers.push(header);
+            headers.push(String::from_utf8_lossy(data).into_owned());
             true
         })?;
         handle.perform()?;
     }
 
-    if progress && pb.borrow().is_some() {
+    if pb.borrow().is_some() {
         pb.borrow().as_ref().unwrap().finish_and_clear();
     }
 
@@ -725,6 +759,7 @@ impl<'a> ApiRequest<'a> {
             handle: handle,
             headers: headers,
             body: None,
+            progress_bar_mode: ProgressBarMode::Disabled,
         })
     }
 
@@ -759,11 +794,18 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
+    /// enables a progress bar.
+    pub fn progress_bar_mode(mut self, mode: ProgressBarMode) -> ApiResult<ApiRequest<'a>> {
+        self.progress_bar_mode = mode;
+        Ok(self)
+    }
+
     /// Sends the request and writes response data into the given file
     /// instead of the response object's in memory buffer.
-    pub fn send_into<W: Write>(mut self, out: &mut W, progress: bool) -> ApiResult<ApiResponse> {
+    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
-        let (status, headers) = send_req(&mut self.handle, out, self.body, progress)?;
+        let (status, headers) = send_req(
+            &mut self.handle, out, self.body, self.progress_bar_mode)?;
         info!("response: {}", status);
         Ok(ApiResponse {
             status: status,
@@ -775,7 +817,7 @@ impl<'a> ApiRequest<'a> {
     /// Sends the request and reads the response body into the response object.
     pub fn send(self) -> ApiResult<ApiResponse> {
         let mut out = vec![];
-        let mut rv = self.send_into(&mut out, false)?;
+        let mut rv = self.send_into(&mut out)?;
         rv.body = Some(out);
         Ok(rv)
     }
