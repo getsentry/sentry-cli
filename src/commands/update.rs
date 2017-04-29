@@ -123,7 +123,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     rename_exe(&exe, &tmp_path, elevate)?;
 
-    println!("Updated!");
+    println!("Updated to {}!", latest_release.version);
 
     Ok(())
 }
