@@ -2,6 +2,7 @@
 use std::env;
 
 use clap::{App, ArgMatches, AppSettings};
+use indicatif::style;
 
 use prelude::*;
 use config::Config;
@@ -30,17 +31,20 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
         println!("Please use homebrew to uninstall sentry-cli");
-        return Ok(())
+        println!("");
+        println!("{} brew uninstall sentry-cli", style("$").dim());
+        return Err(ErrorKind::QuietExit(1).into());
     }
     if is_npm_install() {
         println!("This installation of sentry-cli is managed through npm/yarn");
         println!("Please use npm/yarn to uninstall sentry-cli");
-        return Ok(())
+        return Err(ErrorKind::QuietExit(1).into());
     }
     if cfg!(windows) {
         println!("Cannot uninstall on Windows :(");
         println!("");
         println!("Delete this file yourself: {}", exe.display());
+        return Err(ErrorKind::QuietExit(1).into());
     }
 
     if !utils::prompt_to_continue("Do you really want to uninstall sentry-cli?")? {

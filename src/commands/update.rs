@@ -5,6 +5,7 @@ use std::path::Path;
 
 use clap::{App, Arg, ArgMatches, AppSettings};
 use runas;
+use indicatif::style;
 
 use prelude::*;
 use api::Api;
@@ -77,13 +78,15 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
-        println!("Please use homebrew to update sentry-cli");
-        return Ok(())
+        println!("Please use homebrew to update sentry-cli:");
+        println!("");
+        println!("{} brew upgrade sentry-cli", style("$").dim());
+        return Err(ErrorKind::QuietExit(1).into());
     }
     if is_npm_install() {
         println!("This installation of sentry-cli is managed through npm/yarn");
         println!("Please use npm/yearn to update sentry-cli");
-        return Ok(())
+        return Err(ErrorKind::QuietExit(1).into());
     }
 
     info!("expecting elevation for update: {}", elevate);
