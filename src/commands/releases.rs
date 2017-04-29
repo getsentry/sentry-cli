@@ -228,10 +228,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("strip-common-prefix")
                     .help("Similar to --strip-prefix but strips the most common \
                             prefix on all sources."))
+                // legacy parameter
                 .arg(Arg::with_name("verbose")
                     .long("verbose")
                     .short("verbose")
-                    .help("Enable verbose mode"))
+                    .hidden(true))
                 .arg(Arg::with_name("extensions")
                     .long("ext")
                     .short("x")
@@ -621,7 +622,7 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
     };
     let dist = matches.value_of("dist");
 
-    let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
+    let mut processor = SourceMapProcessor::new();
 
     for path in paths {
         // if we start walking over something that is an actual file then
@@ -653,7 +654,6 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
     }
 
     if matches.is_present("validate") {
-        println!("Running with sourcemap validation");
         processor.validate_all()?;
     }
 
@@ -680,7 +680,6 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
         projects: ctx.get_projects(matches)?,
         ..Default::default()
     })?;
-    println!("Uploading sourcemaps for release {}", release.version);
 
     let project = ctx.get_project_default().ok();
     processor.upload(&ctx.api, org, project.as_ref().map(|x| x.as_str()),

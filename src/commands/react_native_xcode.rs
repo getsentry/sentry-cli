@@ -24,10 +24,11 @@ struct SourceMapReport {
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uploads react-native projects from within an xcode build step")
         .org_project_args()
+        // legacy parameter
         .arg(Arg::with_name("verbose")
             .long("verbose")
             .short("verbose")
-            .help("Enable verbose mode"))
+            .hidden(true))
         .arg(Arg::with_name("force")
              .long("force")
              .short("f")
@@ -202,7 +203,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         info!("  bundle path: {}", bundle_path.display());
         info!("  sourcemap path: {}", sourcemap_path.display());
 
-        let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
+        let mut processor = SourceMapProcessor::new();
         processor.add(&bundle_url, &bundle_path)?;
         processor.add(&sourcemap_url, &sourcemap_path)?;
         processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
@@ -213,7 +214,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             projects: vec![project.to_string()],
             ..Default::default()
         })?;
-        println!("Uploading sourcemaps for release {}", release.version);
         processor.upload(&api, &org, Some(&project), &release.version,
                          Some(&plist.build()))?;
 

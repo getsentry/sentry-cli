@@ -1,9 +1,7 @@
 //! Provides sourcemap validation functionality.
 use std::fs;
-use std::io;
 use std::fmt;
-use std::env;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::cell::RefCell;
 use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
@@ -14,9 +12,18 @@ use api::{Api, FileContents};
 
 use sourcemap;
 use might_be_minified;
-use indicatif::style;
+use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget, Term, style};
 
 use prelude::*;
+
+fn make_progress_bar(len: u64) -> ProgressBar {
+    let pb = ProgressBar::new(len);
+    pb.set_draw_target(ProgressDrawTarget::to_term(Term::stdout(), None));
+    pb.set_style(ProgressStyle::default_bar()
+        .template(&format!("{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+                           style(">").cyan())));
+    pb
+}
 
 fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
@@ -113,7 +120,6 @@ fn find_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Resu
             let parts_len = parts.len();
             parts[parts_len - 1] = &map_ext;
             let new_ext = parts.join(".");
-            println!("{:?}", unsplit_url(path, basename, Some(&new_ext)));
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
                 return Ok(unsplit_url(None, basename, Some(&new_ext)));
             }
@@ -125,7 +131,7 @@ fn find_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Resu
 }
 
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
 enum SourceType {
     Script,
     MinifiedScript,
@@ -145,130 +151,121 @@ impl fmt::Display for SourceType {
 
 #[derive(PartialEq, Debug)]
 enum LogLevel {
-    Info,
     Warning,
     Error,
 }
 
-impl LogLevel {
-    fn is_insignificant(&self) -> bool {
-        *self == LogLevel::Info
+impl fmt::Display for LogLevel {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            LogLevel::Warning => write!(f, "warning"),
+            LogLevel::Error => write!(f, "error"),
+        }
     }
 }
 
 struct Source {
     url: String,
+    #[allow(unused)]
     file_path: PathBuf,
     contents: String,
     ty: SourceType,
     skip_upload: bool,
     headers: Vec<(String, String)>,
-}
-
-struct Log {
-    last_source: RefCell<Option<String>>,
-    verbose: bool,
+    messages: RefCell<Vec<(LogLevel, String)>>,
 }
 
 pub struct SourceMapProcessor {
+    pending_sources: HashSet<(String, PathBuf)>,
     sources: HashMap<String, Source>,
-    log: Log,
 }
 
-impl Log {
-    pub fn new(verbose: bool) -> Log {
-        Log {
-            last_source: RefCell::new(None),
-            verbose: verbose,
-        }
+impl Source {
+
+    fn log(&self, level: LogLevel, msg: String) {
+        self.messages.borrow_mut().push((level, msg));
     }
 
-    pub fn log(&self, source: &Source, level: LogLevel, message: String) {
-        {
-            let mut last_source = self.last_source.borrow_mut();
-            if last_source.as_ref() != Some(&source.url) {
-                *last_source = Some(source.url.clone());
-                writeln!(io::stderr(), "  {}", source.url).ok();
-            }
-        }
-        if level.is_insignificant() && !self.verbose {
-            return;
-        }
-
-        let mut msg = style(format!("{:?}: {}", level, message));
-        match level {
-            LogLevel::Error => { msg = msg.red(); },
-            LogLevel::Warning => { msg = msg.yellow(); },
-            _ => {},
-        };
-
-        writeln!(io::stderr(), "    {}", msg).ok();
+    fn warn(&self, msg: String) {
+        self.log(LogLevel::Warning, msg);
     }
 
-    pub fn error(&self, source: &Source, message: String) {
-        self.log(source, LogLevel::Error, message);
-    }
-
-    pub fn warn(&self, source: &Source, message: String) {
-        self.log(source, LogLevel::Warning, message);
-    }
-
-    pub fn info(&self, source: &Source, message: String) {
-        self.log(source, LogLevel::Info, message);
+    fn error(&self, msg: String) {
+        self.log(LogLevel::Error, msg);
     }
 }
 
 impl SourceMapProcessor {
-    /// Creates a new sourcemap validator.  If it's set to verbose
-    /// it prints the progress to stdout.
-    pub fn new(verbose: bool) -> SourceMapProcessor {
+    /// Creates a new sourcemap validator.
+    pub fn new() -> SourceMapProcessor {
         SourceMapProcessor {
+            pending_sources: HashSet::new(),
             sources: HashMap::new(),
-            log: Log::new(verbose),
         }
     }
 
     /// Adds a new file for processing.
     pub fn add(&mut self, url: &str, path: &Path) -> Result<()> {
-        let mut f = fs::File::open(&path)?;
-        let mut contents = String::new();
-        try!(f.read_to_string(&mut contents));
-        let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
-            SourceType::SourceMap
-        } else if path.file_name()
-            .and_then(|x| x.to_str())
-            .map(|x| x.contains(".min."))
-            .unwrap_or(false) ||
-                           might_be_minified::analyze_str(&contents).is_likely_minified() {
-            SourceType::MinifiedScript
-        } else {
-            SourceType::Script
-        };
+        self.pending_sources.insert((url.to_string(), path.to_path_buf()));
+        Ok(())
+    }
 
-        self.sources.insert(url.to_owned(),
-                            Source {
-                                url: url.to_owned(),
-                                file_path: path.to_path_buf(),
-                                contents: contents,
-                                ty: ty,
-                                skip_upload: false,
-                                headers: vec![],
-                            });
+    fn flush_pending_sources(&mut self) -> Result<()> {
+        if self.pending_sources.is_empty() {
+            return Ok(());
+        }
+
+        let pb = make_progress_bar(self.pending_sources.len() as u64);
+
+        println!("{} Analyzing {} sources",
+                 style(">").dim(), style(self.pending_sources.len()).yellow());
+        for (url, path) in self.pending_sources.drain() {
+            pb.set_message(&url);
+            let mut f = fs::File::open(&path)?;
+            let mut contents = String::new();
+            try!(f.read_to_string(&mut contents));
+            let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
+                SourceType::SourceMap
+            } else if path.file_name()
+                .and_then(|x| x.to_str())
+                .map(|x| x.contains(".min."))
+                .unwrap_or(false) ||
+                might_be_minified::analyze_str(&contents).is_likely_minified()
+            {
+                SourceType::MinifiedScript
+            } else {
+                SourceType::Script
+            };
+
+            self.sources.insert(url.clone(), Source {
+                url: url.clone(),
+                file_path: path.to_path_buf(),
+                contents: contents,
+                ty: ty,
+                skip_upload: false,
+                headers: vec![],
+                messages: RefCell::new(vec![]),
+            });
+            pb.inc(1);
+        }
+
+        pb.finish_and_clear();
+
         Ok(())
     }
 
     fn validate_script(&self, source: &Source) -> Result<()> {
         let reference = sourcemap::locate_sourcemap_reference_slice(source.contents.as_bytes())?;
         if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
-            self.log.warn(source, "encountered a legacy reference".into());
+            source.warn("encountered a legacy reference".into());
         }
         if let Some(url) = reference.get_url() {
             let full_url = join_url(&source.url, url)?;
-            self.log.info(source, format!("sourcemap at {}", full_url));
+            debug!("found sourcemap for {} at {}", &source.url, full_url);
         } else if source.ty == SourceType::MinifiedScript {
-            self.log.error(source, "missing sourcemap!".into());
+            source.error("missing sourcemap!".into());
         } else {
-            self.log.warn(source, "no sourcemap reference".into());
+            source.warn("no source map reference".into());
         }
         Ok(())
     }
@@ -280,58 +277,119 @@ impl SourceMapProcessor {
                     let source_url = sm.get_source(idx).unwrap_or("??");
                     if sm.get_source_contents(idx).is_some() ||
                        self.sources.get(source_url).is_some() {
-                        self.log.info(source, format!("found source ({})", source_url));
+                        debug!("validator found source ({})", source_url);
                     } else {
-                        self.log.warn(source, format!("missing sourcecode ({})", source_url));
+                        source.warn(format!("missing sourcecode ({})", source_url));
                     }
                 }
             }
             sourcemap::DecodedMap::Index(_) => {
-                self.log.warn(source,
-                              "encountered indexed sourcemap. We cannot validate those.".into());
+                source.warn("encountered indexed sourcemap. We cannot validate those.".into());
             }
         }
         Ok(())
     }
 
+    pub fn dump_log(&self, title: &str) {
+        let mut sources: Vec<_> = self.sources.values().collect();
+        sources.sort_by_key(|&source| {
+            (source.ty, source.url.clone())
+        });
+
+        println!("");
+        println!("{}", style(title).dim().bold());
+        let mut sect = None;
+
+        for source in sources {
+            if Some(source.ty) != sect {
+                println!("  {}", style(match source.ty {
+                    SourceType::Script => "Scripts",
+                    SourceType::MinifiedScript => "Minified Scripts",
+                    SourceType::SourceMap => "Source Maps",
+                }).yellow().bold());
+                sect = Some(source.ty);
+            }
+
+            if source.skip_upload {
+                println!("    {} [skipped separate upload]", &source.url);
+            } else {
+                if_chain! {
+                    if source.ty == SourceType::MinifiedScript;
+                    if let Some(sm_ref) = get_sourcemap_reference_from_headers(
+                        source.headers
+                        .iter()
+                        .map(|&(ref k, ref v)| (k, v)));
+                    then {
+                        println!("    {} (sourcemap at {})",
+                                 &source.url, style(sm_ref).cyan());
+                    } else {
+                        println!("    {}", &source.url);
+                    }
+                }
+            }
+
+            if !source.messages.borrow().is_empty() {
+                for msg in source.messages.borrow().iter() {
+                    println!("      - {}: {}", style(&msg.0).red(), msg.1);
+                }
+            }
+        }
+    }
+
     /// Validates all sources within.
-    pub fn validate_all(&self) -> Result<()> {
+    pub fn validate_all(&mut self) -> Result<()> {
+        self.flush_pending_sources()?;
         let mut sources: Vec<_> = self.sources.iter().map(|x| x.1).collect();
         sources.sort_by_key(|x| &x.url);
         let mut failed = false;
 
+        println!("{} Validating sources",
+                 style(">").dim());
+        let pb = ProgressBar::new(sources.len() as u64);
         for source in sources.iter() {
+            pb.tick();
             match source.ty {
                 SourceType::Script |
                 SourceType::MinifiedScript => {
                     if let Err(err) = self.validate_script(&source) {
-                        self.log.error(&source, format!("failed to process: {}", err));
+                        source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
                 SourceType::SourceMap => {
                     if let Err(err) = self.validate_sourcemap(&source) {
-                        self.log.error(&source, format!("failed to process: {}", err));
+                        source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
             }
+            pb.inc(1);
         }
-        if failed {
-            fail!("Encountered problems when validating sourcemaps.");
+        pb.finish_and_clear();
+
+        if !failed {
+            return Ok(());
         }
-        println!("All Good!");
-        Ok(())
+
+        self.dump_log("Source Map Validation Report");
+        fail!("Encountered problems when validating source maps.");
     }
 
-    /// Automatically rewrite all sourcemaps.
+    /// Automatically rewrite all source maps.
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
     pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
+        self.flush_pending_sources()?;
+
+        println!("{} Rewriting sources",
+                 style(">").dim());
+        let pb = ProgressBar::new(self.sources.len() as u64);
         for (_, source) in self.sources.iter_mut() {
             if source.ty != SourceType::SourceMap {
+                pb.inc(1);
                 continue;
             }
+            pb.tick();
             let options = sourcemap::RewriteOptions {
                 load_local_source_contents: true,
                 strip_prefixes: prefixes,
@@ -344,7 +402,9 @@ impl SourceMapProcessor {
             let mut new_source: Vec<u8> = Vec::new();
             sm.to_writer(&mut new_source)?;
             source.contents = String::from_utf8(new_source)?;
+            pb.inc(1);
         }
+        pb.finish_and_clear();
         Ok(())
     }
 
@@ -355,6 +415,9 @@ impl SourceMapProcessor {
             .map(|x| x.1)
             .filter(|x| x.ty == SourceType::SourceMap)
             .map(|x| x.url.to_string()));
+
+        println!("{} Adding source map references",
+                 style(">").dim());
         for (_, source) in self.sources.iter_mut() {
             if source.ty != SourceType::MinifiedScript {
                 continue;
@@ -366,8 +429,10 @@ impl SourceMapProcessor {
                     source.headers.push(("Sourcemap".to_string(), target_url));
                 }
                 Err(err) => {
-                    self.log.warn(source,
-                                  format!("could not determine a sourcemap reference ({})", err));
+                    source.messages.borrow_mut().push((
+                        LogLevel::Warning,
+                        format!(
+                            "could not determine a source map reference ({})", err)));
                 }
             }
         }
@@ -375,35 +440,46 @@ impl SourceMapProcessor {
     }
 
     /// Uploads all files
-    pub fn upload(&self, api: &Api, org: &str, project: Option<&str>,
+    pub fn upload(&mut self, api: &Api, org: &str, project: Option<&str>,
                   release: &str, dist: Option<&str>) -> Result<()> {
-        let here = env::current_dir()?;
+        self.flush_pending_sources()?;
+
+        // get a list of release files first so we know the file IDs of
+        // files that already exist.
+        let release_files: HashMap<_, _> = api.list_release_files(org, project, release)?
+            .into_iter()
+            .map(|artifact| {
+                ((artifact.dist, artifact.name), artifact.id)
+            })
+            .collect();
+
+        println!("{} Uploading source maps for release {}",
+                 style(">").dim(),
+                 style(release).cyan());
+
+        let pb = make_progress_bar(self.sources.len() as u64);
         for (_, source) in self.sources.iter() {
+            pb.tick();
             if source.skip_upload {
+                pb.inc(1);
                 continue;
             }
-            let display_path = here.strip_prefix(&here);
-            println!("{} -> {} [{}]",
-                     display_path.as_ref()
-                         .unwrap_or(&source.file_path.as_path())
-                         .display(),
-                     &source.url,
-                     source.ty);
-            if let Some(artifact) = api.upload_release_file(org,
-                    project, &release, FileContents::FromBytes(source.contents.as_bytes()),
-                    &source.url, dist, Some(source.headers.as_slice()))? {
-                println!("  {}  ({} bytes)", artifact.sha1, artifact.size);
-            } else {
-                println!("  already present");
+            pb.set_message(&source.url);
+
+            // try to delete old file if we have one
+            if let Some(old_id) = release_files.get(&(
+                    dist.map(|x| x.into()), source.url.clone())) {
+                api.delete_release_file(org, project, &release, &old_id).ok();
             }
-            if source.ty == SourceType::MinifiedScript {
-                if let Some(sm_ref) = get_sourcemap_reference_from_headers(source.headers
-                    .iter()
-                    .map(|&(ref k, ref v)| (k, v))) {
-                    println!("  -> sourcemap: {}", sm_ref);
-                }
-            }
+
+            api.upload_release_file(org,
+                project, &release, FileContents::FromBytes(source.contents.as_bytes()),
+                &source.url, dist, Some(source.headers.as_slice()))?;
+            pb.inc(1);
         }
+        pb.finish_and_clear();
+
+        self.dump_log("Source Map Upload Report");
         Ok(())
     }
 }

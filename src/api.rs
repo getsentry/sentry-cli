@@ -323,7 +323,10 @@ impl<'a> Api<'a> {
             }
         }
 
-        let resp = self.request(Method::Post, &path)?.with_form_data(form)?.send()?;
+        let resp = self.request(Method::Post, &path)?
+            .with_form_data(form)?
+            .progress_bar_mode(ProgressBarMode::Request)?
+            .send()?;
         if resp.status() == 409 {
             Ok(None)
         } else {

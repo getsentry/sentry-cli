@@ -55,7 +55,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     info!("  bundle path: {}", bundle_path.display());
     info!("  sourcemap path: {}", sourcemap_path.display());
 
-    let mut processor = SourceMapProcessor::new(matches.is_present("verbose"));
+    let mut processor = SourceMapProcessor::new();
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
     processor.rewrite(&vec![base.to_str().unwrap()])?;
