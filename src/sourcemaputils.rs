@@ -335,9 +335,9 @@ impl SourceMapProcessor {
 
         println!("{} Validating sources",
                  style(">").dim());
-        let pb = ProgressBar::new(sources.len() as u64);
+        let pb = make_progress_bar(sources.len() as u64);
         for source in sources.iter() {
-            pb.tick();
+            pb.set_message(&source.url);
             match source.ty {
                 SourceType::Script |
                 SourceType::MinifiedScript => {
@@ -373,13 +373,13 @@ impl SourceMapProcessor {
 
         println!("{} Rewriting sources",
                  style(">").dim());
-        let pb = ProgressBar::new(self.sources.len() as u64);
+        let pb = make_progress_bar(self.sources.len() as u64);
         for (_, source) in self.sources.iter_mut() {
+            pb.set_message(&source.url);
             if source.ty != SourceType::SourceMap {
                 pb.inc(1);
                 continue;
             }
-            pb.tick();
             let options = sourcemap::RewriteOptions {
                 load_local_source_contents: true,
                 strip_prefixes: prefixes,
