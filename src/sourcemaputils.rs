@@ -138,16 +138,6 @@ enum SourceType {
     SourceMap,
 }
 
-impl fmt::Display for SourceType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            SourceType::Script => write!(f, "script"),
-            SourceType::MinifiedScript => write!(f, "minified script"),
-            SourceType::SourceMap => write!(f, "sourcemap"),
-        }
-    }
-}
-
 
 #[derive(PartialEq, Debug)]
 enum LogLevel {
