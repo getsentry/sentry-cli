@@ -669,7 +669,7 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                             *pb = Some(utils::make_byte_progress_bar(down_len));
                         }
                         pb.as_ref().unwrap().set_position(down_pos);
-                    } else {
+                    } else if pb.is_some() {
                         pb.take().unwrap().finish_and_clear();
                     }
                 }
