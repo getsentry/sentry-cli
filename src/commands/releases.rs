@@ -522,7 +522,7 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
     table.title_row()
         .add("Name")
         .add("Distribution")
-        .add("Sourcemap")
+        .add("Source Map")
         .add("Size");
 
     let org = ctx.get_org()?;
