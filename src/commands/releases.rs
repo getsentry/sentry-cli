@@ -653,10 +653,6 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
         }
     }
 
-    if matches.is_present("validate") {
-        processor.validate_all()?;
-    }
-
     if matches.is_present("rewrite") {
         let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
             Some(paths) => paths.collect(),
@@ -670,6 +666,10 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
 
     if !matches.is_present("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
+    }
+
+    if matches.is_present("validate") {
+        processor.validate_all()?;
     }
 
     let org = ctx.get_org()?;

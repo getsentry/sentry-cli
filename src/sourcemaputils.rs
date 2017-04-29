@@ -82,7 +82,7 @@ pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, 
 }
 
 
-fn find_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String> {
+fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String> {
     // if there is only one sourcemap in total we just assume that's the one.
     // We just need to make sure that we fix up the reference if we need to
     // (eg: ~/ -> /).
@@ -183,6 +183,30 @@ impl Source {
     fn error(&self, msg: String) {
         self.log(LogLevel::Error, msg);
     }
+
+    pub fn get_sourcemap_ref_from_headers(&self) -> sourcemap::SourceMapRef {
+        if let Some(sm_ref) = get_sourcemap_reference_from_headers(
+            self.headers
+            .iter()
+            .map(|&(ref k, ref v)| (k, v))) {
+            sourcemap::SourceMapRef::Ref(sm_ref.to_string())
+        } else {
+            sourcemap::SourceMapRef::Missing
+        }
+    }
+
+    pub fn get_sourcemap_ref_from_contents(&self) -> sourcemap::SourceMapRef {
+        sourcemap::locate_sourcemap_reference_slice(self.contents.as_bytes())
+            .unwrap_or(sourcemap::SourceMapRef::Missing)
+    }
+
+    pub fn get_sourcemap_ref(&self) -> sourcemap::SourceMapRef {
+        match self.get_sourcemap_ref_from_headers() {
+            sourcemap::SourceMapRef::Missing => {},
+            other => { return other; }
+        }
+        self.get_sourcemap_ref_from_contents()
+    }
 }
 
 impl SourceMapProcessor {
@@ -245,17 +269,15 @@ impl SourceMapProcessor {
     }
 
     fn validate_script(&self, source: &Source) -> Result<()> {
-        let reference = sourcemap::locate_sourcemap_reference_slice(source.contents.as_bytes())?;
-        if let sourcemap::SourceMapRef::LegacyRef(_) = reference {
+        let sm_ref = source.get_sourcemap_ref();
+        if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
             source.warn("encountered a legacy reference".into());
         }
-        if let Some(url) = reference.get_url() {
+        if let Some(url) = sm_ref.get_url() {
             let full_url = join_url(&source.url, url)?;
             debug!("found sourcemap for {} at {}", &source.url, full_url);
         } else if source.ty == SourceType::MinifiedScript {
             source.error("missing sourcemap!".into());
-        } else {
-            source.warn("no source map reference".into());
         }
         Ok(())
     }
@@ -302,20 +324,20 @@ impl SourceMapProcessor {
 
             if source.skip_upload {
                 println!("    {} [skipped separate upload]", &source.url);
-            } else {
+            } else if source.ty == SourceType::MinifiedScript {
+                let sm_ref = source.get_sourcemap_ref();
                 if_chain! {
-                    if source.ty == SourceType::MinifiedScript;
-                    if let Some(sm_ref) = get_sourcemap_reference_from_headers(
-                        source.headers
-                        .iter()
-                        .map(|&(ref k, ref v)| (k, v)));
+                    if sm_ref != sourcemap::SourceMapRef::Missing;
+                    if let Some(url) = sm_ref.get_url();
                     then {
                         println!("    {} (sourcemap at {})",
-                                 &source.url, style(sm_ref).cyan());
+                                 &source.url, style(url).cyan());
                     } else {
-                        println!("    {}", &source.url);
+                        println!("    {} (no sourcemap ref)", &source.url);
                     }
                 }
+            } else {
+                println!("    {}", &source.url);
             }
 
             if !source.messages.borrow().is_empty() {
@@ -414,7 +436,7 @@ impl SourceMapProcessor {
             }
             // we silently ignore when we can't find a sourcemap. Maybwe we should
             // log this.
-            match find_sourcemap_reference(&sourcemaps, &source.url) {
+            match guess_sourcemap_reference(&sourcemaps, &source.url) {
                 Ok(target_url) => {
                     source.headers.push(("Sourcemap".to_string(), target_url));
                 }
