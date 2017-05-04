@@ -39,7 +39,7 @@ struct DSymRef {
     arc_name: String,
     checksum: String,
     size: u64,
-    uuids: HashSet<Uuid>,
+    uuids: Vec<Uuid>,
 }
 
 impl DSymRef {
@@ -130,17 +130,17 @@ impl<'a> Iterator for BatchIter<'a> {
         macro_rules! uuid_match {
             ($load:expr) => {
                 match $load {
-                    Ok(uuids) => {
-                        if let Some(ref expected_uuids) = self.uuids {
-                            if !uuids.is_disjoint(expected_uuids) {
-                                Some(uuids)
+                    Ok(macho_info) => {
+                        if !macho_info.has_debug_info() {
+                            None
+                        } else if let Some(ref expected_uuids) = self.uuids {
+                            if !macho_info.matches_any(expected_uuids) {
+                                Some(macho_info)
                             } else {
                                 None
                             }
-                        } else if !uuids.is_empty() {
-                            Some(uuids)
                         } else {
-                            None
+                            Some(macho_info)
                         }
                     }
                     Err(err) => {
@@ -172,7 +172,7 @@ impl<'a> Iterator for BatchIter<'a> {
                         break;
                     }
                 } else {
-                    if let Some(uuids) = uuid_match!(macho::get_uuids_for_reader(
+                    if let Some(macho_info) = uuid_match!(macho::MachoInfo::from_reader(
                             iter_try!(archive.by_index(self.open_zip_index))))
                     {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
@@ -182,7 +182,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             arc_name: name.to_string_lossy().into_owned(),
                             checksum: iter_try!(get_sha1_checksum(&mut f)),
                             size: f.size(),
-                            uuids: uuids,
+                            uuids: macho_info.get_uuids(),
                         }) {
                             break;
                         }
@@ -208,7 +208,7 @@ impl<'a> Iterator for BatchIter<'a> {
                                 break;
                             }
                         }
-                    } else if let Some(uuids) = uuid_match!(macho::get_uuids_for_path(
+                    } else if let Some(macho_info) = uuid_match!(macho::MachoInfo::open_path(
                             dent.path())) {
                         let name = Path::new("DebugSymbols")
                             .join(dent.path().strip_prefix(&self.path).unwrap());
@@ -218,7 +218,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             checksum: iter_try!(get_sha1_checksum(
                                 &mut iter_try!(fs::File::open(dent.path())))),
                             size: md.len(),
-                            uuids: uuids,
+                            uuids: macho_info.get_uuids(),
                         }) {
                             break;
                         }

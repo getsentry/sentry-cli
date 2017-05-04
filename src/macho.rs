@@ -3,12 +3,13 @@ use std::io::{Read, Seek, SeekFrom, Cursor};
 use std::fs::File;
 use std::path::Path;
 use std::collections::HashSet;
+use std::rc::Rc;
 
 use prelude::*;
 
 use memmap;
 use uuid::Uuid;
-use mach_object::{OFile, LoadCommand, MachCommand};
+use mach_object::{OFile, LoadCommand, MachCommand, Section};
 
 
 const FAT_MAGIC: &'static [u8; 4] = b"\xca\xfe\xba\xbe";
@@ -17,20 +18,94 @@ const MAGIC_CIGAM: &'static [u8; 4] = b"\xce\xfa\xed\xfe";
 const MAGIC_64: &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
 const MAGIC_CIGAM64: &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
-
-pub fn get_uuids_for_path(path: &Path) -> Result<HashSet<Uuid>> {
-    let f = File::open(path)?;
-    if let Ok(mmap) = memmap::Mmap::open(&f, memmap::Protection::Read) {
-        get_macho_uuids_from_slice(unsafe { mmap.as_slice() })
-    } else {
-        Err(ErrorKind::NoMacho.into())
-    }
+pub struct MachoInfo {
+    uuids: HashSet<Uuid>,
+    has_dwarf_data: bool,
 }
 
-pub fn get_uuids_for_reader<R: Read>(mut rdr: R) -> Result<HashSet<Uuid>> {
-    let mut contents: Vec<u8> = vec![];
-    rdr.read_to_end(&mut contents)?;
-    get_macho_uuids_from_slice(&contents[..])
+impl MachoInfo {
+
+    pub fn open_path(path: &Path) -> Result<MachoInfo> {
+        let f = File::open(path)?;
+        if let Ok(mmap) = memmap::Mmap::open(&f, memmap::Protection::Read) {
+            MachoInfo::from_slice(unsafe { mmap.as_slice() })
+        } else {
+            Err(ErrorKind::NoMacho.into())
+        }
+    }
+
+    pub fn from_reader<R: Read>(mut rdr: R) -> Result<MachoInfo> {
+        let mut contents: Vec<u8> = vec![];
+        rdr.read_to_end(&mut contents)?;
+        MachoInfo::from_slice(&contents[..])
+    }
+
+    pub fn from_slice(slice: &[u8]) -> Result<MachoInfo> {
+        fn find_dwarf_section<'a>(rv: &mut MachoInfo, sections: &[Rc<Section>]) {
+            for sect in sections {
+                if sect.segname == "__DWARF" {
+                    rv.has_dwarf_data = true;
+                }
+            }
+        }
+
+        fn extract_info<'a>(rv: &mut MachoInfo, file: &'a OFile) {
+            if let &OFile::MachFile { ref commands, .. } = file {
+                for &MachCommand(ref load_cmd, _) in commands {
+                    match load_cmd {
+                        &LoadCommand::Uuid(uuid) => {
+                            rv.uuids.insert(uuid);
+                        },
+                        &LoadCommand::Segment { ref sections, .. } => {
+                            find_dwarf_section(rv, &sections[..]);
+                        }
+                        &LoadCommand::Segment64 { ref sections, .. } => {
+                            find_dwarf_section(rv, &sections[..]);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
+
+        let mut rv = MachoInfo {
+            uuids: HashSet::new(),
+            has_dwarf_data: false,
+        };
+        let mut cursor = Cursor::new(slice);
+
+        if !is_macho_file(&mut cursor) {
+            return Err(ErrorKind::NoMacho.into());
+        }
+        cursor.seek(SeekFrom::Start(0))?;
+
+        let ofile = OFile::parse(&mut cursor)?;
+        match ofile {
+            OFile::FatFile { ref files, .. } => {
+                for &(_, ref file) in files {
+                    extract_info(&mut rv, file);
+                }
+            }
+            OFile::MachFile { .. } => {
+                extract_info(&mut rv, &ofile);
+            }
+            _ => {}
+        }
+
+        Ok(rv)
+    }
+
+    pub fn has_debug_info(&self) -> bool {
+        self.has_dwarf_data && !self.uuids.is_empty()
+    }
+
+    pub fn matches_any(&self, uuids: &HashSet<Uuid>) -> bool {
+        !self.uuids.is_disjoint(uuids)
+    }
+
+    pub fn get_uuids(self) -> Vec<Uuid> {
+        self.uuids.into_iter().collect()
+    }
 }
 
 
@@ -50,43 +125,4 @@ fn is_macho_file_as_result<R: Read>(mut rdr: R) -> Result<bool> {
 /// is or `false` if it's not (or the file does not exist etc.)
 pub fn is_macho_file<R: Read>(rdr: R) -> bool {
     is_macho_file_as_result(rdr).unwrap_or(false)
-}
-
-fn get_macho_uuids_from_slice(slice: &[u8]) -> Result<HashSet<Uuid>> {
-    let mut cursor = Cursor::new(slice);
-    let mut uuids = HashSet::new();
-
-    if !is_macho_file(&mut cursor) {
-        return Err(ErrorKind::NoMacho.into());
-    }
-    cursor.seek(SeekFrom::Start(0))?;
-
-    let ofile = OFile::parse(&mut cursor)?;
-
-    match ofile {
-        OFile::FatFile { ref files, .. } => {
-            for &(_, ref file) in files {
-                extract_uuids(&mut uuids, file);
-            }
-        }
-        OFile::MachFile { .. } => {
-            extract_uuids(&mut uuids, &ofile);
-        }
-        _ => {}
-    }
-
-    Ok(uuids)
-}
-
-fn extract_uuids<'a>(uuids: &'a mut HashSet<Uuid>, file: &'a OFile) {
-    if let &OFile::MachFile { ref commands, .. } = file {
-        for &MachCommand(ref load_cmd, _) in commands {
-            match load_cmd {
-                &LoadCommand::Uuid(uuid) => {
-                    uuids.insert(uuid);
-                },
-                _ => {}
-            }
-        }
-    }
 }
