@@ -134,7 +134,7 @@ impl<'a> Iterator for BatchIter<'a> {
                         if !macho_info.has_debug_info() {
                             None
                         } else if let Some(ref expected_uuids) = self.uuids {
-                            if !macho_info.matches_any(expected_uuids) {
+                            if macho_info.matches_any(expected_uuids) {
                                 Some(macho_info)
                             } else {
                                 None
