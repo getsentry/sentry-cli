@@ -25,7 +25,10 @@ use config::Config;
 use xcode;
 use macho;
 
-const BATCH_SIZE: usize = 12;
+// the ~max size before compression.  This is currently set to the max
+// size after compression that the sentry server accepts.  This is a
+// shitty estimate but it's easiest to implement for now.
+const MAX_SIZE: u64 = 150 * 1024 * 1024;
 
 #[derive(Debug)]
 enum DSymVar {
@@ -112,7 +115,7 @@ impl<'a> BatchIter<'a> {
         if should_push {
             batch.push(dsym_ref);
         }
-        batch.len() >= BATCH_SIZE
+        batch.iter().map(|x| x.size).sum::<u64>() >= MAX_SIZE
     }
 }
 
@@ -123,7 +126,8 @@ impl<'a> Iterator for BatchIter<'a> {
         let pb = ProgressBar::new_spinner();
         pb.set_style(ProgressStyle::default_spinner()
             .tick_chars("/|\\- ")
-            .template("{spinner} Looking for symbols... {msg:.dim}"));
+            .template("{spinner} Looking for symbols... {msg:.dim}\
+                       \n  symbol files found: {prefix:.yellow}"));
 
         let mut batch = vec![];
 
@@ -196,6 +200,7 @@ impl<'a> Iterator for BatchIter<'a> {
                     if let Some(fname) = dent.path().file_name().and_then(|x| x.to_str()) {
                         pb.set_message(fname);
                     }
+                    pb.set_prefix(&format!("{}", batch.len()));
                     if self.allow_zips && is_zip_file(iter_try!(fs::File::open(&dent.path()))) {
                         show_zip_continue = false;
                         let f = iter_try!(fs::File::open(dent.path()));
