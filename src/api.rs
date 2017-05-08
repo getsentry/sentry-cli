@@ -5,6 +5,7 @@
 
 use std::io;
 use std::fs;
+use std::str;
 use std::io::{Read, Write};
 use std::fmt;
 use std::error;
@@ -22,6 +23,7 @@ use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
 use chrono::{Duration, DateTime, UTC};
 use indicatif::ProgressBar;
+use regex::{Regex, Captures};
 
 use utils;
 use event::Event;
@@ -639,6 +641,9 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
         handle.progress(true)?;
     }
 
+    // enable verbose mode
+    handle.verbose(true)?;
+
     let mut headers = Vec::new();
     let pb : Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
     {
@@ -684,6 +689,18 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                 Ok(_) => data.len(),
                 Err(_) => 0,
             })
+        })?;
+
+        handle.debug_function(move |info, data| {
+            match info {
+                curl::easy::InfoType::HeaderIn => {
+                    log_headers(false, data);
+                },
+                curl::easy::InfoType::HeaderOut => {
+                    log_headers(true, data);
+                }
+                _ => {}
+            }
         })?;
 
         handle.header_function(move |data| {
@@ -845,12 +862,6 @@ impl ApiResponse {
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
     pub fn to_result(self) -> ApiResult<ApiResponse> {
-        debug!("headers:");
-        for (header_key, header_value) in self.headers() {
-            if header_value.len() > 0 {
-                debug!("  {}: {}", header_key, header_value);
-            }
-        }
         if let Some(ref body) = self.body {
             debug!("body: {}", String::from_utf8_lossy(body));
         }
@@ -906,6 +917,32 @@ impl ApiResponse {
             }
         }
         None
+    }
+}
+
+fn log_headers(is_response: bool, data: &[u8]) {
+    lazy_static! {
+        static ref AUTH_RE: Regex = Regex::new(
+            r"(?i)(authorization):\s*([\w]+)\s+(.*)").unwrap();
+    }
+    if let Ok(header) = str::from_utf8(data) {
+        for line in header.lines() {
+            if line.is_empty() {
+                continue;
+            }
+            debug!("{} {}", if is_response {
+                ">"
+            } else {
+                "<"
+            }, AUTH_RE.replace_all(line, |caps: &Captures| {
+                let info = if &caps[1].to_lowercase() == "basic" {
+                    caps[3].split(':').next().unwrap().to_string()
+                } else {
+                    format!("{}***", &caps[3][..8])
+                };
+                format!("{}: {} {}", &caps[1], &caps[2], info)
+            }));
+        }
     }
 }
 
