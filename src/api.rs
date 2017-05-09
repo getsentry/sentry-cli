@@ -1056,8 +1056,10 @@ pub struct NewRelease {
 pub struct Ref {
     #[serde(rename="repository")]
     pub repo: String,
-    #[serde(rename="currentId")]
+    #[serde(rename="commit")]
     pub rev: String,
+    #[serde(rename="previousCommit")]
+    pub prev_rev: Option<String>,
 }
 
 /// Changes to a release
@@ -1071,9 +1073,7 @@ pub struct UpdatedRelease {
     pub date_started: Option<DateTime<UTC>>,
     #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
     pub date_released: Option<DateTime<UTC>>,
-    // XXX: this is being renamed to "refs" but for a while we want to
-    // continue with the old name which the server still supports.
-    #[serde(rename="headCommits", skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if="Option::is_none")]
     pub refs: Option<Vec<Ref>>,
 }
 

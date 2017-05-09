@@ -8,6 +8,7 @@ use prelude::*;
 use api::{Repo, Ref};
 
 
+#[derive(Copy, Clone)]
 pub enum GitReference<'a> {
     Commit(git2::Oid),
     Symbolic(&'a str),
@@ -26,13 +27,23 @@ impl<'a> fmt::Display for GitReference<'a> {
 pub struct CommitSpec {
     pub repo: String,
     pub path: Option<PathBuf>,
-    pub rev: Option<String>,
+    pub rev: String,
+    pub prev_rev: Option<String>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct VcsUrl {
     pub provider: &'static str,
     pub id: String,
+}
+
+fn parse_rev_range(rng: &str) -> (Option<String>, String) {
+    if rng == "" {
+        return (None, "HEAD".into());
+    }
+    let mut iter = rng.rsplitn(2, "..");
+    let rev = iter.next().unwrap_or("HEAD");
+    (iter.next().map(|x| x.to_string()), rev.to_string())
 }
 
 impl CommitSpec {
@@ -42,10 +53,12 @@ impl CommitSpec {
                 r"^([^@#]+)(?:#([^@]+))?(?:@(.+))?$").unwrap();
         }
         if let Some(caps) = SPEC_RE.captures(s) {
+            let (prev_rev, rev) = parse_rev_range(caps.get(3).map(|x| x.as_str()).unwrap_or(""));
             Ok(CommitSpec {
                 repo: caps[1].to_string(),
                 path: caps.get(2).map(|x| PathBuf::from(x.as_str())),
-                rev: caps.get(3).map(|x| x.as_str().to_string()),
+                rev: rev,
+                prev_rev: prev_rev,
             })
         } else {
             Err(Error::from(format!("Could not parse commit spec '{}'", s)))
@@ -53,12 +66,21 @@ impl CommitSpec {
     }
 
     pub fn reference<'a>(&'a self) -> GitReference<'a> {
-        let r = self.rev.as_ref().map(|x| x.as_str()).unwrap_or("HEAD");
-        if let Ok(oid) = git2::Oid::from_str(r) {
+        if let Ok(oid) = git2::Oid::from_str(&self.rev) {
             GitReference::Commit(oid)
         } else {
-            GitReference::Symbolic(r)
+            GitReference::Symbolic(&self.rev)
         }
+    }
+
+    pub fn prev_reference<'a>(&'a self) -> Option<GitReference<'a>> {
+        self.prev_rev.as_ref().map(|rev| {
+            if let Ok(oid) = git2::Oid::from_str(rev) {
+                GitReference::Commit(oid)
+            } else {
+                GitReference::Symbolic(rev)
+            }
+        })
     }
 }
 
@@ -118,10 +140,11 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String> {
     Err(Error::from(format!("Could not find matching repository for {}", repo)))
 }
 
-fn find_matching_rev(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
+fn find_matching_rev(reference: GitReference, spec: &CommitSpec,
+                     repos: &[Repo], disable_discovery: bool)
     -> Result<Option<String>>
 {
-    let r = match spec.reference() {
+    let r = match reference {
         GitReference::Commit(commit) => {
             return Ok(Some(commit.to_string()));
         }
@@ -181,6 +204,39 @@ fn find_matching_rev(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
     Ok(None)
 }
 
+fn find_matching_revs(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
+    -> Result<(Option<String>, String)>
+{
+    fn error(r: GitReference, repo: &str) -> Error {
+        Error::from(format!(
+            "Could not find commit '{}' for '{}'. If you do not have local \
+             checkouts of the repositories in question referencing tags or \
+             other references will not work and you need to refer to \
+             revisions explicitly.",
+            r, repo))
+    }
+
+    let rev = if let Some(rev) = find_matching_rev(
+        spec.reference(), &spec, &repos[..], disable_discovery)? {
+        rev
+    } else {
+        return Err(error(spec.reference(), &spec.repo));
+    };
+
+    let prev_rev = if let Some(rev) = spec.prev_reference() {
+        if let Some(rv) = find_matching_rev(
+            rev, &spec, &repos[..], disable_discovery)? {
+            Some(rv)
+        } else {
+            return Err(error(rev, &spec.repo));
+        }
+    } else {
+        None
+    };
+
+    Ok((prev_rev, rev))
+}
+
 pub fn find_head() -> Result<String> {
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
@@ -198,35 +254,30 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
     // limited amounts of magic.
     if let Some(specs) = specs {
         for spec in &specs {
-            let rev = if let Some(rev) = find_matching_rev(
-                &spec, &repos[..], specs.len() == 1)? {
-                rev
-            } else {
-                return Err(Error::from(format!(
-                    "Could not find commit '{}' for '{}'. If you do not have local \
-                     checkouts of the repositories in question referencing tags or \
-                     other references will not work and you need to refer to \
-                     revisions explicitly.",
-                    spec.reference(), &spec.repo)));
-            };
+            let (prev_rev, rev) = find_matching_revs(
+                &spec, &repos[..], specs.len() == 1)?;
             rv.push(Ref {
                 repo: spec.repo.clone(),
                 rev: rev,
+                prev_rev: prev_rev,
             });
         }
 
     // otherwise apply all the magic available
     } else {
         for repo in &repos {
-            if let Some(head) = find_matching_rev(
-                &CommitSpec {
-                    repo: repo.name.to_string(),
-                    path: None,
-                    rev: Some("HEAD".into()),
-                }, &repos[..], false)? {
+            let spec = CommitSpec {
+                repo: repo.name.to_string(),
+                path: None,
+                rev: "HEAD".into(),
+                prev_rev: None,
+            };
+            if let Some(rev) = find_matching_rev(
+                spec.reference(), &spec, &repos[..], false)? {
                 rv.push(Ref {
                     repo: repo.name.to_string(),
-                    rev: head,
+                    rev: rev,
+                    prev_rev: None,
                 });
             }
         }

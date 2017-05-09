@@ -286,14 +286,26 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .about("List all deploys of a release")))
 }
 
-fn strip_version(version: &str) -> &str {
+fn strip_sha(sha: &str) -> &str {
     lazy_static! {
         static ref SHA_RE: Regex = Regex::new(r"^[a-fA-F0-9]{40}$").unwrap();
     }
-    if SHA_RE.is_match(version) {
-        &version[..12]
+    if SHA_RE.is_match(sha) {
+        &sha[..12]
     } else {
-        version
+        sha
+    }
+}
+
+fn strip_version(version: &str) -> &str {
+    lazy_static! {
+        static ref DOTTED_PATH_PREFIX_RE: Regex = Regex::new(
+            r"^([a-z][a-z0-9-]+)(\.[a-z][a-z0-9-]+)+-").unwrap();
+    }
+    if let Some(m) = DOTTED_PATH_PREFIX_RE.find(version) {
+        strip_sha(&version[m.end()..])
+    } else {
+        strip_sha(version)
     }
 }
 
@@ -412,7 +424,13 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
                 .add("Repository")
                 .add("Revision");
             for commit in &heads {
-                table.add_row().add(&commit.repo).add(&commit.rev);
+                let mut row = table.add_row();
+                row.add(&commit.repo);
+                if let Some(ref prev_rev) = commit.prev_rev {
+                    row.add(format!("{} -> {}", strip_sha(prev_rev), strip_sha(&commit.rev)));
+                } else {
+                    row.add(strip_sha(&commit.rev));
+                }
             }
             table.print();
         }
