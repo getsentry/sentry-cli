@@ -87,10 +87,21 @@ parameter to the ``set-commits`` command in the format
 ``REPO_NAME@REVISION``.  You can repeat this for as many repositories as
 you have::
 
-    sentry-cli releases set-commits "$VERISON" --commit "my-repo:deadbeef"
+    sentry-cli releases set-commits "$VERSION" --commit "my-repo@deadbeef"
 
 To see which repos are available for the organization you can run
 ``sentry-cli repos`` which will return a list of configured repositories.
+
+Note that you need to refer to releases you need to use the actual full
+commit SHA.  If you want to refer to tags or references (like `HEAD`) the
+repository needs to he checked out and reachable from the path where you
+invoke `sentry-cli`.
+
+If you also want to set a previous commit instead of letting the server
+use the previous release as the base point you can do that by setting a
+commit range::
+
+    sentry-cli releases set-commits "$VERSION" --commit "my-repo@from..to"
 
 Managing Release Artifacts
 --------------------------
