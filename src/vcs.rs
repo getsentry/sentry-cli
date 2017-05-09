@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::PathBuf;
 
 use git2;
@@ -6,6 +7,20 @@ use regex::Regex;
 use prelude::*;
 use api::{Repo, Ref};
 
+
+pub enum GitReference<'a> {
+    Commit(git2::Oid),
+    Symbolic(&'a str),
+}
+
+impl<'a> fmt::Display for GitReference<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            GitReference::Commit(ref c) => write!(f, "{}", c),
+            GitReference::Symbolic(ref s) => write!(f, "{}", s),
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct CommitSpec {
@@ -34,6 +49,15 @@ impl CommitSpec {
             })
         } else {
             Err(Error::from(format!("Could not parse commit spec '{}'", s)))
+        }
+    }
+
+    pub fn reference<'a>(&'a self) -> GitReference<'a> {
+        let r = self.rev.as_ref().map(|x| x.as_str()).unwrap_or("HEAD");
+        if let Ok(oid) = git2::Oid::from_str(r) {
+            GitReference::Commit(oid)
+        } else {
+            GitReference::Symbolic(r)
         }
     }
 }
@@ -94,9 +118,16 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String> {
     Err(Error::from(format!("Could not find matching repository for {}", repo)))
 }
 
-fn find_matching_head(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
+fn find_matching_rev(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
     -> Result<Option<String>>
 {
+    let r = match spec.reference() {
+        GitReference::Commit(commit) => {
+            return Ok(Some(commit.to_string()));
+        }
+        GitReference::Symbolic(r) => r,
+    };
+
     let (repo, discovery) = if let Some(ref path) = spec.path {
         (git2::Repository::open(path)?, false)
     } else {
@@ -112,7 +143,7 @@ fn find_matching_head(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool
         if let Some(url) = remote.url();
         if !discovery || is_matching_url(url, &reference_url);
         then {
-            let head = repo.revparse_single("HEAD")?;
+            let head = repo.revparse_single(r)?;
             return Ok(Some(head.id().to_string()));
         }
     }
@@ -122,9 +153,27 @@ fn find_matching_head(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool
         if_chain! {
             if let Some(submodule_url) = submodule.url();
             if is_matching_url(submodule_url, &reference_url);
-            if let Some(head_oid) = submodule.head_id();
             then {
-                return Ok(Some(head_oid.to_string()));
+                // heads on submodules is easier so let's start with that
+                // because that does not require the submodule to be
+                // checked out.
+                if_chain! {
+                    if r == "HEAD";
+                    if let Some(head_oid) = submodule.head_id();
+                    then {
+                        return Ok(Some(head_oid.to_string()));
+                    }
+                }
+
+                // otherwise we need to open the submodule which requires
+                // it to be checked out.
+                if_chain! {
+                    if let Ok(subrepo) = submodule.open();
+                    then {
+                        let head = subrepo.revparse_single(r)?;
+                        return Ok(Some(head.id().to_string()));
+                    }
+                }
             }
         }
     }
@@ -132,8 +181,7 @@ fn find_matching_head(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool
     Ok(None)
 }
 
-pub fn find_head() -> Result<String>
-{
+pub fn find_head() -> Result<String> {
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
     Ok(head.id().to_string())
@@ -150,29 +198,31 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
     // limited amounts of magic.
     if let Some(specs) = specs {
         for spec in &specs {
-            let head = if let Some(ref rev) = spec.rev {
-                rev.clone()
-            } else if let Some(head) = find_matching_head(
+            let rev = if let Some(rev) = find_matching_rev(
                 &spec, &repos[..], specs.len() == 1)? {
-                head
+                rev
             } else {
                 return Err(Error::from(format!(
-                    "Could not find HEAD commit for '{}'", &spec.repo)));
+                    "Could not find commit '{}' for '{}'. If you do not have local \
+                     checkouts of the repositories in question referencing tags or \
+                     other references will not work and you need to refer to \
+                     revisions explicitly.",
+                    spec.reference(), &spec.repo)));
             };
             rv.push(Ref {
                 repo: spec.repo.clone(),
-                rev: head,
+                rev: rev,
             });
         }
 
     // otherwise apply all the magic available
     } else {
         for repo in &repos {
-            if let Some(head) = find_matching_head(
+            if let Some(head) = find_matching_rev(
                 &CommitSpec {
                     repo: repo.name.to_string(),
                     path: None,
-                    rev: None,
+                    rev: Some("HEAD".into()),
                 }, &repos[..], false)? {
                 rv.push(Ref {
                     repo: repo.name.to_string(),
