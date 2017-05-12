@@ -58,7 +58,7 @@ fn get_config_status_json(config: &Config) -> Result<()> {
         &Auth::Token(_) => "token".into(),
         &Auth::Key(_) => "api_key".into(),
     });
-    rv.auth.successful = Api::new(config).get_auth_info().is_ok();
+    rv.auth.successful = config.auth.is_some() && Api::new(config).get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();
 
     serde_json::to_writer_pretty(&mut io::stdout(), &rv)?;
