@@ -34,7 +34,7 @@ dependencies = [
  "serde_derive 0.9.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 0.9.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sourcemap 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sourcemap 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -906,7 +906,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "sourcemap"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "base64 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1292,7 +1292,7 @@ dependencies = [
 "checksum sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "cc30b1e1e8c40c121ca33b86c23308a090d19974ef001b4bf6e61fd1a0fb095c"
 "checksum siphasher 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0df90a788073e8d0235a67e50441d47db7c8ad9debd91cbf43736a2a92d36537"
 "checksum smallvec 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "4f8266519bc1d17d0b5b16f6c21295625d562841c708f6376f49028a43e9c11e"
-"checksum sourcemap 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fd945f4f561ba1063bfb5fea901f4446a6d70f12b727405e5e47ed13f82ca736"
+"checksum sourcemap 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3f0189b7835e40432b6f0cc4e7f2c3bfeb484f46f4124c60277af0dffebd766f"
 "checksum stable_deref_trait 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "15132e0e364248108c5e2c02e3ab539be8d6f5d52a01ca9bbf27ed657316f02b"
 "checksum string_cache 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "f55fba06c5e294108f22e8512eb598cb13388a117991e411a8df8f41a1219a75"
 "checksum string_cache_codegen 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "479cde50c3539481f33906a387f2bd17c8e87cb848c35b6021d41fb81ff9b4d7"
