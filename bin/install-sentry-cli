@@ -21,9 +21,8 @@ var archSuffix64bit = '-x86_64';
 var windowsFileExt = '.exe';
 
 // output vars
-var outputDir = './bin';
 var outputName = 'sentry-cli';
-var outputPath = path.join(outputDir, outputName);
+var outputPath = path.join(__dirname, outputName) + (platform === 'win32' ? windowsFileExt : '');
 
 var src = '';
 if (platform === 'darwin') { //OSX
@@ -56,7 +55,7 @@ if (src === '') {
 // Download the binary from the response
 function downloadBinary(res) {
   var download = fs.createWriteStream(outputPath, {
-    mode: Number.parseInt('0755', 8) // - rwxr-xr-x 
+    mode: Number.parseInt('0755', 8) // - rwxr-xr-x
   });
   res.pipe(download);
   download.on('error', function (err) {
@@ -72,6 +71,12 @@ function downloadBinary(res) {
       } else {
         if (stdout.trim() !== outputName + ' ' + version) {
           console.error('Warning! Unexpected ' + outputName + ' version: ' + stdout.trim().split(' ')[1] + ', expected ' + version + '!');
+        }
+        // On windows also create a symlink from `sentry-cli.exe` to `sentry-cli`
+        // because this is the executable expected in package.json bin.
+        if (platform === 'win32') {
+          var linkPath = outputPath.replace(windowsFileExt, '');
+          fs.linkSync(outputPath, linkPath);
         }
         process.exit(0);
       }

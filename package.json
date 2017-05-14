@@ -4,7 +4,7 @@
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "preinstall": "./bin/install-sentry-cli"
+    "preinstall": "node ./bin/install-sentry-cli"
   },
   "repository": {
     "type": "git",
