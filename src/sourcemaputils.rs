@@ -275,7 +275,7 @@ impl SourceMapProcessor {
         }
         if let Some(url) = sm_ref.get_url() {
             let full_url = join_url(&source.url, url)?;
-            debug!("found sourcemap for {} at {}", &source.url, full_url);
+            info!("found sourcemap for {} at {}", &source.url, full_url);
         } else if source.ty == SourceType::MinifiedScript {
             source.error("missing sourcemap!".into());
         }
@@ -289,7 +289,7 @@ impl SourceMapProcessor {
                     let source_url = sm.get_source(idx).unwrap_or("??");
                     if sm.get_source_contents(idx).is_some() ||
                        self.sources.get(source_url).is_some() {
-                        debug!("validator found source ({})", source_url);
+                        info!("validator found source ({})", source_url);
                     } else {
                         source.warn(format!("missing sourcecode ({})", source_url));
                     }

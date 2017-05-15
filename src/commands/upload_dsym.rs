@@ -248,7 +248,7 @@ fn find_missing_files(api: &mut Api,
                       org: &str,
                       project: &str)
                       -> Result<Vec<DSymRef>> {
-    debug!("Checking for missing debug symbols: {:#?}", &refs);
+    info!("Checking for missing debug symbols: {:#?}", &refs);
     let missing = {
         let checksums: Vec<_> = refs.iter().map(|ref x| x.checksum.as_str()).collect();
         api.find_missing_dsym_checksums(org, project, &checksums)?
@@ -259,7 +259,7 @@ fn find_missing_files(api: &mut Api,
             rv.push(r)
         }
     }
-    debug!("Missing debug symbols: {:#?}", &rv);
+    info!("Missing debug symbols: {:#?}", &rv);
     Ok(rv)
 }
 
@@ -290,8 +290,8 @@ fn upload_dsyms(api: &mut Api,
 fn get_paths_from_env() -> Result<Vec<PathBuf>> {
     let mut rv = vec![];
     if let Some(base_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
-        debug!("Getting path from DWARF_DSYM_FOLDER_PATH: {}",
-               Path::new(&base_path).display());
+        info!("Getting path from DWARF_DSYM_FOLDER_PATH: {}",
+              Path::new(&base_path).display());
         for entry in WalkDir::new(base_path) {
             let entry = entry?;
             if entry.path().extension() == Some(OsStr::new("dSYM")) &&
@@ -388,7 +388,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         let mut batch_num = 0;
         let mut all_dsym_checksums = vec![];
         for path in paths.into_iter() {
-            debug!("Scanning {}", path.display());
+            info!("Scanning {}", path.display());
             for batch_res in BatchIter::new(path, find_uuids.as_ref(), zips,
                                             &mut found_uuids) {
                 if batch_num > 0 {

@@ -662,9 +662,9 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
                     continue;
                 }
             }
-            debug!("found: {} ({} bytes)",
-                   dent.path().display(),
-                   dent.metadata().unwrap().len());
+            info!("found: {} ({} bytes)",
+                  dent.path().display(),
+                  dent.metadata().unwrap().len());
             let local_path = dent.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, path_as_url(local_path));
             processor.add(&url, dent.path())?;

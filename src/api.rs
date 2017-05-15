@@ -863,7 +863,7 @@ impl ApiResponse {
     /// non okay response codes into errors.
     pub fn to_result(self) -> ApiResult<ApiResponse> {
         if let Some(ref body) = self.body {
-            debug!("body: {}", String::from_utf8_lossy(body));
+            info!("body: {}", String::from_utf8_lossy(body));
         }
         if self.ok() {
             return Ok(self);
@@ -930,7 +930,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
             if line.is_empty() {
                 continue;
             }
-            debug!("{} {}", if is_response {
+            info!("{} {}", if is_response {
                 ">"
             } else {
                 "<"
