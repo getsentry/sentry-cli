@@ -1,6 +1,7 @@
 //! Implements a command for uploading dsym files.
 use std::fs;
 use std::env;
+use std::fmt;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{Write, Seek};
@@ -36,13 +37,23 @@ enum DSymVar {
     ZipFile(Rc<RefCell<Option<zip::ZipArchive<fs::File>>>>, usize),
 }
 
-#[derive(Debug)]
 struct DSymRef {
     var: DSymVar,
     arc_name: String,
     checksum: String,
     size: u64,
     uuids: Vec<Uuid>,
+}
+
+impl fmt::Debug for DSymRef {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("DSymRef")
+            .field("arc_name", &self.arc_name)
+            .field("checksum", &self.checksum)
+            .field("size", &self.size)
+            .field("uuids", &self.uuids)
+            .finish()
+    }
 }
 
 impl DSymRef {
