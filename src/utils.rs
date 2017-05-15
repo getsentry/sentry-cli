@@ -68,7 +68,7 @@ impl log::Log for Logger {
         if !self.enabled(record.metadata()) {
             return;
         }
-        let level = self.get_real_level(metadata);
+        let level = self.get_real_level(record.metadata());
         let msg = format!("[{}] {} {}", level, record.target(), record.args());
         writeln!(io::stderr(), "{}", style(msg).fg(
             match level {
