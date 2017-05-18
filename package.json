@@ -4,7 +4,7 @@
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "preinstall": "node ./bin/install-sentry-cli"
+    "install": "node ./bin/install-sentry-cli"
   },
   "repository": {
     "type": "git",
@@ -18,11 +18,12 @@
   "bugs": {
     "url": "https://github.com/getsentry/sentry-cli/issues"
   },
+  "main": "index.js",
   "bin": {
     "sentry-cli": "bin/sentry-cli"
   },
   "dependencies": {
-    "process": "2.0.0"
+    "progress": "2.0.0"
   },
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
   "license": "BSD-3-Clause"
