@@ -9,7 +9,7 @@ var https = require('https');
 var arch = os.arch();
 var exec = require('child_process').exec;
 
-// src vars
+// downloadUrl vars
 var releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
 var version = process.env.npm_package_version;
 var binaryPrefix = '/sentry-cli-';
@@ -24,30 +24,24 @@ var windowsFileExt = '.exe';
 var outputName = 'sentry-cli';
 var outputPath = path.join(__dirname, outputName) + (platform === 'win32' ? windowsFileExt : '');
 
-var src = '';
+var downloadUrl = null;
+
+// macOS
 if (platform === 'darwin') { //OSX
-  // only x86_64 arch available
-  // if (arch.indexOf('64') > -1) { //64bit
-  src = releasesUrl + version + binaryPrefix + platformOSX + archSuffix64bit;
-  // } else { //32bit
-  //   src = releasesUrl + version + binaryPrefix + platformOSX + archSuffix32bit;
-  // }
-} else if (platform === 'win32') { //windows
-  // only i686 arch available for windows
-  // if (arch.indexOf('64') > -1) { //64bit
-  //   src = releasesUrl + version + binaryPrefix + platformWindows + archSuffix64bit + windowsFileExt;
-  // } else { //32bit
-  src = releasesUrl + version + binaryPrefix + platformWindows + archSuffix32bit + windowsFileExt;
-  // }
-} else { //linux
-  if (arch.indexOf('64') > -1) { //64bit
-    src = releasesUrl + version + binaryPrefix + platformLinux + archSuffix64bit;
-  } else { //32bit
-    src = releasesUrl + version + binaryPrefix + platformLinux + archSuffix32bit;
+  downloadUrl = releasesUrl + version + binaryPrefix + platformOSX + archSuffix64bit;
+// Windows
+} else if (platform === 'win32') {
+  downloadUrl = releasesUrl + version + binaryPrefix + platformWindows + archSuffix32bit + windowsFileExt;
+// Linux
+} else {
+  if (arch.indexOf('64') > -1) {
+    downloadUrl = releasesUrl + version + binaryPrefix + platformLinux + archSuffix64bit;
+  } else {
+    downloadUrl = releasesUrl + version + binaryPrefix + platformLinux + archSuffix32bit;
   }
 }
 
-if (src === '') {
+if (downloadUrl === null) {
   console.log('error: your platform and architecture (' + platform + '-' + arch + ') is unsupported.');
   process.exit(1);
 }
@@ -55,7 +49,7 @@ if (src === '') {
 // Download the binary from the response
 function downloadBinary(res) {
   var download = fs.createWriteStream(outputPath, {
-    mode: Number.parseInt('0755', 8) // - rwxr-xr-x
+    mode: Number.parseInt('0755', 8)
   });
   res.pipe(download);
   download.on('error', function (err) {
@@ -71,12 +65,6 @@ function downloadBinary(res) {
       } else {
         if (stdout.trim() !== outputName + ' ' + version) {
           console.error('Warning! Unexpected ' + outputName + ' version: ' + stdout.trim().split(' ')[1] + ', expected ' + version + '!');
-        }
-        // On windows also create a symlink from `sentry-cli.exe` to `sentry-cli`
-        // because this is the executable expected in package.json bin.
-        if (platform === 'win32') {
-          var linkPath = outputPath.replace(windowsFileExt, '');
-          fs.linkSync(outputPath, linkPath);
         }
         process.exit(0);
       }
@@ -108,7 +96,7 @@ function handleResponse(res) {
 }
 
 // Start download
-https.get(src, handleResponse)
+https.get(downloadUrl, handleResponse)
   .on('error', function (err) {
     console.log(err);
     process.exit(1);

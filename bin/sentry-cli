@@ -1,0 +1,25 @@
+#!/usr/bin/env node
+/*
+ * a wrapper script for *windows*
+ *
+ * Since on older windows versions symlinks are unavailable, node will
+ * installed a sentry-cli.cmd wrapper.  This wrapper is a batch file which
+ * will invoke node for the bin/sentry-cli javascript file which in turn
+ * will shell out to the sentry-cli.exe we downloaded.
+ *
+ * This is also why signal handling is not implemented here.
+ */
+var child = require('child_process').spawn(
+  __filename + '.exe',
+  process.argv.slice(2),
+  {stdio: 'inherit'}
+);
+
+child.on('error', function(err) {
+  console.error('error: failed to invoke sentry-cli');
+  console.error(err.stack);
+});
+
+child.on('exit', function(code){
+  process.exit(code);
+});
