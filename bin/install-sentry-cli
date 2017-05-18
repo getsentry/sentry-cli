@@ -56,7 +56,7 @@ function downloadBinary(res) {
   var progress = null;
   var isYarn = false;
   if (process.stdout.isTTY) {
-    new ProgressBar('fetching ' + fn +' :bar :percent :etas', {
+    progress = new ProgressBar('fetching ' + fn +' :bar :percent :etas', {
       complete: "█",
       incomplete: "░",
       width: 20,
