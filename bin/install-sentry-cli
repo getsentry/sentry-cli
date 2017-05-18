@@ -49,20 +49,34 @@ if (downloadUrl === null) {
 
 // Download the binary from the response
 function downloadBinary(res) {
+  require('fs').writeFileSync('/tmp/debug.log', JSON.stringify(process.env));
   var fn = downloadUrl.match(/.*\/(.*?)$/)[1];
   var total = parseInt(res.headers['content-length'], 10);
-  var progress = new ProgressBar('fetching ' + fn +' :bar :percent :etas', {
-    complete: "█",
-    incomplete: "░",
-    width: 20,
-    total: total
-  });
+  var downloaded = 0;
+  var progress = null;
+  var isYarn = false;
+  if (process.stdout.isTTY) {
+    new ProgressBar('fetching ' + fn +' :bar :percent :etas', {
+      complete: "█",
+      incomplete: "░",
+      width: 20,
+      total: total
+    });
+  } else if ((process.env.npm_config_user_agent || '').match(/yarn/)) {
+    isYarn = true;
+  }
   var download = fs.createWriteStream(outputPath, {
     mode: Number.parseInt('0755', 8)
   });
   res.pipe(download);
   res.on('data', function(chunk) {
-    progress.tick(chunk.length);
+    downloaded += chunk.length;
+    if (process.stdout.isTTY) {
+      progress.tick(chunk.length);
+    } else if (isYarn) {
+      process.stdout.write('fetching ' + fn + ' ' + Math.round(
+        downloaded / total * 100) + '%\n');
+    }
   });
   download.on('error', function(err) {
     console.log(err);
