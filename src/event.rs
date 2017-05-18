@@ -25,6 +25,8 @@ pub struct Event {
     pub release: Option<String>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub environment: Option<String>,
+    #[serde(skip_serializing_if="HashMap::is_empty")]
+    pub user: HashMap<String, String>,
 }
 
 fn get_server_name() -> Result<String> {
@@ -45,6 +47,7 @@ impl Event {
             server_name: get_server_name().ok(),
             release: None,
             environment: None,
+            user: HashMap::new(),
         }
     }
 }

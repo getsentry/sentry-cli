@@ -37,19 +37,27 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .short("p")
             .help("Overrides the default 'other' platform"))
         .arg(Arg::with_name("tags")
-            .value_name("TAG")
+            .value_name("KEY:VALUE")
             .long("tag")
             .short("t")
             .multiple(true)
             .number_of_values(1)
             .help("Adds a tag (key:value) to the event."))
         .arg(Arg::with_name("extra")
-            .value_name("EXTRA")
+            .value_name("KEY:VALUE")
             .long("extra")
             .short("e")
             .multiple(true)
             .number_of_values(1)
             .help("Adds extra information (key:value) to the event."))
+        .arg(Arg::with_name("user_data")
+             .value_name("KEY:VALUE")
+             .long("user")
+             .short("u")
+            .multiple(true)
+            .number_of_values(1)
+            .help("Adds user information (key:value) to the event. \
+                   eg: id:42, username:foo"))
         .arg(Arg::with_name("fingerprint")
             .value_name("FINGERPRINT")
             .long("fingerprint")
@@ -82,6 +90,15 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             let key = split.next().ok_or("missing extra key")?;
             let value = split.next().ok_or("missing extra value")?;
             event.extra.insert(key.into(), value.into());
+        }
+    }
+
+    if let Some(user_data) = matches.values_of("user_data") {
+        for pair in user_data {
+            let mut split = pair.splitn(2, ':');
+            let key = split.next().ok_or("missing user key")?;
+            let value = split.next().ok_or("missing user value")?;
+            event.user.insert(key.into(), value.into());
         }
     }
 
