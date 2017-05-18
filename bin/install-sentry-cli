@@ -5,13 +5,14 @@ var fs = require('fs');
 var assert = require('assert');
 var path = require('path');
 var platform = os.platform();
+var ProgressBar = require('progress');
 var https = require('https');
 var arch = os.arch();
 var exec = require('child_process').exec;
 
 // downloadUrl vars
 var releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
-var version = process.env.npm_package_version;
+var version = require('../package.json').version;
 var binaryPrefix = '/sentry-cli-';
 var platformOSX = 'Darwin';
 var platformWindows = 'Windows';
@@ -48,16 +49,27 @@ if (downloadUrl === null) {
 
 // Download the binary from the response
 function downloadBinary(res) {
+  var fn = downloadUrl.match(/.*\/(.*?)$/)[1];
+  var total = parseInt(res.headers['content-length'], 10);
+  var progress = new ProgressBar('fetching ' + fn +' :bar :percent :etas', {
+    complete: "█",
+    incomplete: "░",
+    width: 20,
+    total: total
+  });
   var download = fs.createWriteStream(outputPath, {
     mode: Number.parseInt('0755', 8)
   });
   res.pipe(download);
-  download.on('error', function (err) {
+  res.on('data', function(chunk) {
+    progress.tick(chunk.length);
+  });
+  download.on('error', function(err) {
     console.log(err);
     process.exit(1);
   });
-  download.on('close', function () {
-    exec(outputPath + ' --version', function (error, stdout, stderr) {
+  download.on('close', function() {
+    exec(outputPath + ' --version', function(error, stdout, stderr) {
       if (error) {
         console.log('Something went wrong!');
         console.error(error);
@@ -83,7 +95,7 @@ function handleResponse(res) {
       process.exit(1);
     }
     https.get(res.headers['Location'] || res.headers['location'], handleResponse)
-      .on('error', function (err) {
+      .on('error', function(err) {
         console.log(err);
         process.exit(1);
       });
@@ -97,7 +109,7 @@ function handleResponse(res) {
 
 // Start download
 https.get(downloadUrl, handleResponse)
-  .on('error', function (err) {
+  .on('error', function(err) {
     console.log(err);
     process.exit(1);
   });
