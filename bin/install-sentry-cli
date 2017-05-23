@@ -49,7 +49,6 @@ if (downloadUrl === null) {
 
 // Download the binary from the response
 function downloadBinary(res) {
-  require('fs').writeFileSync('/tmp/debug.log', JSON.stringify(process.env));
   var fn = downloadUrl.match(/.*\/(.*?)$/)[1];
   var total = parseInt(res.headers['content-length'], 10);
   var downloaded = 0;
