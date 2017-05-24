@@ -18,6 +18,7 @@ use std::borrow::Cow;
 use std::rc::Rc;
 
 use serde::{Serialize, Deserialize};
+use serde::de::DeserializeOwned;
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
@@ -877,7 +878,7 @@ impl ApiResponse {
     }
 
     /// Deserializes the response body into the given type
-    pub fn deserialize<T: Deserialize>(&self) -> ApiResult<T> {
+    pub fn deserialize<T: DeserializeOwned>(&self) -> ApiResult<T> {
         Ok(serde_json::from_reader(match self.body {
             Some(ref body) => body,
             None => &b""[..],
@@ -886,12 +887,12 @@ impl ApiResponse {
 
     /// Like `deserialize` but consumes the response and will convert
     /// failed requests into proper errors.
-    pub fn convert<T: Deserialize>(self) -> ApiResult<T> {
+    pub fn convert<T: DeserializeOwned>(self) -> ApiResult<T> {
         self.to_result().and_then(|x| x.deserialize())
     }
 
     /// Like convert but produces resource not found errors.
-    pub fn convert_rnf<T: Deserialize>(self, resource: &'static str) -> ApiResult<T> {
+    pub fn convert_rnf<T: DeserializeOwned>(self, resource: &'static str) -> ApiResult<T> {
         if self.status() == 404 {
             return Err(Error::ResourceNotFound(resource))
         } else {
