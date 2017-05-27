@@ -17,7 +17,7 @@ use std::collections::{HashSet, HashMap};
 use std::borrow::Cow;
 use std::rc::Rc;
 
-use serde::{Serialize, Deserialize};
+use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
