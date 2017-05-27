@@ -35,7 +35,11 @@ impl fmt::Display for InfoPlist {
     }
 }
 
-pub fn expand_xcodevars<'a>(s: &'a str) -> Cow<'a, str> {
+fn var_from_env(name: &str) -> String {
+    env::var(name).unwrap_or("".into())
+}
+
+pub fn expand_xcodevars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> {
     lazy_static! {
         static ref SEP_RE: Regex = Regex::new(r"[\s/]+").unwrap();
     }
@@ -44,7 +48,7 @@ pub fn expand_xcodevars<'a>(s: &'a str) -> Cow<'a, str> {
             return "".into();
         }
         let mut iter = key.splitn(2, ':');
-        let value = env::var(iter.next().unwrap()).unwrap_or("".into());
+        let value = f(iter.next().unwrap());
         match iter.next() {
             Some("rfc1034identifier") => {
                 SEP_RE.replace_all(&value, "-").into_owned()
@@ -98,11 +102,28 @@ impl InfoPlist {
     }
 
     pub fn name<'a>(&'a self) -> Cow<'a, str> {
-        expand_xcodevars(&self.name)
+        expand_xcodevars(&self.name, var_from_env)
     }
 
     pub fn bundle_id<'a>(&'a self) -> Cow<'a, str> {
-        expand_xcodevars(&self.bundle_id)
+        expand_xcodevars(&self.bundle_id, var_from_env)
+    }
+
+    /// This is similar to `bundle_id` but the product name that might be
+    /// referenced is explicitly passed in instead of being picked up
+    /// from the environment if missing there.  The reason for this is that
+    /// in some cases (react-native with code push) we are not run from an
+    /// xcode build step so that information might not be available.
+    pub fn derived_bundle_id<'a>(&'a self, product: &str) -> Cow<'a, str> {
+        let f = |var: &str| -> String {
+            let rv = var_from_env(var);
+            if rv.is_empty() && (var == "PRODUCT_NAME" || var == "TARGET_NAME") {
+                product.to_string()
+            } else {
+                rv
+            }
+        };
+        expand_xcodevars(&self.bundle_id, f)
     }
 }
 
@@ -276,11 +297,17 @@ pub fn show_notification(title: &str, msg: &str) -> Result<()> {
 
 #[test]
 fn test_expansion() {
-    env::set_var("FOO_BAR", "foo bar baz / blah");
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B").to_string(),
+    fn f(name: &str) -> String {
+        if name == "FOO_BAR" {
+            "foo bar baz / blah".into()
+        } else {
+            "".into()
+        }
+    }
+    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B", f).to_string(),
                "Afoo-bar-baz-blahB".to_string());
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B").to_string(),
+    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B", f).to_string(),
                "Afoo_bar_baz_blahB".to_string());
-    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B").to_string(),
+    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B", f).to_string(),
                "Afoo_bar_baz_blahB".to_string());
 }

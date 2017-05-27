@@ -79,13 +79,16 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str)
         for entry_rv in glob_with("ios/*/info.plist", &opts)? {
             if_chain! {
                 if let Ok(entry) = entry_rv;
-                if !entry.ends_with("-tvOS");
+                if let Some(base) = entry.parent();
+                if let Some(folder_os) = base.file_name();
+                if let Some(folder) = folder_os.to_str();
+                if !folder.ends_with("-tvOS");
                 if let Ok(md) = entry.metadata();
                 if md.is_file();
                 then {
                     let plist = InfoPlist::from_path(&entry)?;
                     return Ok(format!("{}-{}:{}",
-                                      plist.bundle_id(),
+                                      plist.derived_bundle_id(folder),
                                       package.app_version,
                                       package.label));
                 }
