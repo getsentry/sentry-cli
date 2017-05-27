@@ -2,7 +2,7 @@
 use std::env;
 
 use clap::{App, ArgMatches, AppSettings};
-use indicatif::style;
+use console::style;
 
 use prelude::*;
 use config::Config;

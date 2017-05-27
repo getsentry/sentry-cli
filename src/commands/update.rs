@@ -5,7 +5,7 @@ use std::path::Path;
 
 use clap::{App, Arg, ArgMatches, AppSettings};
 use runas;
-use indicatif::style;
+use console::style;
 
 use prelude::*;
 use api::Api;

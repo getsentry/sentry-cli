@@ -12,7 +12,8 @@ use api::{Api, FileContents};
 
 use sourcemap;
 use might_be_minified;
-use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget, Term, style};
+use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
+use console::{Term, style};
 
 use prelude::*;
 

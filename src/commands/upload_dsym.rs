@@ -15,7 +15,8 @@ use clap::{App, Arg, ArgMatches};
 use walkdir::{WalkDir, Iter as WalkDirIter};
 use zip;
 use uuid::Uuid;
-use indicatif::{ProgressBar, ProgressStyle, style};
+use indicatif::{ProgressBar, ProgressStyle};
+use console::style;
 
 use prelude::*;
 use api::{Api, DSymFile};

@@ -19,7 +19,8 @@ use sha1::Sha1;
 use regex::{Regex, Captures};
 use prettytable;
 use chrono::{Duration, DateTime, UTC, TimeZone};
-use indicatif::{style, Color, ProgressBar, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
+use console::{style, Color};
 
 use prelude::*;
 
