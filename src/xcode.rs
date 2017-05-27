@@ -281,4 +281,6 @@ fn test_expansion() {
                "Afoo-bar-baz-blahB".to_string());
     assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B").to_string(),
                "Afoo_bar_baz_blahB".to_string());
+    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B").to_string(),
+               "Afoo_bar_baz_blahB".to_string());
 }

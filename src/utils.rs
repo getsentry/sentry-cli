@@ -488,13 +488,13 @@ pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
 pub fn expand_vars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> {
     lazy_static! {
         static ref VAR_RE: Regex = Regex::new(
-            r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\))").unwrap();
+            r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").unwrap();
     }
     VAR_RE.replace_all(s, |caps: &Captures| {
         let key = &caps[1];
         if key == "$" {
             "$".into()
-        } else if &key[..1] == "(" {
+        } else if &key[..1] == "(" || &key[..1] == "{" {
             f(&key[1..key.len() - 1])
         } else {
             f(key)
