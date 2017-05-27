@@ -3,6 +3,7 @@ use std::string;
 
 use ini::ini;
 use clap;
+use glob;
 use serde_json;
 use url;
 use walkdir;
@@ -40,5 +41,6 @@ error_chain! {
         Git(git2::Error);
         Xml(elementtree::ParseError);
         MachO(mach_object::Error);
+        GlobPattern(glob::PatternError);
     }
 }

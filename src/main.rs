@@ -55,6 +55,7 @@ extern crate humansize;
 extern crate java_properties;
 extern crate mach_object;
 extern crate memmap;
+extern crate glob;
 
 mod macros;
 
@@ -67,7 +68,7 @@ pub mod config;
 pub mod utils;
 pub mod macho;
 pub mod xcode;
-pub mod gradle;
+pub mod codepush;
 pub mod sourcemaputils;
 pub mod constants;
 pub mod vcs;
