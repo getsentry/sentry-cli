@@ -68,46 +68,9 @@ pub mod config;
 pub mod utils;
 pub mod constants;
 
-use std::io::Write;
-
-fn init_backtrace() {
-    use backtrace::Backtrace;
-    use std::panic;
-    use std::thread;
-
-    panic::set_hook(Box::new(|info| {
-        let backtrace = Backtrace::new();
-
-        let thread = thread::current();
-        let thread = thread.name().unwrap_or("unnamed");
-
-        let msg = match info.payload().downcast_ref::<&'static str>() {
-            Some(s) => *s,
-            None => {
-                match info.payload().downcast_ref::<String>() {
-                    Some(s) => &**s,
-                    None => "Box<Any>",
-                }
-            }
-        };
-
-        match info.location() {
-            Some(location) => {
-                println_stderr!("thread '{}' panicked at '{}': {}:{}\n\n{:?}",
-                         thread,
-                         msg,
-                         location.file(),
-                         location.line(),
-                         backtrace);
-            }
-            None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
-        }
-    }));
-}
-
 /// Executes the command line application and exits the process.
 pub fn main() {
     dotenv::dotenv().ok();
-    init_backtrace();
+    utils::init_backtrace();
     utils::run_or_interrupt(commands::main);
 }

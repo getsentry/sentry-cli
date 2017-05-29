@@ -135,3 +135,39 @@ pub fn print_error(err: &Error) {
 pub fn to_timestamp(tm: DateTime<UTC>) -> f64 {
     tm.timestamp() as f64
 }
+
+/// Initializes the backtrace support
+pub fn init_backtrace() {
+    use backtrace::Backtrace;
+    use std::panic;
+    use std::thread;
+
+    panic::set_hook(Box::new(|info| {
+        let backtrace = Backtrace::new();
+
+        let thread = thread::current();
+        let thread = thread.name().unwrap_or("unnamed");
+
+        let msg = match info.payload().downcast_ref::<&'static str>() {
+            Some(s) => *s,
+            None => {
+                match info.payload().downcast_ref::<String>() {
+                    Some(s) => &**s,
+                    None => "Box<Any>",
+                }
+            }
+        };
+
+        match info.location() {
+            Some(location) => {
+                println_stderr!("thread '{}' panicked at '{}': {}:{}\n\n{:?}",
+                         thread,
+                         msg,
+                         location.file(),
+                         location.line(),
+                         backtrace);
+            }
+            None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+        }
+    }));
+}

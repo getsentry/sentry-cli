@@ -23,6 +23,6 @@ pub use self::sourcemaps::{SourceMapProcessor, get_sourcemap_reference_from_head
 pub use self::system::{propagate_exit_status, is_homebrew_install,
                        is_npm_install, expand_envvars, expand_vars,
                        print_error, to_timestamp,
-                       run_or_interrupt};
+                       run_or_interrupt, init_backtrace};
 pub use self::ui::{prompt_to_continue, prompt, capitalize_string,
                    copy_with_progress, make_byte_progress_bar};
