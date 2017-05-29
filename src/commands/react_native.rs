@@ -3,24 +3,38 @@ use clap::{App, ArgMatches};
 use prelude::*;
 use config::Config;
 
-use commands::{react_native_xcode, react_native_gradle, react_native_codepush};
+use commands;
 
+macro_rules! each_subcommand {
+    ($mac:ident) => {
+        $mac!(react_native_gradle);
+        $mac!(react_native_codepush);
+        #[cfg(target_os="macos")]
+        $mac!(react_native_xcode);
+    }
+}
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("provides helpers for react-native.")
-        .subcommand(react_native_xcode::make_app(App::new("xcode")))
-        .subcommand(react_native_gradle::make_app(App::new("gradle")))
-        .subcommand(react_native_codepush::make_app(App::new("codepush")))
+pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
+    macro_rules! add_subcommand {
+        ($name:ident) => {{
+            app = app.subcommand(commands::$name::make_app(
+                App::new(&stringify!($name)[13..])));
+        }}
+    }
+
+    app = app.about("provides helpers for react-native.");
+    each_subcommand!(add_subcommand);
+    app
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    if let Some(sub_matches) = matches.subcommand_matches("xcode") {
-        react_native_xcode::execute(&sub_matches, config)
-    } else if let Some(sub_matches) = matches.subcommand_matches("gradle") {
-        react_native_gradle::execute(&sub_matches, config)
-    } else if let Some(sub_matches) = matches.subcommand_matches("codepush") {
-        react_native_codepush::execute(&sub_matches, config)
-    } else {
-        unreachable!();
+    macro_rules! execute_subcommand {
+        ($name:ident) => {{
+            if let Some(sub_matches) = matches.subcommand_matches(&stringify!($name)[13..]) {
+                return Ok(commands::$name::execute(&sub_matches, &config)?);
+            }
+        }}
     }
+    each_subcommand!(execute_subcommand);
+    unreachable!();
 }
