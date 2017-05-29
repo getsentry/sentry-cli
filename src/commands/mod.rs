@@ -31,10 +31,14 @@ macro_rules! each_subcommand {
         $mac!(info);
         $mac!(login);
         $mac!(send_event);
+        $mac!(react_native);
+
+        // these here exist for legacy reasons only.  They were moved
+        // to subcommands of the react-native command.  Note that
+        // codepush was never available on that level.
         #[cfg(target_os="macos")]
         $mac!(react_native_xcode);
         $mac!(react_native_gradle);
-        $mac!(react_native_codepush);
     }
 }
 
@@ -51,6 +55,7 @@ pub mod info;
 pub mod login;
 pub mod send_event;
 
+pub mod react_native;
 #[cfg(target_os="macos")]
 pub mod react_native_xcode;
 pub mod react_native_gradle;
@@ -113,8 +118,15 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            app = app.subcommand($name::make_app(
-                App::new(stringify!($name).replace("_", "-").as_str())));
+            let mut cmd = $name::make_app(
+                App::new(stringify!($name).replace("_", "-").as_str()));
+
+            // for legacy reasons
+            if stringify!($name).starts_with("react_native_") {
+                cmd = cmd.setting(AppSettings::Hidden);
+            }
+
+            app = app.subcommand(cmd);
         }}
     }
     each_subcommand!(add_subcommand);

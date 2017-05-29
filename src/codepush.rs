@@ -13,8 +13,6 @@ use xcode::InfoPlist;
 
 #[derive(Debug, Deserialize)]
 pub struct CodePushPackage {
-    #[serde(rename="appVersion")]
-    pub app_version: String,
     pub label: String,
 }
 
@@ -87,9 +85,8 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str)
                 if md.is_file();
                 then {
                     let plist = InfoPlist::from_path(&entry)?;
-                    return Ok(format!("{}-{}:{}",
+                    return Ok(format!("{}-codepush:{}",
                                       plist.derived_bundle_id(folder),
-                                      package.app_version,
                                       package.label));
                 }
             }
@@ -107,9 +104,8 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str)
                     let id = manifest.get_attr("package")
                         .ok_or_else(|| Error::from(
                             "Could not find package in android manifest"))?;
-                    return Ok(format!("{}-{}:{}",
+                    return Ok(format!("{}-codepush:{}",
                                       id,
-                                      package.app_version,
                                       package.label));
                 }
             }
