@@ -1,10 +1,13 @@
 use std::fs;
 use std::env;
 use std::fmt;
-use std::path::Path;
-use std::io::BufReader;
+use std::process;
+use std::path::{Path, PathBuf};
+use std::io::{BufReader, BufRead};
 use std::borrow::Cow;
+use std::collections::HashMap;
 
+use serde_json;
 use plist::serde::deserialize;
 #[cfg(target_os="macos")]
 use osascript;
@@ -26,6 +29,16 @@ pub struct InfoPlist {
     version: String,
     #[serde(rename="CFBundleVersion")]
     build: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct XcodeProjectInfo {
+    targets: Vec<String>,
+    schemes: Vec<String>,
+    configurations: Vec<String>,
+    name: String,
+    #[serde(default="PathBuf::new")]
+    path: PathBuf,
 }
 
 impl fmt::Display for InfoPlist {
@@ -60,10 +73,95 @@ pub fn expand_xcodevars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, 
     })
 }
 
+impl XcodeProjectInfo {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<XcodeProjectInfo> {
+        #[derive(Deserialize)]
+        struct Output {
+            project: XcodeProjectInfo,
+        }
+        let p = process::Command::new("xcodebuild")
+            .arg("-list")
+            .arg("-json")
+            .arg("-project")
+            .arg(path.as_ref().as_os_str())
+            .output()?;
+        let mut rv: Output = serde_json::from_slice(&p.stdout)?;
+        rv.project.path = path.as_ref().canonicalize()?;
+        Ok(rv.project)
+    }
+
+    pub fn get_build_vars(&self, target: &str, configuration: &str)
+        -> Result<HashMap<String, String>>
+    {
+        let mut rv = HashMap::new();
+        let p = process::Command::new("xcodebuild")
+            .arg("-showBuildSettings")
+            .arg("-project")
+            .arg(&self.path)
+            .arg("-target")
+            .arg(target)
+            .arg("-configuration")
+            .arg(configuration)
+            .output()?;
+        for line_rv in p.stdout.lines() {
+            let line = line_rv?;
+            if line.starts_with("    ") {
+                let mut sep = line[4..].splitn(2, " = ");
+                if_chain! {
+                    if let Some(key) = sep.next();
+                    if let Some(value) = sep.next();
+                    then {
+                        rv.insert(key.to_owned(), value.to_owned());
+                    }
+                }
+            }
+        }
+        Ok(rv)
+    }
+
+    /// Return the first target
+    pub fn get_first_target(&self) -> Option<&str> {
+        if !self.targets.is_empty() {
+            Some(&self.targets[0])
+        } else {
+            None
+        }
+    }
+
+    /// Returns the config with a certain name
+    pub fn get_configuration(&self, name: &str) -> Option<&str> {
+        let name = name.to_lowercase();
+        for cfg in &self.configurations {
+            if cfg.to_lowercase() == name {
+                return Some(&cfg);
+            }
+        }
+        None
+    }
+
+    /// Returns the release name for the given target.
+    pub fn get_release_name(&self, target: &str, configuration: &str)
+        -> Result<String>
+    {
+        let vars = self.get_build_vars(target, configuration)?;
+        let plist_path = vars.get("INFOPLIST_FILE").map(|plist| {
+            self.path.parent().unwrap().join(plist)
+        }).ok_or(Error::from("Could not find info.plist"))?;
+        let plist = InfoPlist::from_path(&plist_path)?;
+        Ok(format!("{}-{}",
+                   plist.bundle_id_from_vars(&vars),
+                   plist.version()))
+    }
+}
+
 impl InfoPlist {
 
     pub fn discover_from_env() -> Result<Option<InfoPlist>> {
-        if let Ok(path) = env::var("INFOPLIST_FILE") {
+        // we only permit info plist discovery if we get an xcode version
+        // (eg: we were launched from xcode)
+        if env::var("XCODE_VERSION_ACTUAL").is_err() {
+            Ok(None)
+        } else if let Ok(path) = env::var("INFOPLIST_FILE") {
             Ok(Some(InfoPlist::from_path(path)?))
         } else {
             Ok(None)
@@ -94,21 +192,28 @@ impl InfoPlist {
         expand_xcodevars(&self.bundle_id, var_from_env)
     }
 
+    pub fn bundle_id_from_vars<'a>(&'a self, vars: &HashMap<String, String>)
+        -> Cow<'a, str>
+    {
+        expand_xcodevars(&self.bundle_id, |var: &str| -> String {
+            vars.get(var).map(|x| x.to_string()).unwrap_or(var_from_env(var))
+        })
+    }
+
     /// This is similar to `bundle_id` but the product name that might be
     /// referenced is explicitly passed in instead of being picked up
     /// from the environment if missing there.  The reason for this is that
     /// in some cases (react-native with code push) we are not run from an
     /// xcode build step so that information might not be available.
     pub fn derived_bundle_id<'a>(&'a self, product: &str) -> Cow<'a, str> {
-        let f = |var: &str| -> String {
+        expand_xcodevars(&self.bundle_id, |var: &str| -> String {
             let rv = var_from_env(var);
             if rv.is_empty() && (var == "PRODUCT_NAME" || var == "TARGET_NAME") {
                 product.to_string()
             } else {
                 rv
             }
-        };
-        expand_xcodevars(&self.bundle_id, f)
+        })
     }
 }
 
