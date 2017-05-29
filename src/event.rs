@@ -1,10 +1,10 @@
 //! Provides support for sending events to Sentry.
-use std::time::SystemTime;
 use std::collections::HashMap;
 use std::process::Command;
 
 use prelude::*;
 use utils::to_timestamp;
+use chrono::UTC;
 
 
 /// Represents a Sentry event.
@@ -43,7 +43,7 @@ impl Event {
             fingerprint: None,
             message: None,
             platform: "other".into(),
-            timestamp: to_timestamp(SystemTime::now()),
+            timestamp: to_timestamp(UTC::now()),
             server_name: get_server_name().ok(),
             release: None,
             environment: None,

@@ -12,10 +12,10 @@ use prelude::*;
 use vcs;
 use api::{Api, NewRelease, UpdatedRelease, FileContents, Deploy};
 use config::Config;
-use sourcemaputils::SourceMapProcessor;
 use indicatif::HumanBytes;
 use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
-            validate_seconds, get_timestamp, validate_project};
+            validate_seconds, get_timestamp, validate_project,
+            SourceMapProcessor};
 
 
 struct ReleaseContext<'a> {

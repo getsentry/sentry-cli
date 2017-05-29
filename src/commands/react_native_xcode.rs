@@ -11,8 +11,7 @@ use chrono::Duration;
 use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
-use utils::{ArgExt, TempFile, propagate_exit_status};
-use sourcemaputils::SourceMapProcessor;
+use utils::{ArgExt, TempFile, propagate_exit_status, SourceMapProcessor};
 use xcode;
 
 #[derive(Serialize, Deserialize, Default, Debug)]

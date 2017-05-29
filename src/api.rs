@@ -30,7 +30,6 @@ use utils;
 use event::Event;
 use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
-use sourcemaputils::get_sourcemap_reference_from_headers;
 use xcode::InfoPlist;
 
 
@@ -1035,7 +1034,7 @@ impl Artifact {
     }
 
     pub fn get_sourcemap_reference(&self) -> Option<&str> {
-        get_sourcemap_reference_from_headers(self.headers.iter())
+        utils::get_sourcemap_reference_from_headers(self.headers.iter())
     }
 }
 

@@ -5,9 +5,8 @@ use clap::{App, Arg, ArgMatches};
 
 use prelude::*;
 use config::Config;
-use utils::ArgExt;
+use utils::{ArgExt, SourceMapProcessor};
 use api::{Api, NewRelease};
-use sourcemaputils::SourceMapProcessor;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

@@ -69,26 +69,10 @@ pub mod utils;
 pub mod macho;
 pub mod xcode;
 pub mod codepush;
-pub mod sourcemaputils;
 pub mod constants;
 pub mod vcs;
 
 use std::io::Write;
-
-#[cfg(not(windows))]
-fn real_main() {
-    if let Some(signal) = utils::run_or_interrupt(commands::main) {
-        use chan_signal::Signal;
-        if signal == Signal::INT {
-            println!("Interrupted!");
-        }
-    }
-}
-
-#[cfg(windows)]
-fn real_main() {
-    commands::main();
-}
 
 fn init_backtrace() {
     use backtrace::Backtrace;
@@ -129,5 +113,5 @@ fn init_backtrace() {
 pub fn main() {
     dotenv::dotenv().ok();
     init_backtrace();
-    real_main();
+    utils::run_or_interrupt(commands::main);
 }
