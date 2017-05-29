@@ -6,7 +6,6 @@ use std::io::BufReader;
 use std::borrow::Cow;
 
 use plist::serde::deserialize;
-use walkdir::WalkDir;
 #[cfg(target_os="macos")]
 use osascript;
 #[cfg(target_os="macos")]
@@ -62,20 +61,6 @@ pub fn expand_xcodevars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, 
 }
 
 impl InfoPlist {
-
-    pub fn discover_from_path<P: AsRef<Path>>(path: P) -> Result<Option<InfoPlist>> {
-        let fpl_fn = Some("info.plist".to_string());
-        for dent_res in WalkDir::new(path.as_ref()) {
-            let dent = dent_res?;
-            if dent.file_name().to_str().map(|x| x.to_lowercase()) == fpl_fn {
-                let md = dent.metadata()?;
-                if md.is_file() {
-                    return Ok(Some(InfoPlist::from_path(dent.path())?));
-                }
-            }
-        }
-        Ok(None)
-    }
 
     pub fn discover_from_env() -> Result<Option<InfoPlist>> {
         if let Ok(path) = env::var("INFOPLIST_FILE") {
