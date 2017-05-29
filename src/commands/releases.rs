@@ -14,7 +14,7 @@ use config::Config;
 use indicatif::HumanBytes;
 use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
             validate_seconds, get_timestamp, validate_project,
-            SourceMapProcessor, vcs};
+            SourceMapProcessor, vcs, detect_release_name};
 
 
 struct ReleaseContext<'a> {
@@ -359,9 +359,9 @@ fn execute_finalize<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
-fn execute_propose_version<'a>() -> Result<()>
+fn execute_propose_version() -> Result<()>
 {
-    println!("{}", vcs::find_head()?);
+    println!("{}", detect_release_name()?);
     Ok(())
 }
 
