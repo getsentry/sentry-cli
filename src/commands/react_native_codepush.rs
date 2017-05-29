@@ -9,8 +9,7 @@ use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
 use utils::ArgExt;
-use codepush::{get_codepush_package, get_codepush_release};
-use utils::SourceMapProcessor;
+use utils::{SourceMapProcessor, get_codepush_package, get_codepush_release};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("uploads react-native projects for codepush")

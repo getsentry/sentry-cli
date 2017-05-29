@@ -27,10 +27,10 @@ use indicatif::ProgressBar;
 use regex::{Regex, Captures};
 
 use utils;
+use utils::xcode::InfoPlist;
 use event::Event;
 use config::{Config, Auth, Dsn};
 use constants::{PLATFORM, ARCH, EXT, VERSION};
-use xcode::InfoPlist;
 
 
 /// Wrapper that escapes arguments for URL path segments.

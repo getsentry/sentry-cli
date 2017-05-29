@@ -22,10 +22,8 @@ use prelude::*;
 use api::{Api, DSymFile};
 use utils::{ArgExt, TempFile, get_sha1_checksum,
             is_zip_file, validate_uuid, copy_with_progress,
-            make_byte_progress_bar};
+            make_byte_progress_bar, xcode, MachoInfo};
 use config::Config;
-use xcode;
-use macho;
 
 // the ~max size before compression.  This is currently set to the max
 // size after compression that the sentry server accepts.  This is a
@@ -188,7 +186,7 @@ impl<'a> Iterator for BatchIter<'a> {
                         break;
                     }
                 } else {
-                    if let Some(macho_info) = uuid_match!(macho::MachoInfo::from_reader(
+                    if let Some(macho_info) = uuid_match!(MachoInfo::from_reader(
                             iter_try!(archive.by_index(self.open_zip_index))))
                     {
                         let mut f = iter_try!(archive.by_index(self.open_zip_index));
@@ -225,7 +223,7 @@ impl<'a> Iterator for BatchIter<'a> {
                                 break;
                             }
                         }
-                    } else if let Some(macho_info) = uuid_match!(macho::MachoInfo::open_path(
+                    } else if let Some(macho_info) = uuid_match!(MachoInfo::open_path(
                             dent.path())) {
                         let name = Path::new("DebugSymbols")
                             .join(dent.path().strip_prefix(&self.path).unwrap());

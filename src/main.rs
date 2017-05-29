@@ -66,11 +66,7 @@ pub mod event;
 pub mod errors;
 pub mod config;
 pub mod utils;
-pub mod macho;
-pub mod xcode;
-pub mod codepush;
 pub mod constants;
-pub mod vcs;
 
 use std::io::Write;
 

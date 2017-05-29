@@ -8,7 +8,7 @@ use glob::{glob, glob_with, MatchOptions};
 use elementtree::Element;
 
 use prelude::*;
-use xcode::InfoPlist;
+use utils::xcode::InfoPlist;
 
 
 #[derive(Debug, Deserialize)]

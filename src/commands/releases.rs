@@ -9,13 +9,12 @@ use chrono::{DateTime, Duration, UTC};
 use regex::Regex;
 
 use prelude::*;
-use vcs;
 use api::{Api, NewRelease, UpdatedRelease, FileContents, Deploy};
 use config::Config;
 use indicatif::HumanBytes;
 use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
             validate_seconds, get_timestamp, validate_project,
-            SourceMapProcessor};
+            SourceMapProcessor, vcs};
 
 
 struct ReleaseContext<'a> {
