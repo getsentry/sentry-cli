@@ -1,6 +1,6 @@
 [package]
 name = "sentry-cli"
-version = "1.11.0"
+version = "1.11.1"
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 
@@ -22,7 +22,7 @@ open = "1.2"
 runas = "0.1"
 log = "0.3"
 curl = "0.4.6"
-might-be-minified = "0.2"
+might-be-minified = "0.2.1"
 sourcemap = "1.0.1"
 backtrace = "0.3.0"
 plist = "0.2.2"
