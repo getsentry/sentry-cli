@@ -79,5 +79,9 @@ pub fn detect_release_name() -> Result<String>
         }
     }
 
-    Ok(vcs::find_head()?)
+    if let Ok(head) = vcs::find_head() {
+        Ok(head)
+    } else {
+        Err("Could not automatically determine release name".into())
+    }
 }
