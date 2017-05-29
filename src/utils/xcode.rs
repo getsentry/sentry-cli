@@ -140,7 +140,8 @@ impl XcodeProjectInfo {
     }
 
     /// Returns the release name for the given target.
-    pub fn get_release_name(&self, target: &str, configuration: &str)
+    pub fn get_release_name(&self, target: &str, configuration: &str,
+                            version_override: Option<&str>)
         -> Result<String>
     {
         let vars = self.get_build_vars(target, configuration)?;
@@ -150,7 +151,7 @@ impl XcodeProjectInfo {
         let plist = InfoPlist::from_path(&plist_path)?;
         Ok(format!("{}-{}",
                    plist.bundle_id_from_vars(&vars),
-                   plist.version()))
+                   version_override.unwrap_or_else(|| plist.version())))
     }
 }
 
@@ -197,22 +198,6 @@ impl InfoPlist {
     {
         expand_xcodevars(&self.bundle_id, |var: &str| -> String {
             vars.get(var).map(|x| x.to_string()).unwrap_or(var_from_env(var))
-        })
-    }
-
-    /// This is similar to `bundle_id` but the product name that might be
-    /// referenced is explicitly passed in instead of being picked up
-    /// from the environment if missing there.  The reason for this is that
-    /// in some cases (react-native with code push) we are not run from an
-    /// xcode build step so that information might not be available.
-    pub fn derived_bundle_id<'a>(&'a self, product: &str) -> Cow<'a, str> {
-        expand_xcodevars(&self.bundle_id, |var: &str| -> String {
-            let rv = var_from_env(var);
-            if rv.is_empty() && (var == "PRODUCT_NAME" || var == "TARGET_NAME") {
-                product.to_string()
-            } else {
-                rv
-            }
         })
     }
 }

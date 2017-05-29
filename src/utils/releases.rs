@@ -54,7 +54,7 @@ fn get_xcode_release_name() -> Result<Option<String>>
                     .or_else(|| pi.get_configuration("debug"));
                 if let Some(target) = pi.get_first_target();
                 then {
-                    return Ok(Some(pi.get_release_name(target, config)?));
+                    return Ok(Some(pi.get_release_name(target, config, None)?));
                 }
             }
             if !here.pop() {

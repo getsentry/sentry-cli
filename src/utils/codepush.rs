@@ -8,7 +8,7 @@ use glob::{glob, glob_with, MatchOptions};
 use elementtree::Element;
 
 use prelude::*;
-use utils::xcode::InfoPlist;
+use utils::xcode::XcodeProjectInfo;
 
 
 #[derive(Debug, Deserialize)]
@@ -72,22 +72,23 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str)
     -> Result<String>
 {
     if platform == "ios" {
+        if !cfg!(target_os="macos") {
+            return Err("Codepush releases for iOS require OS X".into());
+        }
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
-        for entry_rv in glob_with("ios/*/info.plist", &opts)? {
-            if_chain! {
-                if let Ok(entry) = entry_rv;
-                if let Some(base) = entry.parent();
-                if let Some(folder_os) = base.file_name();
-                if let Some(folder) = folder_os.to_str();
-                if !folder.ends_with("-tvOS");
-                if let Ok(md) = entry.metadata();
-                if md.is_file();
-                then {
-                    let plist = InfoPlist::from_path(&entry)?;
-                    return Ok(format!("{}-codepush:{}",
-                                      plist.derived_bundle_id(folder),
-                                      package.label));
+        for entry_rv in glob_with("ios/*.xcodeproj", &opts)? {
+            if let Ok(entry) = entry_rv {
+                let pi = XcodeProjectInfo::from_path(&entry)?;
+                if_chain! {
+                    if let Some(config) = pi.get_configuration("release")
+                        .or_else(|| pi.get_configuration("debug"));
+                    if let Some(target) = pi.get_first_target();
+                    then {
+                        return Ok(pi.get_release_name(
+                            target, config,
+                            Some(&format!("codepush:{}", package.label)))?);
+                    }
                 }
             }
         }
