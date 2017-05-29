@@ -68,12 +68,18 @@ pub fn get_codepush_package(app: &str, deployment: &str)
     Err(format!("could not find deployment {} for {}", deployment, app).into())
 }
 
-pub fn get_codepush_release(package: &CodePushPackage, platform: &str)
+pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
+                            bundle_id_override: Option<&str>)
     -> Result<String>
 {
+    if let Some(bundle_id) = bundle_id_override {
+        return Ok(format!("{}-codepush:{}", bundle_id, package.label));
+    }
+
     if platform == "ios" {
         if !cfg!(target_os="macos") {
-            return Err("Codepush releases for iOS require OS X".into());
+            return Err("Codepush releases for iOS require OS X if no \
+                        bundle ID is specified".into());
         }
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
