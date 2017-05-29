@@ -18,11 +18,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .value_name("DEPLOYMENT")
             .help("The name of the deployment (Production, Staging)"))
         .arg(Arg::with_name("bundle_id")
-             .value_name("BUNDLE_ID")
-             .long("bundle-id")
-             .help("Explicitly provide the bundle ID instead of \
-                    parsing the source projects.  This allows you to push \
-                    codepush releases for iOS on platforms without xcode."))
+            .value_name("BUNDLE_ID")
+            .long("bundle-id")
+            .help("Explicitly provide the bundle ID instead of \
+                   parsing the source projects.  This allows you to push \
+                   codepush releases for iOS on platforms without xcode."))
+        .arg(Arg::with_name("print_release_name")
+            .long("print-release-name")
+            .help("Print out the release name instead."))
         .arg(Arg::with_name("app_name")
             .value_name("APP_NAME")
             .index(1)
@@ -49,10 +52,18 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
     let api = Api::new(config);
+    let print_release_name = matches.is_present("print_release_name");
 
-    println!("{} Fetching latest code-push package info", style(">").dim());
+    if !print_release_name {
+        println!("{} Fetching latest code-push package info", style(">").dim());
+    }
+
     let package = get_codepush_package(app, deployment)?;
     let release = get_codepush_release(&package, platform, matches.value_of("bundle_id"))?;
+    if print_release_name {
+        println!("{}", release);
+        return Ok(());
+    }
 
     println!("{} Processing react-native code-push sourcemaps",
              style(">").dim());
