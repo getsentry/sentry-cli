@@ -73,6 +73,7 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
                             bundle_id_override: Option<&str>)
     -> Result<String>
 {
+    // this is similar to utils::releases::infer_gradle_release_name
     lazy_static! {
         static ref APP_ID_RE: Regex = Regex::new(
             r#"applicationId\s+["']([^"']*)["']"#).unwrap();
