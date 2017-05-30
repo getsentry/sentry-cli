@@ -48,7 +48,6 @@ extern crate unix_daemonize;
 extern crate dotenv;
 #[cfg(not(windows))]
 extern crate openssl_probe;
-extern crate elementtree;
 extern crate prettytable;
 extern crate git2;
 extern crate humansize;

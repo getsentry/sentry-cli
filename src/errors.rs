@@ -10,7 +10,6 @@ use walkdir;
 use zip;
 use plist;
 use sourcemap;
-use elementtree;
 use git2;
 use mach_object;
 
@@ -39,7 +38,6 @@ error_chain! {
         PList(plist::Error);
         Api(api::Error);
         Git(git2::Error);
-        Xml(elementtree::ParseError);
         MachO(mach_object::Error);
         GlobPattern(glob::PatternError);
     }
