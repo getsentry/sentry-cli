@@ -55,6 +55,9 @@ extern crate java_properties;
 extern crate mach_object;
 extern crate memmap;
 extern crate glob;
+extern crate libc;
+#[cfg(target_os="macos")]
+extern crate mac_process_info;
 
 mod macros;
 

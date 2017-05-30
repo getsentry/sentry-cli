@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use std::io::{BufReader, BufRead};
 use std::borrow::Cow;
 use std::collections::HashMap;
+use libc::getpid;
 
 use serde_json;
 use plist::serde::deserialize;
@@ -13,6 +14,8 @@ use plist::serde::deserialize;
 use osascript;
 #[cfg(target_os="macos")]
 use unix_daemonize::{daemonize_redirect, ChdirMode};
+#[cfg(target_os="macos")]
+use mac_process_info;
 use regex::Regex;
 
 use prelude::*;
@@ -305,7 +308,24 @@ impl<'a> MayDetach<'a> {
 /// Returns true if we were invoked from xcode
 #[cfg(target_os="macos")]
 pub fn launched_from_xcode() -> bool {
-    env::var("XCODE_VERSION_ACTUAL").is_ok() && env::var("TERM").is_err()
+    if env::var("XCODE_VERSION_ACTUAL").is_err() {
+        return false;
+    }
+
+    let mut pid = unsafe { getpid() as u32 };
+    while let Some(parent) = mac_process_info::get_parent_pid(pid) {
+        if parent == 1 {
+            break;
+        }
+        if let Ok(name) = mac_process_info::get_process_name(parent) {
+            if &name == "Xcode" {
+                return true;
+            }
+        }
+        pid = parent;
+    }
+
+    false
 }
 
 /// Shows a dialog in xcode and blocks.  The dialog will have a title and a

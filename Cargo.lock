@@ -19,7 +19,9 @@ dependencies = [
  "itertools 0.5.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "java-properties 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ "mac-process-info 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mach_object 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "memmap 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "might-be-minified 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -534,6 +536,14 @@ dependencies = [
 name = "log"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "mac-process-info"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "gcc 0.3.46 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "mach_object"
@@ -1169,6 +1179,7 @@ dependencies = [
 "checksum libgit2-sys 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)" = "dd89dd7196d5fa35b659c3eaf3c1b14b9bd961bfd1a07dfca49adeb8a6aa3763"
 "checksum libz-sys 1.0.13 (registry+https://github.com/rust-lang/crates.io-index)" = "e5ee912a45d686d393d5ac87fac15ba0ba18daae14e8e7543c63ebf7fb7e970c"
 "checksum log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "880f77541efa6e5cc74e76910c9884d9859683118839d6a1dc3b11e63512565b"
+"checksum mac-process-info 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aedcdb7168e5c8f1d67f342dd6ed69963113039574bcd447c85a437e7dd625f1"
 "checksum mach_object 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "cf1437a416e1e34e79ed97ce1e92c4409ada4b5e2dec97cb36da8f04171a7c49"
 "checksum matches 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "efd7622e3022e1a6eaa602c4cea8912254e5582c9c692e9167714182244801b1"
 "checksum memchr 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1dbccc0e46f1ea47b9f17e6d67c5a96bd27030519c519c9c91327e31275a47b4"
