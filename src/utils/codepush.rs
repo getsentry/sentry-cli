@@ -1,11 +1,12 @@
 use std::fs;
+use std::io::Read;
 use std::str;
 use std::process;
 
 use serde_json;
 use console::strip_ansi_codes;
 use glob::{glob, glob_with, MatchOptions};
-use elementtree::Element;
+use regex::Regex;
 
 use prelude::*;
 use utils::xcode::XcodeProjectInfo;
@@ -72,6 +73,11 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
                             bundle_id_override: Option<&str>)
     -> Result<String>
 {
+    lazy_static! {
+        static ref APP_ID_RE: Regex = Regex::new(
+            r#"applicationId\s+["']([^"']*)["']"#).unwrap();
+    }
+
     if let Some(bundle_id) = bundle_id_override {
         return Ok(format!("{}-codepush:{}", bundle_id, package.label));
     }
@@ -100,20 +106,20 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
         }
         return Err("Could not find plist".into());
     } else if platform == "android" {
-        for entry_rv in glob("android/app/**/AndroidManifest.xml")? {
+        for entry_rv in glob("android/app/build.gradle")? {
+            let mut s = String::new();
             if_chain! {
                 if let Ok(entry) = entry_rv;
                 if let Ok(md) = entry.metadata();
                 if md.is_file();
+                if let Ok(mut f) = fs::File::open(entry);
+                if f.read_to_string(&mut s).is_ok();
                 then {
-                    let f = fs::File::open(entry)?;
-                    let manifest = Element::from_reader(f)?;
-                    let id = manifest.get_attr("package")
-                        .ok_or_else(|| Error::from(
-                            "Could not find package in android manifest"))?;
-                    return Ok(format!("{}-codepush:{}",
-                                      id,
-                                      package.label));
+                    return if let Some(app_id_caps) = APP_ID_RE.captures(&s) {
+                        Ok(format!("{}-codepush:{}", &app_id_caps[1], package.label))
+                    } else {
+                        Err("Could not parse app id from build.gradle".into())
+                    };
                 }
             }
         }

@@ -1,9 +1,12 @@
 use std::fs;
+use std::io::Read;
 use std::env;
 use std::path::Path;
 
 use utils::vcs;
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
+
+use regex::Regex;
 
 use prelude::*;
 
@@ -28,6 +31,7 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
             }
         }
     }
+
     if projects.len() == 1 {
         Ok(Some(XcodeProjectInfo::from_path(&projects[0])?))
     } else {
@@ -35,8 +39,7 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
     }
 }
 
-fn get_xcode_release_name() -> Result<Option<String>>
-{
+fn get_xcode_release_name() -> Result<Option<String>> {
     // if we are executed from within xcode, then we can use the environment
     // based discovery to get a release name without any interpolation.
     if let Some(plist) = InfoPlist::discover_from_env()? {
@@ -66,9 +69,42 @@ fn get_xcode_release_name() -> Result<Option<String>>
     Ok(None)
 }
 
+fn infer_gradle_release_name() -> Result<Option<String>> {
+    // this is similar to utils::codepush::get_codepush_release
+    lazy_static! {
+        static ref APP_ID_RE: Regex = Regex::new(
+            r#"applicationId\s+["']([^"']*)["']"#).unwrap();
+        static ref VERSION_NAME_RE: Regex = Regex::new(
+            r#"versionName\s+["']([^"']*)["']"#).unwrap();
+    }
+
+    let mut contents = String::new();
+    if let Ok(mut here) = env::current_dir() {
+        loop {
+            if_chain! {
+                if let Ok(build_md) = here.join("build.gradle").metadata();
+                if build_md.is_file();
+                if let Ok(app_md) = here.join("app/build.gradle").metadata();
+                if app_md.is_file();
+                if let Ok(mut f) = fs::File::open(here.join("app/build.gradle"));
+                if f.read_to_string(&mut contents).is_ok();
+                if let Some(app_id_caps) = APP_ID_RE.captures(&contents);
+                if let Some(version_caps) = VERSION_NAME_RE.captures(&contents);
+                then {
+                    return Ok(Some(format!("{}-{}", &app_id_caps[1], &version_caps[1])));
+                }
+            }
+            if !here.pop() {
+                break;
+            }
+        }
+    }
+
+    Ok(None)
+}
+
 /// Detects the release name for the current working directory.
-pub fn detect_release_name() -> Result<String>
-{
+pub fn detect_release_name() -> Result<String> {
     // for now only execute this on macs.  The reason is that this uses
     // xcodebuild which does not exist anywhere but there.
     if_chain! {
@@ -77,6 +113,13 @@ pub fn detect_release_name() -> Result<String>
         then {
             return Ok(release)
         }
+    }
+
+    // For android we badly parse gradle files.  We do this because most of the
+    // time now people set the ids and versions in the gradle files instead of
+    // the xml manifests.
+    if let Some(release) = infer_gradle_release_name()? {
+        return Ok(release);
     }
 
     if let Ok(head) = vcs::find_head() {
