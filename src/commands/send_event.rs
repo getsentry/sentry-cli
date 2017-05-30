@@ -19,6 +19,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("release")
             .short("r")
             .help("Set the release."))
+        .arg(Arg::with_name("dist")
+            .value_name("DISTRIBUTION")
+            .long("dist")
+            .short("d")
+            .help("Set the distribution."))
         .arg(Arg::with_name("environment")
             .value_name("ENVIRONMENT")
             .long("env")
@@ -71,6 +76,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let mut event = Event::new();
     event.level = matches.value_of("level").unwrap_or("error").into();
     event.release = matches.value_of("release").map(|x| x.into());
+    event.dist = matches.value_of("dist").map(|x| x.into());
     event.platform = matches.value_of("platform").unwrap_or("other").into();
     event.message = matches.values_of("message").map(|mut x| x.join("\n"));
     event.environment = matches.value_of("environment").map(|x| x.into());
