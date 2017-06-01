@@ -8,6 +8,8 @@
  * will shell out to the sentry-cli.exe we downloaded.
  *
  * This is also why signal handling is not implemented here.
+ *
+ * INSTALL_SENTRY_CLI_MARKER  // indicates that the file was not replaced
  */
 var child = require('child_process').spawn(
   __filename + '.exe',
