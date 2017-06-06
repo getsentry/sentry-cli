@@ -14,31 +14,25 @@ var exec = require('child_process').exec;
 var releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
 var version = require('../package.json').version;
 var binaryPrefix = '/sentry-cli-';
-var platformOSX = 'Darwin';
-var platformWindows = 'Windows';
-var platformLinux = 'Linux';
-var archSuffix32bit = '-i686';
-var archSuffix64bit = '-x86_64';
-var windowsFileExt = '.exe';
 
 // output vars
-var outputName = 'sentry-cli';
-var outputPath = path.join(__dirname, outputName) + (platform === 'win32' ? windowsFileExt : '');
+var outputPath = __dirname + '/../sentry-cli' +
+  (platform === 'win32' ? '.exe' : '');
 
 var downloadUrl = null;
 
 // macOS
-if (platform === 'darwin') { //OSX
-  downloadUrl = releasesUrl + version + binaryPrefix + platformOSX + archSuffix64bit;
+if (platform === 'darwin') {
+  downloadUrl = releasesUrl + version + binaryPrefix + 'Darwin-x86_64';
 // Windows
 } else if (platform === 'win32') {
-  downloadUrl = releasesUrl + version + binaryPrefix + platformWindows + archSuffix32bit + windowsFileExt;
+  downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-i686.exe';
 // Linux
 } else {
   if (arch.indexOf('64') > -1) {
-    downloadUrl = releasesUrl + version + binaryPrefix + platformLinux + archSuffix64bit;
+    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
   } else {
-    downloadUrl = releasesUrl + version + binaryPrefix + platformLinux + archSuffix32bit;
+    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-i686';
   }
 }
 
@@ -51,6 +45,7 @@ if (downloadUrl === null) {
 function downloadBinary(res) {
   var fn = downloadUrl.match(/.*\/(.*?)$/)[1];
   var total = parseInt(res.headers['content-length'], 10);
+  var pct = -1;
   var downloaded = 0;
   var progress = null;
   var isYarn = false;
@@ -73,8 +68,11 @@ function downloadBinary(res) {
     if (process.stdout.isTTY) {
       progress.tick(chunk.length);
     } else if (isYarn) {
-      process.stdout.write('fetching ' + fn + ' ' + Math.round(
-        downloaded / total * 100) + '%\n');
+      var newPct = Math.round(downloaded / total * 100);
+      if (newPct !== pct) {
+        pct = newPct;
+        process.stdout.write('fetching ' + fn + ' ' + pct + '%\n');
+      }
     }
   });
   download.on('error', function(err) {
@@ -88,8 +86,10 @@ function downloadBinary(res) {
         console.error(error);
         process.exit(1);
       } else {
-        if (stdout.trim() !== outputName + ' ' + version) {
-          console.error('Warning! Unexpected ' + outputName + ' version: ' + stdout.trim().split(' ')[1] + ', expected ' + version + '!');
+        if (stdout.trim() !== 'sentry-cli ' + version) {
+          console.error('Warning! Unexpected sentry-cli version: ' +
+                        stdout.trim().split(' ')[1] +
+                        ', expected ' + version + '!');
         }
         process.exit(0);
       }
@@ -121,12 +121,7 @@ function handleResponse(res) {
 }
 
 function shouldDownloadScript() {
-  if (platform === 'win32') {
-    return fs.existsSync(outputPath);
-  }
-  return !!fs.readFileSync(outputPath, {
-    encoding: 'utf-8'
-  }).match(/INSTALL_SENTRY_CLI_MARKER/);
+  return !fs.existsSync(outputPath);
 }
 
 // Start download
