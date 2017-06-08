@@ -17,7 +17,7 @@ var binaryPrefix = '/sentry-cli-';
 
 // output vars
 var outputPath;
-if platform === 'win32' {
+if (platform === 'win32') {
   outputPath = __dirname + '\\sentry-cli.exe';
 } else {
   outputPath = __dirname + '/../sentry-cli';
