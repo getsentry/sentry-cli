@@ -16,8 +16,12 @@ var version = require('../package.json').version;
 var binaryPrefix = '/sentry-cli-';
 
 // output vars
-var outputPath = __dirname + '/../sentry-cli' +
-  (platform === 'win32' ? '.exe' : '');
+var outputPath;
+if platform === 'win32' {
+  outputPath = __dirname + '\\sentry-cli.exe';
+} else {
+  outputPath = __dirname + '/../sentry-cli';
+}
 
 var downloadUrl = null;
 

@@ -4,7 +4,7 @@ var pkgInfo = require('./package.json');
 
 let path = null;
 if (os.platform() === 'win32') {
-  path = __dirname + '\\sentry-cli.exe';
+  path = __dirname + '\\bin\\sentry-cli.exe';
 } else {
   path = __dirname + '/sentry-cli';
 }
