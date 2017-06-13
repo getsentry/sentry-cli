@@ -549,23 +549,29 @@ impl<'a> Api<'a> {
             .send()?.convert()
     }
 
-    /// Associate debug symbols with a build
+    /// Associate apple debug symbols with a build
     pub fn associate_apple_dsyms(&self, org: &str, project: &str,
                                  info_plist: &InfoPlist, checksums: Vec<String>)
         -> ApiResult<Option<AssociateDsymsResponse>>
     {
-        let data = AssociateDsyms {
+        self.associate_dsyms(org, project, &AssociateDsyms {
             platform: "apple".to_string(),
             checksums: checksums,
             name: info_plist.name().to_string(),
             app_id: info_plist.bundle_id().to_string(),
             version: info_plist.version().to_string(),
             build: Some(info_plist.build().to_string()),
-        };
+        })
+    }
+
+    /// Associate arbitrary debug symbols with a build
+    pub fn associate_dsyms(&self, org: &str, project: &str, data: &AssociateDsyms)
+        -> ApiResult<Option<AssociateDsymsResponse>>
+    {
         let path = format!("/projects/{}/{}/files/dsyms/associate/",
                            PathArg(org),
                            PathArg(project));
-        let resp = self.request(Method::Post, &path)?.with_json_body(&data)?.send()?;
+        let resp = self.request(Method::Post, &path)?.with_json_body(data)?.send()?;
         if resp.status() == 404 {
             Ok(None)
         } else {
@@ -1125,8 +1131,8 @@ pub struct DSymFile {
     pub cpu_name: String,
 }
 
-#[derive(Serialize)]
-struct AssociateDsyms {
+#[derive(Debug, Serialize)]
+pub struct AssociateDsyms {
     pub platform: String,
     pub checksums: Vec<String>,
     pub name: String,
