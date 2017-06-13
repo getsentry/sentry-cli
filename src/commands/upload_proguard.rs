@@ -109,10 +109,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     println!("{} uploading mappings", style("[2/2]").dim());
-    api.upload_dsyms(&org, &project, tf.path())?;
+    let rv = api.upload_dsyms(&org, &project, tf.path())?;
 
-    println!("Uploaded a total of {} mapping files",
-             style(mappings.len()).yellow());
+    println!("Uploaded a total of {} new mapping files",
+             style(rv.len()).yellow());
+
+    if rv.len() > 0 {
+        println!("Newly uploaded debug symbols:");
+        for df in rv {
+            println!("  {}", style(&df.uuid).dim());
+        }
+    }
 
     // if values are given associate
     if let Some(app_id) = matches.value_of("app_id") {
