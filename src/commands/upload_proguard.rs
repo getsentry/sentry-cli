@@ -69,6 +69,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let mut mappings = vec![];
     let mut all_checksums = vec![];
 
+    // since the mappings are quite small we don't bother doing a second http
+    // request to figure out if any of the checksums are missing.  We just ship
+    // them all up.
     for path in &paths {
         let md = fs::metadata(path)?;
         let mapping = MappingView::from_path(path)?;
