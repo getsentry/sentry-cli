@@ -92,13 +92,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     println!("{} compressing mappings", style("[1/2]").dim());
     let tf = TempFile::new()?;
-    let mut zip = zip::ZipWriter::new(tf.open());
-    for mapping in &mappings {
-        let pb = make_byte_progress_bar(mapping.size);
-        zip.start_file(format!("proguard/{}.txt", mapping.uuid),
-                       zip::write::FileOptions::default())?;
-        copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
-        pb.finish_and_clear();
+
+    // add a scope here so we will flush before uploading
+    {
+        let mut zip = zip::ZipWriter::new(tf.open());
+        for mapping in &mappings {
+            let pb = make_byte_progress_bar(mapping.size);
+            zip.start_file(format!("proguard/{}.txt", mapping.uuid),
+                           zip::write::FileOptions::default())?;
+            copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
+            pb.finish_and_clear();
+        }
     }
 
     println!("{} uploading mappings", style("[2/2]").dim());
