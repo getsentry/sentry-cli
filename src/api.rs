@@ -564,6 +564,22 @@ impl<'a> Api<'a> {
         })
     }
 
+    /// Associate proguard mappings with an android app
+    pub fn associate_android_proguard_mappings(&self, org: &str, project: &str,
+                                               manifest: &utils::AndroidManifest,
+                                               checksums: Vec<String>)
+        -> ApiResult<Option<AssociateDsymsResponse>>
+    {
+        self.associate_dsyms(org, project, &AssociateDsyms {
+            platform: "android".to_string(),
+            checksums: checksums,
+            name: manifest.name().to_string(),
+            app_id: manifest.package().to_string(),
+            version: manifest.version_name().to_string(),
+            build: Some(manifest.version_code().to_string()),
+        })
+    }
+
     /// Associate arbitrary debug symbols with a build
     pub fn associate_dsyms(&self, org: &str, project: &str, data: &AssociateDsyms)
         -> ApiResult<Option<AssociateDsymsResponse>>

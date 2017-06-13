@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use prelude::*;
 use utils::{ArgExt, TempFile, copy_with_progress, make_byte_progress_bar,
-            get_sha1_checksum};
+            get_sha1_checksum, AndroidManifest};
 use config::Config;
 use api::{Api, AssociateDsyms};
 
@@ -53,9 +53,29 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Optionally associate the mapping files with an application \
                     ID.  If you have multiple apps in one sentry project you can \
                     then easlier tell them apart."))
+        .arg(Arg::with_name("platform")
+             .long("platform")
+             .value_name("PLATFORM")
+             .requires("app_id")
+             .help("Optionally defines the platform for the app association. \
+                    This defaults to 'android'."))
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
              .help("Does not trigger reprocessing after upload"))
+        .arg(Arg::with_name("android_manifest")
+             .long("android-manifest")
+             .value_name("PATH")
+             .conflicts_with("app_id")
+             .help("If provided the path to a processed android manifest \
+                    needs to be supplied.  In that case version and version \
+                    code as well as the package are read from there. \
+                    Additionally if --update-manifest is provided the \
+                    manifest is updated with the proguard UUID."))
+        .arg(Arg::with_name("update_manifest")
+             .long("update-manifest")
+             .help("If provided the android manifest is updated with the \
+                    build UUID.")
+             .requires("android_manifest"))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -68,6 +88,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     };
     let mut mappings = vec![];
     let mut all_checksums = vec![];
+
+    let android_manifest = if let Some(path) = matches.value_of("android_manifest") {
+        Some(AndroidManifest::from_path(path)?)
+    } else {
+        None
+    };
 
     // since the mappings are quite small we don't bother doing a second http
     // request to figure out if any of the checksums are missing.  We just ship
@@ -121,11 +147,20 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
+    // update the uuids
+    if let Some(mut android_manifest) = android_manifest {
+        let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
+        if matches.is_present("update_manifest") {
+            android_manifest.set_proguard_uuids(&uuids);
+            android_manifest.save()?;
+        }
+        api.associate_android_proguard_mappings(
+            &org, &project, &android_manifest, all_checksums)?;
+
     // if values are given associate
-    if let Some(app_id) = matches.value_of("app_id") {
+    } else if let Some(app_id) = matches.value_of("app_id") {
         api.associate_dsyms(&org, &project, &AssociateDsyms {
-            // android?
-            platform: "android".to_string(),
+            platform: matches.value_of("platform").unwrap_or("android").to_string(),
             checksums: all_checksums,
             name: app_id.to_string(),
             app_id: app_id.to_string(),

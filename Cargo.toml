@@ -16,7 +16,7 @@ walkdir = "1.0"
 which = "1.0"
 zip = "0.2"
 sha1 = "0.2.0"
-itertools = "0.5"
+itertools = "0.6.0"
 rust-ini = "0.10"
 open = "1.2"
 runas = "0.1"
@@ -41,6 +41,7 @@ memmap = "^0.5.0"
 glob = "0.2.11"
 libc = "0.2.23"
 proguard = "0.3.0"
+elementtree = "0.5.0"
 # As we currently do not need to use any of the networking features of
 # git2 (we only need local repo access) we can safely disable the default
 # features and use nothing instead.
