@@ -436,7 +436,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         // associate the dsyms with the info plist data if available
         if let Some(ref info_plist) = info_plist {
             println!("Associating dsyms with {}", info_plist);
-            match api.associate_dsyms(&org, &project, info_plist, all_dsym_checksums)? {
+            match api.associate_apple_dsyms(&org, &project, info_plist, all_dsym_checksums)? {
                 None => {
                     println!("Server does not support dsym associations. Ignoring.");
                 }

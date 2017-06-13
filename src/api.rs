@@ -550,8 +550,8 @@ impl<'a> Api<'a> {
     }
 
     /// Associate debug symbols with a build
-    pub fn associate_dsyms(&self, org: &str, project: &str,
-                           info_plist: &InfoPlist, checksums: Vec<String>)
+    pub fn associate_apple_dsyms(&self, org: &str, project: &str,
+                                 info_plist: &InfoPlist, checksums: Vec<String>)
         -> ApiResult<Option<AssociateDsymsResponse>>
     {
         let data = AssociateDsyms {

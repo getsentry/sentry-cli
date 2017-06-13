@@ -12,6 +12,7 @@ use plist;
 use sourcemap;
 use git2;
 use mach_object;
+use proguard;
 
 use api;
 
@@ -23,6 +24,10 @@ error_chain! {
         NoMacho {
             description("not a mach-o file")
         }
+    }
+
+    links {
+        Proguard(proguard::Error, proguard::ErrorKind);
     }
 
     foreign_links {

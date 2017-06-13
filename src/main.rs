@@ -28,6 +28,7 @@ extern crate sourcemap;
 extern crate open;
 extern crate runas;
 extern crate plist;
+extern crate proguard;
 extern crate might_be_minified;
 #[macro_use]
 extern crate error_chain;

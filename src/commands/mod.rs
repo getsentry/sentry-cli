@@ -22,6 +22,7 @@ subcommands to learn more about them.";
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dsym);
+        $mac!(upload_proguard);
         $mac!(releases);
         $mac!(issues);
         $mac!(repos);
@@ -45,6 +46,7 @@ macro_rules! each_subcommand {
 // it would be great if this could be a macro expansion as well
 // but rust bug #37663 breaks location information then.
 pub mod upload_dsym;
+pub mod upload_proguard;
 pub mod releases;
 pub mod issues;
 pub mod repos;
