@@ -573,7 +573,7 @@ impl<'a> Api<'a> {
         self.associate_dsyms(org, project, &AssociateDsyms {
             platform: "android".to_string(),
             checksums: checksums,
-            name: manifest.name().to_string(),
+            name: manifest.name(),
             app_id: manifest.package().to_string(),
             version: manifest.version_name().to_string(),
             build: Some(manifest.version_code().to_string()),

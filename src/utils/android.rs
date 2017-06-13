@@ -33,9 +33,22 @@ impl AndroidManifest {
     }
 
     /// Returns a name
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> String {
         self.root.get_attr("package")
-            .unwrap_or("unknown").split(".").next().unwrap()
+            .unwrap_or("unknown")
+            .rsplit(".")
+            .next()
+            .unwrap()
+            .chars()
+            .enumerate()
+            .map(|(idx, c)| {
+                if idx == 0 {
+                    c.to_uppercase().to_string()
+                } else {
+                    c.to_lowercase().to_string()
+                }
+            })
+            .collect()
     }
 
     /// Returns the internal version code for this manifest
