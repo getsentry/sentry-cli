@@ -19,7 +19,7 @@ const UUIDS_TAG: &'static str = "io.sentry.ProguardUuids";
 impl AndroidManifest {
 
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<AndroidManifest> {
-        let mut f = fs::File::open(path.as_ref())?;
+        let f = fs::File::open(path.as_ref())?;
         let root = Element::from_reader(f)?;
         Ok(AndroidManifest {
             path: path.as_ref().to_path_buf(),
