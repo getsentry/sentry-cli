@@ -62,6 +62,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
              .help("Does not trigger reprocessing after upload"))
+        .arg(Arg::with_name("no_upload")
+             .long("no-upload")
+             .help("Disables the actual upload.  This runs all steps for the \
+                    processing but does not trigger the upload (this also \
+                    automatically disables reprocessing.  This is useful if you \
+                    just want to verify the mapping files and update manifests."))
         .arg(Arg::with_name("android_manifest")
              .long("android-manifest")
              .value_name("PATH")
@@ -134,8 +140,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
-    println!("{} uploading mappings", style("[2/2]").dim());
-    let rv = api.upload_dsyms(&org, &project, tf.path())?;
+    if !matches.is_present("no_upload") {
+        println!("{} uploading mappings", style("[2/2]").dim());
+        let rv = api.upload_dsyms(&org, &project, tf.path())?;
+    } else {
+        println!("Skipping upload.");
+    }
 
     println!("Uploaded a total of {} new mapping files",
              style(rv.len()).yellow());
@@ -170,7 +180,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     // If wanted trigger reprocessing
-    if !matches.is_present("no_reprocessing") {
+    if !matches.is_present("no_reprocessing") &&
+       !matches.is_present("no_upload") {
         if !api.trigger_reprocessing(&org, &project)? {
             println!("Server does not support reprocessing. Not triggering.");
         }
