@@ -143,18 +143,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if !matches.is_present("no_upload") {
         println!("{} uploading mappings", style("[2/2]").dim());
         let rv = api.upload_dsyms(&org, &project, tf.path())?;
+        println!("Uploaded a total of {} new mapping files",
+                 style(rv.len()).yellow());
+        if rv.len() > 0 {
+            println!("Newly uploaded debug symbols:");
+            for df in rv {
+                println!("  {}", style(&df.uuid).dim());
+            }
+        }
     } else {
         println!("Skipping upload.");
-    }
-
-    println!("Uploaded a total of {} new mapping files",
-             style(rv.len()).yellow());
-
-    if rv.len() > 0 {
-        println!("Newly uploaded debug symbols:");
-        for df in rv {
-            println!("  {}", style(&df.uuid).dim());
-        }
     }
 
     // update the uuids
