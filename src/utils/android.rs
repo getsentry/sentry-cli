@@ -34,6 +34,15 @@ impl AndroidManifest {
 
     /// Returns a name
     pub fn name(&self) -> String {
+        if_chain! {
+            if let Some(app) = self.root.find("application");
+            if let Some(label) = app.get_attr((ANDROID_NS, "label"));
+            then {
+                return self.resolve_resource_string(label);
+            }
+        }
+
+        // fallback name is the package reformatted
         self.root.get_attr("package")
             .unwrap_or("unknown")
             .rsplit(".")

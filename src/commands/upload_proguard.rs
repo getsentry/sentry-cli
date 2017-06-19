@@ -82,6 +82,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("If provided the android manifest is updated with the \
                     build UUID.")
              .requires("android_manifest"))
+        .arg(Arg::with_name("require_one")
+             .long("require-one")
+             .help("Requires at least one file to upload or the command will error."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -121,7 +124,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
-    if mappings.is_empty() {
+    if mappings.is_empty() && matches.is_present("require_one") {
         fail!("found no mapping files to upload");
     }
 
