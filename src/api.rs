@@ -584,6 +584,16 @@ impl<'a> Api<'a> {
     pub fn associate_dsyms(&self, org: &str, project: &str, data: &AssociateDsyms)
         -> ApiResult<Option<AssociateDsymsResponse>>
     {
+        // in case we have no checksums to send up the server does not actually
+        // let us associate anything.  This generally makes sense but means that
+        // from the client side we need to deal with this separately.  In this
+        // case we just pretend we did a request that did nothing.
+        if data.checksums.is_empty() {
+            return Ok(Some(AssociateDsymsResponse {
+                associated_dsyms: vec![],
+            }));
+        }
+
         let path = format!("/projects/{}/{}/files/dsyms/associate/",
                            PathArg(org),
                            PathArg(project));
