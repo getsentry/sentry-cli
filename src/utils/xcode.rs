@@ -287,8 +287,9 @@ impl<'a> MayDetach<'a> {
 
     /// Dummy wrap call that never detaches for non mac platforms.
     #[cfg(not(target_os="macos"))]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(task_name: &'a str, f: F) -> Result<T> {
-        f(&mut MayDetach::new(task_name))
+    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(
+        config: &Config, task_name: &'a str, f: F) -> Result<T> {
+        f(&mut MayDetach::new(config, task_name))
     }
 
     #[cfg(target_os="macos")]
