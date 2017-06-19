@@ -221,6 +221,13 @@ impl Config {
              .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned())))
     }
 
+    /// Returns true if notifications should be displayed
+    pub fn show_notifications(&self) -> Result<bool> {
+        Ok(self.ini.get_from(Some("ui"), "show_notifications")
+            .map(|x| x == "true")
+            .unwrap_or(true))
+    }
+
     /// Return the DSN
     pub fn get_dsn(&self) -> Result<Dsn> {
         if let Some(ref val) = env::var("SENTRY_DSN").ok() {

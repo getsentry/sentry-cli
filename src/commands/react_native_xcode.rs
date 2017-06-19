@@ -118,7 +118,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
 
-    xcode::MayDetach::wrap("React native symbol handling", |md| {
+    xcode::MayDetach::wrap(config, "React native symbol handling", |md| {
         let bundle_path;
         let sourcemap_path;
         let bundle_url;

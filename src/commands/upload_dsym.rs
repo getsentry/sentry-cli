@@ -389,7 +389,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let mut api = Api::new(config);
     let mut total_uploaded = 0;
 
-    xcode::MayDetach::wrap("Debug symbol upload", |md| {
+    xcode::MayDetach::wrap(config, "Debug symbol upload", |md| {
         // Optionally detach if run from xcode
         if !matches.is_present("force_foreground") {
             md.may_detach()?;

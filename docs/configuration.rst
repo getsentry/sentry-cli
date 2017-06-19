@@ -88,6 +88,10 @@ value in the parentheses is the config key in the config file):
     Windows.  This can be useful when working with a corporate SSL MITM
     proxy that does not properly implement revocation checks.  Do not use
     this unless absolutely necessary.
+(`ui.show_notifications`):
+    If this is set to false some operating system notifications are
+    disabled.  This currently primarily affects xcode builds which
+    will not show notifications for background builds.
 ``SENTRY_LOG_LEVEL`` (`log.level`):
     Configures the log level for the SDK.  The default is ``warning``.
     If you want to see what the library is doing you can set it to
