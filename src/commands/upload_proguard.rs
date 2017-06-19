@@ -67,16 +67,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Disables the actual upload.  This runs all steps for the \
                     processing but does not trigger the upload (this also \
                     automatically disables reprocessing.  This is useful if you \
-                    just want to verify the mapping files and update manifests."))
+                    just want to verify the mapping files and write the \
+                    proguard UUIDs into a proeprties file."))
         .arg(Arg::with_name("android_manifest")
              .long("android-manifest")
              .value_name("PATH")
              .conflicts_with("app_id")
              .help("If provided the path to a processed android manifest \
                     needs to be supplied.  In that case version and version \
-                    code as well as the package are read from there. \
-                    Additionally if --update-manifest is provided the \
-                    manifest is updated with the proguard UUID."))
+                    code as well as the package are read from there."))
         .arg(Arg::with_name("write_properties")
              .long("write-properties")
              .value_name("PATH")
