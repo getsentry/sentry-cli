@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use prelude::*;
 use utils::{ArgExt, TempFile, copy_with_progress, make_byte_progress_bar,
-            get_sha1_checksum, AndroidManifest};
+            get_sha1_checksum, AndroidManifest, dump_proguard_uuids_as_properties};
 use config::Config;
 use api::{Api, AssociateDsyms};
 
@@ -77,11 +77,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     code as well as the package are read from there. \
                     Additionally if --update-manifest is provided the \
                     manifest is updated with the proguard UUID."))
-        .arg(Arg::with_name("update_manifest")
-             .long("update-manifest")
-             .help("If provided the android manifest is updated with the \
-                    build UUID.")
-             .requires("android_manifest"))
+        .arg(Arg::with_name("write_properties")
+             .long("write-properties")
+             .value_name("PATH")
+             .help("Write the UUIDs for the processed mapping files into \
+                    the given properties file."))
         .arg(Arg::with_name("require_one")
              .long("require-one")
              .help("Requires at least one file to upload or the command will error."))
@@ -158,13 +158,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         println!("Skipping upload.");
     }
 
-    // update the uuids
-    if let Some(mut android_manifest) = android_manifest {
+    // write UUIDs into the mapping file.
+    if let Some(p) = matches.value_of("write_properties") {
         let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
-        if matches.is_present("update_manifest") {
-            android_manifest.set_proguard_uuids(&uuids);
-            android_manifest.save()?;
-        }
+        dump_proguard_uuids_as_properties(p, &uuids)?;
+    }
+
+    // update the uuids
+    if let Some(android_manifest) = android_manifest {
         api.associate_android_proguard_mappings(
             &org, &project, &android_manifest, all_checksums)?;
 

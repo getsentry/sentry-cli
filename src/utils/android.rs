@@ -1,12 +1,15 @@
+use std::io;
 use std::fs;
 use std::fmt;
 use std::path::{Path, PathBuf};
+use std::collections::HashMap;
 
 use prelude::*;
 
 use uuid::Uuid;
 use elementtree::Element;
 use itertools::Itertools;
+use java_properties;
 
 pub struct AndroidManifest {
     path: PathBuf,
@@ -14,7 +17,6 @@ pub struct AndroidManifest {
 }
 
 const ANDROID_NS: &'static str = "http://schemas.android.com/apk/res/android";
-const UUIDS_TAG: &'static str = "io.sentry.ProguardUuids";
 
 impl AndroidManifest {
 
@@ -34,14 +36,6 @@ impl AndroidManifest {
 
     /// Returns a name
     pub fn name(&self) -> String {
-        if_chain! {
-            if let Some(app) = self.root.find("application");
-            if let Some(label) = app.get_attr((ANDROID_NS, "label"));
-            then {
-                return self.resolve_resource_string(label);
-            }
-        }
-
         // fallback name is the package reformatted
         self.root.get_attr("package")
             .unwrap_or("unknown")
@@ -70,44 +64,6 @@ impl AndroidManifest {
         self.root.get_attr((ANDROID_NS, "versionName")).unwrap_or("0.0")
     }
 
-    /// Returns the proguard uuids mentioned in the manifest
-    pub fn proguard_uuids(&self) -> Vec<Uuid> {
-        let mut rv = vec![];
-        if let Some(app) = self.root.find("application") {
-            for md in app.find_all("meta-data") {
-                if md.get_attr((ANDROID_NS, "name")) == Some(UUIDS_TAG) {
-                    let val = md.get_attr((ANDROID_NS, "value")).unwrap_or("");
-                    for key in val.split('|') {
-                        if let Ok(uuid) = key.parse() {
-                            rv.push(uuid);
-                        }
-                    }
-                }
-            }
-        }
-        rv
-    }
-
-    /// Sets new values for the proguard uuids in the manifest
-    pub fn set_proguard_uuids(&mut self, uuids: &[Uuid]) {
-        let s = uuids.iter()
-            .map(|x| x.to_string())
-            .join("|");
-
-        if let Some(mut app) = self.root.find_mut("application") {
-            for mut md in app.find_all_mut("meta-data") {
-                if md.get_attr((ANDROID_NS, "name")) == Some(UUIDS_TAG) {
-                    md.set_attr((ANDROID_NS, "value"), s);
-                    return;
-                }
-            }
-
-            app.append_new_child("meta-data")
-                .set_attr((ANDROID_NS, "name"), UUIDS_TAG)
-                .set_attr((ANDROID_NS, "value"), s);
-        }
-    }
-
     /// Write back the file.
     pub fn save(&self) -> Result<()> {
         let mut f = fs::File::create(&self.path)?;
@@ -122,7 +78,32 @@ impl fmt::Debug for AndroidManifest {
             .field("package", &self.package())
             .field("version_code", &self.version_code())
             .field("version_name", &self.version_name())
-            .field("proguard_uuids", &self.proguard_uuids())
             .finish()
     }
+}
+
+pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(
+    p: P, uuids: &[Uuid]) -> Result<()>
+{
+    let mut props = match fs::File::open(p.as_ref()) {
+        Ok(f) => {
+            java_properties::read(f).unwrap_or_else(|_| HashMap::new())
+        },
+        Err(err) => {
+            if err.kind() != io::ErrorKind::NotFound {
+                return Err(err.into());
+            } else {
+                HashMap::new()
+            }
+        }
+    };
+
+    props.insert("io.sentry.ProguardUuids".to_string(), uuids.iter()
+        .map(|x| x.to_string())
+        .join("|"));
+
+    let mut f = fs::File::create(p.as_ref())?;
+    java_properties::write(&mut f, &props)
+        .map_err(|_| Error::from("Could not persist proguard UUID in properties file"))?;
+    Ok(())
 }

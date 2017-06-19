@@ -13,7 +13,7 @@ mod ui;
 pub mod vcs;
 pub mod xcode;
 
-pub use self::android::AndroidManifest;
+pub use self::android::{AndroidManifest, dump_proguard_uuids_as_properties};
 pub use self::args::{ArgExt, validate_uuid, validate_seconds, validate_timestamp,
                      validate_project, get_timestamp};
 pub use self::codepush::{get_codepush_package, get_codepush_release};
