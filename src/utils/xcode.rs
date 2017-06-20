@@ -383,7 +383,7 @@ pub fn show_notification(config: &Config, title: &str, msg: &str) -> Result<()> 
             });
         ");
     }
-    
+
     if !config.show_notifications()? {
         return Ok(());
     }
