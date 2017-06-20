@@ -274,7 +274,7 @@ fn find_missing_files(api: &mut Api,
 }
 
 fn zip_up_missing(refs: &[DSymRef]) -> Result<TempFile> {
-    println!("{} Compressing {} missing debug symbol files", style("[2/3]").dim(),
+    println!("{} Compressing {} missing debug symbol files", style(">").dim(),
              style(refs.len()).yellow());
     let total_bytes = refs.iter().map(|x| x.size).sum();
     let pb = make_byte_progress_bar(total_bytes);
@@ -293,7 +293,7 @@ fn upload_dsyms(api: &mut Api,
                 project: &str)
                 -> Result<Vec<DSymFile>> {
     let tf = zip_up_missing(refs)?;
-    println!("{} Uploading debug symbol files", style("[3/3]").dim());
+    println!("{} Uploading debug symbol files", style(">").dim());
     Ok(api.upload_dsyms(org, project, tf.path())?)
 }
 
@@ -411,12 +411,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                     all_dsym_checksums.push(dsym_ref.checksum.clone());
                 }
                 println!("{} Found {} debug symbol files. Checking for missing symbols on server",
-                         style("[1/3]").dim(), style(batch.len()).yellow());
+                         style(">").dim(), style(batch.len()).yellow());
                 let missing = find_missing_files(&mut api, batch, &org, &project)?;
                 if missing.len() == 0 {
                     println!("{} Nothing to compress, all symbols are on the server",
-                             style("[2/3]").dim());
-                    println!("{} Nothing to upload", style("[3/3]").dim());
+                             style(">").dim());
+                    println!("{} Nothing to upload", style(">").dim());
                     continue;
                 }
                 let rv = upload_dsyms(&mut api, &missing, &org, &project)?;
@@ -459,10 +459,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         // If wanted trigger reprocessing
         if !matches.is_present("no_reprocessing") {
             if !api.trigger_reprocessing(&org, &project)? {
-                println!("Server does not support reprocessing. Not triggering.");
+                println!("{} Server does not support reprocessing. Not triggering.",
+                         style(">").dim());
             }
         } else {
-            println!("Skipped reprocessing.");
+            println!("{} skipped reprocessing", style(">").dim());
         }
 
         // did we miss anything?
