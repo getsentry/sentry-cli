@@ -1,5 +1,6 @@
 //! Implements a command for uploading proguard mapping files.
 use std::fs;
+use std::io;
 use std::io::Write;
 use std::path::PathBuf;
 
@@ -107,19 +108,32 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     // request to figure out if any of the checksums are missing.  We just ship
     // them all up.
     for path in &paths {
-        let md = fs::metadata(path)?;
-        let mapping = MappingView::from_path(path)?;
-        if !mapping.has_line_info() {
-            println_stderr!("warning: proguard mapping '{}' was ignored because it \
-                             does not contain any line information.", path);
-        } else {
-            let mut f = fs::File::open(path)?;
-            all_checksums.push(get_sha1_checksum(&mut f)?);
-            mappings.push(MappingRef {
-                path: PathBuf::from(path),
-                size: md.len(),
-                uuid: mapping.uuid(),
-            });
+        match fs::metadata(path) {
+            Ok(md) => {
+                let mapping = MappingView::from_path(path)?;
+                if !mapping.has_line_info() {
+                    println_stderr!("warning: proguard mapping '{}' was ignored because it \
+                                     does not contain any line information.", path);
+                } else {
+                    let mut f = fs::File::open(path)?;
+                    all_checksums.push(get_sha1_checksum(&mut f)?);
+                    mappings.push(MappingRef {
+                        path: PathBuf::from(path),
+                        size: md.len(),
+                        uuid: mapping.uuid(),
+                    });
+                }
+            }
+            Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
+                println_stderr!("warning: proguard mapping '{}' does not exist. This \
+                                 might be because the build process did not generate \
+                                 one (for instance because -dontobfuscate is used)",
+                                 path);
+            }
+            Err(err) => {
+                return Err(err).chain_err(|| Error::from(
+                    format!("failed to open proguard mapping '{}'", path)))?;
+            }
         }
     }
 
