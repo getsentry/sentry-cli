@@ -1,7 +1,6 @@
 //! Implements a command for uploading proguard mapping files.
 use std::fs;
 use std::io;
-use std::io::Write;
 use std::path::PathBuf;
 
 use prelude::*;
