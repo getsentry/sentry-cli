@@ -103,8 +103,8 @@ impl MachoInfo {
         !self.uuids.is_disjoint(uuids)
     }
 
-    pub fn get_uuids(self) -> Vec<Uuid> {
-        self.uuids.into_iter().collect()
+    pub fn get_uuids(&self) -> Vec<Uuid> {
+        self.uuids.iter().map(|&x| x).collect()
     }
 }
 

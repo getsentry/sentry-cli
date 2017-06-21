@@ -22,7 +22,7 @@ use utils::{validate_uuid, MachoInfo};
 const MAX_MAPPING_FILE: u64 = 32 * 1024 * 1024;
 
 #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
-enum DifType {
+pub enum DifType {
     #[serde(rename="dsym")]
     Dsym,
     #[serde(rename="proguard")]

@@ -8,6 +8,7 @@ use commands;
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(difutil_find);
+        $mac!(difutil_check);
     }
 }
 
