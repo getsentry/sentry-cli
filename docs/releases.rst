@@ -140,11 +140,11 @@ the expansion by the shell to your home folder.
 
 .. _sentry-cli-sourcemaps:
 
-Upload Sourcemaps
-`````````````````
+Upload Source Maps
+``````````````````
 
 For sourcemap upload a separate command is provided which assists you in
-uploading and verifying sourcemaps::
+uploading and verifying source maps::
 
     $ sentry-cli releases files VERSION upload-sourcemaps /path/to/sourcemaps
 
@@ -152,7 +152,7 @@ This command provides a bunch of options and attempts as much auto
 detection as possible.  By default it will scan the provided path for
 files and upload them named by their path with a ``~/`` prefix.  It will
 also attempt to figure out references between minified files and
-sourcemaps based on the filename.  So if you have a file named
+source maps based on the filename.  So if you have a file named
 ``foo.min.js`` which is a minified JavaScript file and a sourcemap named
 ``foo.min.map`` for example, it will send a long a ``Sourcemap`` header to
 associate them.  This works for files the system can detect a relationship
@@ -169,19 +169,19 @@ The following options exist to change the behavior of the upload command:
 
 ``--rewrite``
     When this option is provided ``sentry-cli`` will rewrite the
-    sourcemaps before upload.  This does two things:
+    source maps before upload.  This does two things:
 
-    1.  it flattens out indexed sourcemaps.  This has the advantage that
-        it can compress sourcemaps sometimes which might improve your
+    1.  it flattens out indexed source maps.  This has the advantage that
+        it can compress source maps sometimes which might improve your
         processing times and can work with tools that embed local paths
         for sourcemap references which would not work on the server.  This
-        is useful when working with sourcemaps for development purposes in
+        is useful when working with source maps for development purposes in
         particular.
-    2.  local file references in sourcemaps for source contents are
+    2.  local file references in source maps for source contents are
         inlined.  This works particularly well with react-native projects
         which might reference thousands of files you probably do not want
         to upload separately.
-    3.  It automatically validates sourcemaps before upload very
+    3.  It automatically validates source maps before upload very
         accurately which can spot errors you would not find otherwise
         until an event comes in.  This is an improved version of what
         ``--validate`` does otherwise.
@@ -195,7 +195,7 @@ The following options exist to change the behavior of the upload command:
 
 ``--validate``
     This attempts sourcemap validation before upload when rewriting is not
-    enabled.  It will spot a variety of issues with sourcemaps and cancel
+    enabled.  It will spot a variety of issues with source maps and cancel
     the upload if any are found.  This is not the default as this can
     cause false positives.
 
@@ -210,7 +210,7 @@ The following options exist to change the behavior of the upload command:
     following file extensions are processed: ``js``, ``map``, ``jsbundle``
     and ``bundle``.  The tool will automatically detect the type of the
     file by the file contents (eg: sources, minified sources, and
-    sourcemaps) and act appropriately.
+    source maps) and act appropriately.
 
 Some example usages::
 
