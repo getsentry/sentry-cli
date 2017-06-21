@@ -1,4 +1,4 @@
-use clap::{App, ArgMatches};
+use clap::{App, ArgMatches, AppSettings};
 
 use prelude::*;
 use config::Config;
@@ -22,7 +22,9 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
         }}
     }
 
-    app = app.about("provides helpers for react-native.");
+    app = app
+        .about("provides helpers for react-native.")
+        .setting(AppSettings::SubcommandRequiredElseHelp);
     each_subcommand!(add_subcommand);
     app
 }
