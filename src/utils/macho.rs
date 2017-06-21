@@ -2,14 +2,15 @@
 use std::io::{Read, Seek, SeekFrom, Cursor};
 use std::fs::File;
 use std::path::Path;
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap};
 use std::rc::Rc;
 
 use prelude::*;
 
 use memmap;
 use uuid::Uuid;
-use mach_object::{OFile, LoadCommand, MachCommand, Section};
+use mach_object::{OFile, LoadCommand, MachCommand, Section,
+                  get_arch_name_from_types};
 
 
 const FAT_MAGIC: &'static [u8; 4] = b"\xca\xfe\xba\xbe";
@@ -19,7 +20,7 @@ const MAGIC_64: &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
 const MAGIC_CIGAM64: &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
 pub struct MachoInfo {
-    uuids: HashSet<Uuid>,
+    uuids: HashMap<Uuid, &'static str>,
     has_dwarf_data: bool,
 }
 
@@ -50,11 +51,12 @@ impl MachoInfo {
         }
 
         fn extract_info<'a>(rv: &mut MachoInfo, file: &'a OFile) {
-            if let &OFile::MachFile { ref commands, .. } = file {
+            if let &OFile::MachFile { ref header, ref commands, .. } = file {
                 for &MachCommand(ref load_cmd, _) in commands {
                     match load_cmd {
                         &LoadCommand::Uuid(uuid) => {
-                            rv.uuids.insert(uuid);
+                            rv.uuids.insert(uuid, get_arch_name_from_types(
+                                header.cputype, header.cpusubtype).unwrap_or("unknown"));
                         },
                         &LoadCommand::Segment { ref sections, .. } => {
                             find_dwarf_section(rv, &sections[..]);
@@ -69,7 +71,7 @@ impl MachoInfo {
         }
 
         let mut rv = MachoInfo {
-            uuids: HashSet::new(),
+            uuids: HashMap::new(),
             has_dwarf_data: false,
         };
         let mut cursor = Cursor::new(slice);
@@ -100,11 +102,20 @@ impl MachoInfo {
     }
 
     pub fn matches_any(&self, uuids: &HashSet<Uuid>) -> bool {
-        !self.uuids.is_disjoint(uuids)
+        for uuid in uuids {
+            if self.uuids.contains_key(uuid) {
+                return true;
+            }
+        }
+        false
     }
 
     pub fn get_uuids(&self) -> Vec<Uuid> {
-        self.uuids.iter().map(|&x| x).collect()
+        self.uuids.iter().map(|x| *x.0).collect()
+    }
+
+    pub fn get_architectures(&self) -> HashMap<Uuid, &'static str> {
+        self.uuids.clone()
     }
 }
 

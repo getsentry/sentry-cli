@@ -24,10 +24,17 @@ impl DifRepr {
         }
     }
 
-    pub fn uuids(&self) -> Vec<Uuid> {
+    pub fn variants(&self) -> Vec<(Uuid, Option<&'static str>)> {
         match self {
-            &DifRepr::Dsym(ref mi) => mi.get_uuids(),
-            &DifRepr::Proguard(ref pg) => vec![pg.uuid()],
+            &DifRepr::Dsym(ref mi) => {
+                mi.get_architectures()
+                    .into_iter()
+                    .map(|(key, value)| (key, Some(value)))
+                    .collect()
+            }
+            &DifRepr::Proguard(ref pg) => {
+                vec![(pg.uuid(), None)]
+            }
         }
     }
 
@@ -102,15 +109,19 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     println!("{}", style("Debug Info File Check").dim().bold());
     println!("  Type: {}", style(repr.ty()).cyan());
     println!("  Contained UUIDs:");
-    for uuid in repr.uuids() {
-        println!("    > {}", style(uuid).dim());
+    for (uuid, cpu_type) in repr.variants() {
+        if let Some(cpu_type) = cpu_type {
+            println!("    > {} ({})", style(uuid).dim(), style(cpu_type).cyan());
+        } else {
+            println!("    > {}", style(uuid).dim());
+        }
     }
 
     if let Some(prob) = repr.get_problem() {
         println!("  Usable: {} ({})", style("no").red(), prob);
+        Err(ErrorKind::QuietExit(1).into())
     } else {
         println!("  Usable: {}", style("yes").green());
+        Ok(())
     }
-
-    Ok(())
 }
