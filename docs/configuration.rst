@@ -135,6 +135,28 @@ environment vaiables that control this (``SENTRY_ORG`` and
     export SENTRY_ORG=my-org
     export SENTRY_PROJECT=my-project
 
+Properties Files
+````````````````
+
+Additionally ``sentry-cli`` supports loading configuration values from
+``.properties`` files (common in the Java environment).  You can instruct
+``sentry-cli`` to load config files from there by exporting the path to a
+properties file in the ``SENTRY_PROPERTIES`` environment variable.  This
+is commonly done automatically for some of our client integrations like
+Java and React-Native.
+
+Inside the properties files you just use the dotted notation to set
+values.  Example:
+
+.. sourcecode:: ini
+
+    defaults.url=https://mysentry.invalid/
+
+To then instruct ``sentry-cli`` to use that file use this::
+
+    export SENTRY_PROPERTIES=/path/to/sentry.properties
+    sentry-cli ...
+
 Explicit Options
 ````````````````
 
