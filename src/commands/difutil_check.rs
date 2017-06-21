@@ -2,13 +2,13 @@ use std::path::Path;
 use std::ffi::OsStr;
 
 use clap::{App, Arg, ArgMatches};
-use uuid::{Uuid, UuidVersion};
+use uuid::Uuid;
 use proguard;
 use console::style;
 
 use prelude::*;
 use config::Config;
-use utils::{validate_uuid, MachoInfo};
+use utils::MachoInfo;
 use commands::difutil_find::DifType;
 
 enum DifRepr {
@@ -43,8 +43,8 @@ impl DifRepr {
             None
         } else {
             Some(match self {
-                &DifRepr::Dsym(ref mi) => "missing DWARF debug info",
-                &DifRepr::Proguard(ref pg) => "missing line information",
+                &DifRepr::Dsym(..) => "missing DWARF debug info",
+                &DifRepr::Proguard(..) => "missing line information",
             })
         }
     }
@@ -80,7 +80,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     let repr = match ty {
         Some(DifType::Dsym) => DifRepr::Dsym(MachoInfo::open_path(&path)?),
         Some(DifType::Proguard) => DifRepr::Proguard(proguard::MappingView::from_path(&path)?),
-        Some(_) => unreachable!(),
         None => {
             if let Ok(mi) = MachoInfo::open_path(&path) {
                 DifRepr::Dsym(mi)
