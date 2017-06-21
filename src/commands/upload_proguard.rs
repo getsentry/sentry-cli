@@ -1,7 +1,6 @@
 //! Implements a command for uploading proguard mapping files.
 use std::fs;
 use std::io;
-use std::io::Write;
 use std::path::PathBuf;
 
 use prelude::*;
@@ -88,7 +87,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::new(config);
 
     let paths: Vec<_> = match matches.values_of("paths") {
@@ -138,10 +136,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     if mappings.is_empty() && matches.is_present("require_one") {
-        fail!("found no mapping files to upload");
+        println!("");
+        println_stderr!("{}", style("error: found no mapping files to upload").red());
+        return Err(ErrorKind::QuietExit(1).into());
     }
 
-    println!("{} compressing mappings", style("[1/2]").dim());
+    println!("{} compressing mappings", style(">").dim());
     let tf = TempFile::new()?;
 
     // add a scope here so we will flush before uploading
@@ -156,19 +156,21 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
-    if !matches.is_present("no_upload") {
-        println!("{} uploading mappings", style("[2/2]").dim());
-        let rv = api.upload_dsyms(&org, &project, tf.path())?;
-        println!("Uploaded a total of {} new mapping files",
-                 style(rv.len()).yellow());
-        if rv.len() > 0 {
-            println!("Newly uploaded debug symbols:");
-            for df in rv {
-                println!("  {}", style(&df.uuid).dim());
-            }
+    if matches.is_present("no_upload") {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(());
+    }
+
+    println!("{} uploading mappings", style(">").dim());
+    let (org, project) = config.get_org_and_project(matches)?;
+    let rv = api.upload_dsyms(&org, &project, tf.path())?;
+    println!("{} Uploaded a total of {} new mapping files",
+             style(">").dim(), style(rv.len()).yellow());
+    if rv.len() > 0 {
+        println!("Newly uploaded debug symbols:");
+        for df in rv {
+            println!("  {}", style(&df.uuid).dim());
         }
-    } else {
-        println!("Skipping upload.");
     }
 
     // write UUIDs into the mapping file.
@@ -198,10 +200,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     if !matches.is_present("no_reprocessing") &&
        !matches.is_present("no_upload") {
         if !api.trigger_reprocessing(&org, &project)? {
-            println!("Server does not support reprocessing. Not triggering.");
+            println!("{} Server does not support reprocessing. Not triggering.",
+                     style(">").dim());
         }
     } else {
-        println!("Skipped reprocessing.");
+        println!("{} skipped reprocessing", style(">").dim());
     }
 
     Ok(())

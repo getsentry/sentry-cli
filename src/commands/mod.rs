@@ -33,6 +33,7 @@ macro_rules! each_subcommand {
         $mac!(login);
         $mac!(send_event);
         $mac!(react_native);
+        $mac!(difutil);
 
         // these here exist for legacy reasons only.  They were moved
         // to subcommands of the react-native command.  Note that
@@ -62,6 +63,10 @@ pub mod react_native;
 pub mod react_native_xcode;
 pub mod react_native_gradle;
 pub mod react_native_codepush;
+
+pub mod difutil;
+pub mod difutil_find;
+pub mod difutil_check;
 
 fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();
