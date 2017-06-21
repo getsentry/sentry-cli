@@ -54,3 +54,25 @@ Upload Options
 
 ``--require-one``
     Requires at least one file to upload or the command will error.
+
+.. _proguard-uuids:
+
+UUID Format
+-----------
+
+Unlike most debug information files, proguard files themselves do not
+carry an unique identifier that can be used to uniquely identify the file.
+Since this causes unnecessary complexities we give the files a SHA1 UUID
+based on the checksum of the file.  You can use ``sentry-cli difutil
+check`` on a proguard file to see the generated UUID.
+
+If you want to generate the UUID yourself you can do so with the following
+algorithm (Python code for reference)::
+
+    import uuid
+
+    NAMESPACE = uuid.uuid5(uuid.NAMESPACE_DNS, "guardsquare.com")
+
+    def get_proguard_uuid(filename):
+        with open(filename, 'rb') as f:
+            return uuid.uuid5(NAMESPACE, f.read())
