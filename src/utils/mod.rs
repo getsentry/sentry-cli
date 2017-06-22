@@ -10,6 +10,7 @@ mod releases;
 mod sourcemaps;
 mod system;
 mod ui;
+pub mod dif;
 pub mod vcs;
 pub mod xcode;
 

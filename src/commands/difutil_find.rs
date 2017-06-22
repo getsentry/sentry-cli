@@ -1,6 +1,5 @@
 use std::io;
 use std::env;
-use std::fmt;
 use std::ffi::OsStr;
 use std::path::PathBuf;
 use std::collections::HashSet;
@@ -15,35 +14,18 @@ use serde_json;
 
 use prelude::*;
 use config::Config;
-use utils::{validate_uuid, MachoInfo};
+use utils::{validate_uuid, MachoInfo, dif};
 
 // text files larger than 32 megabytes are not considered to be
 // valid mapping files when scanning
 const MAX_MAPPING_FILE: u64 = 32 * 1024 * 1024;
 
-#[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
-pub enum DifType {
-    #[serde(rename="dsym")]
-    Dsym,
-    #[serde(rename="proguard")]
-    Proguard,
-}
-
 #[derive(Serialize, Debug)]
 struct DifMatch {
     #[serde(rename="type")]
-    pub ty: DifType,
+    pub ty: dif::DifType,
     pub uuid: Uuid,
     pub path: PathBuf,
-}
-
-impl fmt::Display for DifType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", match self {
-            &DifType::Dsym => "dsym",
-            &DifType::Proguard => "proguard",
-        })
-    }
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -84,7 +66,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn find_uuids(paths: HashSet<PathBuf>,
-              types: HashSet<DifType>,
+              types: HashSet<dif::DifType>,
               uuids: HashSet<Uuid>,
               as_json: bool) -> Result<bool>
 {
@@ -125,18 +107,18 @@ fn find_uuids(paths: HashSet<PathBuf>,
         // and only if the file is a text file.
         if_chain! {
             if !proguard_uuids.is_empty();
-            if types.contains(&DifType::Proguard);
+            if types.contains(&dif::DifType::Proguard);
             if dirent.path().extension() == Some(OsStr::new("txt"));
             if let Ok(mapping) = proguard::MappingView::from_path(dirent.path());
             if proguard_uuids.contains(&mapping.uuid());
             then {
-                found.push((mapping.uuid(), DifType::Proguard));
+                found.push((mapping.uuid(), dif::DifType::Proguard));
             }
         }
 
         // look for dsyms
         if_chain! {
-            if types.contains(&DifType::Dsym);
+            if types.contains(&dif::DifType::Dsym);
             // we regularly match on .class files but the will never be
             // dsyms, so we can quickly skip them here
             if dirent.path().extension() != Some(OsStr::new("class"));
@@ -147,7 +129,7 @@ fn find_uuids(paths: HashSet<PathBuf>,
             then {
                 for uuid in info.get_uuids() {
                     if remaining.contains(&uuid) {
-                        found.push((uuid, DifType::Dsym));
+                        found.push((uuid, dif::DifType::Dsym));
                     }
                 }
             }
@@ -197,15 +179,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     // which types should we consider?
     if let Some(t) = matches.values_of("types") {
         for ty in t {
-            types.insert(match ty {
-                "dsym" => DifType::Dsym,
-                "proguard" => DifType::Proguard,
-                _ => unreachable!()
-            });
+            types.insert(ty.parse().unwrap());
         }
     } else {
-        types.insert(DifType::Dsym);
-        types.insert(DifType::Proguard);
+        types.insert(dif::DifType::Dsym);
+        types.insert(dif::DifType::Proguard);
     }
 
     let with_well_known = !matches.is_present("no_well_known");
@@ -214,7 +192,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
     // start adding well known locations
     if_chain! {
         if with_well_known;
-        if types.contains(&DifType::Dsym);
+        if types.contains(&dif::DifType::Dsym);
         if let Some(path) = env::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
         if path.is_dir();
         then {

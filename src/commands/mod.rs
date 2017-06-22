@@ -67,6 +67,7 @@ pub mod react_native_codepush;
 pub mod difutil;
 pub mod difutil_find;
 pub mod difutil_check;
+pub mod difutil_uuid;
 
 fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();
