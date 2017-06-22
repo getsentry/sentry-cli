@@ -5,7 +5,8 @@ use std::path::PathBuf;
 
 use prelude::*;
 use utils::{ArgExt, TempFile, copy_with_progress, make_byte_progress_bar,
-            get_sha1_checksum, AndroidManifest, dump_proguard_uuids_as_properties};
+            get_sha1_checksum, AndroidManifest, dump_proguard_uuids_as_properties,
+            validate_uuid};
 use config::Config;
 use api::{Api, AssociateDsyms};
 
@@ -84,6 +85,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("require_one")
              .long("require-one")
              .help("Requires at least one file to upload or the command will error."))
+        .arg(Arg::with_name("uuid")
+             .long("uuid")
+             .short("u")
+             .value_name("UUID")
+             .validator(validate_uuid)
+             .help("Explicitly override the UUID of the mapping file to another one. \
+                    This should be used with caution as it means that you can upload \
+                    multiple mapping files if you don't take care.  This however can \
+                    be useful if you have a build process in which you need to know \
+                    the UUID of the proguard file before it was created.  If you upload \
+                    a file with a forced UUID you can only upload a single proguard file."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -102,6 +114,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         None
     };
 
+    let forced_uuid = matches.value_of("uuid").map(|x| x.parse::<Uuid>().unwrap());
+    if forced_uuid.is_some() && paths.len() != 1 {
+        fail!("When forcing a UUID a single proguard file needs to be \
+               provided, got {}", paths.len());
+    }
+
     // since the mappings are quite small we don't bother doing a second http
     // request to figure out if any of the checksums are missing.  We just ship
     // them all up.
@@ -118,7 +136,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
                         size: md.len(),
-                        uuid: mapping.uuid(),
+                        uuid: forced_uuid.clone().unwrap_or_else(|| mapping.uuid()),
                     });
                 }
             }
