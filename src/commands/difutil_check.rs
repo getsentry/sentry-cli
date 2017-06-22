@@ -1,10 +1,14 @@
+use std::io;
 use std::path::Path;
 use std::ffi::OsStr;
+use std::collections::BTreeMap;
 
 use clap::{App, Arg, ArgMatches};
 use uuid::Uuid;
 use proguard;
 use console::style;
+use serde_json;
+use serde::ser::{Serialize, Serializer, SerializeStruct};
 
 use prelude::*;
 use config::Config;
@@ -24,7 +28,7 @@ impl DifRepr {
         }
     }
 
-    pub fn variants(&self) -> Vec<(Uuid, Option<&'static str>)> {
+    pub fn variants(&self) -> BTreeMap<Uuid, Option<&'static str>> {
         match self {
             &DifRepr::Dsym(ref mi) => {
                 mi.get_architectures()
@@ -33,7 +37,7 @@ impl DifRepr {
                     .collect()
             }
             &DifRepr::Proguard(ref pg) => {
-                vec![(pg.uuid(), None)]
+                vec![(pg.uuid(), None)].into_iter().collect()
             }
         }
     }
@@ -57,6 +61,20 @@ impl DifRepr {
     }
 }
 
+impl Serialize for DifRepr {
+    fn serialize<S>(&self, serializer: S) -> ::std::result::Result<S::Ok, S::Error>
+        where S: Serializer
+    {
+        // 3 is the number of fields in the struct.
+        let mut state = serializer.serialize_struct("DifRepr", 4)?;
+        state.serialize_field("type", &self.ty())?;
+        state.serialize_field("variants", &self.variants())?;
+        state.serialize_field("is_usable", &self.is_usable())?;
+        state.serialize_field("problem", &self.get_problem())?;
+        state.end()
+    }
+}
+
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
         .about("given the path to a debug info file it checks it")
@@ -66,6 +84,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .value_name("TYPE")
              .possible_values(&["dsym", "proguard"])
              .help("Explicitly sets the type of the debug info file."))
+        .arg(Arg::with_name("json")
+             .long("json")
+             .help("Returns the results as JSON"))
         .arg(Arg::with_name("path")
              .index(1)
              .required(true)
@@ -105,6 +126,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
             }
         }
     };
+
+    if matches.is_present("json") {
+        serde_json::to_writer_pretty(&mut io::stdout(), &repr)?;
+        println!("");
+        return if repr.is_usable() {
+            Ok(())
+        } else {
+            Err(ErrorKind::QuietExit(1).into())
+        };
+    }
 
     println!("{}", style("Debug Info File Check").dim().bold());
     println!("  Type: {}", style(repr.ty()).cyan());
