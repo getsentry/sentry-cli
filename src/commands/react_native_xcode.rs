@@ -44,12 +44,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("When fetching is enabled this is the URL where fetches can be made \
                     from.  The default is http://127.0.0.1:8081/ where the react-native \
                     packager runs by default."))
-        .arg(Arg::with_name("build_script")
-             .value_name("BUILD_SCRIPT")
-             .index(1)
-             .help("Optional path to the build script{n}{n}\
-                    This is the path to the react-native-xcode.sh script you want \
-                    to use.  By default the bundled build script is used."))
         .arg(Arg::with_name("force_foreground")
              .long("force-foreground")
              .help("By default part of the build process will when triggered from Xcode \
@@ -57,6 +51,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     a dialog is shown.  If this parameter is passed Xcode will wait \
                     for the process to finish before the build finishes and output \
                     will be shown in the Xcode build output."))
+        .arg(Arg::with_name("build_script")
+             .value_name("BUILD_SCRIPT")
+             .index(1)
+             .help("Optional path to the build script{n}{n}\
+                    This is the path to the react-native-xcode.sh script you want \
+                    to use.  By default the bundled build script is used."))
+        .arg(Arg::with_name("args")
+             .value_name("ARGS")
+             .multiple(true)
+             .last(true)
+             .help("Optional arguments to pass to the build script."))
 }
 
 fn find_node() -> String {

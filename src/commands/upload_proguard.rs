@@ -174,6 +174,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
+
     if matches.is_present("no_upload") {
         println!("{} skipping upload.", style(">").dim());
         return Ok(());

@@ -25,11 +25,6 @@ use utils::{ArgExt, TempFile, get_sha1_checksum,
             make_byte_progress_bar, xcode, MachoInfo};
 use config::Config;
 
-// the ~max size before compression.  This is currently set to the max
-// size after compression that the sentry server accepts.  This is a
-// shitty estimate but it's easiest to implement for now.
-const MAX_SIZE: u64 = 150 * 1024 * 1024;
-
 #[derive(Debug)]
 enum DSymVar {
     FsFile(PathBuf),
@@ -80,6 +75,7 @@ impl DSymRef {
 
 struct BatchIter<'a> {
     path: PathBuf,
+    max_size: u64,
     wd_iter: Fuse<WalkDirIter>,
     open_zip: Rc<RefCell<Option<zip::ZipArchive<fs::File>>>>,
     open_zip_index: usize,
@@ -89,12 +85,13 @@ struct BatchIter<'a> {
 }
 
 impl<'a> BatchIter<'a> {
-    pub fn new<P: AsRef<Path>>(path: P, uuids: Option<&'a HashSet<Uuid>>,
+    pub fn new<P: AsRef<Path>>(path: P, max_size: u64, uuids: Option<&'a HashSet<Uuid>>,
                                allow_zips: bool, found_uuids: &'a mut HashSet<Uuid>)
         -> BatchIter<'a>
     {
         BatchIter {
             path: path.as_ref().to_path_buf(),
+            max_size: max_size,
             wd_iter: WalkDir::new(&path).into_iter().fuse(),
             open_zip: Rc::new(RefCell::new(None)),
             open_zip_index: !0,
@@ -125,7 +122,7 @@ impl<'a> BatchIter<'a> {
         if should_push {
             batch.push(dsym_ref);
         }
-        batch.iter().map(|x| x.size).sum::<u64>() >= MAX_SIZE
+        batch.iter().map(|x| x.size).sum::<u64>() >= self.max_size
     }
 }
 
@@ -386,6 +383,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     let (org, project) = config.get_org_and_project(matches)?;
+    let max_size = config.get_max_dsym_upload_size()?;
     let mut api = Api::new(config);
     let mut total_uploaded = 0;
 
@@ -399,8 +397,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         let mut all_dsym_checksums = vec![];
         for path in paths.into_iter() {
             info!("Scanning {}", path.display());
-            for batch_res in BatchIter::new(path, find_uuids.as_ref(), zips,
-                                            &mut found_uuids) {
+            for batch_res in BatchIter::new(path, max_size, find_uuids.as_ref(),
+                                            zips, &mut found_uuids) {
                 if batch_num > 0 {
                     println!("");
                 }

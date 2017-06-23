@@ -228,6 +228,13 @@ impl Config {
             .unwrap_or(true))
     }
 
+    /// Returns the maximum dsym upload size
+    pub fn get_max_dsym_upload_size(&self) -> Result<u64> {
+        Ok(self.ini.get_from(Some("dsym"), "max_upload_size")
+            .and_then(|x| x.parse().ok())
+            .unwrap_or(100 * 1024 * 1024))
+    }
+
     /// Return the DSN
     pub fn get_dsn(&self) -> Result<Dsn> {
         if let Some(ref val) = env::var("SENTRY_DSN").ok() {
