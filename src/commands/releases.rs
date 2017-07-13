@@ -407,12 +407,14 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
         }
     };
 
-    // make sure the release exists
-    ctx.api.new_release(&org, &NewRelease {
-        version: version.into(),
-        projects: ctx.get_projects(matches)?,
-        ..Default::default()
-    })?;
+    // make sure the release exists if projects are given
+    if let Ok(projects) = ctx.get_projects(matches) {
+        ctx.api.new_release(&org, &NewRelease {
+            version: version.into(),
+            projects: projects,
+            ..Default::default()
+        })?;
+    }
 
     if let Some(heads) = heads {
         if heads.is_empty() {
