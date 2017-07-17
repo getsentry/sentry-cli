@@ -21,7 +21,7 @@ rust-ini = "0.10"
 open = "1.2"
 runas = "0.1"
 log = "0.3"
-curl = "0.4.6"
+curl = "0.4.7"
 might-be-minified = "0.2.1"
 sourcemap = "1.0.1"
 backtrace = "0.3.0"
@@ -47,9 +47,10 @@ elementtree = "0.5.0"
 # features and use nothing instead.
 git2 = { version = "0.6.4", default-features = false, features = [] }
 
-[replace.'curl:0.4.6']
-git = "https://github.com/alexcrichton/curl-rust"
-rev = "9af0dbb6d0859a91e48af1d1d9777ae75c62dc1b"
+[replace.'curl:0.4.7']
+# This contains a fix for this: https://github.com/alexcrichton/curl-rust/pull/177
+git = "https://github.com/mitsuhiko/curl-rust"
+rev = "adb3d825d352b925fc2e35c576d46cb055a30489"
 
 ## This is currently disabled because we are not using any of the networking
 ## features of git2.  If the default features are enabled there this
