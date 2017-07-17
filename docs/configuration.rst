@@ -103,6 +103,11 @@ value in the parentheses is the config key in the config file):
     the version of sentry-cli) which is suitable for sentry.io but if you
     are using a different sentry server you might want to change this
     limit if necessary.
+``SENTRY_DISABLE_UPDATE_CHECK`` (`update.disable_check`):
+    If set to ``true`` then the automatic update check in sentry-cli is
+    disabled.  This was introduced in 1.17.  Versions before that did not
+    include an update check.  The update check is also not enabled for npm
+    based installations of sentry-cli at the moment.
 
 Validating The Config
 ---------------------

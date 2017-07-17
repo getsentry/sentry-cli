@@ -239,5 +239,11 @@ pub fn run_sentrycli_update_nagger(config: &Config) {
         return;
     }
 
+    // if the update nagger is disabled, do not run it.
+    if config.disable_update_nagger() {
+        info!("update nagger was disabled, not running update checks");
+        return;
+    }
+
     update_nagger_impl(config).ok();
 }

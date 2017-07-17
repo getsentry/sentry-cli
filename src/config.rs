@@ -245,6 +245,19 @@ impl Config {
             fail!("No DSN provided");
         }
     }
+
+    /// Should we nag about updates?
+    pub fn disable_update_nagger(&self) -> bool {
+        if let Ok(var) = env::var("SENTRY_DISABLE_UPDATE_CHECK") {
+            &var == "1" || &var == "true"
+        } else {
+            if let Some(val) = self.ini.get_from(Some("update"), "disable_check") {
+                val == "true"
+            } else {
+                false
+            }
+        }
+    }
 }
 
 fn find_project_config_file() -> Option<PathBuf> {
