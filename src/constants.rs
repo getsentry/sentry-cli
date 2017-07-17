@@ -1,5 +1,12 @@
 //! Provides some useful constants.
 
+use app_dirs::AppInfo;
+
+pub const APP_INFO: &'static AppInfo = &AppInfo {
+    name: "sentrycli",
+    author: "Sentry",
+};
+
 /// The default API URL
 pub const DEFAULT_URL: &'static str = "https://sentry.io/";
 

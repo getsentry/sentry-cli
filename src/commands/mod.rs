@@ -8,7 +8,7 @@ use clap::{Arg, App, AppSettings};
 
 use prelude::*;
 use constants::VERSION;
-use utils::{Logger, print_error};
+use utils::{Logger, print_error, run_sentrycli_update_nagger};
 use config::{Config, Auth, prepare_environment};
 
 const ABOUT: &'static str = "
@@ -43,6 +43,17 @@ macro_rules! each_subcommand {
         $mac!(react_native_gradle);
     }
 }
+
+// commands we want to run the update nagger on
+const UPDATE_NAGGER_CMDS: &'static [&'static str] = &[
+    "releases",
+    "issues",
+    "repos",
+    "projects",
+    "info",
+    "login",
+    "difutil",
+];
 
 // it would be great if this could be a macro expansion as well
 // but rust bug #37663 breaks location information then.
@@ -171,8 +182,12 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
-            if let Some(sub_matches) = matches.subcommand_matches(cmd) {
-                return Ok($name::execute(&sub_matches, &config)?);
+            if let Some(sub_matches) = matches.subcommand_matches(&cmd) {
+                let rv = $name::execute(&sub_matches, &config)?;
+                if UPDATE_NAGGER_CMDS.iter().any(|x| x == &cmd) {
+                    run_sentrycli_update_nagger(&config);
+                }
+                return Ok(rv);
             }
         }}
     }
@@ -182,7 +197,17 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 
 fn run() -> Result<()> {
     prepare_environment();
-    execute(env::args().collect(), &mut Config::from_cli_config()?)
+    let mut cfg = Config::from_cli_config()?;
+    match execute(env::args().collect(), &mut cfg) {
+        Ok(()) => Ok(()),
+        Err(err) => {
+            // if the user hit an error, it might be time to run the update
+            // nagger because maybe they tried to do something only newer
+            // versions support.
+            run_sentrycli_update_nagger(&cfg);
+            Err(err)
+        }
+    }
 }
 
 /// Executes the command line application and exists the process.

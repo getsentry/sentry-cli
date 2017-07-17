@@ -1,13 +1,10 @@
 //! Implements a command for updating `sentry-cli`
-use std::fs;
 use std::env;
-use std::path::Path;
 
 use clap::{App, Arg, ArgMatches, AppSettings};
 
 use prelude::*;
 use config::Config;
-use constants::VERSION;
 use utils::{get_latest_sentrycli_release, can_update_sentrycli};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
