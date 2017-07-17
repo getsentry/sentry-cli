@@ -10,6 +10,7 @@ mod releases;
 mod sourcemaps;
 mod system;
 mod ui;
+mod update;
 pub mod dif;
 pub mod vcs;
 pub mod xcode;
@@ -31,3 +32,5 @@ pub use self::system::{propagate_exit_status, is_homebrew_install,
                        run_or_interrupt, init_backtrace};
 pub use self::ui::{prompt_to_continue, prompt, capitalize_string,
                    copy_with_progress, make_byte_progress_bar};
+pub use self::update::{can_update_sentrycli, get_latest_sentrycli_release,
+                       SentryCliUpdateInfo};
