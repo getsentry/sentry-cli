@@ -99,9 +99,10 @@ value in the parentheses is the config key in the config file):
     debug some issues with permissions.
 (`dsym.max_upload_size`):
     Sets the maximum upload size in bytes (before compression) of debug
-    symbols into one batch.  The default is 100MB which is suitable for
-    sentry.io but if you are using a different sentry server you might
-    want to change this limit if necessary.
+    symbols into one batch.  The default is 35MB or 100MB (depending on
+    the version of sentry-cli) which is suitable for sentry.io but if you
+    are using a different sentry server you might want to change this
+    limit if necessary.
 
 Validating The Config
 ---------------------
