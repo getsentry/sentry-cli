@@ -17,7 +17,8 @@ fn validate_org(v: String) -> StdResult<(), String> {
 }
 
 pub fn validate_project(v: String) -> StdResult<(), String> {
-    if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {
+    if v.contains("/") || &v == "." || &v == ".." ||
+       v.contains(' ') || v.contains('\n') || v.contains('\t') || v.contains('\r') {
         return Err("invalid value for project. Use the URL \
                     slug and not the name!".into())
     } else {
@@ -26,7 +27,10 @@ pub fn validate_project(v: String) -> StdResult<(), String> {
 }
 
 fn validate_version(v: String) -> StdResult<(), String> {
-    if v.len() == 0 || &v == "." || &v == ".." ||
+    if v.trim() != &v {
+        Err(format!("Invalid release version. Releases must not contain \
+                     leading or trailing spaces."))
+    } else if v.len() == 0 || &v == "." || &v == ".." ||
        v.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..]).is_some() {
         Err(format!("Invalid release version. Slashes and certain \
                      whitespace characters are not permitted."))
