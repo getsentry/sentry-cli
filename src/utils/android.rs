@@ -102,6 +102,7 @@ pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(
         .map(|x| x.to_string())
         .join("|"));
 
+    p.as_ref().parent().map(|parent| fs::create_dir_all(parent));
     let mut f = fs::File::create(p.as_ref())?;
     java_properties::write(&mut f, &props)
         .map_err(|_| Error::from("Could not persist proguard UUID in properties file"))?;
