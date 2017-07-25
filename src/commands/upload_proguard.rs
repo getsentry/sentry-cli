@@ -174,6 +174,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
+    // write UUIDs into the mapping file.
+    if let Some(p) = matches.value_of("write_properties") {
+        let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
+        dump_proguard_uuids_as_properties(p, &uuids)?;
+    }
 
     if matches.is_present("no_upload") {
         println!("{} skipping upload.", style(">").dim());
@@ -190,12 +195,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         for df in rv {
             println!("  {}", style(&df.uuid).dim());
         }
-    }
-
-    // write UUIDs into the mapping file.
-    if let Some(p) = matches.value_of("write_properties") {
-        let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
-        dump_proguard_uuids_as_properties(p, &uuids)?;
     }
 
     // update the uuids
