@@ -349,7 +349,7 @@ fn execute_finalize<'a>(ctx: &ReleaseContext,
     let info_rv = ctx.api.update_release(ctx.get_org()?,
         matches.value_of("version").unwrap(),
         &UpdatedRelease {
-            projects: Some(ctx.get_projects(matches)?),
+            projects: ctx.get_projects(matches).ok(),
             url: matches.value_of("url").map(|x| x.to_owned()),
             date_started: get_date(matches.value_of("started"), false)?,
             date_released: get_date(matches.value_of("released"), true)?,
