@@ -13,6 +13,10 @@ You can also install it with everybody's favorite curl to bash:
 Additionally you can also install this binary via npm:
 
     npm install sentry-cli-binary
+    
+You can also install via Homebrew:
+
+    brew install sentry-cli
 
 Or homebrew:
 
