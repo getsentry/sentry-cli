@@ -14,6 +14,10 @@ Additionally you can also install this binary via npm:
 
     npm install sentry-cli-binary
 
+Or homebrew:
+
+    brew install getsentry/tools/sentry-cli
+
 Documentation [can be found here](https://docs.sentry.io/hosted/learn/cli/)
 
 ## Compiling
