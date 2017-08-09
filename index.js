@@ -2,7 +2,7 @@ var os = require('os');
 var childProcess = require('child_process');
 var pkgInfo = require('./package.json');
 
-let path = null;
+var path = null;
 if (os.platform() === 'win32') {
   path = __dirname + '\\bin\\sentry-cli.exe';
 } else {
