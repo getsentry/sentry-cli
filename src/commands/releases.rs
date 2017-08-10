@@ -809,6 +809,11 @@ fn execute_deploys<'a>(ctx: &ReleaseContext,
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+    // this one does not need a context or org
+    if let Some(_sub_matches) = matches.subcommand_matches("propose-version") {
+        return execute_propose_version();
+    }
+
     let ctx = ReleaseContext {
         api: Api::new(config),
         config: config,
@@ -820,9 +825,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
     if let Some(sub_matches) = matches.subcommand_matches("finalize") {
         return execute_finalize(&ctx, sub_matches);
-    }
-    if let Some(_sub_matches) = matches.subcommand_matches("propose-version") {
-        return execute_propose_version();
     }
     if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
         return execute_set_commits(&ctx, sub_matches);
