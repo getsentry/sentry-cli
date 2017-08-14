@@ -7,10 +7,16 @@ use std::rc::Rc;
 
 use prelude::*;
 
+use regex::Regex;
 use memmap;
 use uuid::Uuid;
-use mach_object::{OFile, LoadCommand, MachCommand, Section,
+use mach_object::{OFile, LoadCommand, MachCommand, Section, SymbolReader,
                   get_arch_name_from_types};
+
+
+lazy_static! {
+    static ref HIDDEN_SYMBOL_RE: Regex = Regex::new("__hidden#\\d+").unwrap();
+}
 
 
 const FAT_MAGIC: &'static [u8; 4] = b"\xca\xfe\xba\xbe";
@@ -22,6 +28,7 @@ const MAGIC_CIGAM64: &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 pub struct MachoInfo {
     uuids: HashMap<Uuid, &'static str>,
     has_dwarf_data: bool,
+    has_hidden_symbols: bool,
 }
 
 impl MachoInfo {
@@ -50,7 +57,7 @@ impl MachoInfo {
             }
         }
 
-        fn extract_info<'a>(rv: &mut MachoInfo, file: &'a OFile) {
+        fn extract_info<'a>(rv: &mut MachoInfo, file: &'a OFile, cur: &'a mut Cursor<&'a [u8]>) {
             if let &OFile::MachFile { ref header, ref commands, .. } = file {
                 for &MachCommand(ref load_cmd, _) in commands {
                     match load_cmd {
@@ -67,12 +74,28 @@ impl MachoInfo {
                         _ => {}
                     }
                 }
+                if !rv.has_hidden_symbols {
+                    if let Some(iter) = file.symbols(cur) {
+                        for symbol in iter {
+                            if_chain! {
+                                if !symbol.is_external();
+                                if let Some(sym) = symbol.name();
+                                if HIDDEN_SYMBOL_RE.is_match(sym);
+                                then {
+                                    rv.has_hidden_symbols = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
         let mut rv = MachoInfo {
             uuids: HashMap::new(),
             has_dwarf_data: false,
+            has_hidden_symbols: false,
         };
         let mut cursor = Cursor::new(slice);
 
@@ -84,12 +107,14 @@ impl MachoInfo {
         let ofile = OFile::parse(&mut cursor)?;
         match ofile {
             OFile::FatFile { ref files, .. } => {
-                for &(_, ref file) in files {
-                    extract_info(&mut rv, file);
+                for &(ref arch, ref file) in files {
+                    let mut f_cur = Cursor::new(&slice[arch.offset as usize..]);
+                    extract_info(&mut rv, file, &mut f_cur);
                 }
             }
             OFile::MachFile { .. } => {
-                extract_info(&mut rv, &ofile);
+                let mut f_cur = Cursor::new(slice);
+                extract_info(&mut rv, &ofile, &mut f_cur);
             }
             _ => {}
         }
@@ -99,6 +124,10 @@ impl MachoInfo {
 
     pub fn has_debug_info(&self) -> bool {
         self.has_dwarf_data && !self.uuids.is_empty()
+    }
+
+    pub fn has_hidden_symbols(&self) -> bool {
+        self.has_hidden_symbols
     }
 
     pub fn matches_any(&self, uuids: &HashSet<Uuid>) -> bool {

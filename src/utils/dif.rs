@@ -117,6 +117,19 @@ impl DifFile {
             })
         }
     }
+
+    pub fn get_note(&self) -> Option<&str> {
+        match self {
+            &DifFile::Dsym(ref mi) => {
+                if mi.has_hidden_symbols() {
+                    Some("contains hidden symbols (needs BCSymbolMaps)")
+                } else {
+                    None
+                }
+            }
+            &DifFile::Proguard(..) => None
+        }
+    }
 }
 
 impl Serialize for DifFile {
@@ -129,6 +142,7 @@ impl Serialize for DifFile {
         state.serialize_field("variants", &self.variants())?;
         state.serialize_field("is_usable", &self.is_usable())?;
         state.serialize_field("problem", &self.get_problem())?;
+        state.serialize_field("note", &self.get_note())?;
         state.end()
     }
 }

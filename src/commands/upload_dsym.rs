@@ -330,6 +330,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .long("require-all")
              .help("When combined with --uuid this will error if not all \
                     UUIDs could be found."))
+        .arg(Arg::with_name("symbol_maps")
+             .long("symbol-maps")
+             .value_name("PATH")
+             .help("Optional path to bcsymbolmap files which are used to \
+                    resolve hidden symbols in the actual dsym files.  This \
+                    requires the dsymutil tool to be available."))
         .arg(Arg::with_name("derived_data")
              .long("derived-data")
              .help("Search for debug symbols in derived data."))

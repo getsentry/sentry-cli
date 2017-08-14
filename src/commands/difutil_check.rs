@@ -55,6 +55,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
         }
     }
 
+    if let Some(msg) = f.get_note() {
+        println!("  Note: {}", msg);
+    }
+
     if let Some(prob) = f.get_problem() {
         println!("  Usable: {} ({})", style("no").red(), prob);
         Err(ErrorKind::QuietExit(1).into())
