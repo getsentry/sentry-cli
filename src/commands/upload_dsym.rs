@@ -241,6 +241,7 @@ impl<'a> Iterator for BatchIter<'a> {
 
     fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
         let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(100);
         pb.set_style(ProgressStyle::default_spinner()
             .tick_chars("/|\\- ")
             .template("{spinner} Looking for symbols... {msg:.dim}\
@@ -432,8 +433,8 @@ fn resolve_bcsymbolmaps(refs: &mut [DSymRef],
 
         let pb = ProgressBar::new(hidden_symbols.len() as u64);
         for idx in hidden_symbols.into_iter() {
-            pb.inc(1);
             let mut r = &mut refs[idx];
+            pb.inc(1);
             r.resolve_bcsymbolmaps(symbol_map_path)?;
         }
         pb.finish_and_clear();
