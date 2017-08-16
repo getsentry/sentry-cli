@@ -20,6 +20,7 @@ use zip;
 use uuid::Uuid;
 use indicatif::{ProgressBar, ProgressStyle};
 use console::style;
+use which;
 
 use prelude::*;
 use api::{Api, DSymFile};
@@ -93,6 +94,10 @@ impl DSymRef {
         }
     }
 
+    pub fn is_swift_support(&self) -> bool {
+        self.dsym_name().starts_with("libswift")
+    }
+
     pub fn resolve_bcsymbolmaps(&mut self, symbol_map_path: &Path) -> Result<()> {
         let td = TempDir::new()?;
         fs::create_dir_all(td.path().join("DWARF"))?;
@@ -129,7 +134,7 @@ impl DSymRef {
                         if let Some(base) = p.parent().and_then(|x| x.parent());
                         if let Ok(mut f) = fs::File::open(base.join(&plist_ref));
                         then {
-                            io::copy(&mut f, &mut fs::File::open(td.path().join(&plist_ref))?)?;
+                            io::copy(&mut f, &mut fs::File::create(td.path().join(&plist_ref))?)?;
                         }
                     }
                 }
@@ -161,7 +166,7 @@ impl DSymRef {
             if let Ok(msg) = str::from_utf8(&p.stderr) {
                 fail!("Could not resolve BCSymbolMaps: {}", msg);
             } else {
-                fail!("Could not resolve BCSymboleMaps due to an unknown error");
+                fail!("Could not resolve BCSymbolMaps due to an unknown error");
             }
         }
 
@@ -405,7 +410,15 @@ fn resolve_bcsymbolmaps(refs: &mut [DSymRef],
                         symbol_map_path: Option<&Path>) -> Result<()> {
     let mut hidden_symbols = vec![];
     for (idx, r) in refs.iter().enumerate() {
-        if r.has_hidden_symbols {
+        // XXX: for now we just ignroe libswift because there are various
+        // issues with that.  In particular there are never any BCSymbolMaps
+        // generated for it and the DBGOriginalUUID in the plist is the UUID
+        // of the original dsym file.
+        //
+        // I *think* what we would have to do here is to locate the original
+        // library in the xcode distribution, then build a new non-fat dSYM
+        // file from it and patch the the UUID.
+        if r.has_hidden_symbols && !r.is_swift_support() {
             hidden_symbols.push(idx);
         }
     }
@@ -414,13 +427,16 @@ fn resolve_bcsymbolmaps(refs: &mut [DSymRef],
     }
 
     if let Some(symbol_map_path) = symbol_map_path {
-        println!("{} Trying to resolve {} BCSourceMaps",
+        println!("{} Resolving {} BCSourceMaps",
                  style(">").dim(), style(hidden_symbols.len()).yellow());
 
+        let pb = ProgressBar::new(hidden_symbols.len() as u64);
         for idx in hidden_symbols.into_iter() {
+            pb.inc(1);
             let mut r = &mut refs[idx];
             r.resolve_bcsymbolmaps(symbol_map_path)?;
         }
+        pb.finish_and_clear();
     } else {
         println!("{} {}: found {} symbol files with hidden symbols (need BCSymbolMaps)",
                  style(">").dim(), style("warning").red(),
@@ -504,7 +520,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         None => get_paths_from_env()?,
     };
     let symbol_maps_path = match matches.value_of("symbol_maps") {
-        Some(path) => Some(Path::new(path)),
+        Some(path) => {
+            if which::which("dsymutil").is_err() {
+                fail!("--symbol-maps requires the apple dsymutil to be available.");
+            }
+            Some(Path::new(path))
+        }
         None => None,
     };
     if_chain! {
@@ -549,21 +570,23 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                     println!("");
                 }
                 batch_num += 1;
-                let batch = batch_res?;
+                let mut batch = batch_res?;
                 println!("{}", style(format!("Batch {}", batch_num)).bold());
+                println!("{} Found {} debug symbol files.",
+                         style(">").dim(), style(batch.len()).yellow());
+                resolve_bcsymbolmaps(&mut batch, symbol_maps_path)?;
                 for dsym_ref in batch.iter() {
                     all_dsym_checksums.push(dsym_ref.checksum.clone());
                 }
-                println!("{} Found {} debug symbol files. Checking for missing symbols on server",
-                         style(">").dim(), style(batch.len()).yellow());
-                let mut missing = find_missing_files(&mut api, batch, &org, &project)?;
+                println!("{} Checking for missing debug symbol files on server",
+                         style(">").dim());
+                let missing = find_missing_files(&mut api, batch, &org, &project)?;
                 if missing.len() == 0 {
                     println!("{} Nothing to compress, all symbols are on the server",
                              style(">").dim());
                     println!("{} Nothing to upload", style(">").dim());
                     continue;
                 }
-                resolve_bcsymbolmaps(&mut missing, symbol_maps_path)?;
                 let rv = upload_dsyms(&mut api, &missing, &org, &project)?;
                 if rv.len() > 0 {
                     total_uploaded += rv.len();
