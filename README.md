@@ -33,3 +33,34 @@ In case you get OpenSSL errors you need to compile with the path to the
 OpenSSL headers.  For instance:
 
     $ CFLAGS=-I/usr/local/opt/openssl/include/ cargo build
+
+## Alpine Linux
+
+If you want to run sentry-cli in Alpine (popular with Docker), you need to compile it yourself. Here's an example Dockerfile:
+
+```Dockerfile
+FROM alpine
+
+ENV SENTRY_VERSION="1.18.0"
+
+RUN apk add --no-cache --virtual .build-deps \
+		build-base \
+		cargo \
+		cmake \
+		curl \
+		curl-dev \
+		file \
+		gcc \
+		openssl \
+		openssl-dev \
+		rust \
+	&& cd /tmp \
+	&& curl -LO https://github.com/getsentry/sentry-cli/archive/$SENTRY_VERSION.tar.gz \
+	&& tar -xzf $SENTRY_VERSION.tar.gz \
+	&& cargo build --manifest-path sentry-cli-$SENTRY_VERSION/Cargo.toml --release \
+	&& mv sentry-cli-$SENTRY_VERSION/target/release/sentry-cli /usr/local/bin \
+	&& rm -rf /tmp/* \
+	&& rm -rf /root/.cargo \
+	&& apk del .build-deps \
+	&& apk add --no-cache curl llvm-libunwind openssl
+```
