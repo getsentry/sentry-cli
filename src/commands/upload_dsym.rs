@@ -1,7 +1,10 @@
 //! Implements a command for uploading dsym files.
+use std::io;
 use std::fs;
 use std::env;
+use std::str;
 use std::fmt;
+use std::process;
 use std::path::{Path, PathBuf};
 use std::fs::File;
 use std::io::{Write, Seek};
@@ -20,7 +23,7 @@ use console::style;
 
 use prelude::*;
 use api::{Api, DSymFile};
-use utils::{ArgExt, TempFile, get_sha1_checksum,
+use utils::{ArgExt, TempDir, TempFile, get_sha1_checksum,
             is_zip_file, validate_uuid, copy_with_progress,
             make_byte_progress_bar, xcode, MachoInfo};
 use config::Config;
@@ -28,6 +31,7 @@ use config::Config;
 #[derive(Debug)]
 enum DSymVar {
     FsFile(PathBuf),
+    TempFile(TempFile),
     ZipFile(Rc<RefCell<Option<zip::ZipArchive<fs::File>>>>, usize),
 }
 
@@ -37,6 +41,7 @@ struct DSymRef {
     checksum: String,
     size: u64,
     uuids: Vec<Uuid>,
+    has_hidden_symbols: bool,
 }
 
 impl fmt::Debug for DSymRef {
@@ -46,6 +51,7 @@ impl fmt::Debug for DSymRef {
             .field("checksum", &self.checksum)
             .field("size", &self.size)
             .field("uuids", &self.uuids)
+            .field("has_hidden_symbols", &self.has_hidden_symbols)
             .finish()
     }
 }
@@ -58,6 +64,9 @@ impl DSymRef {
             DSymVar::FsFile(ref p) => {
                 copy_with_progress(pb, &mut File::open(&p)?, &mut zip)?;
             }
+            DSymVar::TempFile(ref p) => {
+                copy_with_progress(pb, &mut p.open(), &mut zip)?;
+            }
             DSymVar::ZipFile(ref rc, idx) => {
                 let rc = rc.clone();
                 let mut opt_archive = rc.borrow_mut();
@@ -69,6 +78,102 @@ impl DSymRef {
                 }
             }
         }
+        Ok(())
+    }
+
+    pub fn dsym_name(&self) -> &str {
+        if_chain! {
+            if let Some(filename_os) = Path::new(&self.arc_name).file_name();
+            if let Some(filename) = filename_os.to_str();
+            then {
+                filename
+            } else {
+                "Generic"
+            }
+        }
+    }
+
+    pub fn resolve_bcsymbolmaps(&mut self, symbol_map_path: &Path) -> Result<()> {
+        let td = TempDir::new()?;
+        fs::create_dir_all(td.path().join("DWARF"))?;
+        let mut df = fs::File::create(td.path().join("DWARF").join(self.dsym_name()))?;
+        let mut zipname = None;
+
+        // copy the dsym contents over
+        match self.var {
+            DSymVar::FsFile(ref p) => {
+                io::copy(&mut File::open(&p)?, &mut df)?;
+            }
+            DSymVar::TempFile(..) => {
+                fail!("Cannot resolve BCSymbolMaps in temporary files.");
+            }
+            DSymVar::ZipFile(ref rc, idx) => {
+                let rc = rc.clone();
+                let mut opt_archive = rc.borrow_mut();
+                if let Some(ref mut archive) = *opt_archive {
+                    let mut af = archive.by_index(idx)?;
+                    zipname = Some(PathBuf::from(af.name()));
+                    io::copy(&mut af, &mut df)?;
+                } else {
+                    panic!("zip file went away");
+                }
+            }
+        }
+
+        // place the debug references
+        for uuid in &self.uuids {
+            let plist_ref = format!("{}.plist", uuid.to_string().to_uppercase());
+            match self.var {
+                DSymVar::FsFile(ref p) => {
+                    if_chain! {
+                        if let Some(base) = p.parent().and_then(|x| x.parent());
+                        if let Ok(mut f) = fs::File::open(base.join(&plist_ref));
+                        then {
+                            io::copy(&mut f, &mut fs::File::open(td.path().join(&plist_ref))?)?;
+                        }
+                    }
+                }
+                DSymVar::TempFile(..) => {
+                    fail!("Cannot resolve BCSymbolMaps in temporary files.");
+                }
+                DSymVar::ZipFile(ref rc, ..) => {
+                    let rc = rc.clone();
+                    let mut opt_archive = rc.borrow_mut();
+                    if let Some(ref mut archive) = *opt_archive {
+                        let mut af = archive.by_name(
+                            zipname.as_ref().unwrap().join(&plist_ref).to_str().unwrap())?;
+                        let mut df = fs::File::open(td.path().join(&plist_ref))?;
+                        io::copy(&mut af, &mut df)?;
+                    } else {
+                        panic!("zip file went away");
+                    }
+                }
+            }
+        }
+
+        // invoke dsymutil
+        let p = process::Command::new("dsymutil")
+            .arg("-symbol-map")
+            .arg(symbol_map_path)
+            .arg(&td.path().join("DWARF").join(self.dsym_name()))
+            .output()?;
+        if !p.status.success() {
+            if let Ok(msg) = str::from_utf8(&p.stderr) {
+                fail!("Could not resolve BCSymbolMaps: {}", msg);
+            } else {
+                fail!("Could not resolve BCSymboleMaps due to an unknown error");
+            }
+        }
+
+        // replace us with the new tempfile
+        let tf = TempFile::new()?;
+        io::copy(&mut fs::File::open(&td.path().join("DWARF").join(self.dsym_name()))?,
+                 &mut tf.open())?;
+        self.has_hidden_symbols = false;
+        self.checksum = get_sha1_checksum(&mut tf.open())?;
+        self.size = tf.size()?;
+        self.var = DSymVar::TempFile(tf);
+
         Ok(())
     }
 }
@@ -194,6 +299,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             checksum: iter_try!(get_sha1_checksum(&mut f)),
                             size: f.size(),
                             uuids: macho_info.get_uuids(),
+                            has_hidden_symbols: macho_info.has_hidden_symbols(),
                         }) {
                             break;
                         }
@@ -231,6 +337,7 @@ impl<'a> Iterator for BatchIter<'a> {
                                 &mut iter_try!(fs::File::open(dent.path())))),
                             size: md.len(),
                             uuids: macho_info.get_uuids(),
+                            has_hidden_symbols: macho_info.has_hidden_symbols(),
                         }) {
                             break;
                         }
@@ -292,6 +399,35 @@ fn upload_dsyms(api: &mut Api,
     let tf = zip_up_missing(refs)?;
     println!("{} Uploading debug symbol files", style(">").dim());
     Ok(api.upload_dsyms(org, project, tf.path())?)
+}
+
+fn resolve_bcsymbolmaps(refs: &mut [DSymRef],
+                        symbol_map_path: Option<&Path>) -> Result<()> {
+    let mut hidden_symbols = vec![];
+    for (idx, r) in refs.iter().enumerate() {
+        if r.has_hidden_symbols {
+            hidden_symbols.push(idx);
+        }
+    }
+    if hidden_symbols.is_empty() {
+        return Ok(());
+    }
+
+    if let Some(symbol_map_path) = symbol_map_path {
+        println!("{} Trying to resolve {} BCSourceMaps",
+                 style(">").dim(), style(hidden_symbols.len()).yellow());
+
+        for idx in hidden_symbols.into_iter() {
+            let mut r = &mut refs[idx];
+            r.resolve_bcsymbolmaps(symbol_map_path)?;
+        }
+    } else {
+        println!("{} {}: found {} symbol files with hidden symbols (need BCSymbolMaps)",
+                 style(">").dim(), style("warning").red(),
+                 style(hidden_symbols.len()).yellow());
+    }
+
+    Ok(())
 }
 
 fn get_paths_from_env() -> Result<Vec<PathBuf>> {
@@ -367,6 +503,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
         None => get_paths_from_env()?,
     };
+    let symbol_maps_path = match matches.value_of("symbol_maps") {
+        Some(path) => Some(Path::new(path)),
+        None => None,
+    };
     if_chain! {
         if matches.is_present("derived_data");
         if let Some(path) = env::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
@@ -416,13 +556,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
                 }
                 println!("{} Found {} debug symbol files. Checking for missing symbols on server",
                          style(">").dim(), style(batch.len()).yellow());
-                let missing = find_missing_files(&mut api, batch, &org, &project)?;
+                let mut missing = find_missing_files(&mut api, batch, &org, &project)?;
                 if missing.len() == 0 {
                     println!("{} Nothing to compress, all symbols are on the server",
                              style(">").dim());
                     println!("{} Nothing to upload", style(">").dim());
                     continue;
                 }
+                resolve_bcsymbolmaps(&mut missing, symbol_maps_path)?;
                 let rv = upload_dsyms(&mut api, &missing, &org, &project)?;
                 if rv.len() > 0 {
                     total_uploaded += rv.len();

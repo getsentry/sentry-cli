@@ -20,7 +20,7 @@ pub use self::args::{ArgExt, validate_uuid, validate_seconds, validate_timestamp
                      validate_project, get_timestamp};
 pub use self::codepush::{get_codepush_package, get_codepush_release};
 pub use self::formatting::{HumanDuration, Table, TableRow};
-pub use self::fs::{TempFile, is_writable, set_executable_mode, is_zip_file,
+pub use self::fs::{TempDir, TempFile, is_writable, set_executable_mode, is_zip_file,
                    get_sha1_checksum};
 pub use self::logging::Logger;
 pub use self::macho::MachoInfo;

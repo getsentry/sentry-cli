@@ -11,7 +11,37 @@ use uuid::{Uuid, UuidVersion};
 use prelude::*;
 
 
+/// Helper for temporary dicts
+#[derive(Debug)]
+pub struct TempDir {
+    path: PathBuf,
+}
+
+impl TempDir {
+    /// Creates a new tempdir
+    pub fn new() -> io::Result<TempDir> {
+        let mut path = env::temp_dir();
+        path.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+        fs::create_dir(&path)?;
+        Ok(TempDir {
+            path: path,
+        })
+    }
+
+    /// Returns the path to the tempdir
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+}
+
+impl Drop for TempDir {
+    fn drop(&mut self) {
+        let _ = fs::remove_dir_all(&self.path);
+    }
+}
+
 /// Helper for temporary file access
+#[derive(Debug)]
 pub struct TempFile {
     f: Option<fs::File>,
     path: PathBuf,
@@ -44,6 +74,12 @@ impl TempFile {
     /// Returns the path to the tempfile
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    /// Returns the size of the temp file.
+    pub fn size(&self) -> Result<u64> {
+        let mut f = self.open();
+        Ok(f.seek(SeekFrom::End(0))?)
     }
 }
 
