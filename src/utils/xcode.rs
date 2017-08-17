@@ -3,7 +3,7 @@ use std::env;
 use std::fmt;
 use std::process;
 use std::path::{Path, PathBuf};
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Cursor};
 use std::collections::HashMap;
 use libc::getpid;
 
@@ -219,9 +219,18 @@ impl InfoPlist {
     {
         // do we want to preprocess the plist file?
         let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
-            let mut f = fs::File::open(path.as_ref()).chain_err(||
-                Error::from("Could not open Info.plist file"))?;
-            InfoPlist::from_reader(&mut f)?
+            let mut c = process::Command::new("cc");
+            c.arg("-xc")
+                .arg("-P")
+                .arg("-E");
+            if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
+                for token in defs.split_whitespace() {
+                    c.arg(format!("-D{}", token));
+                }
+            }
+            c.arg(path.as_ref());
+            let p = c.output()?;
+            InfoPlist::from_reader(&mut Cursor::new(&p.stderr[..]))?
         } else {
             InfoPlist::from_path(path)?
         };
