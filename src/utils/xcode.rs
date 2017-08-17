@@ -230,7 +230,7 @@ impl InfoPlist {
             }
             c.arg(path.as_ref());
             let p = c.output()?;
-            InfoPlist::from_reader(&mut Cursor::new(&p.stderr[..]))?
+            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))?
         } else {
             InfoPlist::from_path(path)?
         };
