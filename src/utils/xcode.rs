@@ -4,7 +4,6 @@ use std::fmt;
 use std::process;
 use std::path::{Path, PathBuf};
 use std::io::{BufReader, BufRead};
-use std::borrow::Cow;
 use std::collections::HashMap;
 use libc::getpid;
 
@@ -51,30 +50,54 @@ impl fmt::Display for InfoPlist {
     }
 }
 
-fn var_from_env(name: &str) -> String {
-    env::var(name).unwrap_or("".into())
-}
-
-pub fn expand_xcodevars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> {
+pub fn expand_xcodevars(s: String, vars: &HashMap<String, String>) -> String {
     lazy_static! {
         static ref SEP_RE: Regex = Regex::new(r"[\s/]+").unwrap();
     }
-    expand_vars(s, |key| {
+    expand_vars(&s, |key| {
         if key == "" {
             return "".into();
         }
         let mut iter = key.splitn(2, ':');
-        let value = f(iter.next().unwrap());
+        let value = vars.get(iter.next().unwrap()).map(|x| x.as_str()).unwrap_or("");
         match iter.next() {
             Some("rfc1034identifier") => {
-                SEP_RE.replace_all(&value, "-").into_owned()
+                SEP_RE.replace_all(value, "-").into_owned()
             },
             Some("identifier") => {
-                SEP_RE.replace_all(&value, "_").into_owned()
+                SEP_RE.replace_all(value, "_").into_owned()
             },
-            None | Some(_) => value
+            None | Some(_) => value.to_string()
         }
-    })
+    }).into_owned()
+}
+
+fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
+    if_chain! {
+        if let Some(filename_os) = path.file_name();
+        if let Some(filename) = filename_os.to_str();
+        if filename.ends_with(".xcodeproj");
+        then {
+            return Ok(Some(XcodeProjectInfo::from_path(path)?));
+        }
+    }
+
+    let mut projects = vec![];
+    for entry_rv in fs::read_dir(path)? {
+        if let Ok(entry) = entry_rv {
+            if let Some(filename) = entry.file_name().to_str() {
+                if filename.ends_with(".xcodeproj") {
+                    projects.push(entry.path().to_path_buf());
+                }
+            }
+        }
+    }
+
+    if projects.len() == 1 {
+        Ok(Some(XcodeProjectInfo::from_path(&projects[0])?))
+    } else {
+        Ok(None)
+    }
 }
 
 impl XcodeProjectInfo {
@@ -142,43 +165,79 @@ impl XcodeProjectInfo {
         }
         None
     }
-
-    /// Returns the release name for the given target.
-    pub fn get_release_name(&self, target: &str, configuration: &str,
-                            version_override: Option<&str>)
-        -> Result<String>
-    {
-        let vars = self.get_build_vars(target, configuration)?;
-        let plist_path = vars.get("INFOPLIST_FILE").map(|plist| {
-            self.path.parent().unwrap().join(plist)
-        }).ok_or(Error::from("Could not find info.plist"))?;
-        let plist = InfoPlist::from_path(&plist_path)?;
-        Ok(format!("{}-{}",
-                   plist.bundle_id_from_vars(&vars),
-                   version_override.unwrap_or_else(|| plist.version())))
-    }
 }
 
 impl InfoPlist {
 
+    /// Loads a processed plist file.
     pub fn discover_from_env() -> Result<Option<InfoPlist>> {
-        // we only permit info plist discovery if we get an xcode version
-        // (eg: we were launched from xcode)
-        if env::var("XCODE_VERSION_ACTUAL").is_err() {
-            Ok(None)
-        } else if let Ok(path) = env::var("INFOPLIST_FILE") {
-            Ok(Some(InfoPlist::from_path(path)?))
+        if env::var("XCODE_VERSION_ACTUAL").is_ok() {
+            let vars: HashMap<_, _> = env::vars().collect();
+            if let Some(filename) = vars.get("INFOPLIST_FILE") {
+                Ok(Some(InfoPlist::load_and_process(filename, &vars)?))
+            } else {
+                Ok(None)
+            }
         } else {
-            Ok(None)
+            if_chain! {
+                if let Ok(here) = env::current_dir();
+                if let Some(pi) = get_xcode_project_info(&here)?;
+                then {
+                    InfoPlist::from_project_info(&pi)
+                } else {
+                    Ok(None)
+                }
+            }
         }
     }
 
+    /// Lodas an info plist from a given project info
+    pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>> {
+        if_chain! {
+            if let Some(config) = pi.get_configuration("release")
+                .or_else(|| pi.get_configuration("debug"));
+            if let Some(target) = pi.get_first_target();
+            then {
+                let vars = pi.get_build_vars(target, config)?;
+                if let Some(path) = vars.get("INFOPLIST_FILE") {
+                    return Ok(Some(InfoPlist::load_and_process(path, &vars)?));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// loads an info plist file from a path and processes it with the given vars
+    pub fn load_and_process<P: AsRef<Path>>(path: P, vars: &HashMap<String, String>)
+        -> Result<InfoPlist>
+    {
+        // do we want to preprocess the plist file?
+        if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
+            /* invoke preprocessor */
+        }
+
+        let mut rv = InfoPlist::from_path(path)?;
+
+        // expand xcodevars here
+        rv.name = expand_xcodevars(rv.name, &vars);
+        rv.bundle_id = expand_xcodevars(rv.bundle_id, &vars);
+        rv.version = expand_xcodevars(rv.version, &vars);
+        rv.build = expand_xcodevars(rv.build, &vars);
+
+        Ok(rv)
+    }
+
+    /// Loads an info plist file from a path and does not process it.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
         let f = fs::File::open(path.as_ref()).chain_err(||
             Error::from("Could not open Info.plist file"))?;
         let mut rdr = BufReader::new(f);
         Ok(deserialize(&mut rdr).chain_err(||
             Error::from("Could not parse Info.plist file"))?)
+    }
+
+    pub fn get_release_name(&self) -> String {
+        format!("{}-{}", self.bundle_id(), self.version())
     }
 
     pub fn version(&self) -> &str {
@@ -189,20 +248,12 @@ impl InfoPlist {
         &self.build
     }
 
-    pub fn name<'a>(&'a self) -> Cow<'a, str> {
-        expand_xcodevars(&self.name, var_from_env)
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
-    pub fn bundle_id<'a>(&'a self) -> Cow<'a, str> {
-        expand_xcodevars(&self.bundle_id, var_from_env)
-    }
-
-    pub fn bundle_id_from_vars<'a>(&'a self, vars: &HashMap<String, String>)
-        -> Cow<'a, str>
-    {
-        expand_xcodevars(&self.bundle_id, |var: &str| -> String {
-            vars.get(var).map(|x| x.to_string()).unwrap_or(var_from_env(var))
-        })
+    pub fn bundle_id(&self) -> &str {
+        &self.bundle_id
     }
 }
 

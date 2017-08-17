@@ -9,7 +9,7 @@ use glob::{glob, glob_with, MatchOptions};
 use regex::Regex;
 
 use prelude::*;
-use utils::xcode::XcodeProjectInfo;
+use utils::xcode::{InfoPlist, XcodeProjectInfo};
 
 
 #[derive(Debug, Deserialize)]
@@ -93,15 +93,8 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
         for entry_rv in glob_with("ios/*.xcodeproj", &opts)? {
             if let Ok(entry) = entry_rv {
                 let pi = XcodeProjectInfo::from_path(&entry)?;
-                if_chain! {
-                    if let Some(config) = pi.get_configuration("release")
-                        .or_else(|| pi.get_configuration("debug"));
-                    if let Some(target) = pi.get_first_target();
-                    then {
-                        return Ok(pi.get_release_name(
-                            target, config,
-                            Some(&format!("codepush:{}", package.label)))?);
-                    }
+                if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
+                    return Ok(ipl.get_release_name());
                 }
             }
         }

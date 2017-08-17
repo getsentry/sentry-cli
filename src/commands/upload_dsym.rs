@@ -501,7 +501,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Optional path to the Info.plist.  We will try to find this \
                     automatically if run from xcode.  Providing this information \
                     will associate the debug symbols with a specific ITC application \
-                    and build in Sentry."))
+                    and build in Sentry.  Note that if you provide the plist
+                    explicitly it must already be processed."))
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
              .help("Does not trigger reprocessing after upload"))
