@@ -171,6 +171,8 @@ impl InfoPlist {
 
     /// Loads a processed plist file.
     pub fn discover_from_env() -> Result<Option<InfoPlist>> {
+        // if we are loaded directly from xcode we can trust the os environment
+        // and pass those variables to the processor.
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
             let vars: HashMap<_, _> = env::vars().collect();
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
@@ -178,6 +180,10 @@ impl InfoPlist {
             } else {
                 Ok(None)
             }
+
+        // otherwise, we discover the project info from the current path and
+        // invoke xcodebuild to give us the project settings for the first
+        // target.
         } else {
             if_chain! {
                 if let Ok(here) = env::current_dir();
