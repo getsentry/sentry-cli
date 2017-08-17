@@ -30,7 +30,7 @@ fn update_config(config: &Config, token: &str) -> Result<()> {
 }
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let token_url = format!("{}/api/", config.url.trim_right_matches('/'));
+    let token_url = format!("{}/api/", config.get_base_url()?);
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
     println!("If you do not yet have a token ready we can bring up a browser for you");

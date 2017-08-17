@@ -129,6 +129,24 @@ impl Config {
         }
     }
 
+    /// Returns the base url (without trailing slashes)
+    pub fn get_base_url(&self) -> Result<&str> {
+        let base = self.url.trim_right_matches('/');
+        if !base.starts_with("http://") && !base.starts_with("https://") {
+            fail!("bad sentry url: unknown scheme ({})", base);
+        }
+        if base.matches('/').count() != 3 {
+            fail!("bad sentry url: not on URL root ({})", base);
+        }
+        Ok(base)
+    }
+
+    /// Returns the API URL for a path
+    pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
+        let base = self.get_base_url()?;
+        Ok(format!("{}/api/0/{}", base, path.trim_left_matches('/')))
+    }
+
     /// Indicates whether keepalive support should be enabled.  This
     /// mostly corresponds to an ini config but also has some sensible
     /// default handling.

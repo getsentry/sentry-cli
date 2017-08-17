@@ -81,6 +81,7 @@ pub enum Error {
     Io(io::Error),
     Json(serde_json::Error),
     ResourceNotFound(&'static str),
+    BadApiUrl(String),
     NoDsn,
 }
 
@@ -156,10 +157,12 @@ impl<'a> Api<'a> {
         let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
             (Cow::Borrowed(url), None)
         } else {
-            (Cow::Owned(format!("{}/api/0/{}",
-                                self.config.url.trim_right_matches('/'),
-                                url.trim_left_matches('/'))),
-             self.config.auth.as_ref())
+            (Cow::Owned(match self.config.get_api_endpoint(url) {
+                Ok(rv) => rv,
+                Err(err) => {
+                    return Err(Error::BadApiUrl(err.to_string()));
+                }
+            }), self.config.auth.as_ref())
         };
 
         // the proxy url is discovered from the http_proxy envvar.
@@ -1013,6 +1016,7 @@ impl fmt::Display for Error {
             Error::Json(ref err) => write!(f, "bad json: {}", err),
             Error::ResourceNotFound(res) => write!(f, "{} not found", res),
             Error::NoDsn => write!(f, "no dsn provided"),
+            Error::BadApiUrl(ref msg) => write!(f, "{}", msg),
         }
     }
 }
