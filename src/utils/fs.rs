@@ -11,6 +11,9 @@ use uuid::{Uuid, UuidVersion};
 use prelude::*;
 
 
+pub trait SeekRead: Seek + Read {}
+impl<T: Seek + Read> SeekRead for T {}
+
 /// Helper for temporary dicts
 #[derive(Debug)]
 pub struct TempDir {

@@ -19,7 +19,7 @@ use regex::Regex;
 
 use prelude::*;
 use config::Config;
-use utils::{TempFile, expand_vars};
+use utils::{TempFile, expand_vars, SeekRead};
 
 
 #[derive(Deserialize, Debug)]
@@ -218,11 +218,13 @@ impl InfoPlist {
         -> Result<InfoPlist>
     {
         // do we want to preprocess the plist file?
-        if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
-            /* invoke preprocessor */
-        }
-
-        let mut rv = InfoPlist::from_path(path)?;
+        let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
+            let mut f = fs::File::open(path.as_ref()).chain_err(||
+                Error::from("Could not open Info.plist file"))?;
+            InfoPlist::from_reader(&mut f)?
+        } else {
+            InfoPlist::from_path(path)?
+        };
 
         // expand xcodevars here
         rv.name = expand_xcodevars(rv.name, &vars);
@@ -235,9 +237,14 @@ impl InfoPlist {
 
     /// Loads an info plist file from a path and does not process it.
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
-        let f = fs::File::open(path.as_ref()).chain_err(||
+        let mut f = fs::File::open(path.as_ref()).chain_err(||
             Error::from("Could not open Info.plist file"))?;
-        let mut rdr = BufReader::new(f);
+        InfoPlist::from_reader(&mut f)
+    }
+
+    /// Loads an info plist file from a reader.
+    pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist> {
+        let mut rdr = BufReader::new(rdr);
         Ok(deserialize(&mut rdr).chain_err(||
             Error::from("Could not parse Info.plist file"))?)
     }
