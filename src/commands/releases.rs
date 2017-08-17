@@ -657,7 +657,11 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
 
         for dent in WalkDir::new(&walk_path) {
             let dent = dent?;
-            if !skip_ext_test && dent.file_type().is_file() {
+            // skip over directories
+            if dent.file_type().is_dir() {
+                continue;
+            }
+            if !skip_ext_test {
                 let extension = dent.path().extension();
                 if !extensions.iter().any(|ext| Some(*ext) == extension) {
                     continue;
