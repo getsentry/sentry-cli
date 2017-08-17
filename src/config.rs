@@ -135,7 +135,7 @@ impl Config {
         if !base.starts_with("http://") && !base.starts_with("https://") {
             fail!("bad sentry url: unknown scheme ({})", base);
         }
-        if base.matches('/').count() != 3 {
+        if base.matches('/').count() != 2 {
             fail!("bad sentry url: not on URL root ({})", base);
         }
         Ok(base)
