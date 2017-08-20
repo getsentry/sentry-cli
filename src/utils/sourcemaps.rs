@@ -1,6 +1,7 @@
 //! Provides sourcemap validation functionality.
 use std::fs;
 use std::fmt;
+use std::str;
 use std::io::Read;
 use std::cell::RefCell;
 use std::collections::{HashSet, HashMap};
@@ -24,6 +25,14 @@ fn make_progress_bar(len: u64) -> ProgressBar {
         .template(&format!("{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
                            style(">").cyan())));
     pb
+}
+
+fn is_likely_minified_js(code: &[u8]) -> bool {
+    if let Ok(s) = str::from_utf8(code) {
+        might_be_minified::analyze_str(s).is_likely_minified()
+    } else {
+        false
+    }
 }
 
 fn join_url(base_url: &str, url: &str) -> Result<String> {
@@ -159,7 +168,7 @@ struct Source {
     url: String,
     #[allow(unused)]
     file_path: PathBuf,
-    contents: String,
+    contents: Vec<u8>,
     ty: SourceType,
     skip_upload: bool,
     headers: Vec<(String, String)>,
@@ -197,7 +206,7 @@ impl Source {
     }
 
     pub fn get_sourcemap_ref_from_contents(&self) -> sourcemap::SourceMapRef {
-        sourcemap::locate_sourcemap_reference_slice(self.contents.as_bytes())
+        sourcemap::locate_sourcemap_reference_slice(&self.contents)
             .unwrap_or(sourcemap::SourceMapRef::Missing)
     }
 
@@ -237,15 +246,15 @@ impl SourceMapProcessor {
         for (url, path) in self.pending_sources.drain() {
             pb.set_message(&url);
             let mut f = fs::File::open(&path)?;
-            let mut contents = String::new();
-            try!(f.read_to_string(&mut contents));
-            let ty = if sourcemap::is_sourcemap_slice(contents.as_bytes()) {
+            let mut contents: Vec<u8> = vec![];
+            try!(f.read_to_end(&mut contents));
+            let ty = if sourcemap::is_sourcemap_slice(&contents) {
                 SourceType::SourceMap
             } else if path.file_name()
                 .and_then(|x| x.to_str())
                 .map(|x| x.contains(".min."))
                 .unwrap_or(false) ||
-                might_be_minified::analyze_str(&contents).is_likely_minified()
+                is_likely_minified_js(&contents)
             {
                 SourceType::MinifiedScript
             } else {
@@ -284,7 +293,7 @@ impl SourceMapProcessor {
     }
 
     fn validate_sourcemap(&self, source: &Source) -> Result<()> {
-        match sourcemap::decode_slice(source.contents.as_bytes())? {
+        match sourcemap::decode_slice(&source.contents)? {
             sourcemap::DecodedMap::Regular(sm) => {
                 for idx in 0..sm.get_source_count() {
                     let source_url = sm.get_source(idx).unwrap_or("??");
@@ -408,13 +417,13 @@ impl SourceMapProcessor {
                 strip_prefixes: prefixes,
                 ..Default::default()
             };
-            let sm = match sourcemap::decode_slice(source.contents.as_bytes())? {
+            let sm = match sourcemap::decode_slice(&source.contents)? {
                 sourcemap::DecodedMap::Regular(sm) => sm.rewrite(&options)?,
                 sourcemap::DecodedMap::Index(smi) => smi.flatten_and_rewrite(&options)?,
             };
             let mut new_source: Vec<u8> = Vec::new();
             sm.to_writer(&mut new_source)?;
-            source.contents = String::from_utf8(new_source)?;
+            source.contents = new_source;
             pb.inc(1);
         }
         pb.finish_and_clear();
@@ -486,7 +495,7 @@ impl SourceMapProcessor {
             }
 
             api.upload_release_file(org,
-                project, &release, FileContents::FromBytes(source.contents.as_bytes()),
+                project, &release, FileContents::FromBytes(&source.contents),
                 &source.url, dist, Some(source.headers.as_slice()))?;
             pb.inc(1);
         }
