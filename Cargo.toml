@@ -40,6 +40,8 @@ url = "1.4"
 walkdir = "1.0"
 which = "1.0"
 zip = "0.2"
+uchardet = "2.0"
+encoding = "0.2"
 
 [dependencies.chrono]
 features = ["serde"]

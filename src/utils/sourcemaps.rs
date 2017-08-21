@@ -8,15 +8,16 @@ use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
-use url::Url;
-use api::{Api, FileContents};
-
 use sourcemap;
 use might_be_minified;
 use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
 use console::{Term, style};
 
 use prelude::*;
+use url::Url;
+use api::{Api, FileContents};
+use utils::decode_unknown_string;
+
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);
@@ -28,8 +29,8 @@ fn make_progress_bar(len: u64) -> ProgressBar {
 }
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
-    if let Ok(s) = str::from_utf8(code) {
-        might_be_minified::analyze_str(s).is_likely_minified()
+    if let Ok(code_str) = decode_unknown_string(code) {
+        might_be_minified::analyze_str(&code_str).is_likely_minified()
     } else {
         false
     }

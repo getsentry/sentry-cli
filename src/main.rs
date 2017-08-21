@@ -61,6 +61,8 @@ extern crate libc;
 #[cfg(target_os="macos")]
 extern crate mac_process_info;
 extern crate app_dirs;
+extern crate uchardet;
+extern crate encoding;
 
 mod macros;
 

@@ -2,6 +2,7 @@
 mod android;
 mod args;
 mod codepush;
+mod enc;
 mod formatting;
 mod fs;
 mod logging;
@@ -19,6 +20,7 @@ pub use self::android::{AndroidManifest, dump_proguard_uuids_as_properties};
 pub use self::args::{ArgExt, validate_uuid, validate_seconds, validate_timestamp,
                      validate_project, get_timestamp};
 pub use self::codepush::{get_codepush_package, get_codepush_release};
+pub use self::enc::{decode_unknown_string};
 pub use self::formatting::{HumanDuration, Table, TableRow};
 pub use self::fs::{TempDir, TempFile, is_writable, set_executable_mode, is_zip_file,
                    get_sha1_checksum, SeekRead};

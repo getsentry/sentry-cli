@@ -12,6 +12,7 @@ dependencies = [
  "curl 0.4.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "dotenv 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "elementtree 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "encoding 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -41,6 +42,7 @@ dependencies = [
  "serde_json 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sourcemap 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "uchardet 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "uuid 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1117,6 +1119,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "uchardet"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "uchardet-sys 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "uchardet-sys"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cmake 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.23 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "unicode-bidi"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1399,6 +1421,8 @@ dependencies = [
 "checksum thread-id 3.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8df7875b676fddfadffd96deea3b1124e5ede707d4884248931077518cf1f773"
 "checksum thread_local 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "c85048c6260d17cf486ceae3282d9fb6b90be220bf5b28c400f5485ffc29f0c7"
 "checksum time 0.1.37 (registry+https://github.com/rust-lang/crates.io-index)" = "ffd7ccbf969a892bf83f1e441126968a07a3941c24ff522a26af9f9f4585d1a3"
+"checksum uchardet 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b7fdfd0fc7f075795045dfd767b6a73769f5cba80a1c6041cb0a0c8769427cb7"
+"checksum uchardet-sys 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ec196c2a7b8cc0e8212c632e6c27ec6fcbfb1718c32cbfa732fb98cb46e1f16a"
 "checksum unicode-bidi 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "916219eb752dd865717c9b21064401c6ee843dc91ed659c144591e0c87c56d59"
 "checksum unicode-normalization 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "e28fa37426fceeb5cf8f41ee273faa7c82c47dc8fba5853402841e665fcd86ff"
 "checksum unicode-segmentation 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a8083c594e02b8ae1654ae26f0ade5158b119bd88ad0e8227a5d8fcd72407946"
