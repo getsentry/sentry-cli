@@ -92,23 +92,31 @@ fn strip_git_suffix(s: &str) -> &str {
     }
 }
 
+fn get_git_provider(hostname: &str) -> &'static str {
+    match hostname {
+        "github.com" => "github",
+        "bitbucket.org" => "bitbucket",
+        _ => "generic",
+    }
+}
+
 impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
         lazy_static! {
-            static ref GITHUB_URL_RE: Regex = Regex::new(
-                r"^(?:ssh|https?)://(?:[^@]+@)?github.com/([^/]+)/([^/]+)").unwrap();
-            static ref GITHUB_SSH_RE: Regex = Regex::new(
-                r"^(?:[^@]+@)?github.com:([^/]+)/([^/]+)").unwrap();
+            static ref GIT_URL_RE: Regex = Regex::new(
+                r"^(?:ssh|https?)://(?:[^@]+@)?(github\.com|bitbucket\.org)/([^/]+)/([^/]+)").unwrap();
+            static ref GIT_SSH_RE: Regex = Regex::new(
+                r"^(?:[^@]+@)?(github\.com|bitbucket\.org):([^/]+)/([^/]+)").unwrap();
         }
-        if let Some(caps) = GITHUB_URL_RE.captures(url) {
+        if let Some(caps) = GIT_URL_RE.captures(url) {
             VcsUrl {
-                provider: "github",
-                id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
+                provider: get_git_provider(&caps[1]),
+                id: format!("{}/{}", &caps[2], strip_git_suffix(&caps[3])),
             }
-        } else if let Some(caps) = GITHUB_SSH_RE.captures(url) {
+        } else if let Some(caps) = GIT_SSH_RE.captures(url) {
             VcsUrl {
-                provider: "github",
-                id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
+                provider: get_git_provider(&caps[1]),
+                id: format!("{}/{}", &caps[2], strip_git_suffix(&caps[3])),
             }
         } else {
             VcsUrl {
@@ -294,6 +302,14 @@ fn test_url_parsing() {
     });
     assert_eq!(VcsUrl::parse("git@github.com:mitsuhiko/flask.git"), VcsUrl {
         provider: "github",
+        id: "mitsuhiko/flask".into(),
+    });
+    assert_eq!(VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"), VcsUrl {
+        provider: "bitbucket",
+        id: "mitsuhiko/flask".into(),
+    });
+    assert_eq!(VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"), VcsUrl {
+        provider: "bitbucket",
         id: "mitsuhiko/flask".into(),
     });
 }
