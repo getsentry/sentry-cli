@@ -475,17 +475,13 @@ pub fn show_notification(config: &Config, title: &str, msg: &str) -> Result<()> 
 
 #[test]
 fn test_expansion() {
-    fn f(name: &str) -> String {
-        if name == "FOO_BAR" {
-            "foo bar baz / blah".into()
-        } else {
-            "".into()
-        }
-    }
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B", f).to_string(),
+    let mut vars = HashMap::new();
+    vars.insert("FOO_BAR".to_string(), "foo bar baz / blah".to_string());
+
+    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B".to_string(), &vars),
                "Afoo-bar-baz-blahB".to_string());
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B", f).to_string(),
+    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B".to_string(), &vars),
                "Afoo_bar_baz_blahB".to_string());
-    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B", f).to_string(),
+    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B".to_string(), &vars),
                "Afoo_bar_baz_blahB".to_string());
 }
