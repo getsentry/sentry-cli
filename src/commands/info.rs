@@ -49,7 +49,7 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
 fn get_config_status_json(config: &Config) -> Result<()> {
     let mut rv = ConfigStatus::default();
 
-    let (project, org) = config.get_org_and_project_defaults();
+    let (org, project) = config.get_org_and_project_defaults();
     rv.config.insert("org".into(), org);
     rv.config.insert("project".into(), project);
     rv.config.insert("url".into(), Some(config.url.clone()));
@@ -71,7 +71,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         return get_config_status_json(config);
     }
 
-    let (project, org) = config.get_org_and_project_defaults();
+    let (org, project) = config.get_org_and_project_defaults();
     let info_rv = Api::new(config).get_auth_info();
     let errors = project.is_none() || org.is_none() || config.auth.is_none() || info_rv.is_err();
 
