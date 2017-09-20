@@ -94,7 +94,7 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
             if let Ok(entry) = entry_rv {
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
-                    return Ok(ipl.get_release_name());
+                    return Ok(format!("{}-codepush:{}", ipl.get_release_name(), package.label));
                 }
             }
         }
