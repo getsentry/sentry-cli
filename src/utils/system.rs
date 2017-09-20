@@ -5,7 +5,7 @@ use std::env;
 use std::borrow::Cow;
 
 use regex::{Regex, Captures};
-use chrono::{DateTime, UTC};
+use chrono::{DateTime, Utc};
 
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
@@ -132,7 +132,7 @@ pub fn print_error(err: &Error) {
 }
 
 /// Given a system time returns the unix timestamp as f64
-pub fn to_timestamp(tm: DateTime<UTC>) -> f64 {
+pub fn to_timestamp(tm: DateTime<Utc>) -> f64 {
     tm.timestamp() as f64
 }
 

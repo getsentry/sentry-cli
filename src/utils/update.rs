@@ -8,7 +8,7 @@ use runas;
 use console::style;
 use app_dirs;
 use serde_json;
-use chrono::{UTC, DateTime, Duration};
+use chrono::{Utc, DateTime, Duration};
 
 use config::Config;
 use api::{Api, SentryCliRelease};
@@ -63,14 +63,14 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct LastUpdateCheck {
-    pub last_check_timestamp: Option<DateTime<UTC>>,
+    pub last_check_timestamp: Option<DateTime<Utc>>,
     pub last_check_version: Option<String>,
     pub last_fetched_version: Option<String>,
 }
 
 impl LastUpdateCheck {
     pub fn update_for_info(&mut self, ui: SentryCliUpdateInfo) {
-        self.last_check_timestamp = Some(UTC::now());
+        self.last_check_timestamp = Some(Utc::now());
         self.last_check_version = Some(ui.current_version().to_string());
         self.last_fetched_version = Some(ui.latest_version().to_string());
     }
@@ -80,7 +80,7 @@ impl LastUpdateCheck {
             if let Some(ts) = self.last_check_timestamp;
             if let Some(ref ver) = self.last_check_version;
             then {
-                ver.as_str() != VERSION || ts < UTC::now() - Duration::hours(12)
+                ver.as_str() != VERSION || ts < Utc::now() - Duration::hours(12)
             } else {
                 true
             }
