@@ -117,6 +117,10 @@ impl XcodeProjectInfo {
         Ok(rv.project)
     }
 
+    pub fn base_path(&self) -> &Path {
+        self.path.parent().unwrap()
+    }
+
     pub fn get_build_vars(&self, target: &str, configuration: &str)
         -> Result<HashMap<String, String>>
     {
@@ -206,6 +210,7 @@ impl InfoPlist {
             then {
                 let vars = pi.get_build_vars(target, config)?;
                 if let Some(path) = vars.get("INFOPLIST_FILE") {
+                    let path = pi.base_path().join(path);
                     return Ok(Some(InfoPlist::load_and_process(path, &vars)?));
                 }
             }
