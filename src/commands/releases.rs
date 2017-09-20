@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use walkdir::WalkDir;
-use chrono::{DateTime, Duration, UTC};
+use chrono::{DateTime, Duration, Utc};
 use regex::Regex;
 
 use prelude::*;
@@ -39,7 +39,7 @@ impl<'a> ReleaseContext<'a> {
 
     pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>> {
         if let Some(projects) = matches.values_of("projects") {
-             Ok(projects.map(|x| x.to_string()).collect())       
+             Ok(projects.map(|x| x.to_string()).collect())
         } else if let Some(project) = self.project_default {
             Ok(vec![project.to_string()])
         } else {
@@ -325,9 +325,9 @@ fn execute_new<'a>(ctx: &ReleaseContext,
             version: matches.value_of("version").unwrap().to_owned(),
             projects: ctx.get_projects(matches)?,
             url: matches.value_of("url").map(|x| x.to_owned()),
-            date_started: Some(UTC::now()),
+            date_started: Some(Utc::now()),
             date_released: if matches.is_present("finalize") {
-                Some(UTC::now())
+                Some(Utc::now())
             } else {
                 None
             },
@@ -339,9 +339,9 @@ fn execute_new<'a>(ctx: &ReleaseContext,
 
 fn execute_finalize<'a>(ctx: &ReleaseContext,
                         matches: &ArgMatches<'a>) -> Result<()> {
-    fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<UTC>>> {
+    fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<Utc>>> {
         match value {
-            None => Ok(if now_default { Some(UTC::now()) } else { None }),
+            None => Ok(if now_default { Some(Utc::now()) } else { None }),
             Some(value) => Ok(Some(get_timestamp(value)?))
         }
     }
@@ -470,7 +470,7 @@ fn execute_list<'a>(ctx: &ReleaseContext,
     for release_info in releases {
         let mut row = table.add_row();
         if let Some(date) = release_info.date_released {
-            row.add(format!("{} ago", HumanDuration(UTC::now().signed_duration_since(date))));
+            row.add(format!("{} ago", HumanDuration(Utc::now().signed_duration_since(date))));
         } else {
             row.add("(unreleased)");
         }
@@ -481,7 +481,7 @@ fn execute_list<'a>(ctx: &ReleaseContext,
         }
         row.add(release_info.new_groups);
         if let Some(date) = release_info.last_event {
-            row.add(format!("{} ago", HumanDuration(UTC::now().signed_duration_since(date))));
+            row.add(format!("{} ago", HumanDuration(Utc::now().signed_duration_since(date))));
         } else {
             row.add("-");
         }
@@ -743,14 +743,14 @@ fn execute_deploys_new<'a>(ctx: &ReleaseContext,
     };
 
     if let Some(value) = matches.value_of("time") {
-        let finished = UTC::now();
+        let finished = Utc::now();
         deploy.finished = Some(finished);
         deploy.started = Some(finished - Duration::seconds(value.parse().unwrap()));
     } else {
         if let Some(finished_str) = matches.value_of("finished") {
             deploy.finished = Some(get_timestamp(finished_str)?);
         } else {
-            deploy.finished = Some(UTC::now());
+            deploy.finished = Some(Utc::now());
         }
         if let Some(started_str) = matches.value_of("started") {
             deploy.started = Some(get_timestamp(started_str)?);
@@ -788,7 +788,7 @@ fn execute_deploys_list<'a>(ctx: &ReleaseContext,
         table.add_row()
             .add(deploy.env)
             .add(name)
-            .add(HumanDuration(UTC::now().signed_duration_since(deploy.finished.unwrap())));
+            .add(HumanDuration(Utc::now().signed_duration_since(deploy.finished.unwrap())));
     }
 
     if table.is_empty() {

@@ -2,7 +2,7 @@ use std::result::Result as StdResult;
 
 use uuid::Uuid;
 use clap;
-use chrono::{DateTime, UTC, TimeZone};
+use chrono::{DateTime, Utc, TimeZone};
 
 use prelude::*;
 
@@ -63,13 +63,13 @@ pub fn validate_uuid(s: String) -> StdResult<(), String> {
     }
 }
 
-pub fn get_timestamp(value: &str) -> Result<DateTime<UTC>> {
+pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
     if let Ok(int) = value.parse::<i64>() {
-        Ok(UTC.timestamp(int, 0))
+        Ok(Utc.timestamp(int, 0))
     } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
-        Ok(dt.with_timezone(&UTC))
+        Ok(dt.with_timezone(&Utc))
     } else if let Ok(dt) = DateTime::parse_from_rfc2822(value) {
-        Ok(dt.with_timezone(&UTC))
+        Ok(dt.with_timezone(&Utc))
     } else {
         Err(Error::from("not in valid format. Unix timestamp or ISO 8601 date expected."))
     }

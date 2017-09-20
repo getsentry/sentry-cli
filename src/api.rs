@@ -22,7 +22,7 @@ use serde::de::DeserializeOwned;
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
-use chrono::{Duration, DateTime, UTC};
+use chrono::{Duration, DateTime, Utc};
 use indicatif::ProgressBar;
 use regex::{Regex, Captures};
 
@@ -214,7 +214,7 @@ impl<'a> Api<'a> {
     /// Convenience method that waits for a few seconds until a resource
     /// becomes available.
     pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
-        let started = UTC::now();
+        let started = Utc::now();
         loop {
             match self.request(Method::Get, &url)?.send() {
                 Ok(_) => { return Ok(true); }
@@ -226,7 +226,7 @@ impl<'a> Api<'a> {
                 }
             }
             thread::sleep(Duration::milliseconds(500).to_std().unwrap());
-            if UTC::now() - duration > started {
+            if Utc::now() - duration > started {
                 return Ok(false);
             }
         }
@@ -1082,9 +1082,9 @@ pub struct NewRelease {
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
     #[serde(rename="dateStarted", skip_serializing_if="Option::is_none")]
-    pub date_started: Option<DateTime<UTC>>,
+    pub date_started: Option<DateTime<Utc>>,
     #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
-    pub date_released: Option<DateTime<UTC>>,
+    pub date_released: Option<DateTime<Utc>>,
 }
 
 /// A head commit on a release
@@ -1106,9 +1106,9 @@ pub struct UpdatedRelease {
     #[serde(skip_serializing_if="Option::is_none")]
     pub url: Option<String>,
     #[serde(rename="dateStarted", skip_serializing_if="Option::is_none")]
-    pub date_started: Option<DateTime<UTC>>,
+    pub date_started: Option<DateTime<Utc>>,
     #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
-    pub date_released: Option<DateTime<UTC>>,
+    pub date_released: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if="Option::is_none")]
     pub refs: Option<Vec<Ref>>,
 }
@@ -1119,11 +1119,11 @@ pub struct ReleaseInfo {
     pub version: String,
     pub url: Option<String>,
     #[serde(rename="dateCreated")]
-    pub date_created: DateTime<UTC>,
+    pub date_created: DateTime<Utc>,
     #[serde(rename="dateReleased")]
-    pub date_released: Option<DateTime<UTC>>,
+    pub date_released: Option<DateTime<Utc>>,
     #[serde(rename="lastEvent")]
-    pub last_event: Option<DateTime<UTC>>,
+    pub last_event: Option<DateTime<Utc>>,
     #[serde(rename="newGroups")]
     pub new_groups: u64,
 }
@@ -1257,7 +1257,7 @@ pub struct Repo {
     pub provider: RepoProvider,
     pub status: String,
     #[serde(rename="dateCreated")]
-    pub date_created: DateTime<UTC>,
+    pub date_created: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -1267,7 +1267,7 @@ pub struct Deploy {
     pub name: Option<String>,
     pub url: Option<String>,
     #[serde(rename="dateStarted")]
-    pub started: Option<DateTime<UTC>>,
+    pub started: Option<DateTime<Utc>>,
     #[serde(rename="dateFinished")]
-    pub finished: Option<DateTime<UTC>>,
+    pub finished: Option<DateTime<Utc>>,
 }

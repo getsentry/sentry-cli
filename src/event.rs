@@ -4,7 +4,7 @@ use std::process::Command;
 
 use prelude::*;
 use utils::to_timestamp;
-use chrono::UTC;
+use chrono::Utc;
 
 
 /// Represents a Sentry event.
@@ -45,7 +45,7 @@ impl Event {
             fingerprint: None,
             message: None,
             platform: "other".into(),
-            timestamp: to_timestamp(UTC::now()),
+            timestamp: to_timestamp(Utc::now()),
             server_name: get_server_name().ok(),
             release: None,
             dist: None,
