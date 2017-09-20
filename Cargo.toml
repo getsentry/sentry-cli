@@ -2,7 +2,7 @@
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 name = "sentry-cli"
-version = "1.19.1"
+version = "1.20.0"
 
 [dependencies]
 app_dirs = "1.1.1"
@@ -33,7 +33,7 @@ plist = "0.2.2"
 prettytable-rs = "0.6"
 proguard = "0.3"
 regex = "0.2"
-runas = "0.1"
+runas = "0.1.4"
 rust-ini = "0.10"
 serde = "1.0"
 serde_derive = "1.0"

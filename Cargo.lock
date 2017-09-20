@@ -1,6 +1,6 @@
 [root]
 name = "sentry-cli"
-version = "1.19.1"
+version = "1.20.0"
 dependencies = [
  "app_dirs 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "backtrace 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -35,7 +35,7 @@ dependencies = [
  "prettytable-rs 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "proguard 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "runas 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "runas 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-ini 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -877,7 +877,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "runas"
-version = "0.1.3"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gcc 0.3.54 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1440,7 +1440,7 @@ dependencies = [
 "checksum redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)" = "8dde11f18c108289bef24469638a04dce49da56084f2d50618b226e47eb04509"
 "checksum regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1731164734096285ec2a5ec7fea5248ae2f5485b3feeb0115af4fda2183b2d1b"
 "checksum regex-syntax 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ad890a5eef7953f55427c50575c680c42841653abd2b028b68cd223d157f62db"
-"checksum runas 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)" = "47e18ab2c0d06065975ca26b5dfe38405b532a42dcf3cc93514c0d588c90d342"
+"checksum runas 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "6faa02258923b46584eb9738a2274fcd70530db56614189eab0ab424bb143c99"
 "checksum rust-ini 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)" = "06d4e8b0b50e7e7f827d609fa9746e1cf6371a1fa15404a1a0a86152a801079f"
 "checksum rustc-demangle 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "aee45432acc62f7b9a108cc054142dac51f979e69e71ddce7d6fc7adf29e817e"
 "checksum rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
