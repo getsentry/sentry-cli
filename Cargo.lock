@@ -18,7 +18,7 @@ dependencies = [
  "glob 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "humansize 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "if_chain 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "indicatif 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "indicatif 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "itertools 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "java-properties 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -490,7 +490,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "indicatif"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "console 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1393,7 +1393,7 @@ dependencies = [
 "checksum humansize 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "92d211e6e70b05749dce515b47684f29a3c8c38bbbb21c50b30aff9eca1b0bd3"
 "checksum idna 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "014b298351066f1512874135335d62a789ffe78a9974f94b43ed5621951eaf7d"
 "checksum if_chain 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "61bb90bdd39e3af69b0172dfc6130f6cd6332bf040fbb9bdd4401d37adbd48b8"
-"checksum indicatif 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9ec647e1aec3f5a0208bcc1004ebaaa94d281748b7265227dddfe5757a04a212"
+"checksum indicatif 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "3ba24d01b1bc8bb67a28f71935c7545f2dff16e6c6a2b0b20af1514b6c9f096a"
 "checksum itertools 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "22c285d60139cf413244894189ca52debcfd70b57966feed060da76802e415a0"
 "checksum itoa 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8324a32baf01e2ae060e9de58ed0bc2320c9a2833491ee36cd3b4c414de4db8c"
 "checksum java-properties 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "0330c8386cfee98c0755a596e2adc312c20a0137aed78f988cdb29a321882480"

@@ -6,60 +6,46 @@ version = "1.19.1"
 
 [dependencies]
 app_dirs = "1.1.1"
-backtrace = "0.3.0"
-console = "0.5.0"
+backtrace = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "2.22", default-features = false, features = ["suggestions", "wrap_help"] }
+console = "0.5"
 curl = "0.4.8"
-dotenv = "0.10.0"
-elementtree = "0.5.0"
+dotenv = "0.10"
+elementtree = "0.5"
+encoding = "0.2"
 error-chain = "0.10"
+git2 = { version = "0.6.4", default-features = false }
 glob = "0.2.11"
-humansize = "^1.0.0"
-if_chain = "^0.1.2"
-indicatif = "0.6.0"
-itertools = "0.6.0"
-java-properties = "1.0.0"
+humansize = "1.0"
+if_chain = "0.1.2"
+indicatif = "0.7"
+itertools = "0.6"
+java-properties = "1.0"
 lazy_static = "0.2.4"
 libc = "0.2.23"
 log = "0.3"
-mach_object = "^0.1.5"
-memmap = "^0.5.0"
+mach_object = "0.1.5"
+memmap = "0.5"
 might-be-minified = "0.2.1"
 open = "1.2"
 plist = "0.2.2"
-prettytable-rs = "0.6.0"
-proguard = "0.3.0"
+prettytable-rs = "0.6"
+proguard = "0.3"
 regex = "0.2"
 runas = "0.1"
 rust-ini = "0.10"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-sha1 = "0.2.0"
+sha1 = "0.2"
 sourcemap = "1.0.1"
+uchardet = "2.0"
 url = "1.4"
+uuid = { version = "0.5", features = ["v4", "serde"] }
 walkdir = "1.0"
 which = "1.0"
 zip = "0.2"
-uchardet = "2.0"
-encoding = "0.2"
-
-[dependencies.chrono]
-features = ["serde"]
-version = "0.4"
-
-[dependencies.clap]
-default-features = false
-features = ["suggestions", "wrap_help"]
-version = "2.22"
-
-[dependencies.git2]
-default-features = false
-features = []
-version = "0.6.4"
-
-[dependencies.uuid]
-features = ["v4", "serde"]
-version = "0.5"
 
 [profile]
 
@@ -67,10 +53,7 @@ version = "0.5"
 codegen-units = 2
 
 [replace]
-
-#[replace."curl:0.4.7"]
-#git = "https://github.com/mitsuhiko/curl-rust"
-#rev = "adb3d825d352b925fc2e35c576d46cb055a30489"
+#"curl:0.4.7" = { git = "https://github.com/mitsuhiko/curl-rust", rev = "adb3d825d352b925fc2e35c576d46cb055a30489" }
 
 [target]
 
