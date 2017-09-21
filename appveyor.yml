@@ -3,9 +3,13 @@ cache:
   - '%USERPROFILE%\.cargo'
 
 environment:
-  TARGET: i686-pc-windows-msvc
+  fast_finish: true
   GITHUB_AUTH_TOKEN:
     secure: OIMAVZAsCzaNv3emTg9MlxxuA0vi2lwJM41cEtTjb9p1CQbDEO3riYwcVzLDjhZi
+
+  matrix:
+    - TARGET: i686-pc-windows-msvc
+    - TARGET: x86_64-pc-windows-msvc
 
 install:
   - set PATH=C:\Program Files\Git\mingw64\bin;%PATH%
