@@ -5,6 +5,7 @@ use std::process;
 use std::path::{Path, PathBuf};
 use std::io::{BufReader, BufRead, Cursor};
 use std::collections::HashMap;
+#[cfg(target_os="macos")]
 use libc::getpid;
 
 use serde_json;
@@ -288,6 +289,7 @@ impl InfoPlist {
 /// the xcode console and continue in the background.  This becomes
 /// a dummy shim for non xcode runs or platforms.
 pub struct MayDetach<'a> {
+    #[allow(dead_code)]
     config: &'a Config,
     output_file: Option<TempFile>,
     #[allow(dead_code)]
