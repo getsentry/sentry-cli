@@ -29,7 +29,7 @@ install:
 build: false
 
 test_script:
-  - cargo build --release --target i686-pc-windows-msvc
+  - cargo build --release
 
 after_test:
   - powershell -File .ci/deploy.ps1
