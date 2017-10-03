@@ -126,7 +126,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .value_name("TIMESTAMP")
                  .help("The release time (if not provided the current time is used).")))
         .subcommand(App::new("list")
-            .about("list the most recent releases")
+            .about("List the most recent releases")
             .arg(Arg::with_name("no_abbrev")
                 .long("no-abbrev")
                 .help("Do not abbreviate the release version")))
@@ -140,7 +140,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                        used to determine if a release already exists.  The exit status \
                        will be 0 if the release exists or 1 otherwise.")))
         .subcommand(App::new("files")
-            .about("manage release artifact files")
+            .about("Manage release artifact files")
             .setting(AppSettings::SubcommandRequiredElseHelp)
             .version_arg(1)
             .subcommand(App::new("list").about("List all release files"))
