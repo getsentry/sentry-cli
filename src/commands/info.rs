@@ -77,8 +77,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     if !matches.is_present("quiet") {
         println!("Sentry Server: {}", config.url);
-        println!("Default Organization: {}", project.unwrap_or("-".into()));
-        println!("Default Project: {}", org.unwrap_or("-".into()));
+        println!("Default Organization: {}", org.unwrap_or("-".into()));
+        println!("Default Project: {}", project.unwrap_or("-".into()));
 
         if config.auth.is_some() {
             println!("");
