@@ -1,16 +1,14 @@
-use std::fs;
-use std::io::Read;
+use std::env;
 use std::str;
 use std::process;
 
 use serde_json;
 use console::strip_ansi_codes;
-use glob::{glob, glob_with, MatchOptions};
-use regex::Regex;
+use glob::{glob_with, MatchOptions};
 
 use prelude::*;
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
-
+use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 
 #[derive(Debug, Deserialize)]
 pub struct CodePushPackage {
@@ -73,12 +71,6 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
                             bundle_id_override: Option<&str>)
     -> Result<String>
 {
-    // this is similar to utils::releases::infer_gradle_release_name
-    lazy_static! {
-        static ref APP_ID_RE: Regex = Regex::new(
-            r#"applicationId\s+["']([^"']*)["']"#).unwrap();
-    }
-
     if let Some(bundle_id) = bundle_id_override {
         return Ok(format!("{}-codepush:{}", bundle_id, package.label));
     }
@@ -94,26 +86,23 @@ pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
             if let Ok(entry) = entry_rv {
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
-                    return Ok(format!("{}-codepush:{}", ipl.get_release_name(), package.label));
+                    if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
+                        return Ok(format!("{}-codepush:{}", release_name, package.label));
+                    }
                 }
             }
         }
         return Err("Could not find plist".into());
     } else if platform == "android" {
-        for entry_rv in glob("android/app/build.gradle")? {
-            let mut s = String::new();
-            if_chain! {
-                if let Ok(entry) = entry_rv;
-                if let Ok(md) = entry.metadata();
-                if md.is_file();
-                if let Ok(mut f) = fs::File::open(entry);
-                if f.read_to_string(&mut s).is_ok();
-                then {
-                    return if let Some(app_id_caps) = APP_ID_RE.captures(&s) {
-                        Ok(format!("{}-codepush:{}", &app_id_caps[1], package.label))
-                    } else {
-                        Err("Could not parse app id from build.gradle".into())
-                    };
+        if_chain! {
+            if let Ok(here) = env::current_dir();
+            if let Ok(android_folder) = here.join("android").metadata();
+            if android_folder.is_dir();
+            then {
+                return if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
+                    Ok(format!("{}-codepush:{}", release_name, package.label))
+                } else {
+                    Err("Could not parse app id from build.gradle".into())
                 }
             }
         }
