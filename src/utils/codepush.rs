@@ -5,7 +5,6 @@ use std::process;
 use serde_json;
 use console::strip_ansi_codes;
 use glob::{glob_with, MatchOptions};
-use regex::Regex;
 
 use prelude::*;
 use utils::xcode::{InfoPlist, XcodeProjectInfo};

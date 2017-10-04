@@ -6,6 +6,8 @@ use std::path::PathBuf;
 use utils::vcs;
 use utils::xcode::InfoPlist;
 
+use regex::Regex;
+
 use prelude::*;
 
 
