@@ -137,6 +137,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String> {
             continue;
         }
         if &configured_repo.provider.id != "github" &&
+           &configured_repo.provider.id != "bitbucket" &&
            &configured_repo.provider.id != "git" {
             return Err(Error::from("For non git repositories \
                                    explicit revisions are required"));
