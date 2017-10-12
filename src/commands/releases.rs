@@ -1,11 +1,12 @@
 //! Implements a command for managing releases.
-use std::path::{Path, PathBuf};
-use std::ffi::OsStr;
+use std::path::Path;
 use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use walkdir::WalkDir;
 use chrono::{DateTime, Duration, Utc};
+use ignore::WalkBuilder;
+use ignore::types::TypesBuilder;
+use ignore::overrides::OverrideBuilder;
 use regex::Regex;
 
 use prelude::*;
@@ -227,6 +228,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("strip-common-prefix")
                     .help("Similar to --strip-prefix but strips the most common \
                             prefix on all sources."))
+                .arg(Arg::with_name("ignore")
+                    .long("ignore")
+                    .short("i")
+                    .value_name("IGNORE")
+                    .multiple(true)
+                    .help("Ignores all files and folders matching the given glob"))
+                .arg(Arg::with_name("ignore_file")
+                    .long("ignore-file")
+                    .short("I")
+                    .value_name("IGNORE_FILE")
+                    .help("Ignores all fiels and folders specified in the given \
+                            ignore file, e.g. .gitignore. Defaults to .sentryignore"))
                 // legacy parameter
                 .arg(Arg::with_name("verbose")
                     .long("verbose")
@@ -425,7 +438,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
                 .add("Repository")
                 .add("Revision");
             for commit in &heads {
-                let mut row = table.add_row();
+                let row = table.add_row();
                 row.add(&commit.repo);
                 if let Some(ref prev_rev) = commit.prev_rev {
                     row.add(format!("{} -> {}", strip_sha(prev_rev), strip_sha(&commit.rev)));
@@ -468,7 +481,7 @@ fn execute_list<'a>(ctx: &ReleaseContext,
         .add("New Events")
         .add("Last Event");
     for release_info in releases {
-        let mut row = table.add_row();
+        let row = table.add_row();
         if let Some(date) = release_info.date_released {
             row.add(format!("{} ago", HumanDuration(Utc::now().signed_duration_since(date))));
         } else {
@@ -548,7 +561,7 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
     let project = ctx.get_project_default().ok();
     for artifact in ctx.api.list_release_files(
             org, project.as_ref().map(|x| x.as_str()), release)? {
-        let mut row = table.add_row();
+        let row = table.add_row();
         row.add(&artifact.name);
         if let Some(ref dist) = artifact.dist {
             row.add(dist);
@@ -633,12 +646,13 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
                                        -> Result<()> {
     let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();
-    let extensions = match matches.values_of("extensions") {
-        Some(matches) => matches.map(|ext| OsStr::new(ext.trim_left_matches("."))).collect(),
-        None => {
-            vec![OsStr::new("js"), OsStr::new("map"), OsStr::new("jsbundle"), OsStr::new("bundle")]
-        }
-    };
+    let extensions = matches.values_of("extensions")
+        .map(|extensions| extensions.map(|ext| ext.trim_left_matches(".")).collect())
+        .unwrap_or(vec!["js", "map", "jsbundle", "bundle"]);
+    let ignores = matches.values_of("ignore").map(|ignores| ignores
+        .map(|i| format!("!{}", i))
+        .collect::<Vec<_>>());
+    let ignore_file = matches.value_of("ignore_file");
     let dist = matches.value_of("dist");
 
     let mut processor = SourceMapProcessor::new();
@@ -648,31 +662,50 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
         // the directory iterator yields that path and terminates.  We
         // handle that case here specifically to figure out what the path is
         // we should strip off.
-        let walk_path = PathBuf::from(&path);
-        let (base_path, skip_ext_test) = if walk_path.is_file() {
-            (walk_path.parent().unwrap(), true)
+        let path = Path::new(path);
+        let (base_path, check_ignore) = if path.is_file() {
+            (path.parent().unwrap(), false)
         } else {
-            (walk_path.as_path(), false)
+            (path, true)
         };
 
-        for dent in WalkDir::new(&walk_path) {
-            let dent = dent?;
-            // skip over directories
-            if dent.file_type().is_dir() {
+        let mut builder = WalkBuilder::new(path);
+        builder.git_exclude(false)
+            .git_ignore(false)
+            .ignore(false);
+
+        if check_ignore {
+            let mut types_builder = TypesBuilder::new();
+            for ext in &extensions {
+                types_builder.add(ext, &format!("*.{}", ext))?;
+            }
+            builder.types(types_builder.select("all").build()?);
+
+            if let Some(ignore_file) = ignore_file {
+                // This could yield an optional partial error
+                // We ignore this error to match behavior of git
+                builder.add_ignore(ignore_file);
+            }
+
+            if let Some(ref ignores) = ignores {
+                let mut override_builder = OverrideBuilder::new(path);
+                for ignore in ignores {
+                    override_builder.add(&ignore)?;
+                }
+                builder.overrides(override_builder.build()?);
+            }
+        }
+
+        for result in builder.build() {
+            let file = result?;
+            if file.file_type().map_or(false, |t| t.is_dir()) {
                 continue;
             }
-            if !skip_ext_test {
-                let extension = dent.path().extension();
-                if !extensions.iter().any(|ext| Some(*ext) == extension) {
-                    continue;
-                }
-            }
-            info!("found: {} ({} bytes)",
-                  dent.path().display(),
-                  dent.metadata().unwrap().len());
-            let local_path = dent.path().strip_prefix(&base_path).unwrap();
+
+            info!("found: {} ({} bytes)", file.path().display(), file.metadata().unwrap().len());
+            let local_path = file.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, path_as_url(local_path));
-            processor.add(&url, dent.path())?;
+            processor.add(&url, file.path())?;
         }
     }
 
