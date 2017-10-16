@@ -90,7 +90,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
-    if let Some(extra) = matches.values_of("tags") {
+    if let Some(extra) = matches.values_of("extra") {
         for pair in extra {
             let mut split = pair.splitn(2, ':');
             let key = split.next().ok_or("missing extra key")?;
