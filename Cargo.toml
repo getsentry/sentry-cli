@@ -19,6 +19,7 @@ git2 = { version = "0.6.4", default-features = false }
 glob = "0.2.11"
 humansize = "1.0"
 if_chain = "0.1.2"
+ignore = "0.2"
 indicatif = "0.7"
 itertools = "0.6"
 java-properties = "1.0"

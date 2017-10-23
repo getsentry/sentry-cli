@@ -284,7 +284,7 @@ impl<'a> Iterator for BatchIter<'a> {
 
             if self.open_zip_index != !0 {
                 let mut archive_ptr = self.open_zip.borrow_mut();
-                let mut archive = archive_ptr.as_mut().unwrap();
+                let archive = archive_ptr.as_mut().unwrap();
                 if show_zip_continue {
                     show_zip_continue = false;
                 }
@@ -433,7 +433,7 @@ fn resolve_bcsymbolmaps(refs: &mut [DSymRef],
 
         let pb = ProgressBar::new(hidden_symbols.len() as u64);
         for idx in hidden_symbols.into_iter() {
-            let mut r = &mut refs[idx];
+            let r = &mut refs[idx];
             pb.inc(1);
             r.resolve_bcsymbolmaps(symbol_map_path)?;
         }

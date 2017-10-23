@@ -63,6 +63,7 @@ extern crate mac_process_info;
 extern crate app_dirs;
 extern crate uchardet;
 extern crate encoding;
+extern crate ignore;
 
 mod macros;
 

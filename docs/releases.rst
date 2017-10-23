@@ -212,6 +212,21 @@ The following options exist to change the behavior of the upload command:
     file by the file contents (eg: sources, minified sources, and
     source maps) and act appropriately.
 
+``--ignore``
+    Specifies one or more patterns of ignored files and folders.  Overrides
+    patterns specified in the ignore file. See ``--ignore-file`` for more
+    information.  Note that unlike ``--ignore-file``, this argument is
+    interpreted relative to the specified path argument.
+
+``--ignore-file``
+    Specifies a file containing patterns of files and folders to ignore
+    during the scan.  Ignore patterns follow the gitignore_ rules and are
+    evaluated relative to the location of the ignore file.  The file is
+    assumed in the current working directory or any of its parent
+    directories.
+
+.. _gitignore: https://git-scm.com/docs/gitignore#_pattern_format
+
 Some example usages::
 
     $ sentry-cli releases files 0.1 upload-sourcemaps /path/to/sourcemaps
@@ -219,6 +234,8 @@ Some example usages::
         --url-prefix '~/static/js`
     $ sentry-cli releases files 0.1 upload-sourcemaps /path/to/sourcemaps \
         --url-prefix '~/static/js` --rewrite --strip-common-prefix
+    $ sentry-cli releases files 0.1 upload-sourcemaps /path/to/sourcemaps \
+        --ignore-file .sentryignore
 
 List Files
 ``````````
