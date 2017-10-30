@@ -14,7 +14,7 @@ curl = "0.4.8"
 dotenv = "0.10"
 elementtree = "0.5"
 encoding = "0.2"
-error-chain = "0.10"
+error-chain = "0.11"
 git2 = { version = "0.6.4", default-features = false }
 glob = "0.2.11"
 humansize = "1.0"
@@ -32,7 +32,7 @@ might-be-minified = "0.2.1"
 open = "1.2"
 plist = "0.2.2"
 prettytable-rs = "0.6"
-proguard = "0.3"
+proguard = "0.4"
 regex = "0.2"
 runas = "0.1.4"
 rust-ini = "0.10"
@@ -62,7 +62,7 @@ codegen-units = 2
 
 [target."cfg(not(windows))".dependencies]
 chan = "0.1"
-chan-signal = "0.2"
+chan-signal = "0.3"
 openssl-probe = "0.1.0"
 
 [target."cfg(target_os=\"macos\")"]
