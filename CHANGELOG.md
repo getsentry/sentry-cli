@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.22.0
+
+- Add `--ignore` and `--ignore-file` parameters to `upload-dsyms`
+- Fix some typos in the CLI (thanks @mbudde and @AdrienDS)
+
 ## sentry-cli 1.21.0
 
 - Fix codepush command for android
