@@ -4,8 +4,7 @@ cache:
 
 environment:
   fast_finish: true
-  GITHUB_AUTH_TOKEN:
-    secure: OIMAVZAsCzaNv3emTg9MlxxuA0vi2lwJM41cEtTjb9p1CQbDEO3riYwcVzLDjhZi
+  DIST_DIR: '.'
 
   matrix:
     - TARGET: i686-pc-windows-msvc
@@ -32,4 +31,17 @@ test_script:
   - cargo build --release
 
 after_test:
-  - powershell -File .ci/deploy.ps1
+  - C:\Python27\python .ci/move-asset.py
+
+artifacts:
+  - path: '*.exe'
+
+deploy:
+  provider: S3
+  access_key_id: AKIAJKYWAF3QS7SFL75Q
+  secret_access_key:
+    secure: Jk6F78pedve8W++5KDviGUw07CA5mjtuAZNBbiY1zbAaDCtZhX0lZOVQLns36eRp
+  bucket: getsentry-builds
+  set_public: true
+  folder: $(APPVEYOR_REPO_NAME)/$(APPVEYOR_REPO_COMMIT)
+  artifact: /.*/
