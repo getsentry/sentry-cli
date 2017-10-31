@@ -34,7 +34,7 @@ after_test:
   - C:\Python27\python .ci/move-asset.py
 
 artifacts:
-  - path: '*.exe'
+  - path: 'sentry-cli-*.exe'
 
 deploy:
   provider: S3
