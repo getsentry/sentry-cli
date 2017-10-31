@@ -50,3 +50,16 @@ deploy:
   skip_cleanup: true
   on:
     tags: true
+
+before_deploy: python .ci/move-asset.py
+
+deploy:
+  provider: s3
+  access_key_id: AKIAJKYWAF3QS7SFL75Q
+  secret_access_key:
+    secure: ChlFKqMUfbQvGY/mfczQOSorb5ZePWZVbcqkabOEdusXa16I5GxOKjHtf5ND6wo+uQ8w8o6OyfexiEPywdnMJRklp/Byw4PkfLVdk09vR1z1nzXTEPbVFLbDY6b4H6FLeFIsq1ANZTRg12XA3reCkc6i5FmNwtlwvq2sjb/Z2i/VsIW1cPgSpX+ONc4l3c6k8LM9whD1M9/JXFaNfj1IFUNZlrf20RQdUCNPP5BwLqjneXhuw+rBRwJ2sTPgjBQWRa5YKKj+MR3dcw1MlMAwJeiZuTNksipl/CgP1RpyFIgIu9/JS74h4J9RWw/+VsD4pg4bZ7Q4TL0kGDhgwytDa0zSItWAmDSYEy306I2Be3uyhCKafTtoaXgDfaGXdQYDcruQYHoAdzxge2H1s/mc8weLYM0aLmIWzqsX4jktfABrp80INvbxiemoaudUmwsAbw/kfbxcIsPuVjY0kLuT9jyfcvLWVZSsxN5u/kqAVpDPGKl6leb5gQNpr5afUOEXXxkAWXJfU+GQi2Vc1PSX6Uwy0nosWaNN7FTnGjJ3jjJBppOM3n52Wp4IO8Z4wiINQUFRqOUTzZVh9lA1D2jAg/n2Y6w3F+60/+UtjHNswoaw+IszlzMzzNmsDkLAiBv1GHI5BVx7f48+ciMrduiZ+toepRmRHW1E1PLxW+aqLV0=
+  skip_cleanup: true
+  acl: public_read
+  bucket: getsentry-builds
+  upload-dir: $TRAVIS_REPO_SLUG/$TRAVIS_COMMIT
+  local_dir: dist
