@@ -25,7 +25,7 @@ matrix:
       node_js: 8
       install: skip
       script: npm pack
-      before_deploy: mkdir -p dist && mv *.tgz dist
+      before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
 
 install:
   - export PATH="$PATH:$HOME/.cargo/bin"
