@@ -42,7 +42,7 @@ echo "Bumping version: $TARGET"
 
 sed -i '' -e "1,/^version/ s/^version.*/version = \"$TARGET\"/" Cargo.toml
 sed -i '' -e "1,/^version/ s/^version.*/version = \"$TARGET\"/" Cargo.lock
-sed -i '' -e "1,/\"version\"/ s/\"version\".*/\"version\": \"$TARGET\"/" package.json
+sed -i '' -e "1,/\"version\"/ s/\"version\".*/\"version\": \"$TARGET\",/" package.json
 git commit -a -m "release: $TARGET" > /dev/null
 git tag "$TARGET"
 
