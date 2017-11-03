@@ -4,6 +4,8 @@ dist: trusty
 services:
   - docker
 
+if: tag IS blank
+
 matrix:
   include:
     - os: linux
