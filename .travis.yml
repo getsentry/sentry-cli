@@ -23,7 +23,7 @@ matrix:
       sudo: false
       language: node_js
       node_js: 8
-      install: npm install
+      install: skip
       script: npm pack
       before_deploy: mkdir -p dist && mv *.tgz dist
 
