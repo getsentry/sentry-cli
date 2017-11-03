@@ -1,3 +1,5 @@
+skip_tags: true
+
 cache:
   - 'target -> appveyor.yml'
   - '%USERPROFILE%\.cargo'
