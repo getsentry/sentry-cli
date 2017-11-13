@@ -1,4 +1,14 @@
-# sentry-cli
+<p align="center">
+    <img src="https://sentry-brand.storage.googleapis.com/sentry-logo-black.png" width="280">
+    <br />
+</p>
+
+# Official Sentry Command Line Interface
+
+[![Travis](https://img.shields.io/travis/getsentry/sentry-cli.svg?maxAge=2592000)](https://travis-ci.org/getsentry/sentry-cli)
+[![GitHub release](https://img.shields.io/github/release/getsentry/sentry-cli.svg)](github.com/getsentry/sentry-cli/releases/latest)
+[![npm version](https://img.shields.io/npm/v/sentry-cli-binary.svg)](https://www.npmjs.com/package/sentry-cli-binary)
+[![license](https://img.shields.io/github/license/getsentry/sentry-cli.svg)](https://github.com/getsentry/sentry-cli/blob/master/LICENSE)
 
 This is a Sentry command line client for some generic tasks.  Right now this
 is primarily used to upload debug symbols to Sentry if you are not using the
@@ -9,7 +19,7 @@ fastlane tools.
 
 ## Installation
 
-You can also install it with everybody's favorite curl to bash:
+The recommended way to install is with everybody's favorite curl to bash:
 
     curl -sL https://sentry.io/get-cli/ | bash
 
