@@ -307,13 +307,17 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
             if err.kind() == io::ErrorKind::NotFound {
                 Ini::new()
             } else {
-                fail!(err);
+                return Err(err).chain_err(
+                    || "Failed to load .sentryclirc file from the home folder.");
             }
         }
     };
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let ini = Ini::read_from(&mut fs::File::open(&project_config_path)?)?;
+        let mut f = fs::File::open(&project_config_path)
+            .chain_err(|| format!("Failed to load .sentryclirc file from project path ({})",
+                project_config_path.display()))?;
+        let ini = Ini::read_from(&mut f)?;
         for (section, props) in ini.iter() {
             for (key, value) in props {
                 rv.set_to(section.clone(), key.clone(), value.to_owned());
@@ -325,7 +329,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
     };
 
     if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
-        match fs::File::open(prop_path) {
+        match fs::File::open(&prop_path) {
             Ok(f) => {
                 let props = match java_properties::read(f) {
                     Ok(props) => props,
@@ -344,7 +348,9 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
             },
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
-                    return Err(err.into());
+                    return Err(Error::from(err)).chain_err(
+                        || format!("Failed to load file referenced by SENTRY_PROPERTIES ({})",
+                                   &prop_path));
                 }
             }
         }
