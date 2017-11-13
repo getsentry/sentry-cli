@@ -329,7 +329,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
     };
 
     if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
-        match fs::File::open(prop_path) {
+        match fs::File::open(&prop_path) {
             Ok(f) => {
                 let props = match java_properties::read(f) {
                     Ok(props) => props,
@@ -349,7 +349,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
                     return Err(Error::from(err)).chain_err(
-                        || "Failed to load file referenced by SENTRY_PROPERTIES");
+                        || format!("Failed to load file referenced by SENTRY_PROPERTIES ({})",
+                                   &prop_path));
                 }
             }
         }
