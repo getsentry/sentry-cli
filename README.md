@@ -14,6 +14,11 @@ Additionally you can also install this binary via npm:
 
     npm install sentry-cli-binary
 
+When installing globally, make sure to have set [correct permissions on the global node_modules directory](https://docs.npmjs.com/getting-started/fixing-npm-permissions).
+If this is not possible in your environment or still produces an EACCESS error, install as root:
+
+    sudo npm install -g sentry-cli-binary --unsafe-perm
+
 Or homebrew:
 
     brew install getsentry/tools/sentry-cli
