@@ -34,7 +34,7 @@ dependencies = [
  "osascript 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "plist 0.2.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "prettytable-rs 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
- "proguard 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "proguard 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "regex 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "runas 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "rust-ini 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -874,7 +874,7 @@ dependencies = [
 
 [[package]]
 name = "proguard"
-version = "0.4.0"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "lazy_static 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1504,7 +1504,7 @@ dependencies = [
 "checksum podio 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "e5422a1ee1bc57cc47ae717b0137314258138f38fd5f3cea083f43a9725383a0"
 "checksum precomputed-hash 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 "checksum prettytable-rs 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)" = "34dc1f4f6dddab3bf008ecfd4fd2a631b585fbf0af123f34c1324f51a034ff5f"
-"checksum proguard 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "68dff7dd8a78fe6463de150791dfb043f41ca66af97b73591270b4045041ba00"
+"checksum proguard 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "9b208284829c74d78fa85cefeeb4e4eeca3bafc84c22ede942ec283ab9dd6588"
 "checksum quote 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)" = "7a6e920b65c65f10b2ae65c831a81a073a89edd28c7cce89475bff467ab4167a"
 "checksum rand 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)" = "61efcbcd9fa8d8fbb07c84e34a8af18a1ff177b449689ad38a6e9457ecc7b2ae"
 "checksum redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)" = "8dde11f18c108289bef24469638a04dce49da56084f2d50618b226e47eb04509"
