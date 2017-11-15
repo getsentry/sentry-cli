@@ -238,7 +238,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("ignore-file")
                     .short("I")
                     .value_name("IGNORE_FILE")
-                    .help("Ignores all fiels and folders specified in the given \
+                    .help("Ignores all files and folders specified in the given \
                             ignore file, e.g. .gitignore."))
                 // legacy parameter
                 .arg(Arg::with_name("verbose")
