@@ -51,7 +51,7 @@ impl<'a> ReleaseContext<'a> {
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("manage releases on Sentry")
+    app.about("Manage releases on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .org_arg()
         .arg(Arg::with_name("project")
@@ -61,7 +61,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .short("p")
             .validator(validate_project))
         .subcommand(App::new("new")
-            .about("Create a new release")
+            .about("Create a new release.")
             .version_arg(1)
             .projects_arg()
             // this is deprecated and no longer does anything
@@ -73,22 +73,22 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("url")
                 .long("url")
                 .value_name("URL")
-                .help("Optional URL to the release for information purposes"))
+                .help("Optional URL to the release for information purposes."))
             .arg(Arg::with_name("finalize")
                  .long("finalize")
-                 .help("Immediately finalize the release (sets it to released)")))
+                 .help("Immediately finalize the release. (sets it to released)")))
         .subcommand(App::new("propose-version")
-            .about("Proposes a version name for a new release"))
+            .about("Propose a version name for a new release."))
         .subcommand(App::new("set-commits")
-            .about("Sets commits to a release")
+            .about("Set commits of a release.")
             .version_arg(1)
             .arg(Arg::with_name("clear")
                  .long("clear")
-                 .help("If this is passed the commits will be cleared from the release."))
+                 .help("Clear all current commits from the release."))
             .arg(Arg::with_name("auto")
                  .long("auto")
-                 .help("This parameter enables completely automated commit management. \
-                        It requires that the command is run from within a git repository. \
+                 .help("Enable completely automated commit management.{n}\
+                        This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
             .arg(Arg::with_name("commits")
@@ -97,7 +97,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .value_name("SPEC")
                  .multiple(true)
                  .number_of_values(1)
-                 .help("This parameter defines a single commit for a repo as \
+                 .help("Defines a single commit for a repo as \
                         identified by the repo name in the remote Sentry config. \
                         If no commit has been specified sentry-cli will attempt \
                         to auto discover that repository in the local git repo \
@@ -111,123 +111,123 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         assumed.  To override the revision `@REV` can be appended \
                         which will force the revision to a certain value.")))
         .subcommand(App::new("delete")
-            .about("Delete a release")
+            .about("Delete a release.")
             .version_arg(1))
         .subcommand(App::new("finalize")
-            .about("Marks a release as finalized and released.")
+            .about("Mark a release as finalized and released.")
             .version_arg(1)
             .arg(Arg::with_name("started")
                  .long("started")
                  .validator(validate_timestamp)
                  .value_name("TIMESTAMP")
-                 .help("If set the release start date is set to this value."))
+                 .help("Set the release start date."))
             .arg(Arg::with_name("released")
                  .long("released")
                  .validator(validate_timestamp)
                  .value_name("TIMESTAMP")
-                 .help("The release time (if not provided the current time is used).")))
+                 .help("Set the release time. [defaults to the current time]")))
         .subcommand(App::new("list")
-            .about("List the most recent releases")
+            .about("List the most recent releases.")
             .arg(Arg::with_name("no_abbrev")
                 .long("no-abbrev")
-                .help("Do not abbreviate the release version")))
+                .help("Do not abbreviate the release version.")))
         .subcommand(App::new("info")
-            .about("Return information about a release")
+            .about("Print information about a release.")
             .version_arg(1)
             .arg(Arg::with_name("quiet")
                 .short("q")
                 .long("quiet")
-                .help("Do not print any output.  If this is passed the command can be \
+                .help("Do not print any output.{n}If this is passed the command can be \
                        used to determine if a release already exists.  The exit status \
                        will be 0 if the release exists or 1 otherwise.")))
         .subcommand(App::new("files")
-            .about("Manage release artifact files")
+            .about("Manage release artifacts.")
             .setting(AppSettings::SubcommandRequiredElseHelp)
             .version_arg(1)
-            .subcommand(App::new("list").about("List all release files"))
+            .subcommand(App::new("list").about("List all release files."))
             .subcommand(App::new("delete")
-                .about("Delete a release file")
+                .about("Delete a release file.")
                 .arg(Arg::with_name("all")
                     .short("A")
                     .long("all")
-                    .help("deletes all files"))
+                    .help("Delete all files."))
                 .arg(Arg::with_name("names")
                     .value_name("NAMES")
                     .index(1)
                     .multiple(true)
-                    .help("a list of filenames to delete.")))
+                    .help("Filenames to delete.")))
             .subcommand(App::new("upload")
-                .about("Uploads a file for a given release")
+                .about("Upload a file for a release.")
                 .arg(Arg::with_name("dist")
                     .long("dist")
                     .short("d")
                     .value_name("DISTRIBUTION")
-                    .help("Optional distribution identifier for this file"))
+                    .help("Optional distribution identifier for this file."))
                 .arg(Arg::with_name("headers")
                     .long("header")
                     .short("H")
                     .value_name("KEY VALUE")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("Stores a header with this file"))
+                    .help("Store a header with this file."))
                 .arg(Arg::with_name("path")
                     .value_name("PATH")
                     .index(1)
                     .required(true)
-                    .help("The file to upload"))
+                    .help("The path to the file to upload."))
                 .arg(Arg::with_name("name")
                     .index(2)
                     .value_name("NAME")
                     .help("The name of the file on the server.")))
             .subcommand(App::new("upload-sourcemaps")
-                .about("Uploads sourcemap information for a given release")
+                .about("Upload sourcemaps for a release.")
                 .arg(Arg::with_name("paths")
                     .value_name("PATHS")
                     .index(1)
                     .required(true)
                     .multiple(true)
-                    .help("The files to upload"))
+                    .help("The files to upload."))
                 .arg(Arg::with_name("url_prefix")
                     .short("u")
                     .long("url-prefix")
                     .value_name("PREFIX")
-                    .help("The URL prefix to prepend to all filenames"))
+                    .help("The URL prefix to prepend to all filenames."))
                 .arg(Arg::with_name("dist")
                     .long("dist")
                     .short("d")
                     .value_name("DISTRIBUTION")
-                    .help("Optional distribution identifier for the sourcemaps"))
+                    .help("Optional distribution identifier for the sourcemaps."))
                 .arg(Arg::with_name("validate")
                     .long("validate")
-                    .help("Enable basic sourcemap validation"))
+                    .help("Enable basic sourcemap validation."))
                 .arg(Arg::with_name("no_sourcemap_reference")
                     .long("no-sourcemap-reference")
-                    .help("Disables the emitting of automatic sourcemap references. \
-                            By default the tool will store a 'Sourcemap' header with \
-                            minified files so that sourcemaps are located automatically \
-                            if the tool can detect a link. If this causes issues it can \
-                            be disabled."))
+                    .help("Disable emitting of automatic sourcemap references.{n}\
+                           By default the tool will store a 'Sourcemap' header with \
+                           minified files so that sourcemaps are located automatically \
+                           if the tool can detect a link. If this causes issues it can \
+                           be disabled."))
                 .arg(Arg::with_name("rewrite")
                     .long("rewrite")
-                    .help("Enables rewriting of matching sourcemaps \
-                            so that indexed maps are flattened and missing \
-                            sources are inlined if possible.  This fundamentally \
-                            changes the upload process to be based on sourcemaps \
-                            and minified files exclusively and comes in handy for \
-                            setups like react-native that generate sourcemaps that \
-                            would otherwise not work for sentry."))
+                    .help("Enable rewriting of matching sourcemaps \
+                           so that indexed maps are flattened and missing \
+                           sources are inlined if possible.{n}This fundamentally \
+                           changes the upload process to be based on sourcemaps \
+                           and minified files exclusively and comes in handy for \
+                           setups like react-native that generate sourcemaps that \
+                           would otherwise not work for sentry."))
                 .arg(Arg::with_name("strip_prefix")
                     .long("strip-prefix")
                     .value_name("PREFIX")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("When passed all sources that start with the given prefix \
-                            will have that prefix stripped from the filename.  This \
-                            requires --rewrite to be enabled."))
+                    .help("Strip the given prefix from all filenames.{n}\
+                           Only files that start with the given prefix will be stripped.\
+                           This requires --rewrite to be enabled."))
                 .arg(Arg::with_name("strip_common_prefix")
                     .long("strip-common-prefix")
                     .help("Similar to --strip-prefix but strips the most common \
-                            prefix on all sources."))
+                           prefix on all sources."))
                 .arg(Arg::with_name("ignore")
                     .long("ignore")
                     .short("i")
@@ -238,12 +238,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("ignore-file")
                     .short("I")
                     .value_name("IGNORE_FILE")
-                    .help("Ignores all files and folders specified in the given \
-                            ignore file, e.g. .gitignore."))
+                    .help("Ignore all files and folders specified in the given \
+                           ignore file, e.g. .gitignore."))
                 // legacy parameter
                 .arg(Arg::with_name("verbose")
                     .long("verbose")
-                    .short("verbose")
+                    .short("v")
                     .hidden(true))
                 .arg(Arg::with_name("extensions")
                     .long("ext")
@@ -253,49 +253,47 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .number_of_values(1)
                     .help("Add a file extension to the list of files to upload."))))
         .subcommand(App::new("deploys")
-            .about("Manages deploys for a release")
+            .about("Manage release deployments.")
             .setting(AppSettings::SubcommandRequiredElseHelp)
             .version_arg(1)
             .subcommand(App::new("new")
-                .about("Creates a deploy for a release")
+                .about("Creates a new release deployment.")
                 .arg(Arg::with_name("env")
                      .long("env")
                      .short("e")
                      .value_name("ENV")
                      .required(true)
-                     .help("This sets the environment for this release.  This needs to be \
-                            provided.  Values that make sense here would be 'production' or \
-                            'staging'."))
+                     .help("Set the environment for this release.{n}This argument is required.  \
+                            Values that make sense here would be 'production' or 'staging'."))
                 .arg(Arg::with_name("name")
                      .long("name")
                      .short("n")
                      .value_name("NAME")
-                     .help("An optional human visible name for this deploy."))
+                     .help("Optional human readable name for this deployment."))
                 .arg(Arg::with_name("url")
                      .long("url")
                      .short("u")
                      .value_name("URL")
-                     .help("An optional optional URL that points to the deployment."))
+                     .help("Optional URL that points to the deployment."))
                 .arg(Arg::with_name("started")
                      .long("started")
                      .value_name("TIMESTAMP")
                      .validator(validate_timestamp)
-                     .help("Optional unix timestamp when the deploy was started."))
+                     .help("Optional unix timestamp when the deployment started."))
                 .arg(Arg::with_name("finished")
                      .long("finished")
                      .value_name("TIMESTAMP")
                      .validator(validate_timestamp)
-                     .help("Optional unix timestamp when the deploy was finished."))
+                     .help("Optional unix timestamp when the deployment finished."))
                 .arg(Arg::with_name("time")
                      .long("time")
                      .short("t")
                      .value_name("SECONDS")
                      .validator(validate_seconds)
-                     .help("Alternatively to `--started` and `--finished` an optional \
-                            time in seconds that indicates how long it took for the \
-                            deploy to finish.")))
+                     .help("Optional deployment duration in seconds.{n}\
+                            This can be specified alternatively to `--started` and `--finished`.")))
             .subcommand(App::new("list")
-                .about("List all deploys of a release")))
+                .about("List all deployments of a release.")))
 }
 
 fn strip_sha(sha: &str) -> &str {

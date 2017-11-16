@@ -10,18 +10,18 @@ use api::{Api, NewRelease};
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("uploads react-native projects from within a gradle build step")
+    app.about("Upload react-native projects in a gradle build step.")
         .org_project_args()
         .arg(Arg::with_name("sourcemap")
              .long("sourcemap")
              .value_name("PATH")
              .required(true)
-             .help("The path to the sourcemap that should be uploaded"))
+             .help("The path to a sourcemap that should be uploaded."))
         .arg(Arg::with_name("bundle")
              .long("bundle")
              .value_name("PATH")
              .required(true)
-             .help("The path to the bundle that should be uploaded"))
+             .help("The path to a bundle that should be uploaded."))
         .arg(Arg::with_name("release")
              .long("release")
              .value_name("RELEASE")

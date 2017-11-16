@@ -23,7 +23,7 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     }
 
     app = app
-        .about("provides helpers for react-native.")
+        .about("Upload build artifacts for react-native projects.")
         .setting(AppSettings::SubcommandRequiredElseHelp);
     each_subcommand!(add_subcommand);
     app

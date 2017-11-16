@@ -11,16 +11,17 @@ use utils::dif;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
-        .about("given the path to a debug info file it checks it")
+        .about("Check the debug info file at a given path.")
         .arg(Arg::with_name("type")
              .long("type")
              .short("t")
              .value_name("TYPE")
              .possible_values(&["dsym", "proguard"])
-             .help("Explicitly sets the type of the debug info file."))
+             .help("Explicitly set the type of the debug info file. \
+                    This should not be needed as files are auto detected."))
         .arg(Arg::with_name("json")
              .long("json")
-             .help("Returns the results as JSON"))
+             .help("Format outputs as JSON."))
         .arg(Arg::with_name("path")
              .index(1)
              .required(true)

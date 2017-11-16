@@ -10,7 +10,7 @@ use utils::{prompt, prompt_to_continue};
 use api::Api;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("helper that assists in signin in with sentry.")
+    app.about("Authenticate with the Sentry server.")
 }
 
 fn update_config(config: &Config, token: &str) -> Result<()> {

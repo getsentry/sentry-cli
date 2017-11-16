@@ -464,25 +464,24 @@ fn get_paths_from_env() -> Result<Vec<PathBuf>> {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("uploads debug symbols to a project")
+    app.about("Upload debug symbols to a project.")
         .org_project_args()
         .arg(Arg::with_name("paths")
             .value_name("PATH")
-            .help("The path to the debug symbols")
+            .help("A path to search recursively for symbol files.")
             .multiple(true)
             .number_of_values(1)
             .index(1))
         .arg(Arg::with_name("uuids")
              .value_name("UUID")
              .long("uuid")
-             .help("Finds debug symbols by UUID.")
+             .help("Search for specific UUIDs.")
              .validator(validate_uuid)
              .multiple(true)
              .number_of_values(1))
         .arg(Arg::with_name("require_all")
              .long("require-all")
-             .help("When combined with --uuid this will error if not all \
-                    UUIDs could be found."))
+             .help("Errors if not all UUIDs specified with --uuid could be found."))
         .arg(Arg::with_name("symbol_maps")
              .long("symbol-maps")
              .value_name("PATH")
@@ -494,21 +493,22 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Search for debug symbols in derived data."))
         .arg(Arg::with_name("no_zips")
              .long("no-zips")
-             .help("Do not recursive into .zip files"))
+             .help("Do not recurse into ZIP files."))
         .arg(Arg::with_name("info_plist")
              .long("info-plist")
              .value_name("PATH")
-             .help("Optional path to the Info.plist.  We will try to find this \
+             .help("Optional path to the Info.plist.{n}We will try to find this \
                     automatically if run from xcode.  Providing this information \
                     will associate the debug symbols with a specific ITC application \
                     and build in Sentry.  Note that if you provide the plist \
                     explicitly it must already be processed."))
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
-             .help("Does not trigger reprocessing after upload"))
+             .help("Do not trigger reprocessing after uploading."))
         .arg(Arg::with_name("force_foreground")
              .long("force-foreground")
-             .help("By default the upload process will when triggered from Xcode \
+             .help("Wait for the process to finish.{n}\
+                    By default the upload process will when triggered from Xcode \
                     detach and continue in the background.  When an error happens \
                     a dialog is shown.  If this parameter is passed Xcode will wait \
                     for the process to finish before the build finishes and output \

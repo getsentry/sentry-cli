@@ -13,7 +13,7 @@ fn is_hidden() -> bool {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("uninstalls the sentry-cli executable")
+    app.about("Uninstall the sentry-cli executable.")
         .settings(&if is_hidden() {
             vec![AppSettings::Hidden]
         } else {
