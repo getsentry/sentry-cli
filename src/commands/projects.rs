@@ -8,11 +8,11 @@ use api::Api;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("manage projects on Sentry")
+    app.about("Manage projects on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .org_arg()
         .subcommand(App::new("list")
-            .about("List all projects for an organization"))
+            .about("List all projects for an organization."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {

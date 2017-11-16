@@ -8,7 +8,7 @@ use config::Config;
 use utils::{get_latest_sentrycli_release, can_update_sentrycli};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("update the sentry-cli executable")
+    app.about("Update the sentry-cli executable.")
         .settings(&if !can_update_sentrycli() {
             vec![AppSettings::Hidden]
         } else {
@@ -17,7 +17,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("force")
             .long("force")
             .short("f")
-            .help("Force the update even if already current."))
+            .help("Force the update even if the latest version is already installed."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {

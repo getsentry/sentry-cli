@@ -22,7 +22,7 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     }
 
     app = app
-        .about("provides utilities for debug information files.")
+        .about("Locate or analyze debug information files.")
         .setting(AppSettings::SubcommandRequiredElseHelp);
     each_subcommand!(add_subcommand);
     app

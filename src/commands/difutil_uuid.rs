@@ -10,17 +10,17 @@ use utils::dif;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
-        .about("Given a debug info file spits out the UUID(s) of it")
+        .about("Print UUID(s) from a debug info file.")
         .arg(Arg::with_name("type")
              .long("type")
              .short("t")
              .value_name("TYPE")
              .possible_values(&["dsym", "proguard"])
-             .help("Explicitly sets the type of the debug info file. \
+             .help("Explicitly set the type of the debug info file. \
                     This should not be needed as files are auto detected."))
         .arg(Arg::with_name("json")
              .long("json")
-             .help("Returns the results as JSON"))
+             .help("Format outputs as JSON."))
         .arg(Arg::with_name("path")
              .index(1)
              .required(true)

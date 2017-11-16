@@ -8,7 +8,7 @@ use utils::ArgExt;
 
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("manage issues in Sentry")
+    app.about("Manage issues in Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .org_project_args()
         .arg(Arg::with_name("status")
@@ -16,25 +16,25 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .short("s")
             .value_name("STATUS")
             .possible_values(&["resolved", "muted", "unresolved"])
-            .help("Only changes issues with this status"))
+            .help("Select all issues matching a given status."))
         .arg(Arg::with_name("all")
             .long("all")
             .short("a")
-            .help("Selects all issues (this might be limited)"))
+            .help("Select all issues (this might be limited)."))
         .arg(Arg::with_name("id")
             .multiple(true)
             .number_of_values(1)
             .short("i")
             .long("id")
-            .help("Explicit issue IDs to resolve"))
+            .help("Select the issue with the given ID."))
         .subcommand(App::new("resolve")
-            .about("Bulk resolve all matching issues")
+            .about("Bulk resolve all selected issues.")
             .arg(Arg::with_name("next_release")
                 .long("next-release")
                 .short("n")
-                .help("Resolve in next release only")))
-        .subcommand(App::new("mute").about("Bulk mute all matching issues"))
-        .subcommand(App::new("unresolve").about("Bulk unresolve all matching issues"))
+                .help("Only select issues in the next release.")))
+        .subcommand(App::new("mute").about("Bulk mute all selected issues."))
+        .subcommand(App::new("unresolve").about("Bulk unresolve all selected issues."))
 }
 
 fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter> {
