@@ -936,7 +936,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "sentry-cli"
-version = "1.22.0"
+version = "1.23.0"
 dependencies = [
  "app_dirs 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "backtrace 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",

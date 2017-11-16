@@ -1,6 +1,6 @@
 {
   "name": "sentry-cli-binary",
-  "version": "1.22.0",
+  "version": "1.23.0",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
