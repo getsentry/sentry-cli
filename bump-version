@@ -41,8 +41,8 @@ echo "Current version: $VERSION"
 echo "Bumping version: $TARGET"
 
 sed -i '' -e "1,/^version/ s/^version.*/version = \"$TARGET\"/" Cargo.toml
-sed -i '' -e "1,/^version/ s/^version.*/version = \"$TARGET\"/" Cargo.lock
 sed -i '' -e "1,/\"version\"/ s/\"version\".*/\"version\": \"$TARGET\",/" package.json
+cargo update -p sentry-cli
 git commit -a -m "release: $TARGET" > /dev/null
 git tag "$TARGET"
 
