@@ -6,6 +6,7 @@ cache:
 
 environment:
   fast_finish: true
+  DIST_DIR: '.'
 
   matrix:
     - channel: stable
