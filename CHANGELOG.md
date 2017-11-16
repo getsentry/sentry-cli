@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.23.0
+
+- Fix a bug that prevented uploads of ProGuard mapping files on Windows
+- Improve command and parameter descriptions (`--help`)
+- Updated dependencies
+
 ## sentry-cli 1.22.0
 
 - Add `--ignore` and `--ignore-file` parameters to `upload-dsyms`
