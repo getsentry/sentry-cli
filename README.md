@@ -40,7 +40,7 @@ Or homebrew:
 ## Compiling
 
 In case you want to compile this yourself you need to build this with Rust
-1.15 or later.
+1.20 or later.
 
 Use rustup to compile:
 
