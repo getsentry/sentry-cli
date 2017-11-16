@@ -4,77 +4,77 @@
 
 #![recursion_limit = "1024"]
 
+extern crate app_dirs;
+extern crate backtrace;
 #[cfg(not(windows))]
 #[macro_use]
 extern crate chan;
 #[cfg(not(windows))]
 extern crate chan_signal;
-extern crate curl;
+extern crate chrono;
 extern crate clap;
+extern crate console;
+extern crate curl;
+extern crate dotenv;
+extern crate elementtree;
+extern crate encoding;
+#[macro_use]
+extern crate error_chain;
+extern crate git2;
+extern crate glob;
+extern crate humansize;
+#[macro_use]
+extern crate if_chain;
+extern crate ignore;
+extern crate indicatif;
 extern crate ini;
-extern crate backtrace;
 extern crate itertools;
+extern crate java_properties;
+#[macro_use]
+extern crate lazy_static;
+extern crate libc;
+#[macro_use]
+extern crate log;
+#[cfg(target_os = "macos")]
+extern crate mac_process_info;
+extern crate mach_object;
+extern crate memmap;
+extern crate might_be_minified;
+extern crate open;
+#[cfg(not(windows))]
+extern crate openssl_probe;
+#[cfg(target_os = "macos")]
+extern crate osascript;
+extern crate plist;
+extern crate prettytable;
+extern crate proguard;
+extern crate regex;
+extern crate runas;
+extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde;
 extern crate serde_json;
+extern crate sha1;
+extern crate sourcemap;
+extern crate uchardet;
+#[cfg(target_os = "macos")]
+extern crate unix_daemonize;
 extern crate url;
 extern crate uuid;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
-extern crate sha1;
-extern crate sourcemap;
-extern crate open;
-extern crate runas;
-extern crate plist;
-extern crate proguard;
-extern crate elementtree;
-extern crate might_be_minified;
-#[macro_use]
-extern crate error_chain;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate if_chain;
-extern crate chrono;
-extern crate regex;
-#[macro_use]
-extern crate lazy_static;
-extern crate console;
-extern crate indicatif;
-#[cfg(target_os="macos")]
-extern crate osascript;
-#[cfg(target_os="macos")]
-extern crate unix_daemonize;
-extern crate dotenv;
-#[cfg(not(windows))]
-extern crate openssl_probe;
-extern crate prettytable;
-extern crate git2;
-extern crate humansize;
-extern crate java_properties;
-extern crate mach_object;
-extern crate memmap;
-extern crate glob;
-extern crate libc;
-#[cfg(target_os="macos")]
-extern crate mac_process_info;
-extern crate app_dirs;
-extern crate uchardet;
-extern crate encoding;
-extern crate ignore;
 
 mod macros;
 
-pub mod prelude;
 pub mod api;
 pub mod commands;
-pub mod event;
-pub mod errors;
 pub mod config;
-pub mod utils;
 pub mod constants;
+pub mod errors;
+pub mod event;
+pub mod prelude;
+pub mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {
