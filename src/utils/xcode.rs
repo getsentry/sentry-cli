@@ -213,7 +213,9 @@ impl InfoPlist {
             then {
                 let vars = pi.get_build_vars(target, config)?;
                 if let Some(path) = vars.get("INFOPLIST_FILE") {
-                    let path = pi.base_path().join(path);
+                    let base = vars.get("PROJECT_DIR").map(|x| Path::new(x.as_str()))
+                        .unwrap_or(pi.base_path());
+                    let path = base.join(path);
                     return Ok(Some(InfoPlist::load_and_process(path, &vars)?));
                 }
             }
