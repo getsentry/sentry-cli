@@ -199,6 +199,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         }
     }
 
+    if event.breadcrumbs.len() > 100 {
+        let skip = event.breadcrumbs.len() - 100;
+        event.breadcrumbs = event.breadcrumbs.into_iter().skip(skip).collect();
+    }
+
     let dsn = config.get_dsn()?;
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
