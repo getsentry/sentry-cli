@@ -181,7 +181,9 @@ impl InfoPlist {
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
             let vars: HashMap<_, _> = env::vars().collect();
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
-                Ok(Some(InfoPlist::load_and_process(filename, &vars)?))
+                let base = vars.get("PROJECT_DIR").map(|x| x.as_str()).unwrap_or(".");
+                let path = env::current_dir().unwrap().join(base).join(filename);
+                Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
             } else {
                 Ok(None)
             }
