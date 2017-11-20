@@ -193,14 +193,18 @@ struct BatchIter<'a> {
     open_zip_index: usize,
     uuids: Option<&'a HashSet<Uuid>>,
     allow_zips: bool,
+    allow_bins: bool,
     found_uuids: RefCell<&'a mut HashSet<(Uuid, MachoFileType)>>,
 }
 
 impl<'a> BatchIter<'a> {
-    pub fn new<P: AsRef<Path>>(path: P, max_size: u64, uuids: Option<&'a HashSet<Uuid>>,
-                               allow_zips: bool, found_uuids: &'a mut HashSet<(Uuid, MachoFileType)>)
-        -> BatchIter<'a>
-    {
+    pub fn new<P: AsRef<Path>>(
+        path: P,
+        max_size: u64,
+        uuids: Option<&'a HashSet<Uuid>>,
+        allow_zips: bool, allow_bins: bool,
+        found_uuids: &'a mut HashSet<(Uuid, MachoFileType)>
+    ) -> BatchIter<'a> {
         BatchIter {
             path: path.as_ref().to_path_buf(),
             max_size: max_size,
@@ -209,32 +213,83 @@ impl<'a> BatchIter<'a> {
             open_zip_index: !0,
             uuids: uuids,
             allow_zips: allow_zips,
+            allow_bins: allow_bins,
             found_uuids: RefCell::new(found_uuids),
         }
     }
 
     fn found_all(&self) -> bool {
-        // TODO(ja): Check with armin
-        // if let Some(ref uuids) = self.uuids {
-        //     self.found_uuids.borrow().is_superset(uuids)
-        // } else {
+        // In case no UUIDs were specified, we continue searching to the end
+        let uuids = match self.uuids {
+            Some(uuids) => uuids,
+            _ => return false,
+        };
+
+        // First, see if all debug info files have been found. This is a strict
+        // requirement in all cases.
+        let found_dsyms: HashSet<_> = self.found_uuids.borrow().iter()
+            .filter(|&&(_, t)| t == MachoFileType::Dsym)
+            .map(|&(u, _)| u)
+            .collect();
+
+        if !found_dsyms.is_superset(uuids) {
+            return false;
+        }
+
+        // Next, try to see if binaries were required. In this case, we also
+        // have to make sure that all matching binaries have been found.
+        if self.allow_bins {
+            let found_exes: HashSet<_> = self.found_uuids.borrow().iter()
+                .filter(|&&(_, t)| self.is_binary(t))
+                .map(|&(u, _)| u)
+                .collect();
+
+            if !found_exes.is_superset(uuids) {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    fn is_binary(&self, file_type: MachoFileType) -> bool {
+        self.allow_bins
+            && (file_type == MachoFileType::Executable || file_type == MachoFileType::Dylib)
+    }
+
+    fn type_allowed(&self, file_type: MachoFileType) -> bool {
+        if file_type == MachoFileType::Dsym {
+            true
+        } else if self.is_binary(file_type) {
+            true
+        } else {
             false
-        // }
+        }
     }
 
     fn push_ref(&self, batch: &mut Vec<DSymRef>, dsym_ref: DSymRef) -> bool {
         let mut found_uuids = self.found_uuids.borrow_mut();
         let mut should_push = false;
+
+        let file_type = dsym_ref.file_type;
+        if !self.type_allowed(file_type) {
+            return false;
+        }
+
         for uuid in &dsym_ref.uuids {
-            if found_uuids.contains(&(*uuid, dsym_ref.file_type)) {
+            let entry = (*uuid, file_type);
+            if found_uuids.contains(&entry) {
                 continue;
             }
+
             should_push = true;
-            found_uuids.insert((*uuid, dsym_ref.file_type));
+            found_uuids.insert(entry);
         }
+
         if should_push {
             batch.push(dsym_ref);
         }
+
         batch.iter().map(|x| x.size).sum::<u64>() >= self.max_size
     }
 }
@@ -256,7 +311,7 @@ impl<'a> Iterator for BatchIter<'a> {
             ($load:expr) => {
                 match $load {
                     Ok(macho_info) => {
-                        if !macho_info.has_debug_info() {
+                        if !macho_info.has_debug_info() && !self.is_binary(macho_info.file_type()) {
                             None
                         } else if let Some(ref expected_uuids) = self.uuids {
                             if macho_info.matches_any(expected_uuids) {
@@ -478,50 +533,54 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .number_of_values(1)
             .index(1))
         .arg(Arg::with_name("uuids")
-             .value_name("UUID")
-             .long("uuid")
-             .help("Search for specific UUIDs.")
-             .validator(validate_uuid)
-             .multiple(true)
-             .number_of_values(1))
+            .value_name("UUID")
+            .long("uuid")
+            .help("Search for specific UUIDs.")
+            .validator(validate_uuid)
+            .multiple(true)
+            .number_of_values(1))
         .arg(Arg::with_name("require_all")
              .long("require-all")
              .help("Errors if not all UUIDs specified with --uuid could be found."))
         .arg(Arg::with_name("symbol_maps")
-             .long("symbol-maps")
-             .value_name("PATH")
-             .help("Optional path to bcsymbolmap files which are used to \
-                    resolve hidden symbols in the actual dsym files.  This \
-                    requires the dsymutil tool to be available."))
+            .long("symbol-maps")
+            .value_name("PATH")
+            .help("Optional path to bcsymbolmap files which are used to \
+                   resolve hidden symbols in the actual dsym files.  This \
+                   requires the dsymutil tool to be available."))
         .arg(Arg::with_name("derived_data")
              .long("derived-data")
              .help("Search for debug symbols in derived data."))
         .arg(Arg::with_name("no_zips")
              .long("no-zips")
              .help("Do not recurse into ZIP files."))
+        .arg(Arg::with_name("binaries")
+            .long("binaries")
+            .help("Include binaries in the upload to improve server-side stackwalking."))
         .arg(Arg::with_name("info_plist")
-             .long("info-plist")
-             .value_name("PATH")
-             .help("Optional path to the Info.plist.{n}We will try to find this \
-                    automatically if run from xcode.  Providing this information \
-                    will associate the debug symbols with a specific ITC application \
-                    and build in Sentry.  Note that if you provide the plist \
-                    explicitly it must already be processed."))
+            .long("info-plist")
+            .value_name("PATH")
+            .help("Optional path to the Info.plist.{n}We will try to find this \
+                   automatically if run from xcode.  Providing this information \
+                   will associate the debug symbols with a specific ITC application \
+                   and build in Sentry.  Note that if you provide the plist \
+                   explicitly it must already be processed."))
         .arg(Arg::with_name("no_reprocessing")
              .long("no-reprocessing")
              .help("Do not trigger reprocessing after uploading."))
         .arg(Arg::with_name("force_foreground")
-             .long("force-foreground")
-             .help("Wait for the process to finish.{n}\
-                    By default the upload process will when triggered from Xcode \
-                    detach and continue in the background.  When an error happens \
-                    a dialog is shown.  If this parameter is passed Xcode will wait \
-                    for the process to finish before the build finishes and output \
-                    will be shown in the Xcode build output."))
+            .long("force-foreground")
+            .help("Wait for the process to finish.{n}\
+                   By default the upload process will when triggered from Xcode \
+                   detach and continue in the background.  When an error happens \
+                   a dialog is shown.  If this parameter is passed Xcode will wait \
+                   for the process to finish before the build finishes and output \
+                   will be shown in the Xcode build output."))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let zips = !matches.is_present("no_zips");
+    let binaries = matches.is_present("binaries");
     let mut paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
         None => get_paths_from_env()?,
@@ -572,7 +631,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         for path in paths.into_iter() {
             info!("Scanning {}", path.display());
             for batch_res in BatchIter::new(path, max_size, find_uuids.as_ref(),
-                                            zips, &mut found_uuids) {
+                                            zips, binaries, &mut found_uuids) {
                 if batch_num > 0 {
                     println!("");
                 }
