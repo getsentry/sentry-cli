@@ -4,6 +4,8 @@
 
 #![recursion_limit = "1024"]
 
+use std::env;
+
 extern crate app_dirs;
 extern crate backtrace;
 #[cfg(not(windows))]
@@ -78,7 +80,9 @@ pub mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {
-    dotenv::dotenv().ok();
+    if env::var("SENTRY_LOAD_DOTENV").map(|x| x.as_str() == "1").unwrap_or(true) {
+        dotenv::dotenv().ok();
+    }
     utils::init_backtrace();
     utils::run_or_interrupt(commands::main);
 }
