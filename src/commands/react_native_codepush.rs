@@ -22,7 +22,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("bundle-id")
             .help("Explicitly provide the bundle ID instead of \
                    parsing the source projects.  This allows you to push \
-                   codepush releases for iOS on platforms without Xcode."))
+                   codepush releases for iOS on platforms without Xcode or \
+                   codepush releases for Android when you use different \
+                   bundle IDs for release and debug etc."))
         .arg(Arg::with_name("print_release_name")
             .long("print-release-name")
             .help("Print the release name instead."))
