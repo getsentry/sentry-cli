@@ -17,3 +17,4 @@ platforms.
    dif
    dsym
    proguard
+   send-event
