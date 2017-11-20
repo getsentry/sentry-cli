@@ -8,12 +8,20 @@ use chrono::Utc;
 use serde_json::Value;
 
 
-// Represents a parameterized message.
 #[derive(Serialize)]
 pub struct Message {
     pub message: String,
     #[serde(skip_serializing_if="Vec::is_empty")]
     pub params: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct Breadcrumb {
+    pub timestamp: Option<f64>,
+    #[serde(rename="type")]
+    pub ty: String,
+    pub message: String,
+    pub category: String,
 }
 
 /// Represents a Sentry event.
@@ -40,6 +48,8 @@ pub struct Event {
     pub user: HashMap<String, String>,
     #[serde(skip_serializing_if="HashMap::is_empty")]
     pub contexts: HashMap<String, HashMap<String, String>>,
+    #[serde(skip_serializing_if="Vec::is_empty")]
+    pub breadcrumbs: Vec<Breadcrumb>,
 }
 
 fn get_server_name() -> Result<String> {
@@ -63,6 +73,7 @@ impl Event {
             environment: None,
             user: HashMap::new(),
             contexts: HashMap::new(),
+            breadcrumbs: Vec::new(),
         }
     }
 }

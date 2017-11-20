@@ -70,6 +70,7 @@ extern crate username;
 extern crate hostname;
 #[cfg(not(windows))]
 extern crate uname;
+extern crate anylog;
 
 mod macros;
 

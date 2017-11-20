@@ -1,4 +1,6 @@
 //! Implements a command for sending events to Sentry.
+use std::fs;
+use std::io::{BufRead, BufReader};
 use std::env;
 use std::collections::HashMap;
 
@@ -9,10 +11,11 @@ use hostname::get_hostname;
 #[cfg(not(windows))]
 use uname::uname;
 use serde_json::Value;
+use anylog::LogEntry;
 
 use prelude::*;
 use config::Config;
-use event::{Event, Message};
+use event::{Event, Message, Breadcrumb};
 use api::Api;
 use constants::{ARCH, PLATFORM};
 use utils::{get_model, get_family};
@@ -90,6 +93,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .number_of_values(1)
             .help("Change the fingerprint of the event."))
+        .arg(Arg::with_name("logfile")
+            .value_name("PATH")
+            .long("logfile")
+            .help("Send a logfile as breadcrumbs with the event (last 100 records)"))
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
@@ -174,6 +181,22 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     if let Some(fingerprint) = matches.values_of("fingerprint") {
         event.fingerprint = Some(fingerprint.map(|x| x.to_string()).collect());
+    }
+
+    if let Some(logfile) = matches.value_of("logfile") {
+        let f = fs::File::open(logfile)
+            .chain_err(|| "Could not open logfile")?;
+        let reader = BufReader::new(f);
+        for line in reader.lines() {
+            let line = line?;
+            let rec = LogEntry::parse(line.as_bytes());
+            event.breadcrumbs.push(Breadcrumb {
+                timestamp: rec.utc_timestamp().map(|x| x.timestamp() as f64),
+                message: rec.message().to_string(),
+                ty: "default".to_string(),
+                category: "log".to_string(),
+            })
+        }
     }
 
     let dsn = config.get_dsn()?;
