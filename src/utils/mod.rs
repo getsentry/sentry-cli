@@ -25,7 +25,7 @@ pub use self::formatting::{HumanDuration, Table, TableRow};
 pub use self::fs::{TempDir, TempFile, is_writable, set_executable_mode, is_zip_file,
                    get_sha1_checksum, SeekRead};
 pub use self::logging::Logger;
-pub use self::macho::MachoInfo;
+pub use self::macho::{MachoInfo, MachoFileType};
 pub use self::releases::detect_release_name;
 pub use self::sourcemaps::{SourceMapProcessor, get_sourcemap_reference_from_headers};
 pub use self::system::{propagate_exit_status, is_homebrew_install,

@@ -1,8 +1,9 @@
 //! Provides support for working with macho binaries.
-use std::io::{Read, Seek, SeekFrom, Cursor};
+use std::io::{Cursor, Read, Seek, SeekFrom};
+use std::fmt;
 use std::fs::File;
 use std::path::Path;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 
 use prelude::*;
@@ -10,8 +11,7 @@ use prelude::*;
 use regex::Regex;
 use memmap;
 use uuid::Uuid;
-use mach_object::{OFile, LoadCommand, MachCommand, Section, SymbolReader,
-                  get_arch_name_from_types};
+use mach_object::{get_arch_name_from_types, LoadCommand, MachCommand, OFile, Section, SymbolReader};
 
 
 lazy_static! {
@@ -26,14 +26,88 @@ const MAGIC_CIGAM: &'static [u8; 4] = b"\xce\xfa\xed\xfe";
 const MAGIC_64: &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
 const MAGIC_CIGAM64: &'static [u8; 4] = b"\xcf\xfa\xed\xfe";
 
+/// Indicates the usage and alignment of an `Object` file.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub enum MachoFileType {
+    /// The file type is either not set or unknown.
+    Unknown,
+
+    /// The MH_OBJECT file type is the format used for intermediate object
+    /// files. It is a very compact format containing all its sections in one
+    /// segment. The compiler and assembler usually create one MH_OBJECT file
+    /// for each source code file. By convention, the file name extension for
+    /// this format is .o.
+    Object,
+
+    /// The MH_EXECUTE file type is the format used by standard executable
+    /// programs.
+    Executable,
+
+    /// The MH_BUNDLE file type is the type typically used by code that you
+    /// load at runtime (typically called bundles or plug-ins). By convention,
+    /// the file name extension for this format is .bundle.
+    Bundle,
+
+    /// The MH_DYLIB file type is for dynamic shared libraries. It contains
+    /// some additional tables to support multiple modules. By convention, the
+    /// file name extension for this format is .dylib, except for the main
+    /// shared library of a framework, which does not usually have a file name
+    /// extension.
+    Dylib,
+
+    /// The MH_PRELOAD file type is an executable format used for special-
+    /// purpose programs that are not loaded by the OS X kernel, such as
+    /// programs burned into programmable ROM chips. Do not confuse this file
+    /// type with the MH_PREBOUND flag, which is a flag that the static linker
+    /// sets in the header structure to mark a prebound image.
+    Preload,
+
+    /// The MH_CORE file type is used to store core files, which are
+    /// traditionally created when a program crashes. Core files store the
+    /// entire address space of a process at the time it crashed. You can
+    /// later run gdb on the core file to figure out why the crash occurred.
+    Core,
+
+    /// The MH_DYLINKER file type is the type of a dynamic linker shared
+    /// library. This is the type of the dyld file.
+    Dylinker,
+
+    /// The MH_DSYM file type designates files that store symbol information
+    /// for a corresponding binary file.
+    Dsym,
+
+    /// The multi-arch (universal) MachO file contains object with multiple
+    /// file types. It is therefore not possible to specify a common file
+    /// type for the entire file.
+    Inconsistent,
+}
+
+impl From<u32> for MachoFileType {
+    fn from(value: u32) -> Self {
+        use mach_object::*;
+
+        match value {
+            MH_OBJECT => MachoFileType::Object,
+            MH_EXECUTE => MachoFileType::Executable,
+            MH_BUNDLE => MachoFileType::Bundle,
+            MH_DYLIB => MachoFileType::Dylib,
+            MH_PRELOAD => MachoFileType::Preload,
+            MH_CORE => MachoFileType::Core,
+            MH_DYLINKER => MachoFileType::Dylinker,
+            MH_DSYM => MachoFileType::Dsym,
+            _ => MachoFileType::Unknown,
+        }
+    }
+}
+
 pub struct MachoInfo {
     uuids: HashMap<Uuid, &'static str>,
     has_dwarf_data: bool,
     has_hidden_symbols: bool,
+    file_type: MachoFileType,
 }
 
 impl MachoInfo {
-
     pub fn open_path(path: &Path) -> Result<MachoInfo> {
         let f = File::open(path)?;
         if let Ok(mmap) = memmap::Mmap::open(&f, memmap::Protection::Read) {
@@ -50,56 +124,14 @@ impl MachoInfo {
     }
 
     pub fn from_slice(slice: &[u8]) -> Result<MachoInfo> {
-        fn find_dwarf_section<'a>(rv: &mut MachoInfo, sections: &[Rc<Section>]) {
-            for sect in sections {
-                if sect.segname == "__DWARF" {
-                    rv.has_dwarf_data = true;
-                }
-            }
-        }
-
-        fn extract_info<'a>(rv: &mut MachoInfo, file: &'a OFile, cur: &'a mut Cursor<&'a [u8]>) {
-            if let &OFile::MachFile { ref header, ref commands, .. } = file {
-                for &MachCommand(ref load_cmd, _) in commands {
-                    match load_cmd {
-                        &LoadCommand::Uuid(uuid) => {
-                            rv.uuids.insert(uuid, get_arch_name_from_types(
-                                header.cputype, header.cpusubtype).unwrap_or("unknown"));
-                        },
-                        &LoadCommand::Segment { ref sections, .. } => {
-                            find_dwarf_section(rv, &sections[..]);
-                        }
-                        &LoadCommand::Segment64 { ref sections, .. } => {
-                            find_dwarf_section(rv, &sections[..]);
-                        }
-                        _ => {}
-                    }
-                }
-                if !rv.has_hidden_symbols {
-                    if let Some(iter) = file.symbols(cur) {
-                        for symbol in iter {
-                            if_chain! {
-                                if !symbol.is_external();
-                                if let Some(sym) = symbol.name();
-                                if HIDDEN_SYMBOL_RE.is_match(sym);
-                                then {
-                                    rv.has_hidden_symbols = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         let mut rv = MachoInfo {
             uuids: HashMap::new(),
             has_dwarf_data: false,
             has_hidden_symbols: false,
+            file_type: MachoFileType::Unknown,
         };
-        let mut cursor = Cursor::new(slice);
 
+        let mut cursor = Cursor::new(slice);
         if !is_macho_file(&mut cursor) {
             return Err(ErrorKind::NoMacho.into());
         }
@@ -107,12 +139,10 @@ impl MachoInfo {
 
         let ofile = OFile::parse(&mut cursor)?;
         match ofile {
-            OFile::FatFile { ref files, .. } => {
-                for &(ref arch, ref file) in files {
-                    let mut f_cur = Cursor::new(&slice[arch.offset as usize..]);
-                    extract_info(&mut rv, file, &mut f_cur);
-                }
-            }
+            OFile::FatFile { ref files, .. } => for &(ref arch, ref file) in files {
+                let mut f_cur = Cursor::new(&slice[arch.offset as usize..]);
+                extract_info(&mut rv, file, &mut f_cur);
+            },
             OFile::MachFile { .. } => {
                 let mut f_cur = Cursor::new(slice);
                 extract_info(&mut rv, &ofile, &mut f_cur);
@@ -121,6 +151,10 @@ impl MachoInfo {
         }
 
         Ok(rv)
+    }
+
+    pub fn file_type(&self) -> MachoFileType {
+        self.file_type
     }
 
     pub fn has_debug_info(&self) -> bool {
@@ -149,6 +183,69 @@ impl MachoInfo {
     }
 }
 
+impl fmt::Debug for MachoInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct("MachoInfo")
+            .field("file_type", &self.file_type())
+            .field("has_debug_info", &self.has_debug_info())
+            .field("has_hidden_symbols", &self.has_hidden_symbols())
+            .field("architectures", &self.get_architectures())
+            .finish()
+    }
+}
+
+fn find_dwarf_section<'a>(rv: &mut MachoInfo, sections: &[Rc<Section>]) {
+    for sect in sections {
+        if sect.segname == "__DWARF" {
+            rv.has_dwarf_data = true;
+        }
+    }
+}
+
+fn extract_info<'a>(rv: &mut MachoInfo, file: &'a OFile, cur: &'a mut Cursor<&'a [u8]>) {
+    if let &OFile::MachFile { ref header, ref commands, .. } = file {
+        if rv.file_type == MachoFileType::Unknown {
+            rv.file_type = header.filetype.into();
+        } else if rv.file_type != header.filetype.into() {
+            rv.file_type = header.filetype.into();
+        }
+
+        for &MachCommand(ref load_cmd, _) in commands {
+            match load_cmd {
+                &LoadCommand::Uuid(uuid) => {
+                    rv.uuids.insert(
+                        uuid,
+                        get_arch_name_from_types(header.cputype, header.cpusubtype)
+                            .unwrap_or("unknown"),
+                    );
+                }
+                &LoadCommand::Segment { ref sections, .. } => {
+                    find_dwarf_section(rv, &sections[..]);
+                }
+                &LoadCommand::Segment64 { ref sections, .. } => {
+                    find_dwarf_section(rv, &sections[..]);
+                }
+                _ => {}
+            }
+        }
+
+        if !rv.has_hidden_symbols {
+            if let Some(iter) = file.symbols(cur) {
+                for symbol in iter {
+                    if_chain! {
+                        if !symbol.is_external();
+                        if let Some(sym) = symbol.name();
+                        if HIDDEN_SYMBOL_RE.is_match(sym);
+                        then {
+                            rv.has_hidden_symbols = true;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /// this function can return an error if the file is smaller than the magic.
 /// Use the `is_macho_file` instead which does not fail which is actually
