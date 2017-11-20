@@ -27,10 +27,10 @@ Configuration File
 ------------------
 
 The `sentry-cli` tool can be configured with a config file named
-:file:`.sentryclirc` as well as environment variables.  The config file is
-looked for upwards from the current path and defaults from
-`~/.sentryclirc` are always loaded.  You can also override these settings
-from command line parameters.
+:file:`.sentryclirc` as well as environment variables and `.env` files.
+The config file is looked for upwards from the current path and defaults
+from `~/.sentryclirc` are always loaded.  You can also override these
+settings from command line parameters.
 
 The config file uses standard INI syntax.
 
@@ -47,6 +47,13 @@ is also what the `login` command does:
 
     [defaults]
     url = https://mysentry.invalid/
+
+.. admonition:: .env file loading
+
+   By default sentry-cli loads .env files.  On versions of sentry-cli
+   1.24 and newer you can disable this by exporting an environment
+   variable ``SENTRY_LOAD_DOTENV=0``.
+
 
 Configuration Values
 --------------------
