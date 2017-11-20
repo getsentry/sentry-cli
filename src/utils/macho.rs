@@ -20,6 +20,7 @@ lazy_static! {
 
 
 const FAT_MAGIC: &'static [u8; 4] = b"\xca\xfe\xba\xbe";
+const FAT_CIGAM: &'static [u8; 4] = b"\xbe\xba\xfe\xca";
 const MAGIC: &'static [u8; 4] = b"\xfe\xed\xfa\xce";
 const MAGIC_CIGAM: &'static [u8; 4] = b"\xce\xfa\xed\xfe";
 const MAGIC_64: &'static [u8; 4] = b"\xfe\xed\xfa\xcf";
@@ -156,7 +157,7 @@ fn is_macho_file_as_result<R: Read>(mut rdr: R) -> Result<bool> {
     let mut magic: [u8; 4] = [0; 4];
     rdr.read_exact(&mut magic)?;
     Ok(match &magic {
-        FAT_MAGIC | MAGIC | MAGIC_CIGAM | MAGIC_64 | MAGIC_CIGAM64 => true,
+        FAT_MAGIC | FAT_CIGAM | MAGIC | MAGIC_CIGAM | MAGIC_64 | MAGIC_CIGAM64 => true,
         _ => false,
     })
 }
