@@ -18,7 +18,7 @@ use config::Config;
 use event::{Event, Message, Breadcrumb};
 use api::Api;
 use constants::{ARCH, PLATFORM};
-use utils::{get_model, get_family};
+use utils::{get_model, get_family, detect_release_name};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")
@@ -103,6 +103,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let mut event = Event::new();
     event.level = matches.value_of("level").unwrap_or("error").into();
     event.release = matches.value_of("release").map(|x| x.into());
+    if event.release.is_none() {
+        event.release = detect_release_name().ok();
+    }
     event.dist = matches.value_of("dist").map(|x| x.into());
     event.platform = matches.value_of("platform").unwrap_or("other").into();
     event.environment = matches.value_of("environment").map(|x| x.into());
