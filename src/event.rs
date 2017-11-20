@@ -5,18 +5,27 @@ use std::process::Command;
 use prelude::*;
 use utils::to_timestamp;
 use chrono::Utc;
+use serde_json::Value;
 
+
+// Represents a parameterized message.
+#[derive(Serialize)]
+pub struct Message {
+    pub message: String,
+    #[serde(skip_serializing_if="Vec::is_empty")]
+    pub params: Vec<String>,
+}
 
 /// Represents a Sentry event.
 #[derive(Serialize)]
 pub struct Event {
     pub tags: HashMap<String, String>,
-    pub extra: HashMap<String, String>,
+    pub extra: HashMap<String, Value>,
     pub level: String,
     #[serde(skip_serializing_if="Option::is_none")]
     pub fingerprint: Option<Vec<String>>,
-    #[serde(skip_serializing_if="Option::is_none")]
-    pub message: Option<String>,
+    #[serde(skip_serializing_if="Option::is_none", rename="sentry.interfaces.Message")]
+    pub message: Option<Message>,
     pub platform: String,
     pub timestamp: f64,
     #[serde(skip_serializing_if="Option::is_none")]
@@ -29,6 +38,8 @@ pub struct Event {
     pub environment: Option<String>,
     #[serde(skip_serializing_if="HashMap::is_empty")]
     pub user: HashMap<String, String>,
+    #[serde(skip_serializing_if="HashMap::is_empty")]
+    pub contexts: HashMap<String, HashMap<String, String>>,
 }
 
 fn get_server_name() -> Result<String> {
@@ -51,6 +62,7 @@ impl Event {
             dist: None,
             environment: None,
             user: HashMap::new(),
+            contexts: HashMap::new(),
         }
     }
 }

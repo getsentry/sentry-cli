@@ -47,6 +47,8 @@ uuid = { version = "0.5", features = ["v4", "serde"] }
 walkdir = "1.0"
 which = "1.0"
 zip = "0.2"
+username = "0.2.0"
+hostname = "0.1.3"
 
 [profile]
 
@@ -64,6 +66,7 @@ codegen-units = 2
 chan = "0.1"
 chan-signal = "0.3"
 openssl-probe = "0.1.0"
+uname = "0.1.1"
 
 [target."cfg(target_os=\"macos\")"]
 
