@@ -39,10 +39,16 @@ Or homebrew:
 
 ## Compiling
 
-In case you want to compile this yourself you need to build this with Rust
-1.20 or later.
+In case you want to compile this yourself, you need to install at minimum
+the following dependencies:
 
-Use rustup to compile:
+ - C and C++ 11 compiler
+ - Make and CMake
+ - OpenSSL 1.0.2j with development headers
+ - Curl 7.50 with development headers
+ - Rust 1.20 and Cargo
+
+Use cargo to compile:
 
     $ cargo build
 
@@ -50,3 +56,10 @@ In case you get OpenSSL errors you need to compile with the path to the
 OpenSSL headers.  For instance:
 
     $ CFLAGS=-I/usr/local/opt/openssl/include/ cargo build
+
+Also, there is a Dockerfile that builds an Alpine-based Docker image with
+`sentry-cli` in the PATH. Note that this image is not minimal yet, as we
+are not able to compail against musl just yet. To build and use it, run:
+
+    $ docker build -t sentry-cli .
+    $ docker run --rm -it sentry-cli sentry-cli --version
