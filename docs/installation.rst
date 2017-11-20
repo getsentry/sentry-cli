@@ -43,6 +43,15 @@ You can then find it in the `.bin` folder::
 
     $ ./node_modules/.bin/sentry-cli --help
 
+.. admonition:: sudo Installation
+
+    In case you want to install this with npm system wide with sudo you
+    will need to pass `--unsafe-perm` to it::
+
+        sudo npm install -g sentry-cli-binary --unsafe-perm
+
+    This installation is not recommended however.
+
 Installation via Homebrew
 -------------------------
 
