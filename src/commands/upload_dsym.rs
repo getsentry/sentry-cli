@@ -26,7 +26,7 @@ use prelude::*;
 use api::{Api, DSymFile};
 use utils::{ArgExt, TempDir, TempFile, get_sha1_checksum,
             is_zip_file, validate_uuid, copy_with_progress,
-            make_byte_progress_bar, xcode, MachoInfo};
+            make_byte_progress_bar, xcode, MachoInfo, MachoFileType};
 use config::Config;
 
 #[derive(Debug)]
@@ -43,6 +43,7 @@ struct DSymRef {
     size: u64,
     uuids: Vec<Uuid>,
     has_hidden_symbols: bool,
+    file_type: MachoFileType,
 }
 
 impl fmt::Debug for DSymRef {
@@ -53,6 +54,7 @@ impl fmt::Debug for DSymRef {
             .field("size", &self.size)
             .field("uuids", &self.uuids)
             .field("has_hidden_symbols", &self.has_hidden_symbols)
+            .field("file_type", &self.file_type)
             .finish()
     }
 }
@@ -191,12 +193,12 @@ struct BatchIter<'a> {
     open_zip_index: usize,
     uuids: Option<&'a HashSet<Uuid>>,
     allow_zips: bool,
-    found_uuids: RefCell<&'a mut HashSet<Uuid>>,
+    found_uuids: RefCell<&'a mut HashSet<(Uuid, MachoFileType)>>,
 }
 
 impl<'a> BatchIter<'a> {
     pub fn new<P: AsRef<Path>>(path: P, max_size: u64, uuids: Option<&'a HashSet<Uuid>>,
-                               allow_zips: bool, found_uuids: &'a mut HashSet<Uuid>)
+                               allow_zips: bool, found_uuids: &'a mut HashSet<(Uuid, MachoFileType)>)
         -> BatchIter<'a>
     {
         BatchIter {
@@ -212,22 +214,23 @@ impl<'a> BatchIter<'a> {
     }
 
     fn found_all(&self) -> bool {
-        if let Some(ref uuids) = self.uuids {
-            self.found_uuids.borrow().is_superset(uuids)
-        } else {
+        // TODO(ja): Check with armin
+        // if let Some(ref uuids) = self.uuids {
+        //     self.found_uuids.borrow().is_superset(uuids)
+        // } else {
             false
-        }
+        // }
     }
 
     fn push_ref(&self, batch: &mut Vec<DSymRef>, dsym_ref: DSymRef) -> bool {
         let mut found_uuids = self.found_uuids.borrow_mut();
         let mut should_push = false;
         for uuid in &dsym_ref.uuids {
-            if found_uuids.contains(uuid) {
+            if found_uuids.contains(&(*uuid, dsym_ref.file_type)) {
                 continue;
             }
             should_push = true;
-            found_uuids.insert(*uuid);
+            found_uuids.insert((*uuid, dsym_ref.file_type));
         }
         if should_push {
             batch.push(dsym_ref);
@@ -306,6 +309,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             size: f.size(),
                             uuids: macho_info.get_uuids(),
                             has_hidden_symbols: macho_info.has_hidden_symbols(),
+                            file_type: macho_info.file_type(),
                         }) {
                             break;
                         }
@@ -344,6 +348,7 @@ impl<'a> Iterator for BatchIter<'a> {
                             size: md.len(),
                             uuids: macho_info.get_uuids(),
                             has_hidden_symbols: macho_info.has_hidden_symbols(),
+                            file_type: macho_info.file_type(),
                         }) {
                             break;
                         }
@@ -541,7 +546,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let find_uuids = matches.values_of("uuids").map(|uuids| {
         uuids.map(|s| Uuid::parse_str(s).unwrap()).collect::<HashSet<_>>()
     });
-    let mut found_uuids: HashSet<Uuid> = HashSet::new();
+    let mut found_uuids: HashSet<(Uuid, MachoFileType)> = HashSet::new();
     let info_plist = match matches.value_of("info_plist") {
         Some(path) => Some(xcode::InfoPlist::from_path(path)?),
         None => xcode::InfoPlist::discover_from_env()?,
@@ -638,6 +643,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
         // did we miss anything?
         if let Some(ref find_uuids) = find_uuids {
+            let found_uuids = found_uuids.iter().map(|&(uuid, _)| uuid).collect();
             let missing: HashSet<_> = find_uuids.difference(&found_uuids).collect();
             if matches.is_present("require_all") && !missing.is_empty() {
                 println!("");
