@@ -66,6 +66,11 @@ extern crate uuid;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
+extern crate username;
+extern crate hostname;
+#[cfg(not(windows))]
+extern crate uname;
+extern crate anylog;
 
 mod macros;
 
