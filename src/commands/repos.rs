@@ -31,7 +31,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         table.add_row()
             .add(&repo.name)
             .add(&repo.provider.name)
-            .add(&repo.url);
+            .add(&repo.url.as_ref().map(|x| x.as_str()).unwrap_or("-"));
     }
 
     if table.is_empty() {

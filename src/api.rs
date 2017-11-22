@@ -1253,7 +1253,7 @@ pub struct RepoProvider {
 pub struct Repo {
     pub id: String,
     pub name: String,
-    pub url: String,
+    pub url: Option<String>,
     pub provider: RepoProvider,
     pub status: String,
     #[serde(rename="dateCreated")]
