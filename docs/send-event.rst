@@ -69,3 +69,26 @@ Specifying Releases
 Releases can be sent with the ``--release`` parameter.  A default release
 is picked up automatically if you are using sentry-cli from within a git
 repository.
+
+Bash Hook
+---------
+
+For bash scripts you can also enable automatic error sending by using the
+sentry-cli bash hook.  That enables ``set -e`` and will send a sentry
+event for unhandled errors.
+
+The limitations for this are:
+
+*   sentry-cli really only works if ``set -e`` is enabled (which it will
+    by default enable for you).
+*   sentry-cli registers an ``EXIT`` and ``ERR`` trap.
+
+Usage::
+
+    #!/bin/bash
+    export SENTRY_DSN=___DSN___
+    eval "$(sentry-cli bash-hook)"
+    # rest of the script goes here
+
+Alternatively you can use other mechanisms like a ``.sentryclirc`` file to
+configure the dsn.
