@@ -34,6 +34,7 @@ macro_rules! each_subcommand {
         $mac!(send_event);
         $mac!(react_native);
         $mac!(difutil);
+        $mac!(bash_hook);
 
         // these here exist for legacy reasons only.  They were moved
         // to subcommands of the react-native command.  Note that
@@ -68,6 +69,7 @@ pub mod uninstall;
 pub mod info;
 pub mod login;
 pub mod send_event;
+pub mod bash_hook;
 
 pub mod react_native;
 #[cfg(target_os="macos")]
