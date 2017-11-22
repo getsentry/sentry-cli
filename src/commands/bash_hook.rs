@@ -117,15 +117,14 @@ fn send_event(config: &Config, traceback: &str, logfile: &str) -> Result<()> {
     event.attach_logfile(logfile, true)?;
 
     frames.reverse();
-    let mut exception = SingleException {
-        ty: "BashError".into(),
-        value: format!("command {} exited with status {}", cmd, exit_code),
-        stacktrace: Some(Stacktrace {
-            frames: frames,
-        }),
-    };
     event.exception = Some(Exception {
-        values: vec![exception],
+        values: vec![SingleException {
+            ty: "BashError".into(),
+            value: format!("command {} exited with status {}", cmd, exit_code),
+            stacktrace: Some(Stacktrace {
+                frames: frames,
+            }),
+        }],
     });
 
     let dsn = config.get_dsn()?;
