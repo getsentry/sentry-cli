@@ -143,7 +143,9 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String> {
                                    explicit revisions are required"));
         }
 
-        return Ok(configured_repo.url.clone())
+        if let Some(ref url) = configured_repo.url {
+            return Ok(url.clone())
+        }
     }
 
     Err(Error::from(format!("Could not find matching repository for {}", repo)))
