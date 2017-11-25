@@ -274,4 +274,4 @@ Optionally you can also define how long the deploy took::
 
 Deploys can be listed too (however they cannot be deleted)::
 
-    $ sentry-cli relases deploys VERSION list
+    $ sentry-cli releases deploys VERSION list
