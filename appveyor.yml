@@ -24,7 +24,7 @@ install:
 build: false
 
 test_script:
-  - cargo build --release
+  - cargo build --release --locked
 
 after_test:
   - C:\Python27\python .ci/move-asset.py
