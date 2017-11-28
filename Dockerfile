@@ -23,4 +23,4 @@ FROM alpine
 RUN apk add --no-cache curl llvm-libunwind libstdc++ libgcc
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
 
-CMD ["sh"]
+CMD ["/bin/sentry-cli"]
