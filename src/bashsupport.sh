@@ -51,5 +51,5 @@ _sentry_traceback() {
 
 : > "$_SENTRY_LOG_FILE"
 exec \
-  1> >(tee >(awk '{ system(""); print strftime("%c"), "stdout:", $0; system(""); }' >> "$_SENTRY_LOG_FILE")) \
-  2> >(tee >(awk '{ system(""); print strftime("%c"), "stderr:", $0; system(""); }' >> "$_SENTRY_LOG_FILE") >&2)
+  1> >(tee >(awk '{ system(""); print strftime("%Y-%m-%d %H:%M:%S %z:"), "stdout:", $0; system(""); }' >> "$_SENTRY_LOG_FILE")) \
+  2> >(tee >(awk '{ system(""); print strftime("%Y-%m-%d %H:%M:%S %z:"), "stderr:", $0; system(""); }' >> "$_SENTRY_LOG_FILE") >&2)
