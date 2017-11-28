@@ -18,7 +18,7 @@ RUN mkdir -p src && echo "fn main() {}" > src/main.rs && cargo build --release
 ADD src src/
 RUN touch src/main.rs && cargo build --release && mv target/release/sentry-cli /usr/local/bin
 
-FROM alpine
+FROM alpine:3.6
 
 RUN apk add --no-cache curl llvm-libunwind libstdc++ libgcc
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
