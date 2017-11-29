@@ -5,11 +5,26 @@ use std::path::PathBuf;
 
 use utils::vcs;
 use utils::xcode::InfoPlist;
+use utils::cordova::CordovaConfig;
 
 use regex::Regex;
 
 use prelude::*;
 
+
+pub fn get_cordova_release_name() -> Result<Option<String>> {
+    let here = env::current_dir()?;
+    let path = here.join("config.xml");
+    if_chain! {
+        if let Ok(md) = path.metadata();
+        if md.is_file();
+        if let Ok(Some(config)) = CordovaConfig::load(path);
+        then {
+            return Ok(Some(format!("{}-{}", config.id(), config.version())));
+        }
+    }
+    return Ok(None);
+}
 
 pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>> {
     // if we are executed from within xcode, then we can use the environment
@@ -56,6 +71,11 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
 
 /// Detects the release name for the current working directory.
 pub fn detect_release_name() -> Result<String> {
+    // cordova release detection first.
+    if let Some(release) = get_cordova_release_name()? {
+        return Ok(release);
+    }
+
     // for now only execute this on macs.  The reason is that this uses
     // xcodebuild which does not exist anywhere but there.
     if_chain! {

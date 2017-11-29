@@ -15,6 +15,7 @@ mod update;
 pub mod dif;
 pub mod vcs;
 pub mod xcode;
+pub mod cordova;
 
 pub use self::android::{AndroidManifest, dump_proguard_uuids_as_properties};
 pub use self::args::{ArgExt, validate_uuid, validate_seconds, validate_timestamp,
