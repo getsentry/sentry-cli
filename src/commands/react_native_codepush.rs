@@ -8,7 +8,8 @@ use console::style;
 use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
-use utils::{ArgExt, SourceMapProcessor, get_codepush_package, get_codepush_release};
+use utils::{ArgExt, SourceMapProcessor, get_codepush_package,
+            get_react_native_codepush_release};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects for CodePush.")
@@ -61,7 +62,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     let package = get_codepush_package(app, deployment)?;
-    let release = get_codepush_release(&package, platform, matches.value_of("bundle_id"))?;
+    let release = get_react_native_codepush_release(
+        &package, platform, matches.value_of("bundle_id"))?;
     if print_release_name {
         println!("{}", release);
         return Ok(());

@@ -67,8 +67,8 @@ pub fn get_codepush_package(app: &str, deployment: &str)
     Err(format!("could not find deployment {} for {}", deployment, app).into())
 }
 
-pub fn get_codepush_release(package: &CodePushPackage, platform: &str,
-                            bundle_id_override: Option<&str>)
+pub fn get_react_native_codepush_release(package: &CodePushPackage, platform: &str,
+                                         bundle_id_override: Option<&str>)
     -> Result<String>
 {
     if let Some(bundle_id) = bundle_id_override {

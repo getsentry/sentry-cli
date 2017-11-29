@@ -52,7 +52,6 @@ pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>
 }
 
 pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
-    // this is similar to utils::codepush::get_codepush_release
     lazy_static! {
         static ref APP_ID_RE: Regex = Regex::new(
             r#"applicationId\s+["']([^"']*)["']"#).unwrap();
