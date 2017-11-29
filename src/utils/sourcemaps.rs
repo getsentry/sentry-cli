@@ -433,6 +433,7 @@ impl SourceMapProcessor {
 
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
+        self.flush_pending_sources()?;
         let sourcemaps = HashSet::from_iter(self.sources
             .iter()
             .map(|x| x.1)
