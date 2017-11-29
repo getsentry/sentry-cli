@@ -3,6 +3,8 @@
 ## sentry-cli 1.25.0
 
 * Do not run update nagger if the command is not connected to a terminal
+* Source map uploading now correctly determines sourcemap references even
+  if the rewrite flag is not passed.
 
 ## sentry-cli 1.24.1
 
