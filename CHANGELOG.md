@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.25.0
+
+* Do not run update nagger if the command is not connected to a terminal
+
 ## sentry-cli 1.24.1
 
 * Fix an issue with bash hooking not working if sentry-cli was installed on a
