@@ -12,18 +12,33 @@ use regex::Regex;
 use prelude::*;
 
 
-pub fn get_cordova_release_name() -> Result<Option<String>> {
-    let here = env::current_dir()?;
-    let path = here.join("config.xml");
+pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
+    let here = path.map_or(env::current_dir()?, |p| p.into());
+    let platform = match here.file_name().and_then(|x| x.to_str()) {
+        Some("android") => "android",
+        Some("ios") => "ios",
+        _ => return Ok(None)
+    };
+    let base = match here.parent().and_then(|x| x.parent()) {
+        Some(path) => path,
+        None => return Ok(None)
+    };
+
+    let path = base.join("config.xml");
     if_chain! {
         if let Ok(md) = path.metadata();
         if md.is_file();
         if let Ok(Some(config)) = CordovaConfig::load(path);
         then {
-            return Ok(Some(format!("{}-{}", config.id(), config.version())));
+            match platform {
+                "android" => Ok(Some(config.android_release_name())),
+                "ios" => Ok(Some(config.ios_release_name())),
+                _ => unreachable!(),
+            }
+        } else {
+            Ok(None)
         }
     }
-    return Ok(None);
 }
 
 pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>> {
@@ -72,7 +87,7 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
 /// Detects the release name for the current working directory.
 pub fn detect_release_name() -> Result<String> {
     // cordova release detection first.
-    if let Some(release) = get_cordova_release_name()? {
+    if let Some(release) = get_cordova_release_name(None)? {
         return Ok(release);
     }
 
