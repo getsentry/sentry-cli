@@ -5,7 +5,7 @@ use std::env;
 use std::path::Path;
 
 use runas;
-use console::style;
+use console::{style, user_attended};
 use app_dirs;
 use serde_json;
 use chrono::{Utc, DateTime, Duration};
@@ -233,6 +233,11 @@ fn update_nagger_impl(config: &Config) -> Result<()> {
 }
 
 pub fn run_sentrycli_update_nagger(config: &Config) {
+    // Do not run update nagger if stdout/stdin is not a terminal
+    if !user_attended() {
+        return;
+    }
+
     // npm installs do not get an update check.  We might want to relax this later
     // to support update checks for global npm installs but not dependency installs.
     if is_npm_install() {
