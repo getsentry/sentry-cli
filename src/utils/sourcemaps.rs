@@ -514,6 +514,7 @@ fn test_split_url() {
     assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
     assert_eq!(split_url("foo"), (None, "foo", None));
     assert_eq!(split_url("/foo"), (Some(""), "foo", None));
+    assert_eq!(split_url("/foo.deadbeef0123.js"), (Some(""), "foo", Some("deadbeef0123.js")));
 }
 
 #[test]
