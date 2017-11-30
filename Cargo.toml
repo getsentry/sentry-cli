@@ -75,3 +75,6 @@ uname = "0.1.1"
 mac-process-info = "0.1.0"
 osascript = "0.3"
 unix-daemonize = "0.1"
+
+[features]
+no-update = []

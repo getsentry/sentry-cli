@@ -8,7 +8,9 @@ use clap::{Arg, App, AppSettings};
 
 use prelude::*;
 use constants::VERSION;
-use utils::{Logger, print_error, run_sentrycli_update_nagger};
+use utils::{Logger, print_error};
+#[cfg(not(feature="no-update"))]
+use utils::run_sentrycli_update_nagger;
 use config::{Config, Auth, prepare_environment};
 
 const ABOUT: &'static str = "
@@ -27,6 +29,7 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(repos);
         $mac!(projects);
+        #[cfg(not(feature="no-update"))]
         $mac!(update);
         $mac!(uninstall);
         $mac!(info);
@@ -64,6 +67,7 @@ pub mod releases;
 pub mod issues;
 pub mod repos;
 pub mod projects;
+#[cfg(not(feature="no-update"))]
 pub mod update;
 pub mod uninstall;
 pub mod info;
@@ -81,6 +85,11 @@ pub mod difutil;
 pub mod difutil_find;
 pub mod difutil_check;
 pub mod difutil_uuid;
+
+#[cfg(feature = "no-update")]
+fn run_sentrycli_update_nagger(_config: &Config) {
+    // dead stub
+}
 
 fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();

@@ -13,7 +13,7 @@ use chrono::{Utc, DateTime, Duration};
 use config::Config;
 use api::{Api, SentryCliRelease};
 use constants::{APP_INFO, VERSION};
-use utils::{is_docker_install, is_homebrew_install, is_npm_install, set_executable_mode, is_writable};
+use utils::{is_homebrew_install, is_npm_install, set_executable_mode, is_writable};
 use prelude::*;
 
 
@@ -62,7 +62,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
 }
 
 #[derive(Default, Serialize, Deserialize)]
-pub struct LastUpdateCheck {
+struct LastUpdateCheck {
     pub last_check_timestamp: Option<DateTime<Utc>>,
     pub last_check_version: Option<String>,
     pub last_fetched_version: Option<String>,
@@ -150,18 +150,7 @@ impl<'a> SentryCliUpdateInfo<'a> {
         }
         if is_npm_install() {
             println!("This installation of sentry-cli is managed through npm/yarn");
-            println!("Please use npm/yarn to update sentry-cli");
-            return Err(ErrorKind::QuietExit(1).into());
-        }
-        if is_docker_install() {
-            println!("This installation of sentry-cli is managed through docker");
-            println!("Please pull the image or switch to a newer tag to update:");
-            println!("");
-            println!(
-                "{} docker pull getsentry/sentry-cli:{}",
-                style("$").dim(),
-                style("latest").green()
-            );
+            println!("Please use npm/yearn to update sentry-cli");
             return Err(ErrorKind::QuietExit(1).into());
         }
         if self.latest_release.is_none() {
@@ -208,7 +197,7 @@ pub fn get_latest_sentrycli_release<'a>(cfg: &'a Config) -> Result<SentryCliUpda
 }
 
 pub fn can_update_sentrycli() -> bool {
-    !is_homebrew_install() && !is_npm_install() && !is_docker_install()
+    !is_homebrew_install() && !is_npm_install()
 }
 
 fn update_nagger_impl(config: &Config) -> Result<()> {
@@ -252,13 +241,6 @@ pub fn run_sentrycli_update_nagger(config: &Config) {
     // npm installs do not get an update check.  We might want to relax this later
     // to support update checks for global npm installs but not dependency installs.
     if is_npm_install() {
-        return;
-    }
-
-    // Docker tags like `latest` and `edge` are automatically updated, all others
-    // are pinned to a specific version.  It does not make sense to check for
-    // updates in that case.
-    if is_docker_install() {
         return;
     }
 

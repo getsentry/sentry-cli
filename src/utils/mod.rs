@@ -11,6 +11,7 @@ mod releases;
 mod sourcemaps;
 mod system;
 mod ui;
+#[cfg(not(feature="no-update"))]
 mod update;
 pub mod dif;
 pub mod vcs;
@@ -29,11 +30,12 @@ pub use self::logging::Logger;
 pub use self::macho::MachoInfo;
 pub use self::releases::detect_release_name;
 pub use self::sourcemaps::{SourceMapProcessor, get_sourcemap_reference_from_headers};
-pub use self::system::{propagate_exit_status, is_docker_install, is_homebrew_install,
+pub use self::system::{propagate_exit_status, is_homebrew_install,
                        is_npm_install, expand_envvars, expand_vars,
                        print_error, to_timestamp,
                        run_or_interrupt, init_backtrace, get_model, get_family};
 pub use self::ui::{prompt_to_continue, prompt, capitalize_string,
                    copy_with_progress, make_byte_progress_bar};
+#[cfg(not(feature="no-update"))]
 pub use self::update::{can_update_sentrycli, get_latest_sentrycli_release,
-                       run_sentrycli_update_nagger, SentryCliUpdateInfo};
+                       run_sentrycli_update_nagger};
