@@ -7,6 +7,7 @@
   if the rewrite flag is not passed.
 * There is an offical Docker image with `sentry-cli` preinstalled:
   `docker run --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help`
+* Added support for automatically determining corvoda releases.
 
 ## sentry-cli 1.24.1
 
