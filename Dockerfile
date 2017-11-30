@@ -19,6 +19,7 @@ ADD src src/
 RUN touch src/main.rs && cargo build --release && mv target/release/sentry-cli /usr/local/bin
 
 FROM alpine:3.6
+WORKDIR /work
 
 RUN apk add --no-cache curl llvm-libunwind libstdc++ libgcc
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin

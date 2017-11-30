@@ -5,6 +5,8 @@
 * Do not run update nagger if the command is not connected to a terminal
 * Source map uploading now correctly determines sourcemap references even
   if the rewrite flag is not passed.
+* There is an offical Docker image with `sentry-cli` preinstalled:
+  `docker run --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help`
 
 ## sentry-cli 1.24.1
 
