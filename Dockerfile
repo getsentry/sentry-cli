@@ -20,6 +20,7 @@ RUN touch src/main.rs && cargo build --release && mv target/release/sentry-cli /
 
 FROM alpine:3.6
 WORKDIR /work
+ENV SENTRY_DOCKER=1
 
 RUN apk add --no-cache curl llvm-libunwind libstdc++ libgcc
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin

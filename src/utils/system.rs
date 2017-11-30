@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::io;
 use std::io::Write;
 use std::process;
@@ -75,6 +76,16 @@ fn is_npm_install_result() -> Result<bool> {
     Ok(exe.is_file())
 }
 
+#[cfg(target_os = "linux")]
+fn is_docker_install_result() -> Result<bool> {
+    Ok(env::var_os("SENTRY_DOCKER").map_or(false, |v| v == OsString::from("1")))
+}
+
+#[cfg(not(target_os = "linux"))]
+fn is_docker_install_result() -> Result<bool> {
+    Ok(false)
+}
+
 /// Checks if we were installed from homebrew
 pub fn is_homebrew_install() -> bool {
     is_homebrew_install_result().unwrap_or(false)
@@ -83,6 +94,11 @@ pub fn is_homebrew_install() -> bool {
 /// Checks if we were installed via npm
 pub fn is_npm_install() -> bool {
     is_npm_install_result().unwrap_or(false)
+}
+
+/// Checks if we are the getsentry/sentry-cli docker container
+pub fn is_docker_install() -> bool {
+    is_docker_install_result().unwrap_or(false)
 }
 
 /// Expands environment variables in a string
