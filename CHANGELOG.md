@@ -3,6 +3,12 @@
 ## sentry-cli 1.25.0
 
 * Do not run update nagger if the command is not connected to a terminal
+* There is an offical Docker image with `sentry-cli` preinstalled:
+
+```sh
+docker pull getsentry/sentry-cli
+docker run --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help
+```
 
 ## sentry-cli 1.24.1
 

@@ -40,6 +40,16 @@ Or homebrew:
 
     brew install getsentry/tools/sentry-cli
 
+As of version _1.25.0_, there is an official Docker image that comes with
+`sentry-cli` preinstalled. If you prefer a specific version, specify it as tag.
+The latest development version is published under the `edge` tag. In production,
+we recommend you to use the `latest` tag. To use it, run:
+
+```sh
+docker pull getsentry/sentry-cli
+docker run --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help
+```
+
 ## Compiling
 
 In case you want to compile this yourself, you need to install at minimum the
@@ -64,5 +74,7 @@ Also, there is a Dockerfile that builds an Alpine-based Docker image with
 `sentry-cli` in the PATH. Note that this image is not minimal yet, as we are not
 able to compail against musl just yet. To build and use it, run:
 
-    $ docker build -t sentry-cli .
-    $ docker run --rm -it sentry-cli sentry-cli --version
+```sh
+docker build -t sentry-cli .
+docker run --rm -it -v $(pwd):/work sentry-cli sentry-cli --help
+```
