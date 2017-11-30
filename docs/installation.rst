@@ -66,7 +66,7 @@ For unsupported distributions and CI systems we offer a Docker image that
 comes with ``sentry-cli`` preinstalled.  It is recommended to use the
 ``latest`` tag, but you can also pin to a specific verison.  By default,
 the command runs inside the ``/work`` directory. Mount relevant project
-folders and build outputs there to allow ``sentry-cli`` to scan for resources.
+folders and build outputs there to allow ``sentry-cli`` to scan for resources::
 
     $ docker pull getsentry/sentry-cli
     $ docker run --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help
