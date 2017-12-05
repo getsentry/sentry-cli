@@ -15,7 +15,7 @@ describe('SentryCli', () => {
   test('call sentry-cli with wrong command', () => {
     expect.assertions(1);
     const cli = new SentryCli();
-    return cli.execute(['--1version']).catch(e => {
+    return cli.execute(['fail']).catch(e => {
       expect(e.message).toMatch('Command failed:');
     });
   });

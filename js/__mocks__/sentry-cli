@@ -1,0 +1,12 @@
+#! /bin/bash
+
+if [ $1 == 'fail' ]
+then
+echo "failed"
+exit 1
+elif [ $1 == '--version' ]
+then
+echo "sentry-cli DEV"
+else
+echo "worked"
+fi
