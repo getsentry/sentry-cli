@@ -6,5 +6,5 @@ node_modules
 coverage
 
 /sentry-cli
-/sentry-cli.exe
+/bin/sentry-cli.exe
 
