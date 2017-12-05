@@ -22,7 +22,7 @@ RUN mkdir -p src \
 
 ADD src src/
 RUN touch src/main.rs \
-    && cargo build --release --features no-update \
+    && cargo build --release --features managed \
     && mv target/release/sentry-cli /usr/local/bin
 
 FROM alpine:3.6

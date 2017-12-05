@@ -77,4 +77,4 @@ osascript = "0.3"
 unix-daemonize = "0.1"
 
 [features]
-no-update = []
+managed = []

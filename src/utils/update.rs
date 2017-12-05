@@ -62,7 +62,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
 }
 
 #[derive(Default, Serialize, Deserialize)]
-struct LastUpdateCheck {
+pub struct LastUpdateCheck {
     pub last_check_timestamp: Option<DateTime<Utc>>,
     pub last_check_version: Option<String>,
     pub last_fetched_version: Option<String>,
@@ -233,6 +233,11 @@ fn update_nagger_impl(config: &Config) -> Result<()> {
 }
 
 pub fn run_sentrycli_update_nagger(config: &Config) {
+    // Only update if we are compiled as unmanaged version (default)
+    if cfg!(feature = "managed") {
+        return;
+    }
+
     // Do not run update nagger if stdout/stdin is not a terminal
     if !user_attended() {
         return;
