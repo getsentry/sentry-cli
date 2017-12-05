@@ -34,9 +34,7 @@ matrix:
       node_js: 8
       install: skip
       script: npm install && npm test
-      env:
-        - TARGET="npm test"
-        - SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
+      env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
     # Build the sentry-cli-binary NPM package
     - os: linux
