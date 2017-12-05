@@ -48,14 +48,7 @@
     "node": ">= 4.8.6"
   },
   "jest": {
-    "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "js",
-      "jsx",
-      "json"
-    ],
-    "testPathIgnorePatterns": [
-      "/node_modules/"
-    ]
+    "collectCoverage": true,
+    "testEnvironment": "node"
   }
 }
