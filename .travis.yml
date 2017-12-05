@@ -18,11 +18,21 @@ matrix:
       osx_image: xcode6.4
       env: TARGET=x86_64-apple-darwin
 
-    # Test js
+    # Test minium js
+    - os: linux
+      sudo: false
+      language: node_js
+      node_js: 4
+      install: skip
+      script: npm install && npm test
+      env: TARGET="npm test"
+
+    # Test latest js
     - os: linux
       sudo: false
       language: node_js
       node_js: 8
+      install: skip
       script: npm install && npm test
       env: TARGET="npm test"
 
