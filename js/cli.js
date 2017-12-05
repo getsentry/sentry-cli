@@ -1,7 +1,16 @@
 const childProcess = require('child_process');
-const cli = require('../index.js');
+const os = require('os');
+const path = require('path');
+const pkgInfo = require('../package.json');
 
 const DEFAULT_IGNORE = ['node_modules'];
+
+let binaryPath = null;
+if (os.platform() === 'win32') {
+  binaryPath = path.resolve(`${__dirname}\\..\\bin\\sentry-cli.exe`);
+} else {
+  binaryPath = path.resolve(`${__dirname}/../sentry-cli`);
+}
 
 function transformIgnore(ignore) {
   if (Array.isArray(ignore)) {
@@ -20,7 +29,7 @@ function SentryCli(configFile) {
 SentryCli.prototype.execute = function(args) {
   const env = this.env;
   return new Promise((resolve, reject) => {
-    childProcess.execFile(cli.getPath(), args, { env }, (err, stdout) => {
+    childProcess.execFile(SentryCli.getPath(), args, { env }, (err, stdout) => {
       if (err) return reject(err);
       // eslint-disable-next-line
       console.log(stdout);
@@ -43,13 +52,13 @@ SentryCli.prototype.finalizeRelease = function(release) {
 
 SentryCli.prototype.uploadSourceMaps = function(options) {
   return Promise.all(
-    options.include.map(path => {
+    options.include.map(sourcemapPath => {
       let command = [
         'releases',
         'files',
         options.release,
         'upload-sourcemaps',
-        path,
+        sourcemapPath,
         '--rewrite',
       ];
 
@@ -68,6 +77,14 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
       return this.execute(command);
     })
   );
+};
+
+SentryCli.getVersion = function() {
+  return pkgInfo.version;
+};
+
+SentryCli.getPath = function() {
+  return binaryPath;
 };
 
 module.exports = SentryCli;

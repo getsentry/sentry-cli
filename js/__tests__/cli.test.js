@@ -1,7 +1,7 @@
 /* eslint-env jest */
 /* eslint-disable global-require */
 
-const SentryCli = require('../../index').default;
+const SentryCli = require('../cli');
 
 describe('SentryCli', () => {
   test('call sentry-cli --version', () => {
