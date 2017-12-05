@@ -1,21 +1,20 @@
 /* eslint-env jest */
-/* eslint-disable global-require */
 
-const SentryCli = require('../cli');
+var SentryCli = require('../cli');
 
-describe('SentryCli', () => {
-  test('call sentry-cli --version', () => {
+describe('SentryCli', function() {
+  test('call sentry-cli --version', function() {
     expect.assertions(1);
-    const cli = new SentryCli();
-    return cli.execute(['--version']).then(() => {
+    var cli = new SentryCli();
+    return cli.execute(['--version']).then(function() {
       expect(true).toBe(true);
     });
   });
 
-  test('call sentry-cli with wrong command', () => {
+  test('call sentry-cli with wrong command', function() {
     expect.assertions(1);
-    const cli = new SentryCli();
-    return cli.execute(['fail']).catch(e => {
+    var cli = new SentryCli();
+    return cli.execute(['fail']).catch(function(e) {
       expect(e.message).toMatch('Command failed:');
     });
   });

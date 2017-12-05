@@ -2,26 +2,24 @@
 /*
  * a wrapper script
  */
-const cli = require('../index.js');
-const child = require('child_process').spawn(cli.getPath(), process.argv.slice(2), {
-  stdio: 'inherit',
+var cli = require('../index.js');
+var child = require('child_process').spawn(cli.getPath(), process.argv.slice(2), {
+  stdio: 'inherit'
 });
 
-child.on('error', err => {
-  // eslint-disable-next-line
+child.on('error', function(err) {
   console.error('error: failed to invoke sentry-cli');
-  // eslint-disable-next-line
   console.error(err.stack);
 });
 
-child.on('exit', code => {
+child.on('exit', function(code) {
   process.exit(code);
 });
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', function() {
   child.kill('SIGTERM');
 });
 
-process.on('SIGINT', () => {
+process.on('SIGINT', function() {
   child.kill('SIGINT');
 });

@@ -18,11 +18,11 @@ matrix:
       osx_image: xcode6.4
       env: TARGET=x86_64-apple-darwin
 
-    # Test minium js
+    # Test minimum js
     - os: linux
       sudo: false
       language: node_js
-      node_js: 4
+      node_js: "0.12"
       install: skip
       script: npm install && npm test
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
@@ -31,7 +31,7 @@ matrix:
     - os: linux
       sudo: false
       language: node_js
-      node_js: 8
+      node_js: "8"
       install: skip
       script: npm install && npm test
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
@@ -40,7 +40,7 @@ matrix:
     - os: linux
       sudo: false
       language: node_js
-      node_js: 8
+      node_js: "8"
       install: skip
       script: npm pack
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
