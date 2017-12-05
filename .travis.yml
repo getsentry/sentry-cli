@@ -23,7 +23,8 @@ matrix:
       sudo: false
       language: node_js
       node_js: 8
-      script: npm run test
+      script: npm install && npm test
+      env: TARGET="npm test"
 
     # Build the sentry-cli-binary NPM package
     - os: linux
@@ -33,6 +34,7 @@ matrix:
       install: skip
       script: npm pack
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
+      env: TARGET="npm pack"
 
 install:
   - export PATH="$PATH:$HOME/.cargo/bin"
