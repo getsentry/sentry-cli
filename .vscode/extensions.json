@@ -5,6 +5,7 @@
         "EditorConfig.editorconfig",
         "rust-lang.rust",
         "esbenp.prettier-vscode",
-        "dbaeumer.vscode-eslint"
+        "dbaeumer.vscode-eslint",
+        "Orta.vscode-jest"
     ]
 }
