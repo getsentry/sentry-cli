@@ -18,6 +18,13 @@ matrix:
       osx_image: xcode6.4
       env: TARGET=x86_64-apple-darwin
 
+    # Test js
+    - os: linux
+      sudo: false
+      language: node_js
+      node_js: 8
+      script: npm run test
+
     # Build the sentry-cli-binary NPM package
     - os: linux
       sudo: false
