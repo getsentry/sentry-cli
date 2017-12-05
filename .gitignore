@@ -4,3 +4,4 @@ target
 .cargo
 node_modules
 bin/sentry-cli.exe
+coverage
