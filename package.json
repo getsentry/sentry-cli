@@ -44,6 +44,9 @@
     "prettier": "^1.9.0",
     "prettier-check": "^2.0.0"
   },
+  "engines": {
+    "node": ">= 4.8.6"
+  },
   "jest": {
     "testRegex": "(/__tests__/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
     "moduleFileExtensions": [
