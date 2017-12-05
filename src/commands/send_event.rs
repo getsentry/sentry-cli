@@ -158,7 +158,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
             println!("Event sent: {}", event_id);
         }
         Err(err) => {
-            println!("error: could not send event: {}", err);
+            fail!("error: could not send event: {}", err);
         }
     };
 
