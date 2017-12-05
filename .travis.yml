@@ -25,7 +25,7 @@ matrix:
       node_js: 4
       install: skip
       script: npm install && npm test
-      env: TARGET="npm test"
+      env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
     # Test latest js
     - os: linux
