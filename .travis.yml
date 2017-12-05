@@ -24,6 +24,15 @@ matrix:
       language: node_js
       node_js: "0.12"
       install: skip
+      script: npm install --production
+      env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
+
+    # Node.js 4
+    - os: linux
+      sudo: false
+      language: node_js
+      node_js: "4"
+      install: skip
       script: npm install && npm test
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
