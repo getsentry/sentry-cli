@@ -25,7 +25,7 @@
   "bugs": {
     "url": "https://github.com/getsentry/sentry-cli/issues"
   },
-  "main": "index.js",
+  "main": "js/index.js",
   "bin": {
     "sentry-cli": "bin/sentry-cli"
   },
