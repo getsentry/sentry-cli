@@ -3,6 +3,9 @@
     // for the documentation about the extensions.json format
     "recommendations": [
         "EditorConfig.editorconfig",
-        "rust-lang.rust"
+        "rust-lang.rust",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "Orta.vscode-jest"
     ]
 }

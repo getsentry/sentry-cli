@@ -3,11 +3,9 @@
  * a wrapper script
  */
 var cli = require('../index.js');
-var child = require('child_process').spawn(
-  cli.getPath(),
-  process.argv.slice(2),
-  {stdio: 'inherit'}
-);
+var child = require('child_process').spawn(cli.getPath(), process.argv.slice(2), {
+  stdio: 'inherit'
+});
 
 child.on('error', function(err) {
   console.error('error: failed to invoke sentry-cli');

@@ -1,0 +1,8 @@
+{
+    "extends": ["es5", "prettier"],
+    "rules": {
+        "no-console": "off",
+        "no-process-exit": "off",
+        "func-names": "off"
+    }
+}

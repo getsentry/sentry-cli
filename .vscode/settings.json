@@ -1,0 +1,6 @@
+{
+    "[javascript]": {
+        "editor.formatOnSave": true
+    },
+    "eslint.autoFixOnSave": true
+}

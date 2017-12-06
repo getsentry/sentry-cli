@@ -1,6 +1,7 @@
 targets:
   - github
-  - npm
+  - name: npm
+    access: public
   - name: brew
     tap: getsentry/tools
     template: >

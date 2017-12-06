@@ -1,47 +1,73 @@
 #!/usr/bin/env node
 
+'use strict';
+
 var os = require('os');
 var fs = require('fs');
-var assert = require('assert');
+var http = require('http');
 var path = require('path');
+
 var platform = os.platform();
 var ProgressBar = require('progress');
 var https = require('https');
+
 var arch = os.arch();
 var spawn = require('child_process').spawn;
 
 // downloadUrl vars
-var releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
+var releasesUrl;
+var server;
+var fetch = https;
 var version = require('../package.json').version;
+
+if (process.env.SENTRY_LOCAL_DOWNLOAD_URL) {
+  releasesUrl = process.env.SENTRY_LOCAL_DOWNLOAD_URL;
+  version = 'DEV';
+  fetch = http;
+  server = http
+    .createServer(function(request, response) {
+      response.writeHead(200, { 'Content-Type': 'application/octet-stream' });
+      var contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
+      response.write(contents);
+      response.end();
+    })
+    .listen(8999);
+  console.log('TEST SERVER started');
+} else {
+  releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
+}
+
 var binaryPrefix = '/sentry-cli-';
 
 // output vars
-var outputPath;
-if (platform === 'win32') {
-  outputPath = __dirname + '\\sentry-cli.exe';
-} else {
-  outputPath = __dirname + '/../sentry-cli';
-}
+var outputPath = path.resolve(
+  __dirname,
+  platform === 'win32' ? 'sentry-cli.exe' : '../sentry-cli'
+);
 
 var downloadUrl = null;
 
 // macOS
 if (platform === 'darwin') {
   downloadUrl = releasesUrl + version + binaryPrefix + 'Darwin-x86_64';
-// Windows
+  // Windows
 } else if (platform === 'win32') {
   downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-i686.exe';
-// Linux
+  // Linux
+} else if (arch.indexOf('64') > -1) {
+  downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
 } else {
-  if (arch.indexOf('64') > -1) {
-    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
-  } else {
-    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-i686';
-  }
+  downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-i686';
 }
 
 if (downloadUrl === null) {
-  console.log('error: your platform and architecture (' + platform + '-' + arch + ') is unsupported.');
+  console.log(
+    'error: your platform and architecture (' +
+      platform +
+      '-' +
+      arch +
+      ') is unsupported.'
+  );
   process.exit(1);
 }
 
@@ -54,18 +80,16 @@ function downloadBinary(res) {
   var progress = null;
   var isYarn = false;
   if (process.stdout.isTTY) {
-    progress = new ProgressBar('fetching ' + fn +' :bar :percent :etas', {
-      complete: "█",
-      incomplete: "░",
+    progress = new ProgressBar('fetching ' + fn + ' :bar :percent :etas', {
+      complete: '█',
+      incomplete: '░',
       width: 20,
       total: total
     });
   } else if ((process.env.npm_config_user_agent || '').match(/yarn/)) {
     isYarn = true;
   }
-  var download = fs.createWriteStream(outputPath, {
-    mode: Number.parseInt('0755', 8)
-  });
+  var download = fs.createWriteStream(outputPath, { mode: '0755' });
   res.pipe(download);
   res.on('data', function(chunk) {
     downloaded += chunk.length;
@@ -84,23 +108,28 @@ function downloadBinary(res) {
     process.exit(1);
   });
   download.on('close', function() {
-    var output = "";
+    var output = '';
     var child = spawn(outputPath, ['--version'], {
-      stdio: ['pipe', 'pipe', process.stderr],
+      stdio: ['pipe', 'pipe', process.stderr]
     });
     child.stdout.on('data', function(data) {
       output += data;
     });
     child.on('close', function(code) {
-      if (code != 0) {
+      if (code !== 0) {
         console.log('Something went wrong!');
         console.error(output);
         process.exit(1);
       } else {
-        if (output.trim() !== 'sentry-cli ' + version) {
-          console.error('Warning! Unexpected sentry-cli version: ' +
-                        output.trim().split(' ')[1] +
-                        ', expected ' + version + '!');
+        if (output.trim() !== 'sentry-cli ' + version + '') {
+          console.error(
+            'Warning! Unexpected sentry-cli version: ',
+            output.trim().split(' ')[1],
+            'expected: ' + version + '!'
+          );
+        }
+        if (server) {
+          server.close();
         }
         process.exit(0);
       }
@@ -113,12 +142,13 @@ function downloadBinary(res) {
 var redirectCt = 0;
 function handleResponse(res) {
   if (res.statusCode === 302) {
-    redirectCt++;
+    redirectCt += 1;
     if (redirectCt > 10) {
       console.log('error: Too many redirects!');
       process.exit(1);
     }
-    https.get(res.headers['Location'] || res.headers['location'], handleResponse)
+    fetch
+      .get(res.headers.Location || res.headers.location, handleResponse)
       .on('error', function(err) {
         console.log(err);
         process.exit(1);
@@ -137,9 +167,10 @@ function shouldDownloadScript() {
 
 // Start download
 if (shouldDownloadScript()) {
-  https.get(downloadUrl, handleResponse)
-    .on('error', function(err) {
-      console.log(err);
-      process.exit(1);
-    });
+  fetch.get(downloadUrl, handleResponse).on('error', function(err) {
+    console.log(err);
+    process.exit(1);
+  });
+} else if (server) {
+  server.close();
 }

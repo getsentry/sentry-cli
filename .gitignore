@@ -3,4 +3,8 @@ target
 .sentryclirc
 .cargo
 node_modules
-bin/sentry-cli.exe
+coverage
+
+/sentry-cli
+/bin/sentry-cli.exe
+
