@@ -99,4 +99,4 @@ deploy:
   upload-dir: $TRAVIS_REPO_SLUG/$TRAVIS_COMMIT
   local_dir: dist
   on:
-    condition: "-v $TARGET" # we only want to trigger deploy on TARGET
+    condition: "-n $TARGET" # we only want to trigger deploy on TARGET
