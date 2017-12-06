@@ -1,6 +1,6 @@
 /* eslint-env jest */
 
-var SentryCli = require('../cli');
+var SentryCli = require('..');
 
 describe('SentryCli', function() {
   test('call sentry-cli --version', function() {

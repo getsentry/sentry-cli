@@ -1,12 +1,13 @@
-# .npmignore
-
-# ignore all
-*
+# ignore everything
+/*
 
 # unignore desired files
 !package.json
 !README.md
-!License
-!install-sentry-cli
-!bin/
-!bin/*
+!LICENSE
+!bin
+!js
+
+# ignore JS tests
+__mocks__
+__tests__
