@@ -52,12 +52,18 @@ if (platform === 'darwin') {
   downloadUrl = releasesUrl + version + binaryPrefix + 'Darwin-x86_64';
   // Windows
 } else if (platform === 'win32') {
-  downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-i686.exe';
+  if (arch.indexOf('64') > -1) {
+    downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-x86_64.exe';
+  } else {
+    downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-i686.exe';
+  }
   // Linux
-} else if (arch.indexOf('64') > -1) {
-  downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
-} else {
-  downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-i686';
+} else if (platform === 'linux') {
+  if (arch.indexOf('64') > -1) {
+    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
+  } else {
+    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-i686';
+  }
 }
 
 if (downloadUrl === null) {
