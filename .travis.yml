@@ -45,7 +45,7 @@ matrix:
       script: npm install && npm test
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
-    # Build the sentry-cli-binary NPM package
+    # Build the @sentry/cli NPM package
     - os: linux
       sudo: false
       language: node_js
