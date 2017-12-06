@@ -58,7 +58,7 @@ if (platform === 'darwin') {
     downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-i686.exe';
   }
   // Linux
-} else if (platform === 'linux') {
+} else if (platform === 'linux' || platform === 'freebsd') {
   if (arch.indexOf('64') > -1) {
     downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
   } else {
