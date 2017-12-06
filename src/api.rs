@@ -909,7 +909,11 @@ impl ApiResponse {
                 fail!(Error::Http(self.status(), detail));
             }
         }
-        fail!(Error::Http(self.status(), "generic error".into()));
+        if let Ok(value) = self.deserialize::<serde_json::Value>() {
+            fail!(Error::Http(self.status(), format!("protocol error:\n\n{:#}", value)));
+        } else {
+            fail!(Error::Http(self.status(), "generic error".into()));
+        }
     }
 
     /// Deserializes the response body into the given type
