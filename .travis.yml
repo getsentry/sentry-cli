@@ -23,7 +23,7 @@ matrix:
       sudo: false
       language: node_js
       node_js: "0.12"
-      install: skip
+      install: true
       script: npm install --production
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
@@ -32,7 +32,7 @@ matrix:
       sudo: false
       language: node_js
       node_js: "4"
-      install: skip
+      install: true
       script: npm install && npm test
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
@@ -41,7 +41,7 @@ matrix:
       sudo: false
       language: node_js
       node_js: "8"
-      install: skip
+      install: true
       script: npm install && npm test
       env: SENTRY_LOCAL_DOWNLOAD_URL="http://localhost:8999/"
 
@@ -50,10 +50,10 @@ matrix:
       sudo: false
       language: node_js
       node_js: "8"
-      install: skip
+      install: true
       script: npm pack
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
-      env: TARGET="npm pack"
+      env: TARGET=npm
 
 
 install:
