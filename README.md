@@ -8,7 +8,7 @@
 [![Travis](https://img.shields.io/travis/getsentry/sentry-cli.svg)](https://travis-ci.org/getsentry/sentry-cli)
 [![AppVeyor](https://img.shields.io/appveyor/ci/sentry/sentry-cli.svg)](https://ci.appveyor.com/project/sentry/sentry-cli)
 [![GitHub release](https://img.shields.io/github/release/getsentry/sentry-cli.svg)](https://github.com/getsentry/sentry-cli/releases/latest)
-[![npm version](https://img.shields.io/npm/v/sentry-cli-binary.svg)](https://www.npmjs.com/package/sentry-cli-binary)
+[![npm version](https://img.shields.io/npm/v/@sentry/cli.svg)](https://www.npmjs.com/package/@sentry/cli)
 [![license](https://img.shields.io/github/license/getsentry/sentry-cli.svg)](https://github.com/getsentry/sentry-cli/blob/master/LICENSE)
 
 This is a Sentry command line client for some generic tasks. Right now this is
@@ -27,14 +27,14 @@ The recommended way to install is with everybody's favorite curl to bash:
 
 Additionally you can also install this binary via npm:
 
-    npm install sentry-cli-binary
+    npm install @sentry/cli
 
 When installing globally, make sure to have set
 [correct permissions on the global node_modules directory](https://docs.npmjs.com/getting-started/fixing-npm-permissions).
 If this is not possible in your environment or still produces an EACCESS error,
 install as root:
 
-    sudo npm install -g sentry-cli-binary --unsafe-perm
+    sudo npm install -g @sentry/cli --unsafe-perm
 
 Or homebrew:
 

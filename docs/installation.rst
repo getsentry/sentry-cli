@@ -34,10 +34,10 @@ Installation via NPM
 
 There is also the option to install `sentry-cli` via npm for specialized
 use cases.  This for instance is useful for build servers.  The package is
-called ``sentry-cli-binary`` and in the post installation it will download
+called ``@sentry/cli`` and in the post installation it will download
 the appropriate release binary::
 
-    $ npm install sentry-cli-binary
+    $ npm install @sentry/cli
 
 You can then find it in the `.bin` folder::
 
@@ -48,7 +48,7 @@ You can then find it in the `.bin` folder::
     In case you want to install this with npm system wide with sudo you
     will need to pass `--unsafe-perm` to it::
 
-        sudo npm install -g sentry-cli-binary --unsafe-perm
+        sudo npm install -g @sentry/cli --unsafe-perm
 
     This installation is not recommended however.
 
