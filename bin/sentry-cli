@@ -2,7 +2,7 @@
 /*
  * a wrapper script
  */
-var cli = require('../index.js');
+var cli = require('../js');
 var child = require('child_process').spawn(cli.getPath(), process.argv.slice(2), {
   stdio: 'inherit'
 });
