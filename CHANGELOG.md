@@ -1,12 +1,19 @@
 # Changelog
 
+## sentry-cli 1.26.0
+
+* The npm package has moved to
+  [`@sentry/cli`](https://www.npmjs.com/package/@sentry/cli)
+* Exit with a proper error code when `send-event` fails, courtesy of @kirkins
+* No more annoying update reminders in the Docker images
+
 ## sentry-cli 1.25.0
 
 * Do not run update nagger if the command is not connected to a terminal
-* Source map uploading now correctly determines sourcemap references even
-  if the rewrite flag is not passed.
-* There is an offical Docker image with `sentry-cli` preinstalled:
-  `docker run --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help`
+* Source map uploading now correctly determines sourcemap references even if the
+  rewrite flag is not passed.
+* There is an offical Docker image with `sentry-cli` preinstalled: `docker run
+  --rm -it -v $(pwd):/work getsentry/sentry-cli sentry-cli --help`
 * Added support for automatically determining corvoda releases.
 
 ## sentry-cli 1.24.1

@@ -27,7 +27,9 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(repos);
         $mac!(projects);
+        #[cfg(not(feature="managed"))]
         $mac!(update);
+        #[cfg(not(feature="managed"))]
         $mac!(uninstall);
         $mac!(info);
         $mac!(login);

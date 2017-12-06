@@ -233,6 +233,11 @@ fn update_nagger_impl(config: &Config) -> Result<()> {
 }
 
 pub fn run_sentrycli_update_nagger(config: &Config) {
+    // Only update if we are compiled as unmanaged version (default)
+    if cfg!(feature = "managed") {
+        return;
+    }
+
     // Do not run update nagger if stdout/stdin is not a terminal
     if !user_attended() {
         return;
