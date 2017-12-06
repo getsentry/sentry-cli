@@ -80,6 +80,7 @@ pub enum Error {
     Form(curl::FormError),
     Io(io::Error),
     Json(serde_json::Error),
+    NotJson,
     ResourceNotFound(&'static str),
     BadApiUrl(String),
     NoDsn,
@@ -908,11 +909,18 @@ impl ApiResponse {
                 fail!(Error::Http(self.status(), detail));
             }
         }
-        fail!(Error::Http(self.status(), "generic error".into()));
+        if let Ok(value) = self.deserialize::<serde_json::Value>() {
+            fail!(Error::Http(self.status(), format!("protocol error:\n\n{:#}", value)));
+        } else {
+            fail!(Error::Http(self.status(), "generic error".into()));
+        }
     }
 
     /// Deserializes the response body into the given type
     pub fn deserialize<T: DeserializeOwned>(&self) -> ApiResult<T> {
+        if !self.is_json() {
+            fail!(Error::NotJson);
+        }
         Ok(serde_json::from_reader(match self.body {
             Some(ref body) => body,
             None => &b""[..],
@@ -952,6 +960,13 @@ impl ApiResponse {
             }
         }
         None
+    }
+
+    /// Returns true if the response is JSON.
+    pub fn is_json(&self) -> bool {
+        self.get_header("content-type")
+            .and_then(|x| x.split(';').next())
+            .unwrap_or("") == "application/json"
     }
 }
 
@@ -1014,6 +1029,7 @@ impl fmt::Display for Error {
             Error::Form(ref err) => write!(f, "http form error: {}", err),
             Error::Io(ref err) => write!(f, "io error: {}", err),
             Error::Json(ref err) => write!(f, "bad json: {}", err),
+            Error::NotJson => write!(f, "not a JSON response"),
             Error::ResourceNotFound(res) => write!(f, "{} not found", res),
             Error::NoDsn => write!(f, "no dsn provided"),
             Error::BadApiUrl(ref msg) => write!(f, "{}", msg),
