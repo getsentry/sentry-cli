@@ -135,9 +135,10 @@ pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
 }
 
 /// Given a path returns the SHA1 checksum for it.
-pub fn get_sha1_checksum<R: Read>(mut rdr: R) -> Result<String> {
+pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<String> {
     let mut sha = Sha1::new();
     let mut buf = [0u8; 16384];
+    let mut rdr = io::BufReader::new(rdr);
     loop {
         let read = rdr.read(&mut buf)?;
         if read == 0 {
