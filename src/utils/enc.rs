@@ -1,7 +1,7 @@
 use std::str;
 use std::borrow::Cow;
 
-use uchardet::detect_encoding_name;
+use chardet::detect;
 use encoding::DecoderTrap;
 use encoding::label::encoding_from_whatwg_label;
 
@@ -14,7 +14,7 @@ pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
         Ok(Cow::Borrowed(s))
     } else {
         if_chain! {
-            if let Ok(enc) = detect_encoding_name(bytes);
+            if let Ok(enc) = detect(bytes).0;
             if let Some(enc) = encoding_from_whatwg_label(&enc);
             if let Ok(s) = enc.decode(bytes, DecoderTrap::Replace);
             then {
