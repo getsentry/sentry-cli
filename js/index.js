@@ -104,7 +104,7 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
       }
 
       return this.execute(command);
-    })
+    }, this)
   );
 };
 

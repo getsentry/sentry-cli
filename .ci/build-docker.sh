@@ -17,8 +17,8 @@ export LD_LIBRARY_PATH=/travis-rust/lib:$LD_LIBRARY_PATH
 # distribute (this can be changed by others of course).
 # ==============================================================================
 
-OPENSSL_VERS=1.0.2j
-OPENSSL_SHA256=e7aff292be21c259c6af26469c7a9b3ba26e9abaaffd325e3dccc9785256c431
+OPENSSL_VERS=1.0.2n
+OPENSSL_SHA256=370babb75f278c39e0c50e8c4e7493bc0f18db6867478341a832a982fd15a8fe
 
 case $TARGET in
   x86_64-*-linux-*)
