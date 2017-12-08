@@ -2,8 +2,6 @@ use std::str;
 use std::borrow::Cow;
 
 use chardet::detect;
-use encoding::DecoderTrap;
-use encoding::label::encoding_from_whatwg_label;
 
 use prelude::*;
 
@@ -13,12 +11,13 @@ pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
     if let Ok(s) = str::from_utf8(bytes) {
         Ok(Cow::Borrowed(s))
     } else {
+        let (enc, confidence, _) = detect(bytes);
+        if confidence < 0.5 {
+            fail!("cannot detect language with sufficient confidence");
+        }
         if_chain! {
-            if let Ok(enc) = detect(bytes).0;
-            if let Some(enc) = encoding_from_whatwg_label(&enc);
-            if let Ok(s) = enc.decode(bytes, DecoderTrap::Replace);
             then {
-                Ok(Cow::Owned(s))
+                Ok(Cow::Owned(enc))
             } else {
                 fail!("unknown encoding for string");
             }
