@@ -4,12 +4,12 @@
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
     "install": "node ./bin/install-sentry-cli",
-    "fix:eslint": "eslint --fix js",
-    "fix:prettier": "prettier --write 'js/**/*.js'",
+    "fix:eslint": "eslint --fix 'bin/*' js",
+    "fix:prettier": "prettier --write 'bin/*' 'js/**/*.js'",
     "fix": "npm-run-all fix:eslint fix:prettier",
     "test:jest": "jest",
-    "test:eslint": "eslint js",
-    "test:prettier": "prettier-check 'js/**/*.js'",
+    "test:eslint": "eslint 'bin/*' js",
+    "test:prettier": "prettier-check 'bin/*' 'js/**/*.js'",
     "test": "npm-run-all test:jest test:eslint test:prettier",
     "test:watch": "jest --watch --notify"
   },

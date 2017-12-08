@@ -112,7 +112,7 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         command = command.concat(transformOption('--ignore', DEFAULT_IGNORE));
       }
       return this.execute(command);
-    })
+    }, this)
   );
 };
 

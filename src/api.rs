@@ -174,6 +174,7 @@ impl<'a> Api<'a> {
             handle.proxy_password(proxy_password)?;
         }
         handle.ssl_verify_host(self.config.should_verify_ssl())?;
+        handle.ssl_verify_peer(self.config.should_verify_ssl())?;
 
         ApiRequest::new(handle, method, &url, auth)
     }
