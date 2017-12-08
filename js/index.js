@@ -38,8 +38,9 @@ function transformOption(option, values) {
 }
 
 function normalizeOptions(options) {
-  return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(newOptions, sourceMapOption) {
-    if (options[sourceMapOption] !== undefined) {
+  var newOptions = [];
+  return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(acc, sourceMapOption) {
+    if (typeof options[sourceMapOption] !== 'undefined') {
       if (
         sourceMapOption === 'ignore' ||
         sourceMapOption === 'stripPrefix' ||
@@ -111,6 +112,7 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
       if (!options.ignoreFile && !options.ignore) {
         command = command.concat(transformOption('--ignore', DEFAULT_IGNORE));
       }
+
       return this.execute(command);
     }, this)
   );
