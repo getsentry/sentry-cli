@@ -13,14 +13,9 @@ pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
     } else {
         let (enc, confidence, _) = detect(bytes);
         if confidence < 0.5 {
-            fail!("cannot detect language with sufficient confidence");
-        }
-        if_chain! {
-            then {
-                Ok(Cow::Owned(enc))
-            } else {
-                fail!("unknown encoding for string");
-            }
+            fail!("unknown encoding for string");
+        } else {
+            Ok(Cow::Owned(enc))
         }
     }
 }
