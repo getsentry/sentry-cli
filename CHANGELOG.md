@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.26.1
+
+* Faster discovery of debug symbols in `upload-dsyms`
+* Fix a bug in sourcemap uploading via JS, courtesy of @roelvanhintum
+* Security update to OpenSSL 1.0.2n for Linux builds
+* Fix a SSL verification command line flag
+
 ## sentry-cli 1.26.0
 
 * The npm package has moved to [`@sentry/cli`](https://www.npmjs.com/package/@sentry/cli)
