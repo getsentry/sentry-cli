@@ -8,6 +8,14 @@ var path = require('path');
 var pkgInfo = require('../package.json');
 
 var DEFAULT_IGNORE = ['node_modules'];
+var SOURCEMAPS_OPTIONS = {
+  noSourceMapReference: '--no-sourcemap-reference',
+  stripPrefix: '--strip-prefix',
+  stripCommonPrefix: '--strip-common-prefix',
+  validate: '--validate',
+  urlPrefix: '--url-prefix',
+  ext: '--ext'
+};
 
 var binaryPath =
   os.platform() === 'win32'
@@ -67,6 +75,21 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         sourcemapPath,
         '--rewrite'
       ];
+
+      var sourceMapOptions = Object.keys(SOURCEMAPS_OPTIONS).reduce(function(
+        newOptions,
+        sourceMapOption
+      ) {
+        if (options[sourceMapOption]) {
+          newOptions.push(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption]);
+        }
+        return newOptions;
+      },
+      []);
+
+      if (sourceMapOptions.length > 1) {
+        command = command.concat(sourceMapOptions);
+      }
 
       if (options.ignoreFile) {
         command = command.concat(['--ignore-file', options.ignoreFile]);
