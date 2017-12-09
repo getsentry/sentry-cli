@@ -13,7 +13,8 @@ pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
     } else {
         let (enc, confidence, _) = detect(bytes);
         if confidence < 0.5 {
-            fail!("unknown encoding for string");
+            println_stderr!("unknown encoding for string");
+            return Err(ErrorKind::QuietExit(1).into());
         } else {
             Ok(Cow::Owned(enc))
         }
