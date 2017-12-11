@@ -38,27 +38,22 @@ function transformOption(option, values) {
 }
 
 function normalizeOptions(options) {
-  var newOptions = [];
-  return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(acc, sourceMapOption) {
-    if (typeof options[sourceMapOption] !== 'undefined') {
-      if (
-        sourceMapOption === 'ignore' ||
-        sourceMapOption === 'stripPrefix' ||
-        sourceMapOption === 'stripCommonPrefix'
-      ) {
-        newOptions = newOptions.concat(
-          transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption])
-        );
-      } else if (sourceMapOption === 'validate') {
-        newOptions = newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption]]);
-      } else {
-        newOptions = newOptions.concat(
-          SOURCEMAPS_OPTIONS[sourceMapOption],
-          options[sourceMapOption]
-        );
-      }
+  var transformableOptions = ['ignore', 'stripPrefix', 'stripCommonPrefix'];
+
+  return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(newOptions, sourceMapOption) {
+    if (options[sourceMapOption] === undefined) return newOptions;
+
+    if (transformableOptions.indexOf(sourceMapOption) !== -1) {
+      return newOptions.concat(
+        transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption])
+      );
+    } else if (sourceMapOption === 'validate') {
+      return newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption]]);
     }
-    return newOptions;
+    return newOptions.concat(
+      SOURCEMAPS_OPTIONS[sourceMapOption],
+      options[sourceMapOption]
+    );
   }, []);
 }
 
