@@ -98,11 +98,7 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         '--rewrite'
       ];
 
-      var normalizedOptions = normalizeOptions(options);
-
-      if (normalizedOptions.length > 1) {
-        command = command.concat(normalizedOptions);
-      }
+      command = command.concat(normalizeOptions(options));
 
       if (!options.ignoreFile && !options.ignore) {
         command = command.concat(transformOption('--ignore', DEFAULT_IGNORE));
