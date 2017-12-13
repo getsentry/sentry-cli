@@ -18,4 +18,29 @@ describe('SentryCli', function() {
       expect(e.message).toMatch('Command failed:');
     });
   });
+
+  // test('call sentry-cli with source map options', function() {
+  //   expect.assertions(1)
+  //
+  //   var cli = new SentryCli()
+  //
+  //   var command = [
+  //     'releases',
+  //     'files',
+  //     22,
+  //     'upload-sourcemaps',
+  //     'testinclude',
+  //     '--rewrite',
+  //     '--url-prefix',
+  //     '~/path',
+  //     '--ext',
+  //     '.js',
+  //     '--ignore',
+  //     'node_modules'
+  //   ]
+  //
+  //   return cli.execute(command).then(function() {
+  //     expect(true).toBe(true)
+  //   })
+  // })
 });

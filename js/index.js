@@ -8,23 +8,53 @@ var path = require('path');
 var pkgInfo = require('../package.json');
 
 var DEFAULT_IGNORE = ['node_modules'];
+var SOURCEMAPS_OPTIONS = {
+  ignore: '--ignore',
+  ignoreFile: '--ignore-file',
+  noSourceMapReference: '--no-sourcemap-reference',
+  stripPrefix: '--strip-prefix',
+  stripCommonPrefix: '--strip-common-prefix',
+  validate: '--validate',
+  urlPrefix: '--url-prefix',
+  ext: '--ext'
+};
 
 var binaryPath =
   os.platform() === 'win32'
     ? path.resolve(__dirname, '..\\bin\\sentry-cli.exe')
     : path.resolve(__dirname, '../sentry-cli');
 
-function transformIgnore(ignore) {
-  if (Array.isArray(ignore)) {
-    return ignore
+function transformOption(option, values) {
+  if (Array.isArray(values)) {
+    return values
       .map(function(value) {
-        return ['--ignore', value];
+        return [option, value];
       })
       .reduce(function(acc, value) {
         return acc.concat(value);
       }, []);
   }
-  return ['--ignore', ignore];
+  return [option, values];
+}
+
+function normalizeOptions(options) {
+  var transformableOptions = ['ignore', 'stripPrefix', 'stripCommonPrefix'];
+
+  return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(newOptions, sourceMapOption) {
+    if (options[sourceMapOption] === undefined) return newOptions;
+
+    if (transformableOptions.indexOf(sourceMapOption) !== -1) {
+      return newOptions.concat(
+        transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption])
+      );
+    } else if (sourceMapOption === 'validate') {
+      return newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption]]);
+    }
+    return newOptions.concat(
+      SOURCEMAPS_OPTIONS[sourceMapOption],
+      options[sourceMapOption]
+    );
+  }, []);
 }
 
 function SentryCli(configFile) {
@@ -68,16 +98,10 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         '--rewrite'
       ];
 
-      if (options.ignoreFile) {
-        command = command.concat(['--ignore-file', options.ignoreFile]);
-      }
-
-      if (options.ignore) {
-        command = command.concat(transformIgnore(options.ignore));
-      }
+      command = command.concat(normalizeOptions(options));
 
       if (!options.ignoreFile && !options.ignore) {
-        command = command.concat(transformIgnore(DEFAULT_IGNORE));
+        command = command.concat(transformOption('--ignore', DEFAULT_IGNORE));
       }
 
       return this.execute(command);
