@@ -9,29 +9,56 @@
     "tasks": [
         {
             "type": "shell",
-            "taskName": "cargo build",
+            "label": "cargo build",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
             "command": "cargo",
-            "args": [
-                "build"
-            ],
-            "problemMatcher": "$rustc",
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            "args": ["build"],
+            "group": "build",
+            "problemMatcher": "$rustc"
         },
         {
             "type": "shell",
-            "taskName": "cargo test",
+            "label": "cargo run",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
             "command": "cargo",
-            "args": [
-                "test"
-            ],
-            "problemMatcher": "$rustc",
-            "group": {
-                "kind": "test",
-                "isDefault": true
-            }
+            "args": ["run"],
+            "problemMatcher": "$rustc"
+        },
+        {
+            "type": "shell",
+            "label": "cargo test",
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared"
+            },
+            "command": "cargo",
+            "args": ["test"],
+            "group": "test",
+            "problemMatcher": "$rustc"
+        },
+        {
+            "type": "shell",
+            "label": "cargo clean",
+            "presentation": {
+                "echo": true,
+                "reveal": "never",
+                "focus": false,
+                "panel": "shared"
+            },
+            "command": "cargo",
+            "args": ["clean"]
         }
     ]
 }
