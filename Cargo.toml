@@ -41,7 +41,7 @@ serde_derive = "1.0"
 serde_json = "1.0"
 sha1 = "0.3"
 sourcemap = "1.0.1"
-uchardet = "2.0"
+chardet = "0.2.4"
 url = "1.4"
 uuid = { version = "0.5", features = ["v4", "serde"] }
 walkdir = "1.0"

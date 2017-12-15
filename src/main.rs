@@ -58,7 +58,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate sha1;
 extern crate sourcemap;
-extern crate uchardet;
+extern crate chardet;
 #[cfg(target_os = "macos")]
 extern crate unix_daemonize;
 extern crate url;

@@ -177,6 +177,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "chardet"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
 name = "chrono"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -989,6 +994,7 @@ dependencies = [
  "backtrace 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chan 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)",
  "chan-signal 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "chardet 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap 2.27.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1027,7 +1033,6 @@ dependencies = [
  "serde_json 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sourcemap 1.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "uchardet 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "uname 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1289,26 +1294,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "uchardet"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "error-chain 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
- "uchardet-sys 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
-name = "uchardet-sys"
-version = "2.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "cmake 0.1.28 (registry+https://github.com/rust-lang/crates.io-index)",
- "libc 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
- "pkg-config 0.3.9 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "uname"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1510,6 +1495,7 @@ dependencies = [
 "checksum cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c819a1287eb618df47cc647173c5c4c66ba19d888a6e50d605672aed3140de"
 "checksum chan 0.1.19 (registry+https://github.com/rust-lang/crates.io-index)" = "f93bfe971116428a9066c1c3c69a09ae3ef69432f8418be28ab50f96783e6a50"
 "checksum chan-signal 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f1f1e11f6e1c14c9e805a87c622cb8fcb636283b3119a2150af390cc6702d7fe"
+"checksum chardet 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "1a48563284b67c003ba0fb7243c87fab68885e1532c605704228a80238512e31"
 "checksum chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c20ebe0b2b08b0aeddba49c609fe7957ba2e33449882cb186a180bc60682fa9"
 "checksum clap 2.27.1 (registry+https://github.com/rust-lang/crates.io-index)" = "1b8c532887f1a292d17de05ae858a8fe50a301e196f9ef0ddb7ccd0d1d00f180"
 "checksum clicolors-control 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "61bd6bff2f99f947c2dbdc73cd0ebd55d8263b921fd4f68a44598555be49f32b"
@@ -1636,8 +1622,6 @@ dependencies = [
 "checksum textwrap 0.9.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c0b59b6b4b44d867f1370ef1bd91bfb262bf07bf0ae65c202ea2fbc16153b693"
 "checksum thread_local 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "1697c4b57aeeb7a536b647165a2825faddffb1d3bad386d507709bd51a90bb14"
 "checksum time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)" = "d5d788d3aa77bc0ef3e9621256885555368b47bd495c13dd2e7413c89f845520"
-"checksum uchardet 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "a496d0db4c292beb5bf5291a02d5913ec97b6f1a6cb1d10a8e8852b08616949c"
-"checksum uchardet-sys 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d904e4160dceaff13d2f09859f3d2a375c8044826c7c7bb6a56249be5e3268a1"
 "checksum uname 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b72f89f0ca32e4db1c04e2a72f5345d59796d4866a1ee0609084569f73683dc8"
 "checksum unicode-bidi 0.3.4 (registry+https://github.com/rust-lang/crates.io-index)" = "49f2bd0c6468a8230e1db229cff8029217cf623c767ea5d60bfbd42729ea54d5"
 "checksum unicode-normalization 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "51ccda9ef9efa3f7ef5d91e8f9b83bbe6955f9bf86aec89d5cce2c874625920f"
