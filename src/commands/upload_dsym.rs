@@ -15,7 +15,7 @@ use std::rc::Rc;
 use std::collections::HashSet;
 
 use clap::{App, Arg, ArgMatches};
-use walkdir::{WalkDir, Iter as WalkDirIter};
+use walkdir::{WalkDir, IntoIter as WalkDirIter};
 use zip;
 use uuid::Uuid;
 use indicatif::{ProgressBar, ProgressStyle};

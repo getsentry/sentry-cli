@@ -35,8 +35,8 @@ impl MachoInfo {
 
     pub fn open_path(path: &Path) -> Result<MachoInfo> {
         let f = File::open(path)?;
-        if let Ok(mmap) = memmap::Mmap::open(&f, memmap::Protection::Read) {
-            MachoInfo::from_slice(unsafe { mmap.as_slice() })
+        if let Ok(mmap) = unsafe { memmap::Mmap::map(&f) } {
+            MachoInfo::from_slice(&mmap)
         } else {
             Err(ErrorKind::NoMacho.into())
         }
