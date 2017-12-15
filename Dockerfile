@@ -4,7 +4,6 @@ RUN apk add --no-cache \
     cargo \
     cmake \
     curl-dev \
-    g++ \
     make \
     openssl-dev \
     rust
@@ -28,7 +27,7 @@ RUN touch src/main.rs \
 FROM alpine:3.6
 WORKDIR /work
 
-RUN apk add --no-cache curl llvm-libunwind libstdc++ libgcc
+RUN apk add --no-cache libcurl llvm-libunwind libgcc
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
 
 CMD ["/bin/sentry-cli"]
