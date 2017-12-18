@@ -28,7 +28,7 @@ pub struct Dsn {
     pub protocol: String,
     pub port: u16,
     pub client_id: String,
-    pub secret: String,
+    pub secret: Option<String>,
     pub project_id: u64,
 }
 
@@ -58,7 +58,7 @@ impl Dsn {
             host: url.host_str().ok_or("invalid dsn: missing host")?.into(),
             port: url.port_or_known_default().unwrap(),
             client_id: url.username().into(),
-            secret: url.password().ok_or("invalid dsn: missing secret")?.into(),
+            secret: url.password().map(|x| x.to_string()),
             project_id: project_id,
         })
     }
@@ -74,17 +74,19 @@ impl Dsn {
 
     /// Returns the given auth header (ts is the timestamp of the event)
     pub fn get_auth_header(&self, ts: f64) -> String {
-        format!("Sentry \
+        let mut rv = format!("Sentry \
             sentry_timestamp={}, \
             sentry_client=sentry-cli/{}, \
             sentry_version={}, \
-            sentry_key={}, \
-            sentry_secret={}",
+            sentry_key={}",
                 ts,
                 VERSION,
                 PROTOCOL_VERSION,
-                self.client_id,
-                self.secret)
+                self.client_id);
+        if let Some(ref secret) = self.secret {
+            rv = format!("{}, sentry_secret={}", rv, secret);
+        }
+        rv
     }
 }
 
