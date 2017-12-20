@@ -6,6 +6,7 @@
 
 use std::env;
 
+extern crate anylog;
 extern crate app_dirs;
 extern crate backtrace;
 #[cfg(not(windows))]
@@ -13,6 +14,7 @@ extern crate backtrace;
 extern crate chan;
 #[cfg(not(windows))]
 extern crate chan_signal;
+extern crate chardet;
 extern crate chrono;
 extern crate clap;
 extern crate console;
@@ -24,6 +26,7 @@ extern crate encoding;
 extern crate error_chain;
 extern crate git2;
 extern crate glob;
+extern crate hostname;
 extern crate humansize;
 #[macro_use]
 extern crate if_chain;
@@ -39,7 +42,6 @@ extern crate libc;
 extern crate log;
 #[cfg(target_os = "macos")]
 extern crate mac_process_info;
-extern crate mach_object;
 extern crate memmap;
 extern crate might_be_minified;
 extern crate open;
@@ -49,7 +51,6 @@ extern crate openssl_probe;
 extern crate osascript;
 extern crate plist;
 extern crate prettytable;
-extern crate proguard;
 extern crate regex;
 extern crate runas;
 extern crate serde;
@@ -58,19 +59,19 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate sha1;
 extern crate sourcemap;
-extern crate chardet;
+extern crate symbolic_common;
+extern crate symbolic_debuginfo;
+extern crate symbolic_proguard;
+#[cfg(not(windows))]
+extern crate uname;
 #[cfg(target_os = "macos")]
 extern crate unix_daemonize;
 extern crate url;
+extern crate username;
 extern crate uuid;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
-extern crate username;
-extern crate hostname;
-#[cfg(not(windows))]
-extern crate uname;
-extern crate anylog;
 
 mod macros;
 
@@ -85,7 +86,10 @@ pub mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {
-    if env::var("SENTRY_LOAD_DOTENV").map(|x| x.as_str() == "1").unwrap_or(true) {
+    if env::var("SENTRY_LOAD_DOTENV")
+        .map(|x| x.as_str() == "1")
+        .unwrap_or(true)
+    {
         dotenv::dotenv().ok();
     }
     utils::init_backtrace();
