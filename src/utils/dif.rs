@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use uuid::Uuid;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{DwarfData, FatObject, SymbolTable};
+use symbolic_debuginfo::{FatObject, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
 
 use prelude::*;
@@ -15,6 +15,7 @@ use prelude::*;
 #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
 pub enum DifType {
     #[serde(rename = "dsym")] Dsym,
+    #[serde(rename = "breakpad")] Breakpad,
     #[serde(rename = "proguard")] Proguard,
 }
 
@@ -22,6 +23,7 @@ impl fmt::Display for DifType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             &DifType::Dsym => write!(f, "dsym"),
+            &DifType::Breakpad => write!(f, "breakpad"),
             &DifType::Proguard => write!(f, "proguard"),
         }
     }
@@ -33,6 +35,7 @@ impl str::FromStr for DifType {
     fn from_str(s: &str) -> Result<DifType> {
         match s {
             "dsym" => Ok(DifType::Dsym),
+            "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
             _ => Err(Error::from("Invalid debug info file type")),
         }
@@ -86,6 +89,7 @@ impl DifFile {
         if let Ok(fat) = FatObject::parse(data) {
             match fat.kind() {
                 ObjectKind::MachO => return DifFile::from_object(fat),
+                ObjectKind::Breakpad => return DifFile::from_object(fat),
                 _ => return Err(Error::from("Unsupported object file")),
             }
         }
@@ -103,6 +107,7 @@ impl DifFile {
     pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<DifFile> {
         match ty {
             Some(DifType::Dsym) => DifFile::open_object(path, ObjectKind::MachO),
+            Some(DifType::Breakpad) => DifFile::open_object(path, ObjectKind::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
             None => DifFile::try_open(path),
         }
@@ -112,6 +117,7 @@ impl DifFile {
         match self {
             &DifFile::Object(ref fat) => match fat.kind() {
                 ObjectKind::MachO => DifType::Dsym,
+                ObjectKind::Breakpad => DifType::Breakpad,
                 _ => unreachable!(),
             },
             &DifFile::Proguard(..) => DifType::Proguard,
@@ -142,7 +148,7 @@ impl DifFile {
         match self {
             &DifFile::Object(ref fat) => fat.objects()
                 .filter_map(|result| result.ok())
-                .any(|object| object.has_dwarf_data()),
+                .any(|object| object.debug_kind().is_some()),
             &DifFile::Proguard(ref pg) => pg.has_line_info(),
         }
     }

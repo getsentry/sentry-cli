@@ -16,7 +16,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .long("type")
              .short("t")
              .value_name("TYPE")
-             .possible_values(&["dsym", "proguard"])
+             .possible_values(&["dsym", "proguard", "breakpad"])
              .help("Explicitly set the type of the debug info file. \
                     This should not be needed as files are auto detected."))
         .arg(Arg::with_name("json")
