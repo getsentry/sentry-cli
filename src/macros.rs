@@ -16,19 +16,6 @@ macro_rules! fail {
     )
 }
 
-/// A version of `try!` that works within iterators.  In particular it
-/// wraps the returned error in `Some(...)`.
-macro_rules! iter_try {
-    ($expr:expr) => {
-        match $expr {
-            Ok(rv) => rv,
-            Err(err) => {
-                return Some(Err(::std::convert::From::from(err)));
-            }
-        }
-    }
-}
-
 macro_rules! println_stderr(
     ($($arg:tt)*) => { {
         use std::io::Write;

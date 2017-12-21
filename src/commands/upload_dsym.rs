@@ -7,7 +7,7 @@ use std::fmt;
 use std::process;
 use std::path::{Path, PathBuf};
 use std::fs::File;
-use std::io::{Write, Seek};
+use std::io::{Seek, Write};
 use std::ffi::OsStr;
 use std::cell::RefCell;
 use std::iter::Fuse;
@@ -15,19 +15,21 @@ use std::rc::Rc;
 use std::collections::HashSet;
 
 use clap::{App, Arg, ArgMatches};
-use walkdir::{WalkDir, IntoIter as WalkDirIter};
-use zip;
-use uuid::Uuid;
-use indicatif::{ProgressBar, ProgressStyle};
 use console::style;
+use indicatif::{ProgressBar, ProgressStyle};
+use symbolic_common::{ByteView, DebugKind, ObjectClass, ObjectKind};
+use symbolic_debuginfo::FatObject;
+use uuid::Uuid;
+use walkdir::{IntoIter as WalkDirIter, WalkDir};
 use which;
+use zip;
 
-use prelude::*;
 use api::{Api, DSymFile};
-use utils::{ArgExt, TempDir, TempFile, get_sha1_checksum,
-            is_zip_file, validate_uuid, copy_with_progress,
-            make_byte_progress_bar, xcode, MachoInfo};
 use config::Config;
+use utils::dif::has_hidden_symbols;
+use prelude::*;
+use utils::{copy_with_progress, is_zip_file, make_byte_progress_bar, validate_uuid, xcode, ArgExt,
+            TempDir, TempFile, get_sha1_checksum};
 
 #[derive(Debug)]
 enum DSymVar {
@@ -234,12 +236,51 @@ impl<'a> BatchIter<'a> {
         }
         batch.iter().map(|x| x.size).sum::<u64>() >= self.max_size
     }
-}
 
-impl<'a> Iterator for BatchIter<'a> {
-    type Item = Result<Vec<DSymRef>>;
+    fn matches_uuids(&self, fat_object: &FatObject) -> Result<bool> {
+        let uuids = match self.uuids {
+            Some(uuids) => uuids,
+            None => return Ok(true),
+        };
 
-    fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
+        for object_result in fat_object.objects() {
+            let object = object_result?;
+            let is_dsym = object.kind() == ObjectKind::MachO
+                && object.class() == ObjectClass::Debug
+                && object.debug_kind() == Some(DebugKind::Dwarf);
+
+            if !is_dsym {
+                continue;
+            }
+
+            if let Some(uuid) = object.uuid() {
+                if uuids.contains(&uuid) {
+                    return Ok(true);
+                }
+            }
+        }
+
+        return Ok(false);
+    }
+
+    fn parse_matching_object<'data>(
+        &self,
+        data: ByteView<'data>,
+    ) -> Result<Option<FatObject<'data>>> {
+        match FatObject::peek(&data) {
+            Ok(ObjectKind::MachO) => {}
+            _ => return Ok(None),
+        };
+
+        let fat = FatObject::parse(data)?;
+        if self.matches_uuids(&fat)? {
+            Ok(Some(fat))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn next_batch(&mut self) -> Result<Option<Vec<DSymRef>>> {
         let pb = ProgressBar::new_spinner();
         pb.enable_steady_tick(100);
         pb.set_style(ProgressStyle::default_spinner()
@@ -249,34 +290,6 @@ impl<'a> Iterator for BatchIter<'a> {
 
         let mut batch = vec![];
 
-        macro_rules! uuid_match {
-            ($load:expr) => {
-                match $load {
-                    Ok(macho_info) => {
-                        if !macho_info.has_debug_info() {
-                            None
-                        } else if let Some(ref expected_uuids) = self.uuids {
-                            if macho_info.matches_any(expected_uuids) {
-                                Some(macho_info)
-                            } else {
-                                None
-                            }
-                        } else {
-                            Some(macho_info)
-                        }
-                    }
-                    Err(err) => {
-                        if let &ErrorKind::NoMacho = err.kind() {
-                            None
-                        } else {
-                            return Some(Err(err));
-                        }
-                    }
-                }
-            }
-        }
-
-        let mut show_zip_continue = true;
         while !self.found_all() {
             if self.open_zip_index == !0 {
                 *self.open_zip.borrow_mut() = None;
@@ -285,44 +298,43 @@ impl<'a> Iterator for BatchIter<'a> {
             if self.open_zip_index != !0 {
                 let mut archive_ptr = self.open_zip.borrow_mut();
                 let archive = archive_ptr.as_mut().unwrap();
-                if show_zip_continue {
-                    show_zip_continue = false;
-                }
                 if self.open_zip_index >= archive.len() {
                     self.open_zip_index = !0;
                     if batch.len() != 0 {
                         break;
                     }
                 } else {
-                    if let Some(macho_info) = uuid_match!(MachoInfo::from_reader(
-                            iter_try!(archive.by_index(self.open_zip_index))))
-                    {
-                        let mut f = iter_try!(archive.by_index(self.open_zip_index));
-                        let name = Path::new("DebugSymbols").join(f.name());
-                        if self.push_ref(&mut batch, DSymRef {
+                    let zip_file = archive.by_index(self.open_zip_index)?;
+                    let zip_name = Path::new("DebugSymbols").join(zip_file.name());
+                    let data = ByteView::from_reader(zip_file)?;
+                    if let Some(object) = self.parse_matching_object(data)? {
+                        let is_full = self.push_ref(&mut batch, DSymRef {
                             var: DSymVar::ZipFile(self.open_zip.clone(), self.open_zip_index),
-                            arc_name: name.to_string_lossy().into_owned(),
-                            checksum: iter_try!(get_sha1_checksum(&mut f)),
-                            size: f.size(),
-                            uuids: macho_info.get_uuids(),
-                            has_hidden_symbols: macho_info.has_hidden_symbols(),
-                        }) {
+                            arc_name: zip_name.to_string_lossy().into_owned(),
+                            checksum: get_sha1_checksum(object.as_bytes())?,
+                            size: object.as_bytes().len() as u64,
+                            uuids: collect_uuids(&object)?,
+                            has_hidden_symbols: has_hidden_symbols(&object)?,
+                        });
+
+                        if is_full {
                             break;
                         }
                     }
+
                     self.open_zip_index += 1;
                 }
-            } else if let Some(dent_res) = self.wd_iter.next() {
-                let dent = iter_try!(dent_res);
-                let md = iter_try!(dent.metadata());
-                if md.is_file() {
-                    if let Some(fname) = dent.path().file_name().and_then(|x| x.to_str()) {
+            } else if let Some(entry_result) = self.wd_iter.next() {
+                let entry = entry_result?;
+                let meta = entry.metadata()?;
+                if meta.is_file() {
+                    if let Some(fname) = entry.path().file_name().and_then(|x| x.to_str()) {
                         pb.set_message(fname);
                     }
+
                     pb.set_prefix(&format!("{}", batch.len()));
-                    if self.allow_zips && is_zip_file(iter_try!(fs::File::open(&dent.path()))) {
-                        show_zip_continue = false;
-                        let f = iter_try!(fs::File::open(dent.path()));
+                    if self.allow_zips && is_zip_file(fs::File::open(&entry.path())?) {
+                        let f = fs::File::open(entry.path())?;
                         if let Ok(archive) = zip::ZipArchive::new(f) {
                             *self.open_zip.borrow_mut() = Some(archive);
                             self.open_zip_index = 0;
@@ -332,20 +344,24 @@ impl<'a> Iterator for BatchIter<'a> {
                                 break;
                             }
                         }
-                    } else if let Some(macho_info) = uuid_match!(MachoInfo::open_path(
-                            dent.path())) {
-                        let name = Path::new("DebugSymbols")
-                            .join(dent.path().strip_prefix(&self.path).unwrap());
-                        if self.push_ref(&mut batch, DSymRef {
-                            var: DSymVar::FsFile(dent.path().to_path_buf()),
-                            arc_name: name.to_string_lossy().into_owned(),
-                            checksum: iter_try!(get_sha1_checksum(
-                                &mut iter_try!(fs::File::open(dent.path())))),
-                            size: md.len(),
-                            uuids: macho_info.get_uuids(),
-                            has_hidden_symbols: macho_info.has_hidden_symbols(),
-                        }) {
-                            break;
+                    } else {
+                        let data = ByteView::from_path(entry.path())?;
+                        if let Some(object) = self.parse_matching_object(data)? {
+                            let name = Path::new("DebugSymbols")
+                                .join(entry.path().strip_prefix(&self.path).unwrap());
+
+                            let is_full = self.push_ref(&mut batch, DSymRef {
+                                var: DSymVar::FsFile(entry.path().to_path_buf()),
+                                arc_name: name.to_string_lossy().into_owned(),
+                                checksum: get_sha1_checksum(object.as_bytes())?,
+                                size: meta.len(),
+                                uuids: collect_uuids(&object)?,
+                                has_hidden_symbols: has_hidden_symbols(&object)?,
+                            });
+
+                            if is_full {
+                                break;
+                            }
                         }
                     }
                 }
@@ -356,11 +372,27 @@ impl<'a> Iterator for BatchIter<'a> {
 
         pb.finish_and_clear();
         if batch.len() == 0 {
-            None
+            Ok(None)
         } else {
-            Some(Ok(batch))
+            Ok(Some(batch))
         }
     }
+}
+
+impl<'a> Iterator for BatchIter<'a> {
+    type Item = Result<Vec<DSymRef>>;
+
+    fn next(&mut self) -> Option<Result<Vec<DSymRef>>> {
+        match self.next_batch() {
+            Ok(Some(batch)) => Some(Ok(batch)),
+            Err(err) => Some(Err(err)),
+            Ok(None) => None,
+        }
+    }
+}
+
+fn collect_uuids(fat: &FatObject) -> Result<Vec<Uuid>> {
+    fat.objects().map(|o| Ok(o?.uuid().unwrap())).collect()
 }
 
 fn find_missing_files(api: &mut Api,

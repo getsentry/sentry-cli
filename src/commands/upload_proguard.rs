@@ -11,10 +11,11 @@ use config::Config;
 use api::{Api, AssociateDsyms};
 
 use clap::{App, Arg, ArgMatches};
+use console::style;
+use symbolic_common::ByteView;
+use symbolic_proguard::ProguardMappingView;
 use uuid::Uuid;
 use zip;
-use proguard::MappingView;
-use console::style;
 
 #[derive(Debug)]
 struct MappingRef {
@@ -124,7 +125,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     for path in &paths {
         match fs::metadata(path) {
             Ok(md) => {
-                let mapping = MappingView::from_path(path)?;
+                let mapping = ProguardMappingView::parse(ByteView::from_path(path)?)?;
                 if !mapping.has_line_info() {
                     println_stderr!("warning: proguard mapping '{}' was ignored because it \
                                      does not contain any line information.", path);
