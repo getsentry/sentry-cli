@@ -132,6 +132,7 @@ impl Event {
         }).collect()));
 
         event.user.insert("username".into(), get_user_name().unwrap_or("unknown".into()));
+        event.user.insert("ip_address".into(), String::from("{{auto}}"));
 
         let mut device = HashMap::new();
         if let Some(hostname) = get_hostname() {
