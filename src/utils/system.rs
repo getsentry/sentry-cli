@@ -4,6 +4,8 @@ use std::process;
 use std::env;
 use std::borrow::Cow;
 
+use config::Config;
+
 use regex::{Regex, Captures};
 use chrono::{DateTime, Utc};
 
@@ -173,7 +175,7 @@ pub fn init_backtrace() {
 }
 
 #[cfg(target_os="macos")]
-pub fn get_model() -> Option<String> {
+pub fn get_model(config: &Config) -> Option<String> {
     use std::ptr;
     use libc;
     use libc::c_void;
@@ -190,14 +192,14 @@ pub fn get_model() -> Option<String> {
 }
 
 #[cfg(target_os="macos")]
-pub fn get_family() -> Option<String> {
+pub fn get_family(config: &Config) -> Option<String> {
     use regex::Regex;
     lazy_static! {
         static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
     }
 
     if_chain! {
-        if let Some(model) = get_model();
+        if let Some(model) = get_model(config);
         if let Some(m) = FAMILY_RE.captures(&model);
         if let Some(group) = m.get(1);
         then {
@@ -209,11 +211,11 @@ pub fn get_family() -> Option<String> {
 }
 
 #[cfg(not(target_os="macos"))]
-pub fn get_model() -> Option<String> {
-    None
+pub fn get_model(config: &Config) -> Option<String> {
+    config.get_model()
 }
 
 #[cfg(not(target_os="macos"))]
-pub fn get_family() -> Option<String> {
-    None
+pub fn get_family(config: &Config) -> Option<String> {
+    config.get_family()
 }

@@ -42,7 +42,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn send_event(config: &Config, traceback: &str, logfile: &str) -> Result<()> {
-    let mut event = Event::new_prefilled()?;
+    let mut event = Event::new_prefilled(config)?;
     event.detect_release();
 
     let mut cmd = "unknown".to_string();

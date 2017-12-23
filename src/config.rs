@@ -12,7 +12,7 @@ use url::Url;
 use ini::Ini;
 
 use prelude::*;
-use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
+use constants::{DEFAULT_URL, DEFAULT_FAMILY, VERSION, PROTOCOL_VERSION};
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -263,6 +263,28 @@ impl Config {
             Dsn::from_str(val)
         } else {
             fail!("No DSN provided");
+        }
+    }
+
+    /// Return device model
+    pub fn get_model(&self) -> Option<String> {
+        if env::var_os("DEVICE_MODEL").is_some() {
+            env::var("DEVICE_MODEL").ok()
+        } else if let Some(val) = self.ini.get_from(Some("device"), "model") {
+            Some(String::from(val))
+        } else {
+            None
+        }
+    }
+
+    /// Return device family
+    pub fn get_family(&self) -> Option<String> {
+        if env::var_os("DEVICE_FAMILY").is_some() {
+            env::var("DEVICE_FAMILY").ok()
+        } else if let Some(val) = self.ini.get_from(Some("device"), "family") {
+            Some(String::from(val))
+        } else {
+            Some(DEFAULT_FAMILY.to_owned())
         }
     }
 
