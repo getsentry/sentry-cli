@@ -33,6 +33,9 @@ if (process.env.SENTRY_LOCAL_DOWNLOAD_URL) {
     })
     .listen(8999);
   console.log('TEST SERVER started');
+} else if (process.env.SENTRY_DOWNLOAD_URL) {
+  releasesUrl = process.env.SENTRY_DOWNLOAD_URL;
+  version = '';
 } else {
   releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
 }
