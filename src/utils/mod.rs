@@ -5,6 +5,7 @@ mod codepush;
 mod enc;
 mod formatting;
 mod fs;
+mod iter;
 mod logging;
 mod releases;
 mod sourcemaps;
@@ -24,6 +25,7 @@ pub use self::enc::{decode_unknown_string};
 pub use self::formatting::{HumanDuration, Table, TableRow};
 pub use self::fs::{TempDir, TempFile, is_writable, set_executable_mode, is_zip_file,
                    get_sha1_checksum, SeekRead};
+pub use self::iter::invert_result;
 pub use self::logging::Logger;
 pub use self::releases::detect_release_name;
 pub use self::sourcemaps::{SourceMapProcessor, get_sourcemap_reference_from_headers};

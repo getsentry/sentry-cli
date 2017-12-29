@@ -39,7 +39,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .value_name("TYPE")
              .multiple(true)
              .number_of_values(1)
-             .possible_values(&["dsym", "proguard"])
+             .possible_values(&["dsym", "proguard", "breakpad"])
              .help("Only consider debug information files of the given \
                     type.  By default all types are considered."))
         .arg(Arg::with_name("no_well_known")
@@ -110,6 +110,8 @@ fn find_uuids(paths: HashSet<PathBuf>,
             if !proguard_uuids.is_empty();
             if types.contains(&DifType::Proguard);
             if dirent.path().extension() == Some(OsStr::new("txt"));
+            if let Ok(md) = dirent.metadata();
+            if md.len() < MAX_MAPPING_FILE;
             if let Ok(byteview) = ByteView::from_path(dirent.path());
             if let Ok(mapping) = ProguardMappingView::parse(byteview);
             if proguard_uuids.contains(&mapping.uuid());
@@ -124,13 +126,25 @@ fn find_uuids(paths: HashSet<PathBuf>,
             // we regularly match on .class files but the will never be
             // dsyms, so we can quickly skip them here
             if dirent.path().extension() != Some(OsStr::new("class"));
-            if let Ok(md) = dirent.metadata();
-            if md.len() < MAX_MAPPING_FILE;
             if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Dsym));
             then {
                 for uuid in dif.uuids() {
                     if remaining.contains(&uuid) {
                         found.push((uuid, DifType::Dsym));
+                    }
+                }
+            }
+        }
+
+        // look for breakpad files
+        if_chain! {
+            if types.contains(&DifType::Breakpad);
+            if dirent.path().extension() == Some(OsStr::new("sym"));
+            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Breakpad));
+            then {
+                for uuid in dif.uuids() {
+                    if remaining.contains(&uuid) {
+                        found.push((uuid, DifType::Breakpad));
                     }
                 }
             }
@@ -184,6 +198,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
         }
     } else {
         types.insert(DifType::Dsym);
+        types.insert(DifType::Breakpad);
         types.insert(DifType::Proguard);
     }
 
