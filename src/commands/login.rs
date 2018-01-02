@@ -2,7 +2,6 @@
 use clap::{App, ArgMatches};
 use open;
 use url::Url;
-use std::fs::OpenOptions;
 
 use prelude::*;
 use config::{Config, Auth};
@@ -15,17 +14,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 fn update_config(config: &Config, token: &str) -> Result<()> {
     let mut new_cfg = config.clone();
-
-    new_cfg.ini.set_to(Some("defaults"), "url".into(), config.url.clone());
-    new_cfg.ini.set_to(Some("auth"), "token".into(), token.into());
-    new_cfg.ini.delete_from(Some("auth"), "api_key");
-
-    let mut file = OpenOptions::new().write(true)
-        .truncate(true)
-        .create(true)
-        .open(&new_cfg.filename)?;
-    new_cfg.ini.write_to(&mut file)?;
-
+    new_cfg.set_auth(Auth::Token(token.to_string()));
+    new_cfg.write_back()?;
     Ok(())
 }
 
@@ -37,8 +27,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     println!("to create a token now.");
     println!("");
     println!("Sentry server: {}",
-             Url::parse(&config.url)
-                 ?
+             Url::parse(&config.get_base_url()?)?
                  .host_str()
                  .unwrap_or("<unknown>"));
 
@@ -53,7 +42,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         token = prompt("Enter your token")?;
 
         let mut test_cfg = config.clone();
-        test_cfg.auth = Some(Auth::Token(token.clone()));
+        test_cfg.set_auth(Auth::Token(token.to_string()));
         match Api::new(&test_cfg).get_auth_info() {
             Ok(info) => {
                 // we can unwrap here somewhat safely because we do not permit
@@ -69,7 +58,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     update_config(&config, &token)?;
     println!("");
-    println!("Stored token in {}", config.filename.display());
+    println!("Stored token in {}", config.get_filename().display());
 
     Ok(())
 }

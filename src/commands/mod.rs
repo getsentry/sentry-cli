@@ -161,18 +161,18 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     let matches = app.get_matches_from_safe(args)?;
 
     if let Some(url) = matches.value_of("url") {
-        config.url = url.to_owned();
+        config.set_base_url(url);
     }
     if let Some(api_key) = matches.value_of("api_key") {
-        config.auth = Some(Auth::Key(api_key.to_owned()));
+        config.set_auth(Auth::Key(api_key.to_owned()));
     }
     if let Some(auth_token) = matches.value_of("auth_token") {
-        config.auth = Some(Auth::Token(auth_token.to_owned()));
+        config.set_auth(Auth::Token(auth_token.to_owned()));
     }
     if let Some(level_str) = matches.value_of("log_level") {
         match level_str.parse() {
             Ok(level) => {
-                config.log_level = level;
+                config.set_log_level(level);
             }
             Err(_) => {
                 fail!("Unknown log level: {}", level_str);
@@ -181,7 +181,7 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
     }
 
     log::set_logger(|max_log_level| {
-        max_log_level.set(config.log_level);
+        max_log_level.set(config.get_log_level());
         Box::new(Logger)
     }).ok();
 

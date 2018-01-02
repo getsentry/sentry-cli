@@ -2,7 +2,8 @@
 use std::io;
 use std::fs;
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::fs::OpenOptions;
 
 use dotenv;
 use log;
@@ -97,11 +98,11 @@ pub fn prepare_environment() {
 /// Represents the `sentry-cli` config.
 #[derive(Clone)]
 pub struct Config {
-    pub filename: PathBuf,
-    pub auth: Option<Auth>,
-    pub url: String,
-    pub log_level: log::LogLevelFilter,
-    pub ini: Ini,
+    filename: PathBuf,
+    auth: Option<Auth>,
+    url: String,
+    log_level: log::LogLevelFilter,
+    ini: Ini,
 }
 
 impl Config {
@@ -117,6 +118,21 @@ impl Config {
         })
     }
 
+    /// Returns the config filename.
+    pub fn get_filename(&self) -> &Path {
+        &self.filename
+    }
+
+    /// Write the current config state back into the file.
+    pub fn write_back(&self) -> Result<()> {
+        let mut file = OpenOptions::new().write(true)
+            .truncate(true)
+            .create(true)
+            .open(&self.filename)?;
+        self.ini.write_to(&mut file)?;
+        Ok(())
+    }
+
     /// Update the environment based on the config
     pub fn configure_environment(&self) {
         if !env::var("http_proxy").is_ok() {
@@ -129,6 +145,34 @@ impl Config {
             use openssl_probe::init_ssl_cert_env_vars;
             init_ssl_cert_env_vars();
         }
+    }
+
+    /// Returns the auth info
+    pub fn get_auth(&self) -> Option<&Auth> {
+        self.auth.as_ref()
+    }
+
+    /// Updates the auth info
+    pub fn set_auth(&mut self, auth: Auth) {
+        self.auth = Some(auth);
+
+        self.ini.delete_from(Some("auth"), "api_key");
+        self.ini.delete_from(Some("auth"), "token");
+        match self.auth {
+            Some(Auth::Token(ref val)) => {
+                self.ini.set_to(Some("auth"), "token".into(), val.to_string());
+            }
+            Some(Auth::Key(ref val)) => {
+                self.ini.set_to(Some("auth"), "api_key".into(), val.to_string());
+            }
+            None => {}
+        }
+    }
+
+    /// Sets the URL
+    pub fn set_base_url(&mut self, url: &str) {
+        self.url = url.to_owned();
+        self.ini.set_to(Some("defaults"), "url".into(), self.url.clone());
     }
 
     /// Returns the base url (without trailing slashes)
@@ -147,6 +191,16 @@ impl Config {
     pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
         let base = self.get_base_url()?;
         Ok(format!("{}/api/0/{}", base, path.trim_left_matches('/')))
+    }
+
+    /// Returns the log level.
+    pub fn get_log_level(&self) -> log::LogLevelFilter {
+        self.log_level
+    }
+
+    /// Sets the log level.
+    pub fn set_log_level(&mut self, value: log::LogLevelFilter) {
+        self.log_level = value;
     }
 
     /// Indicates whether keepalive support should be enabled.  This

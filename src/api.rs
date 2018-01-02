@@ -163,7 +163,7 @@ impl<'a> Api<'a> {
                 Err(err) => {
                     return Err(Error::BadApiUrl(err.to_string()));
                 }
-            }), self.config.auth.as_ref())
+            }), self.config.get_auth())
         };
 
         // the proxy url is discovered from the http_proxy envvar.
