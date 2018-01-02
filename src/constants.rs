@@ -9,12 +9,6 @@ pub const APP_INFO: &'static AppInfo = &AppInfo {
 
 /// The default API URL
 pub const DEFAULT_URL: &'static str = "https://sentry.io/";
-/// The default device family
-#[cfg(windows)]
-pub const DEFAULT_FAMILY: &'static str = "Windows device";
-#[cfg(not(windows))]
-pub const DEFAULT_FAMILY: &'static str = "Unix device";
-
 
 /// The protocol version of the library.
 pub const PROTOCOL_VERSION: u32 = 6;

@@ -12,7 +12,7 @@ use url::Url;
 use ini::Ini;
 
 use prelude::*;
-use constants::{DEFAULT_URL, DEFAULT_FAMILY, VERSION, PROTOCOL_VERSION};
+use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -284,7 +284,7 @@ impl Config {
         } else if let Some(val) = self.ini.get_from(Some("device"), "family") {
             Some(String::from(val))
         } else {
-            Some(DEFAULT_FAMILY.to_owned())
+            None
         }
     }
 

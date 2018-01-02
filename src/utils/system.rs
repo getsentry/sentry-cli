@@ -176,36 +176,44 @@ pub fn init_backtrace() {
 
 #[cfg(target_os="macos")]
 pub fn get_model(config: &Config) -> Option<String> {
-    use std::ptr;
-    use libc;
-    use libc::c_void;
+    if config.get_model().is_some() {
+        config.get_model()
+    } else {
+        use std::ptr;
+        use libc;
+        use libc::c_void;
 
-    unsafe {
-        let mut size = 0;
-        libc::sysctlbyname("hw.model\x00".as_ptr() as *const i8,
-            ptr::null_mut(), &mut size, ptr::null_mut(), 0);
-        let mut buf = vec![0u8; size as usize];
-        libc::sysctlbyname("hw.model\x00".as_ptr() as *const i8,
-            buf.as_mut_ptr() as *mut c_void, &mut size, ptr::null_mut(), 0);
-        Some(String::from_utf8_lossy(&buf).to_string())
+        unsafe {
+            let mut size = 0;
+            libc::sysctlbyname("hw.model\x00".as_ptr() as *const i8,
+                ptr::null_mut(), &mut size, ptr::null_mut(), 0);
+            let mut buf = vec![0u8; size as usize];
+            libc::sysctlbyname("hw.model\x00".as_ptr() as *const i8,
+                buf.as_mut_ptr() as *mut c_void, &mut size, ptr::null_mut(), 0);
+            Some(String::from_utf8_lossy(&buf).to_string())
+        }
     }
 }
 
 #[cfg(target_os="macos")]
 pub fn get_family(config: &Config) -> Option<String> {
-    use regex::Regex;
-    lazy_static! {
-        static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
-    }
+    if config.get_family().is_some() {
+        config.get_family()
+    } else {
+        use regex::Regex;
+        lazy_static! {
+            static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
+        }
 
-    if_chain! {
-        if let Some(model) = get_model(config);
-        if let Some(m) = FAMILY_RE.captures(&model);
-        if let Some(group) = m.get(1);
-        then {
-            Some(group.as_str().to_string())
-        } else {
-            None
+        if_chain! {
+            if let Some(model) = get_model(config);
+            if let Some(m) = FAMILY_RE.captures(&model);
+            if let Some(group) = m.get(1);
+            then {
+                Some(group.as_str().to_string())
+            } else {
+                None
+            }
         }
     }
 }
