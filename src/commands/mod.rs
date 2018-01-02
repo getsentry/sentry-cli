@@ -3,12 +3,11 @@
 use std::env;
 use std::process;
 
-use log;
 use clap::{Arg, App, AppSettings};
 
 use prelude::*;
 use constants::VERSION;
-use utils::{Logger, print_error, run_sentrycli_update_nagger};
+use utils::{print_error, run_sentrycli_update_nagger};
 use config::{Config, Auth, prepare_environment};
 
 const ABOUT: &'static str = "
@@ -109,7 +108,9 @@ fn preexecute_hooks() -> Result<bool> {
 
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
-pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
+pub fn execute(args: Vec<String>) -> Result<()> {
+    let mut config = Config::from_cli_config()?;
+
     // special case for the xcode integration for react native.  For more
     // information see commands/react_native_xcode.rs
     if preexecute_hooks()? {
@@ -180,20 +181,16 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
         }
     }
 
-    log::set_logger(|max_log_level| {
-        max_log_level.set(config.get_log_level());
-        Box::new(Logger)
-    }).ok();
-
-    config.configure_environment();
+    // bind the config to the process and fetch an immutable reference to it
+    config.bind_to_process();
 
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
             if let Some(sub_matches) = matches.subcommand_matches(&cmd) {
-                let rv = $name::execute(&sub_matches, &config)?;
+                let rv = $name::execute(&sub_matches)?;
                 if UPDATE_NAGGER_CMDS.iter().any(|x| x == &cmd) {
-                    run_sentrycli_update_nagger(&config);
+                    run_sentrycli_update_nagger();
                 }
                 return Ok(rv);
             }
@@ -205,14 +202,13 @@ pub fn execute(args: Vec<String>, config: &mut Config) -> Result<()> {
 
 fn run() -> Result<()> {
     prepare_environment();
-    let mut cfg = Config::from_cli_config()?;
-    match execute(env::args().collect(), &mut cfg) {
+    match execute(env::args().collect()) {
         Ok(()) => Ok(()),
         Err(err) => {
             // if the user hit an error, it might be time to run the update
             // nagger because maybe they tried to do something only newer
             // versions support.
-            run_sentrycli_update_nagger(&cfg);
+            run_sentrycli_update_nagger();
             Err(err)
         }
     }

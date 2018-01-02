@@ -14,7 +14,6 @@ use symbolic_common::ByteView;
 use symbolic_proguard::ProguardMappingView;
 
 use prelude::*;
-use config::Config;
 use utils::{validate_uuid};
 use utils::dif::{DifType, DifFile};
 
@@ -186,7 +185,7 @@ fn find_uuids(paths: HashSet<PathBuf>,
     Ok(remaining.is_empty())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let mut paths = HashSet::new();
     let mut types = HashSet::new();
     let mut uuids = HashSet::new();

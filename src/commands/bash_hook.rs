@@ -41,7 +41,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .hidden(true))
 }
 
-fn send_event(config: &Config, traceback: &str, logfile: &str) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str) -> Result<()> {
+    let config = Config::get_current();
     let mut event = Event::new_prefilled()?;
     event.detect_release();
 
@@ -131,17 +132,16 @@ fn send_event(config: &Config, traceback: &str, logfile: &str) -> Result<()> {
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
     // login" to sign in which would be in appropriate here.
-    if let Ok(event_id) = Api::new(config).send_event(&dsn, &event) {
+    if let Ok(event_id) = Api::new().send_event(&dsn, &event) {
         println!("{}", event_id);
     };
 
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     if matches.is_present("send_event") {
-        return send_event(config,
-                          matches.value_of("traceback").unwrap(),
+        return send_event(matches.value_of("traceback").unwrap(),
                           matches.value_of("log").unwrap());
     }
 

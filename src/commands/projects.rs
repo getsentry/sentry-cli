@@ -15,9 +15,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .about("List all projects for an organization."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let api = Api::new(config);
-
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let config = Config::get_current();
+    let api = Api::new();
     let org = config.get_org(matches)?;
     let mut projects = api.list_organization_projects(&org)?;
     projects.sort_by_key(|p| (p.team.name.clone(), p.name.clone()));

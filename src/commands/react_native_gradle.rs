@@ -36,9 +36,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("The names of the distributions to publish. Can be supplied multiple times."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let api = Api::new(config);
+    let api = Api::new();
     let base = env::current_dir()?;
 
     let sourcemap_path = PathBuf::from(matches.value_of("sourcemap").unwrap());

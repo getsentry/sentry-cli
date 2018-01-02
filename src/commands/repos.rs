@@ -15,9 +15,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .about("List all repositories in your organization."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let api = Api::new(config);
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let api = Api::new();
 
+    let config = Config::get_current();
     let org = config.get_org(matches)?;
     let repos = api.list_organization_repos(&org)?;
 

@@ -14,6 +14,7 @@ use ini::Ini;
 
 use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
+use utils::Logger;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -95,10 +96,12 @@ pub fn prepare_environment() {
     dotenv::dotenv().ok();
 }
 
+static mut CONFIG: Option<Config> = None;
+
 /// Represents the `sentry-cli` config.
-#[derive(Clone)]
 pub struct Config {
     filename: PathBuf,
+    process_bound: bool,
     ini: Ini,
     cached_auth: Option<Auth>,
     cached_base_url: String,
@@ -111,11 +114,59 @@ impl Config {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
             filename: filename,
-            ini: ini,
+            process_bound: false,
             cached_auth: get_default_auth(&ini),
             cached_base_url: get_default_url(&ini),
             cached_log_level: get_default_log_level(&ini)?,
+            ini: ini,
         })
+    }
+
+    /// Makes this config the process bound one that can be
+    /// fetched from anywhere.
+    pub fn bind_to_process(mut self) -> &'static Config {
+        self.process_bound = true;
+        self.apply_to_process();
+        unsafe {
+            if CONFIG.is_none() {
+                panic!("Can only bind a single config");
+            }
+            CONFIG = Some(self);
+            CONFIG.as_ref().unwrap()
+        }
+    }
+
+    /// Return the currently bound config as option.
+    pub fn get_current_opt() -> Option<&'static Config> {
+        unsafe {
+            CONFIG.as_ref()
+        }
+    }
+
+    /// Return the currently bound config.
+    pub fn get_current() -> &'static Config {
+        Config::get_current_opt().expect("Config not bound yet")
+    }
+
+    fn apply_to_process(&self) {
+        // this can only apply to the process if we are a process config.
+        if !self.process_bound { 
+            return;
+        }
+        log::set_logger(|max_log_level| {
+            max_log_level.set(self.get_log_level());
+            Box::new(Logger)
+        }).ok();
+        if !env::var("http_proxy").is_ok() {
+            if let Some(proxy) = self.get_proxy_url() {
+                env::set_var("http_proxy", proxy);
+            }
+        }
+        #[cfg(not(windows))]
+        {
+            use openssl_probe::init_ssl_cert_env_vars;
+            init_ssl_cert_env_vars();
+        }
     }
 
     /// Returns the config filename.
@@ -131,20 +182,6 @@ impl Config {
             .open(&self.filename)?;
         self.ini.write_to(&mut file)?;
         Ok(())
-    }
-
-    /// Update the environment based on the config
-    pub fn configure_environment(&self) {
-        if !env::var("http_proxy").is_ok() {
-            if let Some(proxy) = self.get_proxy_url() {
-                env::set_var("http_proxy", proxy);
-            }
-        }
-        #[cfg(not(windows))]
-        {
-            use openssl_probe::init_ssl_cert_env_vars;
-            init_ssl_cert_env_vars();
-        }
     }
 
     /// Returns the auth info
@@ -201,6 +238,7 @@ impl Config {
     /// Sets the log level.
     pub fn set_log_level(&mut self, value: log::LogLevelFilter) {
         self.cached_log_level = value;
+        self.apply_to_process();
     }
 
     /// Indicates whether keepalive support should be enabled.  This
@@ -413,6 +451,19 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
     }
 
     Ok((path, rv))
+}
+
+impl Clone for Config {
+    fn clone(&self) -> Config {
+        Config {
+            filename: self.filename.clone(),
+            process_bound: false,
+            ini: self.ini.clone(),
+            cached_auth: self.cached_auth.clone(),
+            cached_base_url: self.cached_base_url.clone(),
+            cached_log_level: self.cached_log_level.clone(),
+        }
+    }
 }
 
 fn get_default_auth(ini: &Ini) -> Option<Auth> {

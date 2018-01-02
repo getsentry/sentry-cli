@@ -19,7 +19,8 @@ fn update_config(config: &Config, token: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
+    let config = Config::get_current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
@@ -43,7 +44,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
         let mut test_cfg = config.clone();
         test_cfg.set_auth(Auth::Token(token.to_string()));
-        match Api::new(&test_cfg).get_auth_info() {
+        match Api::with_config(&test_cfg).get_auth_info() {
             Ok(info) => {
                 // we can unwrap here somewhat safely because we do not permit
                 // signing in with legacy non user bound api keys here.

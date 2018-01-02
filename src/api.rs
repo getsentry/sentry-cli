@@ -129,10 +129,15 @@ pub struct ApiResponse {
 }
 
 impl<'a> Api<'a> {
-    /// Creates a new API access helper for the given config.  For as long
-    /// as it lives HTTP keepalive can be used.  When the object is recreated
-    /// new connections will be established.
-    pub fn new(config: &'a Config) -> Api<'a> {
+    /// Creates a new API access helper.  For as long as it lives HTTP
+    /// keepalive can be used.  When the object is recreated new
+    /// connections will be established.
+    pub fn new() -> Api<'a> {
+        Api::with_config(Config::get_current())
+    }
+
+    /// Similar to `new` but uses a specific config.
+    pub fn with_config(config: &'a Config) -> Api<'a> {
         Api {
             config: config,
             shared_handle: RefCell::new(curl::easy::Easy::new()),

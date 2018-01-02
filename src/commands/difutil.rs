@@ -1,7 +1,6 @@
 use clap::{App, ArgMatches, AppSettings};
 
 use prelude::*;
-use config::Config;
 
 use commands;
 
@@ -28,11 +27,11 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     app
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) = matches.subcommand_matches(&stringify!($name)[8..]) {
-                return Ok(commands::$name::execute(&sub_matches, &config)?);
+                return Ok(commands::$name::execute(&sub_matches)?);
             }
         }}
     }
