@@ -22,14 +22,7 @@ describe('SentryCli', function() {
   test('call prepare command add default ignore', function() {
     var cli = new SentryCli();
 
-    var command = [
-      'releases',
-      'files',
-      'release',
-      'upload-sourcemaps',
-      '/dev/null',
-      '--rewrite'
-    ];
+    var command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
 
     expect(cli.prepareCommand(command)).toEqual([
       'releases',
@@ -37,7 +30,6 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--ignore',
       'node_modules'
     ]);
@@ -46,14 +38,7 @@ describe('SentryCli', function() {
   test('call prepare command with array option', function() {
     var cli = new SentryCli();
 
-    var command = [
-      'releases',
-      'files',
-      'release',
-      'upload-sourcemaps',
-      '/dev/null',
-      '--rewrite'
-    ];
+    var command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
 
     expect(cli.prepareCommand(command, { stripPrefix: ['node', 'app'] })).toEqual([
       'releases',
@@ -61,7 +46,6 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--strip-prefix',
       'node',
       '--strip-prefix',
@@ -79,54 +63,38 @@ describe('SentryCli', function() {
   test('call prepare command with boolean option', function() {
     var cli = new SentryCli();
 
-    var command = [
-      'releases',
-      'files',
-      'release',
-      'upload-sourcemaps',
-      '/dev/null',
-      '--rewrite'
-    ];
+    var command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
 
-    expect(cli.prepareCommand(command, { noSourceMapReference: true })).toEqual([
+    expect(cli.prepareCommand(command, { sourceMapReference: false })).toEqual([
       'releases',
       'files',
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--no-sourcemap-reference',
       '--ignore',
       'node_modules'
     ]);
 
-    expect(cli.prepareCommand(command, { noSourceMapReference: false })).toEqual([
+    expect(cli.prepareCommand(command, { sourceMapReference: true })).toEqual([
       'releases',
       'files',
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--ignore',
       'node_modules'
     ]);
 
     expect(function() {
-      cli.prepareCommand(command, { noSourceMapReference: 'node' });
+      cli.prepareCommand(command, { sourceMapReference: 'node' });
     }).toThrow();
   });
 
   test('call prepare command with string option', function() {
     var cli = new SentryCli();
 
-    var command = [
-      'releases',
-      'files',
-      'release',
-      'upload-sourcemaps',
-      '/dev/null',
-      '--rewrite'
-    ];
+    var command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
 
     expect(cli.prepareCommand(command, { ext: 'js' })).toEqual([
       'releases',
@@ -134,7 +102,6 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--ext',
       'js',
       '--ignore',
@@ -147,7 +114,6 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--url-prefix',
       '~/',
       '--ignore',
@@ -160,7 +126,6 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--rewrite',
       '--ignore-file',
       '/js.ignore'
     ]);
@@ -177,7 +142,7 @@ describe('SentryCli', function() {
   //     22,
   //     'upload-sourcemaps',
   //     'testinclude',
-  //     '--rewrite',
+  //
   //     '--url-prefix',
   //     '~/path',
   //     '--ext',

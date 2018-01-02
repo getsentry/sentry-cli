@@ -17,9 +17,13 @@ var SOURCEMAPS_OPTIONS = {
     param: '--ignore-file',
     type: 'string'
   },
-  noSourceMapReference: {
+  rewrite: {
+    param: '--no-rewrite',
+    type: 'inverted-boolean'
+  },
+  sourceMapReference: {
     param: '--no-sourcemap-reference',
-    type: 'boolean'
+    type: 'inverted-boolean'
   },
   stripPrefix: {
     param: '--strip-prefix',
@@ -63,29 +67,33 @@ function transformOption(option, values) {
 
 function normalizeOptions(options) {
   return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(newOptions, sourceMapOption) {
-    if (options[sourceMapOption] === undefined) return newOptions;
+    var paramValue = options[sourceMapOption];
+    if (paramValue === undefined) {
+      return newOptions;
+    }
 
-    if (SOURCEMAPS_OPTIONS[sourceMapOption].type === 'array') {
-      if (!Array.isArray(options[sourceMapOption])) {
+    var paramType = SOURCEMAPS_OPTIONS[sourceMapOption].type;
+    var paramName = SOURCEMAPS_OPTIONS[sourceMapOption].param;
+
+    if (paramType === 'array') {
+      if (!Array.isArray(paramValue)) {
         throw new Error(sourceMapOption + ' should be an array');
       }
       return newOptions.concat(
-        transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption])
+        transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], paramValue)
       );
-    } else if (SOURCEMAPS_OPTIONS[sourceMapOption].type === 'boolean') {
-      if (typeof options[sourceMapOption] !== 'boolean') {
+    } else if (paramType === 'boolean' || paramType === 'inverted-boolean') {
+      if (typeof paramValue !== 'boolean') {
         throw new Error(sourceMapOption + ' should be a bool');
       }
-      if (options[sourceMapOption]) {
-        // if it's true
-        return newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption].param]);
+      if (paramType === 'boolean' && paramValue) {
+        return newOptions.concat([paramName]);
+      } else if (paramType === 'inverted-boolean' && paramValue === false) {
+        return newOptions.concat([paramName]);
       }
       return newOptions;
     }
-    return newOptions.concat(
-      SOURCEMAPS_OPTIONS[sourceMapOption].param,
-      options[sourceMapOption]
-    );
+    return newOptions.concat(paramName, paramValue);
   }, []);
 }
 
@@ -126,8 +134,7 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         'files',
         options.release,
         'upload-sourcemaps',
-        sourcemapPath,
-        '--rewrite'
+        sourcemapPath
       ];
 
       return this.execute(this.prepareCommand(command, options));
