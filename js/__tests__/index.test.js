@@ -141,29 +141,4 @@ describe('SentryCli', function() {
       '/js.ignore'
     ]);
   });
-
-  // test('call sentry-cli with source map options', function() {
-  //   expect.assertions(1)
-  //
-  //   var cli = new SentryCli()
-  //
-  //   var command = [
-  //     'releases',
-  //     'files',
-  //     22,
-  //     'upload-sourcemaps',
-  //     'testinclude',
-  //
-  //     '--url-prefix',
-  //     '~/path',
-  //     '--ext',
-  //     '.js',
-  //     '--ignore',
-  //     'node_modules'
-  //   ]
-  //
-  //   return cli.execute(command).then(function() {
-  //     expect(true).toBe(true)
-  //   })
-  // })
 });
