@@ -88,7 +88,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let mut event = Event::new_prefilled()?;
+    let mut event = Event::new_prefilled(config)?;
     event.level = matches.value_of("level").unwrap_or("error").into();
     if let Some(release) = matches.value_of("release") {
         event.release = Some(release.into());
