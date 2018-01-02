@@ -14,15 +14,20 @@ var https = require('https');
 var arch = os.arch();
 var spawn = require('child_process').spawn;
 
+var DEFAULT_CDN = 'https://github.com/getsentry/sentry-cli/releases/download/';
+
 // downloadUrl vars
-var releasesUrl;
 var server;
 var fetch = https;
 var version = require('../package.json').version;
+var binaryPrefix = '/sentry-cli-';
+var releasesUrl =
+  process.env.npm_config_sentrycli_cdnurl ||
+  process.env.SENTRYCLI_CDNURL ||
+  process.env.SENTRYCLI_LOCAL_CDNURL ||
+  DEFAULT_CDN + version;
 
-if (process.env.SENTRY_LOCAL_DOWNLOAD_URL) {
-  releasesUrl = process.env.SENTRY_LOCAL_DOWNLOAD_URL;
-  version = 'DEV';
+if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   fetch = http;
   server = http
     .createServer(function(request, response) {
@@ -33,11 +38,7 @@ if (process.env.SENTRY_LOCAL_DOWNLOAD_URL) {
     })
     .listen(8999);
   console.log('TEST SERVER started');
-} else {
-  releasesUrl = 'https://github.com/getsentry/sentry-cli/releases/download/';
 }
-
-var binaryPrefix = '/sentry-cli-';
 
 // output vars
 var outputPath = path.resolve(
@@ -46,23 +47,24 @@ var outputPath = path.resolve(
 );
 
 var downloadUrl = null;
+releasesUrl += binaryPrefix;
 
 // macOS
 if (platform === 'darwin') {
-  downloadUrl = releasesUrl + version + binaryPrefix + 'Darwin-x86_64';
+  downloadUrl = releasesUrl + 'Darwin-x86_64';
   // Windows
 } else if (platform === 'win32') {
   if (arch.indexOf('64') > -1) {
-    downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-x86_64.exe';
+    downloadUrl = releasesUrl + 'Windows-x86_64.exe';
   } else {
-    downloadUrl = releasesUrl + version + binaryPrefix + 'Windows-i686.exe';
+    downloadUrl = releasesUrl + 'Windows-i686.exe';
   }
   // Linux
 } else if (platform === 'linux' || platform === 'freebsd') {
   if (arch.indexOf('64') > -1) {
-    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-x86_64';
+    downloadUrl = releasesUrl + 'Linux-x86_64';
   } else {
-    downloadUrl = releasesUrl + version + binaryPrefix + 'Linux-i686';
+    downloadUrl = releasesUrl + 'Linux-i686';
   }
 }
 
