@@ -128,7 +128,7 @@ impl Config {
         self.process_bound = true;
         self.apply_to_process();
         unsafe {
-            if CONFIG.is_none() {
+            if CONFIG.is_some() {
                 panic!("Can only bind a single config");
             }
             CONFIG = Some(self);
