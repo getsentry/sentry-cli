@@ -46,12 +46,12 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
+      '--ignore',
+      'node_modules',
       '--strip-prefix',
       'node',
       '--strip-prefix',
-      'app',
-      '--ignore',
-      'node_modules'
+      'app'
     ]);
 
     // Should throw since it is no array
@@ -71,9 +71,9 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--no-sourcemap-reference',
       '--ignore',
-      'node_modules'
+      'node_modules',
+      '--no-sourcemap-reference'
     ]);
 
     expect(cli.prepareCommand(command, { sourceMapReference: true })).toEqual([
@@ -84,6 +84,17 @@ describe('SentryCli', function() {
       '/dev/null',
       '--ignore',
       'node_modules'
+    ]);
+
+    expect(cli.prepareCommand(command, { rewrite: true })).toEqual([
+      'releases',
+      'files',
+      'release',
+      'upload-sourcemaps',
+      '/dev/null',
+      '--ignore',
+      'node_modules',
+      '--rewrite'
     ]);
 
     expect(function() {
@@ -102,10 +113,10 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--ext',
-      'js',
       '--ignore',
-      'node_modules'
+      'node_modules',
+      '--ext',
+      'js'
     ]);
 
     expect(cli.prepareCommand(command, { urlPrefix: '~/' })).toEqual([
@@ -114,10 +125,10 @@ describe('SentryCli', function() {
       'release',
       'upload-sourcemaps',
       '/dev/null',
-      '--url-prefix',
-      '~/',
       '--ignore',
-      'node_modules'
+      'node_modules',
+      '--url-prefix',
+      '~/'
     ]);
 
     expect(cli.prepareCommand(command, { ignoreFile: '/js.ignore' })).toEqual([

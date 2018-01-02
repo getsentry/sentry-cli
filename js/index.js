@@ -18,8 +18,8 @@ var SOURCEMAPS_OPTIONS = {
     type: 'string'
   },
   rewrite: {
-    param: '--no-rewrite',
-    type: 'inverted-boolean'
+    param: '--rewrite',
+    type: 'boolean'
   },
   sourceMapReference: {
     param: '--no-sourcemap-reference',
@@ -144,15 +144,12 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
 
 SentryCli.prototype.prepareCommand = function(command, options) {
   var newOptions = options || {};
-  var newCommand = command.concat(normalizeOptions(newOptions));
 
   if (!newOptions.ignoreFile && !newOptions.ignore) {
-    newCommand = newCommand.concat(
-      transformOption(SOURCEMAPS_OPTIONS.ignore, DEFAULT_IGNORE)
-    );
+    newOptions.ignore = DEFAULT_IGNORE;
   }
 
-  return newCommand;
+  return command.concat(normalizeOptions(newOptions));
 };
 
 SentryCli.getVersion = function() {

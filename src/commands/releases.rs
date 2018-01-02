@@ -216,6 +216,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                            and minified files exclusively and comes in handy for \
                            setups like react-native that generate sourcemaps that \
                            would otherwise not work for sentry."))
+                .arg(Arg::with_name("rewrite")
+                    .long("rewrite")
+                    .help("Enables rewriting of matching sourcemaps \
+                           so that indexed maps are flattened and missing \
+                           sources are inlined if possible.{n}This fundamentally \
+                           changes the upload process to be based on sourcemaps \
+                           and minified files exclusively and comes in handy for \
+                           setups like react-native that generate sourcemaps that \
+                           would otherwise not work for sentry."))
                 .arg(Arg::with_name("strip_prefix")
                     .long("strip-prefix")
                     .value_name("PREFIX")
@@ -706,7 +715,7 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
         }
     }
 
-    if !matches.is_present("no_rewrite") {
+    if matches.is_present("rewrite") {
         let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
             Some(paths) => paths.collect(),
             None => vec![],
