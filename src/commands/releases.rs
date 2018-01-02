@@ -207,9 +207,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                            minified files so that sourcemaps are located automatically \
                            if the tool can detect a link. If this causes issues it can \
                            be disabled."))
+                .arg(Arg::with_name("no_rewrite")
+                    .long("no-rewrite")
+                    .help("Disables rewriting of matching sourcemaps \
+                           so that indexed maps are flattened and missing \
+                           sources are inlined if possible.{n}This fundamentally \
+                           changes the upload process to be based on sourcemaps \
+                           and minified files exclusively and comes in handy for \
+                           setups like react-native that generate sourcemaps that \
+                           would otherwise not work for sentry."))
                 .arg(Arg::with_name("rewrite")
                     .long("rewrite")
-                    .help("Enable rewriting of matching sourcemaps \
+                    .help("Enables rewriting of matching sourcemaps \
                            so that indexed maps are flattened and missing \
                            sources are inlined if possible.{n}This fundamentally \
                            changes the upload process to be based on sourcemaps \
@@ -222,8 +231,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .multiple(true)
                     .number_of_values(1)
                     .help("Strip the given prefix from all filenames.{n}\
-                           Only files that start with the given prefix will be stripped.\
-                           This requires --rewrite to be enabled."))
+                           Only files that start with the given prefix will be stripped."))
                 .arg(Arg::with_name("strip_common_prefix")
                     .long("strip-common-prefix")
                     .help("Similar to --strip-prefix but strips the most common \
