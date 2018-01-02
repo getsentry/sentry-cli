@@ -9,14 +9,38 @@ var pkgInfo = require('../package.json');
 
 var DEFAULT_IGNORE = ['node_modules'];
 var SOURCEMAPS_OPTIONS = {
-  ignore: '--ignore',
-  ignoreFile: '--ignore-file',
-  noSourceMapReference: '--no-sourcemap-reference',
-  stripPrefix: '--strip-prefix',
-  stripCommonPrefix: '--strip-common-prefix',
-  validate: '--validate',
-  urlPrefix: '--url-prefix',
-  ext: '--ext'
+  ignore: {
+    param: '--ignore',
+    type: 'array'
+  },
+  ignoreFile: {
+    param: '--ignore-file',
+    type: 'string'
+  },
+  noSourceMapReference: {
+    param: '--no-sourcemap-reference',
+    type: 'boolean'
+  },
+  stripPrefix: {
+    param: '--strip-prefix',
+    type: 'array'
+  },
+  stripCommonPrefix: {
+    param: '--strip-common-prefix',
+    type: 'array'
+  },
+  validate: {
+    param: '--validate',
+    type: 'boolean'
+  },
+  urlPrefix: {
+    param: '--url-prefix',
+    type: 'string'
+  },
+  ext: {
+    param: '--ext',
+    type: 'string'
+  }
 };
 
 var binaryPath =
@@ -28,30 +52,38 @@ function transformOption(option, values) {
   if (Array.isArray(values)) {
     return values
       .map(function(value) {
-        return [option, value];
+        return [option.param, value];
       })
       .reduce(function(acc, value) {
         return acc.concat(value);
       }, []);
   }
-  return [option, values];
+  return [option.param, values];
 }
 
 function normalizeOptions(options) {
-  var transformableOptions = ['ignore', 'stripPrefix', 'stripCommonPrefix'];
-
   return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(newOptions, sourceMapOption) {
     if (options[sourceMapOption] === undefined) return newOptions;
 
-    if (transformableOptions.indexOf(sourceMapOption) !== -1) {
+    if (SOURCEMAPS_OPTIONS[sourceMapOption].type === 'array') {
+      if (!Array.isArray(options[sourceMapOption])) {
+        throw new Error(sourceMapOption + ' should be an array');
+      }
       return newOptions.concat(
         transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption])
       );
-    } else if (sourceMapOption === 'validate') {
-      return newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption]]);
+    } else if (SOURCEMAPS_OPTIONS[sourceMapOption].type === 'boolean') {
+      if (typeof options[sourceMapOption] !== 'boolean') {
+        throw new Error(sourceMapOption + ' should be a bool');
+      }
+      if (options[sourceMapOption]) {
+        // if it's true
+        return newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption].param]);
+      }
+      return newOptions;
     }
     return newOptions.concat(
-      SOURCEMAPS_OPTIONS[sourceMapOption],
+      SOURCEMAPS_OPTIONS[sourceMapOption].param,
       options[sourceMapOption]
     );
   }, []);
@@ -98,15 +130,22 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         '--rewrite'
       ];
 
-      command = command.concat(normalizeOptions(options));
-
-      if (!options.ignoreFile && !options.ignore) {
-        command = command.concat(transformOption('--ignore', DEFAULT_IGNORE));
-      }
-
-      return this.execute(command);
+      return this.execute(this.prepareCommand(command, options));
     }, this)
   );
+};
+
+SentryCli.prototype.prepareCommand = function(command, options) {
+  var newOptions = options || {};
+  var newCommand = command.concat(normalizeOptions(newOptions));
+
+  if (!newOptions.ignoreFile && !newOptions.ignore) {
+    newCommand = newCommand.concat(
+      transformOption(SOURCEMAPS_OPTIONS.ignore, DEFAULT_IGNORE)
+    );
+  }
+
+  return newCommand;
 };
 
 SentryCli.getVersion = function() {
