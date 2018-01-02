@@ -124,7 +124,7 @@ impl Config {
     }
 
     /// Write the current config state back into the file.
-    pub fn write_back(&self) -> Result<()> {
+    pub fn save(&self) -> Result<()> {
         let mut file = OpenOptions::new().write(true)
             .truncate(true)
             .create(true)

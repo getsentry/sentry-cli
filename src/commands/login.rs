@@ -15,7 +15,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 fn update_config(config: &Config, token: &str) -> Result<()> {
     let mut new_cfg = config.clone();
     new_cfg.set_auth(Auth::Token(token.to_string()));
-    new_cfg.write_back()?;
+    new_cfg.save()?;
     Ok(())
 }
 
