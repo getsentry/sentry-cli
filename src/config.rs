@@ -99,10 +99,10 @@ pub fn prepare_environment() {
 #[derive(Clone)]
 pub struct Config {
     filename: PathBuf,
-    auth: Option<Auth>,
-    url: String,
-    log_level: log::LogLevelFilter,
     ini: Ini,
+    cached_auth: Option<Auth>,
+    cached_base_url: String,
+    cached_log_level: log::LogLevelFilter,
 }
 
 impl Config {
@@ -111,10 +111,10 @@ impl Config {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
             filename: filename,
-            auth: get_default_auth(&ini),
-            url: get_default_url(&ini),
-            log_level: get_default_log_level(&ini)?,
             ini: ini,
+            cached_auth: get_default_auth(&ini),
+            cached_base_url: get_default_url(&ini),
+            cached_log_level: get_default_log_level(&ini)?,
         })
     }
 
@@ -149,16 +149,16 @@ impl Config {
 
     /// Returns the auth info
     pub fn get_auth(&self) -> Option<&Auth> {
-        self.auth.as_ref()
+        self.cached_auth.as_ref()
     }
 
     /// Updates the auth info
     pub fn set_auth(&mut self, auth: Auth) {
-        self.auth = Some(auth);
+        self.cached_auth = Some(auth);
 
         self.ini.delete_from(Some("auth"), "api_key");
         self.ini.delete_from(Some("auth"), "token");
-        match self.auth {
+        match self.cached_auth {
             Some(Auth::Token(ref val)) => {
                 self.ini.set_to(Some("auth"), "token".into(), val.to_string());
             }
@@ -171,13 +171,13 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) {
-        self.url = url.to_owned();
-        self.ini.set_to(Some("defaults"), "url".into(), self.url.clone());
+        self.cached_base_url = url.to_owned();
+        self.ini.set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
     }
 
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str> {
-        let base = self.url.trim_right_matches('/');
+        let base = self.cached_base_url.trim_right_matches('/');
         if !base.starts_with("http://") && !base.starts_with("https://") {
             fail!("bad sentry url: unknown scheme ({})", base);
         }
@@ -195,12 +195,12 @@ impl Config {
 
     /// Returns the log level.
     pub fn get_log_level(&self) -> log::LogLevelFilter {
-        self.log_level
+        self.cached_log_level
     }
 
     /// Sets the log level.
     pub fn set_log_level(&mut self, value: log::LogLevelFilter) {
-        self.log_level = value;
+        self.cached_log_level = value;
     }
 
     /// Indicates whether keepalive support should be enabled.  This
@@ -234,7 +234,7 @@ impl Config {
 
     /// Indicates if SSL is enabled or disabled for the server.
     pub fn has_insecure_server(&self) -> bool {
-        self.url.starts_with("http://")
+        self.get_base_url().unwrap_or("").starts_with("http://")
     }
 
     /// Indicates whether SSL verification should be on or off.
