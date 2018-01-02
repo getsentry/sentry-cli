@@ -180,7 +180,7 @@ impl InfoPlist {
         // and pass those variables to the processor.
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
             match (
-                env::var("BUILT_PRODUCTS_DIR"),
+                env::var("TARGET_BUILD_DIR"),
                 env::var("INFOPLIST_PATH")
             ) {
                 (Ok(dir), Ok(filepath)) => {
