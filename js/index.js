@@ -9,14 +9,42 @@ var pkgInfo = require('../package.json');
 
 var DEFAULT_IGNORE = ['node_modules'];
 var SOURCEMAPS_OPTIONS = {
-  ignore: '--ignore',
-  ignoreFile: '--ignore-file',
-  noSourceMapReference: '--no-sourcemap-reference',
-  stripPrefix: '--strip-prefix',
-  stripCommonPrefix: '--strip-common-prefix',
-  validate: '--validate',
-  urlPrefix: '--url-prefix',
-  ext: '--ext'
+  ignore: {
+    param: '--ignore',
+    type: 'array'
+  },
+  ignoreFile: {
+    param: '--ignore-file',
+    type: 'string'
+  },
+  rewrite: {
+    param: '--rewrite',
+    type: 'boolean'
+  },
+  sourceMapReference: {
+    param: '--no-sourcemap-reference',
+    type: 'inverted-boolean'
+  },
+  stripPrefix: {
+    param: '--strip-prefix',
+    type: 'array'
+  },
+  stripCommonPrefix: {
+    param: '--strip-common-prefix',
+    type: 'array'
+  },
+  validate: {
+    param: '--validate',
+    type: 'boolean'
+  },
+  urlPrefix: {
+    param: '--url-prefix',
+    type: 'string'
+  },
+  ext: {
+    param: '--ext',
+    type: 'string'
+  }
 };
 
 var binaryPath =
@@ -28,32 +56,44 @@ function transformOption(option, values) {
   if (Array.isArray(values)) {
     return values
       .map(function(value) {
-        return [option, value];
+        return [option.param, value];
       })
       .reduce(function(acc, value) {
         return acc.concat(value);
       }, []);
   }
-  return [option, values];
+  return [option.param, values];
 }
 
 function normalizeOptions(options) {
-  var transformableOptions = ['ignore', 'stripPrefix', 'stripCommonPrefix'];
-
   return Object.keys(SOURCEMAPS_OPTIONS).reduce(function(newOptions, sourceMapOption) {
-    if (options[sourceMapOption] === undefined) return newOptions;
-
-    if (transformableOptions.indexOf(sourceMapOption) !== -1) {
-      return newOptions.concat(
-        transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], options[sourceMapOption])
-      );
-    } else if (sourceMapOption === 'validate') {
-      return newOptions.concat([SOURCEMAPS_OPTIONS[sourceMapOption]]);
+    var paramValue = options[sourceMapOption];
+    if (paramValue === undefined) {
+      return newOptions;
     }
-    return newOptions.concat(
-      SOURCEMAPS_OPTIONS[sourceMapOption],
-      options[sourceMapOption]
-    );
+
+    var paramType = SOURCEMAPS_OPTIONS[sourceMapOption].type;
+    var paramName = SOURCEMAPS_OPTIONS[sourceMapOption].param;
+
+    if (paramType === 'array') {
+      if (!Array.isArray(paramValue)) {
+        throw new Error(sourceMapOption + ' should be an array');
+      }
+      return newOptions.concat(
+        transformOption(SOURCEMAPS_OPTIONS[sourceMapOption], paramValue)
+      );
+    } else if (paramType === 'boolean' || paramType === 'inverted-boolean') {
+      if (typeof paramValue !== 'boolean') {
+        throw new Error(sourceMapOption + ' should be a bool');
+      }
+      if (paramType === 'boolean' && paramValue) {
+        return newOptions.concat([paramName]);
+      } else if (paramType === 'inverted-boolean' && paramValue === false) {
+        return newOptions.concat([paramName]);
+      }
+      return newOptions;
+    }
+    return newOptions.concat(paramName, paramValue);
   }, []);
 }
 
@@ -94,19 +134,22 @@ SentryCli.prototype.uploadSourceMaps = function(options) {
         'files',
         options.release,
         'upload-sourcemaps',
-        sourcemapPath,
-        '--rewrite'
+        sourcemapPath
       ];
 
-      command = command.concat(normalizeOptions(options));
-
-      if (!options.ignoreFile && !options.ignore) {
-        command = command.concat(transformOption('--ignore', DEFAULT_IGNORE));
-      }
-
-      return this.execute(command);
+      return this.execute(this.prepareCommand(command, options));
     }, this)
   );
+};
+
+SentryCli.prototype.prepareCommand = function(command, options) {
+  var newOptions = options || {};
+
+  if (!newOptions.ignoreFile && !newOptions.ignore) {
+    newOptions.ignore = DEFAULT_IGNORE;
+  }
+
+  return command.concat(normalizeOptions(newOptions));
 };
 
 SentryCli.getVersion = function() {

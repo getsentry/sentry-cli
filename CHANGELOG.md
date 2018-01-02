@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.27.0
+
+* Support all options in the JS binding for `upload-sourcemaps`, courtesy of @montogeek
+* Enable automatic IP addresses when sending events with `send-event`, courtesy of @kirkins
+* No longer require secret keys to send events with `send-event`
+* Improve and speed up debug symbol handling in `upload-dsym`
+
 ## sentry-cli 1.26.1
 
 * Faster discovery of debug symbols in `upload-dsyms`
