@@ -221,11 +221,11 @@ pub fn get_family() -> Option<String> {
 }
 
 #[cfg(not(target_os="macos"))]
-pub fn get_model(config: &Config) -> Option<String> {
-    config.get_model()
+pub fn get_model() -> Option<String> {
+    Config::get_current().get_model()
 }
 
 #[cfg(not(target_os="macos"))]
-pub fn get_family(config: &Config) -> Option<String> {
-    config.get_family()
+pub fn get_family() -> Option<String> {
+    Config::get_current().get_family()
 }
