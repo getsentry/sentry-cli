@@ -117,7 +117,7 @@ value in the parentheses is the config key in the config file):
     based installations of sentry-cli at the moment.
 ``DEVICE_FAMILY`` (`device.family`):
     Device family value reported to Sentry.
-``DEVICE_Model`` (`device.model`):
+``DEVICE_MODEL`` (`device.model`):
     Device model value reported to Sentry.
 
 Validating The Config
