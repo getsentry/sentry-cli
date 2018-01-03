@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.27.1
+
+* Read from the correct `Info.plist` in XCode builds, courtesy of @adbi
+* Allow to specify device family and model in `send-event`, courtesy of @kirkins
+* Supply environment variables when using the JavaScript API
+* Allow to override the NPM download URL via `SENTRYCLI_CDNURL` environment variable
+
 ## sentry-cli 1.27.0
 
 * Support all options in the JS binding for `upload-sourcemaps`, courtesy of @montogeek
