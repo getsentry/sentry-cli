@@ -103,7 +103,7 @@ function SentryCli(configFile) {
 }
 
 SentryCli.prototype.execute = function(args) {
-  var env = this.env;
+  var env = Object.assign({}, process.env, this.env);
   return new Promise(function(resolve, reject) {
     childProcess.execFile(SentryCli.getPath(), args, { env: env }, function(err, stdout) {
       if (err) return reject(err);
