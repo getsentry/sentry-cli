@@ -45,14 +45,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Do not trigger reprocessing after uploading."))
 }
 
-struct ProjectContext<'a> {
-    api: Api<'a>,
+struct ProjectContext {
+    api: Api,
     org: String,
     project: String,
 }
 
-impl<'a> ProjectContext<'a> {
-    pub fn from_cli(matches: &ArgMatches) -> Result<ProjectContext<'a>> {
+impl ProjectContext {
+    pub fn from_cli(matches: &ArgMatches) -> Result<ProjectContext> {
         let config = Config::get_current();
         let (org, project) = config.get_org_and_project(matches)?;
 

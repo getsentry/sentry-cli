@@ -4,6 +4,7 @@ use std::fs;
 use std::env;
 use std::path::{Path, PathBuf};
 use std::fs::OpenOptions;
+use std::sync::Arc;
 
 use dotenv;
 use log;
@@ -11,6 +12,7 @@ use java_properties;
 use clap::ArgMatches;
 use url::Url;
 use ini::Ini;
+use parking_lot::Mutex;
 
 use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
@@ -96,7 +98,9 @@ pub fn prepare_environment() {
     dotenv::dotenv().ok();
 }
 
-static mut CONFIG: Option<Config> = None;
+lazy_static! {
+    static ref CONFIG: Mutex<Option<Arc<Config>>> = Mutex::new(None);
+}
 
 /// Represents the `sentry-cli` config.
 pub struct Config {
@@ -124,27 +128,23 @@ impl Config {
 
     /// Makes this config the process bound one that can be
     /// fetched from anywhere.
-    pub fn bind_to_process(mut self) -> &'static Config {
+    pub fn bind_to_process(mut self) -> Arc<Config> {
         self.process_bound = true;
         self.apply_to_process();
-        unsafe {
-            if CONFIG.is_some() {
-                panic!("Can only bind a single config");
-            }
-            CONFIG = Some(self);
-            CONFIG.as_ref().unwrap()
+        {
+            let mut cfg = CONFIG.lock();
+            *cfg = Some(Arc::new(self));
         }
+        Config::get_current()
     }
 
     /// Return the currently bound config as option.
-    pub fn get_current_opt() -> Option<&'static Config> {
-        unsafe {
-            CONFIG.as_ref()
-        }
+    pub fn get_current_opt() -> Option<Arc<Config>> {
+        CONFIG.lock().as_ref().map(|x| x.clone())
     }
 
     /// Return the currently bound config.
-    pub fn get_current() -> &'static Config {
+    pub fn get_current() -> Arc<Config> {
         Config::get_current_opt().expect("Config not bound yet")
     }
 

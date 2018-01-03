@@ -1,4 +1,6 @@
 //! Implements a command for signing in.
+use std::sync::Arc;
+
 use clap::{App, ArgMatches};
 use open;
 use url::Url;
@@ -42,9 +44,9 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
     loop {
         token = prompt("Enter your token")?;
 
-        let mut test_cfg = config.clone();
+        let mut test_cfg = (*config).clone();
         test_cfg.set_auth(Auth::Token(token.to_string()));
-        match Api::with_config(&test_cfg).get_auth_info() {
+        match Api::with_config(Arc::new(test_cfg)).get_auth_info() {
             Ok(info) => {
                 // we can unwrap here somewhat safely because we do not permit
                 // signing in with legacy non user bound api keys here.

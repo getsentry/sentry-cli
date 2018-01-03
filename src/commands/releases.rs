@@ -19,7 +19,7 @@ use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
 
 
 struct ReleaseContext<'a> {
-    pub api: Api<'a>,
+    pub api: Api,
     pub org: String,
     pub project_default: Option<&'a str>,
 }

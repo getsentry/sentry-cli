@@ -10,6 +10,7 @@ use std::io::{Read, Write};
 use std::fmt;
 use std::error;
 use std::thread;
+use std::sync::Arc;
 use std::cell::{RefMut, RefCell};
 use std::path::Path;
 use std::ascii::AsciiExt;
@@ -61,8 +62,8 @@ pub enum ProgressBarMode {
 }
 
 /// Helper for the API access.
-pub struct Api<'a> {
-    config: &'a Config,
+pub struct Api {
+    config: Arc<Config>,
     shared_handle: RefCell<curl::easy::Easy>,
 }
 
@@ -128,16 +129,16 @@ pub struct ApiResponse {
     body: Option<Vec<u8>>,
 }
 
-impl<'a> Api<'a> {
+impl Api {
     /// Creates a new API access helper.  For as long as it lives HTTP
     /// keepalive can be used.  When the object is recreated new
     /// connections will be established.
-    pub fn new() -> Api<'a> {
+    pub fn new() -> Api {
         Api::with_config(Config::get_current())
     }
 
     /// Similar to `new` but uses a specific config.
-    pub fn with_config(config: &'a Config) -> Api<'a> {
+    pub fn with_config(config: Arc<Config>) -> Api {
         Api {
             config: config,
             shared_handle: RefCell::new(curl::easy::Easy::new()),
@@ -149,7 +150,7 @@ impl<'a> Api<'a> {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    pub fn request(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
+    pub fn request<'a>(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
         if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();

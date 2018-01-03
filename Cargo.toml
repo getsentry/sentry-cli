@@ -52,6 +52,7 @@ uuid = { version = "0.5.1", features = ["v4", "serde"] }
 walkdir = "2.0.1"
 which = "1.0.3"
 zip = "0.2.6"
+parking_lot = "0.5.3"
 
 [profile.dev]
 codegen-units = 2
