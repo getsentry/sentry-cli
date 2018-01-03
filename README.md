@@ -19,7 +19,7 @@ fastlane tools.
   [Releases](https://github.com/getsentry/sentry-cli/releases/)
 * Documentation can be found [here](https://docs.sentry.io/hosted/learn/cli/)
 
-## Installation
+## Installation2
 
 The recommended way to install is with everybody's favorite curl to bash:
 
