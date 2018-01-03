@@ -115,6 +115,10 @@ value in the parentheses is the config key in the config file):
     disabled.  This was introduced in 1.17.  Versions before that did not
     include an update check.  The update check is also not enabled for npm
     based installations of sentry-cli at the moment.
+``DEVICE_FAMILY`` (`device.family`):
+    Device family value reported to Sentry.
+``DEVICE_Model`` (`device.model`):
+    Device model value reported to Sentry.
 
 Validating The Config
 ---------------------
