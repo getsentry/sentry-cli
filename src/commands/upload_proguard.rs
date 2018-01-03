@@ -97,8 +97,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     a file with a forced UUID you can only upload a single proguard file."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let api = Api::new(config);
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let api = Api::new();
 
     let paths: Vec<_> = match matches.values_of("paths") {
         Some(paths) => paths.collect(),
@@ -185,6 +185,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     }
 
     println!("{} uploading mappings", style(">").dim());
+    let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
     let rv = api.upload_dsyms(&org, &project, tf.path())?;
     println!("{} Uploaded a total of {} new mapping files",

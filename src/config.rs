@@ -2,7 +2,9 @@
 use std::io;
 use std::fs;
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::fs::OpenOptions;
+use std::sync::Arc;
 
 use dotenv;
 use log;
@@ -10,9 +12,11 @@ use java_properties;
 use clap::ArgMatches;
 use url::Url;
 use ini::Ini;
+use parking_lot::Mutex;
 
 use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
+use utils::Logger;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -94,14 +98,18 @@ pub fn prepare_environment() {
     dotenv::dotenv().ok();
 }
 
+lazy_static! {
+    static ref CONFIG: Mutex<Option<Arc<Config>>> = Mutex::new(None);
+}
+
 /// Represents the `sentry-cli` config.
-#[derive(Clone)]
 pub struct Config {
-    pub filename: PathBuf,
-    pub auth: Option<Auth>,
-    pub url: String,
-    pub log_level: log::LogLevelFilter,
-    pub ini: Ini,
+    filename: PathBuf,
+    process_bound: bool,
+    ini: Ini,
+    cached_auth: Option<Auth>,
+    cached_base_url: String,
+    cached_log_level: log::LogLevelFilter,
 }
 
 impl Config {
@@ -110,15 +118,54 @@ impl Config {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
             filename: filename,
-            auth: get_default_auth(&ini),
-            url: get_default_url(&ini),
-            log_level: get_default_log_level(&ini)?,
+            process_bound: false,
+            cached_auth: get_default_auth(&ini),
+            cached_base_url: get_default_url(&ini),
+            cached_log_level: get_default_log_level(&ini)?,
             ini: ini,
         })
     }
 
-    /// Update the environment based on the config
-    pub fn configure_environment(&self) {
+    /// Makes this config the process bound one that can be
+    /// fetched from anywhere.
+    pub fn bind_to_process(mut self) -> Arc<Config> {
+        self.process_bound = true;
+        self.apply_to_process();
+        {
+            let mut cfg = CONFIG.lock();
+            *cfg = Some(Arc::new(self));
+        }
+        Config::get_current()
+    }
+
+    /// Return the currently bound config as option.
+    pub fn get_current_opt() -> Option<Arc<Config>> {
+        CONFIG.lock().as_ref().map(|x| x.clone())
+    }
+
+    /// Return the currently bound config.
+    pub fn get_current() -> Arc<Config> {
+        Config::get_current_opt().expect("Config not bound yet")
+    }
+
+    /// Makes a copy of the config in a closure and boxes it.
+    pub fn make_copy<F: FnOnce(&mut Config) -> Result<()>>(&self, cb: F)
+        -> Result<Arc<Config>>
+    {
+        let mut new_config = self.clone();
+        cb(&mut new_config)?;
+        Ok(Arc::new(new_config))
+    }
+
+    fn apply_to_process(&self) {
+        // this can only apply to the process if we are a process config.
+        if !self.process_bound { 
+            return;
+        }
+        log::set_logger(|max_log_level| {
+            max_log_level.set(self.get_log_level());
+            Box::new(Logger)
+        }).ok();
         if !env::var("http_proxy").is_ok() {
             if let Some(proxy) = self.get_proxy_url() {
                 env::set_var("http_proxy", proxy);
@@ -131,9 +178,52 @@ impl Config {
         }
     }
 
+    /// Returns the config filename.
+    pub fn get_filename(&self) -> &Path {
+        &self.filename
+    }
+
+    /// Write the current config state back into the file.
+    pub fn save(&self) -> Result<()> {
+        let mut file = OpenOptions::new().write(true)
+            .truncate(true)
+            .create(true)
+            .open(&self.filename)?;
+        self.ini.write_to(&mut file)?;
+        Ok(())
+    }
+
+    /// Returns the auth info
+    pub fn get_auth(&self) -> Option<&Auth> {
+        self.cached_auth.as_ref()
+    }
+
+    /// Updates the auth info
+    pub fn set_auth(&mut self, auth: Auth) {
+        self.cached_auth = Some(auth);
+
+        self.ini.delete_from(Some("auth"), "api_key");
+        self.ini.delete_from(Some("auth"), "token");
+        match self.cached_auth {
+            Some(Auth::Token(ref val)) => {
+                self.ini.set_to(Some("auth"), "token".into(), val.to_string());
+            }
+            Some(Auth::Key(ref val)) => {
+                self.ini.set_to(Some("auth"), "api_key".into(), val.to_string());
+            }
+            None => {}
+        }
+    }
+
+    /// Sets the URL
+    pub fn set_base_url(&mut self, url: &str) {
+        self.cached_base_url = url.to_owned();
+        self.ini.set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+    }
+
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str> {
-        let base = self.url.trim_right_matches('/');
+        let base = self.cached_base_url.trim_right_matches('/');
         if !base.starts_with("http://") && !base.starts_with("https://") {
             fail!("bad sentry url: unknown scheme ({})", base);
         }
@@ -147,6 +237,17 @@ impl Config {
     pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
         let base = self.get_base_url()?;
         Ok(format!("{}/api/0/{}", base, path.trim_left_matches('/')))
+    }
+
+    /// Returns the log level.
+    pub fn get_log_level(&self) -> log::LogLevelFilter {
+        self.cached_log_level
+    }
+
+    /// Sets the log level.
+    pub fn set_log_level(&mut self, value: log::LogLevelFilter) {
+        self.cached_log_level = value;
+        self.apply_to_process();
     }
 
     /// Indicates whether keepalive support should be enabled.  This
@@ -180,7 +281,7 @@ impl Config {
 
     /// Indicates if SSL is enabled or disabled for the server.
     pub fn has_insecure_server(&self) -> bool {
-        self.url.starts_with("http://")
+        self.get_base_url().unwrap_or("").starts_with("http://")
     }
 
     /// Indicates whether SSL verification should be on or off.
@@ -381,6 +482,19 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
     }
 
     Ok((path, rv))
+}
+
+impl Clone for Config {
+    fn clone(&self) -> Config {
+        Config {
+            filename: self.filename.clone(),
+            process_bound: false,
+            ini: self.ini.clone(),
+            cached_auth: self.cached_auth.clone(),
+            cached_base_url: self.cached_base_url.clone(),
+            cached_log_level: self.cached_log_level.clone(),
+        }
+    }
 }
 
 fn get_default_auth(ini: &Ini) -> Option<Auth> {

@@ -4,7 +4,6 @@ use std::env;
 use clap::{App, Arg, ArgMatches, AppSettings};
 
 use prelude::*;
-use config::Config;
 use utils::{get_latest_sentrycli_release, can_update_sentrycli};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -20,9 +19,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Force the update even if the latest version is already installed."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let exe = env::current_exe()?;
-    let update = get_latest_sentrycli_release(config)?;
+    let update = get_latest_sentrycli_release()?;
 
     // aborts with an error if this installation is not updatable.
     update.assert_updatable()?;

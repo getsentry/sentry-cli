@@ -19,8 +19,7 @@ use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
 
 
 struct ReleaseContext<'a> {
-    pub api: Api<'a>,
-    pub config: &'a Config,
+    pub api: Api,
     pub org: String,
     pub project_default: Option<&'a str>,
 }
@@ -34,7 +33,8 @@ impl<'a> ReleaseContext<'a> {
         if let Some(ref proj) = self.project_default {
             Ok(proj.to_string())
         } else {
-            Ok(self.config.get_project_default()?)
+            let config = Config::get_current();
+            Ok(config.get_project_default()?)
         }
     }
 
@@ -44,7 +44,8 @@ impl<'a> ReleaseContext<'a> {
         } else if let Some(project) = self.project_default {
             Ok(vec![project.to_string()])
         } else {
-            Ok(vec![self.config.get_project_default()?])
+            let config = Config::get_current();
+            Ok(vec![config.get_project_default()?])
         }
     }
 }
@@ -851,15 +852,15 @@ fn execute_deploys<'a>(ctx: &ReleaseContext,
     unreachable!();
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     // this one does not need a context or org
     if let Some(_sub_matches) = matches.subcommand_matches("propose-version") {
         return execute_propose_version();
     }
 
+    let config = Config::get_current();
     let ctx = ReleaseContext {
-        api: Api::new(config),
-        config: config,
+        api: Api::new(),
         org: config.get_org(matches)?,
         project_default: matches.value_of("project"),
     };

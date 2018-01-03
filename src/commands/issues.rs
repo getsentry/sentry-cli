@@ -58,13 +58,12 @@ fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter> 
     }
 }
 
-fn execute_change(config: &Config,
-                  org: &str,
+fn execute_change(org: &str,
                   project: &str,
                   filter: &IssueFilter,
                   changes: &IssueChanges)
                   -> Result<()> {
-    if Api::new(config).bulk_update_issue(org, project, filter, changes)? {
+    if Api::new().bulk_update_issue(org, project, filter, changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
             println!("  new status: {}", status);
@@ -75,7 +74,8 @@ fn execute_change(config: &Config,
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
     let filter = get_filter_from_matches(matches)?;
     let mut changes: IssueChanges = Default::default();
@@ -92,5 +92,5 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         changes.new_status = Some("unresolved".into());
     }
 
-    return execute_change(config, &org, &project, &filter, &changes);
+    return execute_change(&org, &project, &filter, &changes);
 }

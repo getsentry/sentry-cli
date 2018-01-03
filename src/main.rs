@@ -72,6 +72,7 @@ extern crate uuid;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
+extern crate parking_lot;
 
 mod macros;
 

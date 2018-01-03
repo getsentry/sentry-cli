@@ -296,17 +296,14 @@ impl InfoPlist {
 /// the xcode console and continue in the background.  This becomes
 /// a dummy shim for non xcode runs or platforms.
 pub struct MayDetach<'a> {
-    #[allow(dead_code)]
-    config: &'a Config,
     output_file: Option<TempFile>,
     #[allow(dead_code)]
     task_name: &'a str,
 }
 
 impl<'a> MayDetach<'a> {
-    fn new(config: &'a Config, task_name: &'a str) -> MayDetach<'a> {
+    fn new(task_name: &'a str) -> MayDetach<'a> {
         MayDetach {
-            config: config,
             output_file: None,
             task_name: task_name,
         }
@@ -327,7 +324,7 @@ impl<'a> MayDetach<'a> {
         }
 
         println!("Continuing in background.");
-        show_notification(self.config, "Sentry", &format!("{} starting", self.task_name))?;
+        show_notification("Sentry", &format!("{} starting", self.task_name))?;
         let output_file = TempFile::new()?;
         daemonize_redirect(Some(output_file.path()),
                            Some(output_file.path()),
@@ -346,14 +343,14 @@ impl<'a> MayDetach<'a> {
     /// calls into `may_detach`.
     #[cfg(target_os="macos")]
     pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(
-        config: &Config, task_name: &'a str, f: F) -> Result<T>
+        task_name: &'a str, f: F) -> Result<T>
     {
         use std::time::Duration;
         use std::thread;
         use open;
         use utils::print_error;
 
-        let mut md = MayDetach::new(config, task_name);
+        let mut md = MayDetach::new(task_name);
         match f(&mut md) {
             Ok(x) => {
                 md.show_done()?;
@@ -375,8 +372,8 @@ impl<'a> MayDetach<'a> {
     /// Dummy wrap call that never detaches for non mac platforms.
     #[cfg(not(target_os="macos"))]
     pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(
-        config: &Config, task_name: &'a str, f: F) -> Result<T> {
-        f(&mut MayDetach::new(config, task_name))
+        task_name: &'a str, f: F) -> Result<T> {
+        f(&mut MayDetach::new(task_name))
     }
 
     #[cfg(target_os="macos")]
@@ -392,7 +389,7 @@ impl<'a> MayDetach<'a> {
     #[cfg(target_os="macos")]
     fn show_done(&self) -> Result<()> {
         if self.is_detached() {
-            show_notification(self.config, "Sentry", &format!("{} finished", self.task_name))?;
+            show_notification("Sentry", &format!("{} finished", self.task_name))?;
         }
         Ok(())
     }
@@ -460,7 +457,7 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool> {
 
 /// Shows a notification in xcode
 #[cfg(target_os="macos")]
-pub fn show_notification(config: &Config, title: &str, msg: &str) -> Result<()> {
+pub fn show_notification(title: &str, msg: &str) -> Result<()> {
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
             var App = Application.currentApplication();
@@ -471,6 +468,7 @@ pub fn show_notification(config: &Config, title: &str, msg: &str) -> Result<()> 
         ");
     }
 
+    let config = Config::get_current();
     if !config.show_notifications()? {
         return Ok(());
     }

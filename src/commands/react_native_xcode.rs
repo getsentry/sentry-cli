@@ -74,9 +74,10 @@ fn find_node() -> String {
     "node".into()
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let api = Api::new(config);
+    let api = Api::new();
     let should_wrap = matches.is_present("force") || match env::var("CONFIGURATION") {
         Ok(config) => &config != "Debug",
         Err(_) => { return Err("Need to run this from Xcode".into()); }
@@ -124,7 +125,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
 
-    xcode::MayDetach::wrap(config, "React native symbol handling", |md| {
+    xcode::MayDetach::wrap("React native symbol handling", |md| {
         let bundle_path;
         let sourcemap_path;
         let bundle_url;

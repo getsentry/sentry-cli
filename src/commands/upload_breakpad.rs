@@ -45,18 +45,19 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Do not trigger reprocessing after uploading."))
 }
 
-struct ProjectContext<'a> {
-    api: Api<'a>,
+struct ProjectContext {
+    api: Api,
     org: String,
     project: String,
 }
 
-impl<'a> ProjectContext<'a> {
-    pub fn from_cli(matches: &ArgMatches, config: &'a Config) -> Result<ProjectContext<'a>> {
+impl ProjectContext {
+    pub fn from_cli(matches: &ArgMatches) -> Result<ProjectContext> {
+        let config = Config::get_current();
         let (org, project) = config.get_org_and_project(matches)?;
 
         Ok(ProjectContext {
-            api: Api::new(config),
+            api: Api::new(),
             org: org,
             project: project,
         })
@@ -275,7 +276,7 @@ fn process_batch(batch: Batch, context: &mut ProjectContext) -> Result<usize> {
     Ok(uploaded.len())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|path| PathBuf::from(path)).collect(),
         None => vec![],
@@ -291,7 +292,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         uuids.map(|s| Uuid::parse_str(s).unwrap()).collect()
     });
 
-    let mut context = ProjectContext::from_cli(matches, config)?;
+    let config = Config::get_current();
+    let mut context = ProjectContext::from_cli(matches)?;
     let max_size = config.get_max_dsym_upload_size()?;
     let mut total_uploaded = 0;
 

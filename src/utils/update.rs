@@ -105,13 +105,12 @@ impl LastUpdateCheck {
     }
 }
 
-pub struct SentryCliUpdateInfo<'a> {
-    config: &'a Config,
+pub struct SentryCliUpdateInfo {
     latest_release: Option<SentryCliRelease>,
 }
 
 
-impl<'a> SentryCliUpdateInfo<'a> {
+impl SentryCliUpdateInfo {
     pub fn have_version_info(&self) -> bool {
         self.latest_release.is_some()
     }
@@ -169,7 +168,7 @@ impl<'a> SentryCliUpdateInfo<'a> {
             exe.parent().unwrap().join(".sentry-cli.part")
         };
         let mut f = fs::File::create(&tmp_path)?;
-        let api = Api::new(self.config);
+        let api = Api::new();
         match api.download_with_progress(self.download_url()?, &mut f) {
             Ok(_) => {}
             Err(err) => {
@@ -184,10 +183,9 @@ impl<'a> SentryCliUpdateInfo<'a> {
     }
 }
 
-pub fn get_latest_sentrycli_release<'a>(cfg: &'a Config) -> Result<SentryCliUpdateInfo<'a>> {
-    let api = Api::new(&cfg);
+pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
+    let api = Api::new();
     Ok(SentryCliUpdateInfo {
-        config: cfg,
         latest_release: if let Ok(release) = api.get_latest_sentrycli_release() {
             release
         } else {
@@ -200,7 +198,7 @@ pub fn can_update_sentrycli() -> bool {
     !is_homebrew_install() && !is_npm_install()
 }
 
-fn update_nagger_impl(config: &Config) -> Result<()> {
+fn update_nagger_impl() -> Result<()> {
     let mut path = app_dirs::app_root(app_dirs::AppDataType::UserCache, APP_INFO)
         .chain_err(|| Error::from("Could not get cache folder"))?;
     path.push("updatecheck");
@@ -213,7 +211,7 @@ fn update_nagger_impl(config: &Config) -> Result<()> {
     }
 
     if check.should_run_check() {
-        let ui = get_latest_sentrycli_release(config)?;
+        let ui = get_latest_sentrycli_release()?;
         if ui.have_version_info() {
             check.update_for_info(ui);
             let mut f = fs::File::create(&path)?;
@@ -232,7 +230,12 @@ fn update_nagger_impl(config: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn run_sentrycli_update_nagger(config: &Config) {
+pub fn run_sentrycli_update_nagger() {
+    let config = match Config::get_current_opt() {
+        Some(config) => config,
+        None => return
+    };
+
     // Only update if we are compiled as unmanaged version (default)
     if cfg!(feature = "managed") {
         return;
@@ -255,5 +258,5 @@ pub fn run_sentrycli_update_nagger(config: &Config) {
         return;
     }
 
-    update_nagger_impl(config).ok();
+    update_nagger_impl().ok();
 }

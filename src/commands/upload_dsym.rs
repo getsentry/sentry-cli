@@ -547,7 +547,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     will be shown in the Xcode build output."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let zips = !matches.is_present("no_zips");
     let mut paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|x| PathBuf::from(x)).collect(),
@@ -583,12 +583,13 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
         println!("Warning: no paths were provided.");
     }
 
+    let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
     let max_size = config.get_max_dsym_upload_size()?;
-    let mut api = Api::new(config);
+    let mut api = Api::new();
     let mut total_uploaded = 0;
 
-    xcode::MayDetach::wrap(config, "Debug symbol upload", |md| {
+    xcode::MayDetach::wrap("Debug symbol upload", |md| {
         // Optionally detach if run from xcode
         if !matches.is_present("force_foreground") {
             md.may_detach()?;

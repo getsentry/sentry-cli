@@ -46,19 +46,20 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
     }
 }
 
-fn get_config_status_json(config: &Config) -> Result<()> {
+fn get_config_status_json() -> Result<()> {
+    let config = Config::get_current();
     let mut rv = ConfigStatus::default();
 
     let (org, project) = config.get_org_and_project_defaults();
     rv.config.insert("org".into(), org);
     rv.config.insert("project".into(), project);
-    rv.config.insert("url".into(), Some(config.url.clone()));
+    rv.config.insert("url".into(), Some(config.get_base_url()?.to_string()));
 
-    rv.auth.auth_type = config.auth.as_ref().map(|val| match val {
+    rv.auth.auth_type = config.get_auth().map(|val| match val {
         &Auth::Token(_) => "token".into(),
         &Auth::Key(_) => "api_key".into(),
     });
-    rv.auth.successful = config.auth.is_some() && Api::new(config).get_auth_info().is_ok();
+    rv.auth.successful = config.get_auth().is_some() && Api::new().get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();
 
     serde_json::to_writer_pretty(&mut io::stdout(), &rv)?;
@@ -66,24 +67,25 @@ fn get_config_status_json(config: &Config) -> Result<()> {
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     if matches.is_present("config_status_json") {
-        return get_config_status_json(config);
+        return get_config_status_json();
     }
 
+    let config = Config::get_current();
     let (org, project) = config.get_org_and_project_defaults();
-    let info_rv = Api::new(config).get_auth_info();
-    let errors = project.is_none() || org.is_none() || config.auth.is_none() || info_rv.is_err();
+    let info_rv = Api::new().get_auth_info();
+    let errors = project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
 
     if !matches.is_present("quiet") {
-        println!("Sentry Server: {}", config.url);
+        println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
         println!("Default Organization: {}", org.unwrap_or("-".into()));
         println!("Default Project: {}", project.unwrap_or("-".into()));
 
-        if config.auth.is_some() {
+        if config.get_auth().is_some() {
             println!("");
             println!("Authentication Info:");
-            println!("  Method: {}", describe_auth(config.auth.as_ref()));
+            println!("  Method: {}", describe_auth(config.get_auth()));
             match info_rv {
                 Ok(info) => {
                     if let Some(ref user) = info.user {

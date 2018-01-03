@@ -13,7 +13,6 @@ use username::get_user_name;
 use hostname::get_hostname;
 use anylog::LogEntry;
 use regex::Regex;
-use config::Config;
 
 use prelude::*;
 use constants::{ARCH, PLATFORM};
@@ -125,7 +124,7 @@ impl Event {
         }
     }
 
-    pub fn new_prefilled(config: &Config) -> Result<Event> {
+    pub fn new_prefilled() -> Result<Event> {
         let mut event = Event::new();
 
         event.extra.insert("environ".into(), Value::Object(env::vars().map(|(k, v)| {
@@ -139,10 +138,10 @@ impl Event {
         if let Some(hostname) = get_hostname() {
             device.insert("name".into(), hostname);
         }
-        if let Some(model) = get_model(config) {
+        if let Some(model) = get_model() {
             device.insert("model".into(), model);
         }
-        if let Some(family) = get_family(config) {
+        if let Some(family) = get_family() {
             device.insert("family".into(), family);
         }
         device.insert("arch".into(), ARCH.into());

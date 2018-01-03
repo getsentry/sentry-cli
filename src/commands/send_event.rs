@@ -87,8 +87,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .help("Send a logfile as breadcrumbs with the event (last 100 records)"))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
-    let mut event = Event::new_prefilled(config)?;
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let config = Config::get_current();
+    let mut event = Event::new_prefilled()?;
     event.level = matches.value_of("level").unwrap_or("error").into();
     if let Some(release) = matches.value_of("release") {
         event.release = Some(release.into());
@@ -153,7 +154,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>, config: &Config) -> Result<()> {
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
     // login" to sign in which would be in appropriate here.
-    match Api::new(config).send_event(&dsn, &event) {
+    match Api::new().send_event(&dsn, &event) {
         Ok(event_id) => {
             println!("Event sent: {}", event_id);
         }

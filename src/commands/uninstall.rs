@@ -5,7 +5,6 @@ use clap::{App, ArgMatches, AppSettings};
 use console::style;
 
 use prelude::*;
-use config::Config;
 use utils::{is_homebrew_install, is_npm_install};
 
 fn is_hidden() -> bool {
@@ -21,7 +20,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         })
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
     use std::fs;
     use runas;
     use utils;

@@ -6,7 +6,6 @@ use console::style;
 use serde_json;
 
 use prelude::*;
-use config::Config;
 use utils::dif;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -28,7 +27,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("The path to the debug info file."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>, _config: &Config) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let path = Path::new(matches.value_of("path").unwrap());
 
     // which types should we consider?
