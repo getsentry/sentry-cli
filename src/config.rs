@@ -148,6 +148,15 @@ impl Config {
         Config::get_current_opt().expect("Config not bound yet")
     }
 
+    /// Makes a copy of the config in a closure and boxes it.
+    pub fn make_copy<F: FnOnce(&mut Config) -> Result<()>>(&self, cb: F)
+        -> Result<Arc<Config>>
+    {
+        let mut new_config = self.clone();
+        cb(&mut new_config)?;
+        Ok(Arc::new(new_config))
+    }
+
     fn apply_to_process(&self) {
         // this can only apply to the process if we are a process config.
         if !self.process_bound { 
