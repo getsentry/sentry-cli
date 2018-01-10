@@ -1,48 +1,10 @@
 /* eslint-env jest */
 
-var SentryCli = require('..');
 var helper = require('../helper');
 
-var SOURCEMAPS_OPTIONS = {
-  ignore: {
-    param: '--ignore',
-    type: 'array'
-  },
-  ignoreFile: {
-    param: '--ignore-file',
-    type: 'string'
-  },
-  rewrite: {
-    param: '--rewrite',
-    type: 'boolean'
-  },
-  sourceMapReference: {
-    param: '--no-sourcemap-reference',
-    type: 'inverted-boolean'
-  },
-  stripPrefix: {
-    param: '--strip-prefix',
-    type: 'array'
-  },
-  stripCommonPrefix: {
-    param: '--strip-common-prefix',
-    type: 'array'
-  },
-  validate: {
-    param: '--validate',
-    type: 'boolean'
-  },
-  urlPrefix: {
-    param: '--url-prefix',
-    type: 'string'
-  },
-  ext: {
-    param: '--ext',
-    type: 'string'
-  }
-};
+var SOURCEMAPS_OPTIONS = require('../releases/options/uploadSourcemaps');
 
-describe('SentryCli', function() {
+describe('SentryCli helper', function() {
   test('call sentry-cli --version', function() {
     expect.assertions(1);
     return helper.execute(['--version']).then(function() {
@@ -155,13 +117,5 @@ describe('SentryCli', function() {
       '--ignore-file',
       '/js.ignore'
     ]);
-  });
-
-  test('call sentry-cli releases propose-version', function() {
-    expect.assertions(1);
-    var cli = new SentryCli();
-    return cli.releases.proposeVersion().then(function(version) {
-      expect(version).toBeTruthy();
-    });
   });
 });

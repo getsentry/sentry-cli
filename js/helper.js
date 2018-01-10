@@ -62,6 +62,9 @@ module.exports = {
   },
 
   getPath: function() {
+    if (process.env.NODE_ENV === 'test') {
+      return path.resolve(__dirname, '__mocks__/sentry-cli');
+    }
     return binaryPath;
   },
 
