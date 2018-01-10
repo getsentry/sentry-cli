@@ -461,7 +461,6 @@ fn load_cli_config() -> Result<RcFile> {
         }
     }
 
-    println!("{:#?}", &rv);
     Ok(rv)
 }
 
