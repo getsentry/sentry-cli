@@ -3,7 +3,7 @@ use std::io::{Seek, SeekFrom, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
-use java_properties::{PropertiesIter, PropertiesWriter};
+use java_properties::{PropertiesIter, PropertiesWriter, LineContent};
 use ini::Ini;
 use encoding::Encoding;
 use encoding::all::{UTF_8, ISO_8859_1};
@@ -17,7 +17,7 @@ pub enum RcFileFormat {
     Properties,
 }
 
-
+#[derive(Clone, Debug)]
 pub struct RcFile {
     filename: Option<PathBuf>,
     format: RcFileFormat,
@@ -29,9 +29,18 @@ fn load_props<R: Read + Seek>(mut rdr: R, encoding: &'static Encoding)
 {
     let mut rv = HashMap::new();
     rdr.seek(SeekFrom::Start(0))?;
-    PropertiesIter::new_with_encoding(rdr, encoding).read_into(|key, value| {
-        rv.insert(key, value);
-    }).map_err(|_| Error::from("bad property data"))?;
+    let iter = PropertiesIter::new_with_encoding(rdr, encoding);
+    for item_rv in iter {
+        match item_rv.map_err(|_| Error::from("invalid line"))?.consume_content() {
+            LineContent::KVPair(key, value) => {
+                if key.trim().starts_with('[') {
+                    return Err(Error::from("ini format in props"));
+                }
+                rv.insert(key, value);
+            }
+            LineContent::Comment(..) => {}
+        }
+    }
     Ok(rv)
 }
 
@@ -77,6 +86,10 @@ impl RcFile {
         })
     }
 
+    pub fn open_path<P: AsRef<Path>>(path: P) -> Result<RcFile> {
+        RcFile::open(fs::File::open(path)?)
+    }
+
     pub fn filename(&self) -> Option<&Path> {
         self.filename.as_ref().map(|x| x.as_path())
     }
@@ -90,6 +103,12 @@ impl RcFile {
         let mut rv = RcFile::open(f)?;
         rv.filename = Some(path.as_ref().to_path_buf());
         Ok(rv)
+    }
+
+    pub fn update(&mut self, rcfile: &RcFile) {
+        for (key, value) in &rcfile.items {
+            self.items.insert(key.to_string(), value.to_string());
+        }
     }
 
     pub fn save(&self) -> Result<()> {
@@ -142,6 +161,14 @@ impl RcFile {
 
     pub fn get(&self, key: &str) -> Option<&str> {
         self.items.get(key).map(|x| x.as_str())
+    }
+
+    pub fn set(&mut self, key: &str, value: &str) {
+        self.items.insert(key.to_string(), value.to_string());
+    }
+
+    pub fn remove(&mut self, key: &str) {
+        self.items.remove(key);
     }
 
     pub fn contains(&self, key: &str) -> bool {
