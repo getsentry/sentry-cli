@@ -31,14 +31,13 @@ fn load_props<R: Read + Seek>(mut rdr: R, encoding: &'static Encoding)
     rdr.seek(SeekFrom::Start(0))?;
     let iter = PropertiesIter::new_with_encoding(rdr, encoding);
     for item_rv in iter {
-        match item_rv.map_err(|_| Error::from("invalid line"))?.consume_content() {
-            LineContent::KVPair(key, value) => {
-                if key.trim().starts_with('[') {
-                    return Err(Error::from("ini format in props"));
-                }
-                rv.insert(key, value);
+        if let LineContent::KVPair(key, value) = item_rv
+            .map_err(|_| Error::from("invalid line"))?.consume_content()
+        {
+            if key.trim().starts_with('[') {
+                return Err(Error::from("ini format in props"));
             }
-            LineContent::Comment(..) => {}
+            rv.insert(key, value);
         }
     }
     Ok(rv)
