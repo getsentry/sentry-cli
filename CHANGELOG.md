@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.28.0
+
+* Change JS bindings to be conform with the cli interface
+  Please note that this is a breaking change if you used the JS interface before.
+
 ## sentry-cli 1.27.1
 
 * Read from the correct `Info.plist` in XCode builds, courtesy of @adbi
