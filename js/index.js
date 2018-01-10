@@ -15,6 +15,10 @@ SentryCli.getVersion = function() {
   return pkgInfo.version;
 };
 
+SentryCli.getPath = function() {
+  return helper.getPath();
+};
+
 SentryCli.prototype.releases = require('./releases');
 
 module.exports = SentryCli;
