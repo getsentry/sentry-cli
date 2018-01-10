@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.28.1
+
+* Expose getPath() to not break setups
+
 ## sentry-cli 1.28.0
 
 * Change JS bindings to be conform with the cli interface
