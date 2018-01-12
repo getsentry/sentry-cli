@@ -15,7 +15,7 @@ This is a Sentry command line client for some generic tasks. Right now this is
 primarily used to upload debug symbols to Sentry if you are not using the
 fastlane tools.
 
-* Binaries can be found under
+* Downloads can be found under
   [Releases](https://github.com/getsentry/sentry-cli/releases/)
 * Documentation can be found [here](https://docs.sentry.io/hosted/learn/cli/)
 
@@ -24,6 +24,8 @@ fastlane tools.
 The recommended way to install is with everybody's favorite curl to bash:
 
     curl -sL https://sentry.io/get-cli/ | bash
+
+### Node
 
 Additionally you can also install this binary via npm:
 
@@ -36,9 +38,36 @@ install as root:
 
     sudo npm install -g @sentry/cli --unsafe-perm
 
-Or homebrew:
+By default, this package will download sentry-cli from
+[releases](https://github.com/getsentry/sentry-cli/releases). This should work
+fine for most people. If you are experiencing issues with downloading from
+GitHub, you may need to use a different download mirror. To use a custom CDN,
+set the npm config property `sentrycli_cdnurl`. The downloader will append
+`"/<version>/sentry-cli-<dist>"`.
+
+```sh
+npm install @sentry/cli --sentrycli_cdnurl=https://mymirror.com/path
+```
+
+Or add property into your `.npmrc` file (https://www.npmjs.org/doc/files/npmrc.html)
+
+```rc
+sentrycli_cdnurl=https://mymirror.com/path
+```
+
+Another option is to use the environment variable `SENTRYCLI_CDNURL`.
+
+```sh
+SENTRYCLI_CDNURL=https://mymirror.com/path npm install @sentry/cli
+```
+
+### Homebrew
+
+A homebrew recipe is provided in the `getsentry/tools` tap:
 
     brew install getsentry/tools/sentry-cli
+
+### Docker
 
 As of version _1.25.0_, there is an official Docker image that comes with
 `sentry-cli` preinstalled. If you prefer a specific version, specify it as tag.
