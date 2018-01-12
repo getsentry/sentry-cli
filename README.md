@@ -46,19 +46,19 @@ set the npm config property `sentrycli_cdnurl`. The downloader will append
 `"/<version>/sentry-cli-<dist>"`.
 
 ```sh
-npm install @sentry/cli --sentrycli_cdnurl=https://mymirror.com/path
+npm install @sentry/cli --sentrycli_cdnurl=https://mymirror.local/path
 ```
 
 Or add property into your `.npmrc` file (https://www.npmjs.org/doc/files/npmrc.html)
 
 ```rc
-sentrycli_cdnurl=https://mymirror.com/path
+sentrycli_cdnurl=https://mymirror.local/path
 ```
 
 Another option is to use the environment variable `SENTRYCLI_CDNURL`.
 
 ```sh
-SENTRYCLI_CDNURL=https://mymirror.com/path npm install @sentry/cli
+SENTRYCLI_CDNURL=https://mymirror.local/path npm install @sentry/cli
 ```
 
 ### Homebrew
