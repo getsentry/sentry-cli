@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.28.3
+
+* Reverted new config handling because of problems it caused.
+
 ## sentry-cli 1.28.2
 
 * Fixed use of `SENTRYCLI_CDNURL` to override the npm download URL. See the [documentation](https://docs.sentry.io/learn/cli/installation/#installation-via-npm) for more information
