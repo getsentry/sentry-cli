@@ -12,6 +12,7 @@ mod sourcemaps;
 mod system;
 mod ui;
 mod update;
+mod rcfile;
 pub mod dif;
 pub mod vcs;
 pub mod xcode;
@@ -37,3 +38,4 @@ pub use self::ui::{prompt_to_continue, prompt, capitalize_string,
                    copy_with_progress, make_byte_progress_bar};
 pub use self::update::{can_update_sentrycli, get_latest_sentrycli_release,
                        run_sentrycli_update_nagger, SentryCliUpdateInfo};
+pub use self::rcfile::{RcFile, RcFileFormat};

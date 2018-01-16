@@ -3,20 +3,17 @@ use std::io;
 use std::fs;
 use std::env;
 use std::path::{Path, PathBuf};
-use std::fs::OpenOptions;
 use std::sync::Arc;
 
 use dotenv;
 use log;
-use java_properties;
 use clap::ArgMatches;
 use url::Url;
-use ini::Ini;
 use parking_lot::Mutex;
 
 use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
-use utils::Logger;
+use utils::{Logger, RcFile};
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -104,9 +101,8 @@ lazy_static! {
 
 /// Represents the `sentry-cli` config.
 pub struct Config {
-    filename: PathBuf,
     process_bound: bool,
-    ini: Ini,
+    rcfile: RcFile,
     cached_auth: Option<Auth>,
     cached_base_url: String,
     cached_log_level: log::LogLevelFilter,
@@ -115,14 +111,13 @@ pub struct Config {
 impl Config {
     /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> Result<Config> {
-        let (filename, ini) = load_cli_config()?;
+        let rcfile = load_cli_config()?;
         Ok(Config {
-            filename: filename,
             process_bound: false,
-            cached_auth: get_default_auth(&ini),
-            cached_base_url: get_default_url(&ini),
-            cached_log_level: get_default_log_level(&ini)?,
-            ini: ini,
+            cached_auth: get_default_auth(&rcfile),
+            cached_base_url: get_default_url(&rcfile),
+            cached_log_level: get_default_log_level(&rcfile)?,
+            rcfile: rcfile,
         })
     }
 
@@ -180,17 +175,12 @@ impl Config {
 
     /// Returns the config filename.
     pub fn get_filename(&self) -> &Path {
-        &self.filename
+        self.rcfile.filename().unwrap()
     }
 
     /// Write the current config state back into the file.
     pub fn save(&self) -> Result<()> {
-        let mut file = OpenOptions::new().write(true)
-            .truncate(true)
-            .create(true)
-            .open(&self.filename)?;
-        self.ini.write_to(&mut file)?;
-        Ok(())
+        self.rcfile.save()
     }
 
     /// Returns the auth info
@@ -202,14 +192,14 @@ impl Config {
     pub fn set_auth(&mut self, auth: Auth) {
         self.cached_auth = Some(auth);
 
-        self.ini.delete_from(Some("auth"), "api_key");
-        self.ini.delete_from(Some("auth"), "token");
+        self.rcfile.remove("auth.api_key");
+        self.rcfile.remove("auth.token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.ini.set_to(Some("auth"), "token".into(), val.to_string());
+                self.rcfile.set("auth.token", val);
             }
             Some(Auth::Key(ref val)) => {
-                self.ini.set_to(Some("auth"), "api_key".into(), val.to_string());
+                self.rcfile.set("auth.api_key", val);
             }
             None => {}
         }
@@ -218,7 +208,7 @@ impl Config {
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) {
         self.cached_base_url = url.to_owned();
-        self.ini.set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+        self.rcfile.set("defaults.url", &self.cached_base_url);
     }
 
     /// Returns the base url (without trailing slashes)
@@ -254,7 +244,7 @@ impl Config {
     /// mostly corresponds to an ini config but also has some sensible
     /// default handling.
     pub fn allow_keepalive(&self) -> bool {
-        let val = self.ini.get_from(Some("http"), "keepalive");
+        let val = self.rcfile.get("http.keepalive");
         match val {
             // keepalive is broken on our dev server.  Since this makes local development
             // quite frustrating we disable keepalive (handle reuse) when we connect to
@@ -266,17 +256,17 @@ impl Config {
 
     /// Returns the proxy URL if defined.
     fn get_proxy_url(&self) -> Option<&str> {
-        self.ini.get_from(Some("http"), "proxy_url")
+        self.rcfile.get("http.proxy_url")
     }
 
     /// Returns the proxy username if defined.
     pub fn get_proxy_username(&self) -> Option<&str> {
-        self.ini.get_from(Some("http"), "proxy_username")
+        self.rcfile.get("http.proxy_username")
     }
 
     /// Returns the proxy password if defined.
     pub fn get_proxy_password(&self) -> Option<&str> {
-        self.ini.get_from(Some("http"), "proxy_password")
+        self.rcfile.get("http.proxy_password")
     }
 
     /// Indicates if SSL is enabled or disabled for the server.
@@ -286,7 +276,7 @@ impl Config {
 
     /// Indicates whether SSL verification should be on or off.
     pub fn should_verify_ssl(&self) -> bool {
-        let val = self.ini.get_from(Some("http"), "verify_ssl");
+        let val = self.rcfile.get("http.verify_ssl");
         match val {
             None => true,
             Some(val) => val == "true",
@@ -296,7 +286,7 @@ impl Config {
     /// Controls the SSL revocation check on windows.  This can be used as a
     /// workaround for misconfigured local SSL proxies.
     pub fn disable_ssl_revocation_check(&self) -> bool {
-        let val = self.ini.get_from(Some("http"), "check_ssl_revoke");
+        let val = self.rcfile.get("http.check_ssl_revoke");
         match val {
             None => true,
             Some(val) => val == "true",
@@ -308,7 +298,7 @@ impl Config {
         Ok(matches.value_of("org")
                .map(|x| x.to_owned())
                .or_else(|| env::var("SENTRY_ORG").ok())
-               .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
+               .or_else(|| self.rcfile.get("defaults.org").map(|x| x.to_owned()))
                .ok_or("An organization slug is required (provide with --org)")?)
     }
 
@@ -328,7 +318,7 @@ impl Config {
     /// Return the default value for a project.
     pub fn get_project_default(&self) -> Result<String> {
         Ok(env::var("SENTRY_PROJECT").ok()
-            .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
+            .or_else(|| self.rcfile.get("defaults.project").map(|x| x.to_owned()))
             .ok_or("A project slug is required")?)
     }
 
@@ -336,22 +326,22 @@ impl Config {
     pub fn get_org_and_project_defaults(&self) -> (Option<String>, Option<String>) {
         (env::var("SENTRY_ORG")
              .ok()
-             .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned())),
+             .or_else(|| self.rcfile.get("defaults.org").map(|x| x.to_owned())),
          env::var("SENTRY_PROJECT")
              .ok()
-             .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned())))
+             .or_else(|| self.rcfile.get("defaults.project").map(|x| x.to_owned())))
     }
 
     /// Returns true if notifications should be displayed
     pub fn show_notifications(&self) -> Result<bool> {
-        Ok(self.ini.get_from(Some("ui"), "show_notifications")
+        Ok(self.rcfile.get("ui.show_notifications")
             .map(|x| x == "true")
             .unwrap_or(true))
     }
 
     /// Returns the maximum dsym upload size
     pub fn get_max_dsym_upload_size(&self) -> Result<u64> {
-        Ok(self.ini.get_from(Some("dsym"), "max_upload_size")
+        Ok(self.rcfile.get("dsym.max_upload_size")
             .and_then(|x| x.parse().ok())
             .unwrap_or(35 * 1024 * 1024))
     }
@@ -360,7 +350,7 @@ impl Config {
     pub fn get_dsn(&self) -> Result<Dsn> {
         if let Some(ref val) = env::var("SENTRY_DSN").ok() {
             Dsn::from_str(val)
-        } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
+        } else if let Some(val) = self.rcfile.get("auth.dsn") {
             Dsn::from_str(val)
         } else {
             fail!("No DSN provided");
@@ -371,7 +361,7 @@ impl Config {
     pub fn get_model(&self) -> Option<String> {
         if env::var_os("DEVICE_MODEL").is_some() {
             env::var("DEVICE_MODEL").ok()
-        } else if let Some(val) = self.ini.get_from(Some("device"), "model") {
+        } else if let Some(val) = self.rcfile.get("device.model") {
             Some(String::from(val))
         } else {
             None
@@ -382,7 +372,7 @@ impl Config {
     pub fn get_family(&self) -> Option<String> {
         if env::var_os("DEVICE_FAMILY").is_some() {
             env::var("DEVICE_FAMILY").ok()
-        } else if let Some(val) = self.ini.get_from(Some("device"), "family") {
+        } else if let Some(val) = self.rcfile.get("device.family") {
             Some(String::from(val))
         } else {
             None
@@ -394,7 +384,7 @@ impl Config {
         if let Ok(var) = env::var("SENTRY_DISABLE_UPDATE_CHECK") {
             &var == "1" || &var == "true"
         } else {
-            if let Some(val) = self.ini.get_from(Some("update"), "disable_check") {
+            if let Some(val) = self.rcfile.get("update.disable_check") {
                 val == "true"
             } else {
                 false
@@ -414,6 +404,10 @@ fn find_project_config_file() -> Option<PathBuf> {
             if path.exists() {
                 return Some(path);
             }
+            path.set_file_name("sentry.properties");
+            if path.exists() {
+                return Some(path);
+            }
             path.pop();
             if !path.pop() {
                 return None;
@@ -422,15 +416,15 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-fn load_cli_config() -> Result<(PathBuf, Ini)> {
+fn load_cli_config() -> Result<RcFile> {
     let mut home_fn = env::home_dir().ok_or("Could not find home dir")?;
     home_fn.push(".sentryclirc");
 
     let mut rv = match fs::File::open(&home_fn) {
-        Ok(mut file) => Ini::read_from(&mut file)?,
+        Ok(mut file) => RcFile::open(&mut file)?,
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
-                Ini::new()
+                RcFile::new()
             } else {
                 return Err(err).chain_err(
                     || "Failed to load .sentryclirc file from the home folder.");
@@ -438,38 +432,24 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
         }
     };
 
-    let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let mut f = fs::File::open(&project_config_path)
+    let path = if let Some(project_config_path) = find_project_config_file() {
+        let project_conf = RcFile::open_path(&project_config_path)
             .chain_err(|| format!("Failed to load .sentryclirc file from project path ({})",
                 project_config_path.display()))?;
-        let ini = Ini::read_from(&mut f)?;
-        for (section, props) in ini.iter() {
-            for (key, value) in props {
-                rv.set_to(section.clone(), key.clone(), value.to_owned());
-            }
-        }
-        (project_config_path, rv)
+        rv.update(&project_conf);
+        project_config_path
     } else {
-        (home_fn, rv)
+        home_fn
     };
+    rv.set_filename(Some(&path));
 
     if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
         match fs::File::open(&prop_path) {
             Ok(f) => {
-                let props = match java_properties::read(f) {
-                    Ok(props) => props,
-                    Err(err) => {
-                        return Err(Error::from(format!(
-                            "Could not load java style properties file: {}", err)));
-                    }
-                };
-                for (key, value) in props {
-                    let mut iter = key.rsplitn(2, '.');
-                    if let Some(key) = iter.next() {
-                        let section = iter.next();
-                        rv.set_to(section, key.to_string(), value);
-                    }
-                }
+                let prop_conf = RcFile::open(f)
+                    .chain_err(|| format!("Failed to load java style properties file ({})",
+                        prop_path))?;
+                rv.update(&prop_conf);
             },
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
@@ -481,15 +461,14 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
         }
     }
 
-    Ok((path, rv))
+    Ok(rv)
 }
 
 impl Clone for Config {
     fn clone(&self) -> Config {
         Config {
-            filename: self.filename.clone(),
             process_bound: false,
-            ini: self.ini.clone(),
+            rcfile: self.rcfile.clone(),
             cached_auth: self.cached_auth.clone(),
             cached_base_url: self.cached_base_url.clone(),
             cached_log_level: self.cached_log_level.clone(),
@@ -497,38 +476,38 @@ impl Clone for Config {
     }
 }
 
-fn get_default_auth(ini: &Ini) -> Option<Auth> {
+fn get_default_auth(rcfile: &RcFile) -> Option<Auth> {
     if let Some(ref val) = env::var("SENTRY_AUTH_TOKEN").ok() {
         Some(Auth::Token(val.to_owned()))
     } else if let Some(ref val) = env::var("SENTRY_API_KEY").ok() {
         Some(Auth::Key(val.to_owned()))
-    } else if let Some(val) = ini.get_from(Some("auth"), "token") {
+    } else if let Some(val) = rcfile.get("auth.token") {
         Some(Auth::Token(val.to_owned()))
-    } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
+    } else if let Some(val) = rcfile.get("auth.api_key") {
         Some(Auth::Key(val.to_owned()))
     } else {
         None
     }
 }
 
-fn get_default_url(ini: &Ini) -> String {
+fn get_default_url(rcfile: &RcFile) -> String {
     if let Some(ref val) = env::var("SENTRY_URL").ok() {
         val.to_owned()
-    } else if let Some(val) = ini.get_from(Some("defaults"), "url") {
+    } else if let Some(val) = rcfile.get("defaults.url") {
         val.to_owned()
     } else {
         DEFAULT_URL.to_owned()
     }
 }
 
-fn get_default_log_level(ini: &Ini) -> Result<log::LogLevelFilter> {
+fn get_default_log_level(rcfile: &RcFile) -> Result<log::LogLevelFilter> {
     if let Ok(level_str) = env::var("SENTRY_LOG_LEVEL") {
         if let Ok(level) = level_str.parse() {
             return Ok(level);
         }
     }
 
-    if let Some(level_str) = ini.get_from(Some("log"), "level") {
+    if let Some(level_str) = rcfile.get("log.level") {
         if let Ok(level) = level_str.parse() {
             return Ok(level);
         }
