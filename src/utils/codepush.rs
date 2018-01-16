@@ -24,13 +24,21 @@ pub struct CodePushDeployment {
 pub fn get_codepush_deployments(app: &str)
     -> Result<Vec<CodePushDeployment>>
 {
-    let p = process::Command::new("code-push")
+    let result = process::Command::new("code-push")
         .arg("deployment")
         .arg("ls")
         .arg(app)
         .arg("--format")
         .arg("json")
-        .output()?;
+        .output();
+
+    let p = match result {
+        Ok(p) => p,
+        Err(e) => {
+            return Err(Error::from(e).chain_err(|| "Could not run codepush. Is it on the PATH?"))
+        }
+    };
+
     if !p.status.success() {
         let msgstr;
         let detail = if let Ok(msg) = str::from_utf8(&p.stderr) {
