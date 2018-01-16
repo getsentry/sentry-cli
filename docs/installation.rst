@@ -52,6 +52,25 @@ You can then find it in the `.bin` folder::
 
     This installation is not recommended however.
 
+.. admonition:: Downloading from a Custom Source
+
+    By default, this package will download sentry-cli from
+    `the github release page <https://github.com/getsentry/sentry-cli/releases/>`__.
+    This should work fine for most people. If you are experiencing issues with
+    downloading from GitHub, you may need to use a different download mirror. To use
+    a custom CDN, set the npm config property `sentrycli_cdnurl`. The downloader
+    will append ``"/<version>/sentry-cli-<dist>"``.
+
+        $ npm install @sentry/cli --sentrycli_cdnurl=https://mymirror.local/path
+
+    Or add property into your `.npmrc` file (https://www.npmjs.org/doc/files/npmrc.html)
+
+        sentrycli_cdnurl=https://mymirror.local/path
+
+    Another option is to use the environment variable `SENTRYCLI_CDNURL`.
+
+        $ SENTRYCLI_CDNURL=https://mymirror.local/path npm install @sentry/cli
+
 Installation via Homebrew
 -------------------------
 
