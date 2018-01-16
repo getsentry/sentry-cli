@@ -33,6 +33,7 @@ mach_object = "0.1.6"
 memmap = "0.6.1"
 might-be-minified = "0.2.1"
 open = "1.2.1"
+parking_lot = "0.5.3"
 plist = "0.2.4"
 prettytable-rs = "0.6.7"
 regex = "0.2.3"
@@ -52,7 +53,6 @@ uuid = { version = "0.5.1", features = ["v4", "serde"] }
 walkdir = "2.0.1"
 which = "1.0.3"
 zip = "0.2.6"
-parking_lot = "0.5.3"
 
 [profile.dev]
 codegen-units = 2
