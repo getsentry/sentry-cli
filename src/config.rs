@@ -15,6 +15,8 @@ use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
 use utils::{Logger, RcFile};
 
+static LOGGER: Logger = Logger;
+
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
@@ -105,7 +107,7 @@ pub struct Config {
     rcfile: RcFile,
     cached_auth: Option<Auth>,
     cached_base_url: String,
-    cached_log_level: log::LogLevelFilter,
+    cached_log_level: log::LevelFilter,
 }
 
 impl Config {
@@ -154,13 +156,11 @@ impl Config {
 
     fn apply_to_process(&self) {
         // this can only apply to the process if we are a process config.
-        if !self.process_bound { 
+        if !self.process_bound {
             return;
         }
-        log::set_logger(|max_log_level| {
-            max_log_level.set(self.get_log_level());
-            Box::new(Logger)
-        }).ok();
+        log::set_logger(&LOGGER).ok();
+        log::set_max_level(self.get_log_level());
         if !env::var("http_proxy").is_ok() {
             if let Some(proxy) = self.get_proxy_url() {
                 env::set_var("http_proxy", proxy);
@@ -230,12 +230,12 @@ impl Config {
     }
 
     /// Returns the log level.
-    pub fn get_log_level(&self) -> log::LogLevelFilter {
+    pub fn get_log_level(&self) -> log::LevelFilter {
         self.cached_log_level
     }
 
     /// Sets the log level.
-    pub fn set_log_level(&mut self, value: log::LogLevelFilter) {
+    pub fn set_log_level(&mut self, value: log::LevelFilter) {
         self.cached_log_level = value;
         self.apply_to_process();
     }
@@ -500,7 +500,7 @@ fn get_default_url(rcfile: &RcFile) -> String {
     }
 }
 
-fn get_default_log_level(rcfile: &RcFile) -> Result<log::LogLevelFilter> {
+fn get_default_log_level(rcfile: &RcFile) -> Result<log::LevelFilter> {
     if let Ok(level_str) = env::var("SENTRY_LOG_LEVEL") {
         if let Ok(level) = level_str.parse() {
             return Ok(level);
@@ -513,5 +513,5 @@ fn get_default_log_level(rcfile: &RcFile) -> Result<log::LogLevelFilter> {
         }
     }
 
-    Ok(log::LogLevelFilter::Warn)
+    Ok(log::LevelFilter::Warn)
 }
