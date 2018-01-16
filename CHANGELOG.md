@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.28.2
+
+* Fixed use of `SENTRYCLI_CDNURL` to override the npm download URL. See the [documentation](https://docs.sentry.io/learn/cli/installation/#installation-via-npm) for more information
+* Better handling of environment variables and config files. Please let us know if one of your configuration files or environments doesn't get recognized anymore after the update
+* The official docker image is now smaller and does not require dependencies anymore
+* Replaced confusing errors when using `codepush` with hints to resolve the error
+
 ## sentry-cli 1.28.1
 
 * Expose getPath() to not break setups
