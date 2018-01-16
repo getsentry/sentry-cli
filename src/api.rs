@@ -13,7 +13,6 @@ use std::thread;
 use std::sync::Arc;
 use std::cell::{RefMut, RefCell};
 use std::path::Path;
-use std::ascii::AsciiExt;
 use std::collections::{HashSet, HashMap};
 use std::borrow::Cow;
 use std::rc::Rc;
