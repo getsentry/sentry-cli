@@ -21,41 +21,36 @@ pub struct CodePushDeployment {
     pub package: Option<CodePushPackage>,
 }
 
-pub fn get_codepush_deployments(app: &str)
-    -> Result<Vec<CodePushDeployment>>
-{
-    let result = process::Command::new("code-push")
+fn get_codepush_error(output: process::Output) -> Error {
+    if let Ok(message) = str::from_utf8(&output.stderr) {
+        let stripped = strip_ansi_codes(message);
+        Error::from(if stripped.starts_with("[Error]  ") {
+            &stripped[9..]
+        } else if stripped.starts_with("[Error] ") {
+            &stripped[8..]
+        } else {
+            &stripped
+        })
+    } else {
+        Error::from("Unknown Error")
+    }
+}
+
+pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
+    let output = process::Command::new("node_modules/.bin/code-push")
         .arg("deployment")
         .arg("ls")
         .arg(app)
         .arg("--format")
         .arg("json")
-        .output();
+        .output()
+        .chain_err(|| "Could not run codepush. Is it on the PATH?")?;
 
-    let p = match result {
-        Ok(p) => p,
-        Err(e) => {
-            return Err(Error::from(e).chain_err(|| "Could not run codepush. Is it on the PATH?"))
-        }
-    };
-
-    if !p.status.success() {
-        let msgstr;
-        let detail = if let Ok(msg) = str::from_utf8(&p.stderr) {
-            msgstr = strip_ansi_codes(msg);
-            if &msgstr[..9] == "[Error]  " {
-                &msgstr[9..]
-            } else if &msgstr[..8] == "[Error] " {
-                &msgstr[8..]
-            } else {
-                &msgstr
-            }
-        } else {
-            "Unknown Error"
-        };
-        return Err(format!("Failed to get codepush deployments ({})", detail).into());
+    if output.status.success() {
+        Ok(serde_json::from_slice(&output.stdout)?)
+    } else {
+        Err(get_codepush_error(output)).chain_err(|| "Failed to get codepush deployments")
     }
-    Ok(serde_json::from_slice(&p.stdout)?)
 }
 
 pub fn get_codepush_package(app: &str, deployment: &str)
@@ -72,7 +67,7 @@ pub fn get_codepush_package(app: &str, deployment: &str)
         }
     }
 
-    Err(format!("could not find deployment {} for {}", deployment, app).into())
+    Err(format!("Could not find deployment {} for {}", deployment, app).into())
 }
 
 pub fn get_react_native_codepush_release(package: &CodePushPackage, platform: &str,
