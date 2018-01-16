@@ -1,6 +1,8 @@
 use std::env;
-use std::str;
+use std::io;
+use std::path::Path;
 use std::process;
+use std::str;
 
 use serde_json;
 use console::strip_ansi_codes;
@@ -9,6 +11,9 @@ use glob::{glob_with, MatchOptions};
 use prelude::*;
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
+
+static CODEPUSH_BIN_PATH: &'static str = "code-push";
+static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push";
 
 #[derive(Debug, Deserialize)]
 pub struct CodePushPackage {
@@ -37,14 +42,26 @@ fn get_codepush_error(output: process::Output) -> Error {
 }
 
 pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
-    let output = process::Command::new("node_modules/.bin/code-push")
+    let codepush_bin = if Path::new(CODEPUSH_NPM_PATH).exists() {
+        CODEPUSH_NPM_PATH
+    } else {
+        CODEPUSH_BIN_PATH
+    };
+
+    let output = process::Command::new(codepush_bin)
         .arg("deployment")
         .arg("ls")
         .arg(app)
         .arg("--format")
         .arg("json")
         .output()
-        .chain_err(|| "Could not run codepush. Is it on the PATH?")?;
+        .map_err(|e| {
+            if e.kind() == io::ErrorKind::NotFound {
+                "Codepush not found. Is it installed and configured on the PATH?".into()
+            } else {
+                Error::from(e).chain_err(|| "Failed to run codepush")
+            }
+        })?;
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout)?)
