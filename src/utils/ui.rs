@@ -38,7 +38,6 @@ pub fn prompt(message: &str) -> io::Result<String> {
 
 /// Capitalizes a string and returns it.
 pub fn capitalize_string(s: &str) -> String {
-    use std::ascii::AsciiExt;
     let mut bytes = s.as_bytes().to_vec();
     bytes.make_ascii_lowercase();
     bytes[0] = bytes[0].to_ascii_uppercase();
