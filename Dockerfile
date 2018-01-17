@@ -16,5 +16,6 @@ RUN touch src/main.rs && cargo build --release --features managed
 FROM alpine:3.6
 WORKDIR /work
 
+RUN apk add --no-cache ca-certificates
 COPY --from=sentry-build /work/target/x86_64-unknown-linux-musl/release/sentry-cli /bin
 CMD ["/bin/sentry-cli"]
