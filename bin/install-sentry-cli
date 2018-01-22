@@ -6,10 +6,14 @@ var os = require('os');
 var fs = require('fs');
 var http = require('http');
 var path = require('path');
+var url = require('url');
 
 var platform = os.platform();
 var ProgressBar = require('progress');
 var https = require('https');
+
+var HttpsProxyAgent = require('https-proxy-agent');
+var proxy = process.env.npm_config_https_proxy || process.env.HTTPS_PROXY;
 
 var arch = os.arch();
 var spawn = require('child_process').spawn;
@@ -77,6 +81,18 @@ if (downloadUrl === null) {
       ') is unsupported.'
   );
   process.exit(1);
+}
+
+// Returns the request options for a given URL.
+// Adds in a proxy agent if one is required.
+function requestOptions(requestUrl) {
+  var opts = url.parse(requestUrl);
+
+  if (proxy) {
+    opts.agent = new HttpsProxyAgent(proxy);
+  }
+
+  return opts;
 }
 
 // Download the binary from the response
@@ -156,7 +172,7 @@ function handleResponse(res) {
       process.exit(1);
     }
     fetch
-      .get(res.headers.Location || res.headers.location, handleResponse)
+      .get(requestOptions(res.headers.Location || res.headers.location), handleResponse)
       .on('error', function(err) {
         console.log(err);
         process.exit(1);
@@ -175,7 +191,7 @@ function shouldDownloadScript() {
 
 // Start download
 if (shouldDownloadScript()) {
-  fetch.get(downloadUrl, handleResponse).on('error', function(err) {
+  fetch.get(requestOptions(downloadUrl), handleResponse).on('error', function(err) {
     console.log(err);
     process.exit(1);
   });
