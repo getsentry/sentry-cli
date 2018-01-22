@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
-use symbolic_common::ObjectKind;
+use symbolic_common::{ObjectClass, ObjectKind};
 use uuid::Uuid;
 
 use prelude::*;
@@ -11,7 +11,7 @@ use utils::{validate_uuid, ArgExt};
 use utils::upload::{process_batch, BatchedObjectWalker, UploadOptions};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Upload breakpad symbols to a project.")
+    app.about("Upload Linux debug symbols to a project.")
         .setting(AppSettings::Hidden)
         .org_project_args()
         .arg(Arg::with_name("paths")
@@ -20,6 +20,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .number_of_values(1)
             .index(1))
+        .arg(Arg::with_name("no_executables")
+            .long("no-executables")
+            .help("Exclude executables and look for stripped symbols only."))
         .arg(Arg::with_name("uuids")
             .value_name("UUID")
             .long("uuid")
@@ -36,6 +39,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+    let exes = !matches.is_present("no_executables");
     let paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|path| PathBuf::from(path)).collect(),
         None => vec![],
@@ -57,10 +61,15 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     // Search all paths and upload symbols in batches
     for path in paths.into_iter() {
         let mut iter = BatchedObjectWalker::new(path, &mut found);
-        iter.object_kind(ObjectKind::Breakpad)
+        iter.object_kind(ObjectKind::Elf)
+            .object_class(ObjectClass::Debug)
             .object_uuids(uuids.clone())
-            .file_extension("sym")
             .max_batch_size(context.max_size());
+
+        if exes {
+            iter.object_class(ObjectClass::Executable)
+                .object_class(ObjectClass::Library);
+        }
 
         for (i, batch) in iter.enumerate() {
             if i > 0 {

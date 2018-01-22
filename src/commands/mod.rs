@@ -22,6 +22,7 @@ macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_breakpad);
         $mac!(upload_dsym);
+        $mac!(upload_dbg);
         $mac!(upload_proguard);
         $mac!(releases);
         $mac!(issues);
@@ -62,6 +63,7 @@ const UPDATE_NAGGER_CMDS: &'static [&'static str] = &[
 // but rust bug #37663 breaks location information then.
 pub mod upload_breakpad;
 pub mod upload_dsym;
+pub mod upload_dbg;
 pub mod upload_proguard;
 pub mod releases;
 pub mod issues;

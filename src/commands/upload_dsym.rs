@@ -496,7 +496,7 @@ fn get_paths_from_env() -> Result<Vec<PathBuf>> {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Upload debug symbols to a project.")
+    app.about("Upload Mac debug symbols to a project.")
         .org_project_args()
         .arg(Arg::with_name("paths")
             .value_name("PATH")
