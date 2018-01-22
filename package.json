@@ -30,6 +30,7 @@
     "sentry-cli": "bin/sentry-cli"
   },
   "dependencies": {
+    "https-proxy-agent": "^2.1.1",
     "progress": "2.0.0"
   },
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
