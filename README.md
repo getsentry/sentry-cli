@@ -61,6 +61,10 @@ Another option is to use the environment variable `SENTRYCLI_CDNURL`.
 SENTRYCLI_CDNURL=https://mymirror.local/path npm install @sentry/cli
 ```
 
+If you're installing the CLI with NPM from behind a proxy, the install script will
+use either NPM's configured HTTPS proxy server, or the value from your `HTTPS_PROXY`
+environment variable.
+
 ### Homebrew
 
 A homebrew recipe is provided in the `getsentry/tools` tap:
