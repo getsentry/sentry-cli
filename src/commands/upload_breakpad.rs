@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 use std::path::PathBuf;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -46,8 +46,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         println!("Warning: no paths were provided.");
     }
 
-    let mut found = HashSet::new();
-    let uuids = matches.values_of("uuids").map_or(HashSet::new(), |uuids| {
+    let mut found = BTreeSet::new();
+    let uuids = matches.values_of("uuids").map_or(BTreeSet::new(), |uuids| {
         uuids.map(|s| Uuid::parse_str(s).unwrap()).collect()
     });
 
@@ -85,7 +85,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     // Did we miss explicitly requested symbols?
     if matches.is_present("require_all") && !uuids.is_empty() {
-        let missing: HashSet<_> = uuids.difference(&found).collect();
+        let missing: BTreeSet<_> = uuids.difference(&found).collect();
         if !missing.is_empty() {
             println!("");
 

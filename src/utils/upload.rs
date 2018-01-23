@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-use std::fmt;
+use std::collections::BTreeSet;
 use std::ffi::{OsStr, OsString};
+use std::fmt;
 use std::fs::File;
 use std::iter::Fuse;
 use std::path::{Path, PathBuf};
@@ -64,11 +64,11 @@ pub type ObjectBatch = Vec<ObjectRef>;
 pub struct BatchedObjectWalker<'a> {
     path: PathBuf,
     iter: Fuse<WalkDirIter>,
-    found: &'a mut HashSet<Uuid>,
-    uuids: HashSet<Uuid>,
-    kinds: HashSet<ObjectKind>,
-    classes: HashSet<ObjectClass>,
-    extensions: HashSet<OsString>,
+    found: &'a mut BTreeSet<Uuid>,
+    uuids: BTreeSet<Uuid>,
+    kinds: BTreeSet<ObjectKind>,
+    classes: BTreeSet<ObjectClass>,
+    extensions: BTreeSet<OsString>,
     max_size: Option<u64>,
 }
 
@@ -77,17 +77,17 @@ impl<'a> BatchedObjectWalker<'a> {
     ///
     /// The walker starts scanning this directory recursively and puts
     /// the UUID of every matching object file in the `found` set.
-    pub fn new(path: PathBuf, found: &'a mut HashSet<Uuid>) -> Self {
+    pub fn new(path: PathBuf, found: &'a mut BTreeSet<Uuid>) -> Self {
         let iter = WalkDir::new(&path).into_iter().fuse();
 
         BatchedObjectWalker {
             path: path,
             iter: iter,
             found: found,
-            uuids: HashSet::new(),
-            kinds: HashSet::new(),
-            classes: HashSet::new(),
-            extensions: HashSet::new(),
+            uuids: BTreeSet::new(),
+            kinds: BTreeSet::new(),
+            classes: BTreeSet::new(),
+            extensions: BTreeSet::new(),
             max_size: None,
         }
     }
@@ -207,7 +207,7 @@ impl<'a> BatchedObjectWalker<'a> {
 
     /// Determines if this UUID matches the search criteria.
     fn valid_uuid(&self, uuid: Uuid) -> bool {
-        self.uuids.is_empty() || self.uuids.contains(&uuid)
+        !self.found.contains(&uuid) && (self.uuids.is_empty() || self.uuids.contains(&uuid))
     }
 
     /// Determines if this file extension matches the search criteria.
@@ -262,15 +262,14 @@ impl<'a> BatchedObjectWalker<'a> {
             return Ok(None);
         }
 
-        let file_name = Path::new("DebugSymbols")
-            .join(path.strip_prefix(&self.path).unwrap())
-            .to_string_lossy()
-            .into_owned();
-
+        self.found.insert(uuid);
         Ok(Some(ObjectRef {
             path: path.to_path_buf(),
             checksum: get_sha1_checksum(fat.as_bytes())?,
-            name: file_name,
+            name: Path::new("DebugSymbols")
+                .join(path.strip_prefix(&self.path).unwrap())
+                .to_string_lossy()
+                .into_owned(),
             size: meta.len(),
         }))
     }
