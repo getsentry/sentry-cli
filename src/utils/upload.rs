@@ -207,7 +207,7 @@ impl<'a> BatchedObjectWalker<'a> {
 
     /// Determines if this UUID matches the search criteria.
     fn valid_uuid(&self, uuid: Uuid) -> bool {
-        self.uuids.is_empty() || self.uuids.contains(&uuid)
+        !self.found.contains(&uuid) && (self.uuids.is_empty() || self.uuids.contains(&uuid))
     }
 
     /// Determines if this file extension matches the search criteria.
@@ -262,15 +262,14 @@ impl<'a> BatchedObjectWalker<'a> {
             return Ok(None);
         }
 
-        let file_name = Path::new("DebugSymbols")
-            .join(path.strip_prefix(&self.path).unwrap())
-            .to_string_lossy()
-            .into_owned();
-
+        self.found.insert(uuid);
         Ok(Some(ObjectRef {
             path: path.to_path_buf(),
             checksum: get_sha1_checksum(fat.as_bytes())?,
-            name: file_name,
+            name: Path::new("DebugSymbols")
+                .join(path.strip_prefix(&self.path).unwrap())
+                .to_string_lossy()
+                .into_owned(),
             size: meta.len(),
         }))
     }
