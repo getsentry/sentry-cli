@@ -23,6 +23,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("no_executables")
             .long("no-executables")
             .help("Exclude executables and look for stripped symbols only."))
+        .arg(Arg::with_name("no_debug_only")
+            .long("no-debug-only")
+            .help("Exclude files only containing stripped debugging infos.")
+            .conflicts_with("no_executables"))
         .arg(Arg::with_name("uuids")
             .value_name("UUID")
             .long("uuid")
@@ -40,6 +44,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let exes = !matches.is_present("no_executables");
+    let dbgs = !matches.is_present("no_debug_only");
     let paths = match matches.values_of("paths") {
         Some(paths) => paths.map(|path| PathBuf::from(path)).collect(),
         None => vec![],
@@ -62,13 +67,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     for path in paths.into_iter() {
         let mut iter = BatchedObjectWalker::new(path, &mut found);
         iter.object_kind(ObjectKind::Elf)
-            .object_class(ObjectClass::Debug)
             .object_uuids(uuids.clone())
             .max_batch_size(context.max_size());
 
         if exes {
             iter.object_class(ObjectClass::Executable)
                 .object_class(ObjectClass::Library);
+        }
+
+        if dbgs {
+            iter.object_class(ObjectClass::Debug);
         }
 
         for (i, batch) in iter.enumerate() {
