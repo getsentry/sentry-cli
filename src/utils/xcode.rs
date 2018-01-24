@@ -16,11 +16,10 @@ use osascript;
 use unix_daemonize::{daemonize_redirect, ChdirMode};
 #[cfg(target_os="macos")]
 use mac_process_info;
-use regex::Regex;
 
 use prelude::*;
 use config::Config;
-use utils::{TempFile, expand_vars, SeekRead};
+use utils::TempFile;
 
 
 #[derive(Deserialize, Debug)]
@@ -49,28 +48,6 @@ impl fmt::Display for InfoPlist {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} ({})", self.name(), &self.version)
     }
-}
-
-pub fn expand_xcodevars(s: String, vars: &HashMap<String, String>) -> String {
-    lazy_static! {
-        static ref SEP_RE: Regex = Regex::new(r"[\s/]+").unwrap();
-    }
-    expand_vars(&s, |key| {
-        if key == "" {
-            return "".into();
-        }
-        let mut iter = key.splitn(2, ':');
-        let value = vars.get(iter.next().unwrap()).map(|x| x.as_str()).unwrap_or("");
-        match iter.next() {
-            Some("rfc1034identifier") => {
-                SEP_RE.replace_all(value, "-").into_owned()
-            },
-            Some("identifier") => {
-                SEP_RE.replace_all(value, "_").into_owned()
-            },
-            None | Some(_) => value.to_string()
-        }
-    }).into_owned()
 }
 
 fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
@@ -185,8 +162,7 @@ impl InfoPlist {
             ) {
                 (Ok(dir), Ok(filepath)) => {
                     let path: PathBuf = [dir, filepath].iter().collect();
-                    let vars: HashMap<_, _> = env::vars().collect();
-                    Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+                    Ok(Some(InfoPlist::from_path(&path)?))
                 }
                 _ => Ok(None)
             }
@@ -207,7 +183,7 @@ impl InfoPlist {
         }
     }
 
-    /// Lodas an info plist from a given project info
+    /// Loads an info plist from a given project info.
     pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>> {
         if_chain! {
             if let Some(config) = pi.get_configuration("release")
@@ -215,60 +191,25 @@ impl InfoPlist {
             if let Some(target) = pi.get_first_target();
             then {
                 let vars = pi.get_build_vars(target, config)?;
-                if let Some(path) = vars.get("INFOPLIST_FILE") {
-                    let base = vars.get("PROJECT_DIR").map(|x| Path::new(x.as_str()))
+                if let Some(path) = vars.get("INFOPLIST_PATH") {
+                    let base = vars.get("TARGET_BUILD_DIR")
+                        .map(|x| Path::new(x.as_str()))
                         .unwrap_or(pi.base_path());
                     let path = base.join(path);
-                    return Ok(Some(InfoPlist::load_and_process(path, &vars)?));
+                    return Ok(Some(InfoPlist::from_path(path)?));
                 }
             }
         }
         Ok(None)
     }
 
-    /// loads an info plist file from a path and processes it with the given vars
-    pub fn load_and_process<P: AsRef<Path>>(path: P, vars: &HashMap<String, String>)
-        -> Result<InfoPlist>
-    {
-        // do we want to preprocess the plist file?
-        let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
-            let mut c = process::Command::new("cc");
-            c.arg("-xc")
-                .arg("-P")
-                .arg("-E");
-            if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
-                for token in defs.split_whitespace() {
-                    c.arg(format!("-D{}", token));
-                }
-            }
-            c.arg(path.as_ref());
-            let p = c.output()?;
-            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))?
-        } else {
-            InfoPlist::from_path(path)?
-        };
-
-        // expand xcodevars here
-        rv.name = expand_xcodevars(rv.name, &vars);
-        rv.bundle_id = expand_xcodevars(rv.bundle_id, &vars);
-        rv.version = expand_xcodevars(rv.version, &vars);
-        rv.build = expand_xcodevars(rv.build, &vars);
-
-        Ok(rv)
-    }
-
-    /// Loads an info plist file from a path and does not process it.
+    /// Loads an info plist file from a path and processes it with the given vars
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
-        let mut f = fs::File::open(path.as_ref()).chain_err(||
-            Error::from("Could not open Info.plist file"))?;
-        InfoPlist::from_reader(&mut f)
-    }
-
-    /// Loads an info plist file from a reader.
-    pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist> {
-        let mut rdr = BufReader::new(rdr);
-        Ok(deserialize(&mut rdr).chain_err(||
-            Error::from("Could not parse Info.plist file"))?)
+        let file = fs::File::open(path.as_ref())
+            .chain_err(|| "Could not open Info.plist file")?;
+        let info_plist = deserialize(BufReader::new(file))
+            .chain_err(|| "Could not parse Info.plist file")?;
+        Ok(info_plist)
     }
 
     pub fn get_release_name(&self) -> String {
@@ -483,17 +424,4 @@ pub fn show_notification(title: &str, msg: &str) -> Result<()> {
         title: title,
         message: msg,
     }).chain_err(|| "Failed to display Xcode notification")?)
-}
-
-#[test]
-fn test_expansion() {
-    let mut vars = HashMap::new();
-    vars.insert("FOO_BAR".to_string(), "foo bar baz / blah".to_string());
-
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B".to_string(), &vars),
-               "Afoo-bar-baz-blahB".to_string());
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B".to_string(), &vars),
-               "Afoo_bar_baz_blahB".to_string());
-    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B".to_string(), &vars),
-               "Afoo_bar_baz_blahB".to_string());
 }
