@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.28.4
+
+* Revert `Info.plist` handling to pre-`1.27.1` as it was causing issues when the `"Preprocess Info.plist File"` setting was turned on in Xcode
+* Include CA certificates in the Docker container
+
 ## sentry-cli 1.28.3
 
 * Reverted new config handling because of problems it caused.
