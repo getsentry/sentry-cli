@@ -179,16 +179,13 @@ impl InfoPlist {
         // if we are loaded directly from xcode we can trust the os environment
         // and pass those variables to the processor.
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
-            match (
-                env::var("TARGET_BUILD_DIR"),
-                env::var("INFOPLIST_PATH")
-            ) {
-                (Ok(dir), Ok(filepath)) => {
-                    let path: PathBuf = [dir, filepath].iter().collect();
-                    let vars: HashMap<_, _> = env::vars().collect();
-                    Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
-                }
-                _ => Ok(None)
+            let vars: HashMap<_, _> = env::vars().collect();
+            if let Some(filename) = vars.get("INFOPLIST_FILE") {
+                let base = vars.get("PROJECT_DIR").map(|x| x.as_str()).unwrap_or(".");
+                let path = env::current_dir().unwrap().join(base).join(filename);
+                Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+            } else {
+                Ok(None)
             }
 
         // otherwise, we discover the project info from the current path and
