@@ -3,7 +3,7 @@
   "version": "1.28.2",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
-    "install": "node ./bin/install-sentry-cli",
+    "install": "node scripts/install.js",
     "fix:eslint": "eslint --fix 'bin/*' js",
     "fix:prettier": "prettier --write 'bin/*' 'js/**/*.js'",
     "fix": "npm-run-all fix:eslint fix:prettier",

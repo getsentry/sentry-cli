@@ -48,7 +48,7 @@ function createProgressBar(name, total) {
     });
   }
 
-  if ((process.env.npm_config_user_agent || '').match(/yarn/)) {
+  if (/yarn/.test(process.env.npm_config_user_agent)) {
     let pct = null;
     let current = 0;
     return {
