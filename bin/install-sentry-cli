@@ -1,200 +1,131 @@
 #!/usr/bin/env node
 
-'use strict';
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
 
-var os = require('os');
-var fs = require('fs');
-var http = require('http');
-var path = require('path');
-var url = require('url');
+const HttpsProxyAgent = require('https-proxy-agent');
+const fetch = require('node-fetch');
+const ProgressBar = require('progress');
+const Proxy = require('proxy-from-env');
 
-var platform = os.platform();
-var ProgressBar = require('progress');
-var https = require('https');
-
-var HttpsProxyAgent = require('https-proxy-agent');
-var proxy = process.env.npm_config_https_proxy || process.env.HTTPS_PROXY;
-
-var arch = os.arch();
-var spawn = require('child_process').spawn;
-
-var DEFAULT_CDN = 'https://github.com/getsentry/sentry-cli/releases/download';
-
-// downloadUrl vars
-var server;
-var fetch = https;
-var version = require('../package.json').version;
-var binaryPrefix = '/sentry-cli-';
-var releasesUrl =
+const USER_AGENT = process.env.npm_config_user_agent || '';
+const PACKAGE_VERSION = require('../package.json').version;
+const BINARY_PREFIX = '/sentry-cli-';
+const CDN_URL =
+  process.env.SENTRYCLI_LOCAL_CDNURL ||
   process.env.npm_config_sentrycli_cdnurl ||
   process.env.SENTRYCLI_CDNURL ||
-  process.env.SENTRYCLI_LOCAL_CDNURL ||
-  DEFAULT_CDN;
+  'https://github.com/getsentry/sentry-cli/releases/download';
+
+function getDownloadUrl(platform, arch) {
+  const releasesUrl = CDN_URL + '/' + PACKAGE_VERSION + BINARY_PREFIX;
+
+  switch (platform) {
+    case 'darwin':
+      return releasesUrl + 'Darwin-x86_64';
+    case 'win32':
+      return arch.indexOf('64') > -1
+        ? releasesUrl + 'Windows-x86_64.exe'
+        : releasesUrl + 'Windows-i686.exe';
+    case 'linux':
+    case 'freebsd':
+      return arch.indexOf('64') > -1
+        ? releasesUrl + 'Linux-x86_64'
+        : releasesUrl + 'Linux-i686';
+    default:
+      return null;
+  }
+}
+
+function createProgressBar(name, total) {
+  if (process.stdout.isTTY) {
+    return new ProgressBar(`fetching ${name} :bar :percent :etas`, {
+      complete: '█',
+      incomplete: '░',
+      width: 20,
+      total: total
+    });
+  }
+
+  if (USER_AGENT.match(/yarn/)) {
+    let pct = null;
+    let current = 0;
+    return {
+      tick: length => {
+        current += length;
+        const next = Math.round(current / total * 100);
+        if (next > pct) {
+          pct = next;
+          process.stdout.write(`fetching ${name} ${pct}%\n`);
+        }
+      }
+    };
+  }
+
+  return { tick: () => {} };
+}
+
+function writeBinary(input, outputPath, progressBar) {
+  const output = fs.createWriteStream(outputPath, { autoClose: true, mode: '0755' });
+  return new Promise((resolve, reject) => {
+    input.on('data', chunk => progressBar.tick(chunk.length));
+    input.on('error', e => reject(e));
+    input.pipe(output);
+
+    output.on('error', e => reject(e));
+    output.on('closed', () => resolve());
+  });
+}
+
+function downloadBinary() {
+  const arch = os.arch();
+  const platform = os.platform();
+  const outputPath = path.resolve(
+    __dirname,
+    platform === 'win32' ? 'sentry-cli.exe' : '../sentry-cli'
+  );
+
+  if (fs.existsSync(outputPath)) {
+    return;
+  }
+
+  const downloadUrl = getDownloadUrl(platform, arch);
+  if (!downloadUrl) {
+    return Promise.reject(new Error(`unsupported target ${platform}-${arch}`));
+  }
+
+  const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
+  const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
+  return fetch(downloadUrl, { redirect: 'follow', agent: agent }).then(response => {
+    if (response.status < 200 || response.status >= 300) {
+      throw new Error('Received ' + response.status + ': ' + response.statusText);
+    }
+
+    const name = downloadUrl.match(/.*\/(.*?)$/)[1];
+    const total = parseInt(response.headers.get('content-length'), 10);
+    const progressBar = createProgressBar(name, total);
+    return writeBinary(response.body, outputPath, progressBar);
+  });
+}
 
 if (process.env.SENTRYCLI_LOCAL_CDNURL) {
-  fetch = http;
-  server = http
-    .createServer(function(request, response) {
+  // For testing, mock the CDN by spawning a local server
+  const server = require('http')
+    .createServer((request, response) => {
       response.writeHead(200, { 'Content-Type': 'application/octet-stream' });
       var contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
       response.write(contents);
       response.end();
     })
     .listen(8999);
-  console.log('TEST SERVER started');
+
+  process.on('exit', () => server.close());
 }
 
-// output vars
-var outputPath = path.resolve(
-  __dirname,
-  platform === 'win32' ? 'sentry-cli.exe' : '../sentry-cli'
-);
-
-var downloadUrl = null;
-releasesUrl += '/' + version + binaryPrefix;
-
-// macOS
-if (platform === 'darwin') {
-  downloadUrl = releasesUrl + 'Darwin-x86_64';
-  // Windows
-} else if (platform === 'win32') {
-  if (arch.indexOf('64') > -1) {
-    downloadUrl = releasesUrl + 'Windows-x86_64.exe';
-  } else {
-    downloadUrl = releasesUrl + 'Windows-i686.exe';
-  }
-  // Linux
-} else if (platform === 'linux' || platform === 'freebsd') {
-  if (arch.indexOf('64') > -1) {
-    downloadUrl = releasesUrl + 'Linux-x86_64';
-  } else {
-    downloadUrl = releasesUrl + 'Linux-i686';
-  }
-}
-
-if (downloadUrl === null) {
-  console.log(
-    'error: your platform and architecture (' +
-      platform +
-      '-' +
-      arch +
-      ') is unsupported.'
-  );
-  process.exit(1);
-}
-
-// Returns the request options for a given URL.
-// Adds in a proxy agent if one is required.
-function requestOptions(requestUrl) {
-  var opts = url.parse(requestUrl);
-
-  if (proxy) {
-    opts.agent = new HttpsProxyAgent(proxy);
-  }
-
-  return opts;
-}
-
-// Download the binary from the response
-function downloadBinary(res) {
-  var fn = downloadUrl.match(/.*\/(.*?)$/)[1];
-  var total = parseInt(res.headers['content-length'], 10);
-  var pct = -1;
-  var downloaded = 0;
-  var progress = null;
-  var isYarn = false;
-  if (process.stdout.isTTY) {
-    progress = new ProgressBar('fetching ' + fn + ' :bar :percent :etas', {
-      complete: '█',
-      incomplete: '░',
-      width: 20,
-      total: total
-    });
-  } else if ((process.env.npm_config_user_agent || '').match(/yarn/)) {
-    isYarn = true;
-  }
-  var download = fs.createWriteStream(outputPath, { mode: '0755' });
-  res.pipe(download);
-  res.on('data', function(chunk) {
-    downloaded += chunk.length;
-    if (process.stdout.isTTY) {
-      progress.tick(chunk.length);
-    } else if (isYarn) {
-      var newPct = Math.round(downloaded / total * 100);
-      if (newPct !== pct) {
-        pct = newPct;
-        process.stdout.write('fetching ' + fn + ' ' + pct + '%\n');
-      }
-    }
-  });
-  download.on('error', function(err) {
-    console.log(err);
+downloadBinary()
+  .then(() => process.exit(0))
+  .catch(e => {
+    console.error(e.toString());
     process.exit(1);
   });
-  download.on('close', function() {
-    var output = '';
-    var child = spawn(outputPath, ['--version'], {
-      stdio: ['pipe', 'pipe', process.stderr]
-    });
-    child.stdout.on('data', function(data) {
-      output += data;
-    });
-    child.on('close', function(code) {
-      if (code !== 0) {
-        console.log('Something went wrong!');
-        console.error(output);
-        process.exit(1);
-      } else {
-        if (output.trim() !== 'sentry-cli ' + version + '') {
-          console.error(
-            'Warning! Unexpected sentry-cli version: ',
-            output.trim().split(' ')[1],
-            'expected: ' + version + '!'
-          );
-        }
-        if (server) {
-          server.close();
-        }
-        process.exit(0);
-      }
-    });
-  });
-}
-
-// Count redirects, just in case we get a loop.
-// Pretty sure this can't happen with the github releases URL
-var redirectCt = 0;
-function handleResponse(res) {
-  if (res.statusCode === 302) {
-    redirectCt += 1;
-    if (redirectCt > 10) {
-      console.log('error: Too many redirects!');
-      process.exit(1);
-    }
-    fetch
-      .get(requestOptions(res.headers.Location || res.headers.location), handleResponse)
-      .on('error', function(err) {
-        console.log(err);
-        process.exit(1);
-      });
-  } else if (res.statusCode >= 200 && res.statusCode < 300) {
-    downloadBinary(res);
-  } else {
-    console.log('Received ' + res.statusCode + ': ' + res.statusMessage);
-    process.exit(1);
-  }
-}
-
-function shouldDownloadScript() {
-  return !fs.existsSync(outputPath);
-}
-
-// Start download
-if (shouldDownloadScript()) {
-  fetch.get(requestOptions(downloadUrl), handleResponse).on('error', function(err) {
-    console.log(err);
-    process.exit(1);
-  });
-} else if (server) {
-  server.close();
-}

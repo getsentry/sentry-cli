@@ -31,7 +31,9 @@
   },
   "dependencies": {
     "https-proxy-agent": "^2.1.1",
-    "progress": "2.0.0"
+    "node-fetch": "^1.7.3",
+    "progress": "2.0.0",
+    "proxy-from-env": "^1.0.0"
   },
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
   "license": "BSD-3-Clause",
