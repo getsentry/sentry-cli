@@ -10,9 +10,9 @@ const fetch = require('node-fetch');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
 
-const USER_AGENT = process.env.npm_config_user_agent || '';
-const PACKAGE_VERSION = require('../package.json').version;
-const BINARY_PREFIX = '/sentry-cli-';
+const pkgInfo = require('../package.json');
+const helper = require('../js/helper');
+
 const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
   process.env.npm_config_sentrycli_cdnurl ||
@@ -20,8 +20,7 @@ const CDN_URL =
   'https://github.com/getsentry/sentry-cli/releases/download';
 
 function getDownloadUrl(platform, arch) {
-  const releasesUrl = CDN_URL + '/' + PACKAGE_VERSION + BINARY_PREFIX;
-
+  const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli-`;
   switch (platform) {
     case 'darwin':
       return releasesUrl + 'Darwin-x86_64';
@@ -49,7 +48,7 @@ function createProgressBar(name, total) {
     });
   }
 
-  if (USER_AGENT.match(/yarn/)) {
+  if ((process.env.npm_config_user_agent || '').match(/yarn/)) {
     let pct = null;
     let current = 0;
     return {
@@ -93,7 +92,7 @@ function downloadBinary() {
   }
 
   return fetch(downloadUrl, { redirect: 'follow', agent }).then(response => {
-    if (response.status < 200 || response.status >= 300) {
+    if (!response.ok) {
       throw new Error('Received ' + response.status + ': ' + response.statusText);
     }
 
@@ -121,8 +120,7 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
         'Content-Type': 'application/octet-stream',
         'Content-Length': String(contents.byteLength)
       });
-      response.write(contents);
-      response.end();
+      response.end(contents);
     })
     .listen(8999);
 
