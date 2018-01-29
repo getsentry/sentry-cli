@@ -88,7 +88,7 @@ function downloadBinary() {
   );
 
   if (fs.existsSync(outputPath)) {
-    return;
+    return Promise.resolve();
   }
 
   const downloadUrl = getDownloadUrl(platform, arch);
