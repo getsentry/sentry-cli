@@ -98,7 +98,13 @@ function downloadBinary() {
 
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
   const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
-  return fetch(downloadUrl, { redirect: 'follow', agent: agent }).then(response => {
+
+  // temporary fix for https://github.com/TooTallNate/node-https-proxy-agent/pull/43
+  if (agent) {
+    agent.defaultPort = 443;
+  }
+
+  return fetch(downloadUrl, { redirect: 'follow', agent }).then(response => {
     if (response.status < 200 || response.status >= 300) {
       throw new Error('Received ' + response.status + ': ' + response.statusText);
     }
