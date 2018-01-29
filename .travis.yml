@@ -22,15 +22,6 @@ matrix:
     - os: linux
       sudo: false
       language: node_js
-      node_js: "0.12"
-      install: true
-      script: npm install --production
-      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
-
-    # Node.js 4
-    - os: linux
-      sudo: false
-      language: node_js
       node_js: "4"
       install: true
       script: npm install && npm test
