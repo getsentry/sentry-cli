@@ -67,18 +67,6 @@ function createProgressBar(name, total) {
   return { tick: () => {} };
 }
 
-function writeBinary(input, outputPath, progressBar) {
-  const output = fs.createWriteStream(outputPath, { autoClose: true, mode: '0755' });
-  return new Promise((resolve, reject) => {
-    input.on('data', chunk => progressBar.tick(chunk.length));
-    input.on('error', e => reject(e));
-    input.pipe(output);
-
-    output.on('error', e => reject(e));
-    output.on('closed', () => resolve());
-  });
-}
-
 function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
@@ -112,7 +100,15 @@ function downloadBinary() {
     const name = downloadUrl.match(/.*\/(.*?)$/)[1];
     const total = parseInt(response.headers.get('content-length'), 10);
     const progressBar = createProgressBar(name, total);
-    return writeBinary(response.body, outputPath, progressBar);
+
+    return new Promise((resolve, reject) => {
+      response.body
+        .on('error', e => reject(e))
+        .on('data', chunk => progressBar.tick(chunk.length))
+        .pipe(fs.createWriteStream(outputPath, { mode: '0755' }))
+        .on('error', e => reject(e))
+        .on('finish', () => resolve());
+    });
   });
 }
 
