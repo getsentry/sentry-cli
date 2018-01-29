@@ -120,8 +120,11 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   // For testing, mock the CDN by spawning a local server
   const server = require('http')
     .createServer((request, response) => {
-      response.writeHead(200, { 'Content-Type': 'application/octet-stream' });
       var contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
+      response.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': String(contents.byteLength)
+      });
       response.write(contents);
       response.end();
     })
