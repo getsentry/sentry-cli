@@ -111,6 +111,16 @@ function downloadBinary() {
   });
 }
 
+function checkVersion() {
+  return helper.execute(['--version']).then(output => {
+    const version = output.replace('sentry-cli ', '').trim();
+    const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
+    if (version !== expected) {
+      throw new Error(`Unexpected sentry-cli version: ${version}`);
+    }
+  });
+}
+
 if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   // For testing, mock the CDN by spawning a local server
   const server = require('http')
@@ -128,6 +138,7 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
 }
 
 downloadBinary()
+  .then(() => checkVersion())
   .then(() => process.exit(0))
   .catch(e => {
     console.error(e.toString());
