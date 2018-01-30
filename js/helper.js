@@ -73,10 +73,11 @@ module.exports = {
     var that = this;
     return new Promise(function(resolve, reject) {
       childProcess.execFile(that.getPath(), args, { env: env }, function(err, stdout) {
-        if (err) return reject(err);
-        // eslint-disable-next-line
-        console.log(stdout);
-        return resolve(stdout);
+        if (err) {
+          reject(err);
+        } else {
+          resolve(stdout);
+        }
       });
     });
   }
