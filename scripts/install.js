@@ -1,0 +1,146 @@
+#!/usr/bin/env node
+'use strict';
+
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+
+const HttpsProxyAgent = require('https-proxy-agent');
+const fetch = require('node-fetch');
+const ProgressBar = require('progress');
+const Proxy = require('proxy-from-env');
+
+const pkgInfo = require('../package.json');
+const helper = require('../js/helper');
+
+const CDN_URL =
+  process.env.SENTRYCLI_LOCAL_CDNURL ||
+  process.env.npm_config_sentrycli_cdnurl ||
+  process.env.SENTRYCLI_CDNURL ||
+  'https://github.com/getsentry/sentry-cli/releases/download';
+
+function getDownloadUrl(platform, arch) {
+  const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli-`;
+  switch (platform) {
+    case 'darwin':
+      return releasesUrl + 'Darwin-x86_64';
+    case 'win32':
+      return arch.indexOf('64') > -1
+        ? releasesUrl + 'Windows-x86_64.exe'
+        : releasesUrl + 'Windows-i686.exe';
+    case 'linux':
+    case 'freebsd':
+      return arch.indexOf('64') > -1
+        ? releasesUrl + 'Linux-x86_64'
+        : releasesUrl + 'Linux-i686';
+    default:
+      return null;
+  }
+}
+
+function createProgressBar(name, total) {
+  if (process.stdout.isTTY) {
+    return new ProgressBar(`fetching ${name} :bar :percent :etas`, {
+      complete: '█',
+      incomplete: '░',
+      width: 20,
+      total
+    });
+  }
+
+  if (/yarn/.test(process.env.npm_config_user_agent)) {
+    let pct = null;
+    let current = 0;
+    return {
+      tick: length => {
+        current += length;
+        const next = Math.round(current / total * 100);
+        if (next > pct) {
+          pct = next;
+          process.stdout.write(`fetching ${name} ${pct}%\n`);
+        }
+      }
+    };
+  }
+
+  return { tick: () => {} };
+}
+
+function downloadBinary() {
+  const arch = os.arch();
+  const platform = os.platform();
+  const outputPath = path.resolve(
+    __dirname,
+    platform === 'win32' ? 'sentry-cli.exe' : '../sentry-cli'
+  );
+
+  if (fs.existsSync(outputPath)) {
+    return Promise.resolve();
+  }
+
+  const downloadUrl = getDownloadUrl(platform, arch);
+  if (!downloadUrl) {
+    return Promise.reject(new Error(`unsupported target ${platform}-${arch}`));
+  }
+
+  const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
+  const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
+
+  // temporary fix for https://github.com/TooTallNate/node-https-proxy-agent/pull/43
+  if (agent) {
+    agent.defaultPort = 443;
+  }
+
+  return fetch(downloadUrl, { redirect: 'follow', agent }).then(response => {
+    if (!response.ok) {
+      throw new Error('Received ' + response.status + ': ' + response.statusText);
+    }
+
+    const name = downloadUrl.match(/.*\/(.*?)$/)[1];
+    const total = parseInt(response.headers.get('content-length'), 10);
+    const progressBar = createProgressBar(name, total);
+
+    return new Promise((resolve, reject) => {
+      response.body
+        .on('error', e => reject(e))
+        .on('data', chunk => progressBar.tick(chunk.length))
+        .pipe(fs.createWriteStream(outputPath, { mode: '0755' }))
+        .on('error', e => reject(e))
+        .on('finish', () => resolve());
+    });
+  });
+}
+
+function checkVersion() {
+  return helper.execute(['--version']).then(output => {
+    const version = output.replace('sentry-cli ', '').trim();
+    const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
+    if (version !== expected) {
+      throw new Error(`Unexpected sentry-cli version: ${version}`);
+    }
+  });
+}
+
+if (process.env.SENTRYCLI_LOCAL_CDNURL) {
+  // For testing, mock the CDN by spawning a local server
+  const server = require('http')
+    .createServer((request, response) => {
+      var contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
+      response.writeHead(200, {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': String(contents.byteLength)
+      });
+      response.end(contents);
+    })
+    .listen(8999);
+
+  process.on('exit', () => server.close());
+}
+
+downloadBinary()
+  .then(() => checkVersion())
+  .then(() => process.exit(0))
+  .catch(e => {
+    console.error(e.toString());
+    process.exit(1);
+  });

@@ -3,7 +3,7 @@
   "version": "1.28.4",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
-    "install": "node ./bin/install-sentry-cli",
+    "install": "node scripts/install.js",
     "fix:eslint": "eslint --fix 'bin/*' js",
     "fix:prettier": "prettier --write 'bin/*' 'js/**/*.js'",
     "fix": "npm-run-all fix:eslint fix:prettier",
@@ -30,7 +30,10 @@
     "sentry-cli": "bin/sentry-cli"
   },
   "dependencies": {
-    "progress": "2.0.0"
+    "https-proxy-agent": "^2.1.1",
+    "node-fetch": "^1.7.3",
+    "progress": "2.0.0",
+    "proxy-from-env": "^1.0.0"
   },
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
   "license": "BSD-3-Clause",
@@ -44,7 +47,7 @@
     "prettier-check": "^2.0.0"
   },
   "engines": {
-    "node": ">= 0.12.18"
+    "node": ">= 4.5.0"
   },
   "jest": {
     "collectCoverage": true,
