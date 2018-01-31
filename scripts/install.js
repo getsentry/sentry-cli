@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+
 'use strict';
 
-const os = require('os');
 const fs = require('fs');
+const http = require('http');
+const os = require('os');
 const path = require('path');
 
 const HttpsProxyAgent = require('https-proxy-agent');
@@ -10,8 +12,8 @@ const fetch = require('node-fetch');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
 
-const pkgInfo = require('../package.json');
 const helper = require('../js/helper');
+const pkgInfo = require('../package.json');
 
 const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
@@ -20,19 +22,16 @@ const CDN_URL =
   'https://github.com/getsentry/sentry-cli/releases/download';
 
 function getDownloadUrl(platform, arch) {
-  const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli-`;
+  const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli`;
+  const archString = arch.indexOf('64') > -1 ? 'x86_64' : 'i686';
   switch (platform) {
     case 'darwin':
-      return releasesUrl + 'Darwin-x86_64';
+      return `${releasesUrl}-Darwin-x86_64`;
     case 'win32':
-      return arch.indexOf('64') > -1
-        ? releasesUrl + 'Windows-x86_64.exe'
-        : releasesUrl + 'Windows-i686.exe';
+      return `${releasesUrl}-Windows-${archString}.exe`;
     case 'linux':
     case 'freebsd':
-      return arch.indexOf('64') > -1
-        ? releasesUrl + 'Linux-x86_64'
-        : releasesUrl + 'Linux-i686';
+      return `${releasesUrl}-Linux-${archString}`;
     default:
       return null;
   }
@@ -44,7 +43,7 @@ function createProgressBar(name, total) {
       complete: '█',
       incomplete: '░',
       width: 20,
-      total
+      total,
     });
   }
 
@@ -59,7 +58,7 @@ function createProgressBar(name, total) {
           pct = next;
           process.stdout.write(`fetching ${name} ${pct}%\n`);
         }
-      }
+      },
     };
   }
 
@@ -93,7 +92,7 @@ function downloadBinary() {
 
   return fetch(downloadUrl, { redirect: 'follow', agent }).then(response => {
     if (!response.ok) {
-      throw new Error('Received ' + response.status + ': ' + response.statusText);
+      throw new Error(`Received ${response.status}: ${response.statusText}`);
     }
 
     const name = downloadUrl.match(/.*\/(.*?)$/)[1];
@@ -123,17 +122,16 @@ function checkVersion() {
 
 if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   // For testing, mock the CDN by spawning a local server
-  const server = require('http')
-    .createServer((request, response) => {
-      var contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
-      response.writeHead(200, {
-        'Content-Type': 'application/octet-stream',
-        'Content-Length': String(contents.byteLength)
-      });
-      response.end(contents);
-    })
-    .listen(8999);
+  const server = http.createServer((request, response) => {
+    const contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
+    response.writeHead(200, {
+      'Content-Type': 'application/octet-stream',
+      'Content-Length': String(contents.byteLength),
+    });
+    response.end(contents);
+  });
 
+  server.listen(8999);
   process.on('exit', () => server.close());
 }
 
@@ -141,6 +139,7 @@ downloadBinary()
   .then(() => checkVersion())
   .then(() => process.exit(0))
   .catch(e => {
+    // eslint-disable-next-line no-console
     console.error(e.toString());
     process.exit(1);
   });

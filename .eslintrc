@@ -1,8 +1,7 @@
 {
-    "extends": ["es5", "prettier"],
-    "rules": {
-        "no-console": "off",
-        "no-process-exit": "off",
-        "func-names": "off"
-    }
+  "extends": ["airbnb-base", "prettier"],
+  "rules": {
+    "prefer-destructuring": "off",
+    "strict": "off"
+  }
 }

@@ -1,9 +1,9 @@
 /* eslint-env jest */
 
-var SentryCli = require('../');
+const SentryCli = require('../');
 
-describe('SentryCli', function() {
-  test('call getPath', function() {
+describe('SentryCli', () => {
+  test('call getPath', () => {
     expect(SentryCli.getPath()).toContain('sentry-cli');
   });
 });
