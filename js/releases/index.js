@@ -53,7 +53,9 @@ module.exports = {
    * @memberof SentryReleases
    */
   proposeVersion() {
-    return helper.execute(['releases', 'propose-version']);
+    return helper
+      .execute(['releases', 'propose-version'])
+      .then(version => version && version.trim());
   },
 
   /**
