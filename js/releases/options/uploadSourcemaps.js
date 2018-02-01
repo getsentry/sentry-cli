@@ -21,7 +21,7 @@ module.exports = {
   },
   stripCommonPrefix: {
     param: '--strip-common-prefix',
-    type: 'array',
+    type: 'boolean',
   },
   validate: {
     param: '--validate',
@@ -33,6 +33,6 @@ module.exports = {
   },
   ext: {
     param: '--ext',
-    type: 'string',
+    type: 'array',
   },
 };
