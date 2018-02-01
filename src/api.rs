@@ -11,9 +11,9 @@ use std::fmt;
 use std::error;
 use std::thread;
 use std::sync::Arc;
-use std::cell::{RefMut, RefCell};
+use std::cell::{RefCell, RefMut};
 use std::path::Path;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::rc::Rc;
 
@@ -22,16 +22,15 @@ use serde::de::DeserializeOwned;
 use serde_json;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use curl;
-use chrono::{Duration, DateTime, Utc};
+use chrono::{DateTime, Duration, Utc};
 use indicatif::ProgressBar;
-use regex::{Regex, Captures};
+use regex::{Captures, Regex};
 
 use utils;
 use utils::xcode::InfoPlist;
 use event::Event;
-use config::{Config, Auth, Dsn};
-use constants::{PLATFORM, ARCH, EXT, VERSION};
-
+use config::{Auth, Config, Dsn};
+use constants::{ARCH, EXT, PLATFORM, VERSION};
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
@@ -163,12 +162,13 @@ impl Api {
         let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
             (Cow::Borrowed(url), None)
         } else {
-            (Cow::Owned(match self.config.get_api_endpoint(url) {
-                Ok(rv) => rv,
-                Err(err) => {
-                    return Err(Error::BadApiUrl(err.to_string()));
-                }
-            }), self.config.get_auth())
+            (
+                Cow::Owned(match self.config.get_api_endpoint(url) {
+                    Ok(rv) => rv,
+                    Err(err) => return Err(Error::BadApiUrl(err.to_string())),
+                }),
+                self.config.get_auth(),
+            )
         };
 
         // the proxy url is discovered from the http_proxy envvar.
@@ -196,17 +196,23 @@ impl Api {
 
     /// Convenience method that performs a `POST` request with JSON data.
     pub fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.request(Method::Post, path)?.with_json_body(body)?.send()
+        self.request(Method::Post, path)?
+            .with_json_body(body)?
+            .send()
     }
 
     /// Convenience method that performs a `PUT` request with JSON data.
     pub fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.request(Method::Put, path)?.with_json_body(body)?.send()
+        self.request(Method::Put, path)?
+            .with_json_body(body)?
+            .send()
     }
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, &url)?.follow_location(true)?.send_into(dst)
+        self.request(Method::Get, &url)?
+            .follow_location(true)?
+            .send_into(dst)
     }
 
     /// Convenience method that downloads a file into the given file object
@@ -224,13 +230,11 @@ impl Api {
         let started = Utc::now();
         loop {
             match self.request(Method::Get, &url)?.send() {
-                Ok(_) => { return Ok(true); }
-                Err(err) => {
-                    match err {
-                        Error::Http(..) | Error::Curl(..) => {}
-                        err => { return Err(err); }
-                    }
-                }
+                Ok(_) => return Ok(true),
+                Err(err) => match err {
+                    Error::Http(..) | Error::Curl(..) => {}
+                    err => return Err(err),
+                },
             }
             thread::sleep(Duration::milliseconds(500).to_std().unwrap());
             if Utc::now() - duration > started {
@@ -248,39 +252,53 @@ impl Api {
     }
 
     /// Lists all the release file for the given `release`.
-    pub fn list_release_files(&self,
-                              org: &str,
-                              project: Option<&str>,
-                              release: &str)
-                              -> ApiResult<Vec<Artifact>> {
-        if let Some(project) = project {
-            self.get(&format!("/projects/{}/{}/releases/{}/files/",
-                              PathArg(org),
-                              PathArg(project),
-                              PathArg(release)))?
-                .convert_rnf("release")
+    pub fn list_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+    ) -> ApiResult<Vec<Artifact>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(release)
+            )
         } else {
-            self.get(&format!("/organizations/{}/releases/{}/files/",
-                              PathArg(org),
-                              PathArg(release)))?
-                .convert_rnf("release")
-        }
+            format!(
+                "/organizations/{}/releases/{}/files/",
+                PathArg(org),
+                PathArg(release)
+            )
+        };
+        self.get(&path)?.convert_rnf("release")
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
     /// deleted or `false` otherwise.
-    pub fn delete_release_file(&self,
-                               org: &str,
-                               project: Option<&str>,
-                               version: &str,
-                               file_id: &str)
-                               -> ApiResult<bool> {
+    pub fn delete_release_file(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        file_id: &str,
+    ) -> ApiResult<bool> {
         let path = if let Some(project) = project {
-            format!("/projects/{}/{}/releases/{}/files/{}/",
-                    PathArg(org), PathArg(project), PathArg(version), PathArg(file_id))
+            format!(
+                "/projects/{}/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version),
+                PathArg(file_id)
+            )
         } else {
-            format!("/organizations/{}/releases/{}/files/{}/",
-                    PathArg(org), PathArg(version), PathArg(file_id))
+            format!(
+                "/organizations/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(version),
+                PathArg(file_id)
+            )
         };
 
         let resp = self.delete(&path)?;
@@ -293,21 +311,29 @@ impl Api {
 
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
-    pub fn upload_release_file(&self,
-                               org: &str,
-                               project: Option<&str>,
-                               version: &str,
-                               contents: FileContents,
-                               name: &str,
-                               dist: Option<&str>,
-                               headers: Option<&[(String, String)]>)
-                               -> ApiResult<Option<Artifact>> {
+    pub fn upload_release_file(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        contents: FileContents,
+        name: &str,
+        dist: Option<&str>,
+        headers: Option<&[(String, String)]>,
+    ) -> ApiResult<Option<Artifact>> {
         let path = if let Some(project) = project {
-            format!("/projects/{}/{}/releases/{}/files/", PathArg(org), PathArg(project),
-                    PathArg(version))
+            format!(
+                "/projects/{}/{}/releases/{}/files/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
         } else {
-            format!("/organizations/{}/releases/{}/files/", PathArg(org),
-                    PathArg(version))
+            format!(
+                "/organizations/{}/releases/{}/files/",
+                PathArg(org),
+                PathArg(version)
+            )
         };
         let mut form = curl::easy::Form::new();
         match contents {
@@ -347,71 +373,88 @@ impl Api {
     }
 
     /// Creates a new release.
-    pub fn new_release(&self,
-                       org: &str,
-                       release: &NewRelease)
-                       -> ApiResult<ReleaseInfo> {
+    pub fn new_release(&self, org: &str, release: &NewRelease) -> ApiResult<ReleaseInfo> {
         // for single project releases use the legacy endpoint that is project bound.
         // This means we can support both old and new servers.
         if release.projects.len() == 1 {
-            self.post(&format!("/projects/{}/{}/releases/", PathArg(org),
-                               PathArg(&release.projects[0])), release)?
+            let path = format!(
+                "/projects/{}/{}/releases/",
+                PathArg(org),
+                PathArg(&release.projects[0])
+            );
+            self.post(&path, release)?
                 .convert_rnf("organization or project")
         } else {
-            self.post(&format!("/organizations/{}/releases/", PathArg(org)), release)?
-                .convert_rnf("organization")
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            self.post(&path, release)?.convert_rnf("organization")
         }
     }
 
     /// Updates a release.
-    pub fn update_release(&self,
-                          org: &str,
-                          version: &str,
-                          release: &UpdatedRelease)
-        -> ApiResult<ReleaseInfo>
-    {
+    pub fn update_release(
+        &self,
+        org: &str,
+        version: &str,
+        release: &UpdatedRelease,
+    ) -> ApiResult<ReleaseInfo> {
         if_chain! {
             if let Some(ref projects) = release.projects;
             if projects.len() == 1;
             then {
-                self.put(&format!("/projects/{}/{}/releases/{}/", PathArg(org),
-                                  PathArg(&projects[0]),
-                                  PathArg(version)), release)?
-                    .convert_rnf("release")
+                let path = format!("/projects/{}/{}/releases/{}/",
+                    PathArg(org),
+                    PathArg(&projects[0]),
+                    PathArg(version)
+                );
+                self.put(&path, release)?.convert_rnf("release")
             } else {
-                self.put(&format!("/organizations/{}/releases/{}/", PathArg(org),
-                                  PathArg(version)), release)?
-                    .convert_rnf("release")
+                let path = format!("/organizations/{}/releases/{}/", PathArg(org), PathArg(version));
+                self.put(&path, release)?.convert_rnf("release")
             }
         }
     }
 
     /// Sets release commits
-    pub fn set_release_refs(&self, org: &str, version: &str,
-                            refs: Vec<Ref>)
-        -> ApiResult<ReleaseInfo>
-    {
+    pub fn set_release_refs(
+        &self,
+        org: &str,
+        version: &str,
+        refs: Vec<Ref>,
+    ) -> ApiResult<ReleaseInfo> {
         let update = UpdatedRelease {
             refs: Some(refs),
             ..Default::default()
         };
-        self.put(&format!("/organizations/{}/releases/{}/", PathArg(org),
-                          PathArg(version)), &update)?
-            .convert_rnf("release")
+        let path = format!(
+            "/organizations/{}/releases/{}/",
+            PathArg(org),
+            PathArg(version)
+        );
+        self.put(&path, &update)?.convert_rnf("release")
     }
 
     /// Deletes an already existing release.  Returns `true` if it was deleted
     /// or `false` if not.  The project is needed to support the old deletion
     /// API.
-    pub fn delete_release(&self, org: &str, project: Option<&str>,
-                          version: &str) -> ApiResult<bool> {
+    pub fn delete_release(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<bool> {
         let resp = if let Some(project) = project {
-            self.delete(&format!("/projects/{}/{}/releases/{}/",
-                                 PathArg(org), PathArg(project),
-                                 PathArg(version)))?
+            self.delete(&format!(
+                "/projects/{}/{}/releases/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            ))?
         } else {
-            self.delete(&format!("/organizations/{}/releases/{}/",
-                                 PathArg(org), PathArg(version)))?
+            self.delete(&format!(
+                "/organizations/{}/releases/{}/",
+                PathArg(org),
+                PathArg(version)
+            ))?
         };
         if resp.status() == 404 {
             Ok(false)
@@ -422,17 +465,25 @@ impl Api {
 
     /// Looks up a release and returns it.  If it does not exist `None`
     /// will be returned.
-    pub fn get_release(&self,
-                       org: &str,
-                       project: Option<&str>,
-                       version: &str)
-                       -> ApiResult<Option<ReleaseInfo>> {
+    pub fn get_release(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<Option<ReleaseInfo>> {
         let path = if let Some(project) = project {
-            format!("/projects/{}/{}/releases/{}/", PathArg(org),
-                    PathArg(project), PathArg(version))
+            format!(
+                "/projects/{}/{}/releases/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
         } else {
-            format!("/organizations/{}/releases/{}/", PathArg(org),
-                    PathArg(version))
+            format!(
+                "/organizations/{}/releases/{}/",
+                PathArg(org),
+                PathArg(version)
+            )
         };
         let resp = self.get(&path)?;
         if resp.status() == 404 {
@@ -444,55 +495,62 @@ impl Api {
 
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str, project: Option<&str>)
-        -> ApiResult<Vec<ReleaseInfo>>
-    {
+    pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
         if let Some(project) = project {
-            self.get(&format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project)))?
-                .convert_rnf("organization or project")
+            let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
+            self.get(&path)?.convert_rnf("organization or project")
         } else {
-            self.get(&format!("/organizations/{}/releases/", PathArg(org)))?
-                .convert_rnf("organization")
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            self.get(&path)?.convert_rnf("organization")
         }
     }
 
     /// Creates a new deploy for a release.
-    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy)
-        -> ApiResult<Deploy>
-    {
-        self.post(&format!("/organizations/{}/releases/{}/deploys/",
-                           PathArg(org), PathArg(version)), deploy)?
+    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy) -> ApiResult<Deploy> {
+        let path = format!(
+            "/organizations/{}/releases/{}/deploys/",
+            PathArg(org),
+            PathArg(version)
+        );
+
+        self.post(&path, deploy)?
             .convert_rnf("organization or release")
     }
 
     /// Lists all deploys for a release
-    pub fn list_deploys(&self, org: &str, version: &str)
-        -> ApiResult<Vec<Deploy>>
-    {
-        self.get(&format!("/organizations/{}/releases/{}/deploys/",
-                          PathArg(org), PathArg(version)))?
-            .convert_rnf("organization or release")
+    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy>> {
+        let path = format!(
+            "/organizations/{}/releases/{}/deploys/",
+            PathArg(org),
+            PathArg(version)
+        );
+        self.get(&path)?.convert_rnf("organization or release")
     }
 
     /// Updates a bunch of issues within a project that match a provided filter
     /// and performs `changes` changes.
-    pub fn bulk_update_issue(&self,
-                             org: &str,
-                             project: &str,
-                             filter: &IssueFilter,
-                             changes: &IssueChanges)
-                             -> ApiResult<bool> {
+    pub fn bulk_update_issue(
+        &self,
+        org: &str,
+        project: &str,
+        filter: &IssueFilter,
+        changes: &IssueChanges,
+    ) -> ApiResult<bool> {
         let qs = match filter.get_query_string() {
             None => {
                 return Ok(false);
             }
             Some(qs) => qs,
         };
-        self.put(&format!("/projects/{}/{}/issues/?{}",
-                          PathArg(org),
-                          PathArg(project),
-                          qs),
-                 changes)?
+        self.put(
+            &format!(
+                "/projects/{}/{}/issues/?{}",
+                PathArg(org),
+                PathArg(project),
+                qs
+            ),
+            changes,
+        )?
             .to_result()
             .map(|_| true)
     }
@@ -500,10 +558,12 @@ impl Api {
     /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
         let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
-        let ref_name = format!("sentry-cli-{}-{}{}",
-                               utils::capitalize_string(PLATFORM),
-                               ARCH,
-                               EXT);
+        let ref_name = format!(
+            "sentry-cli-{}-{}{}",
+            utils::capitalize_string(PLATFORM),
+            ARCH,
+            EXT
+        );
         info!("Looking for file named: {}", ref_name);
 
         if resp.status() == 404 {
@@ -526,14 +586,17 @@ impl Api {
 
     /// Given a list of checksums for Dsym files this returns a list of those
     /// that do not exist for the project yet.
-    pub fn find_missing_dsym_checksums(&self,
-                                       org: &str,
-                                       project: &str,
-                                       checksums: &Vec<&str>)
-                                       -> ApiResult<HashSet<String>> {
-        let mut url = format!("/projects/{}/{}/files/dsyms/unknown/?",
-                              PathArg(org),
-                              PathArg(project));
+    pub fn find_missing_dsym_checksums(
+        &self,
+        org: &str,
+        project: &str,
+        checksums: &Vec<&str>,
+    ) -> ApiResult<HashSet<String>> {
+        let mut url = format!(
+            "/projects/{}/{}/files/dsyms/unknown/?",
+            PathArg(org),
+            PathArg(project)
+        );
         for (idx, checksum) in checksums.iter().enumerate() {
             if idx > 0 {
                 url.push('&');
@@ -548,52 +611,71 @@ impl Api {
 
     /// Uploads a dsym file from the given path.
     pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path) -> ApiResult<Vec<DSymFile>> {
-        let path = format!("/projects/{}/{}/files/dsyms/",
-                           PathArg(org),
-                           PathArg(project));
+        let path = format!(
+            "/projects/{}/{}/files/dsyms/",
+            PathArg(org),
+            PathArg(project)
+        );
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
         self.request(Method::Post, &path)?
             .with_form_data(form)?
             .progress_bar_mode(ProgressBarMode::Request)?
-            .send()?.convert()
+            .send()?
+            .convert()
     }
 
     /// Associate apple debug symbols with a build
-    pub fn associate_apple_dsyms(&self, org: &str, project: &str,
-                                 info_plist: &InfoPlist, checksums: Vec<String>)
-        -> ApiResult<Option<AssociateDsymsResponse>>
-    {
-        self.associate_dsyms(org, project, &AssociateDsyms {
-            platform: "apple".to_string(),
-            checksums: checksums,
-            name: info_plist.name().to_string(),
-            app_id: info_plist.bundle_id().to_string(),
-            version: info_plist.version().to_string(),
-            build: Some(info_plist.build().to_string()),
-        })
+    pub fn associate_apple_dsyms(
+        &self,
+        org: &str,
+        project: &str,
+        info_plist: &InfoPlist,
+        checksums: Vec<String>,
+    ) -> ApiResult<Option<AssociateDsymsResponse>> {
+        self.associate_dsyms(
+            org,
+            project,
+            &AssociateDsyms {
+                platform: "apple".to_string(),
+                checksums: checksums,
+                name: info_plist.name().to_string(),
+                app_id: info_plist.bundle_id().to_string(),
+                version: info_plist.version().to_string(),
+                build: Some(info_plist.build().to_string()),
+            },
+        )
     }
 
     /// Associate proguard mappings with an android app
-    pub fn associate_android_proguard_mappings(&self, org: &str, project: &str,
-                                               manifest: &utils::AndroidManifest,
-                                               checksums: Vec<String>)
-        -> ApiResult<Option<AssociateDsymsResponse>>
-    {
-        self.associate_dsyms(org, project, &AssociateDsyms {
-            platform: "android".to_string(),
-            checksums: checksums,
-            name: manifest.name(),
-            app_id: manifest.package().to_string(),
-            version: manifest.version_name().to_string(),
-            build: Some(manifest.version_code().to_string()),
-        })
+    pub fn associate_android_proguard_mappings(
+        &self,
+        org: &str,
+        project: &str,
+        manifest: &utils::AndroidManifest,
+        checksums: Vec<String>,
+    ) -> ApiResult<Option<AssociateDsymsResponse>> {
+        self.associate_dsyms(
+            org,
+            project,
+            &AssociateDsyms {
+                platform: "android".to_string(),
+                checksums: checksums,
+                name: manifest.name(),
+                app_id: manifest.package().to_string(),
+                version: manifest.version_name().to_string(),
+                build: Some(manifest.version_code().to_string()),
+            },
+        )
     }
 
     /// Associate arbitrary debug symbols with a build
-    pub fn associate_dsyms(&self, org: &str, project: &str, data: &AssociateDsyms)
-        -> ApiResult<Option<AssociateDsymsResponse>>
-    {
+    pub fn associate_dsyms(
+        &self,
+        org: &str,
+        project: &str,
+        data: &AssociateDsyms,
+    ) -> ApiResult<Option<AssociateDsymsResponse>> {
         // in case we have no checksums to send up the server does not actually
         // let us associate anything.  This generally makes sense but means that
         // from the client side we need to deal with this separately.  In this
@@ -604,10 +686,14 @@ impl Api {
             }));
         }
 
-        let path = format!("/projects/{}/{}/files/dsyms/associate/",
-                           PathArg(org),
-                           PathArg(project));
-        let resp = self.request(Method::Post, &path)?.with_json_body(data)?.send()?;
+        let path = format!(
+            "/projects/{}/{}/files/dsyms/associate/",
+            PathArg(org),
+            PathArg(project)
+        );
+        let resp = self.request(Method::Post, &path)?
+            .with_json_body(data)?
+            .send()?;
         if resp.status() == 404 {
             Ok(None)
         } else {
@@ -617,9 +703,11 @@ impl Api {
 
     /// Triggers reprocessing for a project
     pub fn trigger_reprocessing(&self, org: &str, project: &str) -> ApiResult<bool> {
-        let path = format!("/projects/{}/{}/reprocessing/",
-                           PathArg(org),
-                           PathArg(project));
+        let path = format!(
+            "/projects/{}/{}/reprocessing/",
+            PathArg(org),
+            PathArg(project)
+        );
         let resp = self.request(Method::Post, &path)?.send()?;
         if resp.status() == 404 {
             Ok(false)
@@ -657,28 +745,31 @@ impl Api {
     }
 }
 
-fn send_req<W: Write>(handle: &mut curl::easy::Easy,
-                      out: &mut W,
-                      body: Option<Vec<u8>>,
-                      progress_bar_mode: ProgressBarMode)
-                      -> ApiResult<(u32, Vec<String>)> {
+fn send_req<W: Write>(
+    handle: &mut curl::easy::Easy,
+    out: &mut W,
+    body: Option<Vec<u8>>,
+    progress_bar_mode: ProgressBarMode,
+) -> ApiResult<(u32, Vec<String>)> {
     match body {
         Some(body) => {
             let mut body = &body[..];
             handle.upload(true)?;
             handle.in_filesize(body.len() as u64)?;
-            handle_req(handle, out, progress_bar_mode,
-                       &mut |buf| body.read(buf).unwrap_or(0))
+            handle_req(handle, out, progress_bar_mode, &mut |buf| {
+                body.read(buf).unwrap_or(0)
+            })
         }
         None => handle_req(handle, out, progress_bar_mode, &mut |_| 0),
     }
 }
 
-fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
-                        out: &mut W,
-                        progress_bar_mode: ProgressBarMode,
-                        read: &mut FnMut(&mut [u8]) -> usize)
-                        -> ApiResult<(u32, Vec<String>)> {
+fn handle_req<W: Write>(
+    handle: &mut curl::easy::Easy,
+    out: &mut W,
+    progress_bar_mode: ProgressBarMode,
+    read: &mut FnMut(&mut [u8]) -> usize,
+) -> ApiResult<(u32, Vec<String>)> {
     if progress_bar_mode != ProgressBarMode::Disabled {
         handle.progress(true)?;
     }
@@ -687,7 +778,7 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
     handle.verbose(true)?;
 
     let mut headers = Vec::new();
-    let pb : Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
+    let pb: Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
     {
         let mut headers = &mut headers;
         let mut handle = handle.transfer();
@@ -695,11 +786,12 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
         if progress_bar_mode != ProgressBarMode::Disabled {
             let pb_progress = pb.clone();
             handle.progress_function(move |a, b, c, d| {
-                let (down_len, down_pos, up_len, up_pos) =
-                    (a as u64, b as u64, c as u64, d as u64);
+                let (down_len, down_pos, up_len, up_pos) = (a as u64, b as u64, c as u64, d as u64);
                 let mut pb = pb_progress.borrow_mut();
-                if up_len > 0 && (progress_bar_mode == ProgressBarMode::Request ||
-                                  progress_bar_mode == ProgressBarMode::Both) {
+                if up_len > 0
+                    && (progress_bar_mode == ProgressBarMode::Request
+                        || progress_bar_mode == ProgressBarMode::Both)
+                {
                     if up_pos < up_len {
                         if pb.is_none() {
                             *pb = Some(utils::make_byte_progress_bar(up_len));
@@ -709,8 +801,10 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
                         pb.take().unwrap().finish_and_clear();
                     }
                 }
-                if down_len > 0 && (progress_bar_mode == ProgressBarMode::Response ||
-                                    progress_bar_mode == ProgressBarMode::Both) {
+                if down_len > 0
+                    && (progress_bar_mode == ProgressBarMode::Response
+                        || progress_bar_mode == ProgressBarMode::Both)
+                {
                     if down_pos < down_len {
                         if pb.is_none() {
                             *pb = Some(utils::make_byte_progress_bar(down_len));
@@ -733,16 +827,14 @@ fn handle_req<W: Write>(handle: &mut curl::easy::Easy,
             })
         })?;
 
-        handle.debug_function(move |info, data| {
-            match info {
-                curl::easy::InfoType::HeaderIn => {
-                    log_headers(false, data);
-                },
-                curl::easy::InfoType::HeaderOut => {
-                    log_headers(true, data);
-                }
-                _ => {}
+        handle.debug_function(move |info, data| match info {
+            curl::easy::InfoType::HeaderIn => {
+                log_headers(false, data);
             }
+            curl::easy::InfoType::HeaderOut => {
+                log_headers(true, data);
+            }
+            _ => {}
         })?;
 
         handle.header_function(move |data| {
@@ -781,16 +873,19 @@ impl<'a> Iterator for Headers<'a> {
 }
 
 impl<'a> ApiRequest<'a> {
-    fn new(mut handle: RefMut<'a, curl::easy::Easy>,
-           method: Method,
-           url: &str,
-           auth: Option<&Auth>)
-           -> ApiResult<ApiRequest<'a>> {
+    fn new(
+        mut handle: RefMut<'a, curl::easy::Easy>,
+        method: Method,
+        url: &str,
+        auth: Option<&Auth>,
+    ) -> ApiResult<ApiRequest<'a>> {
         info!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
-        headers.append(&format!("User-Agent: sentry-cli/{}", VERSION)).ok();
+        headers
+            .append(&format!("User-Agent: sentry-cli/{}", VERSION))
+            .ok();
 
         match method {
             Method::Get => handle.get(true)?,
@@ -798,7 +893,7 @@ impl<'a> ApiRequest<'a> {
                 handle.get(true)?;
                 handle.custom_request("HEAD")?;
                 handle.nobody(true)?;
-            },
+            }
             Method::Post => handle.custom_request("POST")?,
             Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,
@@ -866,8 +961,7 @@ impl<'a> ApiRequest<'a> {
     /// instead of the response object's in memory buffer.
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
-        let (status, headers) = send_req(
-            &mut self.handle, out, self.body, self.progress_bar_mode)?;
+        let (status, headers) = send_req(&mut self.handle, out, self.body, self.progress_bar_mode)?;
         info!("response: {}", status);
         Ok(ApiResponse {
             status: status,
@@ -916,7 +1010,10 @@ impl ApiResponse {
             }
         }
         if let Ok(value) = self.deserialize::<serde_json::Value>() {
-            fail!(Error::Http(self.status(), format!("protocol error:\n\n{:#}", value)));
+            fail!(Error::Http(
+                self.status(),
+                format!("protocol error:\n\n{:#}", value)
+            ));
         } else {
             fail!(Error::Http(self.status(), "generic error".into()));
         }
@@ -942,7 +1039,7 @@ impl ApiResponse {
     /// Like convert but produces resource not found errors.
     pub fn convert_rnf<T: DeserializeOwned>(self, resource: &'static str) -> ApiResult<T> {
         if self.status() == 404 {
-            return Err(Error::ResourceNotFound(resource))
+            Err(Error::ResourceNotFound(resource))
         } else {
             self.to_result().and_then(|x| x.deserialize())
         }
@@ -986,22 +1083,19 @@ fn log_headers(is_response: bool, data: &[u8]) {
             if line.is_empty() {
                 continue;
             }
-            info!("{} {}", if is_response {
-                ">"
-            } else {
-                "<"
-            }, AUTH_RE.replace_all(line, |caps: &Captures| {
+
+            let replaced = AUTH_RE.replace_all(line, |caps: &Captures| {
                 let info = if &caps[1].to_lowercase() == "basic" {
                     caps[3].split(':').next().unwrap().to_string()
                 } else {
                     format!("{}***", &caps[3][..8])
                 };
                 format!("{}: {} {}", &caps[1], &caps[2], info)
-            }));
+            });
+            info!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }
     }
 }
-
 
 impl error::Error for Error {
     fn description(&self) -> &str {
@@ -1101,37 +1195,37 @@ impl Artifact {
 pub struct NewRelease {
     pub version: String,
     pub projects: Vec<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename="dateStarted", skip_serializing_if="Option::is_none")]
+    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
     pub date_started: Option<DateTime<Utc>>,
-    #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
+    #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
     pub date_released: Option<DateTime<Utc>>,
 }
 
 /// A head commit on a release
 #[derive(Debug, Serialize, Default)]
 pub struct Ref {
-    #[serde(rename="repository")]
+    #[serde(rename = "repository")]
     pub repo: String,
-    #[serde(rename="commit")]
+    #[serde(rename = "commit")]
     pub rev: String,
-    #[serde(rename="previousCommit")]
+    #[serde(rename = "previousCommit")]
     pub prev_rev: Option<String>,
 }
 
 /// Changes to a release
 #[derive(Debug, Serialize, Default)]
 pub struct UpdatedRelease {
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub projects: Option<Vec<String>>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename="dateStarted", skip_serializing_if="Option::is_none")]
+    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
     pub date_started: Option<DateTime<Utc>>,
-    #[serde(rename="dateReleased", skip_serializing_if="Option::is_none")]
+    #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
     pub date_released: Option<DateTime<Utc>>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub refs: Option<Vec<Ref>>,
 }
 
@@ -1140,13 +1234,13 @@ pub struct UpdatedRelease {
 pub struct ReleaseInfo {
     pub version: String,
     pub url: Option<String>,
-    #[serde(rename="dateCreated")]
+    #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
-    #[serde(rename="dateReleased")]
+    #[serde(rename = "dateReleased")]
     pub date_released: Option<DateTime<Utc>>,
-    #[serde(rename="lastEvent")]
+    #[serde(rename = "lastEvent")]
     pub last_event: Option<DateTime<Utc>>,
-    #[serde(rename="newGroups")]
+    #[serde(rename = "newGroups")]
     pub new_groups: u64,
 }
 
@@ -1177,9 +1271,9 @@ struct EventInfo {
 #[derive(Debug, Deserialize)]
 pub struct DSymFile {
     pub uuid: String,
-    #[serde(rename="objectName")]
+    #[serde(rename = "objectName")]
     pub object_name: String,
-    #[serde(rename="cpuName")]
+    #[serde(rename = "cpuName")]
     pub cpu_name: String,
 }
 
@@ -1188,7 +1282,7 @@ pub struct AssociateDsyms {
     pub platform: String,
     pub checksums: Vec<String>,
     pub name: String,
-    #[serde(rename="appId")]
+    #[serde(rename = "appId")]
     pub app_id: String,
     pub version: String,
     pub build: Option<String>,
@@ -1202,9 +1296,9 @@ struct MissingChecksumsResponse {
 /// Change information for issue bulk updates.
 #[derive(Serialize, Default)]
 pub struct IssueChanges {
-    #[serde(rename="status")]
+    #[serde(rename = "status")]
     pub new_status: Option<String>,
-    #[serde(rename="snoozeDuration")]
+    #[serde(rename = "snoozeDuration")]
     pub snooze_duration: Option<i64>,
 }
 
@@ -1246,8 +1340,8 @@ impl IssueFilter {
 
 #[derive(Deserialize)]
 pub struct AssociateDsymsResponse {
-    #[serde(rename="associatedDsymFiles")]
-    pub associated_dsyms: Vec<DSymFile>
+    #[serde(rename = "associatedDsymFiles")]
+    pub associated_dsyms: Vec<DSymFile>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -1278,18 +1372,18 @@ pub struct Repo {
     pub url: Option<String>,
     pub provider: RepoProvider,
     pub status: String,
-    #[serde(rename="dateCreated")]
+    #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Deploy {
-    #[serde(rename="environment")]
+    #[serde(rename = "environment")]
     pub env: String,
     pub name: Option<String>,
     pub url: Option<String>,
-    #[serde(rename="dateStarted")]
+    #[serde(rename = "dateStarted")]
     pub started: Option<DateTime<Utc>>,
-    #[serde(rename="dateFinished")]
+    #[serde(rename = "dateFinished")]
     pub finished: Option<DateTime<Utc>>,
 }
