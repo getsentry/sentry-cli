@@ -10,7 +10,7 @@ app_dirs = "1.1.1"
 backtrace = "0.3.5"
 chardet = "0.2.4"
 chrono = { version = "0.4.0", features = ["serde"] }
-clap = { version = "2.29.1", default-features = false, features = ["suggestions", "wrap_help"] }
+clap = { version = "2.29.2", default-features = false, features = ["suggestions", "wrap_help"] }
 console = "0.6.1"
 curl = "0.4.11"
 dotenv = "0.10.1"
@@ -37,34 +37,29 @@ plist = "0.2.4"
 prettytable-rs = "0.6.7"
 regex = "0.2.5"
 runas = "0.1.4"
-rust-ini = "0.10.0"
+rust-ini = "0.10.2"
 serde = "1.0.27"
 serde_derive = "1.0.27"
 serde_json = "1.0.9"
-sha1 = "0.4.0"
+sha1 = "0.5.0"
 sourcemap = "2.2.0"
-symbolic-common = "2.0.4"
-symbolic-debuginfo = "2.0.4"
-symbolic-proguard = "2.0.4"
+symbolic-common = "2.0.5"
+symbolic-debuginfo = "2.0.5"
+symbolic-proguard = "2.0.5"
 url = "1.6.0"
 username = "0.2.0"
 uuid = { version = "0.5.1", features = ["v4", "serde"] }
-walkdir = "2.0.1"
+walkdir = "2.1.0"
 which = "1.0.3"
 zip = "0.3.0"
 
-[profile.dev]
-codegen-units = 2
-
-[target."cfg(not(windows))"]
-
-[target."cfg(not(windows))".dependencies]
-chan = "0.1.20"
+[target.'cfg(unix)'.dependencies]
+chan = "0.1.21"
 chan-signal = "0.3.1"
 openssl-probe = "0.1.2"
 uname = "0.1.1"
 
-[target."cfg(target_os=\"macos\")".dependencies]
+[target.'cfg(target_os = "macos")'.dependencies]
 mac-process-info = "0.1.0"
 osascript = "0.3.0"
 unix-daemonize = "0.1.2"
