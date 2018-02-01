@@ -1,38 +1,38 @@
 module.exports = {
   ignore: {
     param: '--ignore',
-    type: 'array'
+    type: 'array',
   },
   ignoreFile: {
     param: '--ignore-file',
-    type: 'string'
+    type: 'string',
   },
   rewrite: {
     param: '--rewrite',
-    type: 'boolean'
+    type: 'boolean',
   },
   sourceMapReference: {
     param: '--no-sourcemap-reference',
-    type: 'inverted-boolean'
+    type: 'inverted-boolean',
   },
   stripPrefix: {
     param: '--strip-prefix',
-    type: 'array'
+    type: 'array',
   },
   stripCommonPrefix: {
     param: '--strip-common-prefix',
-    type: 'array'
+    type: 'array',
   },
   validate: {
     param: '--validate',
-    type: 'boolean'
+    type: 'boolean',
   },
   urlPrefix: {
     param: '--url-prefix',
-    type: 'string'
+    type: 'string',
   },
   ext: {
     param: '--ext',
-    type: 'string'
-  }
+    type: 'string',
+  },
 };
