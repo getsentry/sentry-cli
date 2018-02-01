@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.29.0
+
+* **BREAKING**: Drop support for Node 0.12. Please pin version `1.28.4` or install sentry-cli using a [different method](https://docs.sentry.io/learn/cli/installation/#automatic-installation) if you still require Node 0.12.
+* Fix NPM installation behind proxies
+* Remove console output when using the JS interface
+
 ## sentry-cli 1.28.4
 
 * Revert `Info.plist` handling to pre-`1.27.1` as it was causing issues when the `"Preprocess Info.plist File"` setting was turned on in Xcode
