@@ -12,7 +12,6 @@ use utils::upload::{process_batch, BatchedObjectWalker, UploadOptions};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload breakpad symbols to a project.")
-        .setting(AppSettings::Hidden)
         .org_project_args()
         .arg(Arg::with_name("paths")
             .value_name("PATH")
