@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use console::style;
 use symbolic_common::{ObjectClass, ObjectKind};
 use uuid::Uuid;
