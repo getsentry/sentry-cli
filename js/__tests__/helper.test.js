@@ -84,7 +84,7 @@ describe('SentryCli helper', () => {
   test('call prepare command with string option', () => {
     const command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
 
-    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { ext: 'js' })).toEqual([
+    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { ext: ['js'] })).toEqual([
       'releases',
       'files',
       'release',
