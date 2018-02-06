@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.29.1
+
+* Fix NPM installation on Windows
+
 ## sentry-cli 1.29.0
 
 * **BREAKING**: Drop support for Node 0.12. Please pin version `1.28.4` or install sentry-cli using a [different method](https://docs.sentry.io/learn/cli/installation/#automatic-installation) if you still require Node 0.12.
