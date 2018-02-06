@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
 use symbolic_common::ObjectKind;
 use uuid::Uuid;
@@ -12,6 +12,7 @@ use utils::upload::{process_batch, BatchedObjectWalker, UploadOptions};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload breakpad symbols to a project.")
+        .setting(AppSettings::Hidden)
         .org_project_args()
         .arg(Arg::with_name("paths")
             .value_name("PATH")
