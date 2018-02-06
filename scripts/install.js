@@ -70,7 +70,7 @@ function downloadBinary() {
   const platform = os.platform();
   const outputPath = path.resolve(
     __dirname,
-    platform === 'win32' ? 'sentry-cli.exe' : '../sentry-cli'
+    platform === 'win32' ? '../bin/sentry-cli.exe' : '../sentry-cli'
   );
 
   if (fs.existsSync(outputPath)) {
