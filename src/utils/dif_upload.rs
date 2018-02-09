@@ -38,6 +38,9 @@ use utils::dif::has_hidden_symbols;
 /// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;
 
+/// A debug info file on the server.
+pub type DebugInfoFile = api::DSymFile;
+
 /// A single chunk of a debug information file returned by
 /// `ChunkedDifMatch::chunks`. It carries the binary data slice and a SHA1
 /// checksum of that data.
@@ -704,8 +707,8 @@ fn process_symbol_maps<'a>(
     difs: Vec<DifMatch<'a>>,
     symbol_map: Option<&Path>,
 ) -> Result<Vec<DifMatch<'a>>> {
-    let (with_hidden, mut without_hidden): (Vec<_>, _) = difs.into_iter()
-        .partition(|dif| dif.needs_symbol_map());
+    let (with_hidden, mut without_hidden): (Vec<_>, _) =
+        difs.into_iter().partition(|dif| dif.needs_symbol_map());
 
     if with_hidden.is_empty() {
         return Ok(without_hidden);
@@ -881,9 +884,14 @@ fn upload_missing_chunks(
     Ok(())
 }
 
-/// Polls the assemble endpoint until all DIFs have either completed or errored
-/// and prints a summary in the end.
-fn poll_dif_assemble(api: &Api, difs: Vec<&ChunkedDifMatch>, options: &DifUpload) -> Result<()> {
+/// Polls the assemble endpoint until all DIFs have either completed or errored.
+/// Returns a list of `DebugInfoFile`s that have been created successfully and
+/// also prints a summary to the user.
+fn poll_dif_assemble(
+    api: &Api,
+    difs: Vec<&ChunkedDifMatch>,
+    options: &DifUpload,
+) -> Result<Vec<DebugInfoFile>> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
          \n  {wide_bar}  {pos}/{len}",
@@ -907,24 +915,47 @@ fn poll_dif_assemble(api: &Api, difs: Vec<&ChunkedDifMatch>, options: &DifUpload
     };
 
     progress.finish_and_clear();
-    println!("{} File processing complete:", style(">").dim());
+    println!("{} File processing complete:\n", style(">").dim());
+    let (successes, errors): (Vec<_>, _) =
+        response.into_iter().partition(|&(_, ref r)| r.state.ok());
 
+    // Print a summary of all successes first, so that errors show up at the
+    // bottom for the user
+    for &(_, ref success) in &successes {
+        // Silently skip all OK entries without a "dif" record since the server
+        // will always return one.
+        if let Some(ref dif) = success.dif {
+            println!(
+                "     {} {} ({}; {})",
+                style("OK").green(),
+                style(&dif.uuid).dim(),
+                dif.object_name,
+                dif.cpu_name,
+            );
+        }
+    }
+
+    // Print a summary of all errors at the bottom.
     let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
-
-    for (checksum, r) in response {
-        let chunked_match = difs_by_checksum
+    for (checksum, error) in errors {
+        let dif = difs_by_checksum
             .get(&checksum)
             .ok_or("Server returned unexpected checksum")?;
 
-        let state = match r.state.ok() {
-            true => style("OK").green(),
-            false => style("ERROR").red(),
-        };
-
-        println!("  {:>5} {}", state, chunked_match.file_name());
+        let message = error
+            .error
+            .as_ref()
+            .map_or("An unknown error ocurred", |s| &s);
+        println!(
+            "  {} {}: {}",
+            style("ERROR").red(),
+            dif.file_name(),
+            style(message).dim()
+        );
     }
 
-    Ok(())
+    // Return only successful uploads
+    Ok(successes.into_iter().filter_map(|(_, r)| r.dif).collect())
 }
 
 /// Uploads debug info files using the chunk-upload endpoint.
@@ -932,7 +963,7 @@ fn upload_difs_chunked(
     api: &Api,
     options: &DifUpload,
     chunk_options: &ChunkUploadOptions,
-) -> Result<()> {
+) -> Result<Vec<DebugInfoFile>> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
@@ -940,7 +971,7 @@ fn upload_difs_chunked(
             "{} No debug debug information files found",
             style(">").dim()
         );
-        return Ok(());
+        return Ok(Default::default());
     }
 
     // Try to resolve BCSymbolMaps
@@ -961,15 +992,15 @@ fn upload_difs_chunked(
 
     // Only if DIFs were missing, poll until assembling is complete
     if let Some((missing, _)) = initially_missing {
-        poll_dif_assemble(api, missing, options)?;
+        poll_dif_assemble(api, missing, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
             style(">").dim()
         );
-    }
 
-    Ok(())
+        Ok(Default::default())
+    }
 }
 
 /// Returns debug files missing on the server.
@@ -1018,7 +1049,7 @@ fn upload_in_batches(
     api: &Api,
     objects: Vec<HashedDifMatch>,
     options: &DifUpload,
-) -> Result<Vec<api::DSymFile>> {
+) -> Result<Vec<DebugInfoFile>> {
     let max_size = Config::get_current().get_max_dsym_upload_size()?;
     let mut dsyms = Vec::new();
 
@@ -1040,12 +1071,12 @@ fn upload_in_batches(
 }
 
 /// Uploads debug info files using the legacy endpoint.
-fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<()> {
+fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
         println!("{} No debug information files found", style(">").dim());
-        return Ok(());
+        return Ok(Default::default());
     }
 
     // Try to resolve BCSymbolMaps
@@ -1063,13 +1094,13 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<()> {
             style(">").dim()
         );
         println!("{} Nothing to upload", style(">").dim());
-        return Ok(());
+        return Ok(Default::default());
     }
 
     // Upload missing DIFs in batches
     let uploaded = upload_in_batches(api, missing, options)?;
     if uploaded.len() > 0 {
-        println!("Newly uploaded debug information files:");
+        println!("{} File upload complete:\n", style(">").dim());
         for dif in &uploaded {
             println!(
                 "  {} ({}; {})",
@@ -1080,7 +1111,7 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<()> {
         }
     }
 
-    Ok(())
+    Ok(uploaded)
 }
 
 /// Searches, processes and uploads debug information files (DIFs).
@@ -1176,25 +1207,37 @@ impl DifUpload {
     /// Performs the search for DIFs and uploads them using the given `Api`.
     ///
     /// ```
+    /// use api::Api;
+    /// use utils::dif_upload::DifUpload;
+    ///
     /// let api = Api::new();
-    /// let matches = App::new("My App").get_matches();
-    /// DifUpload::from_cli(&matches)?.upload_with(&api)?;
+    /// DifUpload::new("org", "project")
+    ///     .search_path(".")
+    ///     .upload_with(&api)?;
     /// ```
-    pub fn upload_with(self, api: &Api) -> Result<()> {
+    pub fn upload_with(&mut self, api: &Api) -> Result<Vec<DebugInfoFile>> {
+        if self.paths.is_empty() {
+            println!("{}: No paths were provided.", style("Warning").yellow());
+            return Ok(Default::default());
+        }
+
         if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
-            upload_difs_chunked(api, &self, chunk_options)
+            upload_difs_chunked(api, self, chunk_options)
         } else {
-            upload_difs_batched(api, &self)
+            upload_difs_batched(api, self)
         }
     }
 
     /// Performs the search for DIFs and uploads them using a new `Api` instance.
     ///
     /// ```
-    /// let matches = App::new("My App").get_matches();
-    /// DifUpload::from_cli(&matches)?.upload()?;
+    /// use utils::dif_upload::DifUpload;
+    ///
+    /// DifUpload::new("org", "project")
+    ///     .search_path(".")
+    ///     .upload()?;
     /// ```
-    pub fn upload(self) -> Result<()> {
+    pub fn upload(&mut self) -> Result<Vec<DebugInfoFile>> {
         self.upload_with(&Api::new())
     }
 
