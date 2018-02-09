@@ -152,6 +152,24 @@ impl<'data> DifMatch<'data> {
     pub fn attachments(&self) -> Option<&BTreeMap<String, ByteView>> {
         self.attachments.as_ref()
     }
+
+    /// Determines whether this file needs resolution of hidden symbols.
+    pub fn needs_symbol_map(&self) -> bool {
+        // XCode release archives and dSYM bundles downloaded from iTunes
+        // Connect contain Swift library symbols. These have caused various
+        // issues in the past, so we ignore them for now. In particular, there
+        // are never any BCSymbolMaps generated for them and the DBGOriginalUUID
+        // in the plist is the UUID of the original dsym file.
+        //
+        // We *might* have to locate the original library in the Xcode
+        // distribution, then build a new non-fat dSYM file from it and patch
+        // the the UUID.
+        if self.file_name().starts_with("libswift") {
+            return false;
+        }
+
+        has_hidden_symbols(self.fat()).unwrap_or(false)
+    }
 }
 
 impl<'data> fmt::Debug for DifMatch<'data> {
@@ -492,17 +510,6 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
     for base_path in &options.paths {
         walk_difs_directory(base_path, options, |mut source, name, buffer| {
             progress.set_message(&name);
-            let file_name = Path::new(&name)
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or_default();
-
-            // XCode release archives and dSYM bundles downloaded from iTunes
-            // Connect contain Swift library symbols. Such system symbols don't
-            // have to be uploaded by the user, so we can ignore them completely.
-            if file_name.starts_with("libswift") {
-                return Ok(());
-            }
 
             // Try to parse a potential object file. If this is not possible,
             // then we're not dealing with an object file, thus silently
@@ -698,7 +705,7 @@ fn process_symbol_maps<'a>(
     symbol_map: Option<&Path>,
 ) -> Result<Vec<DifMatch<'a>>> {
     let (with_hidden, mut without_hidden): (Vec<_>, _) = difs.into_iter()
-        .partition(|dif| has_hidden_symbols(dif.fat()).unwrap_or(false));
+        .partition(|dif| dif.needs_symbol_map());
 
     if with_hidden.is_empty() {
         return Ok(without_hidden);
