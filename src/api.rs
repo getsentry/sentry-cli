@@ -1396,6 +1396,8 @@ pub struct DSymFile {
     pub object_name: String,
     #[serde(rename = "cpuName")]
     pub cpu_name: String,
+    #[serde(rename = "sha1")]
+    pub checksum: String,
 }
 
 impl DSymFile {
