@@ -35,6 +35,7 @@ use utils::{copy_with_progress, make_byte_progress_bar, TempDir, TempFile, get_s
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::has_hidden_symbols;
 
+/// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;
 
 /// A single chunk of a debug information file returned by
@@ -351,9 +352,12 @@ where
 
     let mut magic: [u8; 2] = [0; 2];
     let mut file = File::open(path)?;
-    file.read_exact(&mut magic)?;
-    file.seek(SeekFrom::Start(0))?;
+    if file.read_exact(&mut magic).is_err() {
+        // Catch empty or single-character files
+        return Ok(None);
+    }
 
+    file.seek(SeekFrom::Start(0))?;
     Ok(match &magic {
         b"PK" => Some(ZipArchive::new(file)?),
         _ => None,
@@ -925,7 +929,10 @@ fn upload_difs_chunked(
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
-        println!("{} No debug debug information files found", style(">").dim());
+        println!(
+            "{} No debug debug information files found",
+            style(">").dim()
+        );
         return Ok(());
     }
 
@@ -964,7 +971,10 @@ fn get_missing_difs<'data>(
     objects: Vec<HashedDifMatch<'data>>,
     options: &DifUpload,
 ) -> Result<Vec<HashedDifMatch<'data>>> {
-    info!("Checking for missing debug information files: {:#?}", &objects);
+    info!(
+        "Checking for missing debug information files: {:#?}",
+        &objects
+    );
 
     let missing_checksums = {
         let checksums = objects.iter().map(|s| s.checksum());
