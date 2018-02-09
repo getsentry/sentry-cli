@@ -931,24 +931,37 @@ impl<'a> ApiRequest<'a> {
         }
 
         handle.url(&url)?;
-        match auth {
-            None => {}
-            Some(&Auth::Key(ref key)) => {
-                handle.username(key)?;
-                info!("using key based authentication");
-            }
-            Some(&Auth::Token(ref token)) => {
-                headers.append(&format!("Authorization: Bearer {}", token))?;
-                info!("using token authentication");
-            }
-        }
 
-        Ok(ApiRequest {
+        let request = ApiRequest {
             handle: handle,
             headers: headers,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
-        })
+        };
+
+        let request = match auth {
+            Some(auth) => ApiRequest::with_auth(request, auth)?,
+            None => request,
+        };
+
+        Ok(request)
+    }
+
+    /// Explicitly overrides the Auth info.
+    pub fn with_auth(mut self, auth: &Auth) -> ApiResult<Self> {
+        match *auth {
+            Auth::Key(ref key) => {
+                self.handle.username(key)?;
+                info!("using key based authentication");
+            }
+            Auth::Token(ref token) => {
+                self.headers
+                    .append(&format!("Authorization: Bearer {}", token))?;
+                info!("using token authentication");
+            }
+        }
+
+        Ok(self)
     }
 
     /// adds a specific header to the request
