@@ -91,7 +91,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.value_of("symbol_maps") {
-        upload.symbol_map(symbol_map);
+        upload
+            .symbol_map(symbol_map)
+            .map_err(|_| "--symbol-maps requires Apple dsymutil to be available.")?;
     }
 
     // Add a path to XCode's DerivedData, if configured

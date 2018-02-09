@@ -23,6 +23,7 @@ use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
 use symbolic_debuginfo::{FatObject, ObjectId};
 use walkdir::WalkDir;
+use which::which;
 use zip::{ZipArchive, ZipWriter};
 use zip::write::FileOptions;
 
@@ -1287,15 +1288,16 @@ impl DifUpload {
     }
 
     /// Set a path containing BCSymbolMaps to resolve hidden symbols in dSYMs
-    /// obtained from iTunes Connect.
+    /// obtained from iTunes Connect. This requires the `dsymutil` command.
     ///
     /// By default, hidden symbol resolution will be skipped.
-    pub fn symbol_map<P>(&mut self, path: P) -> &mut Self
+    pub fn symbol_map<P>(&mut self, path: P) -> Result<&mut Self>
     where
         P: Into<PathBuf>,
     {
+        which("dsymutil").map_err(|_| "Command `dsymutil` not found")?;
         self.symbol_map = Some(path.into());
-        self
+        Ok(self)
     }
 
     /// Set whether opening and searching ZIPs for debug information files is
