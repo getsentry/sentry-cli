@@ -194,7 +194,13 @@ impl Serialize for DifFile {
     }
 }
 
+/// Checks whether this `FatObject` contains hidden symbols generated during an
+/// iTunes Connect build. This only applies to MachO files.
 pub fn has_hidden_symbols(fat: &FatObject) -> Result<bool> {
+    if fat.kind() != ObjectKind::MachO {
+        return Ok(false);
+    }
+
     for object in fat.objects() {
         if object?.symbols()?.requires_symbolmap()? {
             return Ok(true);
