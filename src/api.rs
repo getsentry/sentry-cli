@@ -25,6 +25,7 @@ use curl;
 use chrono::{DateTime, Duration, Utc};
 use indicatif::ProgressBar;
 use regex::{Captures, Regex};
+use sha1::Digest;
 
 use utils;
 use utils::xcode::InfoPlist;
@@ -615,23 +616,26 @@ impl Api {
 
     /// Given a list of checksums for Dsym files this returns a list of those
     /// that do not exist for the project yet.
-    pub fn find_missing_dsym_checksums(
+    pub fn find_missing_dsym_checksums<I>(
         &self,
         org: &str,
         project: &str,
-        checksums: &Vec<&str>,
-    ) -> ApiResult<HashSet<String>> {
+        checksums: I,
+    ) -> ApiResult<HashSet<Digest>>
+    where
+        I: IntoIterator<Item = Digest>,
+    {
         let mut url = format!(
             "/projects/{}/{}/files/dsyms/unknown/?",
             PathArg(org),
             PathArg(project)
         );
-        for (idx, checksum) in checksums.iter().enumerate() {
+        for (idx, checksum) in checksums.into_iter().enumerate() {
             if idx > 0 {
                 url.push('&');
             }
             url.push_str("checksums=");
-            url.push_str(checksum);
+            url.push_str(&checksum.to_string());
         }
 
         let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
@@ -1334,7 +1338,7 @@ pub struct AssociateDsyms {
 
 #[derive(Deserialize)]
 struct MissingChecksumsResponse {
-    missing: HashSet<String>,
+    missing: HashSet<Digest>,
 }
 
 /// Change information for issue bulk updates.

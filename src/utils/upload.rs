@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use clap::ArgMatches;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
+use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
 use symbolic_debuginfo::FatObject;
 use uuid::Uuid;
@@ -31,7 +32,7 @@ pub struct ObjectRef {
     /// The absolute path to the object file.
     pub path: PathBuf,
     /// SHA1 Checksum of the object file.
-    pub checksum: String,
+    pub checksum: Digest,
     /// File name of the object file without path.
     pub name: String,
     /// Size of the object file in bytes.
@@ -381,8 +382,8 @@ fn filter_missing_syms(batch: ObjectBatch, context: &UploadOptions) -> Result<Ob
     info!("Checking for missing debug symbols: {:#?}", &batch);
 
     let missing_checksums = {
-        let checksums = batch.iter().map(|ref s| s.checksum.as_str()).collect();
-        context.api().find_missing_dsym_checksums(&context.org(), &context.project(), &checksums)?
+        let checksums = batch.iter().map(|ref s| s.checksum);
+        context.api().find_missing_dsym_checksums(&context.org(), &context.project(), checksums)?
     };
 
     let missing = batch

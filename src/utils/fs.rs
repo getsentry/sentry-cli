@@ -5,11 +5,10 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Seek, SeekFrom};
 
-use sha1::Sha1;
+use sha1::{Sha1, Digest};
 use uuid::{Uuid, UuidVersion};
 
 use prelude::*;
-
 
 pub trait SeekRead: Seek + Read {}
 impl<T: Seek + Read> SeekRead for T {}
@@ -134,8 +133,8 @@ pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
     }
 }
 
-/// Given a path returns the SHA1 checksum for it.
-pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<String> {
+/// Returns the SHA1 hash of the given input.
+pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
     let mut sha = Sha1::new();
     let mut buf = [0u8; 16384];
     let mut rdr = io::BufReader::new(rdr);
@@ -146,5 +145,5 @@ pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<String> {
         }
         sha.update(&buf[..read]);
     }
-    Ok(sha.digest().to_string())
+    Ok(sha.digest())
 }

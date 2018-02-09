@@ -17,6 +17,7 @@ use std::collections::HashSet;
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
+use sha1::Digest;
 use symbolic_common::{ByteView, DebugKind, ObjectClass, ObjectKind};
 use symbolic_debuginfo::FatObject;
 use uuid::Uuid;
@@ -41,7 +42,7 @@ enum DSymVar {
 struct DSymRef {
     var: DSymVar,
     arc_name: String,
-    checksum: String,
+    checksum: Digest,
     size: u64,
     uuids: Vec<Uuid>,
     has_hidden_symbols: bool,
@@ -402,8 +403,8 @@ fn find_missing_files(api: &mut Api,
                       -> Result<Vec<DSymRef>> {
     info!("Checking for missing debug symbols: {:#?}", &refs);
     let missing = {
-        let checksums: Vec<_> = refs.iter().map(|ref x| x.checksum.as_str()).collect();
-        api.find_missing_dsym_checksums(org, project, &checksums)?
+        let checksums = refs.iter().map(|ref x| x.checksum);
+        api.find_missing_dsym_checksums(org, project, checksums)?
     };
     let mut rv = vec![];
     for r in refs.into_iter() {
@@ -611,7 +612,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
                          style(">").dim(), style(batch.len()).yellow());
                 resolve_bcsymbolmaps(&mut batch, symbol_maps_path)?;
                 for dsym_ref in batch.iter() {
-                    all_dsym_checksums.push(dsym_ref.checksum.clone());
+                    all_dsym_checksums.push(dsym_ref.checksum.to_string());
                 }
                 println!("{} Checking for missing debug symbol files on server",
                          style(">").dim());

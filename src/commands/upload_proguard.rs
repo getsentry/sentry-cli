@@ -131,7 +131,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
                                      does not contain any line information.", path);
                 } else {
                     let mut f = fs::File::open(path)?;
-                    all_checksums.push(get_sha1_checksum(&mut f)?);
+                    all_checksums.push(get_sha1_checksum(&mut f)?.to_string());
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
                         size: md.len(),
