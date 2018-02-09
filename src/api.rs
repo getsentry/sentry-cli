@@ -51,12 +51,38 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
     }
 }
 
-#[derive(PartialEq, Eq)]
 pub enum ProgressBarMode {
     Disabled,
     Request,
     Response,
     Both,
+    Shared((Arc<ProgressBar>, u64, u64)),
+}
+
+impl ProgressBarMode {
+    /// Returns if progress bars are generally enabled.
+    pub fn active(&self) -> bool {
+        match *self {
+            ProgressBarMode::Disabled => false,
+            _ => true,
+        }
+    }
+
+    /// Returns whether a progress bar should be displayed for during upload.
+    pub fn request(&self) -> bool {
+        match *self {
+            ProgressBarMode::Request | ProgressBarMode::Both => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether a progress bar should be displayed for during download.
+    pub fn response(&self) -> bool {
+        match *self {
+            ProgressBarMode::Response | ProgressBarMode::Both => true,
+            _ => false,
+        }
+    }
 }
 
 /// Helper for the API access.
@@ -773,7 +799,7 @@ fn handle_req<W: Write>(
     progress_bar_mode: ProgressBarMode,
     read: &mut FnMut(&mut [u8]) -> usize,
 ) -> ApiResult<(u32, Vec<String>)> {
-    if progress_bar_mode != ProgressBarMode::Disabled {
+    if progress_bar_mode.active() {
         handle.progress(true)?;
     }
 
@@ -786,15 +812,20 @@ fn handle_req<W: Write>(
         let mut headers = &mut headers;
         let mut handle = handle.transfer();
 
-        if progress_bar_mode != ProgressBarMode::Disabled {
+        if let ProgressBarMode::Shared((pb_progress, len, offset)) = progress_bar_mode {
+            handle.progress_function(move |_, _, total, uploaded| {
+                if uploaded > 0f64 && uploaded < total {
+                    let position = offset + (uploaded / total * (len as f64)) as u64;
+                    pb_progress.set_position(position);
+                }
+                true
+            })?;
+        } else if progress_bar_mode.active() {
             let pb_progress = pb.clone();
             handle.progress_function(move |a, b, c, d| {
                 let (down_len, down_pos, up_len, up_pos) = (a as u64, b as u64, c as u64, d as u64);
                 let mut pb = pb_progress.borrow_mut();
-                if up_len > 0
-                    && (progress_bar_mode == ProgressBarMode::Request
-                        || progress_bar_mode == ProgressBarMode::Both)
-                {
+                if up_len > 0 && progress_bar_mode.request() {
                     if up_pos < up_len {
                         if pb.is_none() {
                             *pb = Some(utils::make_byte_progress_bar(up_len));
@@ -804,10 +835,7 @@ fn handle_req<W: Write>(
                         pb.take().unwrap().finish_and_clear();
                     }
                 }
-                if down_len > 0
-                    && (progress_bar_mode == ProgressBarMode::Response
-                        || progress_bar_mode == ProgressBarMode::Both)
-                {
+                if down_len > 0 && progress_bar_mode.response() {
                     if down_pos < down_len {
                         if pb.is_none() {
                             *pb = Some(utils::make_byte_progress_bar(down_len));
