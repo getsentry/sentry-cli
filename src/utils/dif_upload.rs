@@ -17,7 +17,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
-use clap::ArgMatches;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
@@ -1116,30 +1115,15 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFi
 
 /// Searches, processes and uploads debug information files (DIFs).
 ///
-/// This struct is created with the `DifUpload::from_cli` from command line
-/// arguments. Then, an upload can either be started via `DifUpload::upload` or
+/// This struct is created with the `DifUpload::new` function. Then, set
+/// search parameters and start the upload via `DifUpload::upload` or
 /// `DifUpload::upload_with`.
 ///
 /// ```
-/// use clap::App;
 /// use utils::dif_upload::DifUpload;
 ///
-/// let matches = App::new("My App")
-///     // Add arguments here
-///     .get_matches();
-///
-/// DifUpload::from_cli(&matches)?
-///     .upload()?;
-/// ```
-///
-/// Alternatively, create a new instance with `DifUpload::new` and set
-/// parameters manually.
-///
-/// ```
-/// use utils::dif_upload::DifUpload;
-///
-/// DifUpload::new("org", "project")
-///     .add_path(".")
+/// DifUpload::new("org".into(), "project".into())
+///     .search_path(".")
 ///     .upload()?;
 /// ```
 ///
@@ -1161,6 +1145,21 @@ pub struct DifUpload {
 
 impl DifUpload {
     /// Creates a new `DifUpload` with default parameters.
+    ///
+    /// To use it, also add paths using `DifUpload::search_path`. It will scan
+    /// the paths and contained ZIPs for all supported object files and upload
+    /// them.
+    ///
+    /// Use `DifUpload::symbol_map` to configure a location of BCSymbolMap files
+    /// to resolve hidden symbols in dSYMs obtained from iTunes Connect.
+    ///
+    /// ```
+    /// use utils::dif_upload::DifUpload;
+    ///
+    /// DifUpload::new("org", "project")
+    ///     .search_path(".")
+    ///     .upload()?;
+    /// ```
     pub fn new(org: String, project: String) -> DifUpload {
         DifUpload {
             org: org,
@@ -1175,33 +1174,137 @@ impl DifUpload {
         }
     }
 
-    /// Creates an `DifUpload` object from command line arguments. Supported
-    /// arguments are:
+    /// Adds a path to search for debug information files.
+    pub fn search_path<P>(&mut self, path: P) -> &mut Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.paths.push(path.into());
+        self
+    }
+
+    /// Adds paths to search for debug information files.
+    pub fn search_paths<I>(&mut self, paths: I) -> &mut Self
+    where
+        I: IntoIterator,
+        I::Item: Into<PathBuf>,
+    {
+        for path in paths {
+            self.paths.push(path.into())
+        }
+        self
+    }
+
+    /// Add a `ObjectId` to filter for.
     ///
-    ///  - `"--org"`: The organization slug
-    ///  - `"--project"`: The project slug
-    ///  - `"--id"`: Missing Debug Identifiers (`ObjectId`) to search for
-    ///  - `"--uuid"`: Missing UUIDs to search for (converted to `ObjectId`s)
-    ///  - `"--type"`: Specify the type of files ("dsym", "breakpad", "elf")
-    ///  - `"--no-executables"`: Exclude executables and search for symbols only
-    ///  - `"--no-debug"`: Exclude symbols and search for executables only
-    ///  - `"--symbol-maps"`: Path to a BCSymbolMap folder
-    ///  - `"--no-zips"`: Do not recurse into ZIPs
-    ///  - `<...>`: Paths to search for debug information files
+    /// By default, all ObjectIds will be included.
+    pub fn filter_id<I>(&mut self, id: I) -> &mut Self
+    where
+        I: Into<ObjectId>,
+    {
+        self.ids.insert(id.into());
+        self
+    }
+
+    /// Add `ObjectId`s to filter for.
     ///
-    /// ```
-    /// use clap::App;
-    /// use utils::dif_upload::DifUpload;
+    /// By default, all ObjectIds will be included. If `ids` is empty, this will
+    /// not be changed.
+    pub fn filter_ids<I>(&mut self, ids: I) -> &mut Self
+    where
+        I: IntoIterator,
+        I::Item: Into<ObjectId>,
+    {
+        for id in ids {
+            self.ids.insert(id.into());
+        }
+        self
+    }
+
+    /// Add an `ObjectKind` to filter for.
     ///
-    /// let matches = App::new("My App")
-    ///     // Add arguments here
-    ///     .get_matches();
+    /// By default, all object kinds will be included.
+    pub fn filter_kind(&mut self, kind: ObjectKind) -> &mut Self {
+        self.kinds.insert(kind);
+        self
+    }
+
+    /// Add `ObjectKind`s to filter for.
     ///
-    /// let upload = DifUpload::from_cli(&matches)?;
-    /// println!("{:#?}", upload);
-    /// ```
-    pub fn from_cli(_matches: &ArgMatches) -> Result<DifUpload> {
-        unimplemented!();
+    /// By default, all object kinds will be included. If `kinds` is empty, this
+    /// will not be changed.
+    pub fn filter_kinds<I>(&mut self, kinds: I) -> &mut Self
+    where
+        I: IntoIterator<Item = ObjectKind>,
+    {
+        self.kinds.extend(kinds);
+        self
+    }
+
+    /// Add an `ObjectClass` to filter for.
+    ///
+    /// By default, all object classes will be included.
+    pub fn filter_class(&mut self, class: ObjectClass) -> &mut Self {
+        self.classes.insert(class);
+        self
+    }
+
+    /// Add `ObjectClass`es to filter for.
+    ///
+    /// By default, all object classes will be included. If `kinds` is empty, this
+    /// will not be changed.
+    pub fn filter_classes<I>(&mut self, classes: I) -> &mut Self
+    where
+        I: IntoIterator<Item = ObjectClass>,
+    {
+        self.classes.extend(classes);
+        self
+    }
+
+    /// Add a file extension to filter for.
+    ///
+    /// By default, all file extensions will be included.
+    pub fn filter_extension<S>(&mut self, extension: S) -> &mut Self
+    where
+        S: Into<OsString>,
+    {
+        self.extensions.insert(extension.into());
+        self
+    }
+
+    /// Add a file extension to filter for.
+    ///
+    /// By default, all file extensions will be included.
+    pub fn filter_extensions<I>(&mut self, extensions: I) -> &mut Self
+    where
+        I: IntoIterator,
+        I::Item: Into<OsString>,
+    {
+        for extension in extensions {
+            self.extensions.insert(extension.into());
+        }
+        self
+    }
+
+    /// Set a path containing BCSymbolMaps to resolve hidden symbols in dSYMs
+    /// obtained from iTunes Connect.
+    ///
+    /// By default, hidden symbol resolution will be skipped.
+    pub fn symbol_map<P>(&mut self, path: P) -> &mut Self
+    where
+        P: Into<PathBuf>,
+    {
+        self.symbol_map = Some(path.into());
+        self
+    }
+
+    /// Set whether opening and searching ZIPs for debug information files is
+    /// allowed or not.
+    ///
+    /// Defaults to `true`.
+    pub fn allow_zips(&mut self, allow: bool) -> &mut Self {
+        self.zips_allowed = allow;
+        self
     }
 
     /// Performs the search for DIFs and uploads them using the given `Api`.
