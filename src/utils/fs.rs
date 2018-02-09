@@ -54,15 +54,33 @@ impl TempFile {
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
         path.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+
         let f = fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .open(&path)
-            .unwrap();
+            .open(&path)?;
+
         Ok(TempFile {
             f: Some(f),
             path: path.to_path_buf(),
+        })
+    }
+
+    /// Assumes ownership over an existing file and moves it to a temp location.
+    pub fn take<P: AsRef<Path>>(path: P) -> io::Result<TempFile> {
+        let mut destination = env::temp_dir();
+        destination.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+
+        fs::rename(&path, &destination)?;
+        let f = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&destination)?;
+
+        Ok(TempFile {
+            f: Some(f),
+            path: destination,
         })
     }
 
