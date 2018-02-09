@@ -15,6 +15,7 @@ mod update;
 pub mod batch;
 pub mod cordova;
 pub mod dif;
+pub mod dif_upload;
 pub mod upload;
 pub mod vcs;
 pub mod xcode;
