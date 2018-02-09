@@ -41,7 +41,7 @@ rust-ini = "0.10.2"
 serde = "1.0.27"
 serde_derive = "1.0.27"
 serde_json = "1.0.9"
-sha1 = "0.5.0"
+sha1 = { version = "0.5.0", features = ["serde"] }
 sourcemap = "2.2.0"
 symbolic-common = "2.0.5"
 symbolic-debuginfo = "2.0.5"
