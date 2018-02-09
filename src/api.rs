@@ -658,6 +658,78 @@ impl Api {
             .convert()
     }
 
+    /// Get the server configuration for chunked file uploads.
+    pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
+        let url = format!("/organizations/{}/chunk-upload/", org);
+        match self.get(&url)?.convert_rnf("chunk upload") {
+            Ok(options) => Ok(Some(options)),
+            Err(Error::ResourceNotFound(_)) => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Request DIF assembling and processing from chunks.
+    pub fn assemble_difs(
+        &self,
+        org: &str,
+        project: &str,
+        request: &AssembleDifsRequest,
+    ) -> ApiResult<AssembleDifsResponse> {
+        let url = format!("/projects/{}/{}/files/difs/assemble/", org, project);
+        self.request(Method::Post, &url)?
+            .with_json_body(request)?
+            .send()?
+            .convert()
+    }
+
+    /// Upload a batch of file chunks.
+    pub fn upload_chunks<'data, I, T>(
+        &self,
+        url: &str,
+        chunks: I,
+        progress_bar_mode: ProgressBarMode,
+    ) -> ApiResult<()>
+    where
+        I: IntoIterator<Item = &'data T>,
+        T: AsRef<(Digest, &'data [u8])> + 'data,
+    {
+        // Curl stores a raw pointer to the stringified checksum internally. We first
+        // transform all checksums to string and keep them in scope until the request
+        // has completed. The original iterator is not needed anymore after this.
+        let stringified_chunks: Vec<_> = chunks
+            .into_iter()
+            .map(|item| item.as_ref())
+            .map(|&(checksum, data)| (checksum.to_string(), data))
+            .collect();
+
+        let mut form = curl::easy::Form::new();
+        for (ref checksum, data) in stringified_chunks {
+            // NOTE: The Part::buffer method requires data in an owned Vec<u8> instead
+            // of just a byte slice. Internally, it retrieves a pointer to the data
+            // and simply adds this pointer to the internal CURL buffers. There is no
+            // other way in the curl crate to create a "file" field with custom file
+            // name from memory. Hopefully, the optimizer detects this unneeded clone
+            // and removes it in the production build.
+            form.part("file").buffer(&checksum, data.into()).add()?
+        }
+
+        let request = self.request(Method::Post, url)?
+            .with_form_data(form)?
+            .progress_bar_mode(progress_bar_mode)?;
+
+        // The request is performed to an absolute URL. Thus, `Self::request()` will
+        // not add the authorization header, by default. Since the URL is guaranteed
+        // to be a Sentry-compatible endpoint, we force the Authorization header at
+        // this point.
+        let request = match Config::get_current().get_auth() {
+            Some(auth) => request.with_auth(auth)?,
+            None => request,
+        };
+
+        request.send()?.to_result()?;
+        Ok(())
+    }
+
     /// Associate apple debug symbols with a build
     pub fn associate_apple_dsyms(
         &self,
@@ -1435,3 +1507,70 @@ pub struct Deploy {
     #[serde(rename = "dateFinished")]
     pub finished: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Deserialize)]
+pub enum ChunkHashAlgorithm {
+    #[serde(rename = "sha1")] Sha1,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChunkUploadOptions {
+    #[serde(rename = "url")]
+    pub url: String,
+    #[serde(rename = "chunksPerRequest")]
+    pub max_chunks: u64,
+    #[serde(rename = "maxRequestSize")]
+    pub max_size: u64,
+    #[serde(rename = "hashAlgorithm")]
+    pub hash_algorithm: ChunkHashAlgorithm,
+    #[serde(rename = "chunkSize")]
+    pub chunk_size: u64,
+    #[serde(rename = "concurrency")]
+    pub concurrency: u8,
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum ChunkedFileState {
+    #[serde(rename = "error")] Error,
+    #[serde(rename = "not_found")] NotFound,
+    #[serde(rename = "created")] Created,
+    #[serde(rename = "assembling")] Assembling,
+    #[serde(rename = "ok")] Ok,
+}
+
+impl ChunkedFileState {
+    pub fn finished(&self) -> bool {
+        *self == ChunkedFileState::Error || *self == ChunkedFileState::Ok
+    }
+
+    pub fn pending(&self) -> bool {
+        !self.finished()
+    }
+
+    pub fn ok(&self) -> bool {
+        *self == ChunkedFileState::Ok
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChunkedDifRequest<'a> {
+    #[serde(rename = "name")]
+    pub name: &'a str,
+    #[serde(rename = "chunks")]
+    pub chunks: &'a [Digest],
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChunkedDifResponse {
+    #[serde(rename = "state")]
+    pub state: ChunkedFileState,
+    #[serde(rename = "missingChunks")]
+    pub missing_chunks: Vec<Digest>,
+    #[serde(rename = "error")]
+    pub error: Option<String>,
+    #[serde(rename = "dif")]
+    pub dif: Option<DSymFile>,
+}
+
+pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;
+pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
