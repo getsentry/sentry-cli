@@ -26,6 +26,7 @@ use chrono::{DateTime, Duration, Utc};
 use indicatif::ProgressBar;
 use regex::{Captures, Regex};
 use sha1::Digest;
+use uuid::Uuid;
 
 use utils;
 use utils::xcode::InfoPlist;
@@ -1395,6 +1396,12 @@ pub struct DSymFile {
     pub object_name: String,
     #[serde(rename = "cpuName")]
     pub cpu_name: String,
+}
+
+impl DSymFile {
+    pub fn uuid(&self) -> Uuid {
+        Uuid::parse_str(&self.uuid).unwrap()
+    }
 }
 
 #[derive(Debug, Serialize)]
