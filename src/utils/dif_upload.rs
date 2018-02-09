@@ -1131,6 +1131,18 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFi
 /// The upload tries to perform a chunked upload by requesting the new
 /// `chunk-upload/` endpoint. If chunk uploads are disabled or the server does
 /// not support them yet, it falls back to the legacy `files/dsyms/` endpoint.
+///
+/// The uploader will walk the given `paths` in the file system recursively and
+/// search for DIFs. If `allow_zips` is not deactivated, it will also open ZIP
+/// files and search there.
+///
+/// By default, all supported object files will be included. To customize this,
+/// use the `filter_id`, `filter_kind`, `filter_class` and `filter_extension`
+/// methods.
+///
+/// If `symbol_map` is set and Apple dSYMs with hidden symbols are found, the
+/// uploader will first try to locate BCSymbolMaps and generate new dSYMs with
+/// resolved symbols.
 #[derive(Debug, Default)]
 pub struct DifUpload {
     org: String,
