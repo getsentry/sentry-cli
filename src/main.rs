@@ -82,7 +82,6 @@ pub mod config;
 pub mod constants;
 pub mod errors;
 pub mod event;
-pub mod prelude;
 pub mod utils;
 
 /// Executes the command line application and exits the process.
@@ -93,6 +92,6 @@ pub fn main() {
     {
         dotenv::dotenv().ok();
     }
-    utils::init_backtrace();
-    utils::run_or_interrupt(commands::main);
+    utils::system::init_backtrace();
+    utils::system::run_or_interrupt(commands::main);
 }

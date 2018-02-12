@@ -4,12 +4,12 @@ use std::fmt;
 use std::path::{Path, PathBuf};
 use std::collections::HashMap;
 
-use prelude::*;
-
-use uuid::Uuid;
 use elementtree::Element;
 use itertools::Itertools;
 use java_properties;
+use uuid::Uuid;
+
+use errors::{Error, Result};
 
 pub struct AndroidManifest {
     path: PathBuf,

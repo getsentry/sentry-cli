@@ -3,14 +3,12 @@ use std::io::Read;
 use std::env;
 use std::path::PathBuf;
 
+use regex::Regex;
+
+use errors::Result;
 use utils::vcs;
 use utils::xcode::InfoPlist;
 use utils::cordova::CordovaConfig;
-
-use regex::Regex;
-
-use prelude::*;
-
 
 pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
     let here = path.map_or(env::current_dir()?, |p| p.into());

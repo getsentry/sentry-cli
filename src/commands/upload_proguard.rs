@@ -3,19 +3,20 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use prelude::*;
-use utils::{ArgExt, TempFile, copy_with_progress, make_byte_progress_bar,
-            get_sha1_checksum, AndroidManifest, dump_proguard_uuids_as_properties,
-            validate_uuid};
-use config::Config;
-use api::{Api, AssociateDsyms};
-
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use symbolic_common::ByteView;
 use symbolic_proguard::ProguardMappingView;
 use uuid::Uuid;
 use zip;
+
+use api::{Api, AssociateDsyms};
+use config::Config;
+use errors::{Error, ErrorKind, Result, ResultExt};
+use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
+use utils::args::{validate_uuid, ArgExt};
+use utils::fs::{TempFile, get_sha1_checksum};
+use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 #[derive(Debug)]
 struct MappingRef {
@@ -187,7 +188,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     println!("{} uploading mappings", style(">").dim());
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let rv = api.upload_dsyms(&org, &project, tf.path())?;
+    let rv = api.upload_dif_archive(&org, &project, tf.path())?;
     println!("{} Uploaded a total of {} new mapping files",
              style(">").dim(), style(rv.len()).yellow());
     if rv.len() > 0 {

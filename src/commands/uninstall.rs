@@ -1,11 +1,15 @@
 //! Implements a command for uninstalling `sentry-cli`
 use std::env;
+use std::fs;
 
 use clap::{App, ArgMatches, AppSettings};
 use console::style;
+use runas;
 
-use prelude::*;
-use utils::{is_homebrew_install, is_npm_install};
+use errors::{ErrorKind, Result};
+use utils::fs::is_writable;
+use utils::system::{is_homebrew_install, is_npm_install};
+use utils::ui::prompt_to_continue;
 
 fn is_hidden() -> bool {
     cfg!(windows) || is_homebrew_install() || is_npm_install()
@@ -21,10 +25,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
-    use std::fs;
-    use runas;
-    use utils;
-
     let exe = env::current_exe()?;
 
     if is_homebrew_install() {
@@ -46,12 +46,12 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
         return Err(ErrorKind::QuietExit(1).into());
     }
 
-    if !utils::prompt_to_continue("Do you really want to uninstall sentry-cli?")? {
+    if !prompt_to_continue("Do you really want to uninstall sentry-cli?")? {
         println!("Aborted!");
         return Ok(());
     }
 
-    if !utils::is_writable(&exe) {
+    if !is_writable(&exe) {
         println!("Need to sudo to uninstall {}", exe.display());
         runas::Command::new("rm").arg("-f")
             .arg(&exe)

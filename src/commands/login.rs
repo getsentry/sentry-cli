@@ -3,10 +3,10 @@ use clap::{App, ArgMatches};
 use open;
 use url::Url;
 
-use prelude::*;
-use config::{Config, Auth};
-use utils::{prompt, prompt_to_continue};
 use api::Api;
+use config::{Config, Auth};
+use errors::Result;
+use utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Authenticate with the Sentry server.")

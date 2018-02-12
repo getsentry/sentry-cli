@@ -10,10 +10,10 @@ use clap::{App, Arg, ArgMatches};
 use uuid::{Uuid, UuidVersion};
 use regex::Regex;
 
-use prelude::*;
-use config::Config;
-use event::{Event, Exception, SingleException, Frame, Stacktrace};
 use api::Api;
+use config::Config;
+use errors::Result;
+use event::{Event, Exception, SingleException, Frame, Stacktrace};
 
 const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
 lazy_static! {

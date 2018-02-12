@@ -14,9 +14,9 @@ use url::Url;
 use ini::Ini;
 use parking_lot::Mutex;
 
-use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
-use utils::Logger;
+use errors::{Error, Result, ResultExt};
+use utils::logging::Logger;
 
 static LOGGER: Logger = Logger;
 
@@ -358,8 +358,8 @@ impl Config {
             .unwrap_or(true))
     }
 
-    /// Returns the maximum dsym upload size
-    pub fn get_max_dsym_upload_size(&self) -> Result<u64> {
+    /// Returns the maximum DIF upload size
+    pub fn get_max_dif_archive_size(&self) -> Result<u64> {
         Ok(self.ini.get_from(Some("dsym"), "max_upload_size")
             .and_then(|x| x.parse().ok())
             .unwrap_or(35 * 1024 * 1024))

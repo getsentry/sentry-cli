@@ -8,7 +8,7 @@ use uuid::Uuid;
 use api::Api;
 use config::Config;
 use errors::{ErrorKind, Result};
-use utils::{validate_uuid, ArgExt};
+use utils::args::{validate_uuid, ArgExt};
 use utils::dif_upload::DifUpload;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

@@ -4,8 +4,7 @@ use std::io::BufReader;
 
 use elementtree::{Element, QName};
 
-use prelude::*;
-
+use errors::Result;
 
 pub struct CordovaConfig {
     root: Element,

@@ -3,8 +3,8 @@ use std::env;
 
 use clap::{App, Arg, ArgMatches, AppSettings};
 
-use prelude::*;
-use utils::{get_latest_sentrycli_release, can_update_sentrycli};
+use errors::Result;
+use utils::update::{get_latest_sentrycli_release, can_update_sentrycli};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Update the sentry-cli executable.")

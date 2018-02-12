@@ -10,7 +10,7 @@ use symbolic_common::{ByteView, ObjectKind};
 use symbolic_debuginfo::{FatObject, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
 
-use prelude::*;
+use errors::{Error, Result};
 
 #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
 pub enum DifType {

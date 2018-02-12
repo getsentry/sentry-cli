@@ -1,4 +1,4 @@
-//! Implements a command for uploading dsym files.
+//! Implements a command for uploading dSYM files.
 use std::collections::BTreeSet;
 use std::env;
 use std::str;
@@ -12,7 +12,7 @@ use uuid::Uuid;
 use api::Api;
 use config::Config;
 use errors::{ErrorKind, Result};
-use utils::{validate_uuid, ArgExt};
+use utils::args::{validate_uuid, ArgExt};
 use utils::dif_upload::DifUpload;
 use utils::xcode::{InfoPlist, MayDetach};
 

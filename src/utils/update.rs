@@ -10,12 +10,12 @@ use app_dirs;
 use serde_json;
 use chrono::{Utc, DateTime, Duration};
 
-use config::Config;
 use api::{Api, SentryCliRelease};
+use config::Config;
 use constants::{APP_INFO, VERSION};
-use utils::{is_homebrew_install, is_npm_install, set_executable_mode, is_writable};
-use prelude::*;
-
+use errors::{Error, ErrorKind, Result, ResultExt};
+use utils::fs::{set_executable_mode, is_writable};
+use utils::system::{is_homebrew_install, is_npm_install};
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {

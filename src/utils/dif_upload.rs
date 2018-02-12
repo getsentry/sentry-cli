@@ -27,19 +27,19 @@ use which::which;
 use zip::{ZipArchive, ZipWriter};
 use zip::write::FileOptions;
 
-use api::{self, Api, ChunkUploadOptions};
+use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
 use config::Config;
 use errors::Result;
-use utils::{copy_with_progress, make_byte_progress_bar, TempDir, TempFile, get_sha1_checksum,
-            get_sha1_checksums};
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::has_hidden_symbols;
+use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
+use utils::ui::{copy_with_progress, make_byte_progress_bar};
+
+/// A debug info file on the server.
+pub use api::DebugInfoFile;
 
 /// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;
-
-/// A debug info file on the server.
-pub type DebugInfoFile = api::DSymFile;
 
 /// A single chunk of a debug information file returned by
 /// `ChunkedDifMatch::chunks`. It carries the binary data slice and a SHA1
@@ -251,11 +251,11 @@ impl<'data> ChunkedDifMatch<'data> {
         }
     }
 
-    /// Creates a tuple which can be collected into a `api::AssembleDifsRequest`.
-    pub fn to_assemble(&self) -> (Digest, api::ChunkedDifRequest) {
+    /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
+    pub fn to_assemble(&self) -> (Digest, ChunkedDifRequest) {
         (
             self.checksum(),
-            api::ChunkedDifRequest {
+            ChunkedDifRequest {
                 name: self.file_name(),
                 chunks: &self.chunks,
             },
@@ -788,12 +788,12 @@ fn try_assemble_difs<'data>(
             .ok_or("Server returned unexpected checksum")?;
 
         match file_response.state {
-            api::ChunkedFileState::Error => {
+            ChunkedFileState::Error => {
                 // One of the files could not be uploaded properly and resulted
                 // in an error. We might still want to wait for all other files,
                 // however, so we ignore this file for now.
             }
-            api::ChunkedFileState::NotFound => {
+            ChunkedFileState::NotFound => {
                 // Assembling for one of the files has not started because some
                 // (or all) of its chunks have not been found. We report its
                 // missing chunks to the caller and then continue. The caller
@@ -865,7 +865,7 @@ fn upload_missing_chunks(
     // the maximum size configured in ChunkUploadOptions.
     let mut base = 0;
     for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-        let mode = api::ProgressBarMode::Shared((progress.clone(), size, base));
+        let mode = ProgressBarMode::Shared((progress.clone(), size, base));
         api.upload_chunks(&chunk_options.url, batch, mode)?;
         base += size;
     }
@@ -1016,7 +1016,7 @@ fn get_missing_difs<'data>(
 
     let missing_checksums = {
         let checksums = objects.iter().map(|s| s.checksum());
-        api.find_missing_dsym_checksums(&options.org, &options.project, checksums)?
+        api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
     };
 
     let missing = objects
@@ -1050,7 +1050,7 @@ fn upload_in_batches(
     objects: Vec<HashedDifMatch>,
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>> {
-    let max_size = Config::get_current().get_max_dsym_upload_size()?;
+    let max_size = Config::get_current().get_max_dif_archive_size()?;
     let mut dsyms = Vec::new();
 
     for (i, (batch, _)) in objects.batches(max_size, MAX_CHUNKS).enumerate() {
@@ -1064,7 +1064,7 @@ fn upload_in_batches(
         let archive = create_batch_archive(&batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(api.upload_dsyms(&options.org, &options.project, archive.path())?);
+        dsyms.extend(api.upload_dif_archive(&options.org, &options.project, archive.path())?);
     }
 
     Ok(dsyms)

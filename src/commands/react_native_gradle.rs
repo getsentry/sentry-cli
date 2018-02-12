@@ -3,11 +3,11 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 
-use prelude::*;
-use config::Config;
-use utils::{ArgExt, SourceMapProcessor};
 use api::{Api, NewRelease};
-
+use config::Config;
+use errors::Result;
+use utils::args::ArgExt;
+use utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a gradle build step.")
