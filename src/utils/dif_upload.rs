@@ -32,7 +32,7 @@ use config::Config;
 use errors::Result;
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::has_hidden_symbols;
-use utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
+use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.
@@ -1016,7 +1016,7 @@ fn get_missing_difs<'data>(
 
     let missing_checksums = {
         let checksums = objects.iter().map(|s| s.checksum());
-        api.find_missing_dsym_checksums(&options.org, &options.project, checksums)?
+        api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
     };
 
     let missing = objects
@@ -1064,7 +1064,7 @@ fn upload_in_batches(
         let archive = create_batch_archive(&batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(api.upload_dsyms(&options.org, &options.project, archive.path())?);
+        dsyms.extend(api.upload_dif_archive(&options.org, &options.project, archive.path())?);
     }
 
     Ok(dsyms)

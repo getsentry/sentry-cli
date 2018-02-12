@@ -188,7 +188,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     println!("{} uploading mappings", style(">").dim());
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let rv = api.upload_dsyms(&org, &project, tf.path())?;
+    let rv = api.upload_dif_archive(&org, &project, tf.path())?;
     println!("{} Uploaded a total of {} new mapping files",
              style(">").dim(), style(rv.len()).yellow());
     if rv.len() > 0 {

@@ -612,9 +612,9 @@ impl Api {
         }
     }
 
-    /// Given a list of checksums for Dsym files this returns a list of those
+    /// Given a list of checksums for DIFs, this returns a list of those
     /// that do not exist for the project yet.
-    pub fn find_missing_dsym_checksums<I>(
+    pub fn find_missing_dif_checksums<I>(
         &self,
         org: &str,
         project: &str,
@@ -640,8 +640,8 @@ impl Api {
         Ok(state.missing)
     }
 
-    /// Uploads a dsym file from the given path.
-    pub fn upload_dsyms(
+    /// Uploads a ZIP archive containing DIFs from the given path.
+    pub fn upload_dif_archive(
         &self,
         org: &str,
         project: &str,
