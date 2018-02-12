@@ -8,7 +8,7 @@ use console::strip_ansi_codes;
 use glob::{glob_with, MatchOptions};
 use serde_json;
 
-use prelude::*;
+use errors::{Error, Result, ResultExt};
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
 

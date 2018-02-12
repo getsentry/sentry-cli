@@ -12,7 +12,7 @@ use regex::Regex;
 
 use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
 use config::Config;
-use prelude::*;
+use errors::{Error, ErrorKind, Result};
 use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
 use utils::formatting::{HumanDuration, Table};
 use utils::releases::detect_release_name;

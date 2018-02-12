@@ -12,7 +12,7 @@ use zip;
 
 use api::{Api, AssociateDsyms};
 use config::Config;
-use prelude::*;
+use errors::{Error, ErrorKind, Result, ResultExt};
 use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
 use utils::args::{validate_uuid, ArgExt};
 use utils::fs::{TempFile, get_sha1_checksum};

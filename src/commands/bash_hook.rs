@@ -12,8 +12,8 @@ use regex::Regex;
 
 use api::Api;
 use config::Config;
+use errors::Result;
 use event::{Event, Exception, SingleException, Frame, Stacktrace};
-use prelude::*;
 
 const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
 lazy_static! {

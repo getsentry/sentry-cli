@@ -7,7 +7,7 @@ use serde_json;
 
 use api::Api;
 use config::{Auth, Config};
-use prelude::*;
+use errors::{ErrorKind, Result};
 
 #[derive(Serialize, Default)]
 pub struct AuthStatus {

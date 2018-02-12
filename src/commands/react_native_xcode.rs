@@ -10,7 +10,7 @@ use chrono::Duration;
 
 use api::{Api, NewRelease};
 use config::Config;
-use prelude::*;
+use errors::Result;
 use utils::args::ArgExt;
 use utils::fs::TempFile;
 use utils::sourcemaps::SourceMapProcessor;

@@ -5,7 +5,7 @@ use clap::{App, Arg, ArgMatches};
 
 use api::{Api, NewRelease};
 use config::Config;
-use prelude::*;
+use errors::Result;
 use utils::args::ArgExt;
 use utils::sourcemaps::SourceMapProcessor;
 

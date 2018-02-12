@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use regex::Regex;
 
-use prelude::*;
+use errors::Result;
 use utils::vcs;
 use utils::xcode::InfoPlist;
 use utils::cordova::CordovaConfig;

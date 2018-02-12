@@ -5,7 +5,7 @@ use chardet::detect;
 use encoding::DecoderTrap;
 use encoding::label::encoding_from_whatwg_label;
 
-use prelude::*;
+use errors::{ErrorKind, Result};
 
 // Decodes bytes from an unknown encoding
 pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {

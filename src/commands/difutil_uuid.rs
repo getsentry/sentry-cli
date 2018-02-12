@@ -4,7 +4,7 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches};
 use serde_json;
 
-use prelude::*;
+use errors::{ErrorKind, Result};
 use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

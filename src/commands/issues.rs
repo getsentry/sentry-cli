@@ -3,7 +3,7 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 
 use api::{Api, IssueFilter, IssueChanges};
 use config::Config;
-use prelude::*;
+use errors::{Result, ResultExt};
 use utils::args::ArgExt;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

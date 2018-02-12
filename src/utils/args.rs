@@ -4,7 +4,7 @@ use clap;
 use uuid::Uuid;
 use chrono::{DateTime, Utc, TimeZone};
 
-use prelude::*;
+use errors::{Error, Result};
 
 fn validate_org(v: String) -> StdResult<(), String> {
     if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {

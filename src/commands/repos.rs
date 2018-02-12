@@ -3,7 +3,7 @@ use clap::{App, AppSettings, ArgMatches};
 
 use api::Api;
 use config::Config;
-use prelude::*;
+use errors::Result;
 use utils::args::ArgExt;
 use utils::formatting::Table;
 

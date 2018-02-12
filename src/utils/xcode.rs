@@ -19,7 +19,7 @@ use mac_process_info;
 use regex::Regex;
 
 use config::Config;
-use prelude::*;
+use errors::{Error, Result, ResultExt};
 use utils::fs::{TempFile, SeekRead};
 use utils::system::{expand_vars, print_error};
 

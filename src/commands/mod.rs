@@ -7,7 +7,7 @@ use clap::{Arg, App, AppSettings};
 
 use config::{prepare_environment, Auth, Config};
 use constants::VERSION;
-use prelude::*;
+use errors::{ErrorKind, Result};
 use utils::system::print_error;
 use utils::update::run_sentrycli_update_nagger;
 

@@ -15,7 +15,7 @@ use ini::Ini;
 use parking_lot::Mutex;
 
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
-use prelude::*;
+use errors::{Error, Result, ResultExt};
 use utils::logging::Logger;
 
 static LOGGER: Logger = Logger;

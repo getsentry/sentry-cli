@@ -82,7 +82,6 @@ pub mod config;
 pub mod constants;
 pub mod errors;
 pub mod event;
-pub mod prelude;
 pub mod utils;
 
 /// Executes the command line application and exits the process.

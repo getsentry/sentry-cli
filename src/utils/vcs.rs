@@ -5,7 +5,7 @@ use git2;
 use regex::Regex;
 
 use api::{Repo, Ref};
-use prelude::*;
+use errors::{Error, Result};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {

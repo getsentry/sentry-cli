@@ -15,7 +15,7 @@ use anylog::LogEntry;
 use regex::Regex;
 
 use constants::{ARCH, PLATFORM};
-use prelude::*;
+use errors::{Result, ResultExt};
 use utils::releases::detect_release_name;
 use utils::system::{to_timestamp, get_model, get_family};
 
@@ -23,7 +23,6 @@ lazy_static! {
     static ref COMPONENT_RE: Regex = Regex::new(
         r#"^([^:]+): (.*)$"#).unwrap();
 }
-
 
 #[derive(Serialize)]
 pub struct Message {

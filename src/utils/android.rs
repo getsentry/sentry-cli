@@ -9,7 +9,7 @@ use itertools::Itertools;
 use java_properties;
 use uuid::Uuid;
 
-use prelude::*;
+use errors::{Error, Result};
 
 pub struct AndroidManifest {
     path: PathBuf,

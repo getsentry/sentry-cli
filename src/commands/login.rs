@@ -5,7 +5,7 @@ use url::Url;
 
 use api::Api;
 use config::{Config, Auth};
-use prelude::*;
+use errors::Result;
 use utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

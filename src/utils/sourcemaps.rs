@@ -15,7 +15,7 @@ use sourcemap;
 use url::Url;
 
 use api::{Api, FileContents};
-use prelude::*;
+use errors::Result;
 use utils::enc::decode_unknown_string;
 
 fn make_progress_bar(len: u64) -> ProgressBar {

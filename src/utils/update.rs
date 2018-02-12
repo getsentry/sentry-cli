@@ -13,7 +13,7 @@ use chrono::{Utc, DateTime, Duration};
 use api::{Api, SentryCliRelease};
 use config::Config;
 use constants::{APP_INFO, VERSION};
-use prelude::*;
+use errors::{Error, ErrorKind, Result, ResultExt};
 use utils::fs::{set_executable_mode, is_writable};
 use utils::system::{is_homebrew_install, is_npm_install};
 

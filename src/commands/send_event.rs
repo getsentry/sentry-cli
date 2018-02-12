@@ -5,8 +5,8 @@ use serde_json::Value;
 
 use api::Api;
 use config::Config;
+use errors::{ErrorKind, Result};
 use event::{Event, Message};
-use prelude::*;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")

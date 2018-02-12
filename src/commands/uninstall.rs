@@ -6,7 +6,7 @@ use clap::{App, ArgMatches, AppSettings};
 use console::style;
 use runas;
 
-use prelude::*;
+use errors::{ErrorKind, Result};
 use utils::fs::is_writable;
 use utils::system::{is_homebrew_install, is_npm_install};
 use utils::ui::prompt_to_continue;

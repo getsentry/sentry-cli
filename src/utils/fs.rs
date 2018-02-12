@@ -8,7 +8,7 @@ use std::io::{Read, Seek, SeekFrom};
 use sha1::{Sha1, Digest};
 use uuid::{Uuid, UuidVersion};
 
-use prelude::*;
+use errors::Result;
 
 pub trait SeekRead: Seek + Read {}
 impl<T: Seek + Read> SeekRead for T {}

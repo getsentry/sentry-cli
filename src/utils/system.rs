@@ -6,13 +6,12 @@ use std::borrow::Cow;
 
 use config::Config;
 
-use regex::{Regex, Captures};
-use chrono::{DateTime, Utc};
-
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
+use chrono::{DateTime, Utc};
+use regex::{Captures, Regex};
 
-use prelude::*;
+use errors::{Error, ErrorKind, Result};
 
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)

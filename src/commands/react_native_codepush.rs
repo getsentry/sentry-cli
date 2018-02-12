@@ -7,7 +7,7 @@ use console::style;
 
 use api::{Api, NewRelease};
 use config::Config;
-use prelude::*;
+use errors::Result;
 use utils::args::ArgExt;
 use utils::codepush::{get_codepush_package, get_react_native_codepush_release};
 use utils::sourcemaps::SourceMapProcessor;
