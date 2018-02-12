@@ -27,7 +27,7 @@ use which::which;
 use zip::{ZipArchive, ZipWriter};
 use zip::write::FileOptions;
 
-use api::{self, Api, ChunkUploadOptions};
+use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
 use config::Config;
 use errors::Result;
 use utils::{copy_with_progress, make_byte_progress_bar, TempDir, TempFile, get_sha1_checksum,
@@ -251,11 +251,11 @@ impl<'data> ChunkedDifMatch<'data> {
         }
     }
 
-    /// Creates a tuple which can be collected into a `api::AssembleDifsRequest`.
-    pub fn to_assemble(&self) -> (Digest, api::ChunkedDifRequest) {
+    /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
+    pub fn to_assemble(&self) -> (Digest, ChunkedDifRequest) {
         (
             self.checksum(),
-            api::ChunkedDifRequest {
+            ChunkedDifRequest {
                 name: self.file_name(),
                 chunks: &self.chunks,
             },
@@ -788,12 +788,12 @@ fn try_assemble_difs<'data>(
             .ok_or("Server returned unexpected checksum")?;
 
         match file_response.state {
-            api::ChunkedFileState::Error => {
+            ChunkedFileState::Error => {
                 // One of the files could not be uploaded properly and resulted
                 // in an error. We might still want to wait for all other files,
                 // however, so we ignore this file for now.
             }
-            api::ChunkedFileState::NotFound => {
+            ChunkedFileState::NotFound => {
                 // Assembling for one of the files has not started because some
                 // (or all) of its chunks have not been found. We report its
                 // missing chunks to the caller and then continue. The caller
@@ -865,7 +865,7 @@ fn upload_missing_chunks(
     // the maximum size configured in ChunkUploadOptions.
     let mut base = 0;
     for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-        let mode = api::ProgressBarMode::Shared((progress.clone(), size, base));
+        let mode = ProgressBarMode::Shared((progress.clone(), size, base));
         api.upload_chunks(&chunk_options.url, batch, mode)?;
         base += size;
     }
