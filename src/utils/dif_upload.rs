@@ -35,11 +35,11 @@ use utils::{copy_with_progress, make_byte_progress_bar, TempDir, TempFile, get_s
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::has_hidden_symbols;
 
+/// A debug info file on the server.
+pub use api::DebugInfoFile;
+
 /// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;
-
-/// A debug info file on the server.
-pub type DebugInfoFile = api::DSymFile;
 
 /// A single chunk of a debug information file returned by
 /// `ChunkedDifMatch::chunks`. It carries the binary data slice and a SHA1

@@ -644,7 +644,7 @@ impl Api {
     }
 
     /// Uploads a dsym file from the given path.
-    pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path) -> ApiResult<Vec<DSymFile>> {
+    pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path) -> ApiResult<Vec<DebugInfoFile>> {
         let path = format!(
             "/projects/{}/{}/files/dsyms/",
             PathArg(org),
@@ -1388,9 +1388,10 @@ struct EventInfo {
     id: String,
 }
 
-/// Structure of DSym files.
+/// Debug information files as processed and stored on the server.
+/// Can be dSYMs, ELF debug infos, Breakpad symbols, etc...
 #[derive(Debug, Deserialize)]
-pub struct DSymFile {
+pub struct DebugInfoFile {
     pub uuid: String,
     #[serde(rename = "objectName")]
     pub object_name: String,
@@ -1400,7 +1401,7 @@ pub struct DSymFile {
     pub checksum: String,
 }
 
-impl DSymFile {
+impl DebugInfoFile {
     pub fn uuid(&self) -> Uuid {
         Uuid::parse_str(&self.uuid).unwrap()
     }
@@ -1470,7 +1471,7 @@ impl IssueFilter {
 #[derive(Deserialize)]
 pub struct AssociateDsymsResponse {
     #[serde(rename = "associatedDsymFiles")]
-    pub associated_dsyms: Vec<DSymFile>,
+    pub associated_dsyms: Vec<DebugInfoFile>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -1578,7 +1579,7 @@ pub struct ChunkedDifResponse {
     #[serde(rename = "error")]
     pub error: Option<String>,
     #[serde(rename = "dif")]
-    pub dif: Option<DSymFile>,
+    pub dif: Option<DebugInfoFile>,
 }
 
 pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;
