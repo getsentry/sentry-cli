@@ -671,7 +671,7 @@ where
 {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Preparing for upload... {msg:.dim}\
-         \n  {wide_bar}  {pos}/{len}",
+         \n{wide_bar}  {pos}/{len}",
     );
 
     let progress = ProgressBar::new(items.len() as u64);
@@ -732,7 +732,7 @@ fn process_symbol_maps<'a>(
     let len = with_hidden.len();
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Resolving BCSymbolMaps... {msg:.dim}\
-         \n  {wide_bar}  {pos}/{len}",
+         \n{wide_bar}  {pos}/{len}",
     );
 
     let progress = ProgressBar::new(with_hidden.len() as u64);
@@ -840,10 +840,13 @@ fn upload_missing_chunks(
     difs: &[ChunkedDifMatch],
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let progress_style = ProgressStyle::default_bar().template(
-        "{prefix:.dim} Uploading {msg:.yellow} missing debug information files...\
-         \n  {wide_bar}  {bytes}/{total_bytes} ({eta})",
-    );
+    let progress_style = ProgressStyle::default_bar().template(&format!(
+        "{} Uploading {} missing debug information file{}...\
+         \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+         style(">").dim(),
+         style(difs.len().to_string()).yellow(),
+         if difs.len() == 1 { "" } else { "s" }
+    ));
 
     // Chunks are uploaded in batches, but the progress bar is shared between
     // multiple requests to simulate one continuous upload to the user. Since we
@@ -861,8 +864,6 @@ fn upload_missing_chunks(
 
     let progress = Arc::new(ProgressBar::new(total));
     progress.set_style(progress_style);
-    progress.set_prefix(">");
-    progress.set_message(&difs.len().to_string());
 
     // Since each upload is separate inside `Api::upload_chunks`, we need to
     // keep track of the progress and pass it as offset into
@@ -899,7 +900,7 @@ fn poll_dif_assemble(
 ) -> Result<Vec<DebugInfoFile>> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
-         \n  {wide_bar}  {pos}/{len}",
+         \n{wide_bar}  {pos}/{len}",
     );
 
     let progress = ProgressBar::new(difs.len() as u64);
