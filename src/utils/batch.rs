@@ -96,7 +96,7 @@ pub trait BatchedSliceExt<T: ItemSize> {
     /// `max_size`) and at most `max_items`. Items must implement `ItemSize`.
     ///
     /// ```
-    /// use utils::dif_upload::{BatchedSliceExt, ItemSize};
+    /// use utils::batch::{BatchedSliceExt, ItemSize};
     ///
     /// let slice = &[5, 10, 1, 1, 1, 1];
     /// let mut batches = slice.batches(5, 3);

@@ -8,16 +8,15 @@ use std::collections::{HashSet, HashMap};
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
 
-use sourcemap;
-use might_be_minified;
-use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
 use console::{Term, style};
-
-use prelude::*;
+use indicatif::{ProgressBar, ProgressStyle, ProgressDrawTarget};
+use might_be_minified;
+use sourcemap;
 use url::Url;
-use api::{Api, FileContents};
-use utils::decode_unknown_string;
 
+use api::{Api, FileContents};
+use prelude::*;
+use utils::enc::decode_unknown_string;
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);

@@ -5,7 +5,7 @@ use clap::{App, Arg, ArgMatches};
 use serde_json;
 
 use prelude::*;
-use utils::dif;
+use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
@@ -31,7 +31,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     // which types should we consider?
     let ty = matches.value_of("type").map(|t| t.parse().unwrap());
-    let f = dif::DifFile::open_path(path, ty)?;
+    let f = DifFile::open_path(path, ty)?;
 
     if !f.is_usable() {
         println_stderr!("error: debug info file is not usable: {}",

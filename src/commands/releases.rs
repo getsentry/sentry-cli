@@ -7,16 +7,17 @@ use chrono::{DateTime, Duration, Utc};
 use ignore::WalkBuilder;
 use ignore::types::TypesBuilder;
 use ignore::overrides::OverrideBuilder;
+use indicatif::HumanBytes;
 use regex::Regex;
 
-use prelude::*;
-use api::{Api, NewRelease, UpdatedRelease, FileContents, Deploy};
+use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
 use config::Config;
-use indicatif::HumanBytes;
-use utils::{ArgExt, Table, HumanDuration, validate_timestamp,
-            validate_seconds, get_timestamp, validate_project,
-            SourceMapProcessor, vcs, detect_release_name};
-
+use prelude::*;
+use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
+use utils::formatting::{HumanDuration, Table};
+use utils::releases::detect_release_name;
+use utils::sourcemaps::SourceMapProcessor;
+use utils::vcs::{find_heads, CommitSpec};
 
 struct ReleaseContext<'a> {
     pub api: Api,
@@ -399,7 +400,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
     }
 
     let heads = if matches.is_present("auto") {
-        let commits = vcs::find_heads(None, repos)?;
+        let commits = find_heads(None, repos)?;
         if commits.is_empty() {
             return Err(Error::from("Could not determine any commits to be associated \
                                     automatically. You will have to explicitly provide \
@@ -411,7 +412,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
     } else {
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
-                let commit_spec = vcs::CommitSpec::parse(spec)?;
+                let commit_spec = CommitSpec::parse(spec)?;
                 if (&repos).iter().filter(|r| r.name == commit_spec.repo).next().is_some() {
                     commit_specs.push(commit_spec);
                 } else {
@@ -419,7 +420,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
                 }
             }
         }
-        let commits = vcs::find_heads(Some(commit_specs), repos)?;
+        let commits = find_heads(Some(commit_specs), repos)?;
         if commits.is_empty() {
             None
         } else {

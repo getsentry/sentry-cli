@@ -1,11 +1,10 @@
 use std::result::Result as StdResult;
 
-use uuid::Uuid;
 use clap;
+use uuid::Uuid;
 use chrono::{DateTime, Utc, TimeZone};
 
 use prelude::*;
-
 
 fn validate_org(v: String) -> StdResult<(), String> {
     if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {

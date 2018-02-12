@@ -28,11 +28,13 @@ use regex::{Captures, Regex};
 use sha1::Digest;
 use uuid::Uuid;
 
-use utils;
-use utils::xcode::InfoPlist;
-use event::Event;
 use config::{Auth, Config, Dsn};
 use constants::{ARCH, EXT, PLATFORM, VERSION};
+use event::Event;
+use utils::android::AndroidManifest;
+use utils::sourcemaps::get_sourcemap_reference_from_headers;
+use utils::ui::{capitalize_string, make_byte_progress_bar};
+use utils::xcode::InfoPlist;
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
@@ -589,12 +591,7 @@ impl Api {
     /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
         let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
-        let ref_name = format!(
-            "sentry-cli-{}-{}{}",
-            utils::capitalize_string(PLATFORM),
-            ARCH,
-            EXT
-        );
+        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), ARCH, EXT);
         info!("Looking for file named: {}", ref_name);
 
         if resp.status() == 404 {
@@ -644,7 +641,12 @@ impl Api {
     }
 
     /// Uploads a dsym file from the given path.
-    pub fn upload_dsyms(&self, org: &str, project: &str, file: &Path) -> ApiResult<Vec<DebugInfoFile>> {
+    pub fn upload_dsyms(
+        &self,
+        org: &str,
+        project: &str,
+        file: &Path,
+    ) -> ApiResult<Vec<DebugInfoFile>> {
         let path = format!(
             "/projects/{}/{}/files/dsyms/",
             PathArg(org),
@@ -758,7 +760,7 @@ impl Api {
         &self,
         org: &str,
         project: &str,
-        manifest: &utils::AndroidManifest,
+        manifest: &AndroidManifest,
         checksums: Vec<String>,
     ) -> ApiResult<Option<AssociateDsymsResponse>> {
         self.associate_dsyms(
@@ -905,7 +907,7 @@ fn handle_req<W: Write>(
                 if up_len > 0 && progress_bar_mode.request() {
                     if up_pos < up_len {
                         if pb.is_none() {
-                            *pb = Some(utils::make_byte_progress_bar(up_len));
+                            *pb = Some(make_byte_progress_bar(up_len));
                         }
                         pb.as_ref().unwrap().set_position(up_pos);
                     } else if pb.is_some() {
@@ -915,7 +917,7 @@ fn handle_req<W: Write>(
                 if down_len > 0 && progress_bar_mode.response() {
                     if down_pos < down_len {
                         if pb.is_none() {
-                            *pb = Some(utils::make_byte_progress_bar(down_len));
+                            *pb = Some(make_byte_progress_bar(down_len));
                         }
                         pb.as_ref().unwrap().set_position(down_pos);
                     } else if pb.is_some() {
@@ -1307,7 +1309,7 @@ impl Artifact {
     }
 
     pub fn get_sourcemap_reference(&self) -> Option<&str> {
-        utils::get_sourcemap_reference_from_headers(self.headers.iter())
+        get_sourcemap_reference_from_headers(self.headers.iter())
     }
 }
 

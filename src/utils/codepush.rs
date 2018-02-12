@@ -4,13 +4,13 @@ use std::path::Path;
 use std::process;
 use std::str;
 
-use serde_json;
 use console::strip_ansi_codes;
 use glob::{glob_with, MatchOptions};
+use serde_json;
 
 use prelude::*;
-use utils::xcode::{InfoPlist, XcodeProjectInfo};
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
+use utils::xcode::{InfoPlist, XcodeProjectInfo};
 
 static CODEPUSH_BIN_PATH: &'static str = "code-push";
 static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push";

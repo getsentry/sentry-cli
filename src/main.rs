@@ -93,6 +93,6 @@ pub fn main() {
     {
         dotenv::dotenv().ok();
     }
-    utils::init_backtrace();
-    utils::run_or_interrupt(commands::main);
+    utils::system::init_backtrace();
+    utils::system::run_or_interrupt(commands::main);
 }

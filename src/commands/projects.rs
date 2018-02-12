@@ -1,11 +1,11 @@
 //! Implements a command for managing projects.
 use clap::{App, AppSettings, ArgMatches};
 
-use prelude::*;
-use config::Config;
-use utils::{ArgExt, Table};
 use api::Api;
-
+use config::Config;
+use prelude::*;
+use utils::args::ArgExt;
+use utils::formatting::Table;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage projects on Sentry.")

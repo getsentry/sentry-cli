@@ -8,10 +8,14 @@ use clap::{App, Arg, ArgMatches};
 use serde_json;
 use chrono::Duration;
 
-use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
-use utils::{ArgExt, TempFile, propagate_exit_status, SourceMapProcessor, xcode};
+use prelude::*;
+use utils::args::ArgExt;
+use utils::fs::TempFile;
+use utils::sourcemaps::SourceMapProcessor;
+use utils::system::propagate_exit_status;
+use utils::xcode::{InfoPlist, MayDetach};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct SourceMapReport {
@@ -116,7 +120,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     }
 
     info!("Parsing Info.plist");
-    let plist = match xcode::InfoPlist::discover_from_env()? {
+    let plist = match InfoPlist::discover_from_env()? {
         Some(plist) => plist,
         None => { return Err("Could not find info.plist".into()); }
     };
@@ -125,7 +129,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
 
-    xcode::MayDetach::wrap("React native symbol handling", |md| {
+    MayDetach::wrap("React native symbol handling", |md| {
         let bundle_path;
         let sourcemap_path;
         let bundle_url;

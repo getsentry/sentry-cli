@@ -30,10 +30,10 @@ use zip::write::FileOptions;
 use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
 use config::Config;
 use errors::Result;
-use utils::{copy_with_progress, make_byte_progress_bar, TempDir, TempFile, get_sha1_checksum,
-            get_sha1_checksums};
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::has_hidden_symbols;
+use utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
+use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.
 pub use api::DebugInfoFile;

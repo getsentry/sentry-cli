@@ -14,7 +14,7 @@ use symbolic_common::ByteView;
 use symbolic_proguard::ProguardMappingView;
 
 use prelude::*;
-use utils::{validate_uuid};
+use utils::args::validate_uuid;
 use utils::dif::{DifType, DifFile};
 
 // text files larger than 32 megabytes are not considered to be

@@ -14,9 +14,9 @@ use url::Url;
 use ini::Ini;
 use parking_lot::Mutex;
 
-use prelude::*;
 use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
-use utils::Logger;
+use prelude::*;
+use utils::logging::Logger;
 
 static LOGGER: Logger = Logger;
 

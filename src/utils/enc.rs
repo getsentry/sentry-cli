@@ -7,7 +7,6 @@ use encoding::label::encoding_from_whatwg_label;
 
 use prelude::*;
 
-
 // Decodes bytes from an unknown encoding
 pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
     if let Ok(s) = str::from_utf8(bytes) {

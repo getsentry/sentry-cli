@@ -3,10 +3,10 @@ use clap::{App, Arg, ArgMatches};
 use itertools::Itertools;
 use serde_json::Value;
 
-use prelude::*;
+use api::Api;
 use config::Config;
 use event::{Event, Message};
-use api::Api;
+use prelude::*;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")

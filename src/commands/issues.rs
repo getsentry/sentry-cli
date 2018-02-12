@@ -1,11 +1,10 @@
 //! Implements a command for issue management.
 use clap::{App, AppSettings, Arg, ArgMatches};
 
-use prelude::*;
 use api::{Api, IssueFilter, IssueChanges};
 use config::Config;
-use utils::ArgExt;
-
+use prelude::*;
+use utils::args::ArgExt;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage issues in Sentry.")

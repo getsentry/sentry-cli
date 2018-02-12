@@ -18,10 +18,10 @@ use unix_daemonize::{daemonize_redirect, ChdirMode};
 use mac_process_info;
 use regex::Regex;
 
-use prelude::*;
 use config::Config;
-use utils::{TempFile, expand_vars, SeekRead};
-
+use prelude::*;
+use utils::fs::{TempFile, SeekRead};
+use utils::system::{expand_vars, print_error};
 
 #[derive(Deserialize, Debug)]
 pub struct InfoPlist {
@@ -345,7 +345,6 @@ impl<'a> MayDetach<'a> {
         use std::time::Duration;
         use std::thread;
         use open;
-        use utils::print_error;
 
         let mut md = MayDetach::new(task_name);
         match f(&mut md) {

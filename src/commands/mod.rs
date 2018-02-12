@@ -5,10 +5,11 @@ use std::process;
 
 use clap::{Arg, App, AppSettings};
 
-use prelude::*;
+use config::{prepare_environment, Auth, Config};
 use constants::VERSION;
-use utils::{print_error, run_sentrycli_update_nagger};
-use config::{Config, Auth, prepare_environment};
+use prelude::*;
+use utils::system::print_error;
+use utils::update::run_sentrycli_update_nagger;
 
 const ABOUT: &'static str = "
 Command line utility for Sentry.
@@ -16,7 +17,6 @@ Command line utility for Sentry.
 This tool helps you managing remote resources on a Sentry server like
 sourcemaps, debug symbols or releases.  Use `--help` on the subcommands
 to learn more about them.";
-
 
 macro_rules! each_subcommand {
     ($mac:ident) => {

@@ -5,11 +5,12 @@ use std::ffi::OsStr;
 use clap::{App, Arg, ArgMatches};
 use console::style;
 
-use prelude::*;
 use api::{Api, NewRelease};
 use config::Config;
-use utils::{ArgExt, SourceMapProcessor, get_codepush_package,
-            get_react_native_codepush_release};
+use prelude::*;
+use utils::args::ArgExt;
+use utils::codepush::{get_codepush_package, get_react_native_codepush_release};
+use utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects for CodePush.")

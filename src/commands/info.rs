@@ -5,9 +5,9 @@ use std::collections::HashMap;
 use clap::{App, Arg, ArgMatches};
 use serde_json;
 
-use prelude::*;
 use api::Api;
 use config::{Auth, Config};
+use prelude::*;
 
 #[derive(Serialize, Default)]
 pub struct AuthStatus {

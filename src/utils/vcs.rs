@@ -4,9 +4,8 @@ use std::path::PathBuf;
 use git2;
 use regex::Regex;
 
-use prelude::*;
 use api::{Repo, Ref};
-
+use prelude::*;
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {

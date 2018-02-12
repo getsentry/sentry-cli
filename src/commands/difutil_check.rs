@@ -6,7 +6,7 @@ use console::style;
 use serde_json;
 
 use prelude::*;
-use utils::dif;
+use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
@@ -32,7 +32,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     // which types should we consider?
     let ty = matches.value_of("type").map(|t| t.parse().unwrap());
-    let f = dif::DifFile::open_path(path, ty)?;
+    let f = DifFile::open_path(path, ty)?;
 
     if matches.is_present("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &f)?;

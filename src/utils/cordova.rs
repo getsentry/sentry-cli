@@ -6,7 +6,6 @@ use elementtree::{Element, QName};
 
 use prelude::*;
 
-
 pub struct CordovaConfig {
     root: Element,
 }
