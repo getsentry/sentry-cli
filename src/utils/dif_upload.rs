@@ -766,7 +766,7 @@ fn process_symbol_maps<'a>(
 /// missing chunks for convenience.
 fn try_assemble_difs<'data>(
     api: &Api,
-    difs: &'data Vec<ChunkedDifMatch<'data>>,
+    difs: &'data [ChunkedDifMatch<'data>],
     options: &DifUpload,
 ) -> Result<Option<MissingDifsInfo<'data>>> {
     let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
@@ -837,6 +837,7 @@ fn try_assemble_difs<'data>(
 fn upload_missing_chunks(
     api: &Api,
     missing_info: &MissingDifsInfo,
+    difs: &[ChunkedDifMatch],
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
     let progress_style = ProgressStyle::default_bar().template(
@@ -849,7 +850,11 @@ fn upload_missing_chunks(
     // have to embed the progress bar into a ProgressBarMode and move it into
     // `Api::upload_chunks`, the progress bar is created in an Arc.
     let &(ref difs, ref chunks) = missing_info;
-    let total = chunks
+    let total = difs
+        .iter()
+        .flat_map(|m| m.chunks().map(|DifChunk((_, data))| data.len() as u64))
+        .sum();
+    let total_missing: u64 = chunks
         .iter()
         .map(|&DifChunk((_, data))| data.len() as u64)
         .sum();
@@ -863,7 +868,7 @@ fn upload_missing_chunks(
     // keep track of the progress and pass it as offset into
     // `ProgressBarMode::Shared`. Each batch aggregates objects until it exceeds
     // the maximum size configured in ChunkUploadOptions.
-    let mut base = 0;
+    let mut base = total - total_missing;
     for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
         let mode = ProgressBarMode::Shared((progress.clone(), size, base));
         api.upload_chunks(&chunk_options.url, batch, mode)?;
@@ -986,7 +991,7 @@ fn upload_difs_chunked(
     // Upload until all chunks are present on the server
     let mut initially_missing = None;
     while let Some(missing_info) = try_assemble_difs(api, &chunked, options)? {
-        upload_missing_chunks(api, &missing_info, chunk_options)?;
+        upload_missing_chunks(api, &missing_info, &chunked, chunk_options)?;
         initially_missing.get_or_insert(missing_info);
     }
 
