@@ -5,11 +5,10 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Seek, SeekFrom};
 
-use sha1::Sha1;
+use sha1::{Sha1, Digest};
 use uuid::{Uuid, UuidVersion};
 
 use prelude::*;
-
 
 pub trait SeekRead: Seek + Read {}
 impl<T: Seek + Read> SeekRead for T {}
@@ -55,15 +54,33 @@ impl TempFile {
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
         path.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+
         let f = fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .open(&path)
-            .unwrap();
+            .open(&path)?;
+
         Ok(TempFile {
             f: Some(f),
             path: path.to_path_buf(),
+        })
+    }
+
+    /// Assumes ownership over an existing file and moves it to a temp location.
+    pub fn take<P: AsRef<Path>>(path: P) -> io::Result<TempFile> {
+        let mut destination = env::temp_dir();
+        destination.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+
+        fs::rename(&path, &destination)?;
+        let f = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&destination)?;
+
+        Ok(TempFile {
+            f: Some(f),
+            path: destination,
         })
     }
 
@@ -134,8 +151,8 @@ pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
     }
 }
 
-/// Given a path returns the SHA1 checksum for it.
-pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<String> {
+/// Returns the SHA1 hash of the given input.
+pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
     let mut sha = Sha1::new();
     let mut buf = [0u8; 16384];
     let mut rdr = io::BufReader::new(rdr);
@@ -146,5 +163,25 @@ pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<String> {
         }
         sha.update(&buf[..read]);
     }
-    Ok(sha.digest().to_string())
+    Ok(sha.digest())
+}
+
+/// Returns the SHA1 hash for the entire input, as well as each chunk of it. The
+/// `chunk_size` must be a power of two.
+pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<Digest>)> {
+    if !chunk_size.is_power_of_two() {
+        return Err("Chunk size must be a power of two".into());
+    }
+
+    let mut total_sha = Sha1::new();
+    let mut chunks = Vec::new();
+
+    for chunk in data.chunks(chunk_size as usize) {
+        let mut chunk_sha = Sha1::new();
+        chunk_sha.update(chunk);
+        total_sha.update(chunk);
+        chunks.push(chunk_sha.digest());
+    }
+
+    Ok((total_sha.digest(), chunks))
 }

@@ -25,6 +25,8 @@ use curl;
 use chrono::{DateTime, Duration, Utc};
 use indicatif::ProgressBar;
 use regex::{Captures, Regex};
+use sha1::Digest;
+use uuid::Uuid;
 
 use utils;
 use utils::xcode::InfoPlist;
@@ -51,12 +53,38 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
     }
 }
 
-#[derive(PartialEq, Eq)]
 pub enum ProgressBarMode {
     Disabled,
     Request,
     Response,
     Both,
+    Shared((Arc<ProgressBar>, u64, u64)),
+}
+
+impl ProgressBarMode {
+    /// Returns if progress bars are generally enabled.
+    pub fn active(&self) -> bool {
+        match *self {
+            ProgressBarMode::Disabled => false,
+            _ => true,
+        }
+    }
+
+    /// Returns whether a progress bar should be displayed for during upload.
+    pub fn request(&self) -> bool {
+        match *self {
+            ProgressBarMode::Request | ProgressBarMode::Both => true,
+            _ => false,
+        }
+    }
+
+    /// Returns whether a progress bar should be displayed for during download.
+    pub fn response(&self) -> bool {
+        match *self {
+            ProgressBarMode::Response | ProgressBarMode::Both => true,
+            _ => false,
+        }
+    }
 }
 
 /// Helper for the API access.
@@ -180,6 +208,9 @@ impl Api {
         }
         handle.ssl_verify_host(self.config.should_verify_ssl())?;
         handle.ssl_verify_peer(self.config.should_verify_ssl())?;
+
+        // This toggles gzipping, useful for uploading large files
+        handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
         ApiRequest::new(handle, method, &url, auth)
     }
@@ -586,23 +617,26 @@ impl Api {
 
     /// Given a list of checksums for Dsym files this returns a list of those
     /// that do not exist for the project yet.
-    pub fn find_missing_dsym_checksums(
+    pub fn find_missing_dsym_checksums<I>(
         &self,
         org: &str,
         project: &str,
-        checksums: &Vec<&str>,
-    ) -> ApiResult<HashSet<String>> {
+        checksums: I,
+    ) -> ApiResult<HashSet<Digest>>
+    where
+        I: IntoIterator<Item = Digest>,
+    {
         let mut url = format!(
             "/projects/{}/{}/files/dsyms/unknown/?",
             PathArg(org),
             PathArg(project)
         );
-        for (idx, checksum) in checksums.iter().enumerate() {
+        for (idx, checksum) in checksums.into_iter().enumerate() {
             if idx > 0 {
                 url.push('&');
             }
             url.push_str("checksums=");
-            url.push_str(checksum);
+            url.push_str(&checksum.to_string());
         }
 
         let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
@@ -623,6 +657,78 @@ impl Api {
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?
             .convert()
+    }
+
+    /// Get the server configuration for chunked file uploads.
+    pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
+        let url = format!("/organizations/{}/chunk-upload/", org);
+        match self.get(&url)?.convert_rnf("chunk upload") {
+            Ok(options) => Ok(Some(options)),
+            Err(Error::ResourceNotFound(_)) => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
+    /// Request DIF assembling and processing from chunks.
+    pub fn assemble_difs(
+        &self,
+        org: &str,
+        project: &str,
+        request: &AssembleDifsRequest,
+    ) -> ApiResult<AssembleDifsResponse> {
+        let url = format!("/projects/{}/{}/files/difs/assemble/", org, project);
+        self.request(Method::Post, &url)?
+            .with_json_body(request)?
+            .send()?
+            .convert()
+    }
+
+    /// Upload a batch of file chunks.
+    pub fn upload_chunks<'data, I, T>(
+        &self,
+        url: &str,
+        chunks: I,
+        progress_bar_mode: ProgressBarMode,
+    ) -> ApiResult<()>
+    where
+        I: IntoIterator<Item = &'data T>,
+        T: AsRef<(Digest, &'data [u8])> + 'data,
+    {
+        // Curl stores a raw pointer to the stringified checksum internally. We first
+        // transform all checksums to string and keep them in scope until the request
+        // has completed. The original iterator is not needed anymore after this.
+        let stringified_chunks: Vec<_> = chunks
+            .into_iter()
+            .map(|item| item.as_ref())
+            .map(|&(checksum, data)| (checksum.to_string(), data))
+            .collect();
+
+        let mut form = curl::easy::Form::new();
+        for (ref checksum, data) in stringified_chunks {
+            // NOTE: The Part::buffer method requires data in an owned Vec<u8> instead
+            // of just a byte slice. Internally, it retrieves a pointer to the data
+            // and simply adds this pointer to the internal CURL buffers. There is no
+            // other way in the curl crate to create a "file" field with custom file
+            // name from memory. Hopefully, the optimizer detects this unneeded clone
+            // and removes it in the production build.
+            form.part("file").buffer(&checksum, data.into()).add()?
+        }
+
+        let request = self.request(Method::Post, url)?
+            .with_form_data(form)?
+            .progress_bar_mode(progress_bar_mode)?;
+
+        // The request is performed to an absolute URL. Thus, `Self::request()` will
+        // not add the authorization header, by default. Since the URL is guaranteed
+        // to be a Sentry-compatible endpoint, we force the Authorization header at
+        // this point.
+        let request = match Config::get_current().get_auth() {
+            Some(auth) => request.with_auth(auth)?,
+            None => request,
+        };
+
+        request.send()?.to_result()?;
+        Ok(())
     }
 
     /// Associate apple debug symbols with a build
@@ -770,7 +876,7 @@ fn handle_req<W: Write>(
     progress_bar_mode: ProgressBarMode,
     read: &mut FnMut(&mut [u8]) -> usize,
 ) -> ApiResult<(u32, Vec<String>)> {
-    if progress_bar_mode != ProgressBarMode::Disabled {
+    if progress_bar_mode.active() {
         handle.progress(true)?;
     }
 
@@ -783,15 +889,20 @@ fn handle_req<W: Write>(
         let mut headers = &mut headers;
         let mut handle = handle.transfer();
 
-        if progress_bar_mode != ProgressBarMode::Disabled {
+        if let ProgressBarMode::Shared((pb_progress, len, offset)) = progress_bar_mode {
+            handle.progress_function(move |_, _, total, uploaded| {
+                if uploaded > 0f64 && uploaded < total {
+                    let position = offset + (uploaded / total * (len as f64)) as u64;
+                    pb_progress.set_position(position);
+                }
+                true
+            })?;
+        } else if progress_bar_mode.active() {
             let pb_progress = pb.clone();
             handle.progress_function(move |a, b, c, d| {
                 let (down_len, down_pos, up_len, up_pos) = (a as u64, b as u64, c as u64, d as u64);
                 let mut pb = pb_progress.borrow_mut();
-                if up_len > 0
-                    && (progress_bar_mode == ProgressBarMode::Request
-                        || progress_bar_mode == ProgressBarMode::Both)
-                {
+                if up_len > 0 && progress_bar_mode.request() {
                     if up_pos < up_len {
                         if pb.is_none() {
                             *pb = Some(utils::make_byte_progress_bar(up_len));
@@ -801,10 +912,7 @@ fn handle_req<W: Write>(
                         pb.take().unwrap().finish_and_clear();
                     }
                 }
-                if down_len > 0
-                    && (progress_bar_mode == ProgressBarMode::Response
-                        || progress_bar_mode == ProgressBarMode::Both)
-                {
+                if down_len > 0 && progress_bar_mode.response() {
                     if down_pos < down_len {
                         if pb.is_none() {
                             *pb = Some(utils::make_byte_progress_bar(down_len));
@@ -900,24 +1008,37 @@ impl<'a> ApiRequest<'a> {
         }
 
         handle.url(&url)?;
-        match auth {
-            None => {}
-            Some(&Auth::Key(ref key)) => {
-                handle.username(key)?;
-                info!("using key based authentication");
-            }
-            Some(&Auth::Token(ref token)) => {
-                headers.append(&format!("Authorization: Bearer {}", token))?;
-                info!("using token authentication");
-            }
-        }
 
-        Ok(ApiRequest {
+        let request = ApiRequest {
             handle: handle,
             headers: headers,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
-        })
+        };
+
+        let request = match auth {
+            Some(auth) => ApiRequest::with_auth(request, auth)?,
+            None => request,
+        };
+
+        Ok(request)
+    }
+
+    /// Explicitly overrides the Auth info.
+    pub fn with_auth(mut self, auth: &Auth) -> ApiResult<Self> {
+        match *auth {
+            Auth::Key(ref key) => {
+                self.handle.username(key)?;
+                info!("using key based authentication");
+            }
+            Auth::Token(ref token) => {
+                self.headers
+                    .append(&format!("Authorization: Bearer {}", token))?;
+                info!("using token authentication");
+            }
+        }
+
+        Ok(self)
     }
 
     /// adds a specific header to the request
@@ -1275,6 +1396,14 @@ pub struct DSymFile {
     pub object_name: String,
     #[serde(rename = "cpuName")]
     pub cpu_name: String,
+    #[serde(rename = "sha1")]
+    pub checksum: String,
+}
+
+impl DSymFile {
+    pub fn uuid(&self) -> Uuid {
+        Uuid::parse_str(&self.uuid).unwrap()
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -1290,7 +1419,7 @@ pub struct AssociateDsyms {
 
 #[derive(Deserialize)]
 struct MissingChecksumsResponse {
-    missing: HashSet<String>,
+    missing: HashSet<Digest>,
 }
 
 /// Change information for issue bulk updates.
@@ -1387,3 +1516,70 @@ pub struct Deploy {
     #[serde(rename = "dateFinished")]
     pub finished: Option<DateTime<Utc>>,
 }
+
+#[derive(Debug, Deserialize)]
+pub enum ChunkHashAlgorithm {
+    #[serde(rename = "sha1")] Sha1,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChunkUploadOptions {
+    #[serde(rename = "url")]
+    pub url: String,
+    #[serde(rename = "chunksPerRequest")]
+    pub max_chunks: u64,
+    #[serde(rename = "maxRequestSize")]
+    pub max_size: u64,
+    #[serde(rename = "hashAlgorithm")]
+    pub hash_algorithm: ChunkHashAlgorithm,
+    #[serde(rename = "chunkSize")]
+    pub chunk_size: u64,
+    #[serde(rename = "concurrency")]
+    pub concurrency: u8,
+}
+
+#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
+pub enum ChunkedFileState {
+    #[serde(rename = "error")] Error,
+    #[serde(rename = "not_found")] NotFound,
+    #[serde(rename = "created")] Created,
+    #[serde(rename = "assembling")] Assembling,
+    #[serde(rename = "ok")] Ok,
+}
+
+impl ChunkedFileState {
+    pub fn finished(&self) -> bool {
+        *self == ChunkedFileState::Error || *self == ChunkedFileState::Ok
+    }
+
+    pub fn pending(&self) -> bool {
+        !self.finished()
+    }
+
+    pub fn ok(&self) -> bool {
+        *self == ChunkedFileState::Ok
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ChunkedDifRequest<'a> {
+    #[serde(rename = "name")]
+    pub name: &'a str,
+    #[serde(rename = "chunks")]
+    pub chunks: &'a [Digest],
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ChunkedDifResponse {
+    #[serde(rename = "state")]
+    pub state: ChunkedFileState,
+    #[serde(rename = "missingChunks")]
+    pub missing_chunks: Vec<Digest>,
+    #[serde(rename = "error")]
+    pub error: Option<String>,
+    #[serde(rename = "dif")]
+    pub dif: Option<DSymFile>,
+}
+
+pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;
+pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
