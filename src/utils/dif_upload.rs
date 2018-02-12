@@ -924,7 +924,7 @@ fn poll_dif_assemble(
     for &(_, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
         // will always return one.
-        if let Some(ref dif) = success.dif {
+        for dif in &success.difs {
             println!(
                 "     {} {} ({}; {})",
                 style("OK").green(),
@@ -942,20 +942,18 @@ fn poll_dif_assemble(
             .get(&checksum)
             .ok_or("Server returned unexpected checksum")?;
 
-        let message = error
-            .error
-            .as_ref()
-            .map_or("An unknown error ocurred", |s| &s);
-        println!(
-            "  {} {}: {}",
-            style("ERROR").red(),
-            dif.file_name(),
-            style(message).dim()
-        );
+        println!("  {} {}:", style("ERROR").red(), dif.file_name(),);
+        if error.errors.is_empty() {
+            println!("        {}", style("An unknown error ocurred").dim());
+        } else {
+            for message in &error.errors {
+                println!("        {}", style(message).dim());
+            }
+        }
     }
 
     // Return only successful uploads
-    Ok(successes.into_iter().filter_map(|(_, r)| r.dif).collect())
+    Ok(successes.into_iter().flat_map(|(_, r)| r.difs).collect())
 }
 
 /// Uploads debug info files using the chunk-upload endpoint.
