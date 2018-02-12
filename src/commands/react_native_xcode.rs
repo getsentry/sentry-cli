@@ -81,7 +81,7 @@ fn find_node() -> String {
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let api = Api::new();
+    let api = Api::get_current();
     let should_wrap = matches.is_present("force") || match env::var("CONFIGURATION") {
         Ok(config) => &config != "Debug",
         Err(_) => { return Err("Need to run this from Xcode".into()); }

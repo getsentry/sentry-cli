@@ -56,7 +56,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     let app = matches.value_of("app_name").unwrap();
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
-    let api = Api::new();
+    let api = Api::get_current();
     let print_release_name = matches.is_present("print_release_name");
 
     if !print_release_name {

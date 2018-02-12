@@ -39,6 +39,10 @@ use utils::xcode::InfoPlist;
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
 
+thread_local! {
+    static API: Rc<Api> = Rc::new(Api::new());
+}
+
 impl<A: fmt::Display> fmt::Display for PathArg<A> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         // if we put values into the path we need to url encode them.  However
@@ -163,6 +167,11 @@ impl Api {
     /// connections will be established.
     pub fn new() -> Api {
         Api::with_config(Config::get_current())
+    }
+
+    /// Returns the current api for the thread.
+    pub fn get_current() -> Rc<Api> {
+        API.with(|api| api.clone())
     }
 
     /// Similar to `new` but uses a specific config.

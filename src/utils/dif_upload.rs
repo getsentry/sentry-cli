@@ -837,7 +837,6 @@ fn try_assemble_difs<'data>(
 fn upload_missing_chunks(
     api: &Api,
     missing_info: &MissingDifsInfo,
-    difs: &[ChunkedDifMatch],
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
     let progress_style = ProgressStyle::default_bar().template(
@@ -989,7 +988,7 @@ fn upload_difs_chunked(
     // Upload until all chunks are present on the server
     let mut initially_missing = None;
     while let Some(missing_info) = try_assemble_difs(api, &chunked, options)? {
-        upload_missing_chunks(api, &missing_info, &chunked, chunk_options)?;
+        upload_missing_chunks(api, &missing_info, chunk_options)?;
         initially_missing.get_or_insert(missing_info);
     }
 
@@ -1330,7 +1329,7 @@ impl DifUpload {
     /// use api::Api;
     /// use utils::dif_upload::DifUpload;
     ///
-    /// let api = Api::new();
+    /// let api = Api::get_current();
     /// DifUpload::new("org", "project")
     ///     .search_path(".")
     ///     .upload_with(&api)?;
@@ -1358,7 +1357,7 @@ impl DifUpload {
     ///     .upload()?;
     /// ```
     pub fn upload(&mut self) -> Result<Vec<DebugInfoFile>> {
-        self.upload_with(&Api::new())
+        self.upload_with(&Api::get_current())
     }
 
     /// Determines if this `ObjectId` matches the search criteria.

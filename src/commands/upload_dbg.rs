@@ -47,7 +47,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
-    let api = Api::new();
+    let api = Api::get_current();
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
 
