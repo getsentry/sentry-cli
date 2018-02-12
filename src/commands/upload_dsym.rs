@@ -1,4 +1,4 @@
-//! Implements a command for uploading dsym files.
+//! Implements a command for uploading dSYM files.
 use std::collections::BTreeSet;
 use std::env;
 use std::str;

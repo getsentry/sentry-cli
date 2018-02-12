@@ -358,8 +358,8 @@ impl Config {
             .unwrap_or(true))
     }
 
-    /// Returns the maximum dsym upload size
-    pub fn get_max_dsym_upload_size(&self) -> Result<u64> {
+    /// Returns the maximum DIF upload size
+    pub fn get_max_dif_archive_size(&self) -> Result<u64> {
         Ok(self.ini.get_from(Some("dsym"), "max_upload_size")
             .and_then(|x| x.parse().ok())
             .unwrap_or(35 * 1024 * 1024))

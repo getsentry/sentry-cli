@@ -1050,7 +1050,7 @@ fn upload_in_batches(
     objects: Vec<HashedDifMatch>,
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>> {
-    let max_size = Config::get_current().get_max_dsym_upload_size()?;
+    let max_size = Config::get_current().get_max_dif_archive_size()?;
     let mut dsyms = Vec::new();
 
     for (i, (batch, _)) in objects.batches(max_size, MAX_CHUNKS).enumerate() {
