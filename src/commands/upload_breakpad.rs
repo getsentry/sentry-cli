@@ -55,7 +55,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         .filter_kind(ObjectKind::Breakpad)
         .filter_ids(uuids)
         .allow_zips(!matches.is_present("no_zips"))
-        .upload_with(&api)?;
+        .upload()?;
 
     // Trigger reprocessing only if requested by user
     if matches.is_present("no_reprocessing") {

@@ -16,12 +16,15 @@ use std::str;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
+use std::sync::mpsc::channel;
 
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
 use symbolic_debuginfo::{FatObject, ObjectId};
+use scoped_threadpool::Pool;
+use parking_lot::Mutex;
 use walkdir::WalkDir;
 use which::which;
 use zip::{ZipArchive, ZipWriter};
@@ -765,10 +768,10 @@ fn process_symbol_maps<'a>(
 /// The returned value containes separate vectors for incomplete DIFs and
 /// missing chunks for convenience.
 fn try_assemble_difs<'data>(
-    api: &Api,
     difs: &'data [ChunkedDifMatch<'data>],
     options: &DifUpload,
 ) -> Result<Option<MissingDifsInfo<'data>>> {
+    let api = Api::get_current();
     let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
     let response = api.assemble_difs(&options.org, &options.project, &request)?;
 
@@ -835,7 +838,6 @@ fn try_assemble_difs<'data>(
 ///
 /// This function blocks until all chunks have been uploaded.
 fn upload_missing_chunks(
-    api: &Api,
     missing_info: &MissingDifsInfo,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
@@ -867,11 +869,34 @@ fn upload_missing_chunks(
     // keep track of the progress and pass it as offset into
     // `ProgressBarMode::Shared`. Each batch aggregates objects until it exceeds
     // the maximum size configured in ChunkUploadOptions.
-    let mut base = total - total_missing;
-    for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-        let mode = ProgressBarMode::Shared((progress.clone(), size, base));
-        api.upload_chunks(&chunk_options.url, batch, mode)?;
-        base += size;
+    let base = Arc::new(Mutex::new(total - total_missing));
+    let mut pool = Pool::new(chunk_options.concurrency as u32);
+    let (tx, rx) = channel();
+    let mut jobs = 0;
+
+    {
+        let progress = progress.clone();
+        pool.scoped(|scoped| {
+            for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
+                let base = base.clone();
+                let progress = progress.clone();
+                let tx = tx.clone();
+                scoped.execute(move || {
+                    // XXX: this uses tls api instead of the passed.
+                    let api = Api::get_current();
+                    let mode = ProgressBarMode::Shared((progress, size, {*base.lock()}));
+                    tx.send(api.upload_chunks(&chunk_options.url, batch, mode));
+                    *base.lock() += size;
+                });
+                jobs += 1;
+            }
+        });
+    }
+
+    for result in rx.iter().take(jobs) {
+        if let Err(err) = result {
+            return Err(err)?;
+        }
     }
 
     progress.finish_and_clear();
@@ -892,7 +917,6 @@ fn upload_missing_chunks(
 /// Returns a list of `DebugInfoFile`s that have been created successfully and
 /// also prints a summary to the user.
 fn poll_dif_assemble(
-    api: &Api,
     difs: Vec<&ChunkedDifMatch>,
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>> {
@@ -901,6 +925,7 @@ fn poll_dif_assemble(
          \n  {wide_bar}  {pos}/{len}",
     );
 
+    let api = Api::get_current();
     let progress = ProgressBar::new(difs.len() as u64);
     progress.set_style(progress_style);
     progress.set_prefix(">");
@@ -962,7 +987,6 @@ fn poll_dif_assemble(
 
 /// Uploads debug info files using the chunk-upload endpoint.
 fn upload_difs_chunked(
-    api: &Api,
     options: &DifUpload,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<Vec<DebugInfoFile>> {
@@ -987,14 +1011,14 @@ fn upload_difs_chunked(
 
     // Upload until all chunks are present on the server
     let mut initially_missing = None;
-    while let Some(missing_info) = try_assemble_difs(api, &chunked, options)? {
-        upload_missing_chunks(api, &missing_info, chunk_options)?;
+    while let Some(missing_info) = try_assemble_difs(&chunked, options)? {
+        upload_missing_chunks(&missing_info, chunk_options)?;
         initially_missing.get_or_insert(missing_info);
     }
 
     // Only if DIFs were missing, poll until assembling is complete
     if let Some((missing, _)) = initially_missing {
-        poll_dif_assemble(api, missing, options)
+        poll_dif_assemble(missing, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
@@ -1007,7 +1031,6 @@ fn upload_difs_chunked(
 
 /// Returns debug files missing on the server.
 fn get_missing_difs<'data>(
-    api: &Api,
     objects: Vec<HashedDifMatch<'data>>,
     options: &DifUpload,
 ) -> Result<Vec<HashedDifMatch<'data>>> {
@@ -1016,6 +1039,7 @@ fn get_missing_difs<'data>(
         &objects
     );
 
+    let api = Api::get_current();
     let missing_checksums = {
         let checksums = objects.iter().map(|s| s.checksum());
         api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
@@ -1048,10 +1072,10 @@ fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile> {
 
 /// Uploads the given DIFs to the server in batched ZIP archives.
 fn upload_in_batches(
-    api: &Api,
     objects: Vec<HashedDifMatch>,
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>> {
+    let api = Api::get_current();
     let max_size = Config::get_current().get_max_dif_archive_size()?;
     let mut dsyms = Vec::new();
 
@@ -1073,7 +1097,7 @@ fn upload_in_batches(
 }
 
 /// Uploads debug info files using the legacy endpoint.
-fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
+fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
@@ -1089,7 +1113,7 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFi
     let hashed = prepare_difs(processed, |m| HashedDifMatch::from(m))?;
 
     // Check which files are missing on the server
-    let missing = get_missing_difs(api, hashed, options)?;
+    let missing = get_missing_difs(hashed, options)?;
     if missing.len() == 0 {
         println!(
             "{} Nothing to upload, all files are on the server",
@@ -1100,7 +1124,7 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFi
     }
 
     // Upload missing DIFs in batches
-    let uploaded = upload_in_batches(api, missing, options)?;
+    let uploaded = upload_in_batches(missing, options)?;
     if uploaded.len() > 0 {
         println!("{} File upload complete:\n", style(">").dim());
         for dif in &uploaded {
@@ -1119,8 +1143,7 @@ fn upload_difs_batched(api: &Api, options: &DifUpload) -> Result<Vec<DebugInfoFi
 /// Searches, processes and uploads debug information files (DIFs).
 ///
 /// This struct is created with the `DifUpload::new` function. Then, set
-/// search parameters and start the upload via `DifUpload::upload` or
-/// `DifUpload::upload_with`.
+/// search parameters and start the upload via `DifUpload::upload`.
 ///
 /// ```
 /// use utils::dif_upload::DifUpload;
@@ -1323,31 +1346,7 @@ impl DifUpload {
         self
     }
 
-    /// Performs the search for DIFs and uploads them using the given `Api`.
-    ///
-    /// ```
-    /// use api::Api;
-    /// use utils::dif_upload::DifUpload;
-    ///
-    /// let api = Api::get_current();
-    /// DifUpload::new("org", "project")
-    ///     .search_path(".")
-    ///     .upload_with(&api)?;
-    /// ```
-    pub fn upload_with(&mut self, api: &Api) -> Result<Vec<DebugInfoFile>> {
-        if self.paths.is_empty() {
-            println!("{}: No paths were provided.", style("Warning").yellow());
-            return Ok(Default::default());
-        }
-
-        if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
-            upload_difs_chunked(api, self, chunk_options)
-        } else {
-            upload_difs_batched(api, self)
-        }
-    }
-
-    /// Performs the search for DIFs and uploads them using a new `Api` instance.
+    /// Performs the search for DIFs and uploads them.
     ///
     /// ```
     /// use utils::dif_upload::DifUpload;
@@ -1357,7 +1356,17 @@ impl DifUpload {
     ///     .upload()?;
     /// ```
     pub fn upload(&mut self) -> Result<Vec<DebugInfoFile>> {
-        self.upload_with(&Api::get_current())
+        if self.paths.is_empty() {
+            println!("{}: No paths were provided.", style("Warning").yellow());
+            return Ok(Default::default());
+        }
+
+        let api = Api::get_current();
+        if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
+            upload_difs_chunked(self, chunk_options)
+        } else {
+            upload_difs_batched(self)
+        }
     }
 
     /// Determines if this `ObjectId` matches the search criteria.

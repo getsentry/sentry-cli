@@ -69,6 +69,7 @@ extern crate unix_daemonize;
 extern crate url;
 extern crate username;
 extern crate uuid;
+extern crate scoped_threadpool;
 extern crate walkdir;
 extern crate which;
 extern crate zip;

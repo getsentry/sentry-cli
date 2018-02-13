@@ -75,7 +75,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     }
 
     // Execute the upload
-    let uploaded = upload.upload_with(&api)?;
+    let uploaded = upload.upload()?;
 
     // Trigger reprocessing only if requested by user
     if matches.is_present("no_reprocessing") {

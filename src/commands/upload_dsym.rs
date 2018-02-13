@@ -119,7 +119,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         }
 
         // Execute the upload
-        let uploaded = upload.upload_with(&api)?;
+        let uploaded = upload.upload()?;
 
         // Associate the dSYMs with the Info.plist data, if available
         if let Some(ref info_plist) = info_plist {
