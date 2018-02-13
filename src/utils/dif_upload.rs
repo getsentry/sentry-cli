@@ -16,7 +16,6 @@ use std::str;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
-use std::sync::mpsc::channel;
 
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -24,7 +23,7 @@ use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
 use symbolic_debuginfo::{FatObject, ObjectId};
 use scoped_threadpool::Pool;
-use parking_lot::Mutex;
+use parking_lot::{Mutex, RwLock};
 use walkdir::WalkDir;
 use which::which;
 use zip::{ZipArchive, ZipWriter};
@@ -871,8 +870,7 @@ fn upload_missing_chunks(
     // the maximum size configured in ChunkUploadOptions.
     let base = Arc::new(Mutex::new(total - total_missing));
     let mut pool = Pool::new(chunk_options.concurrency as u32);
-    let (tx, rx) = channel();
-    let mut jobs = 0;
+    let failed = Arc::new(RwLock::new(None));
 
     {
         let progress = progress.clone();
@@ -880,23 +878,26 @@ fn upload_missing_chunks(
             for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
                 let base = base.clone();
                 let progress = progress.clone();
-                let tx = tx.clone();
+                let failed = failed.clone();
                 scoped.execute(move || {
-                    // XXX: this uses tls api instead of the passed.
+                    // if we already failed, stop
+                    if failed.read().is_some() {
+                        return;
+                    }
+
                     let api = Api::get_current();
                     let mode = ProgressBarMode::Shared((progress, size, {*base.lock()}));
-                    tx.send(api.upload_chunks(&chunk_options.url, batch, mode));
+                    if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
+                        *failed.write() = Some(err);
+                    }
                     *base.lock() += size;
                 });
-                jobs += 1;
             }
         });
     }
 
-    for result in rx.iter().take(jobs) {
-        if let Err(err) = result {
-            return Err(err)?;
-        }
+    if let Some(err) = failed.write().take() {
+        return Err(err)?;
     }
 
     progress.finish_and_clear();
