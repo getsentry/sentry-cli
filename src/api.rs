@@ -27,6 +27,7 @@ use indicatif::ProgressBar;
 use regex::{Captures, Regex};
 use sha1::Digest;
 use uuid::Uuid;
+use parking_lot::RwLock;
 
 use config::{Auth, Config, Dsn};
 use constants::{ARCH, EXT, PLATFORM, VERSION};
@@ -64,7 +65,7 @@ pub enum ProgressBarMode {
     Request,
     Response,
     Both,
-    Shared((Arc<ProgressBar>, u64, u64)),
+    Shared((Arc<ProgressBar>, u64, usize, Arc<RwLock<Vec<u64>>>)),
 }
 
 impl ProgressBarMode {
@@ -900,11 +901,11 @@ fn handle_req<W: Write>(
         let mut headers = &mut headers;
         let mut handle = handle.transfer();
 
-        if let ProgressBarMode::Shared((pb_progress, len, offset)) = progress_bar_mode {
+        if let ProgressBarMode::Shared((pb_progress, len, idx, counts)) = progress_bar_mode {
             handle.progress_function(move |_, _, total, uploaded| {
                 if uploaded > 0f64 && uploaded < total {
-                    let position = offset + (uploaded / total * (len as f64)) as u64;
-                    pb_progress.set_position(position);
+                    counts.write()[idx] = (uploaded / total * (len as f64)) as u64;
+                    pb_progress.set_position(counts.read().iter().map(|&x| x).sum());
                 }
                 true
             })?;

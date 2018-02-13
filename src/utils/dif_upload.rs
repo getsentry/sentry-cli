@@ -23,7 +23,7 @@ use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
 use symbolic_debuginfo::{FatObject, ObjectId};
 use scoped_threadpool::Pool;
-use parking_lot::{Mutex, RwLock};
+use parking_lot::RwLock;
 use walkdir::WalkDir;
 use which::which;
 use zip::{ZipArchive, ZipWriter};
@@ -673,7 +673,7 @@ where
 {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Preparing for upload... {msg:.dim}\
-         \n  {wide_bar}  {pos}/{len}",
+         \n{wide_bar}  {pos}/{len}",
     );
 
     let progress = ProgressBar::new(items.len() as u64);
@@ -734,7 +734,7 @@ fn process_symbol_maps<'a>(
     let len = with_hidden.len();
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Resolving BCSymbolMaps... {msg:.dim}\
-         \n  {wide_bar}  {pos}/{len}",
+         \n{wide_bar}  {pos}/{len}",
     );
 
     let progress = ProgressBar::new(with_hidden.len() as u64);
@@ -842,7 +842,7 @@ fn upload_missing_chunks(
 ) -> Result<()> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Uploading {msg:.yellow} missing debug information files...\
-         \n  {wide_bar}  {bytes}/{total_bytes} ({eta})",
+         \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
     );
 
     // Chunks are uploaded in batches, but the progress bar is shared between
@@ -868,29 +868,36 @@ fn upload_missing_chunks(
     // keep track of the progress and pass it as offset into
     // `ProgressBarMode::Shared`. Each batch aggregates objects until it exceeds
     // the maximum size configured in ChunkUploadOptions.
-    let base = Arc::new(Mutex::new(total - total_missing));
     let mut pool = Pool::new(chunk_options.concurrency as u32);
     let failed = Arc::new(RwLock::new(None));
+    let chunk_progress = Arc::new(RwLock::new(vec![0u64; 0]));
+    chunk_progress.write().push(total - total_missing);
 
     {
         let progress = progress.clone();
         pool.scoped(|scoped| {
             for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-                let base = base.clone();
                 let progress = progress.clone();
                 let failed = failed.clone();
+                let chunk_progress = chunk_progress.clone();
                 scoped.execute(move || {
                     // if we already failed, stop
                     if failed.read().is_some() {
                         return;
                     }
 
+                    let idx = {
+                        let mut progress = chunk_progress.write();
+                        let idx = progress.len();
+                        progress.push(0);
+                        idx
+                    };
+
                     let api = Api::get_current();
-                    let mode = ProgressBarMode::Shared((progress, size, {*base.lock()}));
+                    let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
                     if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
                         *failed.write() = Some(err);
                     }
-                    *base.lock() += size;
                 });
             }
         });
@@ -923,7 +930,7 @@ fn poll_dif_assemble(
 ) -> Result<Vec<DebugInfoFile>> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
-         \n  {wide_bar}  {pos}/{len}",
+         \n{wide_bar}  {pos}/{len}",
     );
 
     let api = Api::get_current();
