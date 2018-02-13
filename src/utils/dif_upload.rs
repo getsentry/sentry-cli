@@ -840,10 +840,13 @@ fn upload_missing_chunks(
     missing_info: &MissingDifsInfo,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let progress_style = ProgressStyle::default_bar().template(
-        "{prefix:.dim} Uploading {msg:.yellow} missing debug information files...\
-         \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
-    );
+    let progress_style = ProgressStyle::default_bar().template(&format!(
+        "{} Uploading {} missing debug information file{}...\
+         \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+         style(">").dim(),
+         style(difs.len().to_string()).yellow(),
+         if difs.len() == 1 { "" } else { "s" }
+    ));
 
     // Chunks are uploaded in batches, but the progress bar is shared between
     // multiple requests to simulate one continuous upload to the user. Since we
@@ -861,8 +864,6 @@ fn upload_missing_chunks(
 
     let progress = Arc::new(ProgressBar::new(total));
     progress.set_style(progress_style);
-    progress.set_prefix(">");
-    progress.set_message(&difs.len().to_string());
 
     // Since each upload is separate inside `Api::upload_chunks`, we need to
     // keep track of the progress and pass it as offset into
