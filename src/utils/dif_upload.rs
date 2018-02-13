@@ -840,6 +840,11 @@ fn upload_missing_chunks(
     missing_info: &MissingDifsInfo,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
+    // Chunks are uploaded in batches, but the progress bar is shared between
+    // multiple requests to simulate one continuous upload to the user. Since we
+    // have to embed the progress bar into a ProgressBarMode and move it into
+    // `Api::upload_chunks`, the progress bar is created in an Arc.
+    let &(ref difs, ref chunks) = missing_info;
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
@@ -847,12 +852,6 @@ fn upload_missing_chunks(
          style(difs.len().to_string()).yellow(),
          if difs.len() == 1 { "" } else { "s" }
     ));
-
-    // Chunks are uploaded in batches, but the progress bar is shared between
-    // multiple requests to simulate one continuous upload to the user. Since we
-    // have to embed the progress bar into a ProgressBarMode and move it into
-    // `Api::upload_chunks`, the progress bar is created in an Arc.
-    let &(ref difs, ref chunks) = missing_info;
     let total = difs
         .iter()
         .flat_map(|m| m.chunks().map(|DifChunk((_, data))| data.len() as u64))
