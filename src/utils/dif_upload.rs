@@ -33,7 +33,7 @@ use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, Progress
 use config::Config;
 use errors::Result;
 use utils::batch::{BatchedSliceExt, ItemSize};
-use utils::dif::has_hidden_symbols_obj;
+use utils::dif::DebuggingInformation;
 use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
@@ -183,7 +183,7 @@ impl<'data> DifMatch<'data> {
             return false;
         }
 
-        has_hidden_symbols_obj(&self.object()).unwrap_or(false)
+        self.object().has_hidden_symbols().unwrap_or(false)
     }
 }
 
