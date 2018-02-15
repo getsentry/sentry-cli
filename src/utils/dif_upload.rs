@@ -848,9 +848,9 @@ fn upload_missing_chunks(
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-         style(">").dim(),
-         style(difs.len().to_string()).yellow(),
-         if difs.len() == 1 { "" } else { "s" }
+        style(">").dim(),
+        style(difs.len().to_string()).yellow(),
+        if difs.len() == 1 { "" } else { "s" }
     ));
     let total = difs
         .iter()
@@ -961,7 +961,7 @@ fn poll_dif_assemble(
     for &(_, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
         // will always return one.
-        for dif in &success.difs {
+        if let Some(ref dif) = success.dif {
             println!(
                 "     {} {} ({}; {})",
                 style("OK").green(),
@@ -979,18 +979,22 @@ fn poll_dif_assemble(
             .get(&checksum)
             .ok_or("Server returned unexpected checksum")?;
 
-        println!("  {} {}:", style("ERROR").red(), dif.file_name(),);
-        if error.errors.is_empty() {
-            println!("        {}", style("An unknown error ocurred").dim());
-        } else {
-            for message in &error.errors {
-                println!("        {}", style(message).dim());
-            }
-        }
+        let message = error
+            .error
+            .as_ref()
+            .map(|s| s.as_str())
+            .unwrap_or("An unknown error ocurred");
+
+        println!(
+            "  {} {}: {}",
+            style("ERROR").red(),
+            dif.file_name(),
+            style(message).dim()
+        );
     }
 
     // Return only successful uploads
-    Ok(successes.into_iter().flat_map(|(_, r)| r.difs).collect())
+    Ok(successes.into_iter().filter_map(|(_, r)| r.dif).collect())
 }
 
 /// Uploads debug info files using the chunk-upload endpoint.
