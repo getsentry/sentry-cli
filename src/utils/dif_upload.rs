@@ -832,18 +832,15 @@ fn try_assemble_difs<'data>(
     }
 }
 
-/// Uploads chunks specified in `missing_info` in batches. The batch size is
-/// controlled by `chunk_options`.
+/// Concurrently uploads chunks specified in `missing_info` in batches. The
+/// batch size and number of concurrent requests is controlled by
+/// `chunk_options`.
 ///
 /// This function blocks until all chunks have been uploaded.
 fn upload_missing_chunks(
     missing_info: &MissingDifsInfo,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    // Chunks are uploaded in batches, but the progress bar is shared between
-    // multiple requests to simulate one continuous upload to the user. Since we
-    // have to embed the progress bar into a ProgressBarMode and move it into
-    // `Api::upload_chunks`, the progress bar is created in an Arc.
     let &(ref difs, ref chunks) = missing_info;
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
@@ -852,56 +849,63 @@ fn upload_missing_chunks(
         style(difs.len().to_string()).yellow(),
         if difs.len() == 1 { "" } else { "s" }
     ));
-    let total = difs
-        .iter()
+
+    // To make the progress bar more consistent for repeated and partial uploads
+    // we also include already uploaded chunks in the progress bar. Thus, the
+    // first chunk's progress starts at the amount of already uploaded bytes.
+    let total_bytes = difs.iter()
         .flat_map(|m| m.chunks().map(|DifChunk((_, data))| data.len() as u64))
         .sum();
-    let total_missing: u64 = chunks
+    let missing_bytes: u64 = chunks
         .iter()
         .map(|&DifChunk((_, data))| data.len() as u64)
         .sum();
 
-    let progress = Arc::new(ProgressBar::new(total));
+    // Chunks are uploaded in batches, but the progress bar is shared between
+    // multiple requests to simulate one continuous upload to the user. Since we
+    // have to embed the progress bar into a ProgressBarMode and move it into
+    // `Api::upload_chunks`, the progress bar is created in an Arc.
+    let progress = Arc::new(ProgressBar::new(total_bytes));
     progress.set_style(progress_style);
 
-    // Since each upload is separate inside `Api::upload_chunks`, we need to
-    // keep track of the progress and pass it as offset into
-    // `ProgressBarMode::Shared`. Each batch aggregates objects until it exceeds
-    // the maximum size configured in ChunkUploadOptions.
+    // The upload is executed in parallel batches. Each batch aggregates objects
+    // until it exceeds the maximum size configured in ChunkUploadOptions. We
+    // keep track of the overall progress and potential errors. If an error
+    // ocurrs, all subsequent requests will be cancelled and the error returned.
+    // Otherwise, the after every successful update, the overall progress is
+    // updated and rendered.
     let mut pool = Pool::new(chunk_options.concurrency as u32);
     let failed = Arc::new(RwLock::new(None));
     let chunk_progress = Arc::new(RwLock::new(vec![0u64; 0]));
-    chunk_progress.write().push(total - total_missing);
+    chunk_progress.write().push(total_bytes - missing_bytes);
 
-    {
-        let progress = progress.clone();
-        pool.scoped(|scoped| {
-            for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-                let progress = progress.clone();
-                let failed = failed.clone();
-                let chunk_progress = chunk_progress.clone();
-                scoped.execute(move || {
-                    // if we already failed, stop
-                    if failed.read().is_some() {
-                        return;
-                    }
+    pool.scoped(|scoped| {
+        for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
+            let progress = progress.clone();
+            let failed = failed.clone();
+            let chunk_progress = chunk_progress.clone();
+            scoped.execute(move || {
+                // If we already failed, stop
+                if failed.read().is_some() {
+                    return;
+                }
 
-                    let idx = {
-                        let mut progress = chunk_progress.write();
-                        let idx = progress.len();
-                        progress.push(0);
-                        idx
-                    };
+                let idx = {
+                    let mut progress = chunk_progress.write();
+                    let idx = progress.len();
+                    progress.push(0);
+                    idx
+                };
 
-                    let api = Api::get_current();
-                    let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
-                    if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
-                        *failed.write() = Some(err);
-                    }
-                });
-            }
-        });
-    }
+                // Obtain a thread_local API instance
+                let api = Api::get_current();
+                let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
+                if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
+                    *failed.write() = Some(err);
+                }
+            });
+        }
+    });
 
     if let Some(err) = failed.write().take() {
         return Err(err)?;
