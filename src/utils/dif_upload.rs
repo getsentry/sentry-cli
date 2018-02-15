@@ -924,6 +924,25 @@ fn upload_missing_chunks(
     Ok(())
 }
 
+/// Renders the given detail string to the command line. If the `detail` is
+/// either missing or empty, the optional fallback will be used.
+fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
+    let mut string = match *detail {
+        Some(ref string) => string.as_str(),
+        None => "",
+    };
+
+    if string.is_empty() && fallback.is_some() {
+        string = fallback.unwrap();
+    }
+
+    for line in string.lines() {
+        if !line.is_empty() {
+            println!("        {}", style(line).dim());
+        }
+    }
+}
+
 /// Polls the assemble endpoint until all DIFs have either completed or errored.
 /// Returns a list of `DebugInfoFile`s that have been created successfully and
 /// also prints a summary to the user.
@@ -972,6 +991,8 @@ fn poll_dif_assemble(
                 dif.object_name,
                 dif.cpu_name,
             );
+
+            render_detail(&success.detail, None);
         }
     }
 
@@ -982,18 +1003,8 @@ fn poll_dif_assemble(
             .get(&checksum)
             .ok_or("Server returned unexpected checksum")?;
 
-        let message = error
-            .error
-            .as_ref()
-            .map(|s| s.as_str())
-            .unwrap_or("An unknown error ocurred");
-
-        println!(
-            "  {} {}: {}",
-            style("ERROR").red(),
-            dif.file_name(),
-            style(message).dim()
-        );
+        println!("  {} {}", style("ERROR").red(), dif.file_name());
+        render_detail(&error.detail, Some("An unknown error occurred"));
     }
 
     // Return only successful uploads

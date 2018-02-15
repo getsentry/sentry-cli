@@ -1588,9 +1588,9 @@ pub struct ChunkedDifResponse {
     pub state: ChunkedFileState,
     #[serde(rename = "missingChunks")]
     pub missing_chunks: Vec<Digest>,
-    #[serde(default, rename = "errors")]
-    pub error: Option<String>,
-    #[serde(default, rename = "difs")]
+    #[serde(default, rename = "detail")]
+    pub detail: Option<String>,
+    #[serde(default, rename = "dif")]
     pub dif: Option<DebugInfoFile>,
 }
 
