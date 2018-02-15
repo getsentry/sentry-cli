@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use uuid::Uuid;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{FatObject, SymbolTable};
+use symbolic_debuginfo::{FatObject, Object, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
 
 use errors::{Error, Result};
@@ -57,7 +57,6 @@ impl DifFile {
     }
 
     fn open_proguard<P: AsRef<Path>>(path: P) -> Result<DifFile> {
-
         let data = ByteView::from_path(&path)?;
         let pg = ProguardMappingView::parse(data)?;
 
@@ -208,4 +207,10 @@ pub fn has_hidden_symbols(fat: &FatObject) -> Result<bool> {
     }
 
     Ok(false)
+}
+
+/// Checks whether this `Object` contains hidden symbols generated during an
+/// iTunes Connect build. This only applies to MachO files.
+pub fn has_hidden_symbols_obj(object: &Object) -> Result<bool> {
+    Ok(object.kind() == ObjectKind::MachO && object.symbols()?.requires_symbolmap()?)
 }

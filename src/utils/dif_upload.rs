@@ -21,7 +21,7 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
-use symbolic_debuginfo::{FatObject, ObjectId};
+use symbolic_debuginfo::{FatObject, Object, ObjectId};
 use scoped_threadpool::Pool;
 use parking_lot::RwLock;
 use walkdir::WalkDir;
@@ -33,7 +33,7 @@ use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, Progress
 use config::Config;
 use errors::Result;
 use utils::batch::{BatchedSliceExt, ItemSize};
-use utils::dif::has_hidden_symbols;
+use utils::dif::has_hidden_symbols_obj;
 use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
@@ -101,6 +101,7 @@ enum DifBacking {
 struct DifMatch<'data> {
     _backing: Option<DifBacking>,
     fat: Rc<FatObject<'data>>,
+    object_index: usize,
     name: String,
     attachments: Option<BTreeMap<String, ByteView<'static>>>,
 }
@@ -109,6 +110,8 @@ impl<'data> DifMatch<'data> {
     /// Moves the specified temporary debug file to a safe location and assumes
     /// ownership. The file will be deleted in the file system when this
     /// `DifMatch` is dropped.
+    ///
+    /// The path must point to a `FatObject` containing exactly one `Object`.
     fn take_temp<P, S>(path: P, name: S) -> Result<DifMatch<'static>>
     where
         P: AsRef<Path>,
@@ -116,23 +119,30 @@ impl<'data> DifMatch<'data> {
     {
         let temp_file = TempFile::take(path)?;
         let buffer = ByteView::from_path(temp_file.path())?;
+        let fat = FatObject::parse(buffer)?;
+        if fat.object_count() != 1 {
+            return Err("Multi-arch binaries not supported here".into());
+        }
 
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
-            fat: Rc::new(FatObject::parse(buffer)?),
+            fat: Rc::new(fat),
+            object_index: 1,
             name: name.into(),
             attachments: None,
         })
     }
 
-    /// Returns the parsed `FatObject` of this DIF.
-    pub fn fat(&self) -> &FatObject {
-        &self.fat
+    /// Returns the parsed `Object` of this DIF.
+    pub fn object(&self) -> Object {
+        // Errors can be ignored at this point since the `DifMatch` is only
+        // created if the referenced Object is valid.
+        self.fat.get_object(self.object_index).unwrap().unwrap()
     }
 
     /// Returns the raw binary data of this DIF.
     pub fn data(&self) -> &[u8] {
-        self.fat().as_bytes()
+        self.object().as_bytes()
     }
 
     /// Returns the size of of this DIF in bytes.
@@ -173,7 +183,7 @@ impl<'data> DifMatch<'data> {
             return false;
         }
 
-        has_hidden_symbols(self.fat()).unwrap_or(false)
+        has_hidden_symbols_obj(&self.object()).unwrap_or(false)
     }
 }
 
@@ -461,10 +471,13 @@ where
 /// of Plist name to owning buffer of the file's contents. This function should
 /// only be called for dSYMs.
 fn find_uuid_plists(
-    fat: &FatObject,
+    object: &Object,
     source: &mut DifSource,
 ) -> Option<BTreeMap<String, ByteView<'static>>> {
-    let mut plists = BTreeMap::new();
+    let uuid = match object.id() {
+        Some(id) => id.uuid(),
+        None => return None,
+    };
 
     // When uploading an XCode build archive to iTunes Connect, Apple will
     // re-build the app for different architectures, causing new UUIDs in the
@@ -482,21 +495,15 @@ fn find_uuid_plists(
     //        ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //        └─ DWARF
     //           └─ App
-    for id in fat.objects().filter_map(|o| o.ok()).filter_map(|o| o.id()) {
-        let plist_name = format!("{}.plist", id.uuid().to_string().to_uppercase());
-        if let Some(plist) = source.get_relative(format!("../{}", &plist_name)) {
-            plists.insert(plist_name, plist);
-        }
-    }
+    let plist_name = format!("{}.plist", uuid.to_string().to_uppercase());
+    let plist = match source.get_relative(format!("../{}", &plist_name)) {
+        Some(plist) => plist,
+        None => return None,
+    };
 
-    // In case there are no such plists (e.g. for a local build), return None
-    // instead of an empty map. This allows to exit earlier when processing
-    // the `DifMatches`.
-    if plists.is_empty() {
-        None
-    } else {
-        Some(plists)
-    }
+    let mut plists = BTreeMap::new();
+    plists.insert(plist_name, plist);
+    return Some(plists);
 }
 
 /// Searches matching debug information files.
@@ -524,12 +531,12 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 return Ok(());
             }
 
-            // This is a hack to allow iteration through the FatObject while
-            // also moving it into the DifMatch, in case it contains a matching
-            // object.
-            let mut symbol_added = false;
+            // Each `FatObject` might contain multiple matching objects, each of
+            // which needs to retain a reference to the original fat file. We
+            // create a shared instance here and clone it into `DifMatche`s
+            // below.
             let fat = Rc::new(FatObject::parse(buffer)?);
-            for object in fat.objects() {
+            for (index, object) in fat.objects().enumerate() {
                 let object = object?;
 
                 // If an object object class was specified, this will skip all
@@ -554,28 +561,20 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                     continue;
                 }
 
-                // We only collect the DifMatch once per FatObject but continue
-                // to iterate so that we capture all matching UUIDs. This will
-                // allow us to skip all UUIDs of objects that do not match the
-                // search criteria.
-                found_ids.insert(id);
-                if symbol_added {
-                    continue;
-                }
-
                 // Invoke logic to retrieve attachments specific to the kind
                 // of object file. These are used for processing. Since only
                 // dSYMs equire processing currently, all other kinds are
                 // skipped.
                 let attachments = match fat.kind() {
-                    ObjectKind::MachO => find_uuid_plists(&fat, &mut source),
+                    ObjectKind::MachO => find_uuid_plists(&object, &mut source),
                     _ => None,
                 };
 
-                symbol_added = true;
+                found_ids.insert(id);
                 collected.push(DifMatch {
                     _backing: None,
                     fat: fat.clone(),
+                    object_index: index,
                     name: name.clone(),
                     attachments: attachments,
                 });
