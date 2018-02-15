@@ -154,7 +154,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
     // login" to sign in which would be in appropriate here.
-    match Api::new().send_event(&dsn, &event) {
+    match Api::get_current().send_event(&dsn, &event) {
         Ok(event_id) => {
             println!("Event sent: {}", event_id);
         }

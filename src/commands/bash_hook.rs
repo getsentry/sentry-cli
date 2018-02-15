@@ -132,7 +132,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<()> {
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
     // login" to sign in which would be in appropriate here.
-    if let Ok(event_id) = Api::new().send_event(&dsn, &event) {
+    if let Ok(event_id) = Api::get_current().send_event(&dsn, &event) {
         println!("{}", event_id);
     };
 

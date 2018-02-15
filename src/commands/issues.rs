@@ -62,7 +62,7 @@ fn execute_change(org: &str,
                   filter: &IssueFilter,
                   changes: &IssueChanges)
                   -> Result<()> {
-    if Api::new().bulk_update_issue(org, project, filter, changes)? {
+    if Api::get_current().bulk_update_issue(org, project, filter, changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
             println!("  new status: {}", status);

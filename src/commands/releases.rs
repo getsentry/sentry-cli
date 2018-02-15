@@ -1,5 +1,6 @@
 //! Implements a command for managing releases.
 use std::path::Path;
+use std::rc::Rc;
 use std::collections::HashSet;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -20,7 +21,7 @@ use utils::sourcemaps::SourceMapProcessor;
 use utils::vcs::{find_heads, CommitSpec};
 
 struct ReleaseContext<'a> {
-    pub api: Api,
+    pub api: Rc<Api>,
     pub org: String,
     pub project_default: Option<&'a str>,
 }
@@ -861,7 +862,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     let config = Config::get_current();
     let ctx = ReleaseContext {
-        api: Api::new(),
+        api: Api::get_current(),
         org: config.get_org(matches)?,
         project_default: matches.value_of("project"),
     };

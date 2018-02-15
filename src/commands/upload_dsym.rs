@@ -71,7 +71,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
-    let api = Api::new();
+    let api = Api::get_current();
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -119,7 +119,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         }
 
         // Execute the upload
-        let uploaded = upload.upload_with(&api)?;
+        let uploaded = upload.upload()?;
 
         // Associate the dSYMs with the Info.plist data, if available
         if let Some(ref info_plist) = info_plist {

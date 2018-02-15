@@ -40,7 +40,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
-    let api = Api::new();
+    let api = Api::get_current();
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -55,7 +55,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         .filter_kind(ObjectKind::Breakpad)
         .filter_ids(uuids)
         .allow_zips(!matches.is_present("no_zips"))
-        .upload_with(&api)?;
+        .upload()?;
 
     // Trigger reprocessing only if requested by user
     if matches.is_present("no_reprocessing") {
