@@ -1,25 +1,13 @@
 //! Implements a command for uploading dSYM files.
-use std::collections::BTreeSet;
-use std::env;
-use std::str;
+use clap::{App, AppSettings, Arg, ArgMatches};
 
-use clap::{App, Arg, ArgMatches};
-use console::style;
-use indicatif::{ProgressBar, ProgressStyle};
-use symbolic_common::{ObjectClass, ObjectKind};
-use uuid::Uuid;
-
-use api::Api;
-use config::Config;
-use errors::{ErrorKind, Result};
+use commands::upload_dif;
+use errors::Result;
 use utils::args::{validate_uuid, ArgExt};
-use utils::dif_upload::DifUpload;
-use utils::xcode::{InfoPlist, MayDetach};
-
-static DERIVED_DATA: &'static str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload Mac debug symbols to a project.")
+        .setting(AppSettings::Hidden)
         .org_project_args()
         .arg(Arg::with_name("paths")
             .value_name("PATH")
@@ -70,116 +58,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     will be shown in the Xcode build output."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
-    let api = Api::get_current();
-    let config = Config::get_current();
-    let (org, project) = config.get_org_and_project(matches)?;
-
-    let uuids = matches
-        .values_of("uuids")
-        .unwrap_or_default()
-        .filter_map(|s| Uuid::parse_str(s).ok());
-
-    // Build generic upload parameters
-    let mut upload = DifUpload::new(org.clone(), project.clone());
-    upload
-        .search_paths(matches.values_of("paths").unwrap_or_default())
-        .filter_kind(ObjectKind::MachO)
-        .filter_class(ObjectClass::Debug)
-        .filter_ids(uuids)
-        .allow_zips(!matches.is_present("no_zips"));
-
-    // Configure BCSymbolMap resolution, if possible
-    if let Some(symbol_map) = matches.value_of("symbol_maps") {
-        upload
-            .symbol_map(symbol_map)
-            .map_err(|_| "--symbol-maps requires Apple dsymutil to be available.")?;
-    }
-
-    // Add a path to XCode's DerivedData, if configured
-    if matches.is_present("derived_data") {
-        let derived_data = env::home_dir().map(|x| x.join(DERIVED_DATA));
-        if let Some(path) = derived_data {
-            if path.is_dir() {
-                upload.search_path(path);
-            }
-        }
-    }
-
-    // Try to resolve the Info.plist either by path or from Xcode
-    let info_plist = match matches.value_of("info_plist") {
-        Some(path) => Some(InfoPlist::from_path(path)?),
-        None => InfoPlist::discover_from_env()?,
-    };
-
-    MayDetach::wrap("Debug symbol upload", |handle| {
-        // Optionally detach if run from Xcode
-        if !matches.is_present("force_foreground") {
-            handle.may_detach()?;
-        }
-
-        // Execute the upload
-        let uploaded = upload.upload()?;
-
-        // Associate the dSYMs with the Info.plist data, if available
-        if let Some(ref info_plist) = info_plist {
-            let progress_style = ProgressStyle::default_spinner()
-                .template("{spinner} Associating dSYMs with {msg}...");
-
-            let progress = ProgressBar::new_spinner();
-            progress.enable_steady_tick(100);
-            progress.set_style(progress_style);
-            progress.set_message(&info_plist.to_string());
-
-            let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
-            let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
-            progress.finish_and_clear();
-
-            if let Some(association) = response {
-                if association.associated_dsyms.len() == 0 {
-                    println!("{} No new debug symbols to associate.", style(">").dim());
-                } else {
-                    println!(
-                        "{} Associated {} debug symbols with the build.",
-                        style(">").dim(),
-                        style(association.associated_dsyms.len()).yellow()
-                    );
-                }
-            } else {
-                info!("Server does not support dSYM associations. Ignoring.");
-            }
-        }
-
-        // Trigger reprocessing only if requested by user
-        if matches.is_present("no_reprocessing") {
-            println!("{} skipped reprocessing", style(">").dim());
-        } else if !api.trigger_reprocessing(&org, &project)? {
-            println!("{} Server does not support reprocessing.", style(">").dim());
-        }
-
-        // Did we miss explicitly requested symbols?
-        if matches.is_present("require_all") {
-            let required_uuids: BTreeSet<_> = matches
-                .values_of("uuids")
-                .unwrap_or_default()
-                .filter_map(|s| Uuid::parse_str(s).ok())
-                .collect();
-
-            let found_uuids = uploaded.into_iter().map(|dif| dif.uuid()).collect();
-            let missing_uuids: Vec<_> = required_uuids.difference(&found_uuids).collect();
-
-            if !missing_uuids.is_empty() {
-                println!("");
-                println_stderr!("{}", style("Error: Some symbols could not be found!").red());
-                println_stderr!("The following symbols are still missing:");
-                for uuid in missing_uuids {
-                    println!("  {}", uuid);
-                }
-
-                return Err(ErrorKind::QuietExit(1).into());
-            }
-        }
-
-        Ok(())
-    })
+pub fn execute(matches: &ArgMatches) -> Result<()> {
+    upload_dif::execute_legacy(matches)
 }

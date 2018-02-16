@@ -87,7 +87,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     will be shown in the Xcode build output."))
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
     let api = Api::get_current();
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
@@ -104,29 +104,36 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         .allow_zips(!matches.is_present("no_zips"))
         .filter_ids(uuids);
 
-    // Restrict symbol types, if specified by the user
-    for ty in matches.values_of("types").unwrap_or_default() {
-        upload.filter_kind(match ty {
-            "mach" => ObjectKind::MachO,
-            "elf" => ObjectKind::Elf,
-            "breakpad" => ObjectKind::Breakpad,
-            other => return Err(format!("Unsupported type: {}", other).into()),
-        });
-    }
-
-    // Allow executables and dynamic/shared libraries, but not object fiels.
-    // They may optionally contain debugging information (such as DWARF) or
-    // stackwalking info (for instance `eh_frame`).
-    if !matches.is_present("no_executables") {
+    if legacy {
+        // Configure `upload-dsym` behavior (only dSYM files)
         upload
-            .filter_class(ObjectClass::Executable)
-            .filter_class(ObjectClass::Library);
-    }
+            .filter_kind(ObjectKind::MachO)
+            .filter_class(ObjectClass::Debug);
+    } else {
+        // Restrict symbol types, if specified by the user
+        for ty in matches.values_of("types").unwrap_or_default() {
+            upload.filter_kind(match ty {
+                "mach" => ObjectKind::MachO,
+                "elf" => ObjectKind::Elf,
+                "breakpad" => ObjectKind::Breakpad,
+                other => return Err(format!("Unsupported type: {}", other).into()),
+            });
+        }
 
-    // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
-    // with `objcopy --only-keep-debug` or Breakpad symbols.
-    if !matches.is_present("no_debug_only") {
-        upload.filter_class(ObjectClass::Debug);
+        // Allow executables and dynamic/shared libraries, but not object fiels.
+        // They may optionally contain debugging information (such as DWARF) or
+        // stackwalking info (for instance `eh_frame`).
+        if !matches.is_present("no_executables") {
+            upload
+                .filter_class(ObjectClass::Executable)
+                .filter_class(ObjectClass::Library);
+        }
+
+        // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
+        // with `objcopy --only-keep-debug` or Breakpad symbols.
+        if !matches.is_present("no_debug_only") {
+            upload.filter_class(ObjectClass::Debug);
+        }
     }
 
     // Configure BCSymbolMap resolution, if possible
@@ -222,4 +229,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
         Ok(())
     })
+}
+
+pub fn execute(matches: &ArgMatches) -> Result<()> {
+    execute_internal(matches, false)
+}
+
+pub fn execute_legacy(matches: &ArgMatches) -> Result<()> {
+    execute_internal(matches, true)
 }
