@@ -1588,10 +1588,10 @@ pub struct ChunkedDifResponse {
     pub state: ChunkedFileState,
     #[serde(rename = "missingChunks")]
     pub missing_chunks: Vec<Digest>,
-    #[serde(default, rename = "errors")]
-    pub errors: Vec<String>,
-    #[serde(default, rename = "difs")]
-    pub difs: Vec<DebugInfoFile>,
+    #[serde(default, rename = "detail")]
+    pub detail: Option<String>,
+    #[serde(default, rename = "dif")]
+    pub dif: Option<DebugInfoFile>,
 }
 
 pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;

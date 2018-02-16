@@ -21,7 +21,7 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
-use symbolic_debuginfo::{FatObject, ObjectId};
+use symbolic_debuginfo::{FatObject, Object, ObjectId};
 use scoped_threadpool::Pool;
 use parking_lot::RwLock;
 use walkdir::WalkDir;
@@ -33,7 +33,7 @@ use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, Progress
 use config::Config;
 use errors::Result;
 use utils::batch::{BatchedSliceExt, ItemSize};
-use utils::dif::has_hidden_symbols;
+use utils::dif::DebuggingInformation;
 use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
@@ -101,6 +101,7 @@ enum DifBacking {
 struct DifMatch<'data> {
     _backing: Option<DifBacking>,
     fat: Rc<FatObject<'data>>,
+    object_index: usize,
     name: String,
     attachments: Option<BTreeMap<String, ByteView<'static>>>,
 }
@@ -109,6 +110,8 @@ impl<'data> DifMatch<'data> {
     /// Moves the specified temporary debug file to a safe location and assumes
     /// ownership. The file will be deleted in the file system when this
     /// `DifMatch` is dropped.
+    ///
+    /// The path must point to a `FatObject` containing exactly one `Object`.
     fn take_temp<P, S>(path: P, name: S) -> Result<DifMatch<'static>>
     where
         P: AsRef<Path>,
@@ -116,23 +119,30 @@ impl<'data> DifMatch<'data> {
     {
         let temp_file = TempFile::take(path)?;
         let buffer = ByteView::from_path(temp_file.path())?;
+        let fat = FatObject::parse(buffer)?;
+        if fat.object_count() != 1 {
+            return Err("Multi-arch binaries not supported here".into());
+        }
 
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
-            fat: Rc::new(FatObject::parse(buffer)?),
+            fat: Rc::new(fat),
+            object_index: 1,
             name: name.into(),
             attachments: None,
         })
     }
 
-    /// Returns the parsed `FatObject` of this DIF.
-    pub fn fat(&self) -> &FatObject {
-        &self.fat
+    /// Returns the parsed `Object` of this DIF.
+    pub fn object(&self) -> Object {
+        // Errors can be ignored at this point since the `DifMatch` is only
+        // created if the referenced Object is valid.
+        self.fat.get_object(self.object_index).unwrap().unwrap()
     }
 
     /// Returns the raw binary data of this DIF.
     pub fn data(&self) -> &[u8] {
-        self.fat().as_bytes()
+        self.object().as_bytes()
     }
 
     /// Returns the size of of this DIF in bytes.
@@ -173,7 +183,7 @@ impl<'data> DifMatch<'data> {
             return false;
         }
 
-        has_hidden_symbols(self.fat()).unwrap_or(false)
+        self.object().has_hidden_symbols().unwrap_or(false)
     }
 }
 
@@ -461,10 +471,13 @@ where
 /// of Plist name to owning buffer of the file's contents. This function should
 /// only be called for dSYMs.
 fn find_uuid_plists(
-    fat: &FatObject,
+    object: &Object,
     source: &mut DifSource,
 ) -> Option<BTreeMap<String, ByteView<'static>>> {
-    let mut plists = BTreeMap::new();
+    let uuid = match object.id() {
+        Some(id) => id.uuid(),
+        None => return None,
+    };
 
     // When uploading an XCode build archive to iTunes Connect, Apple will
     // re-build the app for different architectures, causing new UUIDs in the
@@ -482,21 +495,15 @@ fn find_uuid_plists(
     //        ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //        └─ DWARF
     //           └─ App
-    for id in fat.objects().filter_map(|o| o.ok()).filter_map(|o| o.id()) {
-        let plist_name = format!("{}.plist", id.uuid().to_string().to_uppercase());
-        if let Some(plist) = source.get_relative(format!("../{}", &plist_name)) {
-            plists.insert(plist_name, plist);
-        }
-    }
+    let plist_name = format!("{}.plist", uuid.to_string().to_uppercase());
+    let plist = match source.get_relative(format!("../{}", &plist_name)) {
+        Some(plist) => plist,
+        None => return None,
+    };
 
-    // In case there are no such plists (e.g. for a local build), return None
-    // instead of an empty map. This allows to exit earlier when processing
-    // the `DifMatches`.
-    if plists.is_empty() {
-        None
-    } else {
-        Some(plists)
-    }
+    let mut plists = BTreeMap::new();
+    plists.insert(plist_name, plist);
+    return Some(plists);
 }
 
 /// Searches matching debug information files.
@@ -524,12 +531,12 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 return Ok(());
             }
 
-            // This is a hack to allow iteration through the FatObject while
-            // also moving it into the DifMatch, in case it contains a matching
-            // object.
-            let mut symbol_added = false;
+            // Each `FatObject` might contain multiple matching objects, each of
+            // which needs to retain a reference to the original fat file. We
+            // create a shared instance here and clone it into `DifMatche`s
+            // below.
             let fat = Rc::new(FatObject::parse(buffer)?);
-            for object in fat.objects() {
+            for (index, object) in fat.objects().enumerate() {
                 let object = object?;
 
                 // If an object object class was specified, this will skip all
@@ -554,28 +561,20 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                     continue;
                 }
 
-                // We only collect the DifMatch once per FatObject but continue
-                // to iterate so that we capture all matching UUIDs. This will
-                // allow us to skip all UUIDs of objects that do not match the
-                // search criteria.
-                found_ids.insert(id);
-                if symbol_added {
-                    continue;
-                }
-
                 // Invoke logic to retrieve attachments specific to the kind
                 // of object file. These are used for processing. Since only
                 // dSYMs equire processing currently, all other kinds are
                 // skipped.
                 let attachments = match fat.kind() {
-                    ObjectKind::MachO => find_uuid_plists(&fat, &mut source),
+                    ObjectKind::MachO => find_uuid_plists(&object, &mut source),
                     _ => None,
                 };
 
-                symbol_added = true;
+                found_ids.insert(id);
                 collected.push(DifMatch {
                     _backing: None,
                     fat: fat.clone(),
+                    object_index: index,
                     name: name.clone(),
                     attachments: attachments,
                 });
@@ -832,76 +831,80 @@ fn try_assemble_difs<'data>(
     }
 }
 
-/// Uploads chunks specified in `missing_info` in batches. The batch size is
-/// controlled by `chunk_options`.
+/// Concurrently uploads chunks specified in `missing_info` in batches. The
+/// batch size and number of concurrent requests is controlled by
+/// `chunk_options`.
 ///
 /// This function blocks until all chunks have been uploaded.
 fn upload_missing_chunks(
     missing_info: &MissingDifsInfo,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    // Chunks are uploaded in batches, but the progress bar is shared between
-    // multiple requests to simulate one continuous upload to the user. Since we
-    // have to embed the progress bar into a ProgressBarMode and move it into
-    // `Api::upload_chunks`, the progress bar is created in an Arc.
     let &(ref difs, ref chunks) = missing_info;
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-         style(">").dim(),
-         style(difs.len().to_string()).yellow(),
-         if difs.len() == 1 { "" } else { "s" }
+        style(">").dim(),
+        style(difs.len().to_string()).yellow(),
+        if difs.len() == 1 { "" } else { "s" }
     ));
-    let total = difs
-        .iter()
+
+    // To make the progress bar more consistent for repeated and partial uploads
+    // we also include already uploaded chunks in the progress bar. Thus, the
+    // first chunk's progress starts at the amount of already uploaded bytes.
+    let total_bytes = difs.iter()
         .flat_map(|m| m.chunks().map(|DifChunk((_, data))| data.len() as u64))
         .sum();
-    let total_missing: u64 = chunks
+    let missing_bytes: u64 = chunks
         .iter()
         .map(|&DifChunk((_, data))| data.len() as u64)
         .sum();
 
-    let progress = Arc::new(ProgressBar::new(total));
+    // Chunks are uploaded in batches, but the progress bar is shared between
+    // multiple requests to simulate one continuous upload to the user. Since we
+    // have to embed the progress bar into a ProgressBarMode and move it into
+    // `Api::upload_chunks`, the progress bar is created in an Arc.
+    let progress = Arc::new(ProgressBar::new(total_bytes));
     progress.set_style(progress_style);
 
-    // Since each upload is separate inside `Api::upload_chunks`, we need to
-    // keep track of the progress and pass it as offset into
-    // `ProgressBarMode::Shared`. Each batch aggregates objects until it exceeds
-    // the maximum size configured in ChunkUploadOptions.
+    // The upload is executed in parallel batches. Each batch aggregates objects
+    // until it exceeds the maximum size configured in ChunkUploadOptions. We
+    // keep track of the overall progress and potential errors. If an error
+    // ocurrs, all subsequent requests will be cancelled and the error returned.
+    // Otherwise, the after every successful update, the overall progress is
+    // updated and rendered.
     let mut pool = Pool::new(chunk_options.concurrency as u32);
     let failed = Arc::new(RwLock::new(None));
     let chunk_progress = Arc::new(RwLock::new(vec![0u64; 0]));
-    chunk_progress.write().push(total - total_missing);
+    chunk_progress.write().push(total_bytes - missing_bytes);
 
-    {
-        let progress = progress.clone();
-        pool.scoped(|scoped| {
-            for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-                let progress = progress.clone();
-                let failed = failed.clone();
-                let chunk_progress = chunk_progress.clone();
-                scoped.execute(move || {
-                    // if we already failed, stop
-                    if failed.read().is_some() {
-                        return;
-                    }
+    pool.scoped(|scoped| {
+        for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
+            let progress = progress.clone();
+            let failed = failed.clone();
+            let chunk_progress = chunk_progress.clone();
+            scoped.execute(move || {
+                // If we already failed, stop
+                if failed.read().is_some() {
+                    return;
+                }
 
-                    let idx = {
-                        let mut progress = chunk_progress.write();
-                        let idx = progress.len();
-                        progress.push(0);
-                        idx
-                    };
+                let idx = {
+                    let mut progress = chunk_progress.write();
+                    let idx = progress.len();
+                    progress.push(0);
+                    idx
+                };
 
-                    let api = Api::get_current();
-                    let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
-                    if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
-                        *failed.write() = Some(err);
-                    }
-                });
-            }
-        });
-    }
+                // Obtain a thread_local API instance
+                let api = Api::get_current();
+                let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
+                if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
+                    *failed.write() = Some(err);
+                }
+            });
+        }
+    });
 
     if let Some(err) = failed.write().take() {
         return Err(err)?;
@@ -919,6 +922,25 @@ fn upload_missing_chunks(
     );
 
     Ok(())
+}
+
+/// Renders the given detail string to the command line. If the `detail` is
+/// either missing or empty, the optional fallback will be used.
+fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
+    let mut string = match *detail {
+        Some(ref string) => string.as_str(),
+        None => "",
+    };
+
+    if string.is_empty() && fallback.is_some() {
+        string = fallback.unwrap();
+    }
+
+    for line in string.lines() {
+        if !line.is_empty() {
+            println!("        {}", style(line).dim());
+        }
+    }
 }
 
 /// Polls the assemble endpoint until all DIFs have either completed or errored.
@@ -961,7 +983,7 @@ fn poll_dif_assemble(
     for &(_, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
         // will always return one.
-        for dif in &success.difs {
+        if let Some(ref dif) = success.dif {
             println!(
                 "     {} {} ({}; {})",
                 style("OK").green(),
@@ -969,6 +991,8 @@ fn poll_dif_assemble(
                 dif.object_name,
                 dif.cpu_name,
             );
+
+            render_detail(&success.detail, None);
         }
     }
 
@@ -979,18 +1003,12 @@ fn poll_dif_assemble(
             .get(&checksum)
             .ok_or("Server returned unexpected checksum")?;
 
-        println!("  {} {}:", style("ERROR").red(), dif.file_name(),);
-        if error.errors.is_empty() {
-            println!("        {}", style("An unknown error ocurred").dim());
-        } else {
-            for message in &error.errors {
-                println!("        {}", style(message).dim());
-            }
-        }
+        println!("  {} {}", style("ERROR").red(), dif.file_name());
+        render_detail(&error.detail, Some("An unknown error occurred"));
     }
 
     // Return only successful uploads
-    Ok(successes.into_iter().flat_map(|(_, r)| r.difs).collect())
+    Ok(successes.into_iter().filter_map(|(_, r)| r.dif).collect())
 }
 
 /// Uploads debug info files using the chunk-upload endpoint.

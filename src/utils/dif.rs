@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 use uuid::Uuid;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{FatObject, SymbolTable};
+use symbolic_debuginfo::{FatObject, Object, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
 
 use errors::{Error, Result};
@@ -57,7 +57,6 @@ impl DifFile {
     }
 
     fn open_proguard<P: AsRef<Path>>(path: P) -> Result<DifFile> {
-
         let data = ByteView::from_path(&path)?;
         let pg = ProguardMappingView::parse(data)?;
 
@@ -165,15 +164,10 @@ impl DifFile {
     }
 
     pub fn get_note(&self) -> Option<&str> {
-        match self {
-            &DifFile::Object(ref fat) => {
-                if has_hidden_symbols(fat).unwrap_or(false) {
-                    Some("contains hidden symbols (needs BCSymbolMaps)")
-                } else {
-                    None
-                }
-            }
-            &DifFile::Proguard(..) => None,
+        if self.has_hidden_symbols().unwrap_or(false) {
+            Some("contains hidden symbols (needs BCSymbolMaps)")
+        } else {
+            None
         }
     }
 }
@@ -194,18 +188,40 @@ impl Serialize for DifFile {
     }
 }
 
-/// Checks whether this `FatObject` contains hidden symbols generated during an
-/// iTunes Connect build. This only applies to MachO files.
-pub fn has_hidden_symbols(fat: &FatObject) -> Result<bool> {
-    if fat.kind() != ObjectKind::MachO {
-        return Ok(false);
-    }
+/// A trait to help interfacing with debugging information.
+pub trait DebuggingInformation {
+    /// Checks whether this object contains hidden symbols generated during an
+    /// iTunes Connect build. This only applies to MachO files.
+    fn has_hidden_symbols(&self) -> Result<bool>;
+}
 
-    for object in fat.objects() {
-        if object?.symbols()?.requires_symbolmap()? {
-            return Ok(true);
+impl DebuggingInformation for DifFile {
+    fn has_hidden_symbols(&self) -> Result<bool> {
+        match *self {
+            DifFile::Object(ref fat) => fat.has_hidden_symbols(),
+            _ => Ok(false),
         }
     }
+}
 
-    Ok(false)
+impl<'a> DebuggingInformation for FatObject<'a> {
+    fn has_hidden_symbols(&self) -> Result<bool> {
+        if self.kind() != ObjectKind::MachO {
+            return Ok(false);
+        }
+
+        for object in self.objects() {
+            if object?.symbols()?.requires_symbolmap()? {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+}
+
+impl<'a> DebuggingInformation for Object<'a> {
+    fn has_hidden_symbols(&self) -> Result<bool> {
+        Ok(self.kind() == ObjectKind::MachO && self.symbols()?.requires_symbolmap()?)
+    }
 }
