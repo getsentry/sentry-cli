@@ -37,10 +37,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .help("Only consider debug information files of the given \
                     type.  By default, all types are considered."))
         .arg(Arg::with_name("no_executables")
-            .long("no-executables")
-            .help("Exclude executables and look for debug symbols only."))
+            .long("no-bin")
+            .help("Exclude executables and libraries and look for debug symbols only."))
         .arg(Arg::with_name("no_debug_only")
-            .long("no-debug-only")
+            .long("no-debug")
             .help("Exclude files containing only stripped debugging info.")
             .conflicts_with("no_executables"))
         .arg(Arg::with_name("uuids")
