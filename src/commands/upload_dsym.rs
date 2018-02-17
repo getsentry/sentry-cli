@@ -61,11 +61,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!(
-        "{}: Use the {} command for improved options.",
+        "{}: Use the {} command for improved options. For more information, run:",
         style("Note").green(),
         style("upload-dif").bold(),
     );
-    println!("{}: For more information, run:", style("Note").green());
     println!("{} sentry-cli upload-dif --help", style("$").dim());
     println!();
 
