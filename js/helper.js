@@ -8,10 +8,19 @@ const childProcess = require('child_process');
  * Absolute path to the sentry-cli binary (platform dependant).
  * @type {string}
  */
-const binaryPath =
+let binaryPath =
   os.platform() === 'win32'
     ? path.resolve(__dirname, '..\\bin\\sentry-cli.exe')
     : path.resolve(__dirname, '../sentry-cli');
+
+/**
+ * Overrides the default binary path with a mock value, useful for testing.
+ *
+ * @param {string} mockPath The new path to the mock sentry-cli binary
+ */
+function mockBinaryPath(mockPath) {
+  binaryPath = mockPath;
+}
 
 /**
  * Converts the given option into a command line args array.
@@ -118,10 +127,6 @@ function prepareCommand(command, schema, options) {
  * @returns {string}
  */
 function getPath() {
-  if (process.env.NODE_ENV === 'test') {
-    return path.resolve(__dirname, '__mocks__/sentry-cli');
-  }
-
   return binaryPath;
 }
 
@@ -159,6 +164,7 @@ function execute(args) {
 }
 
 module.exports = {
+  mockBinaryPath,
   serializeOptions,
   prepareCommand,
   getPath,

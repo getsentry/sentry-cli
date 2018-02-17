@@ -1,10 +1,15 @@
 /* eslint-env jest */
 
+const path = require('path');
 const helper = require('../helper');
 
 const SOURCEMAPS_OPTIONS = require('../releases/options/uploadSourcemaps');
 
 describe('SentryCli helper', () => {
+  beforeEach(() => {
+    helper.mockBinaryPath(path.resolve(__dirname, '../__mocks__/sentry-cli'));
+  });
+
   test('call sentry-cli --version', () => {
     expect.assertions(1);
     return helper
