@@ -8,6 +8,7 @@ const childProcess = require('child_process');
  * Absolute path to the sentry-cli binary (platform dependant).
  * @type {string}
  */
+// istanbul ignore next
 let binaryPath =
   os.platform() === 'win32'
     ? path.resolve(__dirname, '..\\bin\\sentry-cli.exe')
@@ -20,32 +21,6 @@ let binaryPath =
  */
 function mockBinaryPath(mockPath) {
   binaryPath = mockPath;
-}
-
-/**
- * Converts the given option into a command line args array.
- *
- * The value can either be an array of values or a single value. The value(s) will be
- * converted to string. If an array is given, the option name is repeated for each value.
- *
- * @example
- * expect(transformOption('--foo', 'a'))
- *   .toEqual(['--foo', 'a'])
- *
- * @example
- * expect(transformOption('--foo', ['a', 'b']))
- *   .toEqual(['--foo', 'a', '--foo', 'b']);
- *
- * @param {string} option The literal name of the option, including dashes.
- * @param {any[]|any} values One or more values for this option.
- * @returns {string[]} An arguments array that can be passed via command line.
- */
-function transformOption(option, values) {
-  if (Array.isArray(values)) {
-    return values.reduce((acc, value) => acc.concat([option.param, String(value)]), []);
-  }
-
-  return [option.param, String(values)];
 }
 
 /**
@@ -87,7 +62,9 @@ function serializeOptions(schema, options) {
         throw new Error(`${option} should be an array`);
       }
 
-      return newOptions.concat(transformOption(schema[option], paramValue));
+      return newOptions.concat(
+        paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
+      );
     }
 
     if (paramType === 'boolean' || paramType === 'inverted-boolean') {
