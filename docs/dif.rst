@@ -2,31 +2,32 @@ Debug Information Files
 =======================
 
 ``sentry-cli`` can be used to validate and upload debug information files
-(:doc:`dSYM files <dsym>`, :doc:`proguard files <proguard>`, etc.).
+(dSYM, Proguard files, etc.).
 
 Debug information files are additional files that help us provide better
 information about your crash reports.  We currently support the following
 formats:
 
 *   :doc:`dSYM files <dsym>` for iOS, tvOS and macOS
-*   :doc:`proguard mappings <proguard>` for Android
+*   :doc:`Proguard mappings <proguard>` for Android
 
-Note that sourcemaps while also being debug information files are handled
+Note that sourcemaps, while also being debug information files, are handled
 differently in Sentry.  For more information see
-:ref:`Source maps in sentry-cli <sentry-cli-sourcemaps>`.
+:ref:`Sourcemaps in sentry-cli <sentry-cli-sourcemaps>`.
 
 File Assocations
 ----------------
 
-Generally Sentry associates debug information files with events through
-their UUID.  Each debug information file in general at least has one
-UUID (thought dSYM files can contain more than one ID).  If you have a
-debug information file you can use the ``sentry-cli difutil check``
-command to print the contained UUIDs.
+Generally, Sentry associates debug information files with events through
+their unique ID.  Each debug information file has at least one unique ID.
+As a special case, dSYM files can contain symbols for more than one ID.
+If you have a debug information file you can use the ``sentry-cli difutil
+check`` command to print the contained IDs. The ID depends on the file type:
+dSYMs and proguard files use UUIDs, Linux symbols use longer hash values
+(e.g. SHA256) and PDBs use UUIDs and an age field.
 
-Likewise if you know the UUIDs in many cases the upload commands (like
-``sentry-cli upload-dsym``) can automatically discover debug information
-files based on the UUIDs provided.
+Likewise, the upload commands (e.g. ``sentry-cli upload-dif``) allow to search
+for specific debug information files by providing their known identifiers.
 
 Checking Files
 --------------
@@ -43,18 +44,20 @@ Finding Files
 -------------
 
 If you see in Sentry's UI that debug information files are missing but you
-are not sure how to best find them you can use the ``sentry-cli difutil
+are not sure how to locate them, you can use the ``sentry-cli difutil
 find`` command to look for them::
 
-    $ sentry-cli difutil find UUID
+    $ sentry-cli difutil find <identifier>
 
-Additionally ``sentry-cli upload-dsym`` can automatically look for them.
+Additionally, ``sentry-cli upload-dif`` can automatically search for files
+in a folder or ZIP archive.
 
 Uploading Files
 ---------------
 
-For uploading debug information files specific commands exist depending
-on the type of the file.  The following commands exist:
+Options for the debug file upload depend on the upload environment and
+debug format.  For detailed instructions, please refer to the resources
+linked below:
 
-*   :doc:`upload-dsym <dsym>`
-*   :doc:`upload-proguard <proguard>`
+*   :doc:`dSYMs Upload <dsym>`
+*   :doc:`Proguard Mapping Upload <proguard>`
