@@ -33,7 +33,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .value_name("TYPE")
              .multiple(true)
              .number_of_values(1)
-             .possible_values(&["mach", "elf", "breakpad"])
+             .possible_values(&["dsym", "elf", "breakpad"])
              .help("Only consider debug information files of the given \
                     type.  By default, all types are considered."))
         .arg(Arg::with_name("no_executables")
@@ -113,7 +113,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
         // Restrict symbol types, if specified by the user
         for ty in matches.values_of("types").unwrap_or_default() {
             upload.filter_kind(match ty {
-                "mach" => ObjectKind::MachO,
+                "dsym" => ObjectKind::MachO,
                 "elf" => ObjectKind::Elf,
                 "breakpad" => ObjectKind::Breakpad,
                 other => return Err(format!("Unsupported type: {}", other).into()),
