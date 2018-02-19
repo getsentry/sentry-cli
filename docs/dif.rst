@@ -9,6 +9,8 @@ information about your crash reports.  We currently support the following
 formats:
 
 *   :doc:`dSYM files <dsym>` for iOS, tvOS and macOS
+*   :doc:`ELF symbols <elf>` for Linux and Android
+*   :doc:`Breakpad symbols <breakpad>` for Breakpad or Crashpad
 *   :doc:`Proguard mappings <proguard>` for Android
 
 Note that sourcemaps, while also being debug information files, are handled
@@ -59,5 +61,7 @@ Options for the debug file upload depend on the upload environment and
 debug format.  For detailed instructions, please refer to the resources
 linked below:
 
-*   :doc:`dSYMs Upload <dsym>`
+*   :doc:`dSYM Upload <dsym>`
+*   :doc:`ELF Symbol Upload <elf>`
+*   :doc:`Breakpad Symbol Upload <breakpad>`
 *   :doc:`Proguard Mapping Upload <proguard>`
