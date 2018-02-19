@@ -970,7 +970,7 @@ fn poll_dif_assemble(
             break response;
         }
 
-        thread::sleep(Duration::from_millis(5000));
+        thread::sleep(Duration::from_millis(1000));
     };
 
     progress.finish_and_clear();
