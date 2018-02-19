@@ -17,7 +17,7 @@ For general information about dSYM handling, please refer to
 Basic Upload
 ------------
 
-Use ``upload-dif`` upload dSYM files and specify the ``macho`` type.  If invoked
+Use ``upload-dif`` upload dSYM files and specify the ``dsym`` type.  If invoked
 during an Xcode build step, ``sentry-cli`` will automatically pick up the
 ``DWARF_DSYM_FOLDER_PATH`` environment variable. Otherwise, provide the path to
 a dSYM or folder containing dSYMs as command line argument.
@@ -30,7 +30,7 @@ dSYMs will be used for symbolication.
 
 Example::
 
-    $ sentry-cli upload-dif --type macho .
+    $ sentry-cli upload-dif -t dsym .
 
 Upload Options
 --------------
