@@ -27,6 +27,7 @@ The command will recurively scan the provided folders or ZIP archives.
     about this refer to :ref:`sentry-cli-working-with-projects`.
 
 Example::
+
     $ sentry-cli upload-dif -t breakpad .
 
 Upload Options

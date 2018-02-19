@@ -43,6 +43,7 @@ symbols with crash events.  If this ID is missing for some reason, invoke
 identifier from the unstripped file including debug information.
 
 Example::
+
     $ sentry-cli upload-dif --no-bin -t elf .
 
 Upload Options
