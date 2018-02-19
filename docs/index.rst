@@ -16,5 +16,6 @@ platforms.
    releases
    dif
    dsym
+   elf
    proguard
    send-event
