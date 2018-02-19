@@ -8,35 +8,19 @@ const childProcess = require('child_process');
  * Absolute path to the sentry-cli binary (platform dependant).
  * @type {string}
  */
-const binaryPath =
+// istanbul ignore next
+let binaryPath =
   os.platform() === 'win32'
     ? path.resolve(__dirname, '..\\bin\\sentry-cli.exe')
     : path.resolve(__dirname, '../sentry-cli');
 
 /**
- * Converts the given option into a command line args array.
+ * Overrides the default binary path with a mock value, useful for testing.
  *
- * The value can either be an array of values or a single value. The value(s) will be
- * converted to string. If an array is given, the option name is repeated for each value.
- *
- * @example
- * expect(transformOption('--foo', 'a'))
- *   .toEqual(['--foo', 'a'])
- *
- * @example
- * expect(transformOption('--foo', ['a', 'b']))
- *   .toEqual(['--foo', 'a', '--foo', 'b']);
- *
- * @param {string} option The literal name of the option, including dashes.
- * @param {any[]|any} values One or more values for this option.
- * @returns {string[]} An arguments array that can be passed via command line.
+ * @param {string} mockPath The new path to the mock sentry-cli binary
  */
-function transformOption(option, values) {
-  if (Array.isArray(values)) {
-    return values.reduce((acc, value) => acc.concat([option.param, String(value)]), []);
-  }
-
-  return [option.param, String(values)];
+function mockBinaryPath(mockPath) {
+  binaryPath = mockPath;
 }
 
 /**
@@ -78,7 +62,9 @@ function serializeOptions(schema, options) {
         throw new Error(`${option} should be an array`);
       }
 
-      return newOptions.concat(transformOption(schema[option], paramValue));
+      return newOptions.concat(
+        paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
+      );
     }
 
     if (paramType === 'boolean' || paramType === 'inverted-boolean') {
@@ -118,10 +104,6 @@ function prepareCommand(command, schema, options) {
  * @returns {string}
  */
 function getPath() {
-  if (process.env.NODE_ENV === 'test') {
-    return path.resolve(__dirname, '__mocks__/sentry-cli');
-  }
-
   return binaryPath;
 }
 
@@ -159,6 +141,7 @@ function execute(args) {
 }
 
 module.exports = {
+  mockBinaryPath,
   serializeOptions,
   prepareCommand,
   getPath,
