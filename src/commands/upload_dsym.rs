@@ -1,6 +1,5 @@
 //! Implements a command for uploading dSYM files.
 use clap::{App, AppSettings, Arg, ArgMatches};
-use console::style;
 
 use commands::upload_dif;
 use errors::Result;
@@ -60,13 +59,5 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    println!(
-        "{}: Use the {} command for improved options. For more information, run:",
-        style("Note").green(),
-        style("upload-dif").bold(),
-    );
-    println!("{} sentry-cli upload-dif --help", style("$").dim());
-    println!();
-
     upload_dif::execute_legacy(matches)
 }
