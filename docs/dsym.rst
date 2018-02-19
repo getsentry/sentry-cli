@@ -1,26 +1,26 @@
 dSYM Upload
 ===========
 
-``sentry-cli`` can upload dSYM files to Sentry allow symbolication of iOS
+``sentry-cli`` can upload dSYM files to Sentry to allow symbolication of iOS
 app crashes.  It is also used behind the scenes if you use systems like fastlane
 or build system integrations.
 
 For general information about dSYM handling, please refer to
 :ref:`uploading-dsyms` as well as :doc:`dif` for an introduction.
 
-.. admonition:: Note
-
-    Because dSYM files belong to projects, you will need to specify the
-    organization and project you are working with.  For more information
-    about this refer to :ref:`sentry-cli-working-with-projects`.
-
 Basic Upload
 ------------
 
-Use ``upload-dif`` upload dSYM files and specify the ``dsym`` type.  If invoked
-during an Xcode build step, ``sentry-cli`` will automatically pick up the
-``DWARF_DSYM_FOLDER_PATH`` environment variable. Otherwise, provide the path to
-a dSYM or folder containing dSYMs as command line argument.
+Use ``upload-dif`` to upload dSYM files and specify the ``dsym`` type.  If
+invoked during an Xcode build step, ``sentry-cli`` will automatically pick up
+the ``DWARF_DSYM_FOLDER_PATH`` environment variable. Otherwise, provide the path
+to a dSYM or folder containing dSYMs as command line argument.
+
+.. admonition:: Note
+
+    Because debug files belong to projects, you will need to specify the
+    organization and project you are working with.  For more information
+    about this refer to :ref:`sentry-cli-working-with-projects`.
 
 Since dSYMs have a unique signature, you do not need to associate them with
 releases. However, the CLI will automatically scan for a ``Info.plist``
