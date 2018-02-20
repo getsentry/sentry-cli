@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.30.0
+
+* Improve the upload for debug information files. It is now faster, allows to resume after network errors, and supports much larger files.
+* Add commands to upload Breakpad and ELF (Linux) symbols. See our [documentation page](https://docs.sentry.io/learn/cli/dif/) for more information.
+* Fix JavaScript tests on Windows
+
 ## sentry-cli 1.29.1
 
 * Fix NPM installation on Windows
