@@ -5,12 +5,6 @@ if [ -z "$1" ]; then
     set -- "patch"
 fi
 
-if [ "$(git diff --shortstat 2> /dev/null | tail -n1)" != "" ]; then
-    echo "ERROR: There are uncommitted changes in this repository!"
-    echo "Please commit all changes before tagging a new version."
-    exit 1
-fi
-
 VERSION=$(grep '^version' Cargo.toml | cut -d\" -f2 | head -1)
 MAJOR=$(echo "$VERSION" | cut -d. -f1)
 MINOR=$(echo "$VERSION" | cut -d. -f2)
