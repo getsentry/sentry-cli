@@ -43,7 +43,7 @@ There are a few options you can supply for the upload process
 
 ``--no-reprocessing``
     This parameter prevents Sentry from triggering reprocessing right
-    away.  It can be useful in some limited circumstances where you want
+    away.  It can be useful under rare circumstances where you want
     to upload files in multiple batches and you want to ensure that Sentry
     does not start reprocessing before some optional dsyms are uploaded.
     Note though that someone can still in the meantime trigger
