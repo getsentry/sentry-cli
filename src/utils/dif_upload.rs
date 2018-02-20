@@ -975,11 +975,17 @@ fn poll_dif_assemble(
 
     progress.finish_and_clear();
     println!("{} File processing complete:\n", style(">").dim());
-    let (successes, errors): (Vec<_>, _) =
+    let (mut successes, errors): (Vec<_>, _) =
         response.into_iter().partition(|&(_, ref r)| r.state.ok());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
+    successes.sort_by(|a, b| {
+        let name_a = a.1.dif.as_ref().map(|x| x.object_name.as_str()).unwrap_or("");
+        let name_b = b.1.dif.as_ref().map(|x| x.object_name.as_str()).unwrap_or("");
+        name_a.cmp(name_b)
+    });
+
     for &(_, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
         // will always return one.
@@ -998,11 +1004,16 @@ fn poll_dif_assemble(
 
     // Print a summary of all errors at the bottom.
     let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
+    let mut errored = vec![];
     for (checksum, error) in errors {
         let dif = difs_by_checksum
             .get(&checksum)
             .ok_or("Server returned unexpected checksum")?;
+        errored.push((dif, error));
+    }
+    errored.sort_by_key(|x| x.0.file_name());
 
+    for (dif, error) in errored {
         println!("  {} {}", style("ERROR").red(), dif.file_name());
         render_detail(&error.detail, Some("An unknown error occurred"));
     }
