@@ -43,10 +43,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .long("no-debug")
             .help("Exclude files containing only stripped debugging info.")
             .conflicts_with("no_executables"))
-        .arg(Arg::with_name("uuids")
-             .value_name("UUID")
-             .long("uuid")
-             .help("Search for specific UUIDs.")
+        .arg(Arg::with_name("ids")
+             .value_name("ID")
+             .long("id")
+             .help("Search for specific debug identifiers.")
              .validator(validate_uuid)
              .multiple(true)
              .number_of_values(1))
@@ -93,7 +93,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
 
     let uuids = matches
-        .values_of("uuids")
+        .values_of("ids")
         .unwrap_or_default()
         .filter_map(|s| Uuid::parse_str(s).ok());
 
@@ -207,7 +207,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
         // Did we miss explicitly requested symbols?
         if matches.is_present("require_all") {
             let required_uuids: BTreeSet<_> = matches
-                .values_of("uuids")
+                .values_of("ids")
                 .unwrap_or_default()
                 .filter_map(|s| Uuid::parse_str(s).ok())
                 .collect();

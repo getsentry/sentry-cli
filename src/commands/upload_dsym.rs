@@ -15,7 +15,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .multiple(true)
             .number_of_values(1)
             .index(1))
-        .arg(Arg::with_name("uuids")
+        .arg(Arg::with_name("ids")
              .value_name("UUID")
              .long("uuid")
              .help("Search for specific UUIDs.")
