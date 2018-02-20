@@ -1,65 +1,80 @@
 dSYM Upload
 ===========
 
-``sentry-cli`` is the tool to use to upload dSYM files to Sentry when
-you want symbolication for your iOS applications to work.  It is also used
-behind the scenes if you use systems like fastlane.
+``sentry-cli`` can upload dSYM files to Sentry to allow symbolication of iOS
+app crashes.  It is also used behind the scenes if you use systems like fastlane
+or build system integrations.
 
-For generation information about dSYM handling you can refer to
-:ref:`uploading-dsyms` as well as :doc:`dif` for a general introduction,
-but we have a reference on the command line interface here.
-
-.. admonition:: Note
-
-    Because dSYM files work on projects you will need to specify the
-    organization and project you are working with.  For more information
-    about this refer to :ref:`sentry-cli-working-with-projects`.
+For general information about dSYM handling, please refer to
+:ref:`uploading-dsyms` as well as :doc:`dif` for an introduction.
 
 Basic Upload
 ------------
 
-The ``upload-dsym`` command is the command to use for uploading debug
-symbols.  It automatically picks up the ``DWARF_DSYM_FOLDER_PATH``
-environment variable that Xcode exports in case you are using it from
-within an Xcode build step, alternatively you need to provide the path to
-dSYMs as argument.
+Use ``upload-dif`` to upload dSYM files and specify the ``dsym`` type.  If
+invoked during an Xcode build step, ``sentry-cli`` will automatically pick up
+the ``DWARF_DSYM_FOLDER_PATH`` environment variable. Otherwise, provide the path
+to a dSYM or folder containing dSYMs as command line argument.
 
-Since dSYMs are uniquely identified you do not need to associate them with
-a release, however the tool will automatically scan for a ``Info.plist``
-in the path provided to find the release.  If a release is found the dSYMS
-are associated automatically.  Unassociated dSYMs are still considered for
-processing but you won't easily see which go with which releases.
+.. admonition:: Note
+
+    Because debug files belong to projects, you will need to specify the
+    organization and project you are working with.  For more information
+    about this refer to :ref:`sentry-cli-working-with-projects`.
+
+Since dSYMs have a unique signature, you do not need to associate them with
+releases. However, the CLI will automatically scan for a ``Info.plist``
+in the path provided to find the release.  If a release is found, the dSYMS
+are associated automatically.  Even without this association, the uploaded
+dSYMs will be used for symbolication.
 
 Example::
 
-    $ sentry-cli upload-dsym
+    $ sentry-cli upload-dif -t dsym .
 
 Upload Options
 --------------
 
 There are a few options you can supply for the upload process
 
+``--no-bin``
+    Exclude executables and libraries from the upload and search for dSYM files
+    only.  For iOS apps, this setting can safely be activated since Sentry does
+    not requrie them for symbolication.
+
+``--derived-data``
+    Search for dSYMs in derived data folder.  This is the default location Xcode
+    stores its build output in.
+
+``--no-zips``
+    By default, sentry-cli will open and search ZIP archives for dSYMs. This is
+    especially useful when downloading builds from iTunes Connect. Use this
+    switch to disable if your search paths contain large ZIP archives without
+    dSYMs to speed up the search.
+
 ``--force-foreground``
     This option forces the dSYM upload to happen in foreground.  This only
-    affects uploads happening from within Xcode.  By default the upload
-    process when started from Xcode will detach and finish in the
+    affects uploads invoked from Xcode build steps.  By default, the upload
+    process will detach when started from Xcode and finish in the
     background.  If you need to debug the upload process it might be
-    useful to force the upload to happen in the foreground.
+    useful to force the upload to run in the foreground.
 
 ``--info-plist``
-    If your info.plist is at a non standard location you can specify it
-    here.
+    Overrides the search path for ``Info.plist``, usefule if it is located in
+    a non-standard location.
 
 ``--no-reprocessing``
     This parameter prevents Sentry from triggering reprocessing right
-    away.  It can be useful in some limited circumstances where you want
+    away.  It can be useful under rare circumstances where you want
     to upload files in multiple batches and you want to ensure that Sentry
     does not start reprocessing before some optional dsyms are uploaded.
     Note though that someone can still in the meantime trigger
     reprocessing from the UI.
 
 ``--symbol-maps``
-    Preprocesses debug symbols with symbol maps (BCSymbolMap).
+    Resolve hidden symbols in iTunes Connect builds using BCSymbolMaps. This is
+    needed to symbolicate crashes if symbols were not uploaded to Apple when
+    publishing the app in the AppStore.
 
 Symbol Maps
 -----------
@@ -68,15 +83,13 @@ If you are hiding debug symbols from Apple the debug files will not
 contain many useful symbols.  In that case the sentry-cli upload will warn
 you that it needs BCSymbolMaps::
 
-    $ sentry-cli upload-dsym ...
-    Batch 1
-    > Found 63 debug symbol files.
-    > warning: found 30 symbol files with hidden symbols (need BCSymbolMaps)
-    > Checking for missing debug symbol files on server
+    $ sentry-cli upload-dif ...
+    > Found 34 debug information files
+    > Warning: Found 10 symbol files with hidden symbols (need BCSymbolMaps)
 
-In that case you need the BCSymbolMaps that match your files.  Normally
-these get generated by the xcode build process.  Supply the
+In this case, you need the BCSymbolMaps that match your files.  Normally,
+these get generated by the Xcode build process.  Supply the
 ``--symbol-maps`` parameter and point it to the folder containing the
 symbol maps::
 
-    $ sentry-cli upload-dsym --symbol-path path/to/symbolmaps path/to/debug/symbols
+    $ sentry-cli upload-dif --symbol-maps path/to/symbolmaps path/to/debug/symbols
