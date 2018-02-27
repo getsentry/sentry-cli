@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.30.1
+
+* Expose `execute` on SentryCli js wrapper
+
 ## sentry-cli 1.30.0
 
 * Improve the upload for debug information files. It is now faster, allows to resume after network errors, and supports much larger files.
