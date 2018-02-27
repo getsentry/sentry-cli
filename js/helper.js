@@ -136,7 +136,7 @@ function execute(args, live) {
         env,
         stdio: 'inherit',
       });
-      pid.on('exit', code => {
+      pid.on('exit', () => {
         resolve();
       });
     } else {
