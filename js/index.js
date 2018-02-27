@@ -48,6 +48,15 @@ class SentryCli {
   static getPath() {
     return helper.getPath();
   }
+
+  /**
+   * See {helper.execute} docs.
+   * @param {string[]} args Command line arguments passed to `sentry-cli`.
+   * @returns {Promise.<string>} A promise that resolves to the standard output.
+   */
+  execute(args) {
+    return helper.execute(args);
+  }
 }
 
 SentryCli.prototype.releases = require('./releases');
