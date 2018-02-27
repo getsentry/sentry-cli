@@ -52,10 +52,11 @@ class SentryCli {
   /**
    * See {helper.execute} docs.
    * @param {string[]} args Command line arguments passed to `sentry-cli`.
+   * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
-  execute(args) {
-    return helper.execute(args);
+  execute(args, live) {
+    return helper.execute(args, live);
   }
 }
 
