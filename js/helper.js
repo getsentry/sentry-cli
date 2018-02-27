@@ -125,18 +125,29 @@ function getPath() {
  * expect(output.trim()).toBe('sentry-cli x.y.z');
  *
  * @param {string[]} args Command line arguments passed to `sentry-cli`.
+ * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
  * @returns {Promise.<string>} A promise that resolves to the standard output.
  */
-function execute(args) {
+function execute(args, live) {
   const env = Object.assign({}, process.env);
   return new Promise((resolve, reject) => {
-    childProcess.execFile(getPath(), args, { env }, (err, stdout) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve(stdout);
-      }
-    });
+    if (live === true) {
+      const pid = childProcess.spawn(getPath(), args, {
+        env,
+        stdio: 'inherit',
+      });
+      pid.on('exit', () => {
+        resolve();
+      });
+    } else {
+      childProcess.execFile(getPath(), args, { env }, (err, stdout) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(stdout);
+        }
+      });
+    }
   });
 }
 
