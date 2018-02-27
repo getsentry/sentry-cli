@@ -6,6 +6,7 @@
 use std::io;
 use std::fs;
 use std::str;
+use std::cmp;
 use std::io::{Read, Write};
 use std::fmt;
 use std::error;
@@ -1221,7 +1222,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 let info = if &caps[1].to_lowercase() == "basic" {
                     caps[3].split(':').next().unwrap().to_string()
                 } else {
-                    format!("{}***", &caps[3][..8])
+                    format!("{}***", &caps[3][..cmp::min(caps[3].len(), 8)])
                 };
                 format!("{}: {} {}", &caps[1], &caps[2], info)
             });
