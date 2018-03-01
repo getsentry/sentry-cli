@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.30.2
+
+* Fixed #252
+
 ## sentry-cli 1.30.1
 
 * Expose `execute` on SentryCli js wrapper
