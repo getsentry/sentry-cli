@@ -105,7 +105,7 @@ function downloadBinary() {
         .on('data', chunk => progressBar.tick(chunk.length))
         .pipe(fs.createWriteStream(outputPath, { mode: '0755' }))
         .on('error', e => reject(e))
-        .on('finish', () => resolve());
+        .on('close', () => resolve());
     });
   });
 }
