@@ -5,7 +5,7 @@ name = "sentry-cli"
 version = "1.30.2"
 
 [dependencies]
-anylog = "0.2.0"
+anylog = "0.2.1"
 app_dirs = "1.1.1"
 backtrace = "0.3.5"
 chardet = "0.2.4"
