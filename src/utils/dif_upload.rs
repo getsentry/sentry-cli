@@ -531,6 +531,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 return Ok(());
             }
 
+            debug!("trying to parse dif {}", &name);
             let fat = match FatObject::parse(buffer) {
                 Ok(fat) => Rc::new(fat),
                 Err(e) => {
