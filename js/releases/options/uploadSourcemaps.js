@@ -17,7 +17,7 @@ module.exports = {
   },
   stripPrefix: {
     param: '--strip-prefix',
-    type: 'array',
+    type: 'string',
   },
   stripCommonPrefix: {
     param: '--strip-common-prefix',
