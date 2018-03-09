@@ -1,6 +1,7 @@
 {
   "extends": ["airbnb-base", "prettier"],
   "rules": {
+    "class-methods-use-this": "off",
     "prefer-destructuring": "off",
     "strict": "off"
   }
