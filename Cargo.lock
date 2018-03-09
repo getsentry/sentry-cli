@@ -22,7 +22,7 @@ dependencies = [
 
 [[package]]
 name = "anylog"
-version = "0.2.0"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1085,7 +1085,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "sentry-cli"
 version = "1.30.2"
 dependencies = [
- "anylog 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "anylog 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "app_dirs 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "backtrace 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "chan 0.1.21 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1607,7 +1607,7 @@ dependencies = [
 "checksum adler32 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6cbd0b9af8587c72beadc9f72d35b9fbb070982c9e6203e46e93f10df25f8f45"
 "checksum advapi32-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e06588080cb19d0acb6739808aafa5f26bfb2ca015b2b6370028b44cf7cb8a9a"
 "checksum aho-corasick 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)" = "d6531d44de723825aa81398a6415283229725a00fa30713812ab9323faa82fc4"
-"checksum anylog 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "6eac724c1c3bb9257ae15c2fd83dc3f2f5c9f0ff9a403df4f11861eedaf0b28b"
+"checksum anylog 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "39e4dcf8109f09853c31889900b3f013a666079cb3f19c85378959f49a93d3d5"
 "checksum app_dirs 1.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b7d1c0d48a81bbb13043847f957971f4d87c81542d80ece5e84ba3cba4058fd4"
 "checksum arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)" = "a1e964f9e24d588183fcb43503abda40d288c8657dfc27311516ce2f05675aef"
 "checksum atty 0.2.6 (registry+https://github.com/rust-lang/crates.io-index)" = "8352656fd42c30a0c3c89d26dea01e3b77c0ab2af18230835c15e2e13cd51859"
