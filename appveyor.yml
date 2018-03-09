@@ -24,7 +24,7 @@ install:
 build: false
 
 test_script:
-  - set RUSTFLAGS="-C target-feature=+crt-static"
+  - set RUSTFLAGS=-Ctarget-feature=+crt-static
   - cargo build --release --locked
 
 after_test:
