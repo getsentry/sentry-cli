@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.30.3
+
+* Attempted to make the windows executable more portable (#269)
+* Fixed the JavaScript API (#270)
+* Fixed a bug where breadcrumbs were not always sent (#268)
+
 ## sentry-cli 1.30.2
 
 * Fixed #252
