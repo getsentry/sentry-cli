@@ -56,7 +56,7 @@ class SentryCli {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return this.helper.execute(args, live);
+    return helper.execute(args, live);
   }
 }
 
