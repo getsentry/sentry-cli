@@ -56,6 +56,7 @@ class SentryCli {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
+    // eslint-disable-next-line class-methods-use-this
     return helper.execute(args, live);
   }
 }
