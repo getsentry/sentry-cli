@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli",
-  "version": "1.30.2",
+  "version": "1.30.3",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
     "install": "node scripts/install.js",
