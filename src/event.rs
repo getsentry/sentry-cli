@@ -1,6 +1,7 @@
 //! Provides support for sending events to Sentry.
 use std::env;
 use std::fs;
+use std::time::UNIX_EPOCH;
 use std::io::{BufRead, BufReader};
 use std::collections::HashMap;
 use std::process::Command;
@@ -60,9 +61,9 @@ pub struct SingleException {
     pub stacktrace: Option<Stacktrace>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, Debug)]
 pub struct Breadcrumb {
-    pub timestamp: Option<f64>,
+    pub timestamp: f64,
     #[serde(rename="type")]
     pub ty: String,
     pub message: String,
@@ -169,6 +170,17 @@ impl Event {
     pub fn attach_logfile(&mut self, logfile: &str, with_component: bool) -> Result<()> {
         let f = fs::File::open(logfile)
             .chain_err(|| "Could not open logfile")?;
+
+        // sentry currently requires timestamps for breadcrumbs at all times.
+        // Because we might not be able to parse a timestamp from the log file
+        // we fall back to either the modified time of the file or if that does
+        // not work we use the current timestamp.
+        let fallback_timestamp = fs::metadata(logfile)
+            .chain_err(|| "Could not get metadata for logfile")?
+            .modified()
+            .map(|ts| ts.duration_since(UNIX_EPOCH).unwrap().as_secs() as f64)
+            .unwrap_or_else(|_| Utc::now().timestamp() as f64);
+
         let reader = BufReader::new(f);
         for line in reader.lines() {
             let line = line?;
@@ -189,7 +201,9 @@ impl Event {
             }
 
             self.breadcrumbs.push(Breadcrumb {
-                timestamp: rec.utc_timestamp().map(|x| x.timestamp() as f64),
+                timestamp: rec.utc_timestamp()
+                    .map(|x| x.timestamp() as f64)
+                    .unwrap_or(fallback_timestamp),
                 message: message,
                 ty: "default".to_string(),
                 category: component.to_string(),
