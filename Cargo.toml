@@ -89,9 +89,3 @@ chan = "0.1.21"
 chan-signal = "0.3.1"
 openssl-probe = "0.1.2"
 uname = "0.1.1"
-
-[target.i686-pc-windows-msvc]
-rustflags = ["-Ctarget-feature=+crt-static"]
-
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-Ctarget-feature=+crt-static"]
