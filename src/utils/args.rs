@@ -3,7 +3,7 @@ use std::str::FromStr;
 
 use chrono::{DateTime, Utc, TimeZone};
 use clap;
-use symbolic_debuginfo::ObjectId;
+use symbolic_debuginfo::DebugId;
 use uuid::Uuid;
 
 use errors::{Error, Result};
@@ -65,7 +65,7 @@ pub fn validate_uuid(s: String) -> StdResult<(), String> {
 }
 
 pub fn validate_id(s: String) -> StdResult<(), String> {
-    if ObjectId::from_str(&s).is_err() {
+    if DebugId::from_str(&s).is_err() {
         Err("Invalid ID".to_string())
     } else {
         Ok(())

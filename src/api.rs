@@ -26,7 +26,7 @@ use regex::{Captures, Regex};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use symbolic_debuginfo::ObjectId;
+use symbolic_debuginfo::DebugId;
 use sha1::Digest;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
@@ -1406,7 +1406,7 @@ struct EventInfo {
 #[derive(Debug, Deserialize)]
 pub struct DebugInfoFile {
     #[serde(rename = "uuid")]
-    pub id: ObjectId,
+    pub id: DebugId,
     #[serde(rename = "objectName")]
     pub object_name: String,
     #[serde(rename = "cpuName")]

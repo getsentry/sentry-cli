@@ -21,7 +21,7 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
-use symbolic_debuginfo::{FatObject, Object, ObjectId};
+use symbolic_debuginfo::{FatObject, Object, DebugId};
 use scoped_threadpool::Pool;
 use parking_lot::RwLock;
 use walkdir::WalkDir;
@@ -1226,7 +1226,7 @@ pub struct DifUpload {
     org: String,
     project: String,
     paths: Vec<PathBuf>,
-    ids: BTreeSet<ObjectId>,
+    ids: BTreeSet<DebugId>,
     kinds: BTreeSet<ObjectKind>,
     classes: BTreeSet<ObjectClass>,
     extensions: BTreeSet<OsString>,
@@ -1286,25 +1286,25 @@ impl DifUpload {
         self
     }
 
-    /// Add a `ObjectId` to filter for.
+    /// Add a `DebugId` to filter for.
     ///
-    /// By default, all ObjectIds will be included.
+    /// By default, all DebugIds will be included.
     pub fn filter_id<I>(&mut self, id: I) -> &mut Self
     where
-        I: Into<ObjectId>,
+        I: Into<DebugId>,
     {
         self.ids.insert(id.into());
         self
     }
 
-    /// Add `ObjectId`s to filter for.
+    /// Add `DebugId`s to filter for.
     ///
-    /// By default, all ObjectIds will be included. If `ids` is empty, this will
+    /// By default, all DebugIds will be included. If `ids` is empty, this will
     /// not be changed.
     pub fn filter_ids<I>(&mut self, ids: I) -> &mut Self
     where
         I: IntoIterator,
-        I::Item: Into<ObjectId>,
+        I::Item: Into<DebugId>,
     {
         for id in ids {
             self.ids.insert(id.into());
@@ -1422,8 +1422,8 @@ impl DifUpload {
         }
     }
 
-    /// Determines if this `ObjectId` matches the search criteria.
-    fn valid_id(&self, id: ObjectId) -> bool {
+    /// Determines if this `DebugId` matches the search criteria.
+    fn valid_id(&self, id: DebugId) -> bool {
         self.ids.is_empty() || self.ids.contains(&id)
     }
 

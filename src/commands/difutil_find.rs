@@ -9,7 +9,7 @@ use console::style;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde_json;
 use symbolic_common::ByteView;
-use symbolic_debuginfo::ObjectId;
+use symbolic_debuginfo::DebugId;
 use symbolic_proguard::ProguardMappingView;
 use uuid::UuidVersion;
 use walkdir::WalkDir;
@@ -25,7 +25,7 @@ const MAX_MAPPING_FILE: u64 = 32 * 1024 * 1024;
 #[derive(Serialize, Debug)]
 struct DifMatch {
     #[serde(rename = "type")] pub ty: DifType,
-    pub id: ObjectId,
+    pub id: DebugId,
     pub path: PathBuf,
 }
 
@@ -65,7 +65,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .number_of_values(1))
 }
 
-fn id_hint(id: &ObjectId) -> &'static str {
+fn id_hint(id: &DebugId) -> &'static str {
     if id.appendix() > 0 {
         return "likely PDB";
     }
@@ -81,7 +81,7 @@ fn id_hint(id: &ObjectId) -> &'static str {
 fn find_ids(
     paths: HashSet<PathBuf>,
     types: HashSet<DifType>,
-    ids: HashSet<ObjectId>,
+    ids: HashSet<DebugId>,
     as_json: bool,
 ) -> Result<bool> {
     let mut remaining = ids.clone();

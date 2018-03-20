@@ -1317,7 +1317,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "symbolic-common"
 version = "2.0.7"
-source = "git+https://github.com/getsentry/symbolic#73385a3d14a69e8b5bbcd99309e30cb28c8da828"
+source = "git+https://github.com/getsentry/symbolic#f3f4ef27fcd81af8c3eb5e8a08a17b311cc06e7d"
 dependencies = [
  "error-chain 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "gimli 0.15.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1338,7 +1338,7 @@ replace = "symbolic-common 2.0.7 (git+https://github.com/getsentry/symbolic)"
 [[package]]
 name = "symbolic-debuginfo"
 version = "2.0.7"
-source = "git+https://github.com/getsentry/symbolic#73385a3d14a69e8b5bbcd99309e30cb28c8da828"
+source = "git+https://github.com/getsentry/symbolic#f3f4ef27fcd81af8c3eb5e8a08a17b311cc06e7d"
 dependencies = [
  "goblin 0.0.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1358,7 +1358,7 @@ replace = "symbolic-debuginfo 2.0.7 (git+https://github.com/getsentry/symbolic)"
 [[package]]
 name = "symbolic-proguard"
 version = "2.0.7"
-source = "git+https://github.com/getsentry/symbolic#73385a3d14a69e8b5bbcd99309e30cb28c8da828"
+source = "git+https://github.com/getsentry/symbolic#f3f4ef27fcd81af8c3eb5e8a08a17b311cc06e7d"
 dependencies = [
  "proguard 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "symbolic-common 2.0.7 (git+https://github.com/getsentry/symbolic)",

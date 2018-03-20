@@ -7,7 +7,7 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use symbolic_common::{ObjectClass, ObjectKind};
-use symbolic_debuginfo::ObjectId;
+use symbolic_debuginfo::DebugId;
 
 use api::Api;
 use config::Config;
@@ -95,7 +95,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
     let ids = matches
         .values_of("ids")
         .unwrap_or_default()
-        .filter_map(|s| ObjectId::from_str(s).ok());
+        .filter_map(|s| DebugId::from_str(s).ok());
 
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
@@ -209,7 +209,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
             let required_ids: BTreeSet<_> = matches
                 .values_of("ids")
                 .unwrap_or_default()
-                .filter_map(|s| ObjectId::from_str(s).ok())
+                .filter_map(|s| DebugId::from_str(s).ok())
                 .collect();
 
             let found_ids = uploaded.into_iter().map(|dif| dif.id).collect();

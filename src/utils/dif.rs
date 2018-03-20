@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{FatObject, Object, ObjectId, SymbolTable};
+use symbolic_debuginfo::{FatObject, Object, DebugId, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
 
 use errors::{Error, Result};
@@ -122,7 +122,7 @@ impl DifFile {
         }
     }
 
-    pub fn variants(&self) -> BTreeMap<ObjectId, Option<&'static str>> {
+    pub fn variants(&self) -> BTreeMap<DebugId, Option<&'static str>> {
         match self {
             &DifFile::Object(ref fat) => fat.objects()
                 .filter_map(|result| result.ok())
@@ -132,7 +132,7 @@ impl DifFile {
         }
     }
 
-    pub fn ids(&self) -> Vec<ObjectId> {
+    pub fn ids(&self) -> Vec<DebugId> {
         match self {
             &DifFile::Object(ref fat) => fat.objects()
                 .filter_map(|result| result.ok())
