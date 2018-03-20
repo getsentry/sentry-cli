@@ -9,7 +9,8 @@ use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
-        .about("Print UUID(s) from a debug info file.")
+        .about("Print ID(s) from a debug info file.")
+        .alias("uuid")
         .arg(Arg::with_name("type")
              .long("type")
              .short("t")
@@ -40,12 +41,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     }
 
     if !matches.is_present("json") {
-        for uuid in f.uuids() {
-            println!("{}", uuid);
+        for id in f.ids() {
+            println!("{}", id);
         }
     } else {
         if matches.is_present("json") {
-            serde_json::to_writer_pretty(&mut io::stdout(), &f.uuids())?;
+            serde_json::to_writer_pretty(&mut io::stdout(), &f.ids())?;
             println!("");
         }
     }

@@ -194,7 +194,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     if rv.len() > 0 {
         println!("Newly uploaded debug symbols:");
         for df in rv {
-            println!("  {}", style(&df.uuid).dim());
+            println!("  {}", style(&df.id).dim());
         }
     }
 

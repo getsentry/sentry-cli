@@ -495,7 +495,7 @@ fn find_uuid_plists(
     //        ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //        └─ DWARF
     //           └─ App
-    let plist_name = format!("{}.plist", uuid.to_string().to_uppercase());
+    let plist_name = format!("{:X}.plist", uuid.hyphenated());
     let plist = match source.get_relative(format!("../{}", &plist_name)) {
         Some(plist) => plist,
         None => return None,
@@ -989,8 +989,16 @@ fn poll_dif_assemble(
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
     successes.sort_by(|a, b| {
-        let name_a = a.1.dif.as_ref().map(|x| x.object_name.as_str()).unwrap_or("");
-        let name_b = b.1.dif.as_ref().map(|x| x.object_name.as_str()).unwrap_or("");
+        let name_a = a.1
+            .dif
+            .as_ref()
+            .map(|x| x.object_name.as_str())
+            .unwrap_or("");
+        let name_b = b.1
+            .dif
+            .as_ref()
+            .map(|x| x.object_name.as_str())
+            .unwrap_or("");
         name_a.cmp(name_b)
     });
 
@@ -1001,7 +1009,7 @@ fn poll_dif_assemble(
             println!(
                 "     {} {} ({}; {})",
                 style("OK").green(),
-                style(&dif.uuid).dim(),
+                style(&dif.id).dim(),
                 dif.object_name,
                 dif.cpu_name,
             );
@@ -1175,7 +1183,7 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
         for dif in &uploaded {
             println!(
                 "  {} ({}; {})",
-                style(&dif.uuid).dim(),
+                style(&dif.id).dim(),
                 &dif.object_name,
                 dif.cpu_name
             );

@@ -38,8 +38,8 @@ serde = "1.0.33"
 serde_derive = "1.0.33"
 serde_json = "1.0.12"
 sourcemap = "2.2.0"
-symbolic-common = "2.0.7"
-symbolic-debuginfo = "2.0.7"
+symbolic-common = { version = "2.0.7", features = ["with_serde"] }
+symbolic-debuginfo = { version = "2.0.7", features = ["with_serde"] }
 symbolic-proguard = "2.0.7"
 url = "1.7.0"
 username = "0.2.0"
@@ -54,7 +54,7 @@ version = "0.4.0"
 [dependencies.clap]
 default-features = false
 features = ["suggestions", "wrap_help"]
-version = "2.31.1"
+version = "2.31.2"
 
 [dependencies.git2]
 default-features = false
@@ -87,3 +87,8 @@ chan = "0.1.21"
 chan-signal = "0.3.1"
 openssl-probe = "0.1.2"
 uname = "0.1.1"
+
+[replace]
+"symbolic-common:2.0.7" = { git = "https://github.com/getsentry/symbolic" }
+"symbolic-debuginfo:2.0.7" = { git = "https://github.com/getsentry/symbolic" }
+"symbolic-proguard:2.0.7" = { git = "https://github.com/getsentry/symbolic" }

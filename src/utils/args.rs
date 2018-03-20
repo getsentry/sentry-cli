@@ -1,8 +1,10 @@
 use std::result::Result as StdResult;
+use std::str::FromStr;
 
-use clap;
-use uuid::Uuid;
 use chrono::{DateTime, Utc, TimeZone};
+use clap;
+use symbolic_debuginfo::ObjectId;
+use uuid::Uuid;
 
 use errors::{Error, Result};
 
@@ -57,6 +59,14 @@ pub fn validate_timestamp(v: String) -> StdResult<(), String> {
 pub fn validate_uuid(s: String) -> StdResult<(), String> {
     if Uuid::parse_str(&s).is_err() {
         Err("Invalid UUID".to_string())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn validate_id(s: String) -> StdResult<(), String> {
+    if ObjectId::from_str(&s).is_err() {
+        Err("Invalid ID".to_string())
     } else {
         Ok(())
     }

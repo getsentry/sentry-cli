@@ -1,4 +1,4 @@
-use clap::{App, ArgMatches, AppSettings};
+use clap::{App, AppSettings, ArgMatches};
 
 use commands;
 use errors::Result;
@@ -7,7 +7,7 @@ macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(difutil_find);
         $mac!(difutil_check);
-        $mac!(difutil_uuid);
+        $mac!(difutil_id);
     }
 }
 
@@ -19,8 +19,7 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
         }}
     }
 
-    app = app
-        .about("Locate or analyze debug information files.")
+    app = app.about("Locate or analyze debug information files.")
         .setting(AppSettings::SubcommandRequiredElseHelp);
     each_subcommand!(add_subcommand);
     app

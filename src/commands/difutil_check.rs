@@ -47,11 +47,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     println!("{}", style("Debug Info File Check").dim().bold());
     println!("  Type: {}", style(f.ty()).cyan());
     println!("  Contained UUIDs:");
-    for (uuid, cpu_type) in f.variants() {
+    for (id, cpu_type) in f.variants() {
         if let Some(cpu_type) = cpu_type {
-            println!("    > {} ({})", style(uuid).dim(), style(cpu_type).cyan());
+            println!("    > {} ({})", style(id).dim(), style(cpu_type).cyan());
         } else {
-            println!("    > {}", style(uuid).dim());
+            println!("    > {}", style(id).dim());
         }
     }
 

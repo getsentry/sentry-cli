@@ -4,10 +4,9 @@ use std::path::Path;
 use std::ffi::OsStr;
 use std::collections::BTreeMap;
 
-use uuid::Uuid;
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{FatObject, Object, SymbolTable};
+use symbolic_debuginfo::{FatObject, Object, ObjectId, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
 
 use errors::{Error, Result};
@@ -123,23 +122,23 @@ impl DifFile {
         }
     }
 
-    pub fn variants(&self) -> BTreeMap<Uuid, Option<&'static str>> {
+    pub fn variants(&self) -> BTreeMap<ObjectId, Option<&'static str>> {
         match self {
             &DifFile::Object(ref fat) => fat.objects()
                 .filter_map(|result| result.ok())
-                .filter_map(|object| object.uuid().map(|uuid| (uuid, Some(object.arch().name()))))
+                .filter_map(|object| object.id().map(|id| (id, Some(object.arch().name()))))
                 .collect(),
-            &DifFile::Proguard(ref pg) => vec![(pg.uuid(), None)].into_iter().collect(),
+            &DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
     }
 
-    pub fn uuids(&self) -> Vec<Uuid> {
+    pub fn ids(&self) -> Vec<ObjectId> {
         match self {
             &DifFile::Object(ref fat) => fat.objects()
                 .filter_map(|result| result.ok())
-                .filter_map(|object| object.uuid())
+                .filter_map(|object| object.id())
                 .collect(),
-            &DifFile::Proguard(ref pg) => vec![pg.uuid()],
+            &DifFile::Proguard(ref pg) => vec![pg.uuid().into()],
         }
     }
 
