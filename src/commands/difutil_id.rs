@@ -9,7 +9,7 @@ use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
-        .about("Print ID(s) from a debug info file.")
+        .about("Print debug identifier(s) from a debug info file.")
         .alias("uuid")
         .arg(Arg::with_name("type")
              .long("type")

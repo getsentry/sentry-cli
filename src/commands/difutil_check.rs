@@ -46,7 +46,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     println!("{}", style("Debug Info File Check").dim().bold());
     println!("  Type: {}", style(f.ty()).cyan());
-    println!("  Contained UUIDs:");
+    println!("  Contained debug identifiers:");
     for (id, cpu_type) in f.variants() {
         if let Some(cpu_type) = cpu_type {
             println!("    > {} ({})", style(id).dim(), style(cpu_type).cyan());

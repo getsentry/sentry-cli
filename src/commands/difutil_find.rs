@@ -31,7 +31,7 @@ struct DifMatch {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app
-        .about("Locate debug information files for given UUIDs.")
+        .about("Locate debug information files for given debug identifiers.")
         .arg(Arg::with_name("types")
              .long("type")
              .short("t")
@@ -59,7 +59,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("ids")
              .index(1)
              .value_name("ID")
-             .help("The IDs of the debug images to search for.")
+             .help("The debug identifiers of the files to search for.")
              .validator(validate_id)
              .multiple(true)
              .number_of_values(1))

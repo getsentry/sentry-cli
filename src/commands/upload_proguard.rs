@@ -71,7 +71,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     processing but does not trigger the upload (this also \
                     automatically disables reprocessing.  This is useful if you \
                     just want to verify the mapping files and write the \
-                    proguard UUIDs into a proeprties file."))
+                    proguard UUIDs into a properties file."))
         .arg(Arg::with_name("android_manifest")
              .long("android-manifest")
              .value_name("PATH")

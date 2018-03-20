@@ -52,7 +52,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .number_of_values(1))
         .arg(Arg::with_name("require_all")
              .long("require-all")
-             .help("Errors if not all IDs specified with --id could be found."))
+             .help("Errors if not all identifiers specified with --id could be found."))
         .arg(Arg::with_name("symbol_maps")
              .long("symbol-maps")
              .value_name("PATH")
