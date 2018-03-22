@@ -1406,13 +1406,21 @@ struct EventInfo {
 #[derive(Debug, Deserialize)]
 pub struct DebugInfoFile {
     #[serde(rename = "uuid")]
-    pub id: DebugId,
+    uuid: Option<DebugId>,
+    #[serde(rename = "debug_id")]
+    id: Option<DebugId>,
     #[serde(rename = "objectName")]
     pub object_name: String,
     #[serde(rename = "cpuName")]
     pub cpu_name: String,
     #[serde(rename = "sha1")]
     pub checksum: String,
+}
+
+impl DebugInfoFile {
+    pub fn id(&self) -> DebugId {
+        self.id.or(self.uuid).unwrap_or_default()
+    }
 }
 
 #[derive(Debug, Serialize)]

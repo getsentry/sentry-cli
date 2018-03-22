@@ -212,7 +212,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
                 .filter_map(|s| DebugId::from_str(s).ok())
                 .collect();
 
-            let found_ids = uploaded.into_iter().map(|dif| dif.id).collect();
+            let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();
             let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
 
             if !missing_ids.is_empty() {

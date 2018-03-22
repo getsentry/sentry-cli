@@ -1009,7 +1009,7 @@ fn poll_dif_assemble(
             println!(
                 "     {} {} ({}; {})",
                 style("OK").green(),
-                style(&dif.id).dim(),
+                style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
             );
@@ -1183,7 +1183,7 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
         for dif in &uploaded {
             println!(
                 "  {} ({}; {})",
-                style(&dif.id).dim(),
+                style(&dif.id()).dim(),
                 &dif.object_name,
                 dif.cpu_name
             );
