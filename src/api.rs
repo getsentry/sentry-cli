@@ -1407,7 +1407,7 @@ struct EventInfo {
 pub struct DebugInfoFile {
     #[serde(rename = "uuid")]
     uuid: Option<DebugId>,
-    #[serde(rename = "debug_id")]
+    #[serde(rename = "debugId")]
     id: Option<DebugId>,
     #[serde(rename = "objectName")]
     pub object_name: String,
