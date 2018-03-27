@@ -27,7 +27,6 @@ extern crate error_chain;
 extern crate git2;
 extern crate glob;
 extern crate hostname;
-extern crate humansize;
 #[macro_use]
 extern crate if_chain;
 extern crate ignore;
@@ -42,13 +41,13 @@ extern crate libc;
 extern crate log;
 #[cfg(target_os = "macos")]
 extern crate mac_process_info;
-extern crate memmap;
 extern crate might_be_minified;
 extern crate open;
 #[cfg(not(windows))]
 extern crate openssl_probe;
 #[cfg(target_os = "macos")]
 extern crate osascript;
+extern crate parking_lot;
 extern crate plist;
 extern crate prettytable;
 extern crate regex;
@@ -73,7 +72,6 @@ extern crate scoped_threadpool;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
-extern crate parking_lot;
 
 mod macros;
 

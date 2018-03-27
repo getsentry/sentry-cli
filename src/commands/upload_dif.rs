@@ -1,18 +1,18 @@
 //! Implements a command for uploading dSYM files.
 use std::collections::BTreeSet;
 use std::env;
-use std::str;
+use std::str::{self, FromStr};
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use symbolic_common::{ObjectClass, ObjectKind};
-use uuid::Uuid;
+use symbolic_debuginfo::DebugId;
 
 use api::Api;
 use config::Config;
 use errors::{ErrorKind, Result};
-use utils::args::{validate_uuid, ArgExt};
+use utils::args::{validate_id, ArgExt};
 use utils::dif_upload::DifUpload;
 use utils::xcode::{InfoPlist, MayDetach};
 
@@ -47,12 +47,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              .value_name("ID")
              .long("id")
              .help("Search for specific debug identifiers.")
-             .validator(validate_uuid)
+             .validator(validate_id)
              .multiple(true)
              .number_of_values(1))
         .arg(Arg::with_name("require_all")
              .long("require-all")
-             .help("Errors if not all UUIDs specified with --uuid could be found."))
+             .help("Errors if not all identifiers specified with --id could be found."))
         .arg(Arg::with_name("symbol_maps")
              .long("symbol-maps")
              .value_name("PATH")
@@ -92,17 +92,17 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
 
-    let uuids = matches
+    let ids = matches
         .values_of("ids")
         .unwrap_or_default()
-        .filter_map(|s| Uuid::parse_str(s).ok());
+        .filter_map(|s| DebugId::from_str(s).ok());
 
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
         .search_paths(matches.values_of("paths").unwrap_or_default())
         .allow_zips(!matches.is_present("no_zips"))
-        .filter_ids(uuids);
+        .filter_ids(ids);
 
     if legacy {
         // Configure `upload-dsym` behavior (only dSYM files)
@@ -206,21 +206,21 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<()> {
 
         // Did we miss explicitly requested symbols?
         if matches.is_present("require_all") {
-            let required_uuids: BTreeSet<_> = matches
+            let required_ids: BTreeSet<_> = matches
                 .values_of("ids")
                 .unwrap_or_default()
-                .filter_map(|s| Uuid::parse_str(s).ok())
+                .filter_map(|s| DebugId::from_str(s).ok())
                 .collect();
 
-            let found_uuids = uploaded.into_iter().map(|dif| dif.uuid()).collect();
-            let missing_uuids: Vec<_> = required_uuids.difference(&found_uuids).collect();
+            let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();
+            let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
 
-            if !missing_uuids.is_empty() {
+            if !missing_ids.is_empty() {
                 println!("");
                 println_stderr!("{}", style("Error: Some symbols could not be found!").red());
                 println_stderr!("The following symbols are still missing:");
-                for uuid in missing_uuids {
-                    println!("  {}", uuid);
+                for id in missing_ids {
+                    println!("  {}", id);
                 }
 
                 return Err(ErrorKind::QuietExit(1).into());

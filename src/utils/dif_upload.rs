@@ -21,7 +21,7 @@ use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
 use symbolic_common::{ByteView, ObjectClass, ObjectKind};
-use symbolic_debuginfo::{FatObject, Object, ObjectId};
+use symbolic_debuginfo::{FatObject, Object, DebugId};
 use scoped_threadpool::Pool;
 use parking_lot::RwLock;
 use walkdir::WalkDir;
@@ -495,7 +495,7 @@ fn find_uuid_plists(
     //        ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //        └─ DWARF
     //           └─ App
-    let plist_name = format!("{}.plist", uuid.to_string().to_uppercase());
+    let plist_name = format!("{:X}.plist", uuid.hyphenated());
     let plist = match source.get_relative(format!("../{}", &plist_name)) {
         Some(plist) => plist,
         None => return None,
@@ -989,8 +989,16 @@ fn poll_dif_assemble(
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
     successes.sort_by(|a, b| {
-        let name_a = a.1.dif.as_ref().map(|x| x.object_name.as_str()).unwrap_or("");
-        let name_b = b.1.dif.as_ref().map(|x| x.object_name.as_str()).unwrap_or("");
+        let name_a = a.1
+            .dif
+            .as_ref()
+            .map(|x| x.object_name.as_str())
+            .unwrap_or("");
+        let name_b = b.1
+            .dif
+            .as_ref()
+            .map(|x| x.object_name.as_str())
+            .unwrap_or("");
         name_a.cmp(name_b)
     });
 
@@ -1001,7 +1009,7 @@ fn poll_dif_assemble(
             println!(
                 "     {} {} ({}; {})",
                 style("OK").green(),
-                style(&dif.uuid).dim(),
+                style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
             );
@@ -1175,7 +1183,7 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
         for dif in &uploaded {
             println!(
                 "  {} ({}; {})",
-                style(&dif.uuid).dim(),
+                style(&dif.id()).dim(),
                 &dif.object_name,
                 dif.cpu_name
             );
@@ -1218,7 +1226,7 @@ pub struct DifUpload {
     org: String,
     project: String,
     paths: Vec<PathBuf>,
-    ids: BTreeSet<ObjectId>,
+    ids: BTreeSet<DebugId>,
     kinds: BTreeSet<ObjectKind>,
     classes: BTreeSet<ObjectClass>,
     extensions: BTreeSet<OsString>,
@@ -1278,25 +1286,25 @@ impl DifUpload {
         self
     }
 
-    /// Add a `ObjectId` to filter for.
+    /// Add a `DebugId` to filter for.
     ///
-    /// By default, all ObjectIds will be included.
+    /// By default, all DebugIds will be included.
     pub fn filter_id<I>(&mut self, id: I) -> &mut Self
     where
-        I: Into<ObjectId>,
+        I: Into<DebugId>,
     {
         self.ids.insert(id.into());
         self
     }
 
-    /// Add `ObjectId`s to filter for.
+    /// Add `DebugId`s to filter for.
     ///
-    /// By default, all ObjectIds will be included. If `ids` is empty, this will
+    /// By default, all DebugIds will be included. If `ids` is empty, this will
     /// not be changed.
     pub fn filter_ids<I>(&mut self, ids: I) -> &mut Self
     where
         I: IntoIterator,
-        I::Item: Into<ObjectId>,
+        I::Item: Into<DebugId>,
     {
         for id in ids {
             self.ids.insert(id.into());
@@ -1414,8 +1422,8 @@ impl DifUpload {
         }
     }
 
-    /// Determines if this `ObjectId` matches the search criteria.
-    fn valid_id(&self, id: ObjectId) -> bool {
+    /// Determines if this `DebugId` matches the search criteria.
+    fn valid_id(&self, id: DebugId) -> bool {
         self.ids.is_empty() || self.ids.contains(&id)
     }
 

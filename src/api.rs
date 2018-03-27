@@ -18,17 +18,17 @@ use std::collections::{HashMap, HashSet};
 use std::borrow::Cow;
 use std::rc::Rc;
 
+use chrono::{DateTime, Duration, Utc};
+use curl;
+use indicatif::ProgressBar;
+use parking_lot::RwLock;
+use regex::{Captures, Regex};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
-use curl;
-use chrono::{DateTime, Duration, Utc};
-use indicatif::ProgressBar;
-use regex::{Captures, Regex};
+use symbolic_debuginfo::DebugId;
 use sha1::Digest;
-use uuid::Uuid;
-use parking_lot::RwLock;
+use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
 use config::{Auth, Config, Dsn};
 use constants::{ARCH, EXT, PLATFORM, VERSION};
@@ -1405,7 +1405,10 @@ struct EventInfo {
 /// Can be dSYMs, ELF debug infos, Breakpad symbols, etc...
 #[derive(Debug, Deserialize)]
 pub struct DebugInfoFile {
-    pub uuid: String,
+    #[serde(rename = "uuid")]
+    uuid: Option<DebugId>,
+    #[serde(rename = "debugId")]
+    id: Option<DebugId>,
     #[serde(rename = "objectName")]
     pub object_name: String,
     #[serde(rename = "cpuName")]
@@ -1415,8 +1418,8 @@ pub struct DebugInfoFile {
 }
 
 impl DebugInfoFile {
-    pub fn uuid(&self) -> Uuid {
-        Uuid::parse_str(&self.uuid).unwrap()
+    pub fn id(&self) -> DebugId {
+        self.id.or(self.uuid).unwrap_or_default()
     }
 }
 
