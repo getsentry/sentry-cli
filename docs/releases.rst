@@ -30,13 +30,6 @@ exist:
 *   if you tag releases we recommend using the release tag (eg:
     ``v1.0.0``).
 
-Separately to the release version you can provide an optional reference label.
-That label can point to a human readable identifier that is a reference to
-that version that the time.  As an example if you deploy a specific
-revision of the master branch you can set the version to the SHA of the
-commit but the reference to ``master``.  This can help you figure out if a
-release happened from master, unstable or a feature branch.
-
 Releases can also be auto created by different systems.  For instance upon
 uploading a sourcemap a release is automatically created.  Likewise
 releases are created by some clients when an event for a release comes in.
