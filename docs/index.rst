@@ -17,6 +17,7 @@ platforms.
    dif
    dsym
    elf
+   pdb
    breakpad
    proguard
    send-event
