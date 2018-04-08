@@ -6,7 +6,7 @@ official support, you can convert them to Breakpad symbols and upload those
 instead:
 
 1. Obtain the ``.pdb`` file and put it on a Windows machine
-2. Download `dump_syms.exe`_ from our Breakpad Tools collection
+2. Download our `Breakpad Tools for Windows`_ and extract ``dump_syms.exe``
 3. Run ``dump_syms foo.pdb > foo.sym``
 4. Follow instructions at :doc:`breakpad`.
 
@@ -17,8 +17,8 @@ If you receive ``CoCreateInstance CLSID_DiaSource failed (msdia80.dll
 unregistered?)``, download a copy of ``msdia80.dll`` and put it in ``C:\Program
 Files\Common Files\Microsoft Shared\VC\``. Then as administrator, run:
 
-.. code-block:: sh
+::
 
     > regsvr32 c:\Program Files\Common Files\Microsoft Shared\VC\msdia80.dll
 
-.. _dump_syms.exe: https://s3.amazonaws.com/getsentry-builds/getsentry/breakpad-tools/windows/breakpad-tools-windows.zip
+.. _Breakpad Tools for Windows: https://s3.amazonaws.com/getsentry-builds/getsentry/breakpad-tools/windows/breakpad-tools-windows.zip
