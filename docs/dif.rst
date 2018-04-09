@@ -1,3 +1,5 @@
+.. _sentry-cli-dif:
+
 Debug Information Files
 =======================
 
@@ -10,11 +12,12 @@ formats:
 
 *   :doc:`dSYM files <dsym>` for iOS, tvOS and macOS
 *   :doc:`ELF symbols <elf>` for Linux and Android
+*   :doc:`PDB files <pdb>` for Windows
 *   :doc:`Breakpad symbols <breakpad>` for Breakpad or Crashpad
 *   :doc:`Proguard mappings <proguard>` for Android
 
 Note that sourcemaps, while also being debug information files, are handled
-differently in Sentry.  For more information see
+differently in Sentry. For more information see
 :ref:`Sourcemaps in sentry-cli <sentry-cli-sourcemaps>`.
 
 File Assocations
@@ -63,5 +66,6 @@ linked below:
 
 *   :doc:`dSYM Upload <dsym>`
 *   :doc:`ELF Symbol Upload <elf>`
+*   :doc:`PDB Upload <pdb>`
 *   :doc:`Breakpad Symbol Upload <breakpad>`
 *   :doc:`Proguard Mapping Upload <proguard>`
