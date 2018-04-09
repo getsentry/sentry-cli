@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.30.4
+
+* Show correct identifiers when uploading Windows symbols (#280)
+
 ## sentry-cli 1.30.3
 
 * Attempted to make the windows executable more portable (#269)
