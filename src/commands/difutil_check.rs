@@ -6,7 +6,7 @@ use console::style;
 use serde_json;
 use failure::Error;
 
-use errors::QuietExit;
+use utils::system::QuietExit;
 use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

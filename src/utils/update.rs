@@ -15,8 +15,7 @@ use api::{Api, SentryCliRelease};
 use config::Config;
 use constants::{APP_INFO, VERSION};
 use utils::fs::{is_writable, set_executable_mode};
-use utils::system::{is_homebrew_install, is_npm_install};
-use errors::QuietExit;
+use utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {

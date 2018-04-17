@@ -15,7 +15,7 @@ use uuid::UuidVersion;
 use walkdir::WalkDir;
 use failure::Error;
 
-use errors::QuietExit;
+use utils::system::QuietExit;
 use utils::args::validate_id;
 use utils::dif::{DifFile, DifType};
 

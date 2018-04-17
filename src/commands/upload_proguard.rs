@@ -13,7 +13,7 @@ use failure::{Error, SyncFailure};
 
 use api::{Api, AssociateDsyms};
 use config::Config;
-use errors::QuietExit;
+use utils::system::QuietExit;
 use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
 use utils::args::{validate_uuid, ArgExt};
 use utils::fs::{TempFile, get_sha1_checksum};

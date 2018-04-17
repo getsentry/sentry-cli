@@ -7,9 +7,8 @@ use console::style;
 use runas;
 use failure::Error;
 
-use errors::QuietExit;
 use utils::fs::is_writable;
-use utils::system::{is_homebrew_install, is_npm_install};
+use utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 use utils::ui::prompt_to_continue;
 
 fn is_hidden() -> bool {

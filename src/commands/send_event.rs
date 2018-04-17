@@ -6,7 +6,7 @@ use failure::{err_msg, Error};
 
 use api::Api;
 use config::Config;
-use errors::QuietExit;
+use utils::system::QuietExit;
 use event::{Event, Message};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

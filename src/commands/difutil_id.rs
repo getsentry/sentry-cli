@@ -5,7 +5,7 @@ use failure::Error;
 use clap::{App, Arg, ArgMatches};
 use serde_json;
 
-use errors::QuietExit;
+use utils::system::QuietExit;
 use utils::dif::DifFile;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

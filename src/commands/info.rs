@@ -8,7 +8,7 @@ use failure::Error;
 
 use api::Api;
 use config::{Auth, Config};
-use errors::QuietExit;
+use utils::system::QuietExit;
 
 #[derive(Serialize, Default)]
 pub struct AuthStatus {

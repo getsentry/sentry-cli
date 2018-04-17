@@ -8,8 +8,7 @@ use failure::Error;
 
 use config::{prepare_environment, Auth, Config};
 use constants::VERSION;
-use errors::QuietExit;
-use utils::system::print_error;
+use utils::system::{print_error, QuietExit};
 use utils::update::run_sentrycli_update_nagger;
 
 const ABOUT: &'static str = "
