@@ -149,7 +149,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
                 "dsym" => ObjectKind::MachO,
                 "elf" => ObjectKind::Elf,
                 "breakpad" => ObjectKind::Breakpad,
-                other => fail!("Unsupported type: {}", other),
+                other => bail!("Unsupported type: {}", other),
             });
         }
 

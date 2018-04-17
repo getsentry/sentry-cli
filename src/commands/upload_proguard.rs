@@ -151,7 +151,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     let forced_uuid = matches.value_of("uuid").map(|x| x.parse::<Uuid>().unwrap());
     if forced_uuid.is_some() && paths.len() != 1 {
-        fail!(
+        bail!(
             "When forcing a UUID a single proguard file needs to be \
              provided, got {}",
             paths.len()

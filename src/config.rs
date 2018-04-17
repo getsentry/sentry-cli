@@ -232,10 +232,10 @@ impl Config {
     pub fn get_base_url(&self) -> Result<&str, Error> {
         let base = self.cached_base_url.trim_right_matches('/');
         if !base.starts_with("http://") && !base.starts_with("https://") {
-            fail!("bad sentry url: unknown scheme ({})", base);
+            bail!("bad sentry url: unknown scheme ({})", base);
         }
         if base.matches('/').count() != 2 {
-            fail!("bad sentry url: not on URL root ({})", base);
+            bail!("bad sentry url: not on URL root ({})", base);
         }
         Ok(base)
     }

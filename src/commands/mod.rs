@@ -178,7 +178,7 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
                 config.set_log_level(level);
             }
             Err(_) => {
-                fail!("Unknown log level: {}", level_str);
+                bail!("Unknown log level: {}", level_str);
             }
         }
     }
