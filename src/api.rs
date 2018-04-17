@@ -115,10 +115,19 @@ pub struct SentryError {
 
 impl fmt::Display for SentryError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let detail = self.detail.as_ref().map(|x| x.as_str()).unwrap_or("");
         write!(
             f,
-            "sentry error: {} (HTTP {})",
-            self.detail.as_ref().map(|x| x.as_str()).unwrap_or("generic error"),
+            "sentry reported an error: {} (http status: {})",
+            if detail.is_empty() {
+                match self.status {
+                    400 => "bad request",
+                    401 => "unauthorized",
+                    404 => "not found",
+                    500 => "internal server error",
+                    _ => "unknown error"
+                }
+            } else { detail },
             self.status
         )?;
         if let Some(ref extra) = self.extra {
@@ -149,7 +158,7 @@ pub enum ApiErrorKind {
     ReleaseNotFound,
     #[fail(display = "chunk upload endpoint not supported by sentry server")]
     ChunkUploadNotSupported,
-    #[fail(display = "http request failed")]
+    #[fail(display = "API request failed")]
     RequestFailed,
 }
 
@@ -791,7 +800,7 @@ impl Api {
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .send()?
-            .convert()
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     /// Upload a batch of file chunks.
