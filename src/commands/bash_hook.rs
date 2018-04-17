@@ -9,11 +9,11 @@ use std::collections::HashMap;
 use clap::{App, Arg, ArgMatches};
 use uuid::{Uuid, UuidVersion};
 use regex::Regex;
+use failure::Error;
 
 use api::Api;
 use config::Config;
-use errors::Result;
-use event::{Event, Exception, SingleException, Frame, Stacktrace};
+use event::{Event, Exception, Frame, SingleException, Stacktrace};
 
 const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
 lazy_static! {
@@ -21,27 +21,34 @@ lazy_static! {
         r#"^(.*?):(.*):(\d+)$"#).unwrap();
 }
 
-
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Prints out a bash script that does error handling.")
-        .arg(Arg::with_name("no_exit")
-             .long("no-exit")
-             .help("Do not turn on -e (exit immediately) flag automatically"))
-        .arg(Arg::with_name("send_event")
-            .long("send-event")
-            .requires_all(&["traceback", "log"])
-            .hidden(true))
-        .arg(Arg::with_name("traceback")
-            .long("traceback")
-            .value_name("PATH")
-            .hidden(true))
-        .arg(Arg::with_name("log")
-            .long("log")
-            .value_name("PATH")
-            .hidden(true))
+        .arg(
+            Arg::with_name("no_exit")
+                .long("no-exit")
+                .help("Do not turn on -e (exit immediately) flag automatically"),
+        )
+        .arg(
+            Arg::with_name("send_event")
+                .long("send-event")
+                .requires_all(&["traceback", "log"])
+                .hidden(true),
+        )
+        .arg(
+            Arg::with_name("traceback")
+                .long("traceback")
+                .value_name("PATH")
+                .hidden(true),
+        )
+        .arg(
+            Arg::with_name("log")
+                .long("log")
+                .value_name("PATH")
+                .hidden(true),
+        )
 }
 
-fn send_event(traceback: &str, logfile: &str) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
     let config = Config::get_current();
     let mut event = Event::new_prefilled()?;
     event.detect_release();
@@ -68,15 +75,15 @@ fn send_event(traceback: &str, logfile: &str) -> Result<()> {
 
             if let Some(cap) = FRAME_RE.captures(&line) {
                 match &cap[1] {
-                    "_sentry_err_trap" |
-                    "_sentry_exit_trap" |
-                    "_sentry_traceback" => continue,
+                    "_sentry_err_trap" | "_sentry_exit_trap" | "_sentry_traceback" => continue,
                     _ => {}
                 }
                 frames.push(Frame {
                     filename: cap[2].to_string(),
                     abs_path: Path::new(&cap[2])
-                        .canonicalize().map(|x| x.display().to_string()).ok(),
+                        .canonicalize()
+                        .map(|x| x.display().to_string())
+                        .ok(),
                     function: cap[1].to_string(),
                     lineno: cap[3].parse().ok(),
                     ..Default::default()
@@ -103,14 +110,11 @@ fn send_event(traceback: &str, logfile: &str) -> Result<()> {
             }
         }
         let source = source_caches.get(&frame.filename).unwrap();
-        frame.context_line = source.get(
-            lineno.saturating_sub(1)).map(|x| x.clone());
-        if let Some(slice) = source.get(
-            lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
+        frame.context_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
+        if let Some(slice) = source.get(lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
             frame.pre_context = Some(slice.iter().map(|x| x.clone()).collect());
         };
-        if let Some(slice) = source.get(
-            lineno..min(lineno + 5, source.len())) {
+        if let Some(slice) = source.get(lineno..min(lineno + 5, source.len())) {
             frame.post_context = Some(slice.iter().map(|x| x.clone()).collect());
         };
     }
@@ -119,13 +123,13 @@ fn send_event(traceback: &str, logfile: &str) -> Result<()> {
 
     frames.reverse();
     event.exception = Some(Exception {
-        values: vec![SingleException {
-            ty: "BashError".into(),
-            value: format!("command {} exited with status {}", cmd, exit_code),
-            stacktrace: Some(Stacktrace {
-                frames: frames,
-            }),
-        }],
+        values: vec![
+            SingleException {
+                ty: "BashError".into(),
+                value: format!("command {} exited with status {}", cmd, exit_code),
+                stacktrace: Some(Stacktrace { frames: frames }),
+            },
+        ],
     });
 
     let dsn = config.get_dsn()?;
@@ -139,21 +143,39 @@ fn send_event(traceback: &str, logfile: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     if matches.is_present("send_event") {
-        return send_event(matches.value_of("traceback").unwrap(),
-                          matches.value_of("log").unwrap());
+        return send_event(
+            matches.value_of("traceback").unwrap(),
+            matches.value_of("log").unwrap(),
+        );
     }
 
     let path = env::temp_dir();
     let log = path.join(&format!(
-        ".sentry-{}.out", Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string()));
+        ".sentry-{}.out",
+        Uuid::new(UuidVersion::Random)
+            .unwrap()
+            .hyphenated()
+            .to_string()
+    ));
     let traceback = path.join(&format!(
-        ".sentry-{}.traceback", Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string()));
+        ".sentry-{}.traceback",
+        Uuid::new(UuidVersion::Random)
+            .unwrap()
+            .hyphenated()
+            .to_string()
+    ));
     let mut script = BASH_SCRIPT
-        .replace("___SENTRY_TRACEBACK_FILE___", &traceback.display().to_string())
+        .replace(
+            "___SENTRY_TRACEBACK_FILE___",
+            &traceback.display().to_string(),
+        )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string())
-        .replace("___SENTRY_CLI___", &env::current_exe().unwrap().display().to_string());
+        .replace(
+            "___SENTRY_CLI___",
+            &env::current_exe().unwrap().display().to_string(),
+        );
     if !matches.is_present("no_exit") {
         script.insert_str(0, "set -e\n\n");
     }

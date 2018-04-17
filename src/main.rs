@@ -23,7 +23,9 @@ extern crate dotenv;
 extern crate elementtree;
 extern crate encoding;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
 extern crate git2;
 extern crate glob;
 extern crate hostname;
@@ -52,6 +54,7 @@ extern crate plist;
 extern crate prettytable;
 extern crate regex;
 extern crate runas;
+extern crate scoped_threadpool;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -68,7 +71,6 @@ extern crate unix_daemonize;
 extern crate url;
 extern crate username;
 extern crate uuid;
-extern crate scoped_threadpool;
 extern crate walkdir;
 extern crate which;
 extern crate zip;

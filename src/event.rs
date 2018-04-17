@@ -14,11 +14,11 @@ use username::get_user_name;
 use hostname::get_hostname;
 use anylog::LogEntry;
 use regex::Regex;
+use failure::{Error, ResultExt};
 
 use constants::{ARCH, PLATFORM};
-use errors::{Result, ResultExt};
 use utils::releases::detect_release_name;
-use utils::system::{to_timestamp, get_model, get_family};
+use utils::system::{get_family, get_model, to_timestamp};
 
 lazy_static! {
     static ref COMPONENT_RE: Regex = Regex::new(
@@ -28,7 +28,7 @@ lazy_static! {
 #[derive(Serialize)]
 pub struct Message {
     pub message: String,
-    #[serde(skip_serializing_if="Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub params: Vec<String>,
 }
 
@@ -55,7 +55,7 @@ pub struct Stacktrace {
 
 #[derive(Serialize)]
 pub struct SingleException {
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub ty: String,
     pub value: String,
     pub stacktrace: Option<Stacktrace>,
@@ -64,7 +64,7 @@ pub struct SingleException {
 #[derive(Serialize, Debug)]
 pub struct Breadcrumb {
     pub timestamp: f64,
-    #[serde(rename="type")]
+    #[serde(rename = "type")]
     pub ty: String,
     pub message: String,
     pub category: String,
@@ -76,30 +76,30 @@ pub struct Event {
     pub tags: HashMap<String, String>,
     pub extra: HashMap<String, Value>,
     pub level: String,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fingerprint: Option<Vec<String>>,
-    #[serde(skip_serializing_if="Option::is_none", rename="sentry.interfaces.Message")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "sentry.interfaces.Message")]
     pub message: Option<Message>,
     pub platform: String,
     pub timestamp: f64,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub server_name: Option<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub release: Option<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub dist: Option<String>,
-    #[serde(skip_serializing_if="Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub environment: Option<String>,
-    #[serde(skip_serializing_if="HashMap::is_empty")]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub user: HashMap<String, String>,
-    #[serde(skip_serializing_if="HashMap::is_empty")]
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
     pub contexts: HashMap<String, HashMap<String, String>>,
-    #[serde(skip_serializing_if="Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty")]
     pub breadcrumbs: Vec<Breadcrumb>,
     pub exception: Option<Exception>,
 }
 
-fn get_server_name() -> Result<String> {
+fn get_server_name() -> Result<String, Error> {
     let p = Command::new("uname").arg("-n").output()?;
     Ok(String::from_utf8(p.stdout)?.trim().to_owned())
 }
@@ -125,15 +125,21 @@ impl Event {
         }
     }
 
-    pub fn new_prefilled() -> Result<Event> {
+    pub fn new_prefilled() -> Result<Event, Error> {
         let mut event = Event::new();
 
-        event.extra.insert("environ".into(), Value::Object(env::vars().map(|(k, v)| {
-            (k, Value::String(v))
-        }).collect()));
+        event.extra.insert(
+            "environ".into(),
+            Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
+        );
 
-        event.user.insert("username".into(), get_user_name().unwrap_or("unknown".into()));
-        event.user.insert("ip_address".into(), String::from("{{auto}}"));
+        event.user.insert(
+            "username".into(),
+            get_user_name().unwrap_or("unknown".into()),
+        );
+        event
+            .user
+            .insert("ip_address".into(), String::from("{{auto}}"));
 
         let mut device = HashMap::new();
         if let Some(hostname) = get_hostname() {
@@ -149,7 +155,8 @@ impl Event {
         event.contexts.insert("device".into(), device);
 
         let mut os = HashMap::new();
-        #[cfg(not(windows))] {
+        #[cfg(not(windows))]
+        {
             if let Ok(info) = uname() {
                 os.insert("name".into(), info.sysname);
                 os.insert("kernel_version".into(), info.version);
@@ -167,16 +174,15 @@ impl Event {
         self.release = detect_release_name().ok();
     }
 
-    pub fn attach_logfile(&mut self, logfile: &str, with_component: bool) -> Result<()> {
-        let f = fs::File::open(logfile)
-            .chain_err(|| "Could not open logfile")?;
+    pub fn attach_logfile(&mut self, logfile: &str, with_component: bool) -> Result<(), Error> {
+        let f = fs::File::open(logfile).context("Could not open logfile")?;
 
         // sentry currently requires timestamps for breadcrumbs at all times.
         // Because we might not be able to parse a timestamp from the log file
         // we fall back to either the modified time of the file or if that does
         // not work we use the current timestamp.
         let fallback_timestamp = fs::metadata(logfile)
-            .chain_err(|| "Could not get metadata for logfile")?
+            .context("Could not get metadata for logfile")?
             .modified()
             .map(|ts| ts.duration_since(UNIX_EPOCH).unwrap().as_secs() as f64)
             .unwrap_or_else(|_| Utc::now().timestamp() as f64);

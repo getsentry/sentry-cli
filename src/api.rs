@@ -452,7 +452,9 @@ impl Api {
                 );
                 self.put(&path, release)?.convert_rnf("release")
             } else {
-                let path = format!("/organizations/{}/releases/{}/", PathArg(org), PathArg(version));
+                let path = format!("/organizations/{}/releases/{}/",
+                                   PathArg(org),
+                                   PathArg(version));
                 self.put(&path, release)?.convert_rnf("release")
             }
         }
@@ -1536,7 +1538,8 @@ pub struct Deploy {
 
 #[derive(Debug, Deserialize)]
 pub enum ChunkHashAlgorithm {
-    #[serde(rename = "sha1")] Sha1,
+    #[serde(rename = "sha1")]
+    Sha1,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1557,11 +1560,16 @@ pub struct ChunkUploadOptions {
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ChunkedFileState {
-    #[serde(rename = "error")] Error,
-    #[serde(rename = "not_found")] NotFound,
-    #[serde(rename = "created")] Created,
-    #[serde(rename = "assembling")] Assembling,
-    #[serde(rename = "ok")] Ok,
+    #[serde(rename = "error")]
+    Error,
+    #[serde(rename = "not_found")]
+    NotFound,
+    #[serde(rename = "created")]
+    Created,
+    #[serde(rename = "assembling")]
+    Assembling,
+    #[serde(rename = "ok")]
+    Ok,
 }
 
 impl ChunkedFileState {

@@ -4,22 +4,22 @@ use std::env;
 use std::path::PathBuf;
 
 use regex::Regex;
+use failure::Error;
 
-use errors::Result;
 use utils::vcs;
 use utils::xcode::InfoPlist;
 use utils::cordova::CordovaConfig;
 
-pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
+pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     let here = path.map_or(env::current_dir()?, |p| p.into());
     let platform = match here.file_name().and_then(|x| x.to_str()) {
         Some("android") => "android",
         Some("ios") => "ios",
-        _ => return Ok(None)
+        _ => return Ok(None),
     };
     let base = match here.parent().and_then(|x| x.parent()) {
         Some(path) => path,
-        None => return Ok(None)
+        None => return Ok(None),
     };
 
     let path = base.join("config.xml");
@@ -39,7 +39,7 @@ pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>>
     }
 }
 
-pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>> {
+pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>, Error> {
     // if we are executed from within xcode, then we can use the environment
     // based discovery to get a release name without any interpolation.
     if let Some(plist) = plist.or(InfoPlist::discover_from_env()?) {
@@ -49,7 +49,7 @@ pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>
     Ok(None)
 }
 
-pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
+pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     lazy_static! {
         static ref APP_ID_RE: Regex = Regex::new(
             r#"applicationId\s+["']([^"']*)["']"#).unwrap();
@@ -82,7 +82,7 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
 }
 
 /// Detects the release name for the current working directory.
-pub fn detect_release_name() -> Result<String> {
+pub fn detect_release_name() -> Result<String, Error> {
     // cordova release detection first.
     if let Some(release) = get_cordova_release_name(None)? {
         return Ok(release);
@@ -108,6 +108,6 @@ pub fn detect_release_name() -> Result<String> {
     if let Ok(head) = vcs::find_head() {
         Ok(head)
     } else {
-        Err("Could not automatically determine release name".into())
+        bail!("Could not automatically determine release name");
     }
 }

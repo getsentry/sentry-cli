@@ -3,9 +3,9 @@ use std::path::PathBuf;
 
 use git2;
 use regex::Regex;
+use failure::Error;
 
-use api::{Repo, Ref};
-use errors::{Error, Result};
+use api::{Ref, Repo};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
@@ -46,7 +46,7 @@ fn parse_rev_range(rng: &str) -> (Option<String>, String) {
 }
 
 impl CommitSpec {
-    pub fn parse(s: &str) -> Result<CommitSpec> {
+    pub fn parse(s: &str) -> Result<CommitSpec, Error> {
         lazy_static! {
             static ref SPEC_RE: Regex = Regex::new(
                 r"^([^@#]+)(?:#([^@]+))?(?:@(.+))?$").unwrap();
@@ -60,7 +60,7 @@ impl CommitSpec {
                 prev_rev: prev_rev,
             })
         } else {
-            Err(Error::from(format!("Could not parse commit spec '{}'", s)))
+            bail!("Could not parse commit spec '{}'", s)
         }
     }
 
@@ -130,30 +130,31 @@ fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
 
-fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String> {
+fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
     for configured_repo in repos {
         if configured_repo.name != repo {
             continue;
         }
-        if &configured_repo.provider.id != "github" &&
-           &configured_repo.provider.id != "bitbucket" &&
-           &configured_repo.provider.id != "git" {
-            return Err(Error::from("For non git repositories \
-                                   explicit revisions are required"));
+        if &configured_repo.provider.id != "github" && &configured_repo.provider.id != "bitbucket"
+            && &configured_repo.provider.id != "git"
+        {
+            bail!("For non git repositories explicit revisions are required");
         }
 
         if let Some(ref url) = configured_repo.url {
-            return Ok(url.clone())
+            return Ok(url.clone());
         }
     }
 
-    Err(Error::from(format!("Could not find matching repository for {}", repo)))
+    bail!("Could not find matching repository for {}", repo)
 }
 
-fn find_matching_rev(reference: GitReference, spec: &CommitSpec,
-                     repos: &[Repo], disable_discovery: bool)
-    -> Result<Option<String>>
-{
+fn find_matching_rev(
+    reference: GitReference,
+    spec: &CommitSpec,
+    repos: &[Repo],
+    disable_discovery: bool,
+) -> Result<Option<String>, Error> {
     let r = match reference {
         GitReference::Commit(commit) => {
             return Ok(Some(commit.to_string()));
@@ -214,28 +215,32 @@ fn find_matching_rev(reference: GitReference, spec: &CommitSpec,
     Ok(None)
 }
 
-fn find_matching_revs(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool)
-    -> Result<(Option<String>, String)>
-{
+fn find_matching_revs(
+    spec: &CommitSpec,
+    repos: &[Repo],
+    disable_discovery: bool,
+) -> Result<(Option<String>, String), Error> {
     fn error(r: GitReference, repo: &str) -> Error {
-        Error::from(format!(
+        format_err!(
             "Could not find commit '{}' for '{}'. If you do not have local \
              checkouts of the repositories in question referencing tags or \
              other references will not work and you need to refer to \
              revisions explicitly.",
-            r, repo))
+            r,
+            repo
+        )
     }
 
-    let rev = if let Some(rev) = find_matching_rev(
-        spec.reference(), &spec, &repos[..], disable_discovery)? {
+    let rev = if let Some(rev) =
+        find_matching_rev(spec.reference(), &spec, &repos[..], disable_discovery)?
+    {
         rev
     } else {
         return Err(error(spec.reference(), &spec.repo));
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(rv) = find_matching_rev(
-            rev, &spec, &repos[..], disable_discovery)? {
+        if let Some(rv) = find_matching_rev(rev, &spec, &repos[..], disable_discovery)? {
             Some(rv)
         } else {
             return Err(error(rev, &spec.repo));
@@ -247,7 +252,7 @@ fn find_matching_revs(spec: &CommitSpec, repos: &[Repo], disable_discovery: bool
     Ok((prev_rev, rev))
 }
 
-pub fn find_head() -> Result<String> {
+pub fn find_head() -> Result<String, Error> {
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
     Ok(head.id().to_string())
@@ -255,17 +260,14 @@ pub fn find_head() -> Result<String> {
 
 /// Given commit specs and repos this returns a list of head commits
 /// from it.
-pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
-    -> Result<Vec<Ref>>
-{
+pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>) -> Result<Vec<Ref>, Error> {
     let mut rv = vec![];
 
     // if commit specs were explicitly provided find head commits with
     // limited amounts of magic.
     if let Some(specs) = specs {
         for spec in &specs {
-            let (prev_rev, rev) = find_matching_revs(
-                &spec, &repos[..], specs.len() == 1)?;
+            let (prev_rev, rev) = find_matching_revs(&spec, &repos[..], specs.len() == 1)?;
             rv.push(Ref {
                 repo: spec.repo.clone(),
                 rev: rev,
@@ -282,8 +284,7 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
                 rev: "HEAD".into(),
                 prev_rev: None,
             };
-            if let Some(rev) = find_matching_rev(
-                spec.reference(), &spec, &repos[..], false)? {
+            if let Some(rev) = find_matching_rev(spec.reference(), &spec, &repos[..], false)? {
                 rv.push(Ref {
                     repo: repo.name.to_string(),
                     rev: rev,
@@ -298,26 +299,40 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>)
 
 #[test]
 fn test_url_parsing() {
-    assert_eq!(VcsUrl::parse("http://github.com/mitsuhiko/flask"), VcsUrl {
-        provider: "github",
-        id: "mitsuhiko/flask".into(),
-    });
-    assert_eq!(VcsUrl::parse("git@github.com:mitsuhiko/flask.git"), VcsUrl {
-        provider: "github",
-        id: "mitsuhiko/flask".into(),
-    });
-    assert_eq!(VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"), VcsUrl {
-        provider: "bitbucket",
-        id: "mitsuhiko/flask".into(),
-    });
-    assert_eq!(VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"), VcsUrl {
-        provider: "bitbucket",
-        id: "mitsuhiko/flask".into(),
-    });
+    assert_eq!(
+        VcsUrl::parse("http://github.com/mitsuhiko/flask"),
+        VcsUrl {
+            provider: "github",
+            id: "mitsuhiko/flask".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@github.com:mitsuhiko/flask.git"),
+        VcsUrl {
+            provider: "github",
+            id: "mitsuhiko/flask".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"),
+        VcsUrl {
+            provider: "bitbucket",
+            id: "mitsuhiko/flask".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"),
+        VcsUrl {
+            provider: "bitbucket",
+            id: "mitsuhiko/flask".into(),
+        }
+    );
 }
 
 #[test]
 fn test_url_normalization() {
-    assert!(is_matching_url("http://github.com/mitsuhiko/flask",
-                            "git@github.com:mitsuhiko/flask.git"));
+    assert!(is_matching_url(
+        "http://github.com/mitsuhiko/flask",
+        "git@github.com:mitsuhiko/flask.git"
+    ));
 }

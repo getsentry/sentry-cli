@@ -1,7 +1,7 @@
 use clap::{App, AppSettings, ArgMatches};
+use failure::Error;
 
 use commands;
-use errors::Result;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -25,7 +25,7 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     app
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) = matches.subcommand_matches(&stringify!($name)[8..]) {

@@ -7,15 +7,17 @@ use std::borrow::Cow;
 use config::Config;
 
 #[cfg(not(windows))]
+use clap;
 use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
 use regex::{Captures, Regex};
-
-use errors::{Error, ErrorKind, Result};
+use failure::Error;
 
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)
-    where F: FnOnce() -> (), F: Send + 'static
+where
+    F: FnOnce() -> (),
+    F: Send + 'static,
 {
     use chan;
     let run = |_sdone: chan::Sender<()>| f();
@@ -40,7 +42,9 @@ pub fn run_or_interrupt<F>(f: F)
 
 #[cfg(windows)]
 pub fn run_or_interrupt<F>(f: F)
-    where F: FnOnce() -> (), F: Send + 'static
+where
+    F: FnOnce() -> (),
+    F: Send + 'static,
 {
     f();
 }
@@ -57,7 +61,7 @@ pub fn propagate_exit_status(status: process::ExitStatus) {
 }
 
 #[cfg(not(windows))]
-fn is_homebrew_install_result() -> Result<bool> {
+fn is_homebrew_install_result() -> Result<bool, Error> {
     let mut exe = env::current_exe()?.canonicalize()?;
     exe.pop();
     exe.set_file_name("INSTALL_RECEIPT.json");
@@ -65,11 +69,11 @@ fn is_homebrew_install_result() -> Result<bool> {
 }
 
 #[cfg(windows)]
-fn is_homebrew_install_result() -> Result<bool> {
+fn is_homebrew_install_result() -> Result<bool, Error> {
     Ok(false)
 }
 
-fn is_npm_install_result() -> Result<bool> {
+fn is_npm_install_result() -> Result<bool, Error> {
     let mut exe = env::current_exe()?.canonicalize()?;
     exe.pop();
     exe.set_file_name("package.json");
@@ -88,9 +92,7 @@ pub fn is_npm_install() -> bool {
 
 /// Expands environment variables in a string
 pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
-    expand_vars(s, |key| {
-        env::var(key).unwrap_or("".into())
-    })
+    expand_vars(s, |key| env::var(key).unwrap_or("".into()))
 }
 
 /// Expands variables in a string
@@ -113,17 +115,16 @@ pub fn expand_vars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> 
 
 /// Helper that renders an error to stderr.
 pub fn print_error(err: &Error) {
-    use std::error::Error;
-
-    if let &ErrorKind::Clap(ref clap_err) = err.kind() {
+    if let Some(ref clap_err) = err.downcast_ref::<clap::Error>() {
         clap_err.exit();
     }
 
-    writeln!(&mut io::stderr(), "error: {}", err).ok();
-    let mut cause = err.cause();
-    while let Some(the_cause) = cause {
-        writeln!(&mut io::stderr(), "  caused by: {}", the_cause).ok();
-        cause = the_cause.cause();
+    for (idx, cause) in err.causes().enumerate() {
+        if idx == 0 {
+            writeln!(&mut io::stderr(), "error: {}", cause).ok();
+        } else {
+            writeln!(&mut io::stderr(), "  caused by: {}", cause).ok();
+        }
     }
 
     if env::var("RUST_BACKTRACE") == Ok("1".into()) {
@@ -151,29 +152,29 @@ pub fn init_backtrace() {
 
         let msg = match info.payload().downcast_ref::<&'static str>() {
             Some(s) => *s,
-            None => {
-                match info.payload().downcast_ref::<String>() {
-                    Some(s) => &**s,
-                    None => "Box<Any>",
-                }
-            }
+            None => match info.payload().downcast_ref::<String>() {
+                Some(s) => &**s,
+                None => "Box<Any>",
+            },
         };
 
         match info.location() {
             Some(location) => {
-                println_stderr!("thread '{}' panicked at '{}': {}:{}\n\n{:?}",
-                         thread,
-                         msg,
-                         location.file(),
-                         location.line(),
-                         backtrace);
+                println_stderr!(
+                    "thread '{}' panicked at '{}': {}:{}\n\n{:?}",
+                    thread,
+                    msg,
+                    location.file(),
+                    location.line(),
+                    backtrace
+                );
             }
             None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
         }
     }));
 }
 
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub fn get_model() -> Option<String> {
     if let Some(model) = Config::get_current().get_model() {
         return Some(model);
@@ -185,16 +186,26 @@ pub fn get_model() -> Option<String> {
 
     unsafe {
         let mut size = 0;
-        libc::sysctlbyname("hw.model\x00".as_ptr() as *const i8,
-            ptr::null_mut(), &mut size, ptr::null_mut(), 0);
+        libc::sysctlbyname(
+            "hw.model\x00".as_ptr() as *const i8,
+            ptr::null_mut(),
+            &mut size,
+            ptr::null_mut(),
+            0,
+        );
         let mut buf = vec![0u8; size as usize];
-        libc::sysctlbyname("hw.model\x00".as_ptr() as *const i8,
-            buf.as_mut_ptr() as *mut c_void, &mut size, ptr::null_mut(), 0);
+        libc::sysctlbyname(
+            "hw.model\x00".as_ptr() as *const i8,
+            buf.as_mut_ptr() as *mut c_void,
+            &mut size,
+            ptr::null_mut(),
+            0,
+        );
         Some(String::from_utf8_lossy(&buf).to_string())
     }
 }
 
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub fn get_family() -> Option<String> {
     if let Some(family) = Config::get_current().get_family() {
         return Some(family);
@@ -217,12 +228,12 @@ pub fn get_family() -> Option<String> {
     }
 }
 
-#[cfg(not(target_os="macos"))]
+#[cfg(not(target_os = "macos"))]
 pub fn get_model() -> Option<String> {
     Config::get_current().get_model()
 }
 
-#[cfg(not(target_os="macos"))]
+#[cfg(not(target_os = "macos"))]
 pub fn get_family() -> Option<String> {
     Config::get_current().get_family()
 }

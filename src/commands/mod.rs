@@ -3,11 +3,12 @@
 use std::env;
 use std::process;
 
-use clap::{Arg, App, AppSettings};
+use clap::{App, AppSettings, Arg};
+use failure::Error;
 
 use config::{prepare_environment, Auth, Config};
 use constants::VERSION;
-use errors::{ErrorKind, Result};
+use errors::QuietExit;
 use utils::system::print_error;
 use utils::update::run_sentrycli_update_nagger;
 
@@ -49,13 +50,7 @@ macro_rules! each_subcommand {
 
 // commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &'static [&'static str] = &[
-    "releases",
-    "issues",
-    "repos",
-    "projects",
-    "info",
-    "login",
-    "difutil",
+    "releases", "issues", "repos", "projects", "info", "login", "difutil"
 ];
 
 // it would be great if this could be a macro expansion as well
@@ -75,7 +70,7 @@ pub mod send_event;
 pub mod bash_hook;
 
 pub mod react_native;
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub mod react_native_xcode;
 pub mod react_native_gradle;
 pub mod react_native_codepush;
@@ -85,11 +80,11 @@ pub mod difutil_find;
 pub mod difutil_check;
 pub mod difutil_id;
 
-fn preexecute_hooks() -> Result<bool> {
+fn preexecute_hooks() -> Result<bool, Error> {
     return sentry_react_native_xcode_wrap();
 
-    #[cfg(target_os="macos")]
-    fn sentry_react_native_xcode_wrap() -> Result<bool> {
+    #[cfg(target_os = "macos")]
+    fn sentry_react_native_xcode_wrap() -> Result<bool, Error> {
         if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
             env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
             if &val == "1" {
@@ -100,15 +95,15 @@ fn preexecute_hooks() -> Result<bool> {
         Ok(false)
     }
 
-    #[cfg(not(target_os="macos"))]
-    fn sentry_react_native_xcode_wrap() -> Result<bool> {
+    #[cfg(not(target_os = "macos"))]
+    fn sentry_react_native_xcode_wrap() -> Result<bool, Error> {
         Ok(false)
     }
 }
 
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
-pub fn execute(args: Vec<String>) -> Result<()> {
+pub fn execute(args: Vec<String>) -> Result<(), Error> {
     let mut config = Config::from_cli_config()?;
 
     // special case for the xcode integration for react native.  For more
@@ -117,32 +112,40 @@ pub fn execute(args: Vec<String>) -> Result<()> {
         return Ok(());
     }
 
-    let mut app = App::new("sentry-cli")
-        .help_message("Print this help message.")
-        .version(VERSION)
-        .version_message("Print version information.")
-        .about(ABOUT)
-        .max_term_width(100)
-        .setting(AppSettings::VersionlessSubcommands)
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .global_setting(AppSettings::UnifiedHelpMessage)
-        .arg(Arg::with_name("url")
-            .value_name("URL")
-            .long("url")
-            .help("Fully qualified URL to the Sentry server.{n}[defaults to https://sentry.io/]"))
-        .arg(Arg::with_name("auth_token")
-            .value_name("AUTH_TOKEN")
-            .long("auth-token")
-            .help("Use the given Sentry auth token."))
-        .arg(Arg::with_name("api_key")
-            .value_name("API_KEY")
-            .long("api-key")
-            .help("The the given Sentry API key."))
-        .arg(Arg::with_name("log_level")
-            .value_name("LOG_LEVEL")
-            .long("log-level")
-            .help("Set the log output verbosity.{n}\
-                   [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]"));
+    let mut app =
+        App::new("sentry-cli")
+            .help_message("Print this help message.")
+            .version(VERSION)
+            .version_message("Print version information.")
+            .about(ABOUT)
+            .max_term_width(100)
+            .setting(AppSettings::VersionlessSubcommands)
+            .setting(AppSettings::SubcommandRequiredElseHelp)
+            .global_setting(AppSettings::UnifiedHelpMessage)
+            .arg(Arg::with_name("url").value_name("URL").long("url").help(
+                "Fully qualified URL to the Sentry server.{n}[defaults to https://sentry.io/]",
+            ))
+            .arg(
+                Arg::with_name("auth_token")
+                    .value_name("AUTH_TOKEN")
+                    .long("auth-token")
+                    .help("Use the given Sentry auth token."),
+            )
+            .arg(
+                Arg::with_name("api_key")
+                    .value_name("API_KEY")
+                    .long("api-key")
+                    .help("The the given Sentry API key."),
+            )
+            .arg(
+                Arg::with_name("log_level")
+                    .value_name("LOG_LEVEL")
+                    .long("log-level")
+                    .help(
+                        "Set the log output verbosity.{n}\
+                         [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]",
+                    ),
+            );
 
     macro_rules! add_subcommand {
         ($name:ident) => {{
@@ -200,7 +203,7 @@ pub fn execute(args: Vec<String>) -> Result<()> {
     unreachable!();
 }
 
-fn run() -> Result<()> {
+fn run() -> Result<(), Error> {
     prepare_environment();
     match execute(env::args().collect()) {
         Ok(()) => Ok(()),
@@ -219,7 +222,7 @@ pub fn main() {
     match run() {
         Ok(()) => process::exit(0),
         Err(err) => {
-            if let &ErrorKind::QuietExit(code) = err.kind() {
+            if let Some(&QuietExit(code)) = err.downcast_ref() {
                 process::exit(code);
             } else {
                 print_error(&err);

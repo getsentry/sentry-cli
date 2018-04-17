@@ -46,6 +46,8 @@ username = "0.2.0"
 walkdir = "2.1.4"
 which = "1.0.5"
 zip = "0.3.1"
+failure = "0.1.1"
+failure_derive = "0.1.1"
 
 [dependencies.chrono]
 features = ["serde"]

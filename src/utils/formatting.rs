@@ -33,13 +33,12 @@ pub struct TableRow {
 
 impl TableRow {
     pub fn new() -> TableRow {
-        TableRow {
-            cells: vec![],
-        }
+        TableRow { cells: vec![] }
     }
 
     pub fn add<D: fmt::Display>(&mut self, text: D) -> &mut TableRow {
-        self.cells.push(prettytable::cell::Cell::new(&text.to_string()));
+        self.cells
+            .push(prettytable::cell::Cell::new(&text.to_string()));
         self
     }
 

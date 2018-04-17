@@ -13,9 +13,9 @@ use clap::ArgMatches;
 use url::Url;
 use ini::Ini;
 use parking_lot::Mutex;
+use failure::{err_msg, Error, ResultExt};
 
-use constants::{DEFAULT_URL, VERSION, PROTOCOL_VERSION};
-use errors::{Error, Result, ResultExt};
+use constants::{DEFAULT_URL, PROTOCOL_VERSION, VERSION};
 use utils::logging::Logger;
 
 static LOGGER: Logger = Logger;
@@ -40,28 +40,32 @@ pub struct Dsn {
 
 impl Dsn {
     /// Parses a Dsn from a given string.
-    fn from_str(dsn: &str) -> Result<Dsn> {
+    fn from_str(dsn: &str) -> Result<Dsn, Error> {
         let url = Url::parse(dsn)?;
         let project_id = if let Some(component_iter) = url.path_segments() {
             let components: Vec<_> = component_iter.collect();
             if components.len() != 1 {
-                fail!("invalid dsn: invalid project ID");
+                bail!("invalid dsn: invalid project ID");
             }
-            components[0].parse().or(Err("invalid dsn: invalid project id"))?
+            components[0]
+                .parse()
+                .map_err(|_| err_msg("invalid dsn: invalid project id"))?
         } else {
-            fail!("invalid dsn: missing project ID");
+            bail!("invalid dsn: missing project ID");
         };
         if !(url.scheme() == "http" || url.scheme() == "https") {
-            fail!(format!("invalid dsn: unknown protocol '{}'", url.scheme()));
+            bail!("invalid dsn: unknown protocol '{}'", url.scheme());
         }
 
         if url.username() == "" {
-            fail!("invalid dsn: missing client id");
+            bail!("invalid dsn: missing client id");
         }
 
         Ok(Dsn {
             protocol: url.scheme().into(),
-            host: url.host_str().ok_or("invalid dsn: missing host")?.into(),
+            host: url.host_str()
+                .ok_or_else(|| err_msg("invalid dsn: missing host"))?
+                .into(),
             port: url.port_or_known_default().unwrap(),
             client_id: url.username().into(),
             secret: url.password().map(|x| x.to_string()),
@@ -71,24 +75,22 @@ impl Dsn {
 
     /// Returns the URL where events should be sent.
     pub fn get_submit_url(&self) -> String {
-        format!("{}://{}:{}/api/{}/store/",
-                self.protocol,
-                self.host,
-                self.port,
-                self.project_id)
+        format!(
+            "{}://{}:{}/api/{}/store/",
+            self.protocol, self.host, self.port, self.project_id
+        )
     }
 
     /// Returns the given auth header (ts is the timestamp of the event)
     pub fn get_auth_header(&self, ts: f64) -> String {
-        let mut rv = format!("Sentry \
-            sentry_timestamp={}, \
-            sentry_client=sentry-cli/{}, \
-            sentry_version={}, \
-            sentry_key={}",
-                ts,
-                VERSION,
-                PROTOCOL_VERSION,
-                self.client_id);
+        let mut rv = format!(
+            "Sentry \
+             sentry_timestamp={}, \
+             sentry_client=sentry-cli/{}, \
+             sentry_version={}, \
+             sentry_key={}",
+            ts, VERSION, PROTOCOL_VERSION, self.client_id
+        );
         if let Some(ref secret) = self.secret {
             rv = format!("{}, sentry_secret={}", rv, secret);
         }
@@ -116,7 +118,7 @@ pub struct Config {
 
 impl Config {
     /// Loads the CLI config from the default location and returns it.
-    pub fn from_cli_config() -> Result<Config> {
+    pub fn from_cli_config() -> Result<Config, Error> {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
             filename: filename,
@@ -151,9 +153,10 @@ impl Config {
     }
 
     /// Makes a copy of the config in a closure and boxes it.
-    pub fn make_copy<F: FnOnce(&mut Config) -> Result<()>>(&self, cb: F)
-        -> Result<Arc<Config>>
-    {
+    pub fn make_copy<F: FnOnce(&mut Config) -> Result<(), Error>>(
+        &self,
+        cb: F,
+    ) -> Result<Arc<Config>, Error> {
         let mut new_config = self.clone();
         cb(&mut new_config)?;
         Ok(Arc::new(new_config))
@@ -184,8 +187,9 @@ impl Config {
     }
 
     /// Write the current config state back into the file.
-    pub fn save(&self) -> Result<()> {
-        let mut file = OpenOptions::new().write(true)
+    pub fn save(&self) -> Result<(), Error> {
+        let mut file = OpenOptions::new()
+            .write(true)
             .truncate(true)
             .create(true)
             .open(&self.filename)?;
@@ -206,10 +210,12 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.ini.set_to(Some("auth"), "token".into(), val.to_string());
+                self.ini
+                    .set_to(Some("auth"), "token".into(), val.to_string());
             }
             Some(Auth::Key(ref val)) => {
-                self.ini.set_to(Some("auth"), "api_key".into(), val.to_string());
+                self.ini
+                    .set_to(Some("auth"), "api_key".into(), val.to_string());
             }
             None => {}
         }
@@ -218,11 +224,12 @@ impl Config {
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) {
         self.cached_base_url = url.to_owned();
-        self.ini.set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+        self.ini
+            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
     }
 
     /// Returns the base url (without trailing slashes)
-    pub fn get_base_url(&self) -> Result<&str> {
+    pub fn get_base_url(&self) -> Result<&str, Error> {
         let base = self.cached_base_url.trim_right_matches('/');
         if !base.starts_with("http://") && !base.starts_with("https://") {
             fail!("bad sentry url: unknown scheme ({})", base);
@@ -234,7 +241,7 @@ impl Config {
     }
 
     /// Returns the API URL for a path
-    pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
+    pub fn get_api_endpoint(&self, path: &str) -> Result<String, Error> {
         let base = self.get_base_url()?;
         Ok(format!("{}/api/0/{}", base, path.trim_left_matches('/')))
     }
@@ -313,18 +320,23 @@ impl Config {
     }
 
     /// Given a match object from clap, this returns the org from it.
-    pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
-        Ok(matches.value_of("org")
-               .map(|x| x.to_owned())
-               .or_else(|| env::var("SENTRY_ORG").ok())
-               .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned()))
-               .ok_or("An organization slug is required (provide with --org)")?)
+    pub fn get_org(&self, matches: &ArgMatches) -> Result<String, Error> {
+        Ok(matches
+            .value_of("org")
+            .map(|x| x.to_owned())
+            .or_else(|| env::var("SENTRY_ORG").ok())
+            .or_else(|| {
+                self.ini
+                    .get_from(Some("defaults"), "org")
+                    .map(|x| x.to_owned())
+            })
+            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
     }
 
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
-    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
+    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String), Error> {
         let org = self.get_org(matches)?;
         let project = if let Some(project) = matches.value_of("project") {
             project.to_owned()
@@ -335,44 +347,57 @@ impl Config {
     }
 
     /// Return the default value for a project.
-    pub fn get_project_default(&self) -> Result<String> {
-        Ok(env::var("SENTRY_PROJECT").ok()
-            .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned()))
-            .ok_or("A project slug is required")?)
+    pub fn get_project_default(&self) -> Result<String, Error> {
+        Ok(env::var("SENTRY_PROJECT")
+            .ok()
+            .or_else(|| {
+                self.ini
+                    .get_from(Some("defaults"), "project")
+                    .map(|x| x.to_owned())
+            })
+            .ok_or_else(|| err_msg("A project slug is required"))?)
     }
 
     /// Returns the defaults for org and project.
     pub fn get_org_and_project_defaults(&self) -> (Option<String>, Option<String>) {
-        (env::var("SENTRY_ORG")
-             .ok()
-             .or_else(|| self.ini.get_from(Some("defaults"), "org").map(|x| x.to_owned())),
-         env::var("SENTRY_PROJECT")
-             .ok()
-             .or_else(|| self.ini.get_from(Some("defaults"), "project").map(|x| x.to_owned())))
+        (
+            env::var("SENTRY_ORG").ok().or_else(|| {
+                self.ini
+                    .get_from(Some("defaults"), "org")
+                    .map(|x| x.to_owned())
+            }),
+            env::var("SENTRY_PROJECT").ok().or_else(|| {
+                self.ini
+                    .get_from(Some("defaults"), "project")
+                    .map(|x| x.to_owned())
+            }),
+        )
     }
 
     /// Returns true if notifications should be displayed
-    pub fn show_notifications(&self) -> Result<bool> {
-        Ok(self.ini.get_from(Some("ui"), "show_notifications")
+    pub fn show_notifications(&self) -> Result<bool, Error> {
+        Ok(self.ini
+            .get_from(Some("ui"), "show_notifications")
             .map(|x| x == "true")
             .unwrap_or(true))
     }
 
     /// Returns the maximum DIF upload size
-    pub fn get_max_dif_archive_size(&self) -> Result<u64> {
-        Ok(self.ini.get_from(Some("dsym"), "max_upload_size")
+    pub fn get_max_dif_archive_size(&self) -> Result<u64, Error> {
+        Ok(self.ini
+            .get_from(Some("dsym"), "max_upload_size")
             .and_then(|x| x.parse().ok())
             .unwrap_or(35 * 1024 * 1024))
     }
 
     /// Return the DSN
-    pub fn get_dsn(&self) -> Result<Dsn> {
+    pub fn get_dsn(&self) -> Result<Dsn, Error> {
         if let Some(ref val) = env::var("SENTRY_DSN").ok() {
             Dsn::from_str(val)
         } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
             Dsn::from_str(val)
         } else {
-            fail!("No DSN provided");
+            bail!("No DSN provided");
         }
     }
 
@@ -413,26 +438,24 @@ impl Config {
 }
 
 fn find_project_config_file() -> Option<PathBuf> {
-    env::current_dir().ok().and_then(|mut path| {
-        loop {
-            path.push(".sentryclirc");
-            if path.exists() {
-                return Some(path);
-            }
-            path.set_file_name("sentrycli.ini");
-            if path.exists() {
-                return Some(path);
-            }
-            path.pop();
-            if !path.pop() {
-                return None;
-            }
+    env::current_dir().ok().and_then(|mut path| loop {
+        path.push(".sentryclirc");
+        if path.exists() {
+            return Some(path);
+        }
+        path.set_file_name("sentrycli.ini");
+        if path.exists() {
+            return Some(path);
+        }
+        path.pop();
+        if !path.pop() {
+            return None;
         }
     })
 }
 
-fn load_cli_config() -> Result<(PathBuf, Ini)> {
-    let mut home_fn = env::home_dir().ok_or("Could not find home dir")?;
+fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
+    let mut home_fn = env::home_dir().ok_or_else(|| err_msg("Could not find home dir"))?;
     home_fn.push(".sentryclirc");
 
     let mut rv = match fs::File::open(&home_fn) {
@@ -441,16 +464,20 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
             if err.kind() == io::ErrorKind::NotFound {
                 Ini::new()
             } else {
-                return Err(err).chain_err(
-                    || "Failed to load .sentryclirc file from the home folder.");
+                return Err(Error::from(err)
+                    .context("Failed to load .sentryclirc file from the home folder.")
+                    .into());
             }
         }
     };
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let mut f = fs::File::open(&project_config_path)
-            .chain_err(|| format!("Failed to load .sentryclirc file from project path ({})",
-                project_config_path.display()))?;
+        let mut f = fs::File::open(&project_config_path).with_context(|_| {
+            format!(
+                "Failed to load .sentryclirc file from project path ({})",
+                project_config_path.display()
+            )
+        })?;
         let ini = Ini::read_from(&mut f)?;
         for (section, props) in ini.iter() {
             for (key, value) in props {
@@ -468,8 +495,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                 let props = match java_properties::read(f) {
                     Ok(props) => props,
                     Err(err) => {
-                        return Err(Error::from(format!(
-                            "Could not load java style properties file: {}", err)));
+                        bail!("Could not load java style properties file: {}", err);
                     }
                 };
                 for (key, value) in props {
@@ -479,12 +505,15 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                         rv.set_to(section, key.to_string(), value);
                     }
                 }
-            },
+            }
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
-                    return Err(Error::from(err)).chain_err(
-                        || format!("Failed to load file referenced by SENTRY_PROPERTIES ({})",
-                                   &prop_path));
+                    return Err(Error::from(err)
+                        .context(format!(
+                            "Failed to load file referenced by SENTRY_PROPERTIES ({})",
+                            &prop_path
+                        ))
+                        .into());
                 }
             }
         }
@@ -530,7 +559,7 @@ fn get_default_url(ini: &Ini) -> String {
     }
 }
 
-fn get_default_log_level(ini: &Ini) -> Result<log::LevelFilter> {
+fn get_default_log_level(ini: &Ini) -> Result<log::LevelFilter, Error> {
     if let Ok(level_str) = env::var("SENTRY_LOG_LEVEL") {
         if let Ok(level) = level_str.parse() {
             return Ok(level);

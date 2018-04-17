@@ -5,17 +5,19 @@ use std::ffi::OsStr;
 use std::collections::BTreeMap;
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
+use failure::{Error, SyncFailure};
 use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{FatObject, Object, DebugId, SymbolTable};
+use symbolic_debuginfo::{DebugId, FatObject, Object, SymbolTable};
 use symbolic_proguard::ProguardMappingView;
-
-use errors::{Error, Result};
 
 #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
 pub enum DifType {
-    #[serde(rename = "dsym")] Dsym,
-    #[serde(rename = "breakpad")] Breakpad,
-    #[serde(rename = "proguard")] Proguard,
+    #[serde(rename = "dsym")]
+    Dsym,
+    #[serde(rename = "breakpad")]
+    Breakpad,
+    #[serde(rename = "proguard")]
+    Proguard,
 }
 
 impl fmt::Display for DifType {
@@ -31,12 +33,12 @@ impl fmt::Display for DifType {
 impl str::FromStr for DifType {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<DifType> {
+    fn from_str(s: &str) -> Result<DifType, Error> {
         match s {
             "dsym" => Ok(DifType::Dsym),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
-            _ => Err(Error::from("Invalid debug info file type")),
+            _ => bail!("Invalid debug info file type"),
         }
     }
 }
@@ -47,40 +49,40 @@ pub enum DifFile {
 }
 
 impl DifFile {
-    fn from_object(fat: FatObject<'static>) -> Result<DifFile> {
+    fn from_object(fat: FatObject<'static>) -> Result<DifFile, Error> {
         if fat.object_count() < 1 {
-            return Err(Error::from("Object file is empty"));
+            bail!("Object file is empty");
         }
 
         Ok(DifFile::Object(fat))
     }
 
-    fn open_proguard<P: AsRef<Path>>(path: P) -> Result<DifFile> {
-        let data = ByteView::from_path(&path)?;
-        let pg = ProguardMappingView::parse(data)?;
+    fn open_proguard<P: AsRef<Path>>(path: P) -> Result<DifFile, Error> {
+        let data = ByteView::from_path(&path).map_err(SyncFailure::new)?;
+        let pg = ProguardMappingView::parse(data).map_err(SyncFailure::new)?;
 
         if path.as_ref().extension() == Some(OsStr::new("txt")) || pg.has_line_info() {
             Ok(DifFile::Proguard(pg))
         } else {
-            Err(Error::from("Expected a proguard file"))
+            bail!("Expected a proguard file")
         }
     }
 
-    fn open_object<P: AsRef<Path>>(path: P, kind: ObjectKind) -> Result<DifFile> {
-        let data = ByteView::from_path(path)?;
-        let fat = FatObject::parse(data)?;
+    fn open_object<P: AsRef<Path>>(path: P, kind: ObjectKind) -> Result<DifFile, Error> {
+        let data = ByteView::from_path(path).map_err(SyncFailure::new)?;
+        let fat = FatObject::parse(data).map_err(SyncFailure::new)?;
 
         if fat.kind() != kind {
-            return Err(Error::from("Unexpected file format"));
+            bail!("Unexpected file format");
         }
 
         DifFile::from_object(fat)
     }
 
-    fn try_open<P: AsRef<Path>>(path: P) -> Result<DifFile> {
+    fn try_open<P: AsRef<Path>>(path: P) -> Result<DifFile, Error> {
         // Try to open the file and map it into memory first. This will
         // return an error if the file does not exist.
-        let data = ByteView::from_path(&path)?;
+        let data = ByteView::from_path(&path).map_err(SyncFailure::new)?;
 
         // First try to open a (fat) object file. We only support a couple of
         // sub types, so for unsupported files we throw an error.
@@ -88,7 +90,7 @@ impl DifFile {
             match fat.kind() {
                 ObjectKind::MachO => return DifFile::from_object(fat),
                 ObjectKind::Breakpad => return DifFile::from_object(fat),
-                _ => return Err(Error::from("Unsupported object file")),
+                _ => bail!("Unsupported object file"),
             }
         }
 
@@ -99,10 +101,10 @@ impl DifFile {
         }
 
         // None of the above worked, so throw a generic error
-        return Err(Error::from("Unsupported file"));
+        bail!("Unsupported file");
     }
 
-    pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<DifFile> {
+    pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<DifFile, Error> {
         match ty {
             Some(DifType::Dsym) => DifFile::open_object(path, ObjectKind::MachO),
             Some(DifType::Breakpad) => DifFile::open_object(path, ObjectKind::Breakpad),
@@ -191,11 +193,11 @@ impl Serialize for DifFile {
 pub trait DebuggingInformation {
     /// Checks whether this object contains hidden symbols generated during an
     /// iTunes Connect build. This only applies to MachO files.
-    fn has_hidden_symbols(&self) -> Result<bool>;
+    fn has_hidden_symbols(&self) -> Result<bool, Error>;
 }
 
 impl DebuggingInformation for DifFile {
-    fn has_hidden_symbols(&self) -> Result<bool> {
+    fn has_hidden_symbols(&self) -> Result<bool, Error> {
         match *self {
             DifFile::Object(ref fat) => fat.has_hidden_symbols(),
             _ => Ok(false),
@@ -204,13 +206,19 @@ impl DebuggingInformation for DifFile {
 }
 
 impl<'a> DebuggingInformation for FatObject<'a> {
-    fn has_hidden_symbols(&self) -> Result<bool> {
+    fn has_hidden_symbols(&self) -> Result<bool, Error> {
         if self.kind() != ObjectKind::MachO {
             return Ok(false);
         }
 
         for object in self.objects() {
-            if object?.symbols()?.requires_symbolmap()? {
+            if object
+                .map_err(SyncFailure::new)?
+                .symbols()
+                .map_err(SyncFailure::new)?
+                .requires_symbolmap()
+                .map_err(SyncFailure::new)?
+            {
                 return Ok(true);
             }
         }
@@ -220,7 +228,11 @@ impl<'a> DebuggingInformation for FatObject<'a> {
 }
 
 impl<'a> DebuggingInformation for Object<'a> {
-    fn has_hidden_symbols(&self) -> Result<bool> {
-        Ok(self.kind() == ObjectKind::MachO && self.symbols()?.requires_symbolmap()?)
+    fn has_hidden_symbols(&self) -> Result<bool, Error> {
+        Ok(self.kind() == ObjectKind::MachO
+            && self.symbols()
+                .map_err(SyncFailure::new)?
+                .requires_symbolmap()
+                .map_err(SyncFailure::new)?)
     }
 }

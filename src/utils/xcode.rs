@@ -3,35 +3,35 @@ use std::env;
 use std::fmt;
 use std::process;
 use std::path::{Path, PathBuf};
-use std::io::{BufReader, BufRead, Cursor};
+use std::io::{BufRead, BufReader, Cursor};
 use std::collections::HashMap;
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 use libc::getpid;
 
 use serde_json;
 use plist::serde::deserialize;
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 use osascript;
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 use unix_daemonize::{daemonize_redirect, ChdirMode};
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 use mac_process_info;
 use regex::Regex;
+use failure::{Error, ResultExt};
 
 use config::Config;
-use errors::{Error, Result, ResultExt};
-use utils::fs::{TempFile, SeekRead};
+use utils::fs::{SeekRead, TempFile};
 use utils::system::{expand_vars, print_error};
 
 #[derive(Deserialize, Debug)]
 pub struct InfoPlist {
-    #[serde(rename="CFBundleName")]
+    #[serde(rename = "CFBundleName")]
     name: String,
-    #[serde(rename="CFBundleIdentifier")]
+    #[serde(rename = "CFBundleIdentifier")]
     bundle_id: String,
-    #[serde(rename="CFBundleShortVersionString")]
+    #[serde(rename = "CFBundleShortVersionString")]
     version: String,
-    #[serde(rename="CFBundleVersion")]
+    #[serde(rename = "CFBundleVersion")]
     build: String,
 }
 
@@ -41,7 +41,7 @@ pub struct XcodeProjectInfo {
     schemes: Vec<String>,
     configurations: Vec<String>,
     name: String,
-    #[serde(default="PathBuf::new")]
+    #[serde(default = "PathBuf::new")]
     path: PathBuf,
 }
 
@@ -60,20 +60,18 @@ pub fn expand_xcodevars(s: String, vars: &HashMap<String, String>) -> String {
             return "".into();
         }
         let mut iter = key.splitn(2, ':');
-        let value = vars.get(iter.next().unwrap()).map(|x| x.as_str()).unwrap_or("");
+        let value = vars.get(iter.next().unwrap())
+            .map(|x| x.as_str())
+            .unwrap_or("");
         match iter.next() {
-            Some("rfc1034identifier") => {
-                SEP_RE.replace_all(value, "-").into_owned()
-            },
-            Some("identifier") => {
-                SEP_RE.replace_all(value, "_").into_owned()
-            },
-            None | Some(_) => value.to_string()
+            Some("rfc1034identifier") => SEP_RE.replace_all(value, "-").into_owned(),
+            Some("identifier") => SEP_RE.replace_all(value, "_").into_owned(),
+            None | Some(_) => value.to_string(),
         }
     }).into_owned()
 }
 
-fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
+fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error> {
     if_chain! {
         if let Some(filename_os) = path.file_name();
         if let Some(filename) = filename_os.to_str();
@@ -102,7 +100,7 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
 }
 
 impl XcodeProjectInfo {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<XcodeProjectInfo> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<XcodeProjectInfo, Error> {
         #[derive(Deserialize)]
         struct Output {
             project: XcodeProjectInfo,
@@ -122,9 +120,11 @@ impl XcodeProjectInfo {
         self.path.parent().unwrap()
     }
 
-    pub fn get_build_vars(&self, target: &str, configuration: &str)
-        -> Result<HashMap<String, String>>
-    {
+    pub fn get_build_vars(
+        &self,
+        target: &str,
+        configuration: &str,
+    ) -> Result<HashMap<String, String>, Error> {
         let mut rv = HashMap::new();
         let p = process::Command::new("xcodebuild")
             .arg("-showBuildSettings")
@@ -173,9 +173,8 @@ impl XcodeProjectInfo {
 }
 
 impl InfoPlist {
-
     /// Loads a processed plist file.
-    pub fn discover_from_env() -> Result<Option<InfoPlist>> {
+    pub fn discover_from_env() -> Result<Option<InfoPlist>, Error> {
         // if we are loaded directly from xcode we can trust the os environment
         // and pass those variables to the processor.
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
@@ -205,7 +204,7 @@ impl InfoPlist {
     }
 
     /// Lodas an info plist from a given project info
-    pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>> {
+    pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>, Error> {
         if_chain! {
             if let Some(config) = pi.get_configuration("release")
                 .or_else(|| pi.get_configuration("debug"));
@@ -224,15 +223,14 @@ impl InfoPlist {
     }
 
     /// loads an info plist file from a path and processes it with the given vars
-    pub fn load_and_process<P: AsRef<Path>>(path: P, vars: &HashMap<String, String>)
-        -> Result<InfoPlist>
-    {
+    pub fn load_and_process<P: AsRef<Path>>(
+        path: P,
+        vars: &HashMap<String, String>,
+    ) -> Result<InfoPlist, Error> {
         // do we want to preprocess the plist file?
         let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
             let mut c = process::Command::new("cc");
-            c.arg("-xc")
-                .arg("-P")
-                .arg("-E");
+            c.arg("-xc").arg("-P").arg("-E");
             if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
                 for token in defs.split_whitespace() {
                     c.arg(format!("-D{}", token));
@@ -255,17 +253,15 @@ impl InfoPlist {
     }
 
     /// Loads an info plist file from a path and does not process it.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
-        let mut f = fs::File::open(path.as_ref()).chain_err(||
-            Error::from("Could not open Info.plist file"))?;
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist, Error> {
+        let mut f = fs::File::open(path.as_ref()).context("Could not open Info.plist file")?;
         InfoPlist::from_reader(&mut f)
     }
 
     /// Loads an info plist file from a reader.
-    pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist> {
+    pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist, Error> {
         let mut rdr = BufReader::new(rdr);
-        Ok(deserialize(&mut rdr).chain_err(||
-            Error::from("Could not parse Info.plist file"))?)
+        Ok(deserialize(&mut rdr).context("Could not parse Info.plist file")?)
     }
 
     pub fn get_release_name(&self) -> String {
@@ -314,8 +310,8 @@ impl<'a> MayDetach<'a> {
     /// If we are launched from xcode this detaches us from the xcode console
     /// and continues execution in the background.  From this moment on output
     /// is captured and the user is notified with notifications.
-    #[cfg(target_os="macos")]
-    pub fn may_detach(&mut self) -> Result<bool> {
+    #[cfg(target_os = "macos")]
+    pub fn may_detach(&mut self) -> Result<bool, Error> {
         if !launched_from_xcode() {
             return Ok(false);
         }
@@ -323,25 +319,28 @@ impl<'a> MayDetach<'a> {
         println!("Continuing in background.");
         show_notification("Sentry", &format!("{} starting", self.task_name))?;
         let output_file = TempFile::new()?;
-        daemonize_redirect(Some(output_file.path()),
-                           Some(output_file.path()),
-                           ChdirMode::NoChdir).unwrap();
+        daemonize_redirect(
+            Some(output_file.path()),
+            Some(output_file.path()),
+            ChdirMode::NoChdir,
+        ).unwrap();
         self.output_file = Some(output_file);
         Ok(true)
     }
 
     /// For non mac platforms this just never detaches.
-    #[cfg(not(target_os="macos"))]
-    pub fn may_detach(&mut self) -> Result<bool> {
+    #[cfg(not(target_os = "macos"))]
+    pub fn may_detach(&mut self) -> Result<bool, Error> {
         Ok(false)
     }
 
     /// Wraps the execution of a code block.  Does not detach until someone
     /// calls into `may_detach`.
-    #[cfg(target_os="macos")]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(
-        task_name: &'a str, f: F) -> Result<T>
-    {
+    #[cfg(target_os = "macos")]
+    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T, Error>>(
+        task_name: &'a str,
+        f: F,
+    ) -> Result<T, Error> {
         use std::time::Duration;
         use std::thread;
         use open;
@@ -366,24 +365,27 @@ impl<'a> MayDetach<'a> {
     }
 
     /// Dummy wrap call that never detaches for non mac platforms.
-    #[cfg(not(target_os="macos"))]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(
-        task_name: &'a str, f: F) -> Result<T> {
+    #[cfg(not(target_os = "macos"))]
+    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T, Error>>(
+        task_name: &'a str,
+        f: F,
+    ) -> Result<T, Error> {
         f(&mut MayDetach::new(task_name))
     }
 
-    #[cfg(target_os="macos")]
-    fn show_critical_info(&self) -> Result<bool> {
+    #[cfg(target_os = "macos")]
+    fn show_critical_info(&self) -> Result<bool, Error> {
         show_critical_info(
             &format!("{} failed", self.task_name),
             "The Sentry build step failed while running in the background. \
              You can ignore this error or view details to attempt to resolve \
              it. Ignoring it might cause your crashes not to be handled \
-             properly.")
+             properly.",
+        )
     }
 
-    #[cfg(target_os="macos")]
-    fn show_done(&self) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    fn show_done(&self) -> Result<(), Error> {
         if self.is_detached() {
             show_notification("Sentry", &format!("{} finished", self.task_name))?;
         }
@@ -392,7 +394,7 @@ impl<'a> MayDetach<'a> {
 }
 
 /// Returns true if we were invoked from xcode
-#[cfg(target_os="macos")]
+#[cfg(target_os = "macos")]
 pub fn launched_from_xcode() -> bool {
     if env::var("XCODE_VERSION_ACTUAL").is_err() {
         return false;
@@ -417,8 +419,8 @@ pub fn launched_from_xcode() -> bool {
 /// Shows a dialog in xcode and blocks.  The dialog will have a title and a
 /// message as well as the buttons "Show details" and "Ignore".  Returns
 /// `true` if the `show details` button has been pressed.
-#[cfg(target_os="macos")]
-pub fn show_critical_info(title: &str, msg: &str) -> Result<bool> {
+#[cfg(target_os = "macos")]
+pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
             var App = Application('XCode');
@@ -439,21 +441,23 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool> {
 
     #[derive(Debug, Deserialize)]
     struct AlertResult {
-        #[serde(rename="buttonReturned")]
+        #[serde(rename = "buttonReturned")]
         button: String,
     }
 
-    let rv: AlertResult = SCRIPT.execute_with_params(AlertParams {
-        title: title,
-        message: msg,
-    }).chain_err(|| "Failed to display Xcode dialog")?;
+    let rv: AlertResult = SCRIPT
+        .execute_with_params(AlertParams {
+            title: title,
+            message: msg,
+        })
+        .context("Failed to display Xcode dialog")?;
 
     Ok(&rv.button != "Ignore")
 }
 
 /// Shows a notification in xcode
-#[cfg(target_os="macos")]
-pub fn show_notification(title: &str, msg: &str) -> Result<()> {
+#[cfg(target_os = "macos")]
+pub fn show_notification(title: &str, msg: &str) -> Result<(), Error> {
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
             var App = Application.currentApplication();
@@ -475,10 +479,12 @@ pub fn show_notification(title: &str, msg: &str) -> Result<()> {
         message: &'a str,
     }
 
-    Ok(SCRIPT.execute_with_params(NotificationParams {
-        title: title,
-        message: msg,
-    }).chain_err(|| "Failed to display Xcode notification")?)
+    Ok(SCRIPT
+        .execute_with_params(NotificationParams {
+            title: title,
+            message: msg,
+        })
+        .context("Failed to display Xcode notification")?)
 }
 
 #[test]
@@ -486,10 +492,16 @@ fn test_expansion() {
     let mut vars = HashMap::new();
     vars.insert("FOO_BAR".to_string(), "foo bar baz / blah".to_string());
 
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B".to_string(), &vars),
-               "Afoo-bar-baz-blahB".to_string());
-    assert_eq!(expand_xcodevars("A$(FOO_BAR:identifier)B".to_string(), &vars),
-               "Afoo_bar_baz_blahB".to_string());
-    assert_eq!(expand_xcodevars("A${FOO_BAR:identifier}B".to_string(), &vars),
-               "Afoo_bar_baz_blahB".to_string());
+    assert_eq!(
+        expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B".to_string(), &vars),
+        "Afoo-bar-baz-blahB".to_string()
+    );
+    assert_eq!(
+        expand_xcodevars("A$(FOO_BAR:identifier)B".to_string(), &vars),
+        "Afoo_bar_baz_blahB".to_string()
+    );
+    assert_eq!(
+        expand_xcodevars("A${FOO_BAR:identifier}B".to_string(), &vars),
+        "Afoo_bar_baz_blahB".to_string()
+    );
 }

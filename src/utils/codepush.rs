@@ -7,8 +7,8 @@ use std::str;
 use console::strip_ansi_codes;
 use glob::{glob_with, MatchOptions};
 use serde_json;
+use failure::{err_msg, Error};
 
-use errors::{Error, Result, ResultExt};
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
 
@@ -29,19 +29,21 @@ pub struct CodePushDeployment {
 fn get_codepush_error(output: process::Output) -> Error {
     if let Ok(message) = str::from_utf8(&output.stderr) {
         let stripped = strip_ansi_codes(message);
-        Error::from(if stripped.starts_with("[Error]  ") {
-            &stripped[9..]
-        } else if stripped.starts_with("[Error] ") {
-            &stripped[8..]
-        } else {
-            &stripped
-        })
+        err_msg(
+            if stripped.starts_with("[Error]  ") {
+                &stripped[9..]
+            } else if stripped.starts_with("[Error] ") {
+                &stripped[8..]
+            } else {
+                &stripped
+            }.to_string(),
+        )
     } else {
-        Error::from("Unknown Error")
+        err_msg("Unknown Error")
     }
 }
 
-pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
+pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>, Error> {
     let codepush_bin = if Path::new(CODEPUSH_NPM_PATH).exists() {
         CODEPUSH_NPM_PATH
     } else {
@@ -59,20 +61,20 @@ pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
             if e.kind() == io::ErrorKind::NotFound {
                 "Codepush not found. Is it installed and configured on the PATH?".into()
             } else {
-                Error::from(e).chain_err(|| "Failed to run codepush")
+                Error::from(e).context("Failed to run codepush")
             }
         })?;
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout)?)
     } else {
-        Err(get_codepush_error(output)).chain_err(|| "Failed to get codepush deployments")
+        Err(get_codepush_error(output)
+            .context("Failed to get codepush deployments")
+            .into())
     }
 }
 
-pub fn get_codepush_package(app: &str, deployment: &str)
-    -> Result<CodePushPackage>
-{
+pub fn get_codepush_package(app: &str, deployment: &str) -> Result<CodePushPackage, Error> {
     let deployments = get_codepush_deployments(app)?;
     for dep in deployments {
         if_chain! {
@@ -84,21 +86,21 @@ pub fn get_codepush_package(app: &str, deployment: &str)
         }
     }
 
-    Err(format!("Could not find deployment {} for {}", deployment, app).into())
+    bail!("Could not find deployment {} for {}", deployment, app)
 }
 
-pub fn get_react_native_codepush_release(package: &CodePushPackage, platform: &str,
-                                         bundle_id_override: Option<&str>)
-    -> Result<String>
-{
+pub fn get_react_native_codepush_release(
+    package: &CodePushPackage,
+    platform: &str,
+    bundle_id_override: Option<&str>,
+) -> Result<String, Error> {
     if let Some(bundle_id) = bundle_id_override {
         return Ok(format!("{}-codepush:{}", bundle_id, package.label));
     }
 
     if platform == "ios" {
-        if !cfg!(target_os="macos") {
-            return Err("Codepush releases for iOS require OS X if no \
-                        bundle ID is specified".into());
+        if !cfg!(target_os = "macos") {
+            bail!("Codepush releases for iOS require OS X if no bundle ID is specified");
         }
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
@@ -112,21 +114,21 @@ pub fn get_react_native_codepush_release(package: &CodePushPackage, platform: &s
                 }
             }
         }
-        return Err("Could not find plist".into());
+        bail!("Could not find plist");
     } else if platform == "android" {
         if_chain! {
             if let Ok(here) = env::current_dir();
             if let Ok(android_folder) = here.join("android").metadata();
             if android_folder.is_dir();
             then {
-                return if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
-                    Ok(format!("{}-codepush:{}", release_name, package.label))
+                if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
+                    return Ok(format!("{}-codepush:{}", release_name, package.label));
                 } else {
-                    Err("Could not parse app id from build.gradle".into())
+                    bail!("Could not parse app id from build.gradle");
                 }
             }
         }
-        return Err("Could not find AndroidManifest.xml".into());
+        bail!("Could not find AndroidManifest.xml");
     }
-    return Err(format!("Unsupported platform '{}'", platform).into());
+    bail!("Unsupported platform '{}'", platform);
 }
