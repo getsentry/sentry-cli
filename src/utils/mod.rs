@@ -18,3 +18,6 @@ pub mod ui;
 pub mod update;
 pub mod vcs;
 pub mod xcode;
+
+#[cfg(feature = "with_crash_reporting")]
+pub mod crashreporting;

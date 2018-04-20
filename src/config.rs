@@ -10,92 +10,19 @@ use dotenv;
 use log;
 use java_properties;
 use clap::ArgMatches;
-use url::Url;
 use ini::Ini;
 use parking_lot::Mutex;
 use failure::{err_msg, Error, ResultExt};
+use sentry::Dsn;
 
-use constants::{DEFAULT_URL, PROTOCOL_VERSION, VERSION};
-use utils::logging::Logger;
-
-static LOGGER: Logger = Logger;
+use constants::DEFAULT_URL;
+use utils::logging::set_max_level;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
     Key(String),
     Token(String),
-}
-
-/// Represents a DSN
-#[derive(Debug, Clone)]
-pub struct Dsn {
-    pub host: String,
-    pub protocol: String,
-    pub port: u16,
-    pub client_id: String,
-    pub secret: Option<String>,
-    pub project_id: u64,
-}
-
-impl Dsn {
-    /// Parses a Dsn from a given string.
-    fn from_str(dsn: &str) -> Result<Dsn, Error> {
-        let url = Url::parse(dsn)?;
-        let project_id = if let Some(component_iter) = url.path_segments() {
-            let components: Vec<_> = component_iter.collect();
-            if components.len() != 1 {
-                bail!("invalid dsn: invalid project ID");
-            }
-            components[0]
-                .parse()
-                .map_err(|_| err_msg("invalid dsn: invalid project id"))?
-        } else {
-            bail!("invalid dsn: missing project ID");
-        };
-        if !(url.scheme() == "http" || url.scheme() == "https") {
-            bail!("invalid dsn: unknown protocol '{}'", url.scheme());
-        }
-
-        if url.username() == "" {
-            bail!("invalid dsn: missing client id");
-        }
-
-        Ok(Dsn {
-            protocol: url.scheme().into(),
-            host: url.host_str()
-                .ok_or_else(|| err_msg("invalid dsn: missing host"))?
-                .into(),
-            port: url.port_or_known_default().unwrap(),
-            client_id: url.username().into(),
-            secret: url.password().map(|x| x.to_string()),
-            project_id: project_id,
-        })
-    }
-
-    /// Returns the URL where events should be sent.
-    pub fn get_submit_url(&self) -> String {
-        format!(
-            "{}://{}:{}/api/{}/store/",
-            self.protocol, self.host, self.port, self.project_id
-        )
-    }
-
-    /// Returns the given auth header (ts is the timestamp of the event)
-    pub fn get_auth_header(&self, ts: f64) -> String {
-        let mut rv = format!(
-            "Sentry \
-             sentry_timestamp={}, \
-             sentry_client=sentry-cli/{}, \
-             sentry_version={}, \
-             sentry_key={}",
-            ts, VERSION, PROTOCOL_VERSION, self.client_id
-        );
-        if let Some(ref secret) = self.secret {
-            rv = format!("{}, sentry_secret={}", rv, secret);
-        }
-        rv
-    }
 }
 
 pub fn prepare_environment() {
@@ -167,8 +94,12 @@ impl Config {
         if !self.process_bound {
             return;
         }
-        log::set_logger(&LOGGER).ok();
-        log::set_max_level(self.get_log_level());
+        set_max_level(self.get_log_level());
+        #[cfg(feature = "with_crash_reporting")]
+        {
+            use utils::crashreporting;
+            crashreporting::bind_configured_client();
+        }
         if !env::var("http_proxy").is_ok() {
             if let Some(proxy) = self.get_proxy_url() {
                 env::set_var("http_proxy", proxy);
@@ -393,9 +324,9 @@ impl Config {
     /// Return the DSN
     pub fn get_dsn(&self) -> Result<Dsn, Error> {
         if let Some(ref val) = env::var("SENTRY_DSN").ok() {
-            Dsn::from_str(val)
+            Ok(val.parse()?)
         } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
-            Dsn::from_str(val)
+            Ok(val.parse()?)
         } else {
             bail!("No DSN provided");
         }
@@ -433,6 +364,25 @@ impl Config {
             } else {
                 false
             }
+        }
+    }
+
+    /// Does this installation want errors to sentry?
+    pub fn internal_sentry_dsn(&self) -> Option<Dsn> {
+        if !self.ini
+            .get_from(Some("crash_reporting"), "enabled")
+            .map(|x| x == "1" || x == "true")
+            .unwrap_or(false)
+        {
+            return None;
+        }
+        if let Some(val) = self.ini.get_from(Some("crash_reporting"), "sentry_dsn") {
+            val.parse().ok()
+        } else if cfg!(feature = "with_crash_reporting") {
+            use constants::INTERNAL_SENTRY_DSN;
+            Some(INTERNAL_SENTRY_DSN.clone())
+        } else {
+            None
         }
     }
 }

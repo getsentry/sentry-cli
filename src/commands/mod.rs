@@ -216,8 +216,35 @@ fn run() -> Result<(), Error> {
     }
 }
 
+fn setup() {
+    use log;
+    use utils::system::{init_backtrace, load_dotenv};
+    use utils::logging::Logger;
+
+    init_backtrace();
+    load_dotenv();
+
+    // we use debug internally but our log handler then rejects to a lower limit.
+    // This is okay for our uses but not as efficient.
+    log::set_max_level(log::LevelFilter::Debug);
+
+    // if we work with crash reporting we initialize the sentry system.  This
+    // also configures the logger.
+    #[cfg(feature = "with_crash_reporting")]
+    {
+        use utils::crashreporting::setup;
+        setup(Box::new(Logger));
+    }
+    #[cfg(not(feature = "with_crash_reporting"))]
+    {
+        static LOGGER: Logger = Logger;
+        log::set_logger(&Logger);
+    }
+}
+
 /// Executes the command line application and exists the process.
 pub fn main() {
+    setup();
     match run() {
         Ok(()) => process::exit(0),
         Err(err) => {
@@ -225,6 +252,11 @@ pub fn main() {
                 process::exit(code);
             } else {
                 print_error(&err);
+                #[cfg(feature = "with_crash_reporting")]
+                {
+                    use utils::crashreporting::try_report_to_sentry;
+                    try_report_to_sentry(&err);
+                }
                 process::exit(1);
             }
         }

@@ -28,9 +28,10 @@ use symbolic_debuginfo::DebugId;
 use sha1::Digest;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
+use sentry::Dsn;
 
-use config::{Auth, Config, Dsn};
-use constants::{ARCH, EXT, PLATFORM, VERSION};
+use config::{Auth, Config};
+use constants::{ARCH, EXT, PLATFORM, USER_AGENT, VERSION};
 use event::Event;
 use utils::android::AndroidManifest;
 use utils::sourcemaps::get_sourcemap_reference_from_headers;
@@ -125,9 +126,11 @@ impl fmt::Display for SentryError {
                     401 => "unauthorized",
                     404 => "not found",
                     500 => "internal server error",
-                    _ => "unknown error"
+                    _ => "unknown error",
                 }
-            } else { detail },
+            } else {
+                detail
+            },
             self.status
         )?;
         if let Some(ref extra) = self.extra {
@@ -300,7 +303,9 @@ impl Api {
             (
                 Cow::Owned(match self.config.get_api_endpoint(url) {
                     Ok(rv) => rv,
-                    Err(err) => return Err(Error::from(err).context(ApiErrorKind::BadApiUrl).into()),
+                    Err(err) => {
+                        return Err(Error::from(err).context(ApiErrorKind::BadApiUrl).into())
+                    }
                 }),
                 self.config.get_auth(),
             )
@@ -373,7 +378,7 @@ impl Api {
                     if err.kind() != ApiErrorKind::RequestFailed {
                         return Err(err);
                     }
-                },
+                }
             }
             thread::sleep(Duration::milliseconds(500).to_std().unwrap());
             if Utc::now() - duration > started {
@@ -962,8 +967,8 @@ impl Api {
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
     pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
-        let event: EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
-            .with_header("X-Sentry-Auth", &dsn.get_auth_header(event.timestamp))?
+        let event: EventInfo = self.request(Method::Post, &dsn.store_api_url().path())?
+            .with_header("X-Sentry-Auth", &dsn.to_auth(Some(USER_AGENT)).to_string())?
             .with_json_body(&event)?
             .send()?
             .convert()?;

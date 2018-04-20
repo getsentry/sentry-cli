@@ -2,9 +2,7 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binrary that links against this library.
 
-#![recursion_limit = "1024"]
-
-use std::env;
+#![recursion_limit = "128"]
 
 extern crate anylog;
 extern crate app_dirs;
@@ -55,6 +53,8 @@ extern crate prettytable;
 extern crate regex;
 extern crate runas;
 extern crate scoped_threadpool;
+#[macro_use]
+extern crate sentry;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
@@ -86,12 +86,5 @@ pub mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {
-    if env::var("SENTRY_LOAD_DOTENV")
-        .map(|x| x.as_str() == "1")
-        .unwrap_or(true)
-    {
-        dotenv::dotenv().ok();
-    }
-    utils::system::init_backtrace();
     utils::system::run_or_interrupt(commands::main);
 }

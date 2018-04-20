@@ -48,6 +48,7 @@ which = "1.0.5"
 zip = "0.3.1"
 failure = "0.1.1"
 failure_derive = "0.1.1"
+sentry = "0.3.1"
 
 [dependencies.chrono]
 features = ["serde"]
@@ -71,7 +72,9 @@ features = ["v4", "serde"]
 version = "0.6.2"
 
 [features]
+default = ["with_crash_reporting"]
 managed = []
+with_crash_reporting = []
 
 [target]
 

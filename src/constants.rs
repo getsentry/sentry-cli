@@ -24,4 +24,11 @@ pub const EXT: &'static str = ".exe";
 #[cfg(not(windows))]
 pub const EXT: &'static str = "";
 
+/// The DSN to emit sentry events to.
+#[cfg(feature = "with_crash_reporting")]
+lazy_static! {
+    pub static ref INTERNAL_SENTRY_DSN: ::sentry::Dsn =
+        "https://4b5ba00d320841efbb18a330cf539f4a@sentry.io/1192882".parse().unwrap();
+}
+
 include!(concat!(env!("OUT_DIR"), "/constants.gen.rs"));

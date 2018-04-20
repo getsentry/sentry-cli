@@ -8,6 +8,7 @@ use config::Config;
 
 #[cfg(not(windows))]
 use clap;
+use dotenv;
 use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
 use regex::{Captures, Regex};
@@ -242,3 +243,13 @@ pub fn get_family() -> Option<String> {
 #[derive(Fail, Debug)]
 #[fail(display = "sentry-cli exit with {}", _0)]
 pub struct QuietExit(pub i32);
+
+/// Loads a .env file
+pub fn load_dotenv() {
+    if env::var("SENTRY_LOAD_DOTENV")
+        .map(|x| x.as_str() == "1")
+        .unwrap_or(true)
+    {
+        dotenv::dotenv().ok();
+    }
+}
