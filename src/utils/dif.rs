@@ -6,9 +6,9 @@ use std::collections::BTreeMap;
 
 use serde::ser::{Serialize, SerializeStruct, Serializer};
 use failure::{Error, SyncFailure};
-use symbolic_common::{ByteView, ObjectKind};
-use symbolic_debuginfo::{DebugId, FatObject, Object, SymbolTable};
-use symbolic_proguard::ProguardMappingView;
+use symbolic::common::{byteview::ByteView, types::ObjectKind};
+use symbolic::debuginfo::{DebugId, FatObject, Object, SymbolTable};
+use symbolic::proguard::ProguardMappingView;
 
 #[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
 pub enum DifType {
@@ -70,7 +70,7 @@ impl DifFile {
 
     fn open_object<P: AsRef<Path>>(path: P, kind: ObjectKind) -> Result<DifFile, Error> {
         let data = ByteView::from_path(path).map_err(SyncFailure::new)?;
-        let fat = FatObject::parse(data).map_err(SyncFailure::new)?;
+        let fat = FatObject::parse(data)?;
 
         if fat.kind() != kind {
             bail!("Unexpected file format");
@@ -128,7 +128,11 @@ impl DifFile {
         match self {
             &DifFile::Object(ref fat) => fat.objects()
                 .filter_map(|result| result.ok())
-                .filter_map(|object| object.id().map(|id| (id, Some(object.arch().name()))))
+                .filter_map(|object| {
+                    object
+                        .id()
+                        .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
+                })
                 .collect(),
             &DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
@@ -212,13 +216,7 @@ impl<'a> DebuggingInformation for FatObject<'a> {
         }
 
         for object in self.objects() {
-            if object
-                .map_err(SyncFailure::new)?
-                .symbols()
-                .map_err(SyncFailure::new)?
-                .requires_symbolmap()
-                .map_err(SyncFailure::new)?
-            {
+            if object?.symbols()?.map_or(false, |s| s.requires_symbolmap()) {
                 return Ok(true);
             }
         }
@@ -230,9 +228,6 @@ impl<'a> DebuggingInformation for FatObject<'a> {
 impl<'a> DebuggingInformation for Object<'a> {
     fn has_hidden_symbols(&self) -> Result<bool, Error> {
         Ok(self.kind() == ObjectKind::MachO
-            && self.symbols()
-                .map_err(SyncFailure::new)?
-                .requires_symbolmap()
-                .map_err(SyncFailure::new)?)
+            && self.symbols()?.map_or(false, |s| s.requires_symbolmap()))
     }
 }

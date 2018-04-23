@@ -61,9 +61,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate sha1;
 extern crate sourcemap;
-extern crate symbolic_common;
-extern crate symbolic_debuginfo;
-extern crate symbolic_proguard;
+extern crate symbolic;
 #[cfg(not(windows))]
 extern crate uname;
 #[cfg(target_os = "macos")]

@@ -6,8 +6,8 @@ use std::str::{self, FromStr};
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
-use symbolic_common::{ObjectClass, ObjectKind};
-use symbolic_debuginfo::DebugId;
+use symbolic::common::types::{ObjectClass, ObjectKind};
+use symbolic::debuginfo::DebugId;
 use failure::{err_msg, Error};
 
 use api::Api;

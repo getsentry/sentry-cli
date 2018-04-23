@@ -20,8 +20,8 @@ use std::time::Duration;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
-use symbolic_common::{ByteView, ObjectClass, ObjectKind};
-use symbolic_debuginfo::{DebugId, FatObject, Object};
+use symbolic::common::{byteview::ByteView, types::{ObjectClass, ObjectKind}};
+use symbolic::debuginfo::{DebugId, FatObject, Object};
 use scoped_threadpool::Pool;
 use parking_lot::RwLock;
 use walkdir::WalkDir;
@@ -119,7 +119,7 @@ impl<'data> DifMatch<'data> {
     {
         let temp_file = TempFile::take(path)?;
         let buffer = ByteView::from_path(temp_file.path()).map_err(SyncFailure::new)?;
-        let fat = FatObject::parse(buffer).map_err(SyncFailure::new)?;
+        let fat = FatObject::parse(buffer)?;
         if fat.object_count() != 1 {
             bail!("Multi-arch binaries not supported here");
         }
@@ -533,7 +533,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // Try to parse a potential object file. If this is not possible,
             // then we're not dealing with an object file, thus silently
             // skipping it.
-            let kind = FatObject::peek(&buffer).ok();
+            let kind = FatObject::peek(&buffer).unwrap_or(None);
             if !kind.map_or(false, |k| options.valid_kind(k)) {
                 return Ok(());
             }
@@ -552,7 +552,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // create a shared instance here and clone it into `DifMatche`s
             // below.
             for (index, object) in fat.objects().enumerate() {
-                let object = object.map_err(SyncFailure::new)?;
+                let object = object?;
 
                 // If an object object class was specified, this will skip all
                 // other objects. Usually, the user will search for

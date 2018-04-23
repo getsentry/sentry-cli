@@ -24,7 +24,7 @@ use regex::{Captures, Regex};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use symbolic_debuginfo::DebugId;
+use symbolic::debuginfo::DebugId;
 use sha1::Digest;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 use failure::{Backtrace, Context, Error, Fail, ResultExt};

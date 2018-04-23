@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use clap;
-use symbolic_debuginfo::DebugId;
+use symbolic::debuginfo::DebugId;
 use uuid::Uuid;
 use failure::Error;
 
