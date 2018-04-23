@@ -4,7 +4,9 @@ dist: trusty
 services:
   - docker
 
-if: tag IS blank
+branches:
+  only:
+  - master
 
 matrix:
   include:

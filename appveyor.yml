@@ -4,6 +4,10 @@ cache:
   - 'target'
   - '%USERPROFILE%\.cargo'
 
+branches:
+  only:
+    - master
+
 environment:
   fast_finish: true
   DIST_DIR: '.'
