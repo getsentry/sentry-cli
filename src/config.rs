@@ -98,7 +98,7 @@ impl Config {
         #[cfg(feature = "with_crash_reporting")]
         {
             use utils::crashreporting;
-            crashreporting::bind_configured_client();
+            crashreporting::bind_configured_client(Some(self));
         }
         if !env::var("http_proxy").is_ok() {
             if let Some(proxy) = self.get_proxy_url() {
