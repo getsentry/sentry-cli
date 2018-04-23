@@ -6,9 +6,9 @@ use std::borrow::Cow;
 
 use config::Config;
 
-#[cfg(not(windows))]
 use clap;
 use dotenv;
+#[cfg(not(windows))]
 use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
 use regex::{Captures, Regex};
