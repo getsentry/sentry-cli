@@ -38,7 +38,7 @@ serde = "1.0.42"
 serde_derive = "1.0.42"
 serde_json = "1.0.16"
 sourcemap = "2.2.0"
-symbolic = { git = "https://github.com/getsentry/symbolic", features = ["with_serde"] }
+symbolic = { git = "https://github.com/getsentry/symbolic", features = ["debuginfo", "proguard", "with_serde"] }
 url = "1.7.0"
 username = "0.2.0"
 walkdir = "2.1.4"
