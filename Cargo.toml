@@ -46,7 +46,7 @@ which = "2.0.0"
 zip = "0.3.2"
 failure = "0.1.1"
 failure_derive = "0.1.1"
-sentry = "0.4.0"
+sentry = { version = "0.4.0", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info"] }
 
 [dependencies.chrono]
 features = ["serde"]

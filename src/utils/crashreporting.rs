@@ -37,5 +37,9 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
 
 pub fn try_report_to_sentry(err: &Error) {
     failure::capture_error(err);
+    flush_events();
+}
+
+pub fn flush_events() {
     sentry::drain_events(Some(Duration::from_secs(2)));
 }

@@ -172,6 +172,11 @@ pub fn init_backtrace() {
             }
             None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
         }
+
+        #[cfg(feature = "with_client_implementation")] {
+            use utils::crashreporting::flush_events;
+            flush_events();
+        }
     }));
 }
 
