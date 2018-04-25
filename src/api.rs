@@ -3,13 +3,11 @@
 //! to the GitHub API to figure out if there are new releases of the
 //! sentry-cli tool.
 
-use std::io;
 use std::fs;
 use std::str;
 use std::cmp;
 use std::io::{Read, Write};
 use std::fmt;
-use std::error;
 use std::thread;
 use std::sync::Arc;
 use std::cell::{RefCell, RefMut};
@@ -26,12 +24,14 @@ use regex::{Captures, Regex};
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use symbolic_debuginfo::DebugId;
+use symbolic::debuginfo::DebugId;
 use sha1::Digest;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+use failure::{Backtrace, Context, Error, Fail, ResultExt};
+use sentry::Dsn;
 
-use config::{Auth, Config, Dsn};
-use constants::{ARCH, EXT, PLATFORM, VERSION};
+use config::{Auth, Config};
+use constants::{ARCH, EXT, PLATFORM, USER_AGENT, VERSION};
 use event::Event;
 use utils::android::AndroidManifest;
 use utils::sourcemaps::get_sourcemap_reference_from_headers;
@@ -107,22 +107,119 @@ pub enum FileContents<'a> {
     FromBytes(&'a [u8]),
 }
 
+#[derive(Debug, Fail)]
+pub struct SentryError {
+    status: u32,
+    detail: Option<String>,
+    extra: Option<serde_json::Value>,
+}
+
+impl fmt::Display for SentryError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let detail = self.detail.as_ref().map(|x| x.as_str()).unwrap_or("");
+        write!(
+            f,
+            "sentry reported an error: {} (http status: {})",
+            if detail.is_empty() {
+                match self.status {
+                    400 => "bad request",
+                    401 => "unauthorized",
+                    404 => "not found",
+                    500 => "internal server error",
+                    _ => "unknown error",
+                }
+            } else {
+                detail
+            },
+            self.status
+        )?;
+        if let Some(ref extra) = self.extra {
+            write!(f, "\n  {:?}", extra)?;
+        }
+        Ok(())
+    }
+}
+
 /// Represents API errors.
-#[derive(Debug)]
-pub enum Error {
-    Http(u32, String),
-    Curl(curl::Error),
-    Form(curl::FormError),
-    Io(io::Error),
-    Json(serde_json::Error),
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+pub enum ApiErrorKind {
+    #[fail(display = "could not serialize value as JSON")]
+    CannotSerializeAsJson,
+    #[fail(display = "could not parse JSON response")]
+    BadJson,
+    #[fail(display = "not a JSON response")]
     NotJson,
-    ResourceNotFound(&'static str),
-    BadApiUrl(String),
+    #[fail(display = "no DSN")]
     NoDsn,
+    #[fail(display = "request failed because API URL was incorrectly formatted")]
+    BadApiUrl,
+    #[fail(display = "organization not found")]
+    OrganizationNotFound,
+    #[fail(display = "project not found")]
+    ProjectNotFound,
+    #[fail(display = "release not found")]
+    ReleaseNotFound,
+    #[fail(display = "chunk upload endpoint not supported by sentry server")]
+    ChunkUploadNotSupported,
+    #[fail(display = "API request failed")]
+    RequestFailed,
+}
+
+#[derive(Debug)]
+pub struct ApiError {
+    inner: Context<ApiErrorKind>,
+}
+
+impl Fail for ApiError {
+    fn cause(&self) -> Option<&Fail> {
+        self.inner.cause()
+    }
+
+    fn backtrace(&self) -> Option<&Backtrace> {
+        self.inner.backtrace()
+    }
+}
+
+impl fmt::Display for ApiError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        fmt::Display::fmt(&self.inner, f)
+    }
+}
+
+impl ApiError {
+    pub fn kind(&self) -> ApiErrorKind {
+        *self.inner.get_context()
+    }
+}
+
+impl From<ApiErrorKind> for ApiError {
+    fn from(kind: ApiErrorKind) -> ApiError {
+        ApiError {
+            inner: Context::new(kind),
+        }
+    }
+}
+
+impl From<Context<ApiErrorKind>> for ApiError {
+    fn from(inner: Context<ApiErrorKind>) -> ApiError {
+        ApiError { inner }
+    }
+}
+
+impl From<curl::Error> for ApiError {
+    fn from(err: curl::Error) -> ApiError {
+        Error::from(err).context(ApiErrorKind::RequestFailed).into()
+    }
+}
+
+impl From<curl::FormError> for ApiError {
+    fn from(err: curl::FormError) -> ApiError {
+        Error::from(err).context(ApiErrorKind::RequestFailed).into()
+    }
 }
 
 /// Shortcut alias for results of this module.
-pub type ApiResult<T> = Result<T, Error>;
+pub type ApiResult<T> = Result<T, ApiError>;
 
 /// Represents an HTTP method that is used by the API.
 #[derive(PartialEq, Debug)]
@@ -206,7 +303,9 @@ impl Api {
             (
                 Cow::Owned(match self.config.get_api_endpoint(url) {
                     Ok(rv) => rv,
-                    Err(err) => return Err(Error::BadApiUrl(err.to_string())),
+                    Err(err) => {
+                        return Err(Error::from(err).context(ApiErrorKind::BadApiUrl).into())
+                    }
                 }),
                 self.config.get_auth(),
             )
@@ -275,10 +374,11 @@ impl Api {
         loop {
             match self.request(Method::Get, &url)?.send() {
                 Ok(_) => return Ok(true),
-                Err(err) => match err {
-                    Error::Http(..) | Error::Curl(..) => {}
-                    err => return Err(err),
-                },
+                Err(err) => {
+                    if err.kind() != ApiErrorKind::RequestFailed {
+                        return Err(err);
+                    }
+                }
             }
             thread::sleep(Duration::milliseconds(500).to_std().unwrap());
             if Utc::now() - duration > started {
@@ -316,7 +416,7 @@ impl Api {
                 PathArg(release)
             )
         };
-        self.get(&path)?.convert_rnf("release")
+        self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
@@ -412,7 +512,7 @@ impl Api {
         if resp.status() == 409 {
             Ok(None)
         } else {
-            resp.convert_rnf("release")
+            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
         }
     }
 
@@ -427,10 +527,11 @@ impl Api {
                 PathArg(&release.projects[0])
             );
             self.post(&path, release)?
-                .convert_rnf("organization or project")
+                .convert_rnf(ApiErrorKind::ProjectNotFound)
         } else {
             let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.post(&path, release)?.convert_rnf("organization")
+            self.post(&path, release)?
+                .convert_rnf(ApiErrorKind::OrganizationNotFound)
         }
     }
 
@@ -450,10 +551,12 @@ impl Api {
                     PathArg(&projects[0]),
                     PathArg(version)
                 );
-                self.put(&path, release)?.convert_rnf("release")
+                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
             } else {
-                let path = format!("/organizations/{}/releases/{}/", PathArg(org), PathArg(version));
-                self.put(&path, release)?.convert_rnf("release")
+                let path = format!("/organizations/{}/releases/{}/",
+                                   PathArg(org),
+                                   PathArg(version));
+                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
             }
         }
     }
@@ -474,7 +577,8 @@ impl Api {
             PathArg(org),
             PathArg(version)
         );
-        self.put(&path, &update)?.convert_rnf("release")
+        self.put(&path, &update)?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
     /// Deletes an already existing release.  Returns `true` if it was deleted
@@ -542,10 +646,11 @@ impl Api {
     pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
         if let Some(project) = project {
             let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
-            self.get(&path)?.convert_rnf("organization or project")
+            self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
         } else {
             let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.get(&path)?.convert_rnf("organization")
+            self.get(&path)?
+                .convert_rnf(ApiErrorKind::OrganizationNotFound)
         }
     }
 
@@ -558,7 +663,7 @@ impl Api {
         );
 
         self.post(&path, deploy)?
-            .convert_rnf("organization or release")
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
     /// Lists all deploys for a release
@@ -568,7 +673,7 @@ impl Api {
             PathArg(org),
             PathArg(version)
         );
-        self.get(&path)?.convert_rnf("organization or release")
+        self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
     /// Updates a bunch of issues within a project that match a provided filter
@@ -675,10 +780,17 @@ impl Api {
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
         let url = format!("/organizations/{}/chunk-upload/", org);
-        match self.get(&url)?.convert_rnf("chunk upload") {
+        match self.get(&url)?
+            .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
+        {
             Ok(options) => Ok(Some(options)),
-            Err(Error::ResourceNotFound(_)) => Ok(None),
-            Err(error) => Err(error),
+            Err(error) => {
+                if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
+                    Ok(None)
+                } else {
+                    Err(error)
+                }
+            }
         }
     }
 
@@ -693,7 +805,7 @@ impl Api {
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .send()?
-            .convert()
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     /// Upload a batch of file chunks.
@@ -838,7 +950,7 @@ impl Api {
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
         self.get(&format!("/organizations/{}/projects/", PathArg(org)))?
-            .convert_rnf("organization")
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
     }
 
     /// List all repos associated with an organization
@@ -855,8 +967,8 @@ impl Api {
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
     pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
-        let event: EventInfo = self.request(Method::Post, &dsn.get_submit_url())?
-            .with_header("X-Sentry-Auth", &dsn.get_auth_header(event.timestamp))?
+        let event: EventInfo = self.request(Method::Post, &dsn.store_api_url().path())?
+            .with_header("X-Sentry-Auth", &dsn.to_auth(Some(USER_AGENT)).to_string())?
             .with_json_body(&event)?
             .send()?
             .convert()?;
@@ -1063,7 +1175,7 @@ impl<'a> ApiRequest<'a> {
     /// sets the JSON request body for the request.
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
         let mut body_bytes: Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &body)?;
+        serde_json::to_writer(&mut body_bytes, &body).context(ApiErrorKind::CannotSerializeAsJson)?;
         info!("sending JSON data ({} bytes)", body_bytes.len());
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
@@ -1139,29 +1251,41 @@ impl ApiResponse {
             return Ok(self);
         }
         if let Ok(err) = self.deserialize::<ErrorInfo>() {
-            if let Some(detail) = err.detail.or(err.error) {
-                fail!(Error::Http(self.status(), detail));
-            }
-        }
-        if let Ok(value) = self.deserialize::<serde_json::Value>() {
-            fail!(Error::Http(
-                self.status(),
-                format!("protocol error:\n\n{:#}", value)
-            ));
+            Err(SentryError {
+                status: self.status(),
+                detail: Some(match err {
+                    ErrorInfo::Detail(val) => val,
+                    ErrorInfo::Error(val) => val,
+                }),
+                extra: None,
+            }.context(ApiErrorKind::RequestFailed)
+                .into())
+        } else if let Ok(value) = self.deserialize::<serde_json::Value>() {
+            Err(SentryError {
+                status: self.status(),
+                detail: Some("request failure".into()),
+                extra: Some(value),
+            }.context(ApiErrorKind::RequestFailed)
+                .into())
         } else {
-            fail!(Error::Http(self.status(), "generic error".into()));
+            Err(SentryError {
+                status: self.status(),
+                detail: None,
+                extra: None,
+            }.context(ApiErrorKind::RequestFailed)
+                .into())
         }
     }
 
     /// Deserializes the response body into the given type
     pub fn deserialize<T: DeserializeOwned>(&self) -> ApiResult<T> {
         if !self.is_json() {
-            fail!(Error::NotJson);
+            return Err(ApiErrorKind::NotJson.into());
         }
         Ok(serde_json::from_reader(match self.body {
             Some(ref body) => body,
             None => &b""[..],
-        })?)
+        }).context(ApiErrorKind::BadJson)?)
     }
 
     /// Like `deserialize` but consumes the response and will convert
@@ -1171,9 +1295,9 @@ impl ApiResponse {
     }
 
     /// Like convert but produces resource not found errors.
-    pub fn convert_rnf<T: DeserializeOwned>(self, resource: &'static str) -> ApiResult<T> {
+    pub fn convert_rnf<T: DeserializeOwned>(self, res_err: ApiErrorKind) -> ApiResult<T> {
         if self.status() == 404 {
-            Err(Error::ResourceNotFound(resource))
+            Err(res_err.into())
         } else {
             self.to_result().and_then(|x| x.deserialize())
         }
@@ -1231,50 +1355,11 @@ fn log_headers(is_response: bool, data: &[u8]) {
     }
 }
 
-impl error::Error for Error {
-    fn description(&self) -> &str {
-        "api error"
-    }
-}
-
-impl From<curl::FormError> for Error {
-    fn from(err: curl::FormError) -> Error {
-        Error::Form(err)
-    }
-}
-
-impl From<curl::Error> for Error {
-    fn from(err: curl::Error) -> Error {
-        Error::Curl(err)
-    }
-}
-
-impl From<serde_json::Error> for Error {
-    fn from(err: serde_json::Error) -> Error {
-        Error::Json(err)
-    }
-}
-
-impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            Error::Http(status, ref msg) => write!(f, "http error: {} ({})", msg, status),
-            Error::Curl(ref err) => write!(f, "http error: {}", err),
-            Error::Form(ref err) => write!(f, "http form error: {}", err),
-            Error::Io(ref err) => write!(f, "io error: {}", err),
-            Error::Json(ref err) => write!(f, "bad json: {}", err),
-            Error::NotJson => write!(f, "not a JSON response"),
-            Error::ResourceNotFound(res) => write!(f, "{} not found", res),
-            Error::NoDsn => write!(f, "no dsn provided"),
-            Error::BadApiUrl(ref msg) => write!(f, "{}", msg),
-        }
-    }
-}
-
 #[derive(Debug, Deserialize)]
-struct ErrorInfo {
-    detail: Option<String>,
-    error: Option<String>,
+#[serde(rename_all = "lowercase")]
+enum ErrorInfo {
+    Detail(String),
+    Error(String),
 }
 
 /// Provides the auth details (access scopes)
@@ -1536,7 +1621,8 @@ pub struct Deploy {
 
 #[derive(Debug, Deserialize)]
 pub enum ChunkHashAlgorithm {
-    #[serde(rename = "sha1")] Sha1,
+    #[serde(rename = "sha1")]
+    Sha1,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1557,11 +1643,16 @@ pub struct ChunkUploadOptions {
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ChunkedFileState {
-    #[serde(rename = "error")] Error,
-    #[serde(rename = "not_found")] NotFound,
-    #[serde(rename = "created")] Created,
-    #[serde(rename = "assembling")] Assembling,
-    #[serde(rename = "ok")] Ok,
+    #[serde(rename = "error")]
+    Error,
+    #[serde(rename = "not_found")]
+    NotFound,
+    #[serde(rename = "created")]
+    Created,
+    #[serde(rename = "assembling")]
+    Assembling,
+    #[serde(rename = "ok")]
+    Ok,
 }
 
 impl ChunkedFileState {

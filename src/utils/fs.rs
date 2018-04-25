@@ -5,10 +5,9 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::io::{Read, Seek, SeekFrom};
 
-use sha1::{Sha1, Digest};
+use sha1::{Digest, Sha1};
 use uuid::{Uuid, UuidVersion};
-
-use errors::Result;
+use failure::Error;
 
 pub trait SeekRead: Seek + Read {}
 impl<T: Seek + Read> SeekRead for T {}
@@ -23,11 +22,14 @@ impl TempDir {
     /// Creates a new tempdir
     pub fn new() -> io::Result<TempDir> {
         let mut path = env::temp_dir();
-        path.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+        path.push(
+            Uuid::new(UuidVersion::Random)
+                .unwrap()
+                .hyphenated()
+                .to_string(),
+        );
         fs::create_dir(&path)?;
-        Ok(TempDir {
-            path: path,
-        })
+        Ok(TempDir { path: path })
     }
 
     /// Returns the path to the tempdir
@@ -53,7 +55,12 @@ impl TempFile {
     /// Creates a new tempfile.
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
-        path.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+        path.push(
+            Uuid::new(UuidVersion::Random)
+                .unwrap()
+                .hyphenated()
+                .to_string(),
+        );
 
         let f = fs::OpenOptions::new()
             .read(true)
@@ -70,7 +77,12 @@ impl TempFile {
     /// Assumes ownership over an existing file and moves it to a temp location.
     pub fn take<P: AsRef<Path>>(path: P) -> io::Result<TempFile> {
         let mut destination = env::temp_dir();
-        destination.push(Uuid::new(UuidVersion::Random).unwrap().hyphenated().to_string());
+        destination.push(
+            Uuid::new(UuidVersion::Random)
+                .unwrap()
+                .hyphenated()
+                .to_string(),
+        );
 
         fs::rename(&path, &destination)?;
         let f = fs::OpenOptions::new()
@@ -97,7 +109,7 @@ impl TempFile {
     }
 
     /// Returns the size of the temp file.
-    pub fn size(&self) -> Result<u64> {
+    pub fn size(&self) -> io::Result<u64> {
         let mut f = self.open();
         Ok(f.seek(SeekFrom::End(0))?)
     }
@@ -112,12 +124,16 @@ impl Drop for TempFile {
 
 /// Checks if a path is writable.
 pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
-    fs::OpenOptions::new().write(true).open(&path).map(|_| true).unwrap_or(false)
+    fs::OpenOptions::new()
+        .write(true)
+        .open(&path)
+        .map(|_| true)
+        .unwrap_or(false)
 }
 
 /// Set the mode of a path to 755 if we're on a Unix machine, otherwise
 /// don't do anything with the given path.
-pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> io::Result<()> {
+pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     #[cfg(not(windows))]
     fn exec<P: AsRef<Path>>(path: P) -> io::Result<()> {
         use std::os::unix::fs::PermissionsExt;
@@ -131,15 +147,15 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> io::Result<()> {
         Ok(())
     }
 
-    exec(path)
+    Ok(exec(path)?)
 }
 
-fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<bool> {
+fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<bool, Error> {
     let mut magic: [u8; 2] = [0; 2];
     rdr.read_exact(&mut magic)?;
     Ok(match &magic {
         b"PK" => true,
-        _ => false
+        _ => false,
     })
 }
 
@@ -152,7 +168,7 @@ pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
 }
 
 /// Returns the SHA1 hash of the given input.
-pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
+pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest, Error> {
     let mut sha = Sha1::new();
     let mut buf = [0u8; 16384];
     let mut rdr = io::BufReader::new(rdr);
@@ -168,9 +184,9 @@ pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
 
 /// Returns the SHA1 hash for the entire input, as well as each chunk of it. The
 /// `chunk_size` must be a power of two.
-pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<Digest>)> {
+pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<Digest>), Error> {
     if !chunk_size.is_power_of_two() {
-        return Err("Chunk size must be a power of two".into());
+        bail!("Chunk size must be a power of two");
     }
 
     let mut total_sha = Sha1::new();

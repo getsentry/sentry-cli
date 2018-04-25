@@ -45,10 +45,14 @@ pub fn capitalize_string(s: &str) -> String {
 }
 
 /// Like ``io::copy`` but advances a progress bar set to bytes.
-pub fn copy_with_progress<R: ?Sized, W: ?Sized>(progress: &ProgressBar,
-                                                reader: &mut R, writer: &mut W)
-    -> io::Result<u64>
-    where R: Read, W: Write
+pub fn copy_with_progress<R: ?Sized, W: ?Sized>(
+    progress: &ProgressBar,
+    reader: &mut R,
+    writer: &mut W,
+) -> io::Result<u64>
+where
+    R: Read,
+    W: Write,
 {
     let mut buf = [0; 16384];
     let mut written = 0;
@@ -68,7 +72,8 @@ pub fn copy_with_progress<R: ?Sized, W: ?Sized>(progress: &ProgressBar,
 /// Creates a progress bar for byte stuff
 pub fn make_byte_progress_bar(length: u64) -> ProgressBar {
     let pb = ProgressBar::new(length);
-    pb.set_style(ProgressStyle::default_bar()
-        .template("{wide_bar}  {bytes}/{total_bytes} ({eta})"));
+    pb.set_style(
+        ProgressStyle::default_bar().template("{wide_bar}  {bytes}/{total_bytes} ({eta})"),
+    );
     pb
 }

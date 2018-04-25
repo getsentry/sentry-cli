@@ -10,10 +10,11 @@ use ignore::types::TypesBuilder;
 use ignore::overrides::OverrideBuilder;
 use indicatif::HumanBytes;
 use regex::Regex;
+use failure::{err_msg, Error};
 
 use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
 use config::Config;
-use errors::{Error, ErrorKind, Result};
+use utils::system::QuietExit;
 use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
 use utils::formatting::{HumanDuration, Table};
 use utils::releases::detect_release_name;
@@ -27,11 +28,11 @@ struct ReleaseContext<'a> {
 }
 
 impl<'a> ReleaseContext<'a> {
-    pub fn get_org(&'a self) -> Result<&str> {
+    pub fn get_org(&'a self) -> Result<&str, Error> {
         Ok(&self.org)
     }
 
-    pub fn get_project_default(&'a self) -> Result<String> {
+    pub fn get_project_default(&'a self) -> Result<String, Error> {
         if let Some(ref proj) = self.project_default {
             Ok(proj.to_string())
         } else {
@@ -40,9 +41,9 @@ impl<'a> ReleaseContext<'a> {
         }
     }
 
-    pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>> {
+    pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>, Error> {
         if let Some(projects) = matches.values_of("projects") {
-             Ok(projects.map(|x| x.to_string()).collect())
+            Ok(projects.map(|x| x.to_string()).collect())
         } else if let Some(project) = self.project_default {
             Ok(vec![project.to_string()])
         } else {
@@ -51,7 +52,6 @@ impl<'a> ReleaseContext<'a> {
         }
     }
 }
-
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage releases on Sentry.")
@@ -340,9 +340,9 @@ fn path_as_url(path: &Path) -> String {
     path.display().to_string()
 }
 
-fn execute_new<'a>(ctx: &ReleaseContext,
-                   matches: &ArgMatches<'a>) -> Result<()> {
-    let info_rv = ctx.api.new_release(ctx.get_org()?,
+fn execute_new<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
+    let info_rv = ctx.api.new_release(
+        ctx.get_org()?,
         &NewRelease {
             version: matches.value_of("version").unwrap().to_owned(),
             projects: ctx.get_projects(matches)?,
@@ -354,21 +354,22 @@ fn execute_new<'a>(ctx: &ReleaseContext,
                 None
             },
             ..Default::default()
-        })?;
+        },
+    )?;
     println!("Created release {}.", info_rv.version);
     Ok(())
 }
 
-fn execute_finalize<'a>(ctx: &ReleaseContext,
-                        matches: &ArgMatches<'a>) -> Result<()> {
-    fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<Utc>>> {
+fn execute_finalize<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
+    fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<Utc>>, Error> {
         match value {
             None => Ok(if now_default { Some(Utc::now()) } else { None }),
-            Some(value) => Ok(Some(get_timestamp(value)?))
+            Some(value) => Ok(Some(get_timestamp(value)?)),
         }
     }
 
-    let info_rv = ctx.api.update_release(ctx.get_org()?,
+    let info_rv = ctx.api.update_release(
+        ctx.get_org()?,
         matches.value_of("version").unwrap(),
         &UpdatedRelease {
             projects: ctx.get_projects(matches).ok(),
@@ -376,36 +377,38 @@ fn execute_finalize<'a>(ctx: &ReleaseContext,
             date_started: get_date(matches.value_of("started"), false)?,
             date_released: get_date(matches.value_of("released"), true)?,
             ..Default::default()
-        })?;
+        },
+    )?;
     println!("Finalized release {}.", info_rv.version);
     Ok(())
 }
 
-fn execute_propose_version() -> Result<()>
-{
+fn execute_propose_version() -> Result<(), Error> {
     println!("{}", detect_release_name()?);
     Ok(())
 }
 
-fn execute_set_commits<'a>(ctx: &ReleaseContext,
-                           matches: &ArgMatches<'a>) -> Result<()>
-{
+fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let repos = ctx.api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
 
     if repos.is_empty() {
-        return Err(Error::from("No repositories are configured in Sentry for \
-                                your organization."));
+        bail!(
+            "No repositories are configured in Sentry for \
+             your organization."
+        );
     }
 
     let heads = if matches.is_present("auto") {
         let commits = find_heads(None, repos)?;
         if commits.is_empty() {
-            return Err(Error::from("Could not determine any commits to be associated \
-                                    automatically. You will have to explicitly provide \
-                                    commits on the command line."));
+            bail!(
+                "Could not determine any commits to be associated \
+                 automatically. You will have to explicitly provide \
+                 commits on the command line."
+            );
         }
         Some(commits)
     } else if matches.is_present("clear") {
@@ -414,10 +417,15 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
-                if (&repos).iter().filter(|r| r.name == commit_spec.repo).next().is_some() {
+                if (&repos)
+                    .iter()
+                    .filter(|r| r.name == commit_spec.repo)
+                    .next()
+                    .is_some()
+                {
                     commit_specs.push(commit_spec);
                 } else {
-                    return Err(Error::from(format!("Unknown repo '{}'", commit_spec.repo)));
+                    bail!("Unknown repo '{}'", commit_spec.repo);
                 }
             }
         }
@@ -431,11 +439,14 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
 
     // make sure the release exists if projects are given
     if let Ok(projects) = ctx.get_projects(matches) {
-        ctx.api.new_release(&org, &NewRelease {
-            version: version.into(),
-            projects: projects,
-            ..Default::default()
-        })?;
+        ctx.api.new_release(
+            &org,
+            &NewRelease {
+                version: version.into(),
+                projects: projects,
+                ..Default::default()
+            },
+        )?;
     }
 
     if let Some(heads) = heads {
@@ -443,14 +454,16 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
             println!("Clearing commits for release.");
         } else {
             let mut table = Table::new();
-            table.title_row()
-                .add("Repository")
-                .add("Revision");
+            table.title_row().add("Repository").add("Revision");
             for commit in &heads {
                 let row = table.add_row();
                 row.add(&commit.repo);
                 if let Some(ref prev_rev) = commit.prev_rev {
-                    row.add(format!("{} -> {}", strip_sha(prev_rev), strip_sha(&commit.rev)));
+                    row.add(format!(
+                        "{} -> {}",
+                        strip_sha(prev_rev),
+                        strip_sha(&commit.rev)
+                    ));
                 } else {
                     row.add(strip_sha(&commit.rev));
                 }
@@ -465,26 +478,32 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
-fn execute_delete<'a>(ctx: &ReleaseContext,
-                      matches: &ArgMatches<'a>) -> Result<()> {
+fn execute_delete<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let project = ctx.get_project_default().ok();
-    if ctx.api.delete_release(ctx.get_org()?, project.as_ref().map(|x| x.as_str()), version)? {
+    if ctx.api.delete_release(
+        ctx.get_org()?,
+        project.as_ref().map(|x| x.as_str()),
+        version,
+    )? {
         println!("Deleted release {}!", version);
     } else {
-        println!("Did nothing. Release with this version ({}) does not exist.",
-                 version);
+        println!(
+            "Did nothing. Release with this version ({}) does not exist.",
+            version
+        );
     }
     Ok(())
 }
 
-fn execute_list<'a>(ctx: &ReleaseContext,
-                    matches: &ArgMatches<'a>) -> Result<()> {
+fn execute_list<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
-    let releases = ctx.api.list_releases(ctx.get_org()?, project.as_ref().map(|x| x.as_str()))?;
+    let releases = ctx.api
+        .list_releases(ctx.get_org()?, project.as_ref().map(|x| x.as_str()))?;
     let abbrev = !matches.is_present("no_abbrev");
     let mut table = Table::new();
-    table.title_row()
+    table
+        .title_row()
         .add("Released")
         .add("Version")
         .add("New Events")
@@ -492,7 +511,10 @@ fn execute_list<'a>(ctx: &ReleaseContext,
     for release_info in releases {
         let row = table.add_row();
         if let Some(date) = release_info.date_released {
-            row.add(format!("{} ago", HumanDuration(Utc::now().signed_duration_since(date))));
+            row.add(format!(
+                "{} ago",
+                HumanDuration(Utc::now().signed_duration_since(date))
+            ));
         } else {
             row.add("(unreleased)");
         }
@@ -503,7 +525,10 @@ fn execute_list<'a>(ctx: &ReleaseContext,
         }
         row.add(release_info.new_groups);
         if let Some(date) = release_info.last_event {
-            row.add(format!("{} ago", HumanDuration(Utc::now().signed_duration_since(date))));
+            row.add(format!(
+                "{} ago",
+                HumanDuration(Utc::now().signed_duration_since(date))
+            ));
         } else {
             row.add("-");
         }
@@ -512,18 +537,17 @@ fn execute_list<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
-fn execute_info<'a>(ctx: &ReleaseContext,
-                    matches: &ArgMatches<'a>) -> Result<()> {
+fn execute_info<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    let release = ctx.api.get_release(org, project.as_ref().map(|x| x.as_str()),
-                                      &version)?;
+    let release = ctx.api
+        .get_release(org, project.as_ref().map(|x| x.as_str()), &version)?;
 
     // quiet mode just exists
     if matches.is_present("quiet") {
         if release.is_none() {
-            return Err(ErrorKind::QuietExit(1).into());
+            return Err(QuietExit(1).into());
         }
         return Ok(());
     }
@@ -531,36 +555,30 @@ fn execute_info<'a>(ctx: &ReleaseContext,
     if let Some(release) = release {
         let short_version = strip_version(&release.version);
         let mut tbl = Table::new();
-        tbl.add_row()
-            .add("Version")
-            .add(short_version);
+        tbl.add_row().add("Version").add(short_version);
         if short_version != &release.version {
-            tbl.add_row()
-                .add("Full version")
-                .add(&release.version);
+            tbl.add_row().add("Full version").add(&release.version);
         }
-        tbl.add_row()
-            .add("Date created")
-            .add(&release.date_created);
+        tbl.add_row().add("Date created").add(&release.date_created);
         if let Some(last_event) = release.last_event {
-            tbl.add_row()
-                .add("Last event")
-                .add(last_event);
+            tbl.add_row().add("Last event").add(last_event);
         }
         tbl.print();
     } else {
         println!("No such release");
-        return Err(ErrorKind::QuietExit(1).into());
+        return Err(QuietExit(1).into());
     }
     Ok(())
 }
 
-fn execute_files_list<'a>(ctx: &ReleaseContext,
-                          _matches: &ArgMatches<'a>,
-                          release: &str)
-                          -> Result<()> {
+fn execute_files_list<'a>(
+    ctx: &ReleaseContext,
+    _matches: &ArgMatches<'a>,
+    release: &str,
+) -> Result<(), Error> {
     let mut table = Table::new();
-    table.title_row()
+    table
+        .title_row()
         .add("Name")
         .add("Distribution")
         .add("Source Map")
@@ -568,8 +586,9 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
 
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for artifact in ctx.api.list_release_files(
-            org, project.as_ref().map(|x| x.as_str()), release)? {
+    for artifact in ctx.api
+        .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
+    {
         let row = table.add_row();
         row.add(&artifact.name);
         if let Some(ref dist) = artifact.dist {
@@ -590,46 +609,54 @@ fn execute_files_list<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
-fn execute_files_delete<'a>(ctx: &ReleaseContext,
-                            matches: &ArgMatches<'a>,
-                            release: &str)
-                            -> Result<()> {
+fn execute_files_delete<'a>(
+    ctx: &ReleaseContext,
+    matches: &ArgMatches<'a>,
+    release: &str,
+) -> Result<(), Error> {
     let files: HashSet<String> = match matches.values_of("names") {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for file in ctx.api.list_release_files(org, project.as_ref().map(|x| x.as_str()), release)? {
+    for file in ctx.api
+        .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
+    {
         if !(matches.is_present("all") || files.contains(&file.name)) {
             continue;
         }
-        if ctx.api.delete_release_file(org, project.as_ref().map(|x| x.as_str()), release, &file.id)? {
+        if ctx.api.delete_release_file(
+            org,
+            project.as_ref().map(|x| x.as_str()),
+            release,
+            &file.id,
+        )? {
             println!("D {}", file.name);
         }
     }
     Ok(())
 }
 
-fn execute_files_upload<'a>(ctx: &ReleaseContext,
-                            matches: &ArgMatches<'a>,
-                            version: &str)
-                            -> Result<()> {
+fn execute_files_upload<'a>(
+    ctx: &ReleaseContext,
+    matches: &ArgMatches<'a>,
+    version: &str,
+) -> Result<(), Error> {
     let path = Path::new(matches.value_of("path").unwrap());
     let name = match matches.value_of("name") {
         Some(name) => name,
-        None => {
-            Path::new(path).file_name()
-                .and_then(|x| x.to_str())
-                .ok_or("No filename provided.")?
-        }
+        None => Path::new(path)
+            .file_name()
+            .and_then(|x| x.to_str())
+            .ok_or_else(|| err_msg("No filename provided."))?,
     };
     let dist = matches.value_of("dist");
     let mut headers = vec![];
     if let Some(header_list) = matches.values_of("header") {
         for header in header_list {
             if !header.contains(':') {
-                fail!("Invalid header. Needs to be in key:value format");
+                bail!("Invalid header. Needs to be in key:value format");
             }
             let mut iter = header.splitn(2, ':');
             let key = iter.next().unwrap();
@@ -639,28 +666,39 @@ fn execute_files_upload<'a>(ctx: &ReleaseContext,
     };
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    if let Some(artifact) = ctx.api.upload_release_file(org,
-            project.as_ref().map(|x| x.as_str()), &version,
-            FileContents::FromPath(&path), &name, dist, Some(&headers[..]))? {
+    if let Some(artifact) = ctx.api.upload_release_file(
+        org,
+        project.as_ref().map(|x| x.as_str()),
+        &version,
+        FileContents::FromPath(&path),
+        &name,
+        dist,
+        Some(&headers[..]),
+    )? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {
-        fail!("File already present!");
+        bail!("File already present!");
     }
     Ok(())
 }
 
-fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
-                                       matches: &ArgMatches<'a>,
-                                       version: &str)
-                                       -> Result<()> {
-    let url_prefix = matches.value_of("url_prefix").unwrap_or("~").trim_right_matches("/");
+fn execute_files_upload_sourcemaps<'a>(
+    ctx: &ReleaseContext,
+    matches: &ArgMatches<'a>,
+    version: &str,
+) -> Result<(), Error> {
+    let url_prefix = matches
+        .value_of("url_prefix")
+        .unwrap_or("~")
+        .trim_right_matches("/");
     let paths = matches.values_of("paths").unwrap();
-    let extensions = matches.values_of("extensions")
+    let extensions = matches
+        .values_of("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_left_matches(".")).collect())
         .unwrap_or(vec!["js", "map", "jsbundle", "bundle"]);
-    let ignores = matches.values_of("ignore").map(|ignores| ignores
-        .map(|i| format!("!{}", i))
-        .collect::<Vec<_>>());
+    let ignores = matches
+        .values_of("ignore")
+        .map(|ignores| ignores.map(|i| format!("!{}", i)).collect::<Vec<_>>());
     let ignore_file = matches.value_of("ignore_file");
     let dist = matches.value_of("dist");
 
@@ -679,9 +717,7 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
         };
 
         let mut builder = WalkBuilder::new(path);
-        builder.git_exclude(false)
-            .git_ignore(false)
-            .ignore(false);
+        builder.git_exclude(false).git_ignore(false).ignore(false);
 
         if check_ignore {
             let mut types_builder = TypesBuilder::new();
@@ -711,7 +747,11 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
                 continue;
             }
 
-            info!("found: {} ({} bytes)", file.path().display(), file.metadata().unwrap().len());
+            info!(
+                "found: {} ({} bytes)",
+                file.path().display(),
+                file.metadata().unwrap().len()
+            );
             let local_path = file.path().strip_prefix(&base_path).unwrap();
             let url = format!("{}/{}", url_prefix, path_as_url(local_path));
             processor.add(&url, file.path())?;
@@ -740,22 +780,28 @@ fn execute_files_upload_sourcemaps<'a>(ctx: &ReleaseContext,
     let org = ctx.get_org()?;
 
     // make sure the release exists
-    let release = ctx.api.new_release(&org, &NewRelease {
-        version: version.into(),
-        projects: ctx.get_projects(matches)?,
-        ..Default::default()
-    })?;
+    let release = ctx.api.new_release(
+        &org,
+        &NewRelease {
+            version: version.into(),
+            projects: ctx.get_projects(matches)?,
+            ..Default::default()
+        },
+    )?;
 
     let project = ctx.get_project_default().ok();
-    processor.upload(&ctx.api, org, project.as_ref().map(|x| x.as_str()),
-                     &release.version, dist)?;
+    processor.upload(
+        &ctx.api,
+        org,
+        project.as_ref().map(|x| x.as_str()),
+        &release.version,
+        dist,
+    )?;
 
     Ok(())
 }
 
-fn execute_files<'a>(ctx: &ReleaseContext,
-                     matches: &ArgMatches<'a>)
-                     -> Result<()> {
+fn execute_files<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_files_list(ctx, sub_matches, release);
@@ -772,11 +818,11 @@ fn execute_files<'a>(ctx: &ReleaseContext,
     unreachable!();
 }
 
-fn execute_deploys_new<'a>(ctx: &ReleaseContext,
-                           matches: &ArgMatches<'a>,
-                           version: &str)
-    -> Result<()>
-{
+fn execute_deploys_new<'a>(
+    ctx: &ReleaseContext,
+    matches: &ArgMatches<'a>,
+    version: &str,
+) -> Result<(), Error> {
     let mut deploy = Deploy {
         env: matches.value_of("env").unwrap().to_string(),
         name: matches.value_of("name").map(|x| x.to_string()),
@@ -811,13 +857,14 @@ fn execute_deploys_new<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
-fn execute_deploys_list<'a>(ctx: &ReleaseContext,
-                            _matches: &ArgMatches<'a>,
-                            version: &str)
-    -> Result<()>
-{
+fn execute_deploys_list<'a>(
+    ctx: &ReleaseContext,
+    _matches: &ArgMatches<'a>,
+    version: &str,
+) -> Result<(), Error> {
     let mut table = Table::new();
-    table.title_row()
+    table
+        .title_row()
         .add("Environment")
         .add("Name")
         .add("Finished");
@@ -827,10 +874,9 @@ fn execute_deploys_list<'a>(ctx: &ReleaseContext,
         if name == "" {
             name = "unnamed";
         }
-        table.add_row()
-            .add(deploy.env)
-            .add(name)
-            .add(HumanDuration(Utc::now().signed_duration_since(deploy.finished.unwrap())));
+        table.add_row().add(deploy.env).add(name).add(HumanDuration(
+            Utc::now().signed_duration_since(deploy.finished.unwrap()),
+        ));
     }
 
     if table.is_empty() {
@@ -842,8 +888,7 @@ fn execute_deploys_list<'a>(ctx: &ReleaseContext,
     Ok(())
 }
 
-fn execute_deploys<'a>(ctx: &ReleaseContext,
-                       matches: &ArgMatches<'a>) -> Result<()> {
+fn execute_deploys<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         return execute_deploys_new(ctx, sub_matches, release);
@@ -854,7 +899,7 @@ fn execute_deploys<'a>(ctx: &ReleaseContext,
     unreachable!();
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     // this one does not need a context or org
     if let Some(_sub_matches) = matches.subcommand_matches("propose-version") {
         return execute_propose_version();

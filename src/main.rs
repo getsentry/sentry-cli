@@ -2,9 +2,7 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binrary that links against this library.
 
-#![recursion_limit = "1024"]
-
-use std::env;
+#![recursion_limit = "128"]
 
 extern crate anylog;
 extern crate app_dirs;
@@ -23,7 +21,9 @@ extern crate dotenv;
 extern crate elementtree;
 extern crate encoding;
 #[macro_use]
-extern crate error_chain;
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
 extern crate git2;
 extern crate glob;
 extern crate hostname;
@@ -52,15 +52,16 @@ extern crate plist;
 extern crate prettytable;
 extern crate regex;
 extern crate runas;
+extern crate scoped_threadpool;
+#[macro_use]
+extern crate sentry;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
 extern crate sha1;
 extern crate sourcemap;
-extern crate symbolic_common;
-extern crate symbolic_debuginfo;
-extern crate symbolic_proguard;
+extern crate symbolic;
 #[cfg(not(windows))]
 extern crate uname;
 #[cfg(target_os = "macos")]
@@ -68,7 +69,6 @@ extern crate unix_daemonize;
 extern crate url;
 extern crate username;
 extern crate uuid;
-extern crate scoped_threadpool;
 extern crate walkdir;
 extern crate which;
 extern crate zip;
@@ -79,18 +79,10 @@ pub mod api;
 pub mod commands;
 pub mod config;
 pub mod constants;
-pub mod errors;
 pub mod event;
 pub mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {
-    if env::var("SENTRY_LOAD_DOTENV")
-        .map(|x| x.as_str() == "1")
-        .unwrap_or(true)
-    {
-        dotenv::dotenv().ok();
-    }
-    utils::system::init_backtrace();
     utils::system::run_or_interrupt(commands::main);
 }

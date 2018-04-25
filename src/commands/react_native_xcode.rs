@@ -7,10 +7,10 @@ use std::process;
 use clap::{App, Arg, ArgMatches};
 use serde_json;
 use chrono::Duration;
+use failure::Error;
 
 use api::{Api, NewRelease};
 use config::Config;
-use errors::Result;
 use utils::args::ArgExt;
 use utils::fs::TempFile;
 use utils::sourcemaps::SourceMapProcessor;
@@ -78,13 +78,13 @@ fn find_node() -> String {
     "node".into()
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::get_current();
     let should_wrap = matches.is_present("force") || match env::var("CONFIGURATION") {
         Ok(config) => &config != "Debug",
-        Err(_) => { return Err("Need to run this from Xcode".into()); }
+        Err(_) => bail!("Need to run this from Xcode"),
     };
     let base = env::current_dir()?;
     let script = if let Some(path) = matches.value_of("build_script") {
@@ -122,7 +122,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     info!("Parsing Info.plist");
     let plist = match InfoPlist::discover_from_env()? {
         Some(plist) => plist,
-        None => { return Err("Could not find info.plist".into()); }
+        None => bail!("Could not find info.plist"),
     };
     info!("Parse result from Info.plist: {:?}", &plist);
     let report_file = TempFile::new()?;
@@ -154,13 +154,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
             // wait up to 10 seconds for the server to be up.
             if !api.wait_until_available(url, Duration::seconds(10))? {
-                return Err("Error: react-native packager did not respond in time".into());
+                bail!("Error: react-native packager did not respond in time");
             }
 
-            api.download(&format!("{}/index.ios.bundle?platform=ios&dev=true", url),
-                         &mut bundle_file.open())?;
-            api.download(&format!("{}/index.ios.map?platform=ios&dev=true", url),
-                         &mut sourcemap_file.open())?;
+            api.download(
+                &format!("{}/index.ios.bundle?platform=ios&dev=true", url),
+                &mut bundle_file.open(),
+            )?;
+            api.download(
+                &format!("{}/index.ios.map?platform=ios&dev=true", url),
+                &mut sourcemap_file.open(),
+            )?;
 
         // This is the case where we need to hook into the release process to
         // collect sourcemaps when they are generated.
@@ -182,7 +186,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
             let rv = process::Command::new(&script)
                 .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
                 .env("SENTRY_RN_REAL_NODE_BINARY", &node)
-                .env("SENTRY_RN_SOURCEMAP_REPORT", report_file.path().to_str().unwrap())
+                .env(
+                    "SENTRY_RN_SOURCEMAP_REPORT",
+                    report_file.path().to_str().unwrap(),
+                )
                 .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
                 .spawn()?
                 .wait()?;
@@ -192,18 +199,19 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
                 md.may_detach()?;
             }
             let mut f = fs::File::open(report_file.path())?;
-            let report : SourceMapReport = serde_json::from_reader(&mut f)?;
+            let report: SourceMapReport = serde_json::from_reader(&mut f)?;
             if report.bundle_path.is_none() || report.sourcemap_path.is_none() {
                 println!("Warning: build produced no sourcemaps.");
                 return Ok(());
             }
 
             bundle_path = report.bundle_path.unwrap();
-            bundle_url = format!("~/{}", bundle_path.file_name()
-                                 .unwrap().to_string_lossy());
+            bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
             sourcemap_path = report.sourcemap_path.unwrap();
-            sourcemap_url = format!("~/{}", sourcemap_path.file_name()
-                                    .unwrap().to_string_lossy());
+            sourcemap_url = format!(
+                "~/{}",
+                sourcemap_path.file_name().unwrap().to_string_lossy()
+            );
         }
 
         // now that we have all the data, we can now process and upload the
@@ -218,20 +226,28 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
         processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
 
-        let release = api.new_release(&org, &NewRelease {
-            version: format!("{}-{}", plist.bundle_id(), plist.version()),
-            projects: vec![project.to_string()],
-            ..Default::default()
-        })?;
-        processor.upload(&api, &org, Some(&project), &release.version,
-                         Some(&plist.build()))?;
+        let release = api.new_release(
+            &org,
+            &NewRelease {
+                version: format!("{}-{}", plist.bundle_id(), plist.version()),
+                projects: vec![project.to_string()],
+                ..Default::default()
+            },
+        )?;
+        processor.upload(
+            &api,
+            &org,
+            Some(&project),
+            &release.version,
+            Some(&plist.build()),
+        )?;
 
         Ok(())
     })
 }
 
-pub fn wrap_call() -> Result<()> {
-    let mut args : Vec<_> = env::args().skip(1).collect();
+pub fn wrap_call() -> Result<(), Error> {
+    let mut args: Vec<_> = env::args().skip(1).collect();
     let mut bundle_path = None;
     let mut sourcemap_path = None;
 

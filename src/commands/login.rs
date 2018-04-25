@@ -2,24 +2,24 @@
 use clap::{App, ArgMatches};
 use open;
 use url::Url;
+use failure::Error;
 
 use api::Api;
-use config::{Config, Auth};
-use errors::Result;
+use config::{Auth, Config};
 use utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Authenticate with the Sentry server.")
 }
 
-fn update_config(config: &Config, token: &str) -> Result<()> {
+fn update_config(config: &Config, token: &str) -> Result<(), Error> {
     let mut new_cfg = config.clone();
     new_cfg.set_auth(Auth::Token(token.to_string()));
     new_cfg.save()?;
     Ok(())
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 
@@ -27,10 +27,12 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<()> {
     println!("If you do not yet have a token ready we can bring up a browser for you");
     println!("to create a token now.");
     println!("");
-    println!("Sentry server: {}",
-             Url::parse(&config.get_base_url()?)?
-                 .host_str()
-                 .unwrap_or("<unknown>"));
+    println!(
+        "Sentry server: {}",
+        Url::parse(&config.get_base_url()?)?
+            .host_str()
+            .unwrap_or("<unknown>")
+    );
 
     if prompt_to_continue("Open browser now?")? {
         if open::that(&token_url).is_err() {

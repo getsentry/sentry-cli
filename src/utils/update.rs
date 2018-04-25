@@ -8,17 +8,17 @@ use runas;
 use console::{style, user_attended};
 use app_dirs;
 use serde_json;
-use chrono::{Utc, DateTime, Duration};
+use chrono::{DateTime, Duration, Utc};
+use failure::{Error, ResultExt};
 
 use api::{Api, SentryCliRelease};
 use config::Config;
 use constants::{APP_INFO, VERSION};
-use errors::{Error, ErrorKind, Result, ResultExt};
-use utils::fs::{set_executable_mode, is_writable};
-use utils::system::{is_homebrew_install, is_npm_install};
+use utils::fs::{is_writable, set_executable_mode};
+use utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 
 #[cfg(windows)]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {
     // so on windows you can rename a running executable but you cannot delete it.
     // we move the old executable to a temporary location (this most likely only
     // works if they are on the same FS) and then put the new in place.  This
@@ -27,7 +27,8 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     let tmp = env::temp_dir().join(".sentry-cli.tmp");
 
     if elevate {
-        runas::Command::new("cmd").arg("/c")
+        runas::Command::new("cmd")
+            .arg("/c")
             .arg("move")
             .arg(&exe)
             .arg(&tmp)
@@ -49,10 +50,11 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
 }
 
 #[cfg(not(windows))]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
-        runas::Command::new("mv").arg(&downloaded_path)
+        runas::Command::new("mv")
+            .arg(&downloaded_path)
             .arg(&exe)
             .status()?;
     } else {
@@ -101,14 +103,16 @@ impl LastUpdateCheck {
     }
 
     pub fn latest_version(&self) -> &str {
-        self.last_fetched_version.as_ref().map(|x| x.as_str()).unwrap_or("0.0")
+        self.last_fetched_version
+            .as_ref()
+            .map(|x| x.as_str())
+            .unwrap_or("0.0")
     }
 }
 
 pub struct SentryCliUpdateInfo {
     latest_release: Option<SentryCliRelease>,
 }
-
 
 impl SentryCliUpdateInfo {
     pub fn have_version_info(&self) -> bool {
@@ -131,34 +135,34 @@ impl SentryCliUpdateInfo {
         }
     }
 
-    pub fn download_url(&self) -> Result<&str> {
+    pub fn download_url(&self) -> Result<&str, Error> {
         if let Some(ref rel) = self.latest_release {
             Ok(rel.download_url.as_str())
         } else {
-            fail!("Could not get download URL for latest release.");
+            bail!("Could not get download URL for latest release.");
         }
     }
 
-    pub fn assert_updatable(&self) -> Result<()> {
+    pub fn assert_updatable(&self) -> Result<(), Error> {
         if is_homebrew_install() {
             println!("This installation of sentry-cli is managed through homebrew");
             println!("Please use homebrew to update sentry-cli:");
             println!("");
             println!("{} brew upgrade sentry-cli", style("$").dim());
-            return Err(ErrorKind::QuietExit(1).into());
+            return Err(QuietExit(1).into());
         }
         if is_npm_install() {
             println!("This installation of sentry-cli is managed through npm/yarn");
             println!("Please use npm/yearn to update sentry-cli");
-            return Err(ErrorKind::QuietExit(1).into());
+            return Err(QuietExit(1).into());
         }
         if self.latest_release.is_none() {
-            fail!("Could not get the latest release version.");
+            bail!("Could not get the latest release version.");
         }
         Ok(())
     }
 
-    pub fn download(&self) -> Result<()> {
+    pub fn download(&self) -> Result<(), Error> {
         let exe = env::current_exe()?;
         let elevate = !is_writable(&exe);
         info!("expecting elevation for update: {}", elevate);
@@ -173,7 +177,7 @@ impl SentryCliUpdateInfo {
             Ok(_) => {}
             Err(err) => {
                 fs::remove_file(tmp_path).ok();
-                fail!(err);
+                bail!(err);
             }
         };
 
@@ -183,7 +187,7 @@ impl SentryCliUpdateInfo {
     }
 }
 
-pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
+pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo, Error> {
     let api = Api::get_current();
     Ok(SentryCliUpdateInfo {
         latest_release: if let Ok(release) = api.get_latest_sentrycli_release() {
@@ -198,9 +202,9 @@ pub fn can_update_sentrycli() -> bool {
     !is_homebrew_install() && !is_npm_install()
 }
 
-fn update_nagger_impl() -> Result<()> {
+fn update_nagger_impl() -> Result<(), Error> {
     let mut path = app_dirs::app_root(app_dirs::AppDataType::UserCache, APP_INFO)
-        .chain_err(|| Error::from("Could not get cache folder"))?;
+        .with_context(|_| "Could not get cache folder")?;
     path.push("updatecheck");
 
     let mut check: LastUpdateCheck;
@@ -222,8 +226,13 @@ fn update_nagger_impl() -> Result<()> {
 
     if check.is_outdated() {
         println_stderr!("");
-        println_stderr!("{}", style(format!(
-            "sentry-cli update to {} is available!", check.latest_version())).yellow());
+        println_stderr!(
+            "{}",
+            style(format!(
+                "sentry-cli update to {} is available!",
+                check.latest_version()
+            )).yellow()
+        );
         println_stderr!("{}", style("run sentry-cli update to update").dim());
     }
 
@@ -233,7 +242,7 @@ fn update_nagger_impl() -> Result<()> {
 pub fn run_sentrycli_update_nagger() {
     let config = match Config::get_current_opt() {
         Some(config) => config,
-        None => return
+        None => return,
     };
 
     // Only update if we are compiled as unmanaged version (default)

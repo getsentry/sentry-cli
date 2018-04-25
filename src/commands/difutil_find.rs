@@ -8,13 +8,14 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde_json;
-use symbolic_common::ByteView;
-use symbolic_debuginfo::DebugId;
-use symbolic_proguard::ProguardMappingView;
+use symbolic::common::byteview::ByteView;
+use symbolic::debuginfo::DebugId;
+use symbolic::proguard::ProguardMappingView;
 use uuid::UuidVersion;
 use walkdir::WalkDir;
+use failure::Error;
 
-use errors::{ErrorKind, Result};
+use utils::system::QuietExit;
 use utils::args::validate_id;
 use utils::dif::{DifFile, DifType};
 
@@ -24,45 +25,59 @@ const MAX_MAPPING_FILE: u64 = 32 * 1024 * 1024;
 
 #[derive(Serialize, Debug)]
 struct DifMatch {
-    #[serde(rename = "type")] pub ty: DifType,
+    #[serde(rename = "type")]
+    pub ty: DifType,
     pub id: DebugId,
     pub path: PathBuf,
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app
-        .about("Locate debug information files for given debug identifiers.")
-        .arg(Arg::with_name("types")
-             .long("type")
-             .short("t")
-             .value_name("TYPE")
-             .multiple(true)
-             .number_of_values(1)
-             .possible_values(&["dsym", "proguard", "breakpad"])
-             .help("Only consider debug information files of the given \
-                    type.  By default all types are considered."))
-        .arg(Arg::with_name("no_well_known")
-             .long("no-well-known")
-             .help("Do not look for debug symbols in well known locations."))
-        .arg(Arg::with_name("no_cwd")
-             .long("no-cwd")
-             .help("Do not look for debug symbols in the current working directory."))
-        .arg(Arg::with_name("paths")
-             .long("path")
-             .short("p")
-             .multiple(true)
-             .number_of_values(1)
-             .help("Add a path to search recursively for debug info files."))
-        .arg(Arg::with_name("json")
-             .long("json")
-             .help("Format outputs as JSON."))
-        .arg(Arg::with_name("ids")
-             .index(1)
-             .value_name("ID")
-             .help("The debug identifiers of the files to search for.")
-             .validator(validate_id)
-             .multiple(true)
-             .number_of_values(1))
+    app.about("Locate debug information files for given debug identifiers.")
+        .arg(
+            Arg::with_name("types")
+                .long("type")
+                .short("t")
+                .value_name("TYPE")
+                .multiple(true)
+                .number_of_values(1)
+                .possible_values(&["dsym", "proguard", "breakpad"])
+                .help(
+                    "Only consider debug information files of the given \
+                     type.  By default all types are considered.",
+                ),
+        )
+        .arg(
+            Arg::with_name("no_well_known")
+                .long("no-well-known")
+                .help("Do not look for debug symbols in well known locations."),
+        )
+        .arg(
+            Arg::with_name("no_cwd")
+                .long("no-cwd")
+                .help("Do not look for debug symbols in the current working directory."),
+        )
+        .arg(
+            Arg::with_name("paths")
+                .long("path")
+                .short("p")
+                .multiple(true)
+                .number_of_values(1)
+                .help("Add a path to search recursively for debug info files."),
+        )
+        .arg(
+            Arg::with_name("json")
+                .long("json")
+                .help("Format outputs as JSON."),
+        )
+        .arg(
+            Arg::with_name("ids")
+                .index(1)
+                .value_name("ID")
+                .help("The debug identifiers of the files to search for.")
+                .validator(validate_id)
+                .multiple(true)
+                .number_of_values(1),
+        )
 }
 
 fn id_hint(id: &DebugId) -> &'static str {
@@ -83,7 +98,7 @@ fn find_ids(
     types: HashSet<DifType>,
     ids: HashSet<DebugId>,
     as_json: bool,
-) -> Result<bool> {
+) -> Result<bool, Error> {
     let mut remaining = ids.clone();
     let mut proguard_uuids: HashSet<_> = ids.iter()
         .map(|x| x.uuid())
@@ -204,7 +219,7 @@ fn find_ids(
     Ok(remaining.is_empty())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let mut paths = HashSet::new();
     let mut types = HashSet::new();
     let mut ids = HashSet::new();
@@ -260,7 +275,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     }
 
     if !find_ids(paths, types, ids, matches.is_present("json"))? {
-        return Err(ErrorKind::QuietExit(1).into());
+        return Err(QuietExit(1).into());
     }
 
     Ok(())

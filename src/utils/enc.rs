@@ -1,14 +1,17 @@
 use std::str;
 use std::borrow::Cow;
 
+use failure::Error;
 use chardet::detect;
 use encoding::DecoderTrap;
 use encoding::label::encoding_from_whatwg_label;
 
-use errors::{ErrorKind, Result};
+#[derive(Fail, Debug)]
+#[fail(display = "unknown encoding for string")]
+pub struct UnknownEncodingError;
 
 // Decodes bytes from an unknown encoding
-pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
+pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>, Error> {
     if let Ok(s) = str::from_utf8(bytes) {
         Ok(Cow::Borrowed(s))
     } else {
@@ -20,8 +23,7 @@ pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>> {
             then {
                 Ok(Cow::Owned(s))
             } else {
-                println_stderr!("unknown encoding for string");
-                return Err(ErrorKind::QuietExit(1).into());
+                return Err(UnknownEncodingError.into());
             }
         }
     }

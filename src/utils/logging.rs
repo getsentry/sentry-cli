@@ -1,5 +1,7 @@
 use std::io;
+use std::mem;
 use std::io::Write;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use log;
 use console::{style, Color};
@@ -7,9 +9,22 @@ use console::{style, Color};
 /// A simple logger
 pub struct Logger;
 
+lazy_static! {
+    static ref MAX_LEVEL: AtomicUsize = AtomicUsize::new(
+        unsafe { mem::transmute(log::LevelFilter::Warn) });
+}
+
+pub fn max_level() -> log::LevelFilter {
+    unsafe { mem::transmute(MAX_LEVEL.load(Ordering::Relaxed)) }
+}
+
+pub fn set_max_level(level: log::LevelFilter) {
+    MAX_LEVEL.store(unsafe { mem::transmute(level) }, Ordering::Relaxed);
+}
+
 impl log::Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        metadata.level() <= log::max_level()
+        metadata.level() <= max_level()
     }
 
     fn log(&self, record: &log::Record) {

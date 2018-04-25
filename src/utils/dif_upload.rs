@@ -20,18 +20,18 @@ use std::time::Duration;
 use console::style;
 use indicatif::{ProgressBar, ProgressStyle};
 use sha1::Digest;
-use symbolic_common::{ByteView, ObjectClass, ObjectKind};
-use symbolic_debuginfo::{FatObject, Object, DebugId};
+use symbolic::common::{byteview::ByteView, types::{ObjectClass, ObjectKind}};
+use symbolic::debuginfo::{DebugId, FatObject, Object};
 use scoped_threadpool::Pool;
 use parking_lot::RwLock;
 use walkdir::WalkDir;
 use which::which;
 use zip::{ZipArchive, ZipWriter};
 use zip::write::FileOptions;
+use failure::{err_msg, Error, SyncFailure};
 
 use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
 use config::Config;
-use errors::Result;
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::DebuggingInformation;
 use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
@@ -112,16 +112,16 @@ impl<'data> DifMatch<'data> {
     /// `DifMatch` is dropped.
     ///
     /// The path must point to a `FatObject` containing exactly one `Object`.
-    fn take_temp<P, S>(path: P, name: S) -> Result<DifMatch<'static>>
+    fn take_temp<P, S>(path: P, name: S) -> Result<DifMatch<'static>, Error>
     where
         P: AsRef<Path>,
         S: Into<String>,
     {
         let temp_file = TempFile::take(path)?;
-        let buffer = ByteView::from_path(temp_file.path())?;
+        let buffer = ByteView::from_path(temp_file.path()).map_err(SyncFailure::new)?;
         let fat = FatObject::parse(buffer)?;
         if fat.object_count() != 1 {
-            return Err("Multi-arch binaries not supported here".into());
+            bail!("Multi-arch binaries not supported here");
         }
 
         Ok(DifMatch {
@@ -205,7 +205,7 @@ struct HashedDifMatch<'data> {
 
 impl<'data> HashedDifMatch<'data> {
     /// Calculates the SHA1 checksum for the given DIF.
-    fn from(inner: DifMatch) -> Result<HashedDifMatch> {
+    fn from(inner: DifMatch) -> Result<HashedDifMatch, Error> {
         let checksum = get_sha1_checksum(inner.data())?;
         Ok(HashedDifMatch { inner, checksum })
     }
@@ -241,7 +241,7 @@ struct ChunkedDifMatch<'data> {
 impl<'data> ChunkedDifMatch<'data> {
     /// Slices the DIF into chunks of `chunk_size` bytes each, and computes SHA1
     /// checksums for every chunk as well as the entire DIF.
-    pub fn from(inner: DifMatch, chunk_size: u64) -> Result<ChunkedDifMatch> {
+    pub fn from(inner: DifMatch, chunk_size: u64) -> Result<ChunkedDifMatch, Error> {
         let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size)?;
         Ok(ChunkedDifMatch {
             inner: HashedDifMatch { inner, checksum },
@@ -375,7 +375,7 @@ impl<'a> DifSource<'a> {
 type MissingDifsInfo<'data> = (Vec<&'data ChunkedDifMatch<'data>>, Vec<DifChunk<'data>>);
 
 /// Verifies that the given path contains a ZIP file and opens it.
-fn try_open_zip<P>(path: P) -> Result<Option<ZipArchive<File>>>
+fn try_open_zip<P>(path: P) -> Result<Option<ZipArchive<File>>, Error>
 where
     P: AsRef<Path>,
 {
@@ -403,9 +403,13 @@ where
 /// for every entry before opening it.
 ///
 /// This function will not recurse into ZIPs contained in this ZIP.
-fn walk_difs_zip<F>(mut zip: ZipArchive<File>, options: &DifUpload, mut func: F) -> Result<()>
+fn walk_difs_zip<F>(
+    mut zip: ZipArchive<File>,
+    options: &DifUpload,
+    mut func: F,
+) -> Result<(), Error>
 where
-    F: FnMut(DifSource, String, ByteView<'static>) -> Result<()>,
+    F: FnMut(DifSource, String, ByteView<'static>) -> Result<(), Error>,
 {
     for index in 0..zip.len() {
         let (name, buffer) = {
@@ -416,7 +420,10 @@ where
                 continue;
             }
 
-            (name, ByteView::from_reader(zip_file)?)
+            (
+                name,
+                ByteView::from_reader(zip_file).map_err(SyncFailure::new)?,
+            )
         };
 
         func(DifSource::Zip(&mut zip, &name), name.clone(), buffer)?;
@@ -434,10 +441,10 @@ where
 ///
 /// To avoid unnecessary file operations, the file extension is already checked
 /// for every entry before opening it.
-fn walk_difs_directory<F, P>(directory: P, options: &DifUpload, mut func: F) -> Result<()>
+fn walk_difs_directory<F, P>(directory: P, options: &DifUpload, mut func: F) -> Result<(), Error>
 where
     P: AsRef<Path>,
-    F: FnMut(DifSource, String, ByteView<'static>) -> Result<()>,
+    F: FnMut(DifSource, String, ByteView<'static>) -> Result<(), Error>,
 {
     for entry in WalkDir::new(&directory).into_iter().filter_map(|e| e.ok()) {
         if !entry.metadata()?.is_file() {
@@ -455,7 +462,7 @@ where
             continue;
         }
 
-        let buffer = ByteView::from_path(path)?;
+        let buffer = ByteView::from_path(path).map_err(SyncFailure::new)?;
         let name = path.strip_prefix(&directory)
             .unwrap()
             .to_string_lossy()
@@ -507,7 +514,7 @@ fn find_uuid_plists(
 }
 
 /// Searches matching debug information files.
-fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
+fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
     let progress_style = ProgressStyle::default_spinner().template(
         "{spinner} Searching for debug symbol files...\
          \n  found {prefix:.yellow} {msg:.dim}",
@@ -526,7 +533,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
             // Try to parse a potential object file. If this is not possible,
             // then we're not dealing with an object file, thus silently
             // skipping it.
-            let kind = FatObject::peek(&buffer).ok();
+            let kind = FatObject::peek(&buffer).unwrap_or(None);
             if !kind.map_or(false, |k| options.valid_kind(k)) {
                 return Ok(());
             }
@@ -614,7 +621,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
 ///
 /// Note that this process copies the file to a temporary location and might
 /// incur significant I/O for larger debug files.
-fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<DifMatch<'a>> {
+fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<DifMatch<'a>, Error> {
     if dif.attachments.is_none() {
         println!(
             "{} {}: Could not locate UUID mapping for {}",
@@ -657,9 +664,9 @@ fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<Di
 
     if !output.status.success() {
         if let Ok(error) = str::from_utf8(&output.stderr) {
-            return Err(format!("Could not resolve BCSymbolMaps: {}", error).into());
+            bail!("Could not resolve BCSymbolMaps: {}", error);
         } else {
-            return Err("Could not resolve BCSymbolMaps due to an unknown error".into());
+            bail!("Could not resolve BCSymbolMaps due to an unknown error");
         }
     }
 
@@ -674,9 +681,9 @@ fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<Di
 /// ```
 /// prepare_difs(processed, |m| HashedDifMatch::from(m))?
 /// ```
-fn prepare_difs<'data, F, T>(items: Vec<DifMatch<'data>>, mut func: F) -> Result<Vec<T>>
+fn prepare_difs<'data, F, T>(items: Vec<DifMatch<'data>>, mut func: F) -> Result<Vec<T>, Error>
 where
-    F: FnMut(DifMatch<'data>) -> Result<T>,
+    F: FnMut(DifMatch<'data>) -> Result<T, Error>,
 {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Preparing for upload... {msg:.dim}\
@@ -715,7 +722,7 @@ where
 fn process_symbol_maps<'a>(
     difs: Vec<DifMatch<'a>>,
     symbol_map: Option<&Path>,
-) -> Result<Vec<DifMatch<'a>>> {
+) -> Result<Vec<DifMatch<'a>>, Error> {
     let (with_hidden, mut without_hidden): (Vec<_>, _) =
         difs.into_iter().partition(|dif| dif.needs_symbol_map());
 
@@ -776,7 +783,7 @@ fn process_symbol_maps<'a>(
 fn try_assemble_difs<'data>(
     difs: &'data [ChunkedDifMatch<'data>],
     options: &DifUpload,
-) -> Result<Option<MissingDifsInfo<'data>>> {
+) -> Result<Option<MissingDifsInfo<'data>>, Error> {
     let api = Api::get_current();
     let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
     let response = api.assemble_difs(&options.org, &options.project, &request)?;
@@ -794,7 +801,7 @@ fn try_assemble_difs<'data>(
     for (checksum, ref file_response) in response {
         let chunked_match = *difs_by_checksum
             .get(&checksum)
-            .ok_or("Server returned unexpected checksum")?;
+            .ok_or_else(|| err_msg("Server returned unexpected checksum"))?;
 
         match file_response.state {
             ChunkedFileState::Error => {
@@ -847,7 +854,7 @@ fn try_assemble_difs<'data>(
 fn upload_missing_chunks(
     missing_info: &MissingDifsInfo,
     chunk_options: &ChunkUploadOptions,
-) -> Result<()> {
+) -> Result<(), Error> {
     let &(ref difs, ref chunks) = missing_info;
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
@@ -957,7 +964,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 fn poll_dif_assemble(
     difs: Vec<&ChunkedDifMatch>,
     options: &DifUpload,
-) -> Result<Vec<DebugInfoFile>> {
+) -> Result<Vec<DebugInfoFile>, Error> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
          \n{wide_bar}  {pos}/{len}",
@@ -1024,7 +1031,7 @@ fn poll_dif_assemble(
     for (checksum, error) in errors {
         let dif = difs_by_checksum
             .get(&checksum)
-            .ok_or("Server returned unexpected checksum")?;
+            .ok_or_else(|| err_msg("Server returned unexpected checksum"))?;
         errored.push((dif, error));
     }
     errored.sort_by_key(|x| x.0.file_name());
@@ -1042,7 +1049,7 @@ fn poll_dif_assemble(
 fn upload_difs_chunked(
     options: &DifUpload,
     chunk_options: &ChunkUploadOptions,
-) -> Result<Vec<DebugInfoFile>> {
+) -> Result<Vec<DebugInfoFile>, Error> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
@@ -1086,7 +1093,7 @@ fn upload_difs_chunked(
 fn get_missing_difs<'data>(
     objects: Vec<HashedDifMatch<'data>>,
     options: &DifUpload,
-) -> Result<Vec<HashedDifMatch<'data>>> {
+) -> Result<Vec<HashedDifMatch<'data>>, Error> {
     info!(
         "Checking for missing debug information files: {:#?}",
         &objects
@@ -1108,7 +1115,7 @@ fn get_missing_difs<'data>(
 }
 
 /// Compresses the given batch into a ZIP archive.
-fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile> {
+fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile, Error> {
     let total_bytes = difs.iter().map(|sym| sym.size()).sum();
     let pb = make_byte_progress_bar(total_bytes);
     let tf = TempFile::new()?;
@@ -1127,7 +1134,7 @@ fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile> {
 fn upload_in_batches(
     objects: Vec<HashedDifMatch>,
     options: &DifUpload,
-) -> Result<Vec<DebugInfoFile>> {
+) -> Result<Vec<DebugInfoFile>, Error> {
     let api = Api::get_current();
     let max_size = Config::get_current().get_max_dif_archive_size()?;
     let mut dsyms = Vec::new();
@@ -1150,7 +1157,7 @@ fn upload_in_batches(
 }
 
 /// Uploads debug info files using the legacy endpoint.
-fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
+fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>, Error> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
@@ -1381,11 +1388,11 @@ impl DifUpload {
     /// obtained from iTunes Connect. This requires the `dsymutil` command.
     ///
     /// By default, hidden symbol resolution will be skipped.
-    pub fn symbol_map<P>(&mut self, path: P) -> Result<&mut Self>
+    pub fn symbol_map<P>(&mut self, path: P) -> Result<&mut Self, Error>
     where
         P: Into<PathBuf>,
     {
-        which("dsymutil").map_err(|_| "Command `dsymutil` not found")?;
+        which("dsymutil").map_err(|_| err_msg("Command `dsymutil` not found"))?;
         self.symbol_map = Some(path.into());
         Ok(self)
     }
@@ -1408,7 +1415,7 @@ impl DifUpload {
     ///     .search_path(".")
     ///     .upload()?;
     /// ```
-    pub fn upload(&mut self) -> Result<Vec<DebugInfoFile>> {
+    pub fn upload(&mut self) -> Result<Vec<DebugInfoFile>, Error> {
         if self.paths.is_empty() {
             println!("{}: No paths were provided.", style("Warning").yellow());
             return Ok(Default::default());

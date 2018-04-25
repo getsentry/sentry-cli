@@ -7,10 +7,10 @@ version = "1.30.4"
 [dependencies]
 anylog = "0.2.1"
 app_dirs = "1.2.1"
-backtrace = "0.3.5"
+backtrace = "0.3.6"
 chardet = "0.2.4"
 console = "0.6.1"
-curl = "0.4.11"
+curl = "0.4.12"
 dotenv = "0.11.0"
 elementtree = "0.5.0"
 encoding = "0.2.33"
@@ -18,10 +18,10 @@ error-chain = "0.11.0"
 glob = "0.2.11"
 hostname = "0.1.4"
 if_chain = "0.1.2"
-ignore = "0.4.1"
+ignore = "0.4.2"
 indicatif = "0.9.0"
 itertools = "0.7.8"
-java-properties = "1.1.0"
+java-properties = "1.1.1"
 lazy_static = "1.0.0"
 libc = "0.2.40"
 log = "0.4.1"
@@ -32,24 +32,25 @@ plist = "0.2.4"
 prettytable-rs = "0.6.7"
 regex = "0.2.10"
 runas = "0.1.4"
-rust-ini = "0.10.3"
+rust-ini = "0.11.0"
 scoped_threadpool = "0.1.9"
-serde = "1.0.35"
-serde_derive = "1.0.35"
-serde_json = "1.0.13"
+serde = "1.0.42"
+serde_derive = "1.0.42"
+serde_json = "1.0.16"
 sourcemap = "2.2.0"
-symbolic-common = { version = "3.0.1", features = ["with_serde"] }
-symbolic-debuginfo = { version = "3.0.1", features = ["with_serde"] }
-symbolic-proguard = "3.0.1"
+symbolic = { version = "5.0.0", features = ["debuginfo", "proguard", "with_serde", "with_serde_debuginfo"] }
 url = "1.7.0"
 username = "0.2.0"
 walkdir = "2.1.4"
-which = "1.0.5"
-zip = "0.3.1"
+which = "2.0.0"
+zip = "0.3.2"
+failure = "0.1.1"
+failure_derive = "0.1.1"
+sentry = { version = "0.4.0", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info"] }
 
 [dependencies.chrono]
 features = ["serde"]
-version = "0.4.0"
+version = "0.4.2"
 
 [dependencies.clap]
 default-features = false
@@ -66,10 +67,12 @@ version = "0.6.0"
 
 [dependencies.uuid]
 features = ["v4", "serde"]
-version = "0.6.2"
+version = "0.6.3"
 
 [features]
+default = ["with_crash_reporting"]
 managed = []
+with_crash_reporting = []
 
 [target]
 

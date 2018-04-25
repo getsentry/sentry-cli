@@ -1,8 +1,12 @@
 skip_tags: true
 
 cache:
-  - 'target -> appveyor.yml'
+  - 'target'
   - '%USERPROFILE%\.cargo'
+
+branches:
+  only:
+    - master
 
 environment:
   fast_finish: true

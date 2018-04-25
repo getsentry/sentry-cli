@@ -2,41 +2,49 @@ use std::env;
 use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
+use failure::Error;
 
 use api::{Api, NewRelease};
 use config::Config;
-use errors::Result;
 use utils::args::ArgExt;
 use utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a gradle build step.")
         .org_project_args()
-        .arg(Arg::with_name("sourcemap")
-             .long("sourcemap")
-             .value_name("PATH")
-             .required(true)
-             .help("The path to a sourcemap that should be uploaded."))
-        .arg(Arg::with_name("bundle")
-             .long("bundle")
-             .value_name("PATH")
-             .required(true)
-             .help("The path to a bundle that should be uploaded."))
-        .arg(Arg::with_name("release")
-             .long("release")
-             .value_name("RELEASE")
-             .required(true)
-             .help("The name of the release to publish."))
-        .arg(Arg::with_name("dist")
-             .long("dist")
-             .value_name("DISTRIBUTION")
-             .required(true)
-             .multiple(true)
-             .number_of_values(1)
-             .help("The names of the distributions to publish. Can be supplied multiple times."))
+        .arg(
+            Arg::with_name("sourcemap")
+                .long("sourcemap")
+                .value_name("PATH")
+                .required(true)
+                .help("The path to a sourcemap that should be uploaded."),
+        )
+        .arg(
+            Arg::with_name("bundle")
+                .long("bundle")
+                .value_name("PATH")
+                .required(true)
+                .help("The path to a bundle that should be uploaded."),
+        )
+        .arg(
+            Arg::with_name("release")
+                .long("release")
+                .value_name("RELEASE")
+                .required(true)
+                .help("The name of the release to publish."),
+        )
+        .arg(
+            Arg::with_name("dist")
+                .long("dist")
+                .value_name("DISTRIBUTION")
+                .required(true)
+                .multiple(true)
+                .number_of_values(1)
+                .help("The names of the distributions to publish. Can be supplied multiple times."),
+        )
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::get_current();
@@ -44,7 +52,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
 
     let sourcemap_path = PathBuf::from(matches.value_of("sourcemap").unwrap());
     let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
-    let sourcemap_url = format!("~/{}", sourcemap_path.file_name().unwrap().to_string_lossy());
+    let sourcemap_url = format!(
+        "~/{}",
+        sourcemap_path.file_name().unwrap().to_string_lossy()
+    );
     let bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
 
     println!("Processing react-native sourcemaps for Sentry upload.");
@@ -57,15 +68,20 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<()> {
     processor.rewrite(&vec![base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(&org, &NewRelease {
-        version: matches.value_of("release").unwrap().to_string(),
-        projects: vec![project.to_string()],
-        ..Default::default()
-    })?;
+    let release = api.new_release(
+        &org,
+        &NewRelease {
+            version: matches.value_of("release").unwrap().to_string(),
+            projects: vec![project.to_string()],
+            ..Default::default()
+        },
+    )?;
 
     for dist in matches.values_of("dist").unwrap() {
-        println!("Uploading sourcemaps for release {} distribution {}",
-                 &release.version, dist);
+        println!(
+            "Uploading sourcemaps for release {} distribution {}",
+            &release.version, dist
+        );
         processor.upload(&api, &org, Some(&project), &release.version, Some(dist))?;
     }
 
