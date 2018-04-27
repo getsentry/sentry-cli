@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.30.5
+
+* Add better error diagnostics (internal change, #288)
+
 ## sentry-cli 1.30.4
 
 * Show correct identifiers when uploading Windows symbols (#280)
