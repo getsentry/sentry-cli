@@ -19,9 +19,8 @@ use mac_process_info;
 use regex::Regex;
 use failure::{Error, ResultExt};
 
-use config::Config;
 use utils::fs::{SeekRead, TempFile};
-use utils::system::{expand_vars, print_error};
+use utils::system::expand_vars;
 
 #[derive(Deserialize, Debug)]
 pub struct InfoPlist {
@@ -344,6 +343,7 @@ impl<'a> MayDetach<'a> {
         use std::time::Duration;
         use std::thread;
         use open;
+        use utils::system::print_error;
 
         let mut md = MayDetach::new(task_name);
         match f(&mut md) {
@@ -458,6 +458,8 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
 /// Shows a notification in xcode
 #[cfg(target_os = "macos")]
 pub fn show_notification(title: &str, msg: &str) -> Result<(), Error> {
+    use config::Config;
+
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
             var App = Application.currentApplication();
