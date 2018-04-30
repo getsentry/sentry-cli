@@ -967,7 +967,7 @@ impl Api {
     /// Sends a single Sentry event.  The return value is the ID of the event
     /// that was sent.
     pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
-        let event: EventInfo = self.request(Method::Post, &dsn.store_api_url().path())?
+        let event: EventInfo = self.request(Method::Post, &dsn.store_api_url().as_str())?
             .with_header("X-Sentry-Auth", &dsn.to_auth(Some(USER_AGENT)).to_string())?
             .with_json_body(&event)?
             .send()?
