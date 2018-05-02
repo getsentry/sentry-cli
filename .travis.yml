@@ -8,17 +8,32 @@ branches:
   only:
   - master
 
+install:
+  - export PATH="$PATH:$HOME/.cargo/bin"
+
 matrix:
   include:
+    # Linux 32-bit statically linked binary
     - os: linux
-      env: TARGET=i686-unknown-linux-gnu DOCKER=alexcrichton/rust-slave-dist:2015-10-20b
+      env:
+        - TARGET=i686-unknown-linux-musl
+        - DOCKER_IMAGE=messense/rust-musl-cross:i686-musl
+      script: bash .ci/build_in_docker.sh
+
+    # Linux 64-bit statically linked binary
     - os: linux
-      env: TARGET=x86_64-unknown-linux-gnu DOCKER=alexcrichton/rust-slave-dist:2015-10-20b
+      env:
+        - TARGET=x86_64-unknown-linux-musl
+        - DOCKER_IMAGE=messense/rust-musl-cross:x86_64-musl
+      script: bash .ci/build_in_docker.sh
 
     # Build on older OS X for more portable binaries
     - os: osx
       osx_image: xcode6.4
       env: TARGET=x86_64-apple-darwin
+      script:
+        - bash .ci/install.sh
+        - cargo build --release --locked
 
     # Test minimum js
     - os: linux
@@ -26,8 +41,8 @@ matrix:
       language: node_js
       node_js: "4"
       install: true
-      script: npm install && npm test
       env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+      script: npm install && npm test
 
     # Test latest js
     - os: linux
@@ -35,8 +50,8 @@ matrix:
       language: node_js
       node_js: "8"
       install: true
-      script: npm install && npm test
       env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+      script: npm install && npm test
 
     # Build the @sentry/cli NPM package
     - os: linux
@@ -44,31 +59,9 @@ matrix:
       language: node_js
       node_js: "8"
       install: true
-      script: npm pack
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
       env: TARGET=npm
-
-
-install:
-  - export PATH="$PATH:$HOME/.cargo/bin"
-  - bash .ci/install.sh
-
-script:
-  - mkdir -p target
-  - if [ ! -z "$DOCKER" ]; then
-      docker run
-        --entrypoint bash
-        -u `id -u`:`id -g`
-        -v $HOME/rust:/travis-rust:ro
-        -v `pwd`:/buildslave:ro
-        -v `pwd`/target:/buildslave/target
-        -e TARGET=$TARGET
-        -e SKIP_TESTS=$SKIP_TESTS
-        -it $DOCKER
-        .ci/build-docker.sh;
-    else
-      PATH=$HOME/rust/bin:$PATH sh .ci/build.sh;
-    fi
+      script: npm pack
 
 before_cache:
   - chmod -R a+r $HOME/.cargo
