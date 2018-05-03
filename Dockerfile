@@ -1,10 +1,8 @@
-ARG BUILD_TARGET_TAG=x86_64-musl
+ARG BUILD_ARCH=x86_64
+FROM messense/rust-musl-cross:$BUILD_ARCH-musl AS sentry-build
 
-FROM messense/rust-musl-cross:$BUILD_TARGET_TAG AS sentry-build
-
-ARG BUILD_TARGET=x86_64-unknown-linux-musl
-ENV BUILD_TARGET=${BUILD_TARGET}
-
+ARG BUILD_ARCH=x86_64
+ENV BUILD_TARGET=$BUILD_ARCH-unknown-linux-musl
 WORKDIR /work
 
 # Build only dependencies to speed up subsequent builds
