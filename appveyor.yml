@@ -32,7 +32,7 @@ test_script:
   - cargo build --release --locked
 
 after_test:
-  - C:\Python27\python .ci/move-asset.py
+  - C:\Python27\python scripts/move-asset.py
 
 artifacts:
   - path: 'sentry-cli-*.exe'

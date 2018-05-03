@@ -1,5 +1,4 @@
 language: generic
-sudo: required
 dist: trusty
 services:
   - docker
@@ -8,36 +7,42 @@ branches:
   only:
   - master
 
-install:
-  - export PATH="$PATH:$HOME/.cargo/bin"
+cache:
+  directories:
+    - "node_modules"
+    - $HOME/.cargo
+    - $TRAVIS_BUILD_DIR/target
+
+before_cache:
+  - chmod -R a+r $HOME/.cargo
 
 matrix:
   include:
     # Linux 32-bit statically linked binary
     - os: linux
+      sudo: required
       env:
         - TARGET=i686-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:i686-musl
-      script: bash .ci/build_in_docker.sh
+      script: bash scripts/build-in-docker.sh
 
     # Linux 64-bit statically linked binary
     - os: linux
+      sudo: required
       env:
         - TARGET=x86_64-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:x86_64-musl
-      script: bash .ci/build_in_docker.sh
+      script: bash scripts/build-in-docker.sh
 
     # Build on older OS X for more portable binaries
     - os: osx
       osx_image: xcode6.4
+      language: rust
       env: TARGET=x86_64-apple-darwin
-      script:
-        - bash .ci/install.sh
-        - cargo build --release --locked
+      script: cargo build --release --locked
 
     # Test minimum js
     - os: linux
-      sudo: false
       language: node_js
       node_js: "4"
       install: true
@@ -46,7 +51,6 @@ matrix:
 
     # Test latest js
     - os: linux
-      sudo: false
       language: node_js
       node_js: "8"
       install: true
@@ -55,7 +59,6 @@ matrix:
 
     # Build the @sentry/cli NPM package
     - os: linux
-      sudo: false
       language: node_js
       node_js: "8"
       install: true
@@ -63,16 +66,7 @@ matrix:
       env: TARGET=npm
       script: npm pack
 
-before_cache:
-  - chmod -R a+r $HOME/.cargo
-
-cache:
-  directories:
-    - "node_modules"
-    - $HOME/.cargo
-    - $TRAVIS_BUILD_DIR/target
-
-before_deploy: python .ci/move-asset.py
+before_deploy: python scripts/move-asset.py
 
 deploy:
   provider: s3
