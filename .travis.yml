@@ -13,9 +13,6 @@ cache:
     - $HOME/.cargo
     - $TRAVIS_BUILD_DIR/target
 
-before_cache:
-  - chmod -R a+r $HOME/.cargo
-
 matrix:
   include:
     # Linux 32-bit statically linked binary
