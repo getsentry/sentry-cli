@@ -1,7 +1,7 @@
 ARG BUILD_ARCH=x86_64
 FROM messense/rust-musl-cross:$BUILD_ARCH-musl AS sentry-build
 
-ARG BUILD_ARCH=x86_64
+ARG BUILD_ARCH
 ENV BUILD_TARGET=$BUILD_ARCH-unknown-linux-musl
 WORKDIR /work
 
