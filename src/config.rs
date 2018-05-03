@@ -15,7 +15,7 @@ use parking_lot::Mutex;
 use failure::{err_msg, Error, ResultExt};
 use sentry::Dsn;
 
-use constants::DEFAULT_URL;
+use constants::{DEFAULT_URL, CONFIG_RC_FILE_NAME};
 use utils::logging::set_max_level;
 
 /// Represents the auth information
@@ -119,11 +119,21 @@ impl Config {
 
     /// Write the current config state back into the file.
     pub fn save(&self) -> Result<(), Error> {
-        let mut file = OpenOptions::new()
+
+        let mut options = OpenOptions::new();
+        options
             .write(true)
             .truncate(true)
-            .create(true)
-            .open(&self.filename)?;
+            .create(true);
+
+        // Remove all non-user permissions for the newly created file
+        #[cfg(not(windows))]
+        {
+            use std::os::unix::fs::OpenOptionsExt;
+            options.mode(0o600);
+        }
+
+        let mut file = options.open(&self.filename)?;
         self.ini.write_to(&mut file)?;
         Ok(())
     }
@@ -389,7 +399,7 @@ impl Config {
 
 fn find_project_config_file() -> Option<PathBuf> {
     env::current_dir().ok().and_then(|mut path| loop {
-        path.push(".sentryclirc");
+        path.push(CONFIG_RC_FILE_NAME);
         if path.exists() {
             return Some(path);
         }
@@ -406,7 +416,7 @@ fn find_project_config_file() -> Option<PathBuf> {
 
 fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
     let mut home_fn = env::home_dir().ok_or_else(|| err_msg("Could not find home dir"))?;
-    home_fn.push(".sentryclirc");
+    home_fn.push(CONFIG_RC_FILE_NAME);
 
     let mut rv = match fs::File::open(&home_fn) {
         Ok(mut file) => Ini::read_from(&mut file)?,
@@ -424,7 +434,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
         let mut f = fs::File::open(&project_config_path).with_context(|_| {
             format!(
-                "Failed to load .sentryclirc file from project path ({})",
+                "Failed to load {} file from project path ({})",
+                CONFIG_RC_FILE_NAME,
                 project_config_path.display()
             )
         })?;
