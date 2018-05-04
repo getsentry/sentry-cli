@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.31.0
+
+* Restrict file permissions for newly created `.sentryclirc` (#296)
+* Fix `SENTRY_DSN` environment variable parsing for `send-event` action (#292)
+* Build statically linked `musl`-based binaries for Linux (#294)
+* Detect `HEROKU_SLUG_COMMIT` in propose-version (#298)
+
 ## sentry-cli 1.30.5
 
 * Add better error diagnostics (internal change, #288)
