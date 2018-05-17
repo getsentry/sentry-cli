@@ -1556,7 +1556,7 @@ dependencies = [
  "serde_derive 1.0.43 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.16 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "sourcemap 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sourcemap 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "symbolic 5.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "uname 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1737,7 +1737,7 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "2.2.0"
+version = "2.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "base64 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2552,7 +2552,7 @@ dependencies = [
 "checksum smallvec 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4c8cbcd6df1e117c2210e13ab5109635ad68a929fcbb8964dc965b76cb5ee013"
 "checksum smallvec 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)" = "03dab98ab5ded3a8b43b2c80751194608d0b2aa0f1d46cf95d1c35e192844aa7"
 "checksum socket2 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "ff606e0486e88f5fc6cfeb3966e434fb409abbc7a3ab495238f70a1ca97f789d"
-"checksum sourcemap 2.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e1d9730ef8489fc165f169c72578a8fa9b33583a23b017bef7480aa6e278df40"
+"checksum sourcemap 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "febeea08fbed8ee59d9a784035669cb96123279459a28866e6dd76a7834ba32b"
 "checksum stable_deref_trait 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "15132e0e364248108c5e2c02e3ab539be8d6f5d52a01ca9bbf27ed657316f02b"
 "checksum string_cache 0.7.2 (registry+https://github.com/rust-lang/crates.io-index)" = "2bc8ae5fbdcafd8573e2bfc14acb54720e27bbf102376ed05d6052f7eb238b27"
 "checksum string_cache_codegen 0.4.1 (registry+https://github.com/rust-lang/crates.io-index)" = "35293b05cf1494e8ddd042a7df6756bf18d07f42d234f32e71dce8a7aabb0191"
