@@ -1,7 +1,10 @@
 #!/bin/bash
-set -e
+set -eu
 
-if [ -z "$1" ]; then
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+cd $SCRIPT_DIR/..
+
+if [ -z "${1:-}" ]; then
     set -- "patch"
 fi
 
@@ -33,6 +36,23 @@ esac
 
 echo "Current version: $VERSION"
 echo "Bumping version: $TARGET"
+
+# Check that there's a valid CHANGELOG entry for the new version
+UNRELEASED_MARKER="[Unreleased]"
+echo "Checking changelog entry..."
+CHANGELOG_NEW=$(cat CHANGELOG.md \
+                | sed -E -e "1,/^##.+(\\$UNRELEASED_MARKER|$TARGET)/ d"  \
+                | sed -E -e "/^## /,$ d"                                 \
+                | sed -E -e "/^ *$/ d")
+
+if [ -z "${CHANGELOG_NEW}" ]; then
+    echo "ERROR: Invalid or empty CHANGELOG entry for version ${TARGET}!"
+    echo "ERROR: Put your changes after the unreleased placeholder (${UNRELEASED_MARKER})."
+    exit 1
+fi
+echo "Changelog entry found."
+# Replace version in CHANGELOG
+sed -i '' -e "s/\\${UNRELEASED_MARKER}/${TARGET}/" CHANGELOG.md
 
 sed -i '' -e "1,/^version/ s/^version.*/version = \"$TARGET\"/" Cargo.toml
 sed -i '' -e "1,/\"version\"/ s/\"version\".*/\"version\": \"$TARGET\",/" package.json

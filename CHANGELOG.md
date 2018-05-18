@@ -1,5 +1,7 @@
 # Changelog
 
+## sentry-cli [Unreleased]
+
 ## sentry-cli 1.31.0
 
 * Restrict file permissions for newly created `.sentryclirc` (#296)
