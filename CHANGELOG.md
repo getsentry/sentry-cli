@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.32.0
+
+* Drop support for older macos versions to work around an old xcode linker bug.
+
 ## sentry-cli 1.31.2
 
 * Disabled automatic crash reporting
