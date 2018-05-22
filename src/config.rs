@@ -388,9 +388,6 @@ impl Config {
         }
         if let Some(val) = self.ini.get_from(Some("crash_reporting"), "sentry_dsn") {
             val.parse().ok()
-        } else if cfg!(feature = "with_crash_reporting") {
-            use constants::INTERNAL_SENTRY_DSN;
-            Some(INTERNAL_SENTRY_DSN.clone())
         } else {
             None
         }
