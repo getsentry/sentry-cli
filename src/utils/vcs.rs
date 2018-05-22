@@ -7,6 +7,12 @@ use failure::Error;
 
 use api::{Ref, Repo};
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum VcsType {
+    Git,
+    Unknown,
+}
+
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
     Commit(git2::Oid),
@@ -34,6 +40,7 @@ pub struct CommitSpec {
 pub struct VcsUrl {
     pub provider: &'static str,
     pub id: String,
+    pub ty: VcsType,
 }
 
 fn parse_rev_range(rng: &str) -> (Option<String>, String) {
@@ -91,38 +98,66 @@ fn strip_git_suffix(s: &str) -> &str {
     }
 }
 
-fn get_git_provider(hostname: &str) -> &'static str {
-    match hostname {
-        "github.com" => "github",
-        "bitbucket.org" => "bitbucket",
-        _ => "generic",
-    }
-}
-
 impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
         lazy_static! {
             static ref GIT_URL_RE: Regex = Regex::new(
-                r"^(?:ssh|https?)://(?:[^@]+@)?(github\.com|bitbucket\.org)/([^/]+)/([^/]+)").unwrap();
+                r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
             static ref GIT_SSH_RE: Regex = Regex::new(
-                r"^(?:[^@]+@)?(github\.com|bitbucket\.org):([^/]+)/([^/]+)").unwrap();
+                r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
         if let Some(caps) = GIT_URL_RE.captures(url) {
-            VcsUrl {
-                provider: get_git_provider(&caps[1]),
-                id: format!("{}/{}", &caps[2], strip_git_suffix(&caps[3])),
+            if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
+                return rv;
             }
         } else if let Some(caps) = GIT_SSH_RE.captures(url) {
-            VcsUrl {
-                provider: get_git_provider(&caps[1]),
-                id: format!("{}/{}", &caps[2], strip_git_suffix(&caps[3])),
-            }
-        } else {
-            VcsUrl {
-                provider: "generic",
-                id: url.into(),
+            if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
+                return rv;
+            } else {
+                return VcsUrl {
+                    provider: "git",
+                    id: url.into(),
+                    ty: VcsType::Git,
+                }
             }
         }
+        VcsUrl {
+            provider: "generic",
+            id: url.into(),
+            ty: VcsType::Unknown,
+        }
+    }
+
+    fn from_git_parts(host: &str, path: &str) -> Option<VcsUrl> {
+        lazy_static! {
+            static ref VS_DOMAIN_RE: Regex = Regex::new(
+                r"^([^.]+)\.visualstudio.com$").unwrap();
+            static ref VS_GIT_PATH_RE: Regex = Regex::new(
+                r"^_git/(.+?)(?:\.git)?$").unwrap();
+        }
+        if host == "github.com" {
+            return Some(VcsUrl {
+                provider: "github",
+                id: strip_git_suffix(path).into(),
+                ty: VcsType::Git,
+            });
+        } else if host == "bitbucket.org" {
+            return Some(VcsUrl {
+                provider: "bitbucket",
+                id: strip_git_suffix(path).into(),
+                ty: VcsType::Git,
+            });
+        } else if let Some(caps) = VS_DOMAIN_RE.captures(host) {
+            let username = &caps[1];
+            if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
+                return Some(VcsUrl {
+                    provider: "visualstudio",
+                    id: format!("{}/{}", username, &caps[1]),
+                    ty: VcsType::Git,
+                });
+            }
+        }
+        None
     }
 }
 
@@ -131,22 +166,29 @@ fn is_matching_url(a: &str, b: &str) -> bool {
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
+    let mut found_non_git = false;
     for configured_repo in repos {
         if configured_repo.name != repo {
             continue;
         }
-        if &configured_repo.provider.id != "github" && &configured_repo.provider.id != "bitbucket"
-            && &configured_repo.provider.id != "git"
-        {
-            bail!("For non git repositories explicit revisions are required");
-        }
 
-        if let Some(ref url) = configured_repo.url {
-            return Ok(url.clone());
+        match configured_repo.provider.id.as_str() {
+            "github" | "bitbucket" | "visualstudio" | "git" => {
+                if let Some(ref url) = configured_repo.url {
+                    return Ok(url.clone());
+                }
+            }
+            _ => {
+                found_non_git = true;
+            }
         }
     }
 
-    bail!("Could not find matching repository for {}", repo)
+    if found_non_git {
+        bail!("For non git repositories explicit revisions are required");
+    } else {
+        bail!("Could not find matching repository for {}", repo);
+    }
 }
 
 fn find_matching_rev(
@@ -304,6 +346,7 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "github",
             id: "mitsuhiko/flask".into(),
+            ty: VcsType::Git,
         }
     );
     assert_eq!(
@@ -311,6 +354,7 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "github",
             id: "mitsuhiko/flask".into(),
+            ty: VcsType::Git,
         }
     );
     assert_eq!(
@@ -318,6 +362,7 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "bitbucket",
             id: "mitsuhiko/flask".into(),
+            ty: VcsType::Git,
         }
     );
     assert_eq!(
@@ -325,6 +370,15 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "bitbucket",
             id: "mitsuhiko/flask".into(),
+            ty: VcsType::Git,
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://neilmanvar.visualstudio.com/_git/sentry-demo"),
+        VcsUrl {
+            provider: "visualstudio",
+            id: "neilmanvar/sentry-demo".into(),
+            ty: VcsType::Git,
         }
     );
 }
