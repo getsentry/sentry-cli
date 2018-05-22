@@ -33,7 +33,7 @@ matrix:
 
     # Build on older OS X for more portable binaries
     - os: osx
-      osx_image: xcode6.4
+      osx_image: xcode8
       language: rust
       env: TARGET=x86_64-apple-darwin
       script: cargo build --release --locked
