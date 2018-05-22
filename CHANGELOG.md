@@ -1,7 +1,5 @@
 # Changelog
 
-## sentry-cli [Unreleased]
-
 ## sentry-cli 1.31.1
 
 * Fixed out of bounds panic for sourcemaps without sources (#299)
