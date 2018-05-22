@@ -2,6 +2,11 @@
 
 ## sentry-cli [Unreleased]
 
+## sentry-cli 1.31.1
+
+* Fixed out of bounds panic for sourcemaps without sources (#299)
+* Fixed commit detection when VSTS was used (#300)
+
 ## sentry-cli 1.31.0
 
 * Restrict file permissions for newly created `.sentryclirc` (#296)
