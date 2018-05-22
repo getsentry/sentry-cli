@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.31.2
+
+* Disabled automatic crash reporting
+
 ## sentry-cli 1.31.1
 
 * Fixed out of bounds panic for sourcemaps without sources (#299)
