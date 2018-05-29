@@ -342,6 +342,17 @@ impl Config {
         }
     }
 
+    /// Return the environment
+    pub fn get_environment(&self) -> Option<String> {
+        if env::var_os("SENTRY_ENVIRONMENT").is_some() {
+            env::var("SENTRY_ENVIRONMENT").ok()
+        } else if let Some(val) = self.ini.get_from(Some("defaults"), "environment") {
+            Some(String::from(val))
+        } else {
+            None
+        }
+    }
+
     /// Return device model
     pub fn get_model(&self) -> Option<String> {
         if env::var_os("DEVICE_MODEL").is_some() {

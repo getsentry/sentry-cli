@@ -132,6 +132,8 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
         ],
     });
 
+    event.environment = config.get_environment();
+
     let dsn = config.get_dsn()?;
 
     // handle errors here locally so that we do not get the extra "use sentry-cli
