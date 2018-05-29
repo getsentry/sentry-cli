@@ -552,7 +552,13 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // create a shared instance here and clone it into `DifMatche`s
             // below.
             for (index, object) in fat.objects().enumerate() {
-                let object = object?;
+                // Silently skip all objects that we cannot process. This can
+                // happen due to invalid object files, which we then just
+                // discard rather than stopping the scan.
+                let object = match object {
+                    Ok(object) => object,
+                    Err(_) => continue,
+                };
 
                 // If an object object class was specified, this will skip all
                 // other objects. Usually, the user will search for
