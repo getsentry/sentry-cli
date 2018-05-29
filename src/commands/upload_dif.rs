@@ -142,6 +142,12 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
         upload
             .filter_kind(ObjectKind::MachO)
             .filter_class(ObjectClass::Debug);
+
+        if !matches.is_present("paths") {
+            if let Some(dsym_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
+                upload.search_path(dsym_path);
+            }
+        }
     } else {
         // Restrict symbol types, if specified by the user
         for ty in matches.values_of("types").unwrap_or_default() {
