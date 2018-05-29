@@ -153,7 +153,7 @@ impl SentryCliUpdateInfo {
         }
         if is_npm_install() {
             println!("This installation of sentry-cli is managed through npm/yarn");
-            println!("Please use npm/yearn to update sentry-cli");
+            println!("Please use npm/yarn to update sentry-cli");
             return Err(QuietExit(1).into());
         }
         if self.latest_release.is_none() {
@@ -233,7 +233,13 @@ fn update_nagger_impl() -> Result<(), Error> {
                 check.latest_version()
             )).yellow()
         );
-        println_stderr!("{}", style("run sentry-cli update to update").dim());
+        if is_homebrew_install() {
+            println_stderr!("{}", style("run brew upgrade sentry-cli to update").dim());
+        } else if is_npm_install() {
+            println_stderr!("{}", style("Please use npm/yarn to update sentry-cli").dim())
+        } else {
+            println_stderr!("{}", style("run sentry-cli update to update").dim());
+        }
     }
 
     Ok(())
