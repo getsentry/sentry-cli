@@ -1,8 +1,15 @@
 # Changelog
 
+## sentry-cli [Unreleased]
+
+* Improve update prompts (#306, @danielcompton)
+* Support event environments in bash hook (#312, @geniass)
+* Use `DWARF_DSYM_FOLDER_PATH` in upload-dsym (#313)
+* Skip malformed object files during upload scan (#313)
+
 ## sentry-cli 1.32.0
 
-* Drop support for older macos versions to work around an old xcode linker bug.
+* Drop support for older macOS versions to work around an old xcode linker bug
 
 ## sentry-cli 1.31.2
 
