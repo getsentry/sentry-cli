@@ -1,13 +1,13 @@
-use std::io;
-use std::fs;
 use std::env;
+use std::fs;
+use std::io;
+use std::io::{Read, Seek, SeekFrom};
 use std::mem;
 use std::path::{Path, PathBuf};
-use std::io::{Read, Seek, SeekFrom};
 
+use failure::Error;
 use sha1::{Digest, Sha1};
 use uuid::{Uuid, UuidVersion};
-use failure::Error;
 
 pub trait SeekRead: Seek + Read {}
 impl<T: Seek + Read> SeekRead for T {}

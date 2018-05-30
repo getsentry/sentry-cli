@@ -1,28 +1,27 @@
 //! Provides support for sending events to Sentry.
+use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::time::UNIX_EPOCH;
 use std::io::{BufRead, BufReader};
-use std::collections::HashMap;
 use std::process::Command;
+use std::time::UNIX_EPOCH;
 
+use anylog::LogEntry;
+use chrono::Utc;
+use failure::{Error, ResultExt};
+use hostname::get_hostname;
+use regex::Regex;
+use serde_json::Value;
 #[cfg(not(windows))]
 use uname::uname;
-use chrono::Utc;
-use serde_json::Value;
 use username::get_user_name;
-use hostname::get_hostname;
-use anylog::LogEntry;
-use regex::Regex;
-use failure::{Error, ResultExt};
 
 use constants::{ARCH, PLATFORM};
 use utils::releases::detect_release_name;
 use utils::system::{get_family, get_model, to_timestamp};
 
 lazy_static! {
-    static ref COMPONENT_RE: Regex = Regex::new(
-        r#"^([^:]+): (.*)$"#).unwrap();
+    static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();
 }
 
 #[derive(Serialize)]

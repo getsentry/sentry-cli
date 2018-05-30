@@ -1,17 +1,17 @@
 use std::io;
-use std::mem;
 use std::io::Write;
+use std::mem;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
-use log;
 use console::{style, Color};
+use log;
 
 /// A simple logger
 pub struct Logger;
 
 lazy_static! {
-    static ref MAX_LEVEL: AtomicUsize = AtomicUsize::new(
-        unsafe { mem::transmute(log::LevelFilter::Warn) });
+    static ref MAX_LEVEL: AtomicUsize =
+        AtomicUsize::new(unsafe { mem::transmute(log::LevelFilter::Warn) });
 }
 
 pub fn max_level() -> log::LevelFilter {

@@ -1,14 +1,14 @@
+use std::env;
 use std::fs;
 use std::io::Read;
-use std::env;
 use std::path::PathBuf;
 
-use regex::Regex;
 use failure::Error;
+use regex::Regex;
 
+use utils::cordova::CordovaConfig;
 use utils::vcs;
 use utils::xcode::InfoPlist;
-use utils::cordova::CordovaConfig;
 
 pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     let here = path.map_or(env::current_dir()?, |p| p.into());
@@ -51,10 +51,8 @@ pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>
 
 pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     lazy_static! {
-        static ref APP_ID_RE: Regex = Regex::new(
-            r#"applicationId\s+["']([^"']*)["']"#).unwrap();
-        static ref VERSION_NAME_RE: Regex = Regex::new(
-            r#"versionName\s+["']([^"']*)["']"#).unwrap();
+        static ref APP_ID_RE: Regex = Regex::new(r#"applicationId\s+["']([^"']*)["']"#).unwrap();
+        static ref VERSION_NAME_RE: Regex = Regex::new(r#"versionName\s+["']([^"']*)["']"#).unwrap();
     }
 
     let mut contents = String::new();

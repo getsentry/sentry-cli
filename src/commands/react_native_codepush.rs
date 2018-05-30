@@ -1,6 +1,6 @@
-use std::fs;
 use std::env;
 use std::ffi::OsStr;
+use std::fs;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;

@@ -3,11 +3,11 @@ use std::path::Path;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
-use serde_json;
 use failure::Error;
+use serde_json;
 
-use utils::system::QuietExit;
 use utils::dif::DifFile;
+use utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Check the debug info file at a given path.")

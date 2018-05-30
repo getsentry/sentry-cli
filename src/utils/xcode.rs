@@ -1,23 +1,23 @@
-use std::fs;
-use std::env;
-use std::fmt;
-use std::process;
-use std::path::{Path, PathBuf};
-use std::io::{BufRead, BufReader, Cursor};
-use std::collections::HashMap;
 #[cfg(target_os = "macos")]
 use libc::getpid;
+use std::collections::HashMap;
+use std::env;
+use std::fmt;
+use std::fs;
+use std::io::{BufRead, BufReader, Cursor};
+use std::path::{Path, PathBuf};
+use std::process;
 
-use serde_json;
-use plist::serde::deserialize;
-#[cfg(target_os = "macos")]
-use osascript;
-#[cfg(target_os = "macos")]
-use unix_daemonize::{daemonize_redirect, ChdirMode};
+use failure::{Error, ResultExt};
 #[cfg(target_os = "macos")]
 use mac_process_info;
+#[cfg(target_os = "macos")]
+use osascript;
+use plist::serde::deserialize;
 use regex::Regex;
-use failure::{Error, ResultExt};
+use serde_json;
+#[cfg(target_os = "macos")]
+use unix_daemonize::{daemonize_redirect, ChdirMode};
 
 use utils::fs::{SeekRead, TempFile};
 use utils::system::expand_vars;
@@ -340,9 +340,9 @@ impl<'a> MayDetach<'a> {
         task_name: &'a str,
         f: F,
     ) -> Result<T, Error> {
-        use std::time::Duration;
-        use std::thread;
         use open;
+        use std::thread;
+        use std::time::Duration;
         use utils::system::print_error;
 
         let mut md = MayDetach::new(task_name);
@@ -422,7 +422,8 @@ pub fn launched_from_xcode() -> bool {
 #[cfg(target_os = "macos")]
 pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
     lazy_static! {
-        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
+        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
+            "
             var App = Application('XCode');
             App.includeStandardAdditions = true;
             return App.displayAlert($params.title, {
@@ -430,7 +431,8 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
                 as: \"critical\",
                 buttons: [\"Show details\", \"Ignore\"]
             });
-        ");
+        "
+        );
     }
 
     #[derive(Serialize)]
@@ -461,13 +463,15 @@ pub fn show_notification(title: &str, msg: &str) -> Result<(), Error> {
     use config::Config;
 
     lazy_static! {
-        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new("
+        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
+            "
             var App = Application.currentApplication();
             App.includeStandardAdditions = true;
             App.displayNotification($params.message, {
                 withTitle: $params.title
             });
-        ");
+        "
+        );
     }
 
     let config = Config::get_current();

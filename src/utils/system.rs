@@ -1,18 +1,18 @@
+use std::borrow::Cow;
+use std::env;
 use std::io;
 use std::io::Write;
 use std::process;
-use std::env;
-use std::borrow::Cow;
 
 use config::Config;
 
-use clap;
-use dotenv;
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
-use regex::{Captures, Regex};
+use clap;
+use dotenv;
 use failure::Error;
+use regex::{Captures, Regex};
 
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)
@@ -99,8 +99,7 @@ pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
 /// Expands variables in a string
 pub fn expand_vars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> {
     lazy_static! {
-        static ref VAR_RE: Regex = Regex::new(
-            r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").unwrap();
+        static ref VAR_RE: Regex = Regex::new(r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").unwrap();
     }
     VAR_RE.replace_all(s, |caps: &Captures| {
         let key = &caps[1];
@@ -173,7 +172,8 @@ pub fn init_backtrace() {
             None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
         }
 
-        #[cfg(feature = "with_client_implementation")] {
+        #[cfg(feature = "with_client_implementation")]
+        {
             use utils::crashreporting::flush_events;
             flush_events();
         }
@@ -186,9 +186,9 @@ pub fn get_model() -> Option<String> {
         return Some(model);
     }
 
-    use std::ptr;
     use libc;
     use libc::c_void;
+    use std::ptr;
 
     unsafe {
         let mut size = 0;

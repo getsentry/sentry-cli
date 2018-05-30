@@ -1,11 +1,12 @@
-use std::io;
+use std::collections::HashSet;
 use std::env;
 use std::ffi::OsStr;
+use std::io;
 use std::path::PathBuf;
-use std::collections::HashSet;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use failure::Error;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde_json;
 use symbolic::common::byteview::ByteView;
@@ -13,11 +14,10 @@ use symbolic::debuginfo::DebugId;
 use symbolic::proguard::ProguardMappingView;
 use uuid::UuidVersion;
 use walkdir::WalkDir;
-use failure::Error;
 
-use utils::system::QuietExit;
 use utils::args::validate_id;
 use utils::dif::{DifFile, DifType};
+use utils::system::QuietExit;
 
 // text files larger than 32 megabytes are not considered to be
 // valid mapping files when scanning

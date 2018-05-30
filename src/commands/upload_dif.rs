@@ -5,16 +5,16 @@ use std::str::{self, FromStr};
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use failure::{err_msg, Error};
 use indicatif::{ProgressBar, ProgressStyle};
 use symbolic::common::types::{ObjectClass, ObjectKind};
 use symbolic::debuginfo::DebugId;
-use failure::{err_msg, Error};
 
 use api::Api;
 use config::Config;
-use utils::system::QuietExit;
 use utils::args::{validate_id, ArgExt};
 use utils::dif_upload::DifUpload;
+use utils::system::QuietExit;
 use utils::xcode::{InfoPlist, MayDetach};
 
 static DERIVED_DATA: &'static str = "Library/Developer/Xcode/DerivedData";
@@ -142,6 +142,12 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
         upload
             .filter_kind(ObjectKind::MachO)
             .filter_class(ObjectClass::Debug);
+
+        if !matches.is_present("paths") {
+            if let Some(dsym_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
+                upload.search_path(dsym_path);
+            }
+        }
     } else {
         // Restrict symbol types, if specified by the user
         for ty in matches.values_of("types").unwrap_or_default() {

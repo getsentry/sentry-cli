@@ -1,24 +1,24 @@
 //! Implements a command for managing releases.
+use std::collections::HashSet;
 use std::path::Path;
 use std::rc::Rc;
-use std::collections::HashSet;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
 use chrono::{DateTime, Duration, Utc};
+use clap::{App, AppSettings, Arg, ArgMatches};
+use failure::{err_msg, Error};
 use ignore::WalkBuilder;
-use ignore::types::TypesBuilder;
 use ignore::overrides::OverrideBuilder;
+use ignore::types::TypesBuilder;
 use indicatif::HumanBytes;
 use regex::Regex;
-use failure::{err_msg, Error};
 
 use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
 use config::Config;
-use utils::system::QuietExit;
 use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
 use utils::formatting::{HumanDuration, Table};
 use utils::releases::detect_release_name;
 use utils::sourcemaps::SourceMapProcessor;
+use utils::system::QuietExit;
 use utils::vcs::{find_heads, CommitSpec};
 
 struct ReleaseContext<'a> {
@@ -320,8 +320,8 @@ fn strip_sha(sha: &str) -> &str {
 
 fn strip_version(version: &str) -> &str {
     lazy_static! {
-        static ref DOTTED_PATH_PREFIX_RE: Regex = Regex::new(
-            r"^([a-z][a-z0-9-]+)(\.[a-z][a-z0-9-]+)+-").unwrap();
+        static ref DOTTED_PATH_PREFIX_RE: Regex =
+            Regex::new(r"^([a-z][a-z0-9-]+)(\.[a-z][a-z0-9-]+)+-").unwrap();
     }
     if let Some(m) = DOTTED_PATH_PREFIX_RE.find(version) {
         strip_sha(&version[m.end()..])

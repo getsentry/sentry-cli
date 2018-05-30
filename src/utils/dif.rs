@@ -1,11 +1,11 @@
-use std::fmt;
-use std::str;
-use std::path::Path;
-use std::ffi::OsStr;
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
+use std::fmt;
+use std::path::Path;
+use std::str;
 
-use serde::ser::{Serialize, SerializeStruct, Serializer};
 use failure::{Error, SyncFailure};
+use serde::ser::{Serialize, SerializeStruct, Serializer};
 use symbolic::common::{byteview::ByteView, types::ObjectKind};
 use symbolic::debuginfo::{DebugId, FatObject, Object, SymbolTable};
 use symbolic::proguard::ProguardMappingView;

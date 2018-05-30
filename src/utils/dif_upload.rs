@@ -5,8 +5,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
-use std::iter::IntoIterator;
 use std::io::{Read, Seek, SeekFrom, Write};
+use std::iter::IntoIterator;
 use std::ops::Deref;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
@@ -18,17 +18,17 @@ use std::thread;
 use std::time::Duration;
 
 use console::style;
+use failure::{err_msg, Error, SyncFailure};
 use indicatif::{ProgressBar, ProgressStyle};
+use parking_lot::RwLock;
+use scoped_threadpool::Pool;
 use sha1::Digest;
 use symbolic::common::{byteview::ByteView, types::{ObjectClass, ObjectKind}};
 use symbolic::debuginfo::{DebugId, FatObject, Object};
-use scoped_threadpool::Pool;
-use parking_lot::RwLock;
 use walkdir::WalkDir;
 use which::which;
-use zip::{ZipArchive, ZipWriter};
 use zip::write::FileOptions;
-use failure::{err_msg, Error, SyncFailure};
+use zip::{ZipArchive, ZipWriter};
 
 use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
 use config::Config;
@@ -552,7 +552,13 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // create a shared instance here and clone it into `DifMatche`s
             // below.
             for (index, object) in fat.objects().enumerate() {
-                let object = object?;
+                // Silently skip all objects that we cannot process. This can
+                // happen due to invalid object files, which we then just
+                // discard rather than stopping the scan.
+                let object = match object {
+                    Ok(object) => object,
+                    Err(_) => continue,
+                };
 
                 // If an object object class was specified, this will skip all
                 // other objects. Usually, the user will search for

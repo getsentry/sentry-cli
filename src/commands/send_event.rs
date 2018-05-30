@@ -1,13 +1,13 @@
 //! Implements a command for sending events to Sentry.
 use clap::{App, Arg, ArgMatches};
+use failure::{err_msg, Error};
 use itertools::Itertools;
 use serde_json::Value;
-use failure::{err_msg, Error};
 
 use api::Api;
 use config::Config;
-use utils::system::QuietExit;
 use event::{Event, Message};
+use utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")

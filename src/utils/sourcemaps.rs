@@ -1,19 +1,19 @@
 //! Provides sourcemap validation functionality.
-use std::fs;
-use std::fmt;
-use std::str;
-use std::io::Read;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::fs;
+use std::io::Read;
 use std::iter::FromIterator;
 use std::path::{Path, PathBuf};
+use std::str;
 
 use console::{style, Term};
+use failure::Error;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use might_be_minified;
 use sourcemap;
 use url::Url;
-use failure::Error;
 
 use api::{Api, FileContents};
 use utils::enc::decode_unknown_string;

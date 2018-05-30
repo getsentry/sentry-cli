@@ -1,21 +1,21 @@
 //! This module implements config access.
-use std::io;
-use std::fs;
 use std::env;
-use std::path::{Path, PathBuf};
+use std::fs;
 use std::fs::OpenOptions;
+use std::io;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use dotenv;
-use log;
-use java_properties;
 use clap::ArgMatches;
-use ini::Ini;
-use parking_lot::Mutex;
+use dotenv;
 use failure::{err_msg, Error, ResultExt};
+use ini::Ini;
+use java_properties;
+use log;
+use parking_lot::Mutex;
 use sentry::Dsn;
 
-use constants::{DEFAULT_URL, CONFIG_RC_FILE_NAME};
+use constants::{CONFIG_RC_FILE_NAME, DEFAULT_URL};
 use utils::logging::set_max_level;
 
 /// Represents the auth information
@@ -119,12 +119,8 @@ impl Config {
 
     /// Write the current config state back into the file.
     pub fn save(&self) -> Result<(), Error> {
-
         let mut options = OpenOptions::new();
-        options
-            .write(true)
-            .truncate(true)
-            .create(true);
+        options.write(true).truncate(true).create(true);
 
         // Remove all non-user permissions for the newly created file
         #[cfg(not(windows))]

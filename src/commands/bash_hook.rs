@@ -1,15 +1,15 @@
 //! Implements a command for showing infos from Sentry.
+use std::cmp::min;
+use std::collections::HashMap;
+use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::env;
-use std::cmp::min;
 use std::path::Path;
-use std::collections::HashMap;
 
 use clap::{App, Arg, ArgMatches};
-use uuid::{Uuid, UuidVersion};
-use regex::Regex;
 use failure::Error;
+use regex::Regex;
+use uuid::{Uuid, UuidVersion};
 
 use api::Api;
 use config::Config;
@@ -17,8 +17,7 @@ use event::{Event, Exception, Frame, SingleException, Stacktrace};
 
 const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
 lazy_static! {
-    static ref FRAME_RE: Regex = Regex::new(
-        r#"^(.*?):(.*):(\d+)$"#).unwrap();
+    static ref FRAME_RE: Regex = Regex::new(r#"^(.*?):(.*):(\d+)$"#).unwrap();
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {

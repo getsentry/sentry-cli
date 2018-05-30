@@ -27,9 +27,9 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(repos);
         $mac!(projects);
-        #[cfg(not(feature="managed"))]
+        #[cfg(not(feature = "managed"))]
         $mac!(update);
-        #[cfg(not(feature="managed"))]
+        #[cfg(not(feature = "managed"))]
         $mac!(uninstall);
         $mac!(info);
         $mac!(login);
@@ -41,10 +41,10 @@ macro_rules! each_subcommand {
         // these here exist for legacy reasons only.  They were moved
         // to subcommands of the react-native command.  Note that
         // codepush was never available on that level.
-        #[cfg(target_os="macos")]
+        #[cfg(target_os = "macos")]
         $mac!(react_native_xcode);
         $mac!(react_native_gradle);
-    }
+    };
 }
 
 // commands we want to run the update nagger on
@@ -54,29 +54,29 @@ const UPDATE_NAGGER_CMDS: &'static [&'static str] = &[
 
 // it would be great if this could be a macro expansion as well
 // but rust bug #37663 breaks location information then.
+pub mod bash_hook;
+pub mod info;
+pub mod issues;
+pub mod login;
+pub mod projects;
+pub mod releases;
+pub mod repos;
+pub mod send_event;
+pub mod uninstall;
+pub mod update;
 pub mod upload_dif;
 pub mod upload_dsym;
 pub mod upload_proguard;
-pub mod releases;
-pub mod issues;
-pub mod repos;
-pub mod projects;
-pub mod update;
-pub mod uninstall;
-pub mod info;
-pub mod login;
-pub mod send_event;
-pub mod bash_hook;
 
 pub mod react_native;
+pub mod react_native_codepush;
+pub mod react_native_gradle;
 #[cfg(target_os = "macos")]
 pub mod react_native_xcode;
-pub mod react_native_gradle;
-pub mod react_native_codepush;
 
 pub mod difutil;
-pub mod difutil_find;
 pub mod difutil_check;
+pub mod difutil_find;
 pub mod difutil_id;
 
 fn preexecute_hooks() -> Result<bool, Error> {
@@ -148,8 +148,7 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
 
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            let mut cmd = $name::make_app(
-                App::new(stringify!($name).replace("_", "-").as_str()));
+            let mut cmd = $name::make_app(App::new(stringify!($name).replace("_", "-").as_str()));
 
             // for legacy reasons
             if stringify!($name).starts_with("react_native_") {
@@ -157,7 +156,7 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
             }
 
             app = app.subcommand(cmd);
-        }}
+        }};
     }
     each_subcommand!(add_subcommand);
 
@@ -196,7 +195,7 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
                 }
                 return Ok(rv);
             }
-        }}
+        }};
     }
     each_subcommand!(execute_subcommand);
     unreachable!();
@@ -218,8 +217,8 @@ fn run() -> Result<(), Error> {
 
 fn setup() {
     use log;
-    use utils::system::{init_backtrace, load_dotenv};
     use utils::logging::Logger;
+    use utils::system::{init_backtrace, load_dotenv};
 
     init_backtrace();
     load_dotenv();
