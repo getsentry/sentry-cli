@@ -1,6 +1,6 @@
 # Changelog
 
-## sentry-cli [Unreleased]
+## sentry-cli 1.32.1
 
 * Improve update prompts (#306, @danielcompton)
 * Support event environments in bash hook (#312, @geniass)
