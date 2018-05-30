@@ -77,7 +77,7 @@ pub struct Event {
     pub level: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fingerprint: Option<Vec<String>>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "sentry.interfaces.Message")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "logentry")]
     pub message: Option<Message>,
     pub platform: String,
     pub timestamp: f64,
