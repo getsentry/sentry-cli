@@ -1,10 +1,10 @@
 //! Implements a command for showing infos from Sentry.
-use std::io;
 use std::collections::HashMap;
+use std::io;
 
 use clap::{App, Arg, ArgMatches};
-use serde_json;
 use failure::Error;
+use serde_json;
 
 use api::Api;
 use config::{Auth, Config};

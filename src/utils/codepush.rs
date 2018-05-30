@@ -5,9 +5,9 @@ use std::process;
 use std::str;
 
 use console::strip_ansi_codes;
+use failure::{err_msg, Error};
 use glob::{glob_with, MatchOptions};
 use serde_json;
-use failure::{err_msg, Error};
 
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use utils::xcode::{InfoPlist, XcodeProjectInfo};

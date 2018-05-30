@@ -5,16 +5,16 @@ use std::str::{self, FromStr};
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use failure::{err_msg, Error};
 use indicatif::{ProgressBar, ProgressStyle};
 use symbolic::common::types::{ObjectClass, ObjectKind};
 use symbolic::debuginfo::DebugId;
-use failure::{err_msg, Error};
 
 use api::Api;
 use config::Config;
-use utils::system::QuietExit;
 use utils::args::{validate_id, ArgExt};
 use utils::dif_upload::DifUpload;
+use utils::system::QuietExit;
 use utils::xcode::{InfoPlist, MayDetach};
 
 static DERIVED_DATA: &'static str = "Library/Developer/Xcode/DerivedData";

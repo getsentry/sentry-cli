@@ -3,32 +3,32 @@
 //! to the GitHub API to figure out if there are new releases of the
 //! sentry-cli tool.
 
-use std::fs;
-use std::str;
-use std::cmp;
-use std::io::{Read, Write};
-use std::fmt;
-use std::thread;
-use std::sync::Arc;
-use std::cell::{RefCell, RefMut};
-use std::path::Path;
-use std::collections::{HashMap, HashSet};
 use std::borrow::Cow;
+use std::cell::{RefCell, RefMut};
+use std::cmp;
+use std::collections::{HashMap, HashSet};
+use std::fmt;
+use std::fs;
+use std::io::{Read, Write};
+use std::path::Path;
 use std::rc::Rc;
+use std::str;
+use std::sync::Arc;
+use std::thread;
 
 use chrono::{DateTime, Duration, Utc};
 use curl;
+use failure::{Backtrace, Context, Error, Fail, ResultExt};
 use indicatif::ProgressBar;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
+use sentry::Dsn;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json;
-use symbolic::debuginfo::DebugId;
 use sha1::Digest;
+use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
-use failure::{Backtrace, Context, Error, Fail, ResultExt};
-use sentry::Dsn;
 
 use config::{Auth, Config};
 use constants::{ARCH, EXT, PLATFORM, USER_AGENT, VERSION};
@@ -1333,8 +1333,7 @@ impl ApiResponse {
 
 fn log_headers(is_response: bool, data: &[u8]) {
     lazy_static! {
-        static ref AUTH_RE: Regex = Regex::new(
-            r"(?i)(authorization):\s*([\w]+)\s+(.*)").unwrap();
+        static ref AUTH_RE: Regex = Regex::new(r"(?i)(authorization):\s*([\w]+)\s+(.*)").unwrap();
     }
     if let Ok(header) = str::from_utf8(data) {
         for line in header.lines() {

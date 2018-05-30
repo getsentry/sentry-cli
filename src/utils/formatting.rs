@@ -1,7 +1,7 @@
 use std::fmt;
 
-use prettytable;
 use chrono::Duration;
+use prettytable;
 
 /// Helper for formatting durations.
 pub struct HumanDuration(pub Duration);
@@ -10,9 +10,12 @@ impl<'a> fmt::Display for HumanDuration {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         macro_rules! try_write {
             ($num:expr, $str:expr) => {
-                if $num == 1 { return write!(f, "1 {}", $str); }
-                else if $num > 1 { return write!(f, "{} {}s", $num, $str); }
-            }
+                if $num == 1 {
+                    return write!(f, "1 {}", $str);
+                } else if $num > 1 {
+                    return write!(f, "{} {}s", $num, $str);
+                }
+            };
         }
 
         try_write!(self.0.num_hours(), "hour");

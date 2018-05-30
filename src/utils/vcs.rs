@@ -1,9 +1,9 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use failure::Error;
 use git2;
 use regex::Regex;
-use failure::Error;
 
 use api::{Ref, Repo};
 
@@ -55,8 +55,7 @@ fn parse_rev_range(rng: &str) -> (Option<String>, String) {
 impl CommitSpec {
     pub fn parse(s: &str) -> Result<CommitSpec, Error> {
         lazy_static! {
-            static ref SPEC_RE: Regex = Regex::new(
-                r"^([^@#]+)(?:#([^@]+))?(?:@(.+))?$").unwrap();
+            static ref SPEC_RE: Regex = Regex::new(r"^([^@#]+)(?:#([^@]+))?(?:@(.+))?$").unwrap();
         }
         if let Some(caps) = SPEC_RE.captures(s) {
             let (prev_rev, rev) = parse_rev_range(caps.get(3).map(|x| x.as_str()).unwrap_or(""));
@@ -101,10 +100,9 @@ fn strip_git_suffix(s: &str) -> &str {
 impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
         lazy_static! {
-            static ref GIT_URL_RE: Regex = Regex::new(
-                r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
-            static ref GIT_SSH_RE: Regex = Regex::new(
-                r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
+            static ref GIT_URL_RE: Regex =
+                Regex::new(r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
+            static ref GIT_SSH_RE: Regex = Regex::new(r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
         if let Some(caps) = GIT_URL_RE.captures(url) {
             if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
@@ -118,7 +116,7 @@ impl VcsUrl {
                     provider: "git",
                     id: url.into(),
                     ty: VcsType::Git,
-                }
+                };
             }
         }
         VcsUrl {
@@ -130,10 +128,8 @@ impl VcsUrl {
 
     fn from_git_parts(host: &str, path: &str) -> Option<VcsUrl> {
         lazy_static! {
-            static ref VS_DOMAIN_RE: Regex = Regex::new(
-                r"^([^.]+)\.visualstudio.com$").unwrap();
-            static ref VS_GIT_PATH_RE: Regex = Regex::new(
-                r"^_git/(.+?)(?:\.git)?$").unwrap();
+            static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
+            static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
         }
         if host == "github.com" {
             return Some(VcsUrl {

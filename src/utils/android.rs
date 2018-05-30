@@ -1,14 +1,14 @@
-use std::io;
-use std::fs;
-use std::fmt;
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::fmt;
+use std::fs;
+use std::io;
+use std::path::{Path, PathBuf};
 
 use elementtree::Element;
+use failure::{err_msg, Error};
 use itertools::Itertools;
 use java_properties;
 use uuid::Uuid;
-use failure::{err_msg, Error};
 
 pub struct AndroidManifest {
     path: PathBuf,

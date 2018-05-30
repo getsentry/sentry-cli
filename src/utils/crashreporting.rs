@@ -2,10 +2,10 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::time::Duration;
 
-use sentry::{self, Client, ClientOptions};
-use sentry::integrations::{failure, log, panic};
-use log::Log;
 use failure::Error;
+use log::Log;
+use sentry::integrations::{failure, log, panic};
+use sentry::{self, Client, ClientOptions};
 
 use config::Config;
 use constants::USER_AGENT;

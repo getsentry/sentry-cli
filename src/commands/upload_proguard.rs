@@ -5,18 +5,18 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use failure::{Error, SyncFailure};
 use symbolic::common::byteview::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
 use zip;
-use failure::{Error, SyncFailure};
 
 use api::{Api, AssociateDsyms};
 use config::Config;
-use utils::system::QuietExit;
 use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
 use utils::args::{validate_uuid, ArgExt};
 use utils::fs::{TempFile, get_sha1_checksum};
+use utils::system::QuietExit;
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 #[derive(Debug)]
@@ -164,8 +164,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     for path in &paths {
         match fs::metadata(path) {
             Ok(md) => {
-                let mapping = ProguardMappingView::parse(ByteView::from_path(path).map_err(SyncFailure::new)?)
-                    .map_err(SyncFailure::new)?;
+                let byteview = ByteView::from_path(path).map_err(SyncFailure::new)?;
+                let mapping = ProguardMappingView::parse(byteview).map_err(SyncFailure::new)?;
                 if !mapping.has_line_info() {
                     println_stderr!(
                         "warning: proguard mapping '{}' was ignored because it \

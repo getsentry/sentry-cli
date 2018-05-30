@@ -1,6 +1,6 @@
 use std::fs;
-use std::path::Path;
 use std::io::BufReader;
+use std::path::Path;
 
 use elementtree::{Element, QName};
 use failure::Error;

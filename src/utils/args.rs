@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use clap;
+use failure::Error;
 use symbolic::debuginfo::DebugId;
 use uuid::Uuid;
-use failure::Error;
 
 fn validate_org(v: String) -> Result<(), String> {
     if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {

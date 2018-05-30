@@ -1,12 +1,12 @@
 use std::io;
 use std::path::Path;
 
-use failure::Error;
 use clap::{App, Arg, ArgMatches};
+use failure::Error;
 use serde_json;
 
-use utils::system::QuietExit;
 use utils::dif::DifFile;
+use utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Print debug identifier(s) from a debug info file.")

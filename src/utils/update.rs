@@ -1,15 +1,15 @@
+use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
-use std::env;
 use std::path::Path;
 
-use runas;
-use console::{style, user_attended};
 use app_dirs;
-use serde_json;
 use chrono::{DateTime, Duration, Utc};
+use console::{style, user_attended};
 use failure::{Error, ResultExt};
+use runas;
+use serde_json;
 
 use api::{Api, SentryCliRelease};
 use config::Config;
@@ -236,7 +236,10 @@ fn update_nagger_impl() -> Result<(), Error> {
         if is_homebrew_install() {
             println_stderr!("{}", style("run brew upgrade sentry-cli to update").dim());
         } else if is_npm_install() {
-            println_stderr!("{}", style("Please use npm/yarn to update sentry-cli").dim())
+            println_stderr!(
+                "{}",
+                style("Please use npm/yarn to update sentry-cli").dim()
+            )
         } else {
             println_stderr!("{}", style("run sentry-cli update to update").dim());
         }

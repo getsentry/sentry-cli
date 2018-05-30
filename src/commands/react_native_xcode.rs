@@ -4,10 +4,10 @@ use std::fs;
 use std::path::PathBuf;
 use std::process;
 
-use clap::{App, Arg, ArgMatches};
-use serde_json;
 use chrono::Duration;
+use clap::{App, Arg, ArgMatches};
 use failure::Error;
+use serde_json;
 
 use api::{Api, NewRelease};
 use config::Config;
