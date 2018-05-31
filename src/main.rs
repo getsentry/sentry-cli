@@ -7,6 +7,7 @@
 extern crate anylog;
 extern crate app_dirs;
 extern crate backtrace;
+extern crate brotli2;
 #[cfg(not(windows))]
 #[macro_use]
 extern crate chan;

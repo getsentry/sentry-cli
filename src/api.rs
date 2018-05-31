@@ -9,13 +9,14 @@ use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 use std::thread;
 
+use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, Utc};
 use curl;
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
@@ -811,13 +812,32 @@ impl Api {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
+    /// Compresses a file with the given compression.
+    fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
+        Ok(match compression {
+            ChunkCompression::Brotli => {
+                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Gzip => {
+                let mut encoder = GzEncoder::new(Vec::new(), Default::default());
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Uncompressed => data.into(),
+        })
+    }
+
     /// Upload a batch of file chunks.
     pub fn upload_chunks<'data, I, T>(
         &self,
         url: &str,
         chunks: I,
         progress_bar_mode: ProgressBarMode,
-        compression: Option<ChunkCompression>,
+        compression: ChunkCompression,
     ) -> ApiResult<()>
     where
         I: IntoIterator<Item = &'data T>,
@@ -834,20 +854,8 @@ impl Api {
 
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
-            let (name, buffer) = match compression {
-                Some(ChunkCompression::Gzip) => {
-                    let mut encoder = GzEncoder::new(Default::default(), Default::default());
-                    encoder
-                        .write_all(data)
-                        .context(ApiErrorKind::CompressionFailed)?;
-                    (
-                        "file_gzip",
-                        encoder.finish().context(ApiErrorKind::CompressionFailed)?,
-                    )
-                }
-                Some(ChunkCompression::Other) | None => ("file", data.into()),
-            };
-
+            let name = compression.field_name();
+            let buffer = Api::compress(data, compression).context(ApiErrorKind::CompressionFailed)?;
             form.part(name).buffer(&checksum, buffer).add()?
         }
 
@@ -1638,8 +1646,28 @@ pub enum ChunkHashAlgorithm {
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub enum ChunkCompression {
-    Other = 0,
+    /// No compression should be applied
+    Uncompressed = 0,
+    /// GZIP compression (including header)
     Gzip = 10,
+    /// Brotli compression
+    Brotli = 20,
+}
+
+impl ChunkCompression {
+    fn field_name(&self) -> &'static str {
+        match *self {
+            ChunkCompression::Uncompressed => "file",
+            ChunkCompression::Gzip => "file_gzip",
+            ChunkCompression::Brotli => "file_brotli",
+        }
+    }
+}
+
+impl Default for ChunkCompression {
+    fn default() -> Self {
+        ChunkCompression::Uncompressed
+    }
 }
 
 impl<'de> Deserialize<'de> for ChunkCompression {
@@ -1649,7 +1677,8 @@ impl<'de> Deserialize<'de> for ChunkCompression {
     {
         Ok(match <&str>::deserialize(deserializer)? {
             "gzip" => ChunkCompression::Gzip,
-            _ => ChunkCompression::Other,
+            // We do not know this compression, so we assume no compression
+            _ => ChunkCompression::Uncompressed,
         })
     }
 }
