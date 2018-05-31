@@ -23,7 +23,8 @@ use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::RwLock;
 use scoped_threadpool::Pool;
 use sha1::Digest;
-use symbolic::common::{byteview::ByteView, types::{ObjectClass, ObjectKind}};
+use symbolic::common::{byteview::ByteView,
+                       types::{ObjectClass, ObjectKind}};
 use symbolic::debuginfo::{DebugId, FatObject, Object};
 use walkdir::WalkDir;
 use which::which;
@@ -34,7 +35,7 @@ use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, Progress
 use config::Config;
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::DebuggingInformation;
-use utils::fs::{TempDir, TempFile, get_sha1_checksum, get_sha1_checksums};
+use utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.
@@ -862,6 +863,7 @@ fn upload_missing_chunks(
     chunk_options: &ChunkUploadOptions,
 ) -> Result<(), Error> {
     let &(ref difs, ref chunks) = missing_info;
+    let compression = chunk_options.compression;
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
@@ -920,7 +922,7 @@ fn upload_missing_chunks(
                 // Obtain a thread_local API instance
                 let api = Api::get_current();
                 let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
-                if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode) {
+                if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode, compression) {
                     *failed.write() = Some(err);
                 }
             });

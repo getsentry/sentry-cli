@@ -19,12 +19,13 @@ use std::thread;
 use chrono::{DateTime, Duration, Utc};
 use curl;
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
+use flate2::write::GzEncoder;
 use indicatif::ProgressBar;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
 use sentry::Dsn;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use serde_json;
 use sha1::Digest;
 use symbolic::debuginfo::DebugId;
@@ -163,6 +164,8 @@ pub enum ApiErrorKind {
     ChunkUploadNotSupported,
     #[fail(display = "API request failed")]
     RequestFailed,
+    #[fail(display = "could not compress data")]
+    CompressionFailed,
 }
 
 #[derive(Debug)]
@@ -814,6 +817,7 @@ impl Api {
         url: &str,
         chunks: I,
         progress_bar_mode: ProgressBarMode,
+        compression: Option<ChunkCompression>,
     ) -> ApiResult<()>
     where
         I: IntoIterator<Item = &'data T>,
@@ -830,13 +834,21 @@ impl Api {
 
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
-            // NOTE: The Part::buffer method requires data in an owned Vec<u8> instead
-            // of just a byte slice. Internally, it retrieves a pointer to the data
-            // and simply adds this pointer to the internal CURL buffers. There is no
-            // other way in the curl crate to create a "file" field with custom file
-            // name from memory. Hopefully, the optimizer detects this unneeded clone
-            // and removes it in the production build.
-            form.part("file").buffer(&checksum, data.into()).add()?
+            let (name, buffer) = match compression {
+                Some(ChunkCompression::Gzip) => {
+                    let mut encoder = GzEncoder::new(Default::default(), Default::default());
+                    encoder
+                        .write_all(data)
+                        .context(ApiErrorKind::CompressionFailed)?;
+                    (
+                        "file_gzip",
+                        encoder.finish().context(ApiErrorKind::CompressionFailed)?,
+                    )
+                }
+                None => ("file", data.into()),
+            };
+
+            form.part(name).buffer(&checksum, buffer).add()?
         }
 
         let request = self.request(Method::Post, url)?
@@ -1618,10 +1630,16 @@ pub struct Deploy {
     pub finished: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 pub enum ChunkHashAlgorithm {
     #[serde(rename = "sha1")]
     Sha1,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub enum ChunkCompression {
+    #[serde(rename = "gzip")]
+    Gzip,
 }
 
 #[derive(Debug, Deserialize)]
@@ -1638,6 +1656,8 @@ pub struct ChunkUploadOptions {
     pub chunk_size: u64,
     #[serde(rename = "concurrency")]
     pub concurrency: u8,
+    #[serde(rename = "compression")]
+    pub compression: Option<ChunkCompression>,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]

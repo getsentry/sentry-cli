@@ -24,6 +24,7 @@ extern crate encoding;
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
+extern crate flate2;
 extern crate git2;
 extern crate glob;
 extern crate hostname;
