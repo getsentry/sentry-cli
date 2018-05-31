@@ -911,6 +911,8 @@ fn upload_missing_chunks(
         .cloned()
         .unwrap_or_default();
 
+    info!("using '{}' compression for chunk upload", compression);
+
     pool.scoped(|scoped| {
         for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
             let progress = progress.clone();

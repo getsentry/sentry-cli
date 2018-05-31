@@ -1670,13 +1670,24 @@ impl Default for ChunkCompression {
     }
 }
 
+impl fmt::Display for ChunkCompression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ChunkCompression::Uncompressed => write!(f, "uncompressed"),
+            ChunkCompression::Gzip => write!(f, "gzip"),
+            ChunkCompression::Brotli => write!(f, "brotli"),
+        }
+    }
+}
+
 impl<'de> Deserialize<'de> for ChunkCompression {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        Ok(match <&str>::deserialize(deserializer)? {
+        Ok(match String::deserialize(deserializer)?.as_str() {
             "gzip" => ChunkCompression::Gzip,
+            "brotli" => ChunkCompression::Brotli,
             // We do not know this compression, so we assume no compression
             _ => ChunkCompression::Uncompressed,
         })
