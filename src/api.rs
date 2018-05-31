@@ -9,22 +9,24 @@ use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::{self, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 use std::thread;
 
+use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, Utc};
 use curl;
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
+use flate2::write::GzEncoder;
 use indicatif::ProgressBar;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
 use sentry::Dsn;
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::Serialize;
-use serde::de::DeserializeOwned;
 use serde_json;
 use sha1::Digest;
 use symbolic::debuginfo::DebugId;
@@ -163,6 +165,8 @@ pub enum ApiErrorKind {
     ChunkUploadNotSupported,
     #[fail(display = "API request failed")]
     RequestFailed,
+    #[fail(display = "could not compress data")]
+    CompressionFailed,
 }
 
 #[derive(Debug)]
@@ -808,12 +812,32 @@ impl Api {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
+    /// Compresses a file with the given compression.
+    fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
+        Ok(match compression {
+            ChunkCompression::Brotli => {
+                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Gzip => {
+                let mut encoder = GzEncoder::new(Vec::new(), Default::default());
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Uncompressed => data.into(),
+        })
+    }
+
     /// Upload a batch of file chunks.
     pub fn upload_chunks<'data, I, T>(
         &self,
         url: &str,
         chunks: I,
         progress_bar_mode: ProgressBarMode,
+        compression: ChunkCompression,
     ) -> ApiResult<()>
     where
         I: IntoIterator<Item = &'data T>,
@@ -830,13 +854,9 @@ impl Api {
 
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
-            // NOTE: The Part::buffer method requires data in an owned Vec<u8> instead
-            // of just a byte slice. Internally, it retrieves a pointer to the data
-            // and simply adds this pointer to the internal CURL buffers. There is no
-            // other way in the curl crate to create a "file" field with custom file
-            // name from memory. Hopefully, the optimizer detects this unneeded clone
-            // and removes it in the production build.
-            form.part("file").buffer(&checksum, data.into()).add()?
+            let name = compression.field_name();
+            let buffer = Api::compress(data, compression).context(ApiErrorKind::CompressionFailed)?;
+            form.part(name).buffer(&checksum, buffer).add()?
         }
 
         let request = self.request(Method::Post, url)?
@@ -1618,10 +1638,60 @@ pub struct Deploy {
     pub finished: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub enum ChunkHashAlgorithm {
     #[serde(rename = "sha1")]
     Sha1,
+}
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+pub enum ChunkCompression {
+    /// No compression should be applied
+    Uncompressed = 0,
+    /// GZIP compression (including header)
+    Gzip = 10,
+    /// Brotli compression
+    Brotli = 20,
+}
+
+impl ChunkCompression {
+    fn field_name(&self) -> &'static str {
+        match *self {
+            ChunkCompression::Uncompressed => "file",
+            ChunkCompression::Gzip => "file_gzip",
+            ChunkCompression::Brotli => "file_brotli",
+        }
+    }
+}
+
+impl Default for ChunkCompression {
+    fn default() -> Self {
+        ChunkCompression::Uncompressed
+    }
+}
+
+impl fmt::Display for ChunkCompression {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            ChunkCompression::Uncompressed => write!(f, "uncompressed"),
+            ChunkCompression::Gzip => write!(f, "gzip"),
+            ChunkCompression::Brotli => write!(f, "brotli"),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for ChunkCompression {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(match String::deserialize(deserializer)?.as_str() {
+            "gzip" => ChunkCompression::Gzip,
+            "brotli" => ChunkCompression::Brotli,
+            // We do not know this compression, so we assume no compression
+            _ => ChunkCompression::Uncompressed,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -1638,6 +1708,8 @@ pub struct ChunkUploadOptions {
     pub chunk_size: u64,
     #[serde(rename = "concurrency")]
     pub concurrency: u8,
+    #[serde(rename = "compression", default)]
+    pub compression: Vec<ChunkCompression>,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
