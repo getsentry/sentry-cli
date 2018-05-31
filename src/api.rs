@@ -24,7 +24,7 @@ use indicatif::ProgressBar;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
 use sentry::Dsn;
-use serde::de::DeserializeOwned;
+use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::Serialize;
 use serde_json;
 use sha1::Digest;
@@ -845,7 +845,7 @@ impl Api {
                         encoder.finish().context(ApiErrorKind::CompressionFailed)?,
                     )
                 }
-                None => ("file", data.into()),
+                Some(ChunkCompression::Other) | None => ("file", data.into()),
             };
 
             form.part(name).buffer(&checksum, buffer).add()?
@@ -1630,16 +1630,28 @@ pub struct Deploy {
     pub finished: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub enum ChunkHashAlgorithm {
     #[serde(rename = "sha1")]
     Sha1,
 }
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
 pub enum ChunkCompression {
-    #[serde(rename = "gzip")]
-    Gzip,
+    Other = 0,
+    Gzip = 10,
+}
+
+impl<'de> Deserialize<'de> for ChunkCompression {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(match <&str>::deserialize(deserializer)? {
+            "gzip" => ChunkCompression::Gzip,
+            _ => ChunkCompression::Other,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -1656,8 +1668,8 @@ pub struct ChunkUploadOptions {
     pub chunk_size: u64,
     #[serde(rename = "concurrency")]
     pub concurrency: u8,
-    #[serde(rename = "compression")]
-    pub compression: Option<ChunkCompression>,
+    #[serde(rename = "compression", default)]
+    pub compression: Vec<ChunkCompression>,
 }
 
 #[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]

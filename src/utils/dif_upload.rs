@@ -31,7 +31,8 @@ use which::which;
 use zip::write::FileOptions;
 use zip::{ZipArchive, ZipWriter};
 
-use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
+use api::{Api, ChunkCompression, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState,
+          ProgressBarMode};
 use config::Config;
 use utils::batch::{BatchedSliceExt, ItemSize};
 use utils::dif::DebuggingInformation;
@@ -863,7 +864,6 @@ fn upload_missing_chunks(
     chunk_options: &ChunkUploadOptions,
 ) -> Result<(), Error> {
     let &(ref difs, ref chunks) = missing_info;
-    let compression = chunk_options.compression;
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
@@ -900,6 +900,11 @@ fn upload_missing_chunks(
     let failed = Arc::new(RwLock::new(None));
     let chunk_progress = Arc::new(RwLock::new(vec![0u64; 0]));
     chunk_progress.write().push(total_bytes - missing_bytes);
+
+    // Select the best available compression mechanism. We assume that every
+    // compression algorithm has been implemented for uploading, except
+    // `Some(Other)` which will have the same effect as `None`.
+    let compression = chunk_options.compression.iter().max().cloned();
 
     pool.scoped(|scoped| {
         for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
