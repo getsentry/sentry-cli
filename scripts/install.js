@@ -53,7 +53,7 @@ function createProgressBar(name, total) {
     return {
       tick: length => {
         current += length;
-        const next = Math.round(current / total * 100);
+        const next = Math.round((current / total) * 100);
         if (next > pct) {
           pct = next;
           process.stdout.write(`fetching ${name} ${pct}%\n`);
