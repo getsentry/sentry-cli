@@ -74,11 +74,11 @@ pub fn get_sdk_info() -> Cow<'static, ClientSdkInfo> {
 }
 
 /// Returns a Sentry Client configured for sentry-cli.
-pub fn create_client(dsn: Dsn) -> Result<Client> {
+pub fn create_client(dsn: Dsn) -> Client {
     let options = ClientOptions {
         user_agent: USER_AGENT.into(),
         ..Default::default()
     };
 
-    Ok(Client::with_dsn_and_options(dsn, options))
+    Client::with_dsn_and_options(dsn, options)
 }

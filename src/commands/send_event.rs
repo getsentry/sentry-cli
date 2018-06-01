@@ -4,7 +4,6 @@ use std::time::Duration;
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
-use regex::Regex;
 use sentry::protocol::{Event, Level, LogEntry, User};
 use serde_json::Value;
 use username::get_user_name;
@@ -13,10 +12,6 @@ use config::Config;
 use utils::event::{attach_logfile, create_client, get_sdk_info};
 use utils::releases::detect_release_name;
 use utils::system::QuietExit;
-
-lazy_static! {
-    static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();
-}
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")
@@ -137,14 +132,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         .unwrap_or(Level::Error);
 
     if let Some(release) = matches.value_of("release") {
-        event.release = Some(release.into());
+        event.release = Some(release.to_string().into());
     } else {
         event.release = detect_release_name().ok().map(|r| r.into());
     }
 
-    event.dist = matches.value_of("dist").map(|x| x.into());
-    event.platform = matches.value_of("platform").unwrap_or("other").into();
-    event.environment = matches.value_of("environment").map(|x| x.into());
+    event.dist = matches.value_of("dist").map(|x| x.to_string().into());
+    event.platform = matches.value_of("platform").unwrap_or("other").to_string().into();
+    event.environment = matches.value_of("environment").map(|x| x.to_string().into());
 
     if let Some(mut lines) = matches.values_of("message") {
         event.logentry = Some(LogEntry {
@@ -179,7 +174,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     if let Some(user_data) = matches.values_of("user_data") {
-        let user = User::default();
+        let mut user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
             let key = split.next().ok_or_else(|| err_msg("missing user key"))?;
@@ -205,7 +200,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     if let Some(fingerprint) = matches.values_of("fingerprint") {
-        event.fingerprint = fingerprint.map(|x| x.into()).collect().into();
+        event.fingerprint = fingerprint.map(|x| x.to_string().into()).collect::<Vec<_>>().into();
     }
 
     if let Some(logfile) = matches.value_of("logfile") {

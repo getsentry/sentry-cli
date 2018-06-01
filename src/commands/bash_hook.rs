@@ -104,43 +104,45 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
         }
     }
 
-    let mut source_caches = HashMap::new();
-    for frame in frames.iter_mut() {
-        let lineno = match frame.location.line {
-            Some(line) => line as usize,
-            None => continue,
-        };
+    {
+        let mut source_caches = HashMap::new();
+        for frame in frames.iter_mut() {
+            let lineno = match frame.location.line {
+                Some(line) => line as usize,
+                None => continue,
+            };
 
-        let filename = frame
-            .location
-            .filename
-            .map(|s| s.as_str())
-            .expect("frame without location");
+            let filename = frame
+                .location
+                .filename
+                .as_ref()
+                .map(|s| s.as_str())
+                .expect("frame without location");
 
-        if !source_caches.contains_key(filename) {
-            if let Ok(f) = fs::File::open(filename) {
-                let lines: Vec<_> = BufReader::new(f)
-                    .lines()
-                    .map(|x| x.unwrap_or_else(|_| "".to_string()))
-                    .collect();
-                source_caches.insert(filename, lines);
-            } else {
-                source_caches.insert(filename, vec![]);
+            if !source_caches.contains_key(filename) {
+                if let Ok(f) = fs::File::open(filename) {
+                    let lines: Vec<_> = BufReader::new(f)
+                        .lines()
+                        .map(|x| x.unwrap_or_else(|_| "".to_string()))
+                        .collect();
+                    source_caches.insert(filename, lines);
+                } else {
+                    source_caches.insert(filename, vec![]);
+                }
             }
+            let source = source_caches.get(filename).unwrap();
+            frame.source.current_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
+            if let Some(slice) = source.get(lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
+                frame.source.pre_lines = slice.iter().map(|x| x.clone()).collect();
+            };
+            if let Some(slice) = source.get(lineno..min(lineno + 5, source.len())) {
+                frame.source.post_lines = slice.iter().map(|x| x.clone()).collect();
+            };
         }
-        let source = source_caches.get(filename).unwrap();
-        frame.source.current_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
-        if let Some(slice) = source.get(lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
-            frame.source.pre_lines = slice.iter().map(|x| x.clone()).collect();
-        };
-        if let Some(slice) = source.get(lineno..min(lineno + 5, source.len())) {
-            frame.source.post_lines = slice.iter().map(|x| x.clone()).collect();
-        };
     }
 
     attach_logfile(&mut event, logfile, true)?;
 
-    frames.reverse();
     event.exceptions.push(Exception {
         ty: "BashError".into(),
         value: Some(format!("command {} exited with status {}", cmd, exit_code)),
