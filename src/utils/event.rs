@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::fs;
 use std::io::{BufRead, BufReader};
 
@@ -5,12 +6,16 @@ use anylog;
 use chrono::Utc;
 use failure::{Error, ResultExt};
 use regex::Regex;
-use sentry::protocol::{Breadcrumb, Event};
+use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
+use sentry::{Client, ClientOptions, Dsn};
+
+use constants::USER_AGENT;
 
 lazy_static! {
     static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();
 }
 
+/// Attaches all logs from a logfile as breadcrumbs to the given event.
 pub fn attach_logfile(event: &mut Event, logfile: &str, with_component: bool) -> Result<(), Error> {
     let f = fs::File::open(logfile).context("Could not open logfile")?;
 
@@ -59,3 +64,21 @@ pub fn attach_logfile(event: &mut Event, logfile: &str, with_component: bool) ->
     Ok(())
 }
 
+/// Returns SDK information for sentry-cli.
+pub fn get_sdk_info() -> Cow<'static, ClientSdkInfo> {
+    Cow::Owned(ClientSdkInfo {
+        name: env!("CARGO_PKG_NAME").into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        integrations: Vec::new(),
+    })
+}
+
+/// Returns a Sentry Client configured for sentry-cli.
+pub fn create_client(dsn: Dsn) -> Result<Client> {
+    let options = ClientOptions {
+        user_agent: USER_AGENT.into(),
+        ..Default::default()
+    };
+
+    Ok(Client::with_dsn_and_options(dsn, options))
+}

@@ -1,16 +1,16 @@
 //! Implements a command for sending events to Sentry.
-use std::borrow::Cow;
+use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
 use regex::Regex;
-use sentry::protocol::{ClientSdkInfo, Event, Level, LogEntry, User};
-use sentry::Client;
+use sentry::protocol::{Event, Level, LogEntry, User};
 use serde_json::Value;
+use username::get_user_name;
 
 use config::Config;
-use utils::event::attach_logfile;
+use utils::event::{attach_logfile, create_client, get_sdk_info};
 use utils::releases::detect_release_name;
 use utils::system::QuietExit;
 
@@ -129,11 +129,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
     let mut event = Event::default();
 
-    event.sdk_info = Some(Cow::Owned(ClientSdkInfo {
-        name: env!("CARGO_PKG_NAME").into(),
-        version: env!("CARGO_PKG_VERSION").into(),
-        integrations: Vec::new(),
-    }));
+    event.sdk_info = Some(get_sdk_info());
 
     event.level = matches
         .value_of("level")
@@ -201,6 +197,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         }
 
         event.user = Some(user);
+    } else {
+        event.user = get_user_name().ok().map(|n| User {
+            username: Some(n),
+            ..Default::default()
+        });
     }
 
     if let Some(fingerprint) = matches.values_of("fingerprint") {
@@ -211,9 +212,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         attach_logfile(&mut event, logfile, false)?;
     }
 
-    let client = Client::with_dsn(config.get_dsn()?);
+    let client = create_client(config.get_dsn()?);
     let event_id = client.capture_event(event, None);
-    if client.drain_events(None) {
+    if client.drain_events(Some(Duration::from_secs(2))) {
         println!("Event sent: {}", event_id);
     } else {
         println_stderr!("error: could not send event");

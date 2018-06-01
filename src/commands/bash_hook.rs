@@ -5,16 +5,17 @@ use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
+use std::time::Duration;
 
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use regex::Regex;
-use sentry::protocol::{Event, Exception, FileLocation, Frame, Stacktrace};
-use sentry::Client;
+use sentry::protocol::{Event, Exception, FileLocation, Frame, Stacktrace, User};
+use username::get_user_name;
 use uuid::{Uuid, UuidVersion};
 
 use config::Config;
-use utils::event::attach_logfile;
+use utils::event::{attach_logfile, create_client, get_sdk_info};
 use utils::releases::detect_release_name;
 
 const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
@@ -55,6 +56,11 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
 
     event.environment = config.get_environment().map(|e| e.into());
     event.release = detect_release_name().ok().map(|r| r.into());
+    event.sdk_info = Some(get_sdk_info());
+    event.user = get_user_name().ok().map(|n| User {
+        username: Some(n),
+        ..Default::default()
+    });
 
     let mut cmd = "unknown".to_string();
     let mut exit_code = 1;
@@ -145,9 +151,9 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
         ..Default::default()
     });
 
-    let client = Client::with_dsn(config.get_dsn()?);
+    let client = create_client(config.get_dsn()?);
     let event_id = client.capture_event(event, None);
-    if client.drain_events(None) {
+    if client.drain_events(Some(Duration::from_secs(2))) {
         println!("{}", event_id);
     }
 
