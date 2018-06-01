@@ -9,11 +9,13 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use regex::Regex;
+use sentry::protocol::{Event, Exception, FileLocation, Frame, Stacktrace};
+use sentry::Client;
 use uuid::{Uuid, UuidVersion};
 
-use api::Api;
 use config::Config;
-use event::{Event, Exception, Frame, SingleException, Stacktrace};
+use utils::event::attach_logfile;
+use utils::releases::detect_release_name;
 
 const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
 lazy_static! {
@@ -49,8 +51,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
     let config = Config::get_current();
-    let mut event = Event::new_prefilled()?;
-    event.detect_release();
+    let mut event = Event::default();
+
+    event.environment = config.get_environment().map(|e| e.into());
+    event.release = detect_release_name().ok().map(|r| r.into());
 
     let mut cmd = "unknown".to_string();
     let mut exit_code = 1;
@@ -78,13 +82,16 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
                     _ => {}
                 }
                 frames.push(Frame {
-                    filename: cap[2].to_string(),
-                    abs_path: Path::new(&cap[2])
-                        .canonicalize()
-                        .map(|x| x.display().to_string())
-                        .ok(),
-                    function: cap[1].to_string(),
-                    lineno: cap[3].parse().ok(),
+                    location: FileLocation {
+                        filename: Some(cap[2].to_string()),
+                        abs_path: Path::new(&cap[2])
+                            .canonicalize()
+                            .map(|x| x.display().to_string())
+                            .ok(),
+                        line: cap[3].parse().ok(),
+                        ..Default::default()
+                    },
+                    function: Some(cap[1].to_string()),
                     ..Default::default()
                 });
             }
@@ -93,53 +100,56 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
 
     let mut source_caches = HashMap::new();
     for frame in frames.iter_mut() {
-        let lineno = match frame.lineno {
-            Some(lineno) => lineno as usize,
+        let lineno = match frame.location.line {
+            Some(line) => line as usize,
             None => continue,
         };
-        if !source_caches.contains_key(&frame.filename) {
-            if let Ok(f) = fs::File::open(&frame.filename) {
+
+        let filename = frame
+            .location
+            .filename
+            .map(|s| s.as_str())
+            .expect("frame without location");
+
+        if !source_caches.contains_key(filename) {
+            if let Ok(f) = fs::File::open(filename) {
                 let lines: Vec<_> = BufReader::new(f)
                     .lines()
                     .map(|x| x.unwrap_or_else(|_| "".to_string()))
                     .collect();
-                source_caches.insert(frame.filename.clone(), lines);
+                source_caches.insert(filename, lines);
             } else {
-                source_caches.insert(frame.filename.clone(), vec![]);
+                source_caches.insert(filename, vec![]);
             }
         }
-        let source = source_caches.get(&frame.filename).unwrap();
-        frame.context_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
+        let source = source_caches.get(filename).unwrap();
+        frame.source.current_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
         if let Some(slice) = source.get(lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
-            frame.pre_context = Some(slice.iter().map(|x| x.clone()).collect());
+            frame.source.pre_lines = slice.iter().map(|x| x.clone()).collect();
         };
         if let Some(slice) = source.get(lineno..min(lineno + 5, source.len())) {
-            frame.post_context = Some(slice.iter().map(|x| x.clone()).collect());
+            frame.source.post_lines = slice.iter().map(|x| x.clone()).collect();
         };
     }
 
-    event.attach_logfile(logfile, true)?;
+    attach_logfile(&mut event, logfile, true)?;
 
     frames.reverse();
-    event.exception = Some(Exception {
-        values: vec![
-            SingleException {
-                ty: "BashError".into(),
-                value: format!("command {} exited with status {}", cmd, exit_code),
-                stacktrace: Some(Stacktrace { frames: frames }),
-            },
-        ],
+    event.exceptions.push(Exception {
+        ty: "BashError".into(),
+        value: Some(format!("command {} exited with status {}", cmd, exit_code)),
+        stacktrace: Some(Stacktrace {
+            frames: frames,
+            ..Default::default()
+        }),
+        ..Default::default()
     });
 
-    event.environment = config.get_environment();
-
-    let dsn = config.get_dsn()?;
-
-    // handle errors here locally so that we do not get the extra "use sentry-cli
-    // login" to sign in which would be in appropriate here.
-    if let Ok(event_id) = Api::get_current().send_event(&dsn, &event) {
+    let client = Client::with_dsn(config.get_dsn()?);
+    let event_id = client.capture_event(event, None);
+    if client.drain_events(None) {
         println!("{}", event_id);
-    };
+    }
 
     Ok(())
 }

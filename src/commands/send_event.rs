@@ -1,13 +1,22 @@
 //! Implements a command for sending events to Sentry.
+use std::borrow::Cow;
+
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
+use regex::Regex;
+use sentry::protocol::{ClientSdkInfo, Event, Level, LogEntry, User};
+use sentry::Client;
 use serde_json::Value;
 
-use api::Api;
 use config::Config;
-use event::{Event, Message};
+use utils::event::attach_logfile;
+use utils::releases::detect_release_name;
 use utils::system::QuietExit;
+
+lazy_static! {
+    static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();
+}
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")
@@ -118,22 +127,34 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
-    let mut event = Event::new_prefilled()?;
-    event.level = matches.value_of("level").unwrap_or("error").into();
+    let mut event = Event::default();
+
+    event.sdk_info = Some(Cow::Owned(ClientSdkInfo {
+        name: env!("CARGO_PKG_NAME").into(),
+        version: env!("CARGO_PKG_VERSION").into(),
+        integrations: Vec::new(),
+    }));
+
+    event.level = matches
+        .value_of("level")
+        .and_then(|l| l.parse().ok())
+        .unwrap_or(Level::Error);
+
     if let Some(release) = matches.value_of("release") {
         event.release = Some(release.into());
     } else {
-        event.detect_release();
+        event.release = detect_release_name().ok().map(|r| r.into());
     }
+
     event.dist = matches.value_of("dist").map(|x| x.into());
     event.platform = matches.value_of("platform").unwrap_or("other").into();
     event.environment = matches.value_of("environment").map(|x| x.into());
 
     if let Some(mut lines) = matches.values_of("message") {
-        event.message = Some(Message {
+        event.logentry = Some(LogEntry {
             message: lines.join("\n"),
             params: if let Some(args) = matches.values_of("message_args") {
-                args.map(|x| x.to_string()).collect()
+                args.map(|x| x.into()).collect()
             } else {
                 vec![]
             },
@@ -162,36 +183,42 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     if let Some(user_data) = matches.values_of("user_data") {
-        event.user.remove("username");
+        let user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
             let key = split.next().ok_or_else(|| err_msg("missing user key"))?;
             let value = split.next().ok_or_else(|| err_msg("missing user value"))?;
-            event.user.insert(key.into(), value.into());
+
+            match key {
+                "id" => user.id = Some(value.into()),
+                "email" => user.email = Some(value.into()),
+                "ip_address" => user.ip_address = Some(value.parse()?),
+                "username" => user.username = Some(value.into()),
+                _ => {
+                    user.data.insert(key.into(), value.into());
+                }
+            };
         }
+
+        event.user = Some(user);
     }
 
     if let Some(fingerprint) = matches.values_of("fingerprint") {
-        event.fingerprint = Some(fingerprint.map(|x| x.to_string()).collect());
+        event.fingerprint = fingerprint.map(|x| x.into()).collect().into();
     }
 
     if let Some(logfile) = matches.value_of("logfile") {
-        event.attach_logfile(logfile, false)?;
+        attach_logfile(&mut event, logfile, false)?;
     }
 
-    let dsn = config.get_dsn()?;
-
-    // handle errors here locally so that we do not get the extra "use sentry-cli
-    // login" to sign in which would be in appropriate here.
-    match Api::get_current().send_event(&dsn, &event) {
-        Ok(event_id) => {
-            println!("Event sent: {}", event_id);
-        }
-        Err(err) => {
-            println_stderr!("error: could not send event: {}", err);
-            return Err(QuietExit(1).into());
-        }
-    };
+    let client = Client::with_dsn(config.get_dsn()?);
+    let event_id = client.capture_event(event, None);
+    if client.drain_events(None) {
+        println!("Event sent: {}", event_id);
+    } else {
+        println_stderr!("error: could not send event");
+        return Err(QuietExit(1).into());
+    }
 
     Ok(())
 }
