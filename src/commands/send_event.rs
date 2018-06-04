@@ -1,12 +1,17 @@
 //! Implements a command for sending events to Sentry.
+use std::env;
+
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
+use sentry::capture_event;
+use sentry::protocol::{Event, Level, LogEntry, User};
 use serde_json::Value;
+use username::get_user_name;
 
-use api::Api;
 use config::Config;
-use event::{Event, Message};
+use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
+use utils::releases::detect_release_name;
 use utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -118,80 +123,107 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
-    let mut event = Event::new_prefilled()?;
-    event.level = matches.value_of("level").unwrap_or("error").into();
+    let mut event = Event::default();
+
+    event.sdk_info = Some(get_sdk_info());
+
+    event.level = matches
+        .value_of("level")
+        .and_then(|l| l.parse().ok())
+        .unwrap_or(Level::Error);
+
     if let Some(release) = matches.value_of("release") {
-        event.release = Some(release.into());
+        event.release = Some(release.to_string().into());
     } else {
-        event.detect_release();
+        event.release = detect_release_name().ok().map(|r| r.into());
     }
-    event.dist = matches.value_of("dist").map(|x| x.into());
-    event.platform = matches.value_of("platform").unwrap_or("other").into();
-    event.environment = matches.value_of("environment").map(|x| x.into());
+
+    event.dist = matches.value_of("dist").map(|x| x.to_string().into());
+    event.platform = matches
+        .value_of("platform")
+        .unwrap_or("other")
+        .to_string()
+        .into();
+    event.environment = matches
+        .value_of("environment")
+        .map(|x| x.to_string().into());
 
     if let Some(mut lines) = matches.values_of("message") {
-        event.message = Some(Message {
+        event.logentry = Some(LogEntry {
             message: lines.join("\n"),
-            params: if let Some(args) = matches.values_of("message_args") {
-                args.map(|x| x.to_string()).collect()
-            } else {
-                vec![]
-            },
+            params: matches
+                .values_of("message_args")
+                .map(|args| args.map(|x| x.into()).collect())
+                .unwrap_or_default(),
         });
     }
 
-    if let Some(tags) = matches.values_of("tags") {
-        for tag in tags {
-            let mut split = tag.splitn(2, ':');
-            let key = split.next().ok_or_else(|| err_msg("missing tag key"))?;
-            let value = split.next().ok_or_else(|| err_msg("missing tag value"))?;
-            event.tags.insert(key.into(), value.into());
-        }
+    for tag in matches.values_of("tags").unwrap_or_default() {
+        let mut split = tag.splitn(2, ':');
+        let key = split.next().ok_or_else(|| err_msg("missing tag key"))?;
+        let value = split.next().ok_or_else(|| err_msg("missing tag value"))?;
+        event.tags.insert(key.into(), value.into());
     }
 
-    if matches.is_present("no-environ") {
-        event.extra.remove("environ");
+    if !matches.is_present("no-environ") {
+        event.extra.insert(
+            "environ".into(),
+            Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
+        );
     }
-    if let Some(extra) = matches.values_of("extra") {
-        for pair in extra {
-            let mut split = pair.splitn(2, ':');
-            let key = split.next().ok_or_else(|| err_msg("missing extra key"))?;
-            let value = split.next().ok_or_else(|| err_msg("missing extra value"))?;
-            event.extra.insert(key.into(), Value::String(value.into()));
-        }
+
+    for pair in matches.values_of("extra").unwrap_or_default() {
+        let mut split = pair.splitn(2, ':');
+        let key = split.next().ok_or_else(|| err_msg("missing extra key"))?;
+        let value = split.next().ok_or_else(|| err_msg("missing extra value"))?;
+        event.extra.insert(key.into(), Value::String(value.into()));
     }
 
     if let Some(user_data) = matches.values_of("user_data") {
-        event.user.remove("username");
+        let mut user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
             let key = split.next().ok_or_else(|| err_msg("missing user key"))?;
             let value = split.next().ok_or_else(|| err_msg("missing user value"))?;
-            event.user.insert(key.into(), value.into());
+
+            match key {
+                "id" => user.id = Some(value.into()),
+                "email" => user.email = Some(value.into()),
+                "ip_address" => user.ip_address = Some(value.parse()?),
+                "username" => user.username = Some(value.into()),
+                _ => {
+                    user.data.insert(key.into(), value.into());
+                }
+            };
         }
+
+        user.ip_address.get_or_insert(Default::default());
+        event.user = Some(user);
+    } else {
+        event.user = get_user_name().ok().map(|n| User {
+            username: Some(n),
+            ip_address: Some(Default::default()),
+            ..Default::default()
+        });
     }
 
     if let Some(fingerprint) = matches.values_of("fingerprint") {
-        event.fingerprint = Some(fingerprint.map(|x| x.to_string()).collect());
+        event.fingerprint = fingerprint
+            .map(|x| x.to_string().into())
+            .collect::<Vec<_>>()
+            .into();
     }
 
     if let Some(logfile) = matches.value_of("logfile") {
-        event.attach_logfile(logfile, false)?;
+        attach_logfile(&mut event, logfile, false)?;
     }
 
-    let dsn = config.get_dsn()?;
-
-    // handle errors here locally so that we do not get the extra "use sentry-cli
-    // login" to sign in which would be in appropriate here.
-    match Api::get_current().send_event(&dsn, &event) {
-        Ok(event_id) => {
-            println!("Event sent: {}", event_id);
-        }
-        Err(err) => {
-            println_stderr!("error: could not send event: {}", err);
-            return Err(QuietExit(1).into());
-        }
-    };
+    if let Some(event_id) = with_sentry_client(config.get_dsn()?, || capture_event(event)) {
+        println!("Event sent: {}", event_id);
+    } else {
+        println_stderr!("error: could not send event");
+        return Err(QuietExit(1).into());
+    }
 
     Ok(())
 }

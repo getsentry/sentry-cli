@@ -24,7 +24,7 @@ use flate2::write::GzEncoder;
 use indicatif::ProgressBar;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
-use sentry::Dsn;
+// use sentry::{Dsn, protocol::Event};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::Serialize;
 use serde_json;
@@ -33,8 +33,7 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
 
 use config::{Auth, Config};
-use constants::{ARCH, EXT, PLATFORM, USER_AGENT, VERSION};
-use event::Event;
+use constants::{ARCH, EXT, PLATFORM, VERSION};
 use utils::android::AndroidManifest;
 use utils::sourcemaps::get_sourcemap_reference_from_headers;
 use utils::ui::{capitalize_string, make_byte_progress_bar};
@@ -983,17 +982,6 @@ impl Api {
             Ok(resp.convert()?)
         }
     }
-
-    /// Sends a single Sentry event.  The return value is the ID of the event
-    /// that was sent.
-    pub fn send_event(&self, dsn: &Dsn, event: &Event) -> ApiResult<String> {
-        let event: EventInfo = self.request(Method::Post, &dsn.store_api_url().as_str())?
-            .with_header("X-Sentry-Auth", &dsn.to_auth(Some(USER_AGENT)).to_string())?
-            .with_json_body(&event)?
-            .send()?
-            .convert()?;
-        Ok(event.id)
-    }
 }
 
 fn send_req<W: Write>(
@@ -1498,11 +1486,6 @@ struct GitHubRelease {
 pub struct SentryCliRelease {
     pub version: String,
     pub download_url: String,
-}
-
-#[derive(Deserialize)]
-struct EventInfo {
-    id: String,
 }
 
 /// Debug information files as processed and stored on the server.
