@@ -1,15 +1,16 @@
 //! Implements a command for sending events to Sentry.
-use std::time::Duration;
+use std::env;
 
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
+use sentry::capture_event;
 use sentry::protocol::{Event, Level, LogEntry, User};
 use serde_json::Value;
 use username::get_user_name;
 
 use config::Config;
-use utils::event::{attach_logfile, create_client, get_sdk_info};
+use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use utils::releases::detect_release_name;
 use utils::system::QuietExit;
 
@@ -138,39 +139,44 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     event.dist = matches.value_of("dist").map(|x| x.to_string().into());
-    event.platform = matches.value_of("platform").unwrap_or("other").to_string().into();
-    event.environment = matches.value_of("environment").map(|x| x.to_string().into());
+    event.platform = matches
+        .value_of("platform")
+        .unwrap_or("other")
+        .to_string()
+        .into();
+    event.environment = matches
+        .value_of("environment")
+        .map(|x| x.to_string().into());
 
     if let Some(mut lines) = matches.values_of("message") {
         event.logentry = Some(LogEntry {
             message: lines.join("\n"),
-            params: if let Some(args) = matches.values_of("message_args") {
-                args.map(|x| x.into()).collect()
-            } else {
-                vec![]
-            },
+            params: matches
+                .values_of("message_args")
+                .map(|args| args.map(|x| x.into()).collect())
+                .unwrap_or_default(),
         });
     }
 
-    if let Some(tags) = matches.values_of("tags") {
-        for tag in tags {
-            let mut split = tag.splitn(2, ':');
-            let key = split.next().ok_or_else(|| err_msg("missing tag key"))?;
-            let value = split.next().ok_or_else(|| err_msg("missing tag value"))?;
-            event.tags.insert(key.into(), value.into());
-        }
+    for tag in matches.values_of("tags").unwrap_or_default() {
+        let mut split = tag.splitn(2, ':');
+        let key = split.next().ok_or_else(|| err_msg("missing tag key"))?;
+        let value = split.next().ok_or_else(|| err_msg("missing tag value"))?;
+        event.tags.insert(key.into(), value.into());
     }
 
-    if matches.is_present("no-environ") {
-        event.extra.remove("environ");
+    if !matches.is_present("no-environ") {
+        event.extra.insert(
+            "environ".into(),
+            Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
+        );
     }
-    if let Some(extra) = matches.values_of("extra") {
-        for pair in extra {
-            let mut split = pair.splitn(2, ':');
-            let key = split.next().ok_or_else(|| err_msg("missing extra key"))?;
-            let value = split.next().ok_or_else(|| err_msg("missing extra value"))?;
-            event.extra.insert(key.into(), Value::String(value.into()));
-        }
+
+    for pair in matches.values_of("extra").unwrap_or_default() {
+        let mut split = pair.splitn(2, ':');
+        let key = split.next().ok_or_else(|| err_msg("missing extra key"))?;
+        let value = split.next().ok_or_else(|| err_msg("missing extra value"))?;
+        event.extra.insert(key.into(), Value::String(value.into()));
     }
 
     if let Some(user_data) = matches.values_of("user_data") {
@@ -191,25 +197,28 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             };
         }
 
+        user.ip_address.get_or_insert(Default::default());
         event.user = Some(user);
     } else {
         event.user = get_user_name().ok().map(|n| User {
             username: Some(n),
+            ip_address: Some(Default::default()),
             ..Default::default()
         });
     }
 
     if let Some(fingerprint) = matches.values_of("fingerprint") {
-        event.fingerprint = fingerprint.map(|x| x.to_string().into()).collect::<Vec<_>>().into();
+        event.fingerprint = fingerprint
+            .map(|x| x.to_string().into())
+            .collect::<Vec<_>>()
+            .into();
     }
 
     if let Some(logfile) = matches.value_of("logfile") {
         attach_logfile(&mut event, logfile, false)?;
     }
 
-    let client = create_client(config.get_dsn()?);
-    let event_id = client.capture_event(event, None);
-    if client.drain_events(Some(Duration::from_secs(2))) {
+    if let Some(event_id) = with_sentry_client(config.get_dsn()?, || capture_event(event)) {
         println!("Event sent: {}", event_id);
     } else {
         println_stderr!("error: could not send event");
