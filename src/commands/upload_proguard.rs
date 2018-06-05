@@ -15,7 +15,7 @@ use api::{Api, AssociateDsyms};
 use config::Config;
 use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
 use utils::args::{validate_uuid, ArgExt};
-use utils::fs::{TempFile, get_sha1_checksum};
+use utils::fs::{get_sha1_checksum, TempFile};
 use utils::system::QuietExit;
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
 

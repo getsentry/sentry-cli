@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::str;
 
 use chardet::detect;
-use encoding::DecoderTrap;
 use encoding::label::encoding_from_whatwg_label;
+use encoding::DecoderTrap;
 use failure::Error;
 
 #[derive(Fail, Debug)]

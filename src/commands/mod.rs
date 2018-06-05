@@ -49,7 +49,7 @@ macro_rules! each_subcommand {
 
 // commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &'static [&'static str] = &[
-    "releases", "issues", "repos", "projects", "info", "login", "difutil"
+    "releases", "issues", "repos", "projects", "info", "login", "difutil",
 ];
 
 // it would be great if this could be a macro expansion as well

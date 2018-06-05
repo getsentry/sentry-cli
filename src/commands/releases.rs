@@ -6,9 +6,9 @@ use std::rc::Rc;
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{err_msg, Error};
-use ignore::WalkBuilder;
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
+use ignore::WalkBuilder;
 use indicatif::HumanBytes;
 use regex::Regex;
 
