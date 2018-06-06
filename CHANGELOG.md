@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.32.2
+
+* Compress debug symbols for faster uploads (#315)
+* Refactor `send-event` to include more consistent information (#316, #318)
+
 ## sentry-cli 1.32.1
 
 * Improve update prompts (#306, @danielcompton)
