@@ -4,7 +4,6 @@ use std::env;
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
-use sentry::capture_event;
 use sentry::protocol::{Event, Level, LogEntry, User};
 use serde_json::Value;
 use username::get_user_name;
@@ -218,8 +217,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         attach_logfile(&mut event, logfile, false)?;
     }
 
-    if let Some(event_id) = with_sentry_client(config.get_dsn()?, || capture_event(event)) {
-        println!("Event sent: {}", event_id);
+    if let Some(id) = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None)) {
+        println!("Event sent: {}", id);
     } else {
         println_stderr!("error: could not send event");
         return Err(QuietExit(1).into());

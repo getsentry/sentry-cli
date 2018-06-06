@@ -1,7 +1,6 @@
 use std::borrow::Cow;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::sync::Arc;
 use std::time::Duration;
 
 use anylog;
@@ -9,7 +8,7 @@ use chrono::Utc;
 use failure::{Error, ResultExt};
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
-use sentry::{self, Client, ClientOptions, Dsn};
+use sentry::{Client, ClientOptions, Dsn};
 
 use constants::USER_AGENT;
 
@@ -75,33 +74,26 @@ pub fn get_sdk_info() -> Cow<'static, ClientSdkInfo> {
     })
 }
 
-/// Executes the callback with an isolate sentry client on a default scope.
+/// Executes the callback with an isolate sentry client on an empty isolate scope.
 ///
-/// Use public API of the `sentry` crate to capture exceptions or manual events. To configure the
-/// scope, use `sentry::configure_scope`. The client will automatically drop after the callback has
-/// finished and drain its queue with a timeout of 2 seconds.
+/// Use the client's API to capture exceptions or manual events. The client will automatically drop
+/// after the callback has finished and drain its queue with a timeout of 2 seconds.
 ///
 /// You can optionally return a value from the callback which will also be the return value of this
 /// function if draining the queue is successful. On error, the return value will be None.
 pub fn with_sentry_client<F, R>(dsn: Dsn, callback: F) -> Option<R>
 where
-    F: FnOnce() -> R,
+    F: FnOnce(&Client) -> R,
 {
-    sentry::with_scope(|| {
-        let options = ClientOptions {
-            user_agent: USER_AGENT.into(),
-            ..Default::default()
-        };
-        let client = Arc::new(Client::with_dsn_and_options(dsn, options));
+    let client = Client::with_dsn_and_options(dsn, ClientOptions {
+        user_agent: USER_AGENT.into(),
+        ..Default::default()
+    });
 
-        sentry::bind_client(client.clone());
-        sentry::configure_scope(|scope| scope.clear());
-
-        let rv = callback();
-        if client.drain_events(Some(Duration::from_secs(2))) {
-            Some(rv)
-        } else {
-            None
-        }
-    })
+    let rv = callback(&client);
+    if client.drain_events(Some(Duration::from_secs(2))) {
+        Some(rv)
+    } else {
+        None
+    }
 }

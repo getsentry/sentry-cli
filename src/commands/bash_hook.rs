@@ -9,7 +9,6 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use regex::Regex;
-use sentry::capture_event;
 use sentry::protocol::{Event, Exception, FileLocation, Frame, Stacktrace, User, Value};
 use username::get_user_name;
 use uuid::{Uuid, UuidVersion};
@@ -158,8 +157,8 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
         ..Default::default()
     });
 
-    if let Some(event_id) = with_sentry_client(config.get_dsn()?, || capture_event(event)) {
-        println!("{}", event_id);
+    if let Some(id) = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None)) {
+        println!("{}", id);
     }
 
     Ok(())
