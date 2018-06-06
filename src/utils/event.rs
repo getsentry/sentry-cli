@@ -85,10 +85,13 @@ pub fn with_sentry_client<F, R>(dsn: Dsn, callback: F) -> Option<R>
 where
     F: FnOnce(&Client) -> R,
 {
-    let client = Client::with_dsn_and_options(dsn, ClientOptions {
-        user_agent: USER_AGENT.into(),
-        ..Default::default()
-    });
+    let client = Client::with_dsn_and_options(
+        dsn,
+        ClientOptions {
+            user_agent: USER_AGENT.into(),
+            ..Default::default()
+        },
+    );
 
     let rv = callback(&client);
     if client.drain_events(Some(Duration::from_secs(2))) {
