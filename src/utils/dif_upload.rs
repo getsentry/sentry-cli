@@ -447,6 +447,8 @@ where
     P: AsRef<Path>,
     F: FnMut(DifSource, String, ByteView<'static>) -> Result<(), Error>,
 {
+    let directory = directory.as_ref();
+    debug!("searching location {}", directory.display());
     for entry in WalkDir::new(&directory).into_iter().filter_map(|e| e.ok()) {
         if !entry.metadata()?.is_file() {
             // Walkdir recurses automatically into folders
@@ -454,9 +456,21 @@ where
         }
 
         let path = entry.path();
-        if let Some(zip) = try_open_zip(path)? {
-            walk_difs_zip(zip, options, &mut func)?;
-            continue;
+        match try_open_zip(path) {
+            Ok(Some(zip)) => {
+                debug!("searching zip archive {}", path.display());
+                walk_difs_zip(zip, options, &mut func)?;
+                debug!("finished zip archive {}", path.display());
+                continue;
+            }
+            Err(e) => {
+                debug!("skipping zip archive {}", path.display());
+                debug!("error: {}", e);
+                continue;
+            }
+            Ok(None) => {
+                // this is not a zip archive
+            }
         }
 
         if !options.valid_extension(path.extension()) {
@@ -472,6 +486,7 @@ where
         func(DifSource::FileSystem(path), name, buffer)?;
     }
 
+    debug!("finished location {}", directory.display());
     Ok(())
 }
 
@@ -539,7 +554,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 return Ok(());
             }
 
-            debug!("trying to parse dif {}", &name);
+            debug!("trying to parse dif {}", name);
             let fat = match FatObject::parse(buffer) {
                 Ok(fat) => Rc::new(fat),
                 Err(e) => {
