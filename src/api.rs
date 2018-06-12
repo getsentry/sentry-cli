@@ -173,6 +173,10 @@ pub struct ApiError {
     inner: Context<ApiErrorKind>,
 }
 
+#[derive(Clone, Debug, Fail)]
+#[fail(display = "project was renamed to '{}'", _0)]
+pub struct ProjectRenamedError(String);
+
 impl Fail for ApiError {
     fn cause(&self) -> Option<&Fail> {
         self.inner.cause()
@@ -1304,10 +1308,27 @@ impl ApiResponse {
 
     /// Like convert but produces resource not found errors.
     pub fn convert_rnf<T: DeserializeOwned>(self, res_err: ApiErrorKind) -> ApiResult<T> {
-        if self.status() == 404 {
-            Err(res_err.into())
-        } else {
-            self.to_result().and_then(|x| x.deserialize())
+        match self.status() {
+            301 | 302 if res_err == ApiErrorKind::ProjectNotFound => {
+                #[derive(Deserialize, Debug)]
+                struct ErrorDetail {
+                    slug: String,
+                }
+
+                #[derive(Deserialize, Debug)]
+                struct ErrorInfo {
+                    detail: ErrorDetail,
+                }
+
+                match self.convert::<ErrorInfo>() {
+                    Ok(info) => Err(ProjectRenamedError(info.detail.slug)
+                        .context(res_err)
+                        .into()),
+                    Err(_) => Err(res_err.into()),
+                }
+            }
+            404 => Err(res_err.into()),
+            _ => self.to_result().and_then(|x| x.deserialize()),
         }
     }
 
