@@ -21,6 +21,7 @@ matrix:
       env:
         - TARGET=i686-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:i686-musl
+        - ARTIFACT_SUFFIX=Linux-i686
       script: bash scripts/build-in-docker.sh
 
     # Linux 64-bit statically linked binary
@@ -29,13 +30,16 @@ matrix:
       env:
         - TARGET=x86_64-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:x86_64-musl
+        - ARTIFACT_SUFFIX=Linux-x86_64
       script: bash scripts/build-in-docker.sh
 
     # Build on older OS X for more portable binaries
     - os: osx
       osx_image: xcode8
       language: rust
-      env: TARGET=x86_64-apple-darwin
+      env:
+        - TARGET=x86_64-apple-darwin
+        - ARTIFACT_SUFFIX=Darwin-x86_64
       script: cargo build --release --locked
 
     # Test minimum js
@@ -62,6 +66,14 @@ matrix:
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
       env: TARGET=npm
       script: npm pack
+
+after_success:
+  - |
+      if [ -n "$ARTIFACT_SUFFIX" ]; then
+        zeus upload -t "application/octet-stream"
+                    -n "sentry-cli-${ARTIFACT_SUFFIX}"
+                    target/release/sentry-cli target/*/release/sentry-cli
+      fi
 
 before_deploy: python scripts/move-asset.py
 
