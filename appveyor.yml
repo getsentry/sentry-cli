@@ -25,7 +25,7 @@ install:
   - zeus job update --status=pending -B "%APPVEYOR_PULL_REQUEST_TITLE%" -J "%APPVEYOR_JOB_NAME%"
   # Install the rest
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
-  - rustup-init -yv --default-toolchain %channel% --default-host %target%-pc-windows-msvc
+  - rustup-init -yv --default-toolchain %channel% --default-host %arch%-pc-windows-msvc
   - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
@@ -46,13 +46,3 @@ on_failure:
 
 artifacts:
   - path: '.\target\release\sentry-cli.exe'
-
-deploy:
-  provider: S3
-  access_key_id: AKIAJKYWAF3QS7SFL75Q
-  secret_access_key:
-    secure: Jk6F78pedve8W++5KDviGUw07CA5mjtuAZNBbiY1zbAaDCtZhX0lZOVQLns36eRp
-  bucket: getsentry-builds
-  set_public: true
-  folder: $(APPVEYOR_REPO_NAME)/$(APPVEYOR_REPO_COMMIT)
-  artifact: /.*/
