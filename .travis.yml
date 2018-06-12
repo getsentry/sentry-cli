@@ -3,10 +3,6 @@ dist: trusty
 services:
   - docker
 
-branches:
-  only:
-  - master
-
 cache:
   directories:
     - "node_modules"
@@ -15,6 +11,9 @@ cache:
 
 matrix:
   include:
+    - os: linux
+      script: env
+
     # Linux 32-bit statically linked binary
     - os: linux
       sudo: required
