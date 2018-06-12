@@ -71,7 +71,7 @@ after_success:
   - |
       if [ -n "$ARTIFACT_SUFFIX" ]; then
         npm install -g @zeus-ci/cli
-        zeus upload -t "application/octet-stream"
-                    -n "sentry-cli-${ARTIFACT_SUFFIX}"
+        zeus upload -t "application/octet-stream" \
+                    -n "sentry-cli-${ARTIFACT_SUFFIX}" \
                     target/release/sentry-cli target/*/release/sentry-cli
       fi

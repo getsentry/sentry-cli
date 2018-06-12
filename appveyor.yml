@@ -30,8 +30,7 @@ install:
   - rustc -vV
   - cargo -vV
 
-build:
-  verbosity: minimal
+build: false
 
 test_script:
   - set RUSTFLAGS=-Ctarget-feature=+crt-static
