@@ -76,3 +76,13 @@ after_success:
                     -n "sentry-cli-${ARTIFACT_SUFFIX}" \
                     $ARTIFACT
       fi
+
+notifications:
+  webhooks:
+    urls:
+      - https://zeus.ci/hooks/94ed0760-efce-11e7-9b3c-0a580a282505/public/provider/travis/webhook
+    on_success: always
+    on_failure: always
+    on_start: always
+    on_cancel: always
+    on_error: always
