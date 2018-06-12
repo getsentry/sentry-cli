@@ -66,16 +66,16 @@ matrix:
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
       env: TARGET=npm
       script: npm pack
-
-after_success:
-  - |
-      if [ -n "$ARTIFACT_SUFFIX" ]; then
+      after_success: |
         npm install -g @zeus-ci/cli
-        ARTIFACT=$(ls -1 target/*/sentry-cli target/*/*/sentry-cli 2>/dev/null | head -n 1 || true)
-        zeus upload -t "application/octet-stream" \
-                    -n "sentry-cli-${ARTIFACT_SUFFIX}" \
-                    $ARTIFACT
-      fi
+        zeus upload -t "application/tar+npm" -n package.tgz *.tgz
+
+after_success: |
+  if [ -n "$ARTIFACT_SUFFIX" ]; then
+    npm install -g @zeus-ci/cli
+    ARTIFACT=$(ls -1 target/*/sentry-cli target/*/*/sentry-cli 2>/dev/null | head -n 1 || true)
+    zeus upload -t "application/octet-stream" -n "sentry-cli-${ARTIFACT_SUFFIX}" $ARTIFACT
+  fi
 
 notifications:
   webhooks:
