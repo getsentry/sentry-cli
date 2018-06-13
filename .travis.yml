@@ -13,6 +13,9 @@ cache:
     - $HOME/.cargo
     - $TRAVIS_BUILD_DIR/target
 
+before_install:
+  - npm install -g @zeus-ci/cli
+
 matrix:
   include:
     # Linux 32-bit statically linked binary
@@ -21,8 +24,11 @@ matrix:
       env:
         - TARGET=i686-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:i686-musl
-        - ARTIFACT_SUFFIX=Linux-i686
       script: bash scripts/build-in-docker.sh
+      after_success:
+        - zeus upload -t "application/octet-stream"
+                      -n "sentry-cli-Linux-i686"
+                      "./target/${TARGET}/release/sentry-cli"
 
     # Linux 64-bit statically linked binary
     - os: linux
@@ -30,8 +36,11 @@ matrix:
       env:
         - TARGET=x86_64-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:x86_64-musl
-        - ARTIFACT_SUFFIX=Linux-x86_64
       script: bash scripts/build-in-docker.sh
+      after_success:
+        - zeus upload -t "application/octet-stream"
+                      -n "sentry-cli-Linux-x86_64"
+                      "./target/${TARGET}/release/sentry-cli"
 
     # Build on older OS X for more portable binaries
     - os: osx
@@ -39,8 +48,11 @@ matrix:
       language: rust
       env:
         - TARGET=x86_64-apple-darwin
-        - ARTIFACT_SUFFIX=Darwin-x86_64
       script: cargo build --release --locked
+      after_success:
+        - zeus upload -t "application/octet-stream"
+                      -n "sentry-cli-Darwin-x86_64"
+                      "./target/release/sentry-cli"
 
     # Test minimum js
     - os: linux
@@ -66,16 +78,8 @@ matrix:
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
       env: TARGET=npm
       script: npm pack
-      after_success: |
-        npm install -g @zeus-ci/cli
-        zeus upload -t "application/tar+npm" -n package.tgz *.tgz
-
-after_success: |
-  if [ -n "$ARTIFACT_SUFFIX" ]; then
-    npm install -g @zeus-ci/cli
-    ARTIFACT=$(ls -1 target/*/sentry-cli target/*/*/sentry-cli 2>/dev/null | head -n 1 || true)
-    zeus upload -t "application/octet-stream" -n "sentry-cli-${ARTIFACT_SUFFIX}" $ARTIFACT
-  fi
+      after_success:
+        - zeus upload -t "application/tar+npm" -n package.tgz *.tgz
 
 notifications:
   webhooks:
