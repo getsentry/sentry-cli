@@ -13,6 +13,9 @@ cache:
     - $HOME/.cargo
     - $TRAVIS_BUILD_DIR/target
 
+before_install:
+  - npm install -g @zeus-ci/cli
+
 matrix:
   include:
     # Linux 32-bit statically linked binary
@@ -22,6 +25,10 @@ matrix:
         - TARGET=i686-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:i686-musl
       script: bash scripts/build-in-docker.sh
+      after_success:
+        - zeus upload -t "application/octet-stream"
+                      -n "sentry-cli-Linux-i686"
+                      "./target/${TARGET}/release/sentry-cli"
 
     # Linux 64-bit statically linked binary
     - os: linux
@@ -30,13 +37,22 @@ matrix:
         - TARGET=x86_64-unknown-linux-musl
         - DOCKER_IMAGE=messense/rust-musl-cross:x86_64-musl
       script: bash scripts/build-in-docker.sh
+      after_success:
+        - zeus upload -t "application/octet-stream"
+                      -n "sentry-cli-Linux-x86_64"
+                      "./target/${TARGET}/release/sentry-cli"
 
     # Build on older OS X for more portable binaries
     - os: osx
       osx_image: xcode8
       language: rust
-      env: TARGET=x86_64-apple-darwin
+      env:
+        - TARGET=x86_64-apple-darwin
       script: cargo build --release --locked
+      after_success:
+        - zeus upload -t "application/octet-stream"
+                      -n "sentry-cli-Darwin-x86_64"
+                      "./target/release/sentry-cli"
 
     # Test minimum js
     - os: linux
@@ -62,18 +78,15 @@ matrix:
       before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
       env: TARGET=npm
       script: npm pack
+      after_success:
+        - zeus upload -t "application/tar+npm" -n package.tgz *.tgz
 
-before_deploy: python scripts/move-asset.py
-
-deploy:
-  provider: s3
-  access_key_id: AKIAJKYWAF3QS7SFL75Q
-  secret_access_key:
-    secure: ChlFKqMUfbQvGY/mfczQOSorb5ZePWZVbcqkabOEdusXa16I5GxOKjHtf5ND6wo+uQ8w8o6OyfexiEPywdnMJRklp/Byw4PkfLVdk09vR1z1nzXTEPbVFLbDY6b4H6FLeFIsq1ANZTRg12XA3reCkc6i5FmNwtlwvq2sjb/Z2i/VsIW1cPgSpX+ONc4l3c6k8LM9whD1M9/JXFaNfj1IFUNZlrf20RQdUCNPP5BwLqjneXhuw+rBRwJ2sTPgjBQWRa5YKKj+MR3dcw1MlMAwJeiZuTNksipl/CgP1RpyFIgIu9/JS74h4J9RWw/+VsD4pg4bZ7Q4TL0kGDhgwytDa0zSItWAmDSYEy306I2Be3uyhCKafTtoaXgDfaGXdQYDcruQYHoAdzxge2H1s/mc8weLYM0aLmIWzqsX4jktfABrp80INvbxiemoaudUmwsAbw/kfbxcIsPuVjY0kLuT9jyfcvLWVZSsxN5u/kqAVpDPGKl6leb5gQNpr5afUOEXXxkAWXJfU+GQi2Vc1PSX6Uwy0nosWaNN7FTnGjJ3jjJBppOM3n52Wp4IO8Z4wiINQUFRqOUTzZVh9lA1D2jAg/n2Y6w3F+60/+UtjHNswoaw+IszlzMzzNmsDkLAiBv1GHI5BVx7f48+ciMrduiZ+toepRmRHW1E1PLxW+aqLV0=
-  skip_cleanup: true
-  acl: public_read
-  bucket: getsentry-builds
-  upload-dir: $TRAVIS_REPO_SLUG/$TRAVIS_COMMIT
-  local_dir: dist
-  on:
-    condition: "-n $TARGET" # we only want to trigger deploy on TARGET
+notifications:
+  webhooks:
+    urls:
+      - https://zeus.ci/hooks/94ed0760-efce-11e7-9b3c-0a580a282505/public/provider/travis/webhook
+    on_success: always
+    on_failure: always
+    on_start: always
+    on_cancel: always
+    on_error: always

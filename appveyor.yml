@@ -11,16 +11,21 @@ branches:
 environment:
   fast_finish: true
   DIST_DIR: '.'
-
+  ZEUS_HOOK_BASE:
+    secure: dcqtt6sxxBV0tDkXmPZOyzCsC3uBhPnCcEBNuYrB6+qYmkTo7ACaD6zs1L1exo73NNdgusog+eC40PBo1XQ02qyHDBE4XBFapCzhhpxMe5WtiQn7OOJMY37iic9jtPKCd4CGvJo4f3G/B20ZxmqZ3WTS1TuV4cipKnWXee0mkIk=
   matrix:
     - channel: stable
-      target: i686-pc-windows-msvc
+      arch: i686
     - channel: stable
-      target: x86_64-pc-windows-msvc
+      arch: x86_64
 
 install:
+  # Push job information to Zeus
+  - npm install -g @zeus-ci/cli
+  - zeus job update --status=pending -B "%APPVEYOR_PULL_REQUEST_TITLE%" -J "%APPVEYOR_JOB_NAME%"
+  # Install the rest
   - appveyor DownloadFile https://win.rustup.rs/ -FileName rustup-init.exe
-  - rustup-init -yv --default-toolchain %channel% --default-host %target%
+  - rustup-init -yv --default-toolchain %channel% --default-host %arch%-pc-windows-msvc
   - set PATH=%PATH%;%USERPROFILE%\.cargo\bin
   - rustc -vV
   - cargo -vV
@@ -31,18 +36,12 @@ test_script:
   - set RUSTFLAGS=-Ctarget-feature=+crt-static
   - cargo build --release --locked
 
-after_test:
-  - C:\Python27\python scripts/move-asset.py
+on_success:
+  - zeus upload -t "application/octet-stream" -n sentry-cli-Windows-%arch%.exe .\target\release\sentry-cli.exe
+  - zeus job update --status=passed
+
+on_failure:
+- zeus job update --status=failed
 
 artifacts:
-  - path: 'sentry-cli-*.exe'
-
-deploy:
-  provider: S3
-  access_key_id: AKIAJKYWAF3QS7SFL75Q
-  secret_access_key:
-    secure: Jk6F78pedve8W++5KDviGUw07CA5mjtuAZNBbiY1zbAaDCtZhX0lZOVQLns36eRp
-  bucket: getsentry-builds
-  set_public: true
-  folder: $(APPVEYOR_REPO_NAME)/$(APPVEYOR_REPO_COMMIT)
-  artifact: /.*/
+  - path: '.\target\release\sentry-cli.exe'
