@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.32.3
+
+* Skip invalid ZIP files during debug file upload (#320)
+* Generate better error messages for renamed projects (#321)
+
 ## sentry-cli 1.32.2
 
 * Compress debug symbols for faster uploads (#315)
