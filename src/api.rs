@@ -295,10 +295,10 @@ impl Api {
     /// and authentication is automatically enabled.
     pub fn request<'a>(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
+        handle.reset();
         if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();
         }
-        handle.reset();
         let mut ssl_opts = curl::easy::SslOpt::new();
         if self.config.disable_ssl_revocation_check() {
             ssl_opts.no_revoke(true);
