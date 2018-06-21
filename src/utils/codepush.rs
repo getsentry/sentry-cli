@@ -12,8 +12,8 @@ use serde_json;
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
 
-static APPCENTER_BIN_PATH: &'static str = "appcenter";
-static APPCENTER_NPM_PATH: &'static str = "node_modules/.bin/appcenter";
+static CODEPUSH_BIN_PATH: &'static str = "code-push";
+static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push";
 
 #[derive(Debug, Deserialize)]
 pub struct CodePushPackage {
@@ -44,45 +44,29 @@ fn get_codepush_error(output: process::Output) -> Error {
 }
 
 pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>, Error> {
-    let appcenter_bin = if Path::new(APPCENTER_NPM_PATH).exists() {
-        APPCENTER_NPM_PATH
+    let codepush_bin = if Path::new(CODEPUSH_NPM_PATH).exists() {
+        CODEPUSH_NPM_PATH
     } else {
-        APPCENTER_BIN_PATH
+        CODEPUSH_BIN_PATH
     };
 
-    let output = process::Command::new(appcenter_bin)
-        .arg("codepush")
+    let output = process::Command::new(codepush_bin)
         .arg("deployment")
-        .arg("list")
-        .arg("--app")
+        .arg("ls")
         .arg(app)
-        .arg("--output")
+        .arg("--format")
         .arg("json")
         .output()
         .map_err(|e| {
             if e.kind() == io::ErrorKind::NotFound {
-                "App Center CLI not found. Is it installed and configured on the PATH?".into()
+                "Codepush not found. Is it installed and configured on the PATH?".into()
             } else {
-                Error::from(e).context("Failed to run appcenter")
+                Error::from(e).context("Failed to run codepush")
             }
         })?;
 
     if output.status.success() {
-        let raw_data: Vec<Vec<String>> = serde_json::from_slice(&output.stdout)?;
-
-        let mapped: Vec<CodePushDeployment> = raw_data
-            .iter()
-            .map(|&ref pair| CodePushDeployment {
-                name: pair[0].clone(),
-                package: if let Some(lbl) = pair.get(1) {
-                    Some(CodePushPackage { label: lbl.clone() })
-                } else {
-                    None
-                },
-            })
-            .collect();
-
-        Ok(mapped)
+        Ok(serde_json::from_slice(&output.stdout)?)
     } else {
         Err(get_codepush_error(output)
             .context("Failed to get codepush deployments")
