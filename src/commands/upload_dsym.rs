@@ -6,7 +6,7 @@ use commands::upload_dif;
 use utils::args::{validate_uuid, ArgExt};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Upload Mac debug symbols to a project.")
+    app.about("DEPRECATED: Upload Mac debug symbols to a project.")
         .setting(AppSettings::Hidden)
         .org_project_args()
         .arg(

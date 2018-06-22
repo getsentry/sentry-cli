@@ -2,19 +2,18 @@ use std::env;
 use std::ffi::OsStr;
 use std::fs;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 
 use api::{Api, NewRelease};
 use config::Config;
+use utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
 use utils::args::ArgExt;
-use utils::codepush::{get_codepush_package, get_react_native_codepush_release};
 use utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("DEPRECATED: Upload react-native projects for CodePush.")
-        .setting(AppSettings::Hidden)
+    app.about("Upload react-native projects for AppCenter.")
         .org_project_args()
         .arg(
             Arg::with_name("deployment")
@@ -44,14 +43,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("APP_NAME")
                 .index(1)
                 .required(true)
-                .help("The name of the CodePush application."),
+                .help("The name of the AppCenter application."),
         )
         .arg(
             Arg::with_name("platform")
                 .value_name("PLATFORM")
                 .index(2)
                 .required(true)
-                .help("The name of the CodePush platform. [ios, android]"),
+                .help("The name of the app platform. [ios, android]"),
         )
         .arg(
             Arg::with_name("paths")
@@ -76,21 +75,21 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     if !print_release_name {
         println!(
-            "{} Fetching latest code-push package info",
+            "{} Fetching latest AppCenter deployment info",
             style(">").dim()
         );
     }
 
-    let package = get_codepush_package(app, deployment)?;
+    let package = get_appcenter_package(app, deployment)?;
     let release =
-        get_react_native_codepush_release(&package, platform, matches.value_of("bundle_id"))?;
+        get_react_native_appcenter_release(&package, platform, matches.value_of("bundle_id"))?;
     if print_release_name {
         println!("{}", release);
         return Ok(());
     }
 
     println!(
-        "{} Processing react-native code-push sourcemaps",
+        "{} Processing react-native AppCenter sourcemaps",
         style(">").dim()
     );
 

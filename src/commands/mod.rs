@@ -69,6 +69,7 @@ pub mod upload_dsym;
 pub mod upload_proguard;
 
 pub mod react_native;
+pub mod react_native_appcenter;
 pub mod react_native_codepush;
 pub mod react_native_gradle;
 #[cfg(target_os = "macos")]

@@ -1,5 +1,6 @@
 //! Various utility functionality.
 pub mod android;
+pub mod appcenter;
 pub mod args;
 pub mod batch;
 pub mod codepush;
