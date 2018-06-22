@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.33.0
+
+* Add support for AppCenter CLI for codepush releases (#327)
+* Deprecate the codepush CLI command (#327)
+* Fix a bug where commands would fail with connection errors
+
 ## sentry-cli 1.32.3
 
 * Skip invalid ZIP files during debug file upload (#320)
