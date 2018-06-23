@@ -15,8 +15,15 @@ use serde_json;
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
 
+#[cfg(not(windows))]
 static APPCENTER_BIN_PATH: &str = "appcenter";
+#[cfg(not(windows))]
 static APPCENTER_NPM_PATH: &str = "node_modules/.bin/appcenter";
+
+#[cfg(windows)]
+static APPCENTER_BIN_PATH: &str = "appcenter.cmd";
+#[cfg(windows)]
+static APPCENTER_NPM_PATH: &str = "node_modules/.bin/appcenter.cmd";
 
 static APPCENTER_NOT_FOUND: &str = "AppCenter CLI not found
 
