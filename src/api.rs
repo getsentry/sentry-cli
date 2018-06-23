@@ -174,7 +174,10 @@ pub struct ApiError {
 }
 
 #[derive(Clone, Debug, Fail)]
-#[fail(display = "project was renamed to '{}'", _0)]
+#[fail(
+    display = "project was renamed to '{}'\n\nPlease update the project slug in your .sentryclirc or sentry.properties",
+    _0
+)]
 pub struct ProjectRenamedError(String);
 
 impl Fail for ApiError {
