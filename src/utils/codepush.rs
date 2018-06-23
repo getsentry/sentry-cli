@@ -12,8 +12,15 @@ use serde_json;
 use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use utils::xcode::{InfoPlist, XcodeProjectInfo};
 
+#[cfg(not(windows))]
 static CODEPUSH_BIN_PATH: &'static str = "code-push";
+#[cfg(not(windows))]
 static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push";
+
+#[cfg(windows)]
+static CODEPUSH_BIN_PATH: &'static str = "code-push.cmd";
+#[cfg(windows)]
+static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push.cmd";
 
 #[derive(Debug, Deserialize)]
 pub struct CodePushPackage {
