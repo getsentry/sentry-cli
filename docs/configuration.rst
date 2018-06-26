@@ -9,8 +9,12 @@ it::
 
 If you want to manually authenticate ``sentry-cli`` you can to your to
 your auth token settings in your user account (User Icon -> API) and
-generate a new token.  Afterwards you can export the ``SENTRY_AUTH_TOKEN``
-environment variable::
+generate a new token with at least the following scopes:
+
+*   ``project:read``
+*   ``project:releases``
+
+Afterwards you can export the ``SENTRY_AUTH_TOKEN`` environment variable::
 
     export SENTRY_AUTH_TOKEN=your-auth-token
 
