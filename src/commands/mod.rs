@@ -14,7 +14,7 @@ use utils::update::run_sentrycli_update_nagger;
 const ABOUT: &'static str = "
 Command line utility for Sentry.
 
-This tool helps you managing remote resources on a Sentry server like
+This tool helps you manage remote resources on a Sentry server like
 sourcemaps, debug symbols or releases.  Use `--help` on the subcommands
 to learn more about them.";
 
@@ -135,7 +135,7 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
                 Arg::with_name("api_key")
                     .value_name("API_KEY")
                     .long("api-key")
-                    .help("The the given Sentry API key."),
+                    .help("The given Sentry API key."),
             )
             .arg(
                 Arg::with_name("log_level")
