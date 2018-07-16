@@ -23,8 +23,9 @@ use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::RwLock;
 use scoped_threadpool::Pool;
 use sha1::Digest;
-use symbolic::common::{byteview::ByteView,
-                       types::{ObjectClass, ObjectKind}};
+use symbolic::common::{
+    byteview::ByteView, types::{ObjectClass, ObjectKind},
+};
 use symbolic::debuginfo::{DebugId, FatObject, Object};
 use walkdir::WalkDir;
 use which::which;
@@ -910,7 +911,7 @@ fn upload_missing_chunks(
     // ocurrs, all subsequent requests will be cancelled and the error returned.
     // Otherwise, the after every successful update, the overall progress is
     // updated and rendered.
-    let mut pool = Pool::new(chunk_options.concurrency as u32);
+    // let mut pool = Pool::new(chunk_options.concurrency as u32);
     let failed = Arc::new(RwLock::new(None));
     let chunk_progress = Arc::new(RwLock::new(vec![0u64; 0]));
     chunk_progress.write().push(total_bytes - missing_bytes);
@@ -928,33 +929,34 @@ fn upload_missing_chunks(
 
     info!("using '{}' compression for chunk upload", compression);
 
-    pool.scoped(|scoped| {
-        for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-            let progress = progress.clone();
-            let failed = failed.clone();
-            let chunk_progress = chunk_progress.clone();
-            scoped.execute(move || {
-                // If we already failed, stop
-                if failed.read().is_some() {
-                    return;
-                }
-
-                let idx = {
-                    let mut progress = chunk_progress.write();
-                    let idx = progress.len();
-                    progress.push(0);
-                    idx
-                };
-
-                // Obtain a thread_local API instance
-                let api = Api::get_current();
-                let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
-                if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode, compression) {
-                    *failed.write() = Some(err);
-                }
-            });
+    // pool.scoped(|scoped| {
+    for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
+        let progress = progress.clone();
+        let failed = failed.clone();
+        let chunk_progress = chunk_progress.clone();
+        // scoped.execute(move || {
+        // If we already failed, stop
+        if failed.read().is_some() {
+            // return;
+            continue;
         }
-    });
+
+        let idx = {
+            let mut progress = chunk_progress.write();
+            let idx = progress.len();
+            progress.push(0);
+            idx
+        };
+
+        // Obtain a thread_local API instance
+        let api = Api::get_current();
+        let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
+        if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode, compression) {
+            *failed.write() = Some(err);
+        }
+        // });
+    }
+    // });
 
     if let Some(err) = failed.write().take() {
         return Err(err)?;
