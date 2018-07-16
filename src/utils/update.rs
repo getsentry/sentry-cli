@@ -261,12 +261,14 @@ pub fn run_sentrycli_update_nagger() {
 
     // Do not run update nagger if stdout/stdin is not a terminal
     if !user_attended() {
+        debug!("skipping update check due to unattended session");
         return;
     }
 
     // npm installs do not get an update check.  We might want to relax this later
     // to support update checks for global npm installs but not dependency installs.
     if is_npm_install() {
+        debug!("skipping update check due to npm installation");
         return;
     }
 
@@ -276,5 +278,7 @@ pub fn run_sentrycli_update_nagger() {
         return;
     }
 
+    debug!("checking for updates");
     update_nagger_impl().ok();
+    debug!("update check complete");
 }
