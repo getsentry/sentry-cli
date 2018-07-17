@@ -278,6 +278,9 @@ impl Api {
     }
 
     /// Returns the current api for the thread.
+    ///
+    /// Threads other than the main thread must call `Api::reset` when
+    /// shutting down to prevent `process::exit` from hanging afterwards.
     pub fn get_current() -> Rc<Api> {
         API.with(|api| api.clone())
     }
@@ -292,6 +295,7 @@ impl Api {
 
     // Low Level Methods
 
+    /// Resets the curl handle of this API client.
     pub fn reset(&self) {
         *self.shared_handle.borrow_mut() = curl::easy::Easy::new();
     }
