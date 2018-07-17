@@ -21,10 +21,12 @@ use console::style;
 use failure::{err_msg, Error, SyncFailure};
 use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::RwLock;
-use scoped_threadpool::Pool;
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use sha1::Digest;
-use symbolic::common::{byteview::ByteView,
-                       types::{ObjectClass, ObjectKind}};
+use symbolic::common::{
+    byteview::ByteView, types::{ObjectClass, ObjectKind},
+};
 use symbolic::debuginfo::{DebugId, FatObject, Object};
 use walkdir::WalkDir;
 use which::which;
@@ -904,17 +906,6 @@ fn upload_missing_chunks(
     let progress = Arc::new(ProgressBar::new(total_bytes));
     progress.set_style(progress_style);
 
-    // The upload is executed in parallel batches. Each batch aggregates objects
-    // until it exceeds the maximum size configured in ChunkUploadOptions. We
-    // keep track of the overall progress and potential errors. If an error
-    // ocurrs, all subsequent requests will be cancelled and the error returned.
-    // Otherwise, the after every successful update, the overall progress is
-    // updated and rendered.
-    let mut pool = Pool::new(chunk_options.concurrency as u32);
-    let failed = Arc::new(RwLock::new(None));
-    let chunk_progress = Arc::new(RwLock::new(vec![0u64; 0]));
-    chunk_progress.write().push(total_bytes - missing_bytes);
-
     // Select the best available compression mechanism. We assume that every
     // compression algorithm has been implemented for uploading, except `Other`
     // which is used for unknown compression algorithms. In case the server
@@ -928,39 +919,40 @@ fn upload_missing_chunks(
 
     info!("using '{}' compression for chunk upload", compression);
 
-    pool.scoped(|scoped| {
-        for (batch, size) in chunks.batches(chunk_options.max_size, chunk_options.max_chunks) {
-            let progress = progress.clone();
-            let failed = failed.clone();
-            let chunk_progress = chunk_progress.clone();
-            scoped.execute(move || {
-                // If we already failed, stop
-                if failed.read().is_some() {
-                    return;
-                }
+    // The upload is executed in parallel batches. Each batch aggregates objects
+    // until it exceeds the maximum size configured in ChunkUploadOptions. We
+    // keep track of the overall progress and potential errors. If an error
+    // ocurrs, all subsequent requests will be cancelled and the error returned.
+    // Otherwise, the after every successful update, the overall progress is
+    // updated and rendered.
+    let batches: Vec<_> = chunks
+        .batches(chunk_options.max_size, chunk_options.max_chunks)
+        .collect();
 
-                let idx = {
-                    let mut progress = chunk_progress.write();
-                    let idx = progress.len();
-                    progress.push(0);
-                    idx
-                };
+    // We count the progress of each batch separately to avoid synchronization
+    // issues. For a more consistent progress bar in repeated uploads, we also
+    // add the already uploaded bytes to the progress bar.
+    let bytes = Arc::new(RwLock::new(vec![0u64; batches.len()]));
+    bytes.write().push(total_bytes - missing_bytes);
 
-                // Obtain a thread_local API instance
-                let api = Api::get_current();
-                let mode = ProgressBarMode::Shared((progress, size, idx, chunk_progress.clone()));
-                if let Err(err) = api.upload_chunks(&chunk_options.url, batch, mode, compression) {
-                    *failed.write() = Some(err);
-                }
-            });
-        }
-    });
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(chunk_options.concurrency as usize)
+        .exit_handler(|_| Api::get_current().reset())
+        .build()?;
 
-    if let Some(err) = failed.write().take() {
-        return Err(err)?;
-    }
+    pool.install(|| {
+        batches
+            .into_par_iter()
+            .enumerate()
+            .map(|(index, (batch, size))| {
+                let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
+                Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
+            })
+            .collect::<Result<(), _>>()
+    })?;
 
     progress.finish_and_clear();
+
     println!(
         "{} Uploaded {} missing debug information {}",
         style(">").dim(),
