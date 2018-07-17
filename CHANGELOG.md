@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.34.0
+
+* Improve the error message for renamed projects (#330)
+* Fix appcenter commands on Windows (#331)
+* Fix grammar in some help texts (#337, @gorgos)
+* Fix frozen upload-dif on some Windows versions (#342)
+
 ## sentry-cli 1.33.0
 
 * Add support for AppCenter CLI for codepush releases (#327)
