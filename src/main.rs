@@ -52,9 +52,9 @@ extern crate osascript;
 extern crate parking_lot;
 extern crate plist;
 extern crate prettytable;
+extern crate rayon;
 extern crate regex;
 extern crate runas;
-extern crate scoped_threadpool;
 #[macro_use]
 extern crate sentry;
 extern crate serde;
