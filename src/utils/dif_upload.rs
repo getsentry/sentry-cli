@@ -937,6 +937,7 @@ fn upload_missing_chunks(
 
     let pool = ThreadPoolBuilder::new()
         .num_threads(chunk_options.concurrency as usize)
+        .exit_handler(|_| Api::get_current().reset())
         .build()?;
 
     pool.install(|| {
@@ -945,7 +946,7 @@ fn upload_missing_chunks(
             .enumerate()
             .map(|(index, (batch, size))| {
                 let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
-                Api::new().upload_chunks(&chunk_options.url, batch, mode, compression)
+                Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
             })
             .collect::<Result<(), _>>()
     })?;

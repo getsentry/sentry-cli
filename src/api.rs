@@ -24,7 +24,6 @@ use flate2::write::GzEncoder;
 use indicatif::ProgressBar;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
-// use sentry::{Dsn, protocol::Event};
 use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::Serialize;
 use serde_json;
@@ -292,6 +291,10 @@ impl Api {
     }
 
     // Low Level Methods
+
+    pub fn reset(&self) {
+        *self.shared_handle.borrow_mut() = curl::easy::Easy::new();
+    }
 
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
