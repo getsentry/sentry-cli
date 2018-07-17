@@ -944,8 +944,9 @@ fn upload_missing_chunks(
             .into_par_iter()
             .enumerate()
             .map(|(index, (batch, size))| {
-                let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
-                Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
+                // let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
+                // Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
+                Ok::<(), Error>(())
             })
             .collect::<Result<(), _>>()
     })?;
