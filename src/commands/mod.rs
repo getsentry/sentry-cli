@@ -246,13 +246,9 @@ fn setup() {
 pub fn main() {
     setup();
     match run() {
-        Ok(()) => {
-            println!("exiting with code 0");
-            process::exit(0)
-        }
+        Ok(()) => process::exit(0),
         Err(err) => {
             if let Some(&QuietExit(code)) = err.downcast_ref() {
-                println!("exiting with code {} after error", code);
                 process::exit(code);
             } else {
                 print_error(&err);
