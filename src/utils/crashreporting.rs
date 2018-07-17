@@ -5,7 +5,7 @@ use std::time::Duration;
 use failure::Error;
 use log::Log;
 use sentry::integrations::{failure, log, panic};
-use sentry::{self, Client, ClientOptions};
+use sentry::{Client, ClientOptions, Hub};
 
 use config::Config;
 use constants::USER_AGENT;
@@ -23,16 +23,18 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
         None
     };
 
-    sentry::bind_client(Arc::new(dsn.and_then(|dsn| {
-        Client::from_config((
-            dsn,
-            ClientOptions {
-                release: sentry_crate_release!(),
-                user_agent: Cow::Borrowed(USER_AGENT),
-                ..Default::default()
-            },
-        ))
-    }).unwrap_or_else(Client::disabled)));
+    Hub::with(|hub| {
+        hub.bind_client(Some(Arc::new(dsn.and_then(|dsn| {
+            Client::from_config((
+                dsn,
+                ClientOptions {
+                    release: sentry_crate_release!(),
+                    user_agent: Cow::Borrowed(USER_AGENT),
+                    ..Default::default()
+                },
+            ))
+        }).unwrap_or_else(Client::disabled))))
+    });
 }
 
 pub fn try_report_to_sentry(err: &Error) {
@@ -41,5 +43,5 @@ pub fn try_report_to_sentry(err: &Error) {
 }
 
 pub fn flush_events() {
-    sentry::drain_events(Some(Duration::from_secs(2)));
+    Hub::with(|hub| hub.drain_events(Some(Duration::from_secs(2))));
 }

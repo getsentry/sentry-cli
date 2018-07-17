@@ -7,18 +7,20 @@ version = "1.33.0"
 [dependencies]
 anylog = "0.2.1"
 app_dirs = "1.2.1"
-backtrace = "0.3.8"
+backtrace = "0.3.9"
 brotli2 = "0.3.2"
 chardet = "0.2.4"
+chrono = { version = "0.4.4", features = ["serde"] }
+clap = { version = "2.32.0", default-features = false, features = ["suggestions", "wrap_help"] }
 console = "0.6.1"
 curl = "0.4.12"
 dotenv = "0.13.0"
 elementtree = "0.5.0"
 encoding = "0.2.33"
-error-chain = "0.11.0"
 failure = "0.1.1"
 failure_derive = "0.1.1"
 flate2 = { version = "1.0.1", default-features = false, features = ["rust_backend"] }
+git2 = { version = "0.7.2", default-features = false }
 glob = "0.2.11"
 hostname = "0.1.5"
 if_chain = "0.1.2"
@@ -26,50 +28,31 @@ ignore = "0.4.2"
 indicatif = "0.9.0"
 itertools = "0.7.8"
 java-properties = "1.1.1"
-lazy_static = "1.0.1"
+lazy_static = "1.0.2"
 libc = "0.2.42"
-log = "0.4.1"
+log = "0.4.3"
 might-be-minified = "0.2.1"
 open = "1.2.1"
-parking_lot = "0.5.5"
+parking_lot = "0.6.2"
 plist = "0.3.0"
 prettytable-rs = "0.7.0"
 rayon = "1.0.2"
-regex = "1.0.0"
+regex = "1.0.1"
 runas = "0.1.4"
-rust-ini = "0.12.1"
-sentry = { version = "0.5.4", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info"] }
-serde = "1.0.66"
-serde_derive = "1.0.66"
-serde_json = "1.0.19"
+rust-ini = "0.12.2"
+sentry = { version = "0.6.1", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info"] }
+serde = "1.0.70"
+serde_derive = "1.0.70"
+serde_json = "1.0.24"
+sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = "2.2.1"
 symbolic = { version = "5.0.2", features = ["debuginfo", "proguard", "with_serde", "with_serde_debuginfo"] }
-url = "1.7.0"
+url = "1.7.1"
 username = "0.2.0"
+uuid = { version = "0.6.5", features = ["v4", "serde"] }
 walkdir = "2.1.4"
 which = "2.0.0"
-zip = "0.4.0"
-
-[dependencies.chrono]
-features = ["serde"]
-version = "0.4.2"
-
-[dependencies.clap]
-default-features = false
-features = ["suggestions", "wrap_help"]
-version = "2.31.2"
-
-[dependencies.git2]
-default-features = false
-version = "0.7.1"
-
-[dependencies.sha1]
-features = ["serde"]
-version = "0.6.0"
-
-[dependencies.uuid]
-features = ["v4", "serde"]
-version = "0.6.5"
+zip = "0.4.2"
 
 [features]
 default = ["with_crash_reporting"]
