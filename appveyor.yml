@@ -7,6 +7,7 @@ cache:
 branches:
   only:
     - master
+    - /^release\/[\d.]+$/
 
 environment:
   fast_finish: true

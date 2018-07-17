@@ -6,6 +6,7 @@ services:
 branches:
   only:
   - master
+  - /^release\/[\d.]+$/
 
 cache:
   directories:
