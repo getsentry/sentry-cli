@@ -1,10 +1,10 @@
-store: zeus
-ignoredChecks:
-  - ci/dockercloud
+---
+github:
+  owner: getsentry
+  repo: sentry-cli
 targets:
-  - github
+  - name: github
   - name: npm
-    access: public
   - name: brew
     tap: getsentry/tools
     template: >
