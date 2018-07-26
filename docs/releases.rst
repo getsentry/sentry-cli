@@ -63,9 +63,7 @@ deployed to your machines, enabled in the app store etc.).
 Commit Integration
 ------------------
 
-If you have repositories configured with your sentry organization you can
-associate commits with your release.  This currently only works if you are
-using github but we are going to expand this later.
+If you have `repositories configured <https://docs.sentry.io/learn/releases/#link-a-repository>`__ within your Sentry organization you can associate commits with your release.  This currently only works if you are using GitHub, but we are going to expand this later.
 
 There are two modes in which you can use this.  One is the fully automatic
 mode.  If you are deploying from a git repository and sentry-cli can
