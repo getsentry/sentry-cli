@@ -101,6 +101,12 @@ pub struct Api {
     shared_handle: RefCell<curl::easy::Easy>,
 }
 
+impl Drop for Api {
+    fn drop(&mut self) {
+        self.reset();
+    }
+}
+
 /// Represents file contents temporarily
 pub enum FileContents<'a> {
     FromPath(&'a Path),

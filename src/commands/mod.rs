@@ -6,6 +6,7 @@ use std::process;
 use clap::{App, AppSettings, Arg};
 use failure::Error;
 
+use api::Api;
 use config::{prepare_environment, Auth, Config};
 use constants::VERSION;
 use utils::system::{print_error, QuietExit};
@@ -245,7 +246,10 @@ fn setup() {
 /// Executes the command line application and exists the process.
 pub fn main() {
     setup();
-    match run() {
+    let result = run();
+    Api::get_current().reset();
+
+    match result {
         Ok(()) => process::exit(0),
         Err(err) => {
             if let Some(&QuietExit(code)) = err.downcast_ref() {
