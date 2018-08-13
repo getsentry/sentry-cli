@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.35.0
+
+* Resolve a hang on certain windows versions on shutdown (#349)
+
 ## sentry-cli 1.34.0
 
 * Improve the error message for renamed projects (#330)
