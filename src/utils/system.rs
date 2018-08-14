@@ -119,7 +119,7 @@ pub fn print_error(err: &Error) {
         clap_err.exit();
     }
 
-    for (idx, cause) in err.causes().enumerate() {
+    for (idx, cause) in err.iter_chain().enumerate() {
         if idx == 0 {
             writeln!(&mut io::stderr(), "error: {}", cause).ok();
         } else {
