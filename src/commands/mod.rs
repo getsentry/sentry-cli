@@ -247,7 +247,10 @@ fn setup() {
 pub fn main() {
     setup();
     let result = run();
-    Api::get_current().reset();
+
+    if let Some(api) = Api::get_current_opt() {
+        api.reset();
+    }
 
     match result {
         Ok(()) => process::exit(0),

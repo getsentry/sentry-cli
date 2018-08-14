@@ -291,6 +291,16 @@ impl Api {
         API.with(|api| api.clone())
     }
 
+    /// Returns the current api for the thread if bound.
+    pub fn get_current_opt() -> Option<Rc<Api>> {
+        // `Api::get_current` fails if there is no config yet.
+        if Config::get_current_opt().is_some() {
+            Some(Api::get_current())
+        } else {
+            None
+        }
+    }
+
     /// Similar to `new` but uses a specific config.
     pub fn with_config(config: Arc<Config>) -> Api {
         Api {
