@@ -1,6 +1,6 @@
 # Changelog
 
-## sentry-cli 1.35.0
+## sentry-cli 1.35.1
 
 * Resolve a hang on certain windows versions on shutdown (#349)
 

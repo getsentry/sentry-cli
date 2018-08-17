@@ -2,8 +2,8 @@
 github:
   owner: getsentry
   repo: sentry-cli
+changelogPolicy: simple
 targets:
-  - name: github
   - name: npm
   - name: brew
     tap: getsentry/tools
@@ -24,3 +24,4 @@ targets:
           assert_match version.to_s, shell_output("#{bin}/sentry-cli --version").chomp
         end
       end
+  - name: github
