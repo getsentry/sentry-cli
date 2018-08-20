@@ -12,6 +12,9 @@ branches:
 environment:
   fast_finish: true
   DIST_DIR: '.'
+  SENTRY_ORG: sentry-cli-travis-test
+  SENTRY_AUTH_TOKEN:
+    secure: zaFfRQ1O+0S3XenFbx7l/uK8UF086zd6joeipVI/YAX3Z83QIvt0rcA41uBir6AMcp5lceAxCZlUJSicaPcaZpcZ4l7bvej8OVfj441kBz4=
   ZEUS_HOOK_BASE:
     secure: dcqtt6sxxBV0tDkXmPZOyzCsC3uBhPnCcEBNuYrB6+qYmkTo7ACaD6zs1L1exo73NNdgusog+eC40PBo1XQ02qyHDBE4XBFapCzhhpxMe5WtiQn7OOJMY37iic9jtPKCd4CGvJo4f3G/B20ZxmqZ3WTS1TuV4cipKnWXee0mkIk=
   matrix:
@@ -36,6 +39,7 @@ build: false
 test_script:
   - set RUSTFLAGS=-Ctarget-feature=+crt-static
   - cargo build --release --locked
+  - cargo run --release -- releases list
 
 on_success:
   - zeus upload -t "application/octet-stream" -n sentry-cli-Windows-%arch%.exe .\target\release\sentry-cli.exe
