@@ -50,6 +50,13 @@ _sentry_traceback() {
 }
 
 : > "$_SENTRY_LOG_FILE"
-exec \
-  1> >(tee >(awk '{ system(""); print strftime("%Y-%m-%d %H:%M:%S %z:"), "stdout:", $0; system(""); }' >> "$_SENTRY_LOG_FILE")) \
-  2> >(tee >(awk '{ system(""); print strftime("%Y-%m-%d %H:%M:%S %z:"), "stderr:", $0; system(""); }' >> "$_SENTRY_LOG_FILE") >&2)
+
+if command -v perl >/dev/null; then
+  exec \
+    1> >(tee >(perl '-MPOSIX' -ne '$|++; print strftime("%Y-%m-%d %H:%M:%S %z: ", localtime()), "stdout: ", $_;' >> "$_SENTRY_LOG_FILE")) \
+    2> >(tee >(perl '-MPOSIX' -ne '$|++; print strftime("%Y-%m-%d %H:%M:%S %z: ", localtime()), "stderr: ", $_;' >> "$_SENTRY_LOG_FILE") >&2)
+else
+  exec \
+    1> >(tee >(awk '{ system(""); print strftime("%Y-%m-%d %H:%M:%S %z:"), "stdout:", $0; system(""); }' >> "$_SENTRY_LOG_FILE")) \
+    2> >(tee >(awk '{ system(""); print strftime("%Y-%m-%d %H:%M:%S %z:"), "stderr:", $0; system(""); }' >> "$_SENTRY_LOG_FILE") >&2)
+fi
