@@ -39,7 +39,7 @@ Sending Breadcrumbs
 -------------------
 
 You can also pass a logfile to the ``send-event`` command which will be
-parsed and sent along as breadcrumbs.  The last 100 items will be sent:
+parsed and sent along as breadcrumbs.  The last 100 items will be sent::
 
     $ sentry-cli send-event -m "task failed" --logfile error.log
 
