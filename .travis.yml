@@ -3,6 +3,12 @@ dist: trusty
 services:
   - docker
 
+env:
+  global:
+    - SENTRY_ORG=sentry-cli-travis-test
+    # SENTRY_AUTH_TOKEN
+    - secure: "ttDTQaBws1yMz+aTEsQRxiiVGT2v/7KXMskATFxQGjTiPn3InJc9SQDbqtgrFiRJsc5NGJSKKmgR6IV8HqkYcimzpNZkUmzIZ/JkOv6yz4Gag7CHNrzk2OezoUvYglO8JCiR/WlkEHsGA6OjYaSaL1++FOPVfij56TYmWVp1fZH0pSmrD0o7qtEauUI5vExwB1GuPP0C0Drogf6gYMPoF89tetubM7NVyXCGr7HYPpzo3dDDOUOH/6R/RdGAr5AjA69qJQ0j4w/0ptw9kJt0frC8JF5l6zavufodcRnWFB4MHRQSDwvXtSWO1eiYsNrmeVMRrND2bxSNPDJhrlVH4sJNw1DKlCWfV1EdRlLcOh1du1Aq99jRB+oOXuxQbBUd9rH6A3ZIU+8IYP4QonmLlG+8WvhhmEYoq5ERBXdWfG2BDUKqa4XaCdTej/6AYnbG0DDwzOIZ6AuFIDhXUB60Z0t+tLOe2aSK3yXIxz0Wy+DsGqcHW0wYSiGeB1Vn/CFt1jh+HvD923X5BQtH3xsfTDQWrps4RntK3GrTaLYULiNCHoDyvb9bprmVQhB+smST53QOKsN73YsqPSEt9D6QHzeYxqVI5jSi7HFZX4EyZLGoXASnCWAdeC799FDRUdI3ncE48ojeg6PpHvLl5CWt87v1uWIq7kPsnO1W9mB2Rqs="
+
 branches:
   only:
   - master
@@ -24,7 +30,7 @@ matrix:
       sudo: required
       env:
         - TARGET=i686-unknown-linux-musl
-        - DOCKER_IMAGE=messense/rust-musl-cross:i686-musl
+        - DOCKER_TAG=i686-musl
       script: bash scripts/build-in-docker.sh
       after_success:
         - zeus upload -t "application/octet-stream"
@@ -36,7 +42,7 @@ matrix:
       sudo: required
       env:
         - TARGET=x86_64-unknown-linux-musl
-        - DOCKER_IMAGE=messense/rust-musl-cross:x86_64-musl
+        - DOCKER_TAG=x86_64-musl
       script: bash scripts/build-in-docker.sh
       after_success:
         - zeus upload -t "application/octet-stream"
@@ -49,7 +55,9 @@ matrix:
       language: rust
       env:
         - TARGET=x86_64-apple-darwin
-      script: cargo build --release --locked
+      script:
+        - cargo build --release --locked
+        - cargo run --release -- releases list
       after_success:
         - zeus upload -t "application/octet-stream"
                       -n "sentry-cli-Darwin-x86_64"

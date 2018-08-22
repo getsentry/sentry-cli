@@ -1,5 +1,5 @@
 ARG BUILD_ARCH=x86_64
-FROM messense/rust-musl-cross:$BUILD_ARCH-musl AS sentry-build
+FROM getsentry/rust-musl-cross:$BUILD_ARCH-musl AS sentry-build
 
 ARG BUILD_ARCH
 ENV BUILD_TARGET=$BUILD_ARCH-unknown-linux-musl
@@ -23,4 +23,4 @@ FROM alpine:3.7
 WORKDIR /work
 RUN apk add --no-cache ca-certificates
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
-CMD ["/bin/sentry-cli"]
+ENTRYPOINT ["/bin/sentry-cli"]

@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+* Change entrypoint for Docker image (#358)
+
 ## sentry-cli 1.35.1
 
 * Resolve a hang on certain windows versions on shutdown (#349)
