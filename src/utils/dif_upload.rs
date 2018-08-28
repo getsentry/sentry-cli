@@ -130,7 +130,7 @@ impl<'data> DifMatch<'data> {
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
             fat: Rc::new(fat),
-            object_index: 1,
+            object_index: 0,
             name: name.into(),
             attachments: None,
         })
