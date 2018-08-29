@@ -809,7 +809,7 @@ fn process_symbol_maps<'a>(
 fn try_assemble_difs<'data>(
     difs: &'data [ChunkedDifMatch<'data>],
     options: &DifUpload,
-) -> Result<Option<MissingDifsInfo<'data>>, Error> {
+) -> Result<MissingDifsInfo<'data>, Error> {
     let api = Api::get_current();
     let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
     let response = api.assemble_difs(&options.org, &options.project, &request)?;
@@ -832,8 +832,9 @@ fn try_assemble_difs<'data>(
         match file_response.state {
             ChunkedFileState::Error => {
                 // One of the files could not be uploaded properly and resulted
-                // in an error. We might still want to wait for all other files,
-                // however, so we ignore this file for now.
+                // in an error. We include this file in the return value so that
+                // it shows up in the final report.
+                difs.push(chunked_match);
             }
             ChunkedFileState::NotFound => {
                 // Assembling for one of the files has not started because some
@@ -865,11 +866,7 @@ fn try_assemble_difs<'data>(
         }
     }
 
-    if chunks.is_empty() {
-        Ok(None)
-    } else {
-        Ok(Some((difs, chunks)))
-    }
+    Ok((difs, chunks))
 }
 
 /// Concurrently uploads chunks specified in `missing_info` in batches. The
@@ -882,6 +879,13 @@ fn upload_missing_chunks(
     chunk_options: &ChunkUploadOptions,
 ) -> Result<(), Error> {
     let &(ref difs, ref chunks) = missing_info;
+
+    // Chunks might be empty if errors occurred in a previous upload. We do
+    // not need to render a progress bar or perform an upload in this case.
+    if chunks.is_empty() {
+        return Ok(());
+    }
+
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
@@ -1101,16 +1105,14 @@ fn upload_difs_chunked(
         ChunkedDifMatch::from(m, chunk_options.chunk_size)
     })?;
 
-    // Upload until all chunks are present on the server
-    let mut initially_missing = None;
-    while let Some(missing_info) = try_assemble_difs(&chunked, options)? {
-        upload_missing_chunks(&missing_info, chunk_options)?;
-        initially_missing.get_or_insert(missing_info);
-    }
+    // Upload missing chunks to the server and remember incomplete difs
+    let missing_info = try_assemble_difs(&chunked, options)?;
+    upload_missing_chunks(&missing_info, chunk_options)?;
 
     // Only if DIFs were missing, poll until assembling is complete
-    if let Some((missing, _)) = initially_missing {
-        poll_dif_assemble(missing, options)
+    let (missing_difs, _) = missing_info;
+    if !missing_difs.is_empty() {
+        poll_dif_assemble(missing_difs, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
