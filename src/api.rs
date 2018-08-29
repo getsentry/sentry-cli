@@ -538,7 +538,8 @@ impl Api {
             }
         }
 
-        let resp = self.request(Method::Post, &path)?
+        let resp = self
+            .request(Method::Post, &path)?
             .with_form_data(form)?
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?;
@@ -813,7 +814,8 @@ impl Api {
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
         let url = format!("/organizations/{}/chunk-upload/", org);
-        match self.get(&url)?
+        match self
+            .get(&url)?
             .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
         {
             Ok(options) => Ok(Some(options)),
@@ -888,7 +890,8 @@ impl Api {
             form.part(name).buffer(&checksum, buffer).add()?
         }
 
-        let request = self.request(Method::Post, url)?
+        let request = self
+            .request(Method::Post, url)?
             .with_form_data(form)?
             .progress_bar_mode(progress_bar_mode)?;
 
@@ -971,7 +974,8 @@ impl Api {
             PathArg(org),
             PathArg(project)
         );
-        let resp = self.request(Method::Post, &path)?
+        let resp = self
+            .request(Method::Post, &path)?
             .with_json_body(data)?
             .send()?;
         if resp.status() == 404 {

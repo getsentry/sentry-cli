@@ -59,7 +59,8 @@ pub fn expand_xcodevars(s: String, vars: &HashMap<String, String>) -> String {
             return "".into();
         }
         let mut iter = key.splitn(2, ':');
-        let value = vars.get(iter.next().unwrap())
+        let value = vars
+            .get(iter.next().unwrap())
             .map(|x| x.as_str())
             .unwrap_or("");
         match iter.next() {

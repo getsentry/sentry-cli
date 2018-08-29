@@ -313,7 +313,8 @@ impl Config {
 
     /// Returns true if notifications should be displayed
     pub fn show_notifications(&self) -> Result<bool, Error> {
-        Ok(self.ini
+        Ok(self
+            .ini
             .get_from(Some("ui"), "show_notifications")
             .map(|x| x == "true")
             .unwrap_or(true))
@@ -321,7 +322,8 @@ impl Config {
 
     /// Returns the maximum DIF upload size
     pub fn get_max_dif_archive_size(&self) -> Result<u64, Error> {
-        Ok(self.ini
+        Ok(self
+            .ini
             .get_from(Some("dsym"), "max_upload_size")
             .and_then(|x| x.parse().ok())
             .unwrap_or(35 * 1024 * 1024))
@@ -386,7 +388,8 @@ impl Config {
 
     /// Does this installation want errors to sentry?
     pub fn internal_sentry_dsn(&self) -> Option<Dsn> {
-        if !self.ini
+        if !self
+            .ini
             .get_from(Some("crash_reporting"), "enabled")
             .map(|x| x == "1" || x == "true")
             .unwrap_or(false)

@@ -25,7 +25,8 @@ use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sha1::Digest;
 use symbolic::common::{
-    byteview::ByteView, types::{ObjectClass, ObjectKind},
+    byteview::ByteView,
+    types::{ObjectClass, ObjectKind},
 };
 use symbolic::debuginfo::{DebugId, FatObject, Object};
 use walkdir::WalkDir;
@@ -480,7 +481,8 @@ where
         }
 
         let buffer = ByteView::from_path(path).map_err(SyncFailure::new)?;
-        let name = path.strip_prefix(&directory)
+        let name = path
+            .strip_prefix(&directory)
             .unwrap()
             .to_string_lossy()
             .into_owned();
@@ -891,7 +893,8 @@ fn upload_missing_chunks(
     // To make the progress bar more consistent for repeated and partial uploads
     // we also include already uploaded chunks in the progress bar. Thus, the
     // first chunk's progress starts at the amount of already uploaded bytes.
-    let total_bytes = difs.iter()
+    let total_bytes = difs
+        .iter()
         .flat_map(|m| m.chunks().map(|DifChunk((_, data))| data.len() as u64))
         .sum();
     let missing_bytes: u64 = chunks
@@ -1023,12 +1026,14 @@ fn poll_dif_assemble(
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
     successes.sort_by(|a, b| {
-        let name_a = a.1
+        let name_a = a
+            .1
             .dif
             .as_ref()
             .map(|x| x.object_name.as_str())
             .unwrap_or("");
-        let name_b = b.1
+        let name_b = b
+            .1
             .dif
             .as_ref()
             .map(|x| x.object_name.as_str())

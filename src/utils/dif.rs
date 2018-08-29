@@ -126,7 +126,8 @@ impl DifFile {
 
     pub fn variants(&self) -> BTreeMap<DebugId, Option<&'static str>> {
         match self {
-            &DifFile::Object(ref fat) => fat.objects()
+            &DifFile::Object(ref fat) => fat
+                .objects()
                 .filter_map(|result| result.ok())
                 .filter_map(|object| {
                     object
@@ -140,7 +141,8 @@ impl DifFile {
 
     pub fn ids(&self) -> Vec<DebugId> {
         match self {
-            &DifFile::Object(ref fat) => fat.objects()
+            &DifFile::Object(ref fat) => fat
+                .objects()
                 .filter_map(|result| result.ok())
                 .filter_map(|object| object.id())
                 .collect(),
@@ -150,7 +152,8 @@ impl DifFile {
 
     pub fn is_usable(&self) -> bool {
         match self {
-            &DifFile::Object(ref fat) => fat.objects()
+            &DifFile::Object(ref fat) => fat
+                .objects()
                 .filter_map(|result| result.ok())
                 .any(|object| object.debug_kind().is_some()),
             &DifFile::Proguard(ref pg) => pg.has_line_info(),

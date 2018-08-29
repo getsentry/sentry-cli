@@ -24,16 +24,18 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
     };
 
     Hub::with(|hub| {
-        hub.bind_client(Some(Arc::new(dsn.and_then(|dsn| {
-            Client::from_config((
-                dsn,
-                ClientOptions {
-                    release: sentry_crate_release!(),
-                    user_agent: Cow::Borrowed(USER_AGENT),
-                    ..Default::default()
-                },
-            ))
-        }).unwrap_or_else(Client::disabled))))
+        hub.bind_client(Some(Arc::new(
+            dsn.and_then(|dsn| {
+                Client::from_config((
+                    dsn,
+                    ClientOptions {
+                        release: sentry_crate_release!(),
+                        user_agent: Cow::Borrowed(USER_AGENT),
+                        ..Default::default()
+                    },
+                ))
+            }).unwrap_or_else(Client::disabled),
+        )))
     });
 }
 
