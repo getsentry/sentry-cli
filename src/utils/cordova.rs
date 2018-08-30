@@ -35,7 +35,8 @@ impl CordovaConfig {
     }
 
     pub fn android_version_code(&self) -> u64 {
-        if let Some(version) = self.root
+        if let Some(version) = self
+            .root
             .get_attr("android-versionCode")
             .and_then(|x| x.parse().ok())
         {

@@ -257,7 +257,8 @@ impl SourceMapProcessor {
             try!(f.read_to_end(&mut contents));
             let ty = if sourcemap::is_sourcemap_slice(&contents) {
                 SourceType::SourceMap
-            } else if path.file_name()
+            } else if path
+                .file_name()
                 .and_then(|x| x.to_str())
                 .map(|x| x.contains(".min."))
                 .unwrap_or(false) || is_likely_minified_js(&contents)
@@ -481,7 +482,8 @@ impl SourceMapProcessor {
 
         // get a list of release files first so we know the file IDs of
         // files that already exist.
-        let release_files: HashMap<_, _> = api.list_release_files(org, project, release)?
+        let release_files: HashMap<_, _> = api
+            .list_release_files(org, project, release)?
             .into_iter()
             .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
             .collect();

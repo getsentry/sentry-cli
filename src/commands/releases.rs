@@ -498,7 +498,8 @@ fn execute_delete<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<
 
 fn execute_list<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
-    let releases = ctx.api
+    let releases = ctx
+        .api
         .list_releases(ctx.get_org()?, project.as_ref().map(|x| x.as_str()))?;
     let abbrev = !matches.is_present("no_abbrev");
     let mut table = Table::new();
@@ -541,7 +542,8 @@ fn execute_info<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<()
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    let release = ctx.api
+    let release = ctx
+        .api
         .get_release(org, project.as_ref().map(|x| x.as_str()), &version)?;
 
     // quiet mode just exists
@@ -586,7 +588,8 @@ fn execute_files_list<'a>(
 
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for artifact in ctx.api
+    for artifact in ctx
+        .api
         .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
     {
         let row = table.add_row();
@@ -620,7 +623,8 @@ fn execute_files_delete<'a>(
     };
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for file in ctx.api
+    for file in ctx
+        .api
         .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
     {
         if !(matches.is_present("all") || files.contains(&file.name)) {

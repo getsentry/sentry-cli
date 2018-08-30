@@ -17,8 +17,13 @@ fn validate_org(v: String) -> Result<(), String> {
 }
 
 pub fn validate_project(v: String) -> Result<(), String> {
-    if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') || v.contains('\n')
-        || v.contains('\t') || v.contains('\r')
+    if v.contains("/")
+        || &v == "."
+        || &v == ".."
+        || v.contains(' ')
+        || v.contains('\n')
+        || v.contains('\t')
+        || v.contains('\r')
     {
         return Err("invalid value for project. Use the URL \
                     slug and not the name!"

@@ -52,7 +52,8 @@ pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>
 pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     lazy_static! {
         static ref APP_ID_RE: Regex = Regex::new(r#"applicationId\s+["']([^"']*)["']"#).unwrap();
-        static ref VERSION_NAME_RE: Regex = Regex::new(r#"versionName\s+["']([^"']*)["']"#).unwrap();
+        static ref VERSION_NAME_RE: Regex =
+            Regex::new(r#"versionName\s+["']([^"']*)["']"#).unwrap();
     }
 
     let mut contents = String::new();

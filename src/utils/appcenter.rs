@@ -51,7 +51,8 @@ impl<'de> de::Deserialize<'de> for AppCenterPackage {
             ) -> Result<AppCenterPackage, S::Error> {
                 // Since we only need the package label, we can deserialize the JSON string very
                 // efficiently by only looking at the first element.
-                let label = seq.next_element()?
+                let label = seq
+                    .next_element()?
                     .ok_or_else(|| de::Error::custom("missing package label"))?;
 
                 // Drain the sequence, ignoring all other values.

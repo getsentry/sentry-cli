@@ -100,7 +100,8 @@ fn find_ids(
     as_json: bool,
 ) -> Result<bool, Error> {
     let mut remaining = ids.clone();
-    let mut proguard_uuids: HashSet<_> = ids.iter()
+    let mut proguard_uuids: HashSet<_> = ids
+        .iter()
         .map(|x| x.uuid())
         .filter(|&x| x.get_version() == Some(UuidVersion::Sha1))
         .collect();
