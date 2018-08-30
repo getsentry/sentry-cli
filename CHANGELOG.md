@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.35.3
+
+* Add a warning about new Docker entrypoint (#367)
+
 ## sentry-cli 1.35.2
 
 * Change entrypoint for Docker image (#358)
