@@ -4,3 +4,4 @@
 !Cargo.lock
 !Cargo.toml
 !build.rs
+!docker-entrypoint.sh
