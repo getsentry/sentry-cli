@@ -3,6 +3,9 @@
 ## [Unreleased]
 
 * Change entrypoint for Docker image (#358)
+* Use `perl` over `strftime` in bash hook (#359)
+* Fix iTunes Connect BCSymbolMap handling in `upload-dif` (#362)
+* Display error messages when re-uploading broken DIFs (#363)
 
 ## sentry-cli 1.35.1
 
