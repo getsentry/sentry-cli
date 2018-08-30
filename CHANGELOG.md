@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## sentry-cli 1.35.2
 
 * Change entrypoint for Docker image (#358)
 * Use `perl` over `strftime` in bash hook (#359)
