@@ -2,7 +2,7 @@
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 name = "sentry-cli"
-version = "1.35.2"
+version = "1.35.3"
 
 [dependencies]
 anylog = "0.2.1"
