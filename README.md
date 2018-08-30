@@ -80,7 +80,7 @@ we recommend you to use the `latest` tag. To use it, run:
 
 ```sh
 docker pull getsentry/sentry-cli
-docker run --rm -it -v $(pwd):/work getsentry/sentry-cli --help
+docker run --rm -v $(pwd):/work getsentry/sentry-cli --help
 ```
 
 ## Compiling
