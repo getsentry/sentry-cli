@@ -108,5 +108,5 @@ able to compail against musl just yet. To build and use it, run:
 
 ```sh
 docker build -t sentry-cli .
-docker run --rm -it -v $(pwd):/work sentry-cli sentry-cli --help
+docker run --rm -v $(pwd):/work sentry-cli --help
 ```
