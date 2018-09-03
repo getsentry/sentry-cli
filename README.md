@@ -103,8 +103,7 @@ headers. For instance:
     $ CFLAGS=-I/usr/local/opt/openssl/include/ cargo build
 
 Also, there is a Dockerfile that builds an Alpine-based Docker image with
-`sentry-cli` in the PATH. Note that this image is not minimal yet, as we are not
-able to compail against musl just yet. To build and use it, run:
+`sentry-cli` in the PATH. To build and use it, run:
 
 ```sh
 docker build -t sentry-cli .
