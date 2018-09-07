@@ -112,6 +112,18 @@ describe('SentryCli helper', () => {
     ]);
 
     expect(
+      helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlSuffix: '?hash=1337' })
+    ).toEqual([
+      'releases',
+      'files',
+      'release',
+      'upload-sourcemaps',
+      '/dev/null',
+      '--url-suffix',
+      '?hash=1337',
+    ]);
+
+    expect(
       helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { ignoreFile: '/js.ignore' })
     ).toEqual([
       'releases',
