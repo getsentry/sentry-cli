@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.35.5
+
+* Add url-suffix option
+
 ## sentry-cli 1.35.4
 
 * Additional compatibility improvements for the Docker image (#368)
