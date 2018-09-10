@@ -31,6 +31,10 @@ module.exports = {
     param: '--url-prefix',
     type: 'string',
   },
+  urlSuffix: {
+    param: '--url-suffix',
+    type: 'string',
+  },
   ext: {
     param: '--ext',
     type: 'array',

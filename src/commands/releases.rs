@@ -195,6 +195,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .long("url-prefix")
                     .value_name("PREFIX")
                     .help("The URL prefix to prepend to all filenames."))
+                .arg(Arg::with_name("url_suffix")
+                    .short("u")
+                    .long("url-suffix")
+                    .value_name("SUFFIX")
+                    .help("The URL suffix to append to all filenames."))
                 .arg(Arg::with_name("dist")
                     .long("dist")
                     .short("d")
@@ -695,6 +700,9 @@ fn execute_files_upload_sourcemaps<'a>(
         .value_of("url_prefix")
         .unwrap_or("~")
         .trim_right_matches("/");
+    let url_suffix = matches
+        .value_of("url_suffix")
+        .unwrap_or("");
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")
@@ -757,7 +765,7 @@ fn execute_files_upload_sourcemaps<'a>(
                 file.metadata().unwrap().len()
             );
             let local_path = file.path().strip_prefix(&base_path).unwrap();
-            let url = format!("{}/{}", url_prefix, path_as_url(local_path));
+            let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
             processor.add(&url, file.path())?;
         }
     }

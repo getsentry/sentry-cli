@@ -80,6 +80,7 @@ module.exports = {
    *   stripCommonPrefix: false,  // guess common prefices to remove from filenames
    *   validate: false,           // validate source maps and cancel the upload on error
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
+   *   urlSuffix: '',             // add a suffix source map urls after stripping them
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
    * });
    *
