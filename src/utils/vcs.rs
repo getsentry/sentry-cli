@@ -169,7 +169,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
         }
 
         match configured_repo.provider.id.as_str() {
-            "github" | "bitbucket" | "visualstudio" | "git" => {
+            "integrations:github" | "integrations:bitbucket" | "integrations:visualstudio" | "github" | "bitbucket" | "visualstudio" | "git" => {
                 if let Some(ref url) = configured_repo.url {
                     return Ok(url.clone());
                 }
