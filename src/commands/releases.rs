@@ -196,7 +196,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("PREFIX")
                     .help("The URL prefix to prepend to all filenames."))
                 .arg(Arg::with_name("url_suffix")
-                    .short("u")
                     .long("url-suffix")
                     .value_name("SUFFIX")
                     .help("The URL suffix to append to all filenames."))
