@@ -17,25 +17,21 @@ pub fn setup(log: Box<Log>) {
 }
 
 pub fn bind_configured_client(cfg: Option<&Config>) {
-    let dsn = if cfg.is_some() {
-        cfg.and_then(|config| config.internal_sentry_dsn())
-    } else {
-        None
-    };
-
     Hub::with(|hub| {
-        hub.bind_client(Some(Arc::new(
-            dsn.and_then(|dsn| {
-                Client::from_config((
-                    dsn,
-                    ClientOptions {
-                        release: sentry_crate_release!(),
-                        user_agent: Cow::Borrowed(USER_AGENT),
-                        ..Default::default()
-                    },
-                ))
-            }).unwrap_or_else(Client::disabled),
-        )))
+        let dsn = cfg.and_then(|config| config.internal_sentry_dsn());
+        let client = match dsn {
+            Some(dsn) => Client::from_config((
+                dsn,
+                ClientOptions {
+                    release: sentry_crate_release!(),
+                    user_agent: Cow::Borrowed(USER_AGENT),
+                    ..Default::default()
+                },
+            )),
+            None => Client::from_config(()),
+        };
+
+        hub.bind_client(Some(Arc::new(client)))
     });
 }
 
@@ -45,5 +41,7 @@ pub fn try_report_to_sentry(err: &Error) {
 }
 
 pub fn flush_events() {
-    Hub::with(|hub| hub.drain_events(Some(Duration::from_secs(2))));
+    if let Some(client) = Hub::with(|hub| hub.client()) {
+        client.close(Some(Duration::from_secs(2)));
+    }
 }

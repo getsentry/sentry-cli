@@ -112,7 +112,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
     let mut event = Event::default();
 
-    event.sdk_info = Some(get_sdk_info());
+    event.sdk = Some(get_sdk_info());
 
     event.level = matches
         .value_of("level")
@@ -179,7 +179,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 "ip_address" => user.ip_address = Some(value.parse()?),
                 "username" => user.username = Some(value.into()),
                 _ => {
-                    user.data.insert(key.into(), value.into());
+                    user.other.insert(key.into(), value.into());
                 }
             };
         }

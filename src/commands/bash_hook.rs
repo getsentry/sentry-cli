@@ -9,9 +9,9 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use regex::Regex;
-use sentry::protocol::{Event, Exception, FileLocation, Frame, Stacktrace, User, Value};
+use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
 use username::get_user_name;
-use uuid::{Uuid, UuidVersion};
+use uuid::Uuid;
 
 use config::Config;
 use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
@@ -52,7 +52,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
 
     event.environment = config.get_environment().map(|e| e.into());
     event.release = detect_release_name().ok().map(|r| r.into());
-    event.sdk_info = Some(get_sdk_info());
+    event.sdk = Some(get_sdk_info());
     event.extra.insert(
         "environ".into(),
         Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
@@ -89,15 +89,12 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
                     _ => {}
                 }
                 frames.push(Frame {
-                    location: FileLocation {
-                        filename: Some(cap[2].to_string()),
-                        abs_path: Path::new(&cap[2])
-                            .canonicalize()
-                            .map(|x| x.display().to_string())
-                            .ok(),
-                        line: cap[3].parse().ok(),
-                        ..Default::default()
-                    },
+                    filename: Some(cap[2].to_string()),
+                    abs_path: Path::new(&cap[2])
+                        .canonicalize()
+                        .map(|x| x.display().to_string())
+                        .ok(),
+                    lineno: cap[3].parse().ok(),
                     function: Some(cap[1].to_string()),
                     ..Default::default()
                 });
@@ -108,13 +105,12 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
     {
         let mut source_caches = HashMap::new();
         for frame in frames.iter_mut() {
-            let lineno = match frame.location.line {
+            let lineno = match frame.lineno {
                 Some(line) => line as usize,
                 None => continue,
             };
 
             let filename = frame
-                .location
                 .filename
                 .as_ref()
                 .map(|s| s.as_str())
@@ -132,19 +128,19 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
                 }
             }
             let source = source_caches.get(filename).unwrap();
-            frame.source.current_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
+            frame.context_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
             if let Some(slice) = source.get(lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
-                frame.source.pre_lines = slice.iter().map(|x| x.clone()).collect();
+                frame.pre_context = slice.iter().map(|x| x.clone()).collect();
             };
             if let Some(slice) = source.get(lineno..min(lineno + 5, source.len())) {
-                frame.source.post_lines = slice.iter().map(|x| x.clone()).collect();
+                frame.post_context = slice.iter().map(|x| x.clone()).collect();
             };
         }
     }
 
     attach_logfile(&mut event, logfile, true)?;
 
-    event.exceptions.push(Exception {
+    event.exception.values.push(Exception {
         ty: "BashError".into(),
         value: Some(format!("command {} exited with status {}", cmd, exit_code)),
         stacktrace: Some(Stacktrace {
@@ -172,17 +168,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let path = env::temp_dir();
     let log = path.join(&format!(
         ".sentry-{}.out",
-        Uuid::new(UuidVersion::Random)
-            .unwrap()
-            .hyphenated()
-            .to_string()
+        Uuid::new_v4().hyphenated().to_string()
     ));
     let traceback = path.join(&format!(
         ".sentry-{}.traceback",
-        Uuid::new(UuidVersion::Random)
-            .unwrap()
-            .hyphenated()
-            .to_string()
+        Uuid::new_v4().hyphenated().to_string()
     ));
     let mut script = BASH_SCRIPT
         .replace(

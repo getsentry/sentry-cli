@@ -49,7 +49,7 @@ pub fn attach_logfile(event: &mut Event, logfile: &str, with_component: bool) ->
             }
         }
 
-        event.breadcrumbs.push(Breadcrumb {
+        event.breadcrumbs.values.push(Breadcrumb {
             timestamp: rec.utc_timestamp().unwrap_or(fallback_timestamp),
             message: Some(message),
             category: Some(component.to_string()),
@@ -59,7 +59,7 @@ pub fn attach_logfile(event: &mut Event, logfile: &str, with_component: bool) ->
 
     if event.breadcrumbs.len() > 100 {
         let skip = event.breadcrumbs.len() - 100;
-        event.breadcrumbs.drain(..skip);
+        event.breadcrumbs.values.drain(..skip);
     }
 
     Ok(())
@@ -71,6 +71,7 @@ pub fn get_sdk_info() -> Cow<'static, ClientSdkInfo> {
         name: env!("CARGO_PKG_NAME").into(),
         version: env!("CARGO_PKG_VERSION").into(),
         integrations: Vec::new(),
+        packages: Vec::new(),
     })
 }
 
@@ -85,16 +86,16 @@ pub fn with_sentry_client<F, R>(dsn: Dsn, callback: F) -> Option<R>
 where
     F: FnOnce(&Client) -> R,
 {
-    let client = Client::with_dsn_and_options(
+    let client = Client::from_config((
         dsn,
         ClientOptions {
             user_agent: USER_AGENT.into(),
             ..Default::default()
         },
-    );
+    ));
 
     let rv = callback(&client);
-    if client.drain_events(Some(Duration::from_secs(2))) {
+    if client.close(Some(Duration::from_secs(2))) {
         Some(rv)
     } else {
         None
