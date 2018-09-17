@@ -62,7 +62,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let mut processor = SourceMapProcessor::new();
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
-    processor.rewrite(&vec![base.to_str().unwrap()])?;
+    processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
     let release = api.new_release(

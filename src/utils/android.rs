@@ -15,7 +15,7 @@ pub struct AndroidManifest {
     root: Element,
 }
 
-const ANDROID_NS: &'static str = "http://schemas.android.com/apk/res/android";
+const ANDROID_NS: &str = "http://schemas.android.com/apk/res/android";
 
 impl AndroidManifest {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<AndroidManifest, Error> {
@@ -23,7 +23,7 @@ impl AndroidManifest {
         let root = Element::from_reader(f)?;
         Ok(AndroidManifest {
             path: path.as_ref().to_path_buf(),
-            root: root,
+            root,
         })
     }
 
@@ -38,7 +38,7 @@ impl AndroidManifest {
         self.root
             .get_attr("package")
             .unwrap_or("unknown")
-            .rsplit(".")
+            .rsplit('.')
             .next()
             .unwrap()
             .chars()

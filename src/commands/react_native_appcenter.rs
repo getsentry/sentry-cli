@@ -106,7 +106,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         }
     }
 
-    processor.rewrite(&vec![here_str])?;
+    processor.rewrite(&[here_str])?;
     processor.add_sourcemap_references()?;
 
     let release = api.new_release(

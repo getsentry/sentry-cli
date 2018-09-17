@@ -66,10 +66,10 @@ impl<'de> de::Deserialize<'de> for AppCenterPackage {
     }
 }
 
-pub fn get_appcenter_error(output: Output) -> Error {
+pub fn get_appcenter_error(output: &Output) -> Error {
     let message = match str::from_utf8(&output.stdout) {
         Ok(message) => message,
-        Err(_) => "Unknown AppCenter error".into(),
+        Err(_) => "Unknown AppCenter error",
     };
 
     let stripped = strip_ansi_codes(message);
@@ -110,7 +110,7 @@ pub fn get_appcenter_deployment_history(
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout)?)
     } else {
-        Err(get_appcenter_error(output)
+        Err(get_appcenter_error(&output)
             .context("Failed to load AppCenter deployment history")
             .into())
     }

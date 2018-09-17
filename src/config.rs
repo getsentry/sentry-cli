@@ -49,12 +49,12 @@ impl Config {
     pub fn from_cli_config() -> Result<Config, Error> {
         let (filename, ini) = load_cli_config()?;
         Ok(Config {
-            filename: filename,
+            filename,
             process_bound: false,
             cached_auth: get_default_auth(&ini),
             cached_base_url: get_default_url(&ini),
             cached_log_level: get_default_log_level(&ini)?,
-            ini: ini,
+            ini,
         })
     }
 
@@ -72,7 +72,7 @@ impl Config {
 
     /// Return the currently bound config as option.
     pub fn get_current_opt() -> Option<Arc<Config>> {
-        CONFIG.lock().as_ref().map(|x| x.clone())
+        CONFIG.lock().as_ref().cloned()
     }
 
     /// Return the currently bound config.
@@ -101,7 +101,7 @@ impl Config {
             use utils::crashreporting;
             crashreporting::bind_configured_client(Some(self));
         }
-        if !env::var("http_proxy").is_ok() {
+        if env::var("http_proxy").is_err() {
             if let Some(proxy) = self.get_proxy_url() {
                 env::set_var("http_proxy", proxy);
             }
@@ -330,7 +330,7 @@ impl Config {
 
     /// Return the DSN
     pub fn get_dsn(&self) -> Result<Dsn, Error> {
-        if let Some(ref val) = env::var("SENTRY_DSN").ok() {
+        if let Ok(val) = env::var("SENTRY_DSN") {
             Ok(val.parse()?)
         } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
             Ok(val.parse()?)
@@ -376,12 +376,10 @@ impl Config {
     pub fn disable_update_nagger(&self) -> bool {
         if let Ok(var) = env::var("SENTRY_DISABLE_UPDATE_CHECK") {
             &var == "1" || &var == "true"
+        } else if let Some(val) = self.ini.get_from(Some("update"), "disable_check") {
+            val == "true"
         } else {
-            if let Some(val) = self.ini.get_from(Some("update"), "disable_check") {
-                val == "true"
-            } else {
-                false
-            }
+            false
         }
     }
 
@@ -496,16 +494,16 @@ impl Clone for Config {
             ini: self.ini.clone(),
             cached_auth: self.cached_auth.clone(),
             cached_base_url: self.cached_base_url.clone(),
-            cached_log_level: self.cached_log_level.clone(),
+            cached_log_level: self.cached_log_level,
         }
     }
 }
 
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
-    if let Some(ref val) = env::var("SENTRY_AUTH_TOKEN").ok() {
-        Some(Auth::Token(val.to_owned()))
-    } else if let Some(ref val) = env::var("SENTRY_API_KEY").ok() {
-        Some(Auth::Key(val.to_owned()))
+    if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
+        Some(Auth::Token(val))
+    } else if let Ok(val) = env::var("SENTRY_API_KEY") {
+        Some(Auth::Key(val))
     } else if let Some(val) = ini.get_from(Some("auth"), "token") {
         Some(Auth::Token(val.to_owned()))
     } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
@@ -516,8 +514,8 @@ fn get_default_auth(ini: &Ini) -> Option<Auth> {
 }
 
 fn get_default_url(ini: &Ini) -> String {
-    if let Some(ref val) = env::var("SENTRY_URL").ok() {
-        val.to_owned()
+    if let Ok(val) = env::var("SENTRY_URL") {
+        val
     } else if let Some(val) = ini.get_from(Some("defaults"), "url") {
         val.to_owned()
     } else {

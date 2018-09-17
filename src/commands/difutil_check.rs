@@ -42,7 +42,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     if matches.is_present("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &f)?;
-        println!("");
+        println!();
         return if f.is_usable() {
             Ok(())
         } else {

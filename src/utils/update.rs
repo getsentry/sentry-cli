@@ -71,7 +71,7 @@ pub struct LastUpdateCheck {
 }
 
 impl LastUpdateCheck {
-    pub fn update_for_info(&mut self, ui: SentryCliUpdateInfo) {
+    pub fn update_for_info(&mut self, ui: &SentryCliUpdateInfo) {
         self.last_check_timestamp = Some(Utc::now());
         self.last_check_version = Some(ui.current_version().to_string());
         self.last_fetched_version = Some(ui.latest_version().to_string());
@@ -147,7 +147,7 @@ impl SentryCliUpdateInfo {
         if is_homebrew_install() {
             println!("This installation of sentry-cli is managed through homebrew");
             println!("Please use homebrew to update sentry-cli:");
-            println!("");
+            println!();
             println!("{} brew upgrade sentry-cli", style("$").dim());
             return Err(QuietExit(1).into());
         }
@@ -217,7 +217,7 @@ fn update_nagger_impl() -> Result<(), Error> {
     if check.should_run_check() {
         let ui = get_latest_sentrycli_release()?;
         if ui.have_version_info() {
-            check.update_for_info(ui);
+            check.update_for_info(&ui);
             let mut f = fs::File::create(&path)?;
             serde_json::to_writer_pretty(&mut f, &check)?;
             f.write_all(b"\n")?;

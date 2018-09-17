@@ -89,10 +89,12 @@ fn id_hint(id: &DebugId) -> &'static str {
     }
 }
 
+// TODO: Reduce complexity of this function
+#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
 fn find_ids(
-    paths: HashSet<PathBuf>,
-    types: HashSet<DifType>,
-    ids: HashSet<DebugId>,
+    paths: &HashSet<PathBuf>,
+    types: &HashSet<DifType>,
+    ids: &HashSet<DebugId>,
     as_json: bool,
 ) -> Result<bool, Error> {
     let mut remaining = ids.clone();
@@ -104,7 +106,7 @@ fn find_ids(
 
     let iter = paths
         .iter()
-        .flat_map(|p| WalkDir::new(p))
+        .flat_map(WalkDir::new)
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file());
 
@@ -180,11 +182,8 @@ fn find_ids(
         }
 
         for (id, ty) in found {
-            found_files.push(DifMatch {
-                ty: ty,
-                id: id,
-                path: dirent.path().to_path_buf(),
-            });
+            let path = dirent.path().to_path_buf();
+            found_files.push(DifMatch { ty, id, path });
             remaining.remove(&id);
             proguard_uuids.remove(&id.uuid());
         }
@@ -194,7 +193,7 @@ fn find_ids(
 
     if as_json {
         serde_json::to_writer_pretty(&mut io::stdout(), &found_files)?;
-        println!("");
+        println!();
     } else {
         for m in found_files {
             println!(
@@ -271,7 +270,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         return Ok(());
     }
 
-    if !find_ids(paths, types, ids, matches.is_present("json"))? {
+    if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
         return Err(QuietExit(1).into());
     }
 

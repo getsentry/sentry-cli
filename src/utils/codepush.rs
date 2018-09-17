@@ -33,7 +33,7 @@ pub struct CodePushDeployment {
     pub package: Option<CodePushPackage>,
 }
 
-fn get_codepush_error(output: process::Output) -> Error {
+fn get_codepush_error(output: &process::Output) -> Error {
     if let Ok(message) = str::from_utf8(&output.stderr) {
         let stripped = strip_ansi_codes(message);
         err_msg(
@@ -75,7 +75,7 @@ pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>, Er
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout)?)
     } else {
-        Err(get_codepush_error(output)
+        Err(get_codepush_error(&output)
             .context("Failed to get codepush deployments")
             .into())
     }
@@ -85,7 +85,7 @@ pub fn get_codepush_package(app: &str, deployment: &str) -> Result<CodePushPacka
     let deployments = get_codepush_deployments(app)?;
     for dep in deployments {
         if_chain! {
-            if &dep.name == deployment;
+            if dep.name == deployment;
             if let Some(pkg) = dep.package;
             then {
                 return Ok(pkg);

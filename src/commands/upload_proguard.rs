@@ -168,7 +168,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
                         size: md.len(),
-                        uuid: forced_uuid.clone().unwrap_or_else(|| mapping.uuid()),
+                        uuid: forced_uuid.unwrap_or_else(|| mapping.uuid()),
                     });
                 }
             }
@@ -189,7 +189,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     if mappings.is_empty() && matches.is_present("require_one") {
-        println!("");
+        println!();
         println_stderr!("{}", style("error: found no mapping files to upload").red());
         return Err(QuietExit(1).into());
     }
@@ -231,7 +231,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         style(">").dim(),
         style(rv.len()).yellow()
     );
-    if rv.len() > 0 {
+    if !rv.is_empty() {
         println!("Newly uploaded debug symbols:");
         for df in rv {
             println!("  {}", style(&df.id()).dim());

@@ -30,7 +30,7 @@ pub fn prompt(message: &str) -> io::Result<String> {
         let mut buf = String::new();
         io::stdin().read_line(&mut buf)?;
         let input = buf.trim();
-        if input.len() > 0 {
+        if !input.is_empty() {
             return Ok(input.to_owned());
         }
     }

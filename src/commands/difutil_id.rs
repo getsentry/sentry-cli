@@ -52,11 +52,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         for id in f.ids() {
             println!("{}", id);
         }
-    } else {
-        if matches.is_present("json") {
-            serde_json::to_writer_pretty(&mut io::stdout(), &f.ids())?;
-            println!("");
-        }
+    } else if matches.is_present("json") {
+        serde_json::to_writer_pretty(&mut io::stdout(), &f.ids())?;
+        println!();
     }
 
     Ok(())

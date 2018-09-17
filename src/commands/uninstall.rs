@@ -30,7 +30,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
         println!("Please use homebrew to uninstall sentry-cli");
-        println!("");
+        println!();
         println!("{} brew uninstall sentry-cli", style("$").dim());
         return Err(QuietExit(1).into());
     }
@@ -41,7 +41,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
     if cfg!(windows) {
         println!("Cannot uninstall on Windows :(");
-        println!("");
+        println!();
         println!("Delete this file yourself: {}", exe.display());
         return Err(QuietExit(1).into());
     }

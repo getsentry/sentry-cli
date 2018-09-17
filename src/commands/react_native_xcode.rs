@@ -71,7 +71,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 fn find_node() -> String {
     if let Ok(path) = env::var("NODE_BINARY") {
-        if path.len() > 0 {
+        if !path.is_empty() {
             return path;
         }
     }
@@ -222,7 +222,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         let mut processor = SourceMapProcessor::new();
         processor.add(&bundle_url, &bundle_path)?;
         processor.add(&sourcemap_url, &sourcemap_path)?;
-        processor.rewrite(&vec![base.parent().unwrap().to_str().unwrap()])?;
+        processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
 
         let release = api.new_release(
@@ -276,7 +276,7 @@ pub fn wrap_call() -> Result<(), Error> {
         sourcemap_report.sourcemap_path = Some(PathBuf::from(path));
     }
 
-    sourcemap_report.bundle_path = bundle_path.map(|x| PathBuf::from(x));
+    sourcemap_report.bundle_path = bundle_path.map(PathBuf::from);
 
     let rv = process::Command::new(env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap())
         .args(&args)

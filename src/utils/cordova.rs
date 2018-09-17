@@ -14,9 +14,9 @@ impl CordovaConfig {
         let f = fs::File::open(p)?;
         let root = Element::from_reader(BufReader::new(f))?;
         if root.tag() != &QName::from("{http://www.w3.org/ns/widgets}widget") {
-            return Ok(None);
+            Ok(None)
         } else {
-            Ok(Some(CordovaConfig { root: root }))
+            Ok(Some(CordovaConfig { root }))
         }
     }
 

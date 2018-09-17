@@ -59,14 +59,14 @@ fn get_config_status_json() -> Result<(), Error> {
         .insert("url".into(), Some(config.get_base_url()?.to_string()));
 
     rv.auth.auth_type = config.get_auth().map(|val| match val {
-        &Auth::Token(_) => "token".into(),
-        &Auth::Key(_) => "api_key".into(),
+        Auth::Token(_) => "token".into(),
+        Auth::Key(_) => "api_key".into(),
     });
     rv.auth.successful = config.get_auth().is_some() && Api::get_current().get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();
 
     serde_json::to_writer_pretty(&mut io::stdout(), &rv)?;
-    println!("");
+    println!();
     Ok(())
 }
 
@@ -83,11 +83,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     if !matches.is_present("quiet") {
         println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
-        println!("Default Organization: {}", org.unwrap_or("-".into()));
-        println!("Default Project: {}", project.unwrap_or("-".into()));
+        println!(
+            "Default Organization: {}",
+            org.unwrap_or_else(|| "-".into())
+        );
+        println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
 
         if config.get_auth().is_some() {
-            println!("");
+            println!();
             println!("Authentication Info:");
             println!("  Method: {}", describe_auth(config.get_auth()));
             match info_rv {

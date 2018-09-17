@@ -17,7 +17,7 @@ use config::Config;
 use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use utils::releases::detect_release_name;
 
-const BASH_SCRIPT: &'static str = include_str!("../bashsupport.sh");
+const BASH_SCRIPT: &str = include_str!("../bashsupport.sh");
 lazy_static! {
     static ref FRAME_RE: Regex = Regex::new(r#"^(.*?):(.*):(\d+)$"#).unwrap();
 }
@@ -73,7 +73,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
             let line = line?;
 
             // meta info
-            if line.starts_with("@") {
+            if line.starts_with('@') {
                 if line.starts_with("@command:") {
                     cmd = line[9..].to_string();
                 } else if line.starts_with("@exit_code:") {
@@ -104,7 +104,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
 
     {
         let mut source_caches = HashMap::new();
-        for frame in frames.iter_mut() {
+        for frame in &mut frames {
             let lineno = match frame.lineno {
                 Some(line) => line as usize,
                 None => continue,
@@ -127,13 +127,13 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
                     source_caches.insert(filename, vec![]);
                 }
             }
-            let source = source_caches.get(filename).unwrap();
-            frame.context_line = source.get(lineno.saturating_sub(1)).map(|x| x.clone());
+            let source = &source_caches[filename];
+            frame.context_line = source.get(lineno.saturating_sub(1)).cloned();
             if let Some(slice) = source.get(lineno.saturating_sub(5)..lineno.saturating_sub(1)) {
-                frame.pre_context = slice.iter().map(|x| x.clone()).collect();
+                frame.pre_context = slice.to_vec();
             };
             if let Some(slice) = source.get(lineno..min(lineno + 5, source.len())) {
-                frame.post_context = slice.iter().map(|x| x.clone()).collect();
+                frame.post_context = slice.to_vec();
             };
         }
     }
@@ -144,7 +144,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
         ty: "BashError".into(),
         value: Some(format!("command {} exited with status {}", cmd, exit_code)),
         stacktrace: Some(Stacktrace {
-            frames: frames,
+            frames,
             ..Default::default()
         }),
         ..Default::default()

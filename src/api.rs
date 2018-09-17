@@ -275,6 +275,12 @@ pub struct ApiResponse {
     body: Option<Vec<u8>>,
 }
 
+impl Default for Api {
+    fn default() -> Self {
+        Api::new()
+    }
+}
+
 impl Api {
     /// Creates a new API access helper.  For as long as it lives HTTP
     /// keepalive can be used.  When the object is recreated new
@@ -304,7 +310,7 @@ impl Api {
     /// Similar to `new` but uses a specific config.
     pub fn with_config(config: Arc<Config>) -> Api {
         Api {
-            config: config,
+            config,
             shared_handle: RefCell::new(curl::easy::Easy::new()),
         }
     }
@@ -319,6 +325,7 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     pub fn request<'a>(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
         handle.reset();
@@ -336,9 +343,7 @@ impl Api {
             (
                 Cow::Owned(match self.config.get_api_endpoint(url) {
                     Ok(rv) => rv,
-                    Err(err) => {
-                        return Err(Error::from(err).context(ApiErrorKind::BadApiUrl).into())
-                    }
+                    Err(err) => return Err(err.context(ApiErrorKind::BadApiUrl).into()),
                 }),
                 self.config.get_auth(),
             )
@@ -357,7 +362,7 @@ impl Api {
         // This toggles gzipping, useful for uploading large files
         handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
-        ApiRequest::new(handle, method, &url, auth)
+        ApiRequest::new(handle, &method, &url, auth)
     }
 
     /// Convenience method that performs a `GET` request.
@@ -482,18 +487,20 @@ impl Api {
         if resp.status() == 404 {
             Ok(false)
         } else {
-            resp.to_result().map(|_| true)
+            resp.into_result().map(|_| true)
         }
     }
 
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
+    // TODO: Simplify this function interface
+    #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
     pub fn upload_release_file(
         &self,
         org: &str,
         project: Option<&str>,
         version: &str,
-        contents: FileContents,
+        contents: &FileContents,
         name: &str,
         dist: Option<&str>,
         headers: Option<&[(String, String)]>,
@@ -641,7 +648,7 @@ impl Api {
         if resp.status() == 404 {
             Ok(false)
         } else {
-            resp.to_result().map(|_| true)
+            resp.into_result().map(|_| true)
         }
     }
 
@@ -733,7 +740,7 @@ impl Api {
                 qs
             ),
             changes,
-        )?.to_result()
+        )?.into_result()
         .map(|_| true)
     }
 
@@ -746,7 +753,7 @@ impl Api {
         if resp.status() == 404 {
             Ok(None)
         } else {
-            let info: GitHubRelease = resp.to_result()?.convert()?;
+            let info: GitHubRelease = resp.into_result()?.convert()?;
             for asset in info.assets {
                 info!("Found asset {}", asset.name);
                 if asset.name == ref_name {
@@ -904,7 +911,7 @@ impl Api {
             None => request,
         };
 
-        request.send()?.to_result()?;
+        request.send()?.into_result()?;
         Ok(())
     }
 
@@ -921,7 +928,7 @@ impl Api {
             project,
             &AssociateDsyms {
                 platform: "apple".to_string(),
-                checksums: checksums,
+                checksums,
                 name: info_plist.name().to_string(),
                 app_id: info_plist.bundle_id().to_string(),
                 version: info_plist.version().to_string(),
@@ -943,7 +950,7 @@ impl Api {
             project,
             &AssociateDsyms {
                 platform: "android".to_string(),
-                checksums: checksums,
+                checksums,
                 name: manifest.name(),
                 app_id: manifest.package().to_string(),
                 version: manifest.version_name().to_string(),
@@ -996,7 +1003,7 @@ impl Api {
         if resp.status() == 404 {
             Ok(false)
         } else {
-            resp.to_result().map(|_| true)
+            resp.into_result().map(|_| true)
         }
     }
 
@@ -1060,7 +1067,7 @@ fn handle_req<W: Write>(
             handle.progress_function(move |_, _, total, uploaded| {
                 if uploaded > 0f64 && uploaded < total {
                     counts.write()[idx] = (uploaded / total * (len as f64)) as u64;
-                    pb_progress.set_position(counts.read().iter().map(|&x| x).sum());
+                    pb_progress.set_position(counts.read().iter().sum());
                 }
                 true
             })?;
@@ -1150,7 +1157,7 @@ impl<'a> Iterator for Headers<'a> {
 impl<'a> ApiRequest<'a> {
     fn new(
         mut handle: RefMut<'a, curl::easy::Easy>,
-        method: Method,
+        method: &Method,
         url: &str,
         auth: Option<&Auth>,
     ) -> ApiResult<ApiRequest<'a>> {
@@ -1177,8 +1184,8 @@ impl<'a> ApiRequest<'a> {
         handle.url(&url)?;
 
         let request = ApiRequest {
-            handle: handle,
-            headers: headers,
+            handle,
+            headers,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
         };
@@ -1253,8 +1260,8 @@ impl<'a> ApiRequest<'a> {
         let (status, headers) = send_req(&mut self.handle, out, self.body, self.progress_bar_mode)?;
         info!("response: {}", status);
         Ok(ApiResponse {
-            status: status,
-            headers: headers,
+            status,
+            headers,
             body: None,
         })
     }
@@ -1286,7 +1293,7 @@ impl ApiResponse {
 
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
-    pub fn to_result(self) -> ApiResult<ApiResponse> {
+    pub fn into_result(self) -> ApiResult<ApiResponse> {
         if let Some(ref body) = self.body {
             info!("body: {}", String::from_utf8_lossy(body));
         }
@@ -1334,7 +1341,7 @@ impl ApiResponse {
     /// Like `deserialize` but consumes the response and will convert
     /// failed requests into proper errors.
     pub fn convert<T: DeserializeOwned>(self) -> ApiResult<T> {
-        self.to_result().and_then(|x| x.deserialize())
+        self.into_result().and_then(|x| x.deserialize())
     }
 
     /// Like convert but produces resource not found errors.
@@ -1359,7 +1366,7 @@ impl ApiResponse {
                 }
             }
             404 => Err(res_err.into()),
-            _ => self.to_result().and_then(|x| x.deserialize()),
+            _ => self.into_result().and_then(|x| x.deserialize()),
         }
     }
 
@@ -1456,7 +1463,7 @@ pub struct Artifact {
 impl Artifact {
     pub fn get_header<'a, 'b>(&'a self, key: &'b str) -> Option<&'a str> {
         let ikey = key.to_lowercase();
-        for (k, v) in self.headers.iter() {
+        for (k, v) in &self.headers {
             if k.to_lowercase() == ikey {
                 return Some(v.as_str());
             }
@@ -1703,8 +1710,8 @@ pub enum ChunkCompression {
 }
 
 impl ChunkCompression {
-    fn field_name(&self) -> &'static str {
-        match *self {
+    fn field_name(self) -> &'static str {
+        match self {
             ChunkCompression::Uncompressed => "file",
             ChunkCompression::Gzip => "file_gzip",
             ChunkCompression::Brotli => "file_brotli",

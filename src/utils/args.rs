@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+
 use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
@@ -7,46 +9,42 @@ use symbolic::debuginfo::DebugId;
 use uuid::Uuid;
 
 fn validate_org(v: String) -> Result<(), String> {
-    if v.contains("/") || &v == "." || &v == ".." || v.contains(' ') {
-        return Err("invalid value for organization. Use the URL \
-                    slug and not the name!"
-            .into());
+    if v.contains('/') || v == "." || v == ".." || v.contains(' ') {
+        Err("invalid value for organization. Use the URL slug and not the name!".to_string())
     } else {
         Ok(())
     }
 }
 
 pub fn validate_project(v: String) -> Result<(), String> {
-    if v.contains("/")
-        || &v == "."
-        || &v == ".."
+    if v.contains('/')
+        || v == "."
+        || v == ".."
         || v.contains(' ')
         || v.contains('\n')
         || v.contains('\t')
         || v.contains('\r')
     {
-        return Err("invalid value for project. Use the URL \
-                    slug and not the name!"
-            .into());
+        Err("invalid value for project. Use the URL slug and not the name!".to_string())
     } else {
         Ok(())
     }
 }
 
 fn validate_version(v: String) -> Result<(), String> {
-    if v.trim() != &v {
-        Err(format!(
-            "Invalid release version. Releases must not contain \
-             leading or trailing spaces."
-        ))
-    } else if v.len() == 0 || &v == "." || &v == ".." || v
+    if v.trim() != v {
+        Err(
+            "Invalid release version. Releases must not contain leading or trailing spaces."
+                .to_string(),
+        )
+    } else if v.is_empty() || v == "." || v == ".." || v
         .find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
         .is_some()
     {
-        Err(format!(
-            "Invalid release version. Slashes and certain \
-             whitespace characters are not permitted."
-        ))
+        Err(
+            "Invalid release version. Slashes and certain whitespace characters are not permitted."
+                .to_string(),
+        )
     } else {
         Ok(())
     }
@@ -56,7 +54,7 @@ pub fn validate_seconds(v: String) -> Result<(), String> {
     if v.parse::<i64>().is_ok() {
         Ok(())
     } else {
-        Err(format!("Invalid value (seconds as integer required)"))
+        Err("Invalid value (seconds as integer required)".to_string())
     }
 }
 

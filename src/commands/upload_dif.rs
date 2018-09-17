@@ -212,7 +212,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
             progress.finish_and_clear();
 
             if let Some(association) = response {
-                if association.associated_dsyms.len() == 0 {
+                if association.associated_dsyms.is_empty() {
                     println!("{} No new debug symbols to associate.", style(">").dim());
                 } else {
                     println!(
@@ -245,7 +245,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
             let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
 
             if !missing_ids.is_empty() {
-                println!("");
+                println!();
                 println_stderr!("{}", style("Error: Some symbols could not be found!").red());
                 println_stderr!("The following symbols are still missing:");
                 for id in missing_ids {

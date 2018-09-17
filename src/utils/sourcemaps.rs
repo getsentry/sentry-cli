@@ -273,8 +273,8 @@ impl SourceMapProcessor {
                 Source {
                     url: url.clone(),
                     file_path: path.to_path_buf(),
-                    contents: contents,
-                    ty: ty,
+                    contents,
+                    ty,
                     skip_upload: false,
                     headers: vec![],
                     messages: RefCell::new(vec![]),
@@ -323,7 +323,7 @@ impl SourceMapProcessor {
         let mut sources: Vec<_> = self.sources.values().collect();
         sources.sort_by_key(|&source| (source.ty, source.url.clone()));
 
-        println!("");
+        println!();
         println!("{}", style(title).dim().bold());
         let mut sect = None;
 
@@ -376,7 +376,7 @@ impl SourceMapProcessor {
 
         println!("{} Validating sources", style(">").dim());
         let pb = make_progress_bar(sources.len() as u64);
-        for source in sources.iter() {
+        for source in &sources {
             pb.set_message(&source.url);
             match source.ty {
                 SourceType::Script | SourceType::MinifiedScript => {
@@ -412,7 +412,7 @@ impl SourceMapProcessor {
 
         println!("{} Rewriting sources", style(">").dim());
         let pb = make_progress_bar(self.sources.len() as u64);
-        for (_, source) in self.sources.iter_mut() {
+        for source in self.sources.values_mut() {
             pb.set_message(&source.url);
             if source.ty != SourceType::SourceMap {
                 pb.inc(1);
@@ -448,7 +448,7 @@ impl SourceMapProcessor {
         );
 
         println!("{} Adding source map references", style(">").dim());
-        for (_, source) in self.sources.iter_mut() {
+        for source in self.sources.values_mut() {
             if source.ty != SourceType::MinifiedScript {
                 continue;
             }
@@ -495,7 +495,7 @@ impl SourceMapProcessor {
         );
 
         let pb = make_progress_bar(self.sources.len() as u64);
-        for (_, source) in self.sources.iter() {
+        for source in self.sources.values() {
             pb.tick();
             if source.skip_upload {
                 pb.inc(1);
@@ -513,7 +513,7 @@ impl SourceMapProcessor {
                 org,
                 project,
                 &release,
-                FileContents::FromBytes(&source.contents),
+                &FileContents::FromBytes(&source.contents),
                 &source.url,
                 dist,
                 Some(source.headers.as_slice()),
@@ -524,6 +524,12 @@ impl SourceMapProcessor {
 
         self.dump_log("Source Map Upload Report");
         Ok(())
+    }
+}
+
+impl Default for SourceMapProcessor {
+    fn default() -> Self {
+        SourceMapProcessor::new()
     }
 }
 

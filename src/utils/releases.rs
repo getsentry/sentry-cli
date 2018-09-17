@@ -11,7 +11,7 @@ use utils::vcs;
 use utils::xcode::InfoPlist;
 
 pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
-    let here = path.map_or(env::current_dir()?, |p| p.into());
+    let here = path.unwrap_or(env::current_dir()?);
     let platform = match here.file_name().and_then(|x| x.to_str()) {
         Some("android") => "android",
         Some("ios") => "ios",
@@ -57,7 +57,7 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
     }
 
     let mut contents = String::new();
-    let mut here = path.map_or(env::current_dir()?, |p| p.into());
+    let mut here = path.unwrap_or(env::current_dir()?);
     loop {
         if_chain! {
             if let Ok(build_md) = here.join("build.gradle").metadata();

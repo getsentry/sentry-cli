@@ -92,11 +92,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         } else {
             changes.new_status = Some("resolved".into());
         }
-    } else if let Some(_) = matches.subcommand_matches("mute") {
+    } else if matches.subcommand_matches("mute").is_some() {
         changes.new_status = Some("muted".into());
-    } else if let Some(_) = matches.subcommand_matches("unresolve") {
+    } else if matches.subcommand_matches("unresolve").is_some() {
         changes.new_status = Some("unresolved".into());
     }
 
-    return execute_change(&org, &project, &filter, &changes);
+    execute_change(&org, &project, &filter, &changes)
 }

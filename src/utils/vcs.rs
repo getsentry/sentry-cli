@@ -62,15 +62,15 @@ impl CommitSpec {
             Ok(CommitSpec {
                 repo: caps[1].to_string(),
                 path: caps.get(2).map(|x| PathBuf::from(x.as_str())),
-                rev: rev,
-                prev_rev: prev_rev,
+                rev,
+                prev_rev,
             })
         } else {
             bail!("Could not parse commit spec '{}'", s)
         }
     }
 
-    pub fn reference<'a>(&'a self) -> GitReference<'a> {
+    pub fn reference(&self) -> GitReference {
         if let Ok(oid) = git2::Oid::from_str(&self.rev) {
             GitReference::Commit(oid)
         } else {
@@ -78,7 +78,7 @@ impl CommitSpec {
         }
     }
 
-    pub fn prev_reference<'a>(&'a self) -> Option<GitReference<'a>> {
+    pub fn prev_reference(&self) -> Option<GitReference> {
         self.prev_rev.as_ref().map(|rev| {
             if let Ok(oid) = git2::Oid::from_str(rev) {
                 GitReference::Commit(oid)
@@ -90,11 +90,7 @@ impl CommitSpec {
 }
 
 fn strip_git_suffix(s: &str) -> &str {
-    if s.ends_with(".git") {
-        &s[0..s.len() - 4]
-    } else {
-        s
-    }
+    s.trim_right_matches(".git")
 }
 
 impl VcsUrl {
@@ -298,7 +294,7 @@ pub fn find_head() -> Result<String, Error> {
 
 /// Given commit specs and repos this returns a list of head commits
 /// from it.
-pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>) -> Result<Vec<Ref>, Error> {
+pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<Ref>, Error> {
     let mut rv = vec![];
 
     // if commit specs were explicitly provided find head commits with
@@ -308,14 +304,14 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>) -> Result<Ve
             let (prev_rev, rev) = find_matching_revs(&spec, &repos[..], specs.len() == 1)?;
             rv.push(Ref {
                 repo: spec.repo.clone(),
-                rev: rev,
-                prev_rev: prev_rev,
+                rev,
+                prev_rev,
             });
         }
 
     // otherwise apply all the magic available
     } else {
-        for repo in &repos {
+        for repo in repos {
             let spec = CommitSpec {
                 repo: repo.name.to_string(),
                 path: None,
@@ -325,7 +321,7 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: Vec<Repo>) -> Result<Ve
             if let Some(rev) = find_matching_rev(spec.reference(), &spec, &repos[..], false)? {
                 rv.push(Ref {
                     repo: repo.name.to_string(),
-                    rev: rev,
+                    rev,
                     prev_rev: None,
                 });
             }

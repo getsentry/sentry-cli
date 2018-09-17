@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::fs;
+use std::hash::BuildHasher;
 use std::io::{BufRead, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 use std::process;
@@ -50,19 +51,25 @@ impl fmt::Display for InfoPlist {
     }
 }
 
-pub fn expand_xcodevars(s: String, vars: &HashMap<String, String>) -> String {
+pub fn expand_xcodevars<S>(s: &str, vars: &HashMap<String, String, S>) -> String
+where
+    S: BuildHasher,
+{
     lazy_static! {
         static ref SEP_RE: Regex = Regex::new(r"[\s/]+").unwrap();
     }
+
     expand_vars(&s, |key| {
         if key == "" {
             return "".into();
         }
+
         let mut iter = key.splitn(2, ':');
         let value = vars
             .get(iter.next().unwrap())
             .map(|x| x.as_str())
             .unwrap_or("");
+
         match iter.next() {
             Some("rfc1034identifier") => SEP_RE.replace_all(value, "-").into_owned(),
             Some("identifier") => SEP_RE.replace_all(value, "_").into_owned(),
@@ -213,7 +220,7 @@ impl InfoPlist {
                 let vars = pi.get_build_vars(target, config)?;
                 if let Some(path) = vars.get("INFOPLIST_FILE") {
                     let base = vars.get("PROJECT_DIR").map(|x| Path::new(x.as_str()))
-                        .unwrap_or(pi.base_path());
+                        .unwrap_or_else(|| pi.base_path());
                     let path = base.join(path);
                     return Ok(Some(InfoPlist::load_and_process(path, &vars)?));
                 }
@@ -244,10 +251,10 @@ impl InfoPlist {
         };
 
         // expand xcodevars here
-        rv.name = expand_xcodevars(rv.name, &vars);
-        rv.bundle_id = expand_xcodevars(rv.bundle_id, &vars);
-        rv.version = expand_xcodevars(rv.version, &vars);
-        rv.build = expand_xcodevars(rv.build, &vars);
+        rv.name = expand_xcodevars(&rv.name, &vars);
+        rv.bundle_id = expand_xcodevars(&rv.bundle_id, &vars);
+        rv.version = expand_xcodevars(&rv.version, &vars);
+        rv.build = expand_xcodevars(&rv.build, &vars);
 
         Ok(rv)
     }
@@ -298,7 +305,7 @@ impl<'a> MayDetach<'a> {
     fn new(task_name: &'a str) -> MayDetach<'a> {
         MayDetach {
             output_file: None,
-            task_name: task_name,
+            task_name,
         }
     }
 
@@ -407,7 +414,7 @@ pub fn launched_from_xcode() -> bool {
             break;
         }
         if let Ok(name) = mac_process_info::get_process_name(parent) {
-            if &name == "Xcode" {
+            if name == "Xcode" {
                 return true;
             }
         }
@@ -421,7 +428,7 @@ pub fn launched_from_xcode() -> bool {
 /// message as well as the buttons "Show details" and "Ignore".  Returns
 /// `true` if the `show details` button has been pressed.
 #[cfg(target_os = "macos")]
-pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
+pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
             "
@@ -449,17 +456,15 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
     }
 
     let rv: AlertResult = SCRIPT
-        .execute_with_params(AlertParams {
-            title: title,
-            message: msg,
-        }).context("Failed to display Xcode dialog")?;
+        .execute_with_params(AlertParams { title, message })
+        .context("Failed to display Xcode dialog")?;
 
     Ok(&rv.button != "Ignore")
 }
 
 /// Shows a notification in xcode
 #[cfg(target_os = "macos")]
-pub fn show_notification(title: &str, msg: &str) -> Result<(), Error> {
+pub fn show_notification(title: &str, message: &str) -> Result<(), Error> {
     use config::Config;
 
     lazy_static! {
@@ -485,11 +490,11 @@ pub fn show_notification(title: &str, msg: &str) -> Result<(), Error> {
         message: &'a str,
     }
 
-    Ok(SCRIPT
-        .execute_with_params(NotificationParams {
-            title: title,
-            message: msg,
-        }).context("Failed to display Xcode notification")?)
+    SCRIPT
+        .execute_with_params(NotificationParams { title, message })
+        .context("Failed to display Xcode notification")?;
+
+    Ok(())
 }
 
 #[test]
@@ -498,15 +503,15 @@ fn test_expansion() {
     vars.insert("FOO_BAR".to_string(), "foo bar baz / blah".to_string());
 
     assert_eq!(
-        expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B".to_string(), &vars),
-        "Afoo-bar-baz-blahB".to_string()
+        expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B", &vars),
+        "Afoo-bar-baz-blahB"
     );
     assert_eq!(
-        expand_xcodevars("A$(FOO_BAR:identifier)B".to_string(), &vars),
-        "Afoo_bar_baz_blahB".to_string()
+        expand_xcodevars("A$(FOO_BAR:identifier)B", &vars),
+        "Afoo_bar_baz_blahB"
     );
     assert_eq!(
-        expand_xcodevars("A${FOO_BAR:identifier}B".to_string(), &vars),
-        "Afoo_bar_baz_blahB".to_string()
+        expand_xcodevars("A${FOO_BAR:identifier}B", &vars),
+        "Afoo_bar_baz_blahB"
     );
 }

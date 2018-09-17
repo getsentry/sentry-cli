@@ -29,7 +29,7 @@ impl TempDir {
                 .to_string(),
         );
         fs::create_dir(&path)?;
-        Ok(TempDir { path: path })
+        Ok(TempDir { path })
     }
 
     /// Returns the path to the tempdir
@@ -147,7 +147,8 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<(), Error> {
         Ok(())
     }
 
-    Ok(exec(path)?)
+    exec(path)?;
+    Ok(())
 }
 
 fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<bool, Error> {

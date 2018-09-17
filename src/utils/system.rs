@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 use std::env;
-use std::io;
-use std::io::Write;
 use std::process;
 
 use config::Config;
@@ -92,12 +90,12 @@ pub fn is_npm_install() -> bool {
 }
 
 /// Expands environment variables in a string
-pub fn expand_envvars<'a>(s: &'a str) -> Cow<'a, str> {
-    expand_vars(s, |key| env::var(key).unwrap_or("".into()))
+pub fn expand_envvars(s: &str) -> Cow<str> {
+    expand_vars(s, |key| env::var(key).unwrap_or_else(|_| "".to_string()))
 }
 
 /// Expands variables in a string
-pub fn expand_vars<'a, F: Fn(&str) -> String>(s: &'a str, f: F) -> Cow<'a, str> {
+pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<str> {
     lazy_static! {
         static ref VAR_RE: Regex = Regex::new(r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").unwrap();
     }
@@ -120,16 +118,15 @@ pub fn print_error(err: &Error) {
     }
 
     for (idx, cause) in err.iter_chain().enumerate() {
-        if idx == 0 {
-            writeln!(&mut io::stderr(), "error: {}", cause).ok();
-        } else {
-            writeln!(&mut io::stderr(), "  caused by: {}", cause).ok();
+        match idx {
+            0 => eprintln!("error: {}", cause),
+            _ => eprintln!("  caused by: {}", cause),
         }
     }
 
     if env::var("RUST_BACKTRACE") == Ok("1".into()) {
-        writeln!(&mut io::stderr(), "").ok();
-        writeln!(&mut io::stderr(), "{:?}", err.backtrace()).ok();
+        eprintln!();
+        eprintln!("{:?}", err.backtrace());
     }
 }
 

@@ -357,7 +357,6 @@ fn execute_new<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(),
             } else {
                 None
             },
-            ..Default::default()
         },
     )?;
     println!("Created release {}.", info_rv.version);
@@ -406,7 +405,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
     }
 
     let heads = if matches.is_present("auto") {
-        let commits = find_heads(None, repos)?;
+        let commits = find_heads(None, &repos)?;
         if commits.is_empty() {
             bail!(
                 "Could not determine any commits to be associated \
@@ -421,19 +420,14 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
-                if (&repos)
-                    .iter()
-                    .filter(|r| r.name == commit_spec.repo)
-                    .next()
-                    .is_some()
-                {
+                if (&repos).iter().any(|r| r.name == commit_spec.repo) {
                     commit_specs.push(commit_spec);
                 } else {
                     bail!("Unknown repo '{}'", commit_spec.repo);
                 }
             }
         }
-        let commits = find_heads(Some(commit_specs), repos)?;
+        let commits = find_heads(Some(commit_specs), &repos)?;
         if commits.is_empty() {
             None
         } else {
@@ -447,7 +441,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
             &org,
             &NewRelease {
                 version: version.into(),
-                projects: projects,
+                projects,
                 ..Default::default()
             },
         )?;
@@ -562,7 +556,7 @@ fn execute_info<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<()
         let short_version = strip_version(&release.version);
         let mut tbl = Table::new();
         tbl.add_row().add("Version").add(short_version);
-        if short_version != &release.version {
+        if short_version != release.version {
             tbl.add_row().add("Full version").add(&release.version);
         }
         tbl.add_row().add("Date created").add(&release.date_created);
@@ -678,7 +672,7 @@ fn execute_files_upload<'a>(
         org,
         project.as_ref().map(|x| x.as_str()),
         &version,
-        FileContents::FromPath(&path),
+        &FileContents::FromPath(&path),
         &name,
         dist,
         Some(&headers[..]),
@@ -698,13 +692,13 @@ fn execute_files_upload_sourcemaps<'a>(
     let url_prefix = matches
         .value_of("url_prefix")
         .unwrap_or("~")
-        .trim_right_matches("/");
+        .trim_right_matches('/');
     let url_suffix = matches.value_of("url_suffix").unwrap_or("");
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")
-        .map(|extensions| extensions.map(|ext| ext.trim_left_matches(".")).collect())
-        .unwrap_or(vec!["js", "map", "jsbundle", "bundle"]);
+        .map(|extensions| extensions.map(|ext| ext.trim_left_matches('.')).collect())
+        .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
         .values_of("ignore")
         .map(|ignores| ignores.map(|i| format!("!{}", i)).collect::<Vec<_>>());
