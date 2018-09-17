@@ -1,8 +1,13 @@
 # Changelog
 
+## sentry-cli 1.35.6
+
+* Fix a bug introduced with the `--url-suffix` option in `upload-sourcemaps`
+* Fix broken commit detection for releases (#378, #381)
+
 ## sentry-cli 1.35.5
 
-* Add url-suffix option
+* Add `--url-suffix` option for `upload-sourcemaps` (#373)
 
 ## sentry-cli 1.35.4
 
