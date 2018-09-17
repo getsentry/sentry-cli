@@ -133,8 +133,7 @@ impl DifFile {
                     object
                         .id()
                         .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
-                })
-                .collect(),
+                }).collect(),
             &DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
     }

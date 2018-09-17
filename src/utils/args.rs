@@ -39,9 +39,9 @@ fn validate_version(v: String) -> Result<(), String> {
             "Invalid release version. Releases must not contain \
              leading or trailing spaces."
         ))
-    } else if v.len() == 0 || &v == "." || &v == ".."
-        || v.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
-            .is_some()
+    } else if v.len() == 0 || &v == "." || &v == ".." || v
+        .find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
+        .is_some()
     {
         Err(format!(
             "Invalid release version. Slashes and certain \

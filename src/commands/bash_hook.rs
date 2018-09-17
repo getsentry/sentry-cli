@@ -28,20 +28,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name("no_exit")
                 .long("no-exit")
                 .help("Do not turn on -e (exit immediately) flag automatically"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("send_event")
                 .long("send-event")
                 .requires_all(&["traceback", "log"])
                 .hidden(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("traceback")
                 .long("traceback")
                 .value_name("PATH")
                 .hidden(true),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("log")
                 .long("log")
                 .value_name("PATH")
@@ -191,8 +188,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         .replace(
             "___SENTRY_TRACEBACK_FILE___",
             &traceback.display().to_string(),
-        )
-        .replace("___SENTRY_LOG_FILE___", &log.display().to_string())
+        ).replace("___SENTRY_LOG_FILE___", &log.display().to_string())
         .replace(
             "___SENTRY_CLI___",
             &env::current_exe().unwrap().display().to_string(),

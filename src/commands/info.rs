@@ -29,8 +29,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("quiet").short("q").long("quiet").help(
             "Do not output anything, just report a status \
              code for correct config.",
-        ))
-        .arg(
+        )).arg(
             Arg::with_name("config_status_json")
                 .long("config-status-json")
                 .help(

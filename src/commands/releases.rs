@@ -592,9 +592,9 @@ fn execute_files_list<'a>(
 
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for artifact in ctx
-        .api
-        .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
+    for artifact in
+        ctx.api
+            .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
     {
         let row = table.add_row();
         row.add(&artifact.name);
@@ -699,9 +699,7 @@ fn execute_files_upload_sourcemaps<'a>(
         .value_of("url_prefix")
         .unwrap_or("~")
         .trim_right_matches("/");
-    let url_suffix = matches
-        .value_of("url_suffix")
-        .unwrap_or("");
+    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")

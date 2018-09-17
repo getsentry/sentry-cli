@@ -49,8 +49,7 @@ impl AndroidManifest {
                 } else {
                     c.to_lowercase().to_string()
                 }
-            })
-            .collect()
+            }).collect()
     }
 
     /// Returns the internal version code for this manifest

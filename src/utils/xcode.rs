@@ -452,8 +452,7 @@ pub fn show_critical_info(title: &str, msg: &str) -> Result<bool, Error> {
         .execute_with_params(AlertParams {
             title: title,
             message: msg,
-        })
-        .context("Failed to display Xcode dialog")?;
+        }).context("Failed to display Xcode dialog")?;
 
     Ok(&rv.button != "Ignore")
 }
@@ -490,8 +489,7 @@ pub fn show_notification(title: &str, msg: &str) -> Result<(), Error> {
         .execute_with_params(NotificationParams {
             title: title,
             message: msg,
-        })
-        .context("Failed to display Xcode notification")?)
+        }).context("Failed to display Xcode notification")?)
 }
 
 #[test]

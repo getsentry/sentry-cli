@@ -61,8 +61,7 @@ fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
         .map(|x| {
             let mut fn_iter = x.splitn(2, '.');
             (fn_iter.next(), fn_iter.next())
-        })
-        .unwrap_or((None, None));
+        }).unwrap_or((None, None));
     let path = part_iter.next();
     (path, filename.unwrap_or(""), ext)
 }
@@ -261,7 +260,8 @@ impl SourceMapProcessor {
                 .file_name()
                 .and_then(|x| x.to_str())
                 .map(|x| x.contains(".min."))
-                .unwrap_or(false) || is_likely_minified_js(&contents)
+                .unwrap_or(false)
+                || is_likely_minified_js(&contents)
             {
                 SourceType::MinifiedScript
             } else {
@@ -336,7 +336,7 @@ impl SourceMapProcessor {
                         SourceType::MinifiedScript => "Minified Scripts",
                         SourceType::SourceMap => "Source Maps",
                     }).yellow()
-                        .bold()
+                    .bold()
                 );
                 sect = Some(source.ty);
             }

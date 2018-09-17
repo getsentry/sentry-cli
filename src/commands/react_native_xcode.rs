@@ -189,8 +189,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 .env(
                     "SENTRY_RN_SOURCEMAP_REPORT",
                     report_file.path().to_str().unwrap(),
-                )
-                .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
+                ).env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
                 .spawn()?
                 .wait()?;
             propagate_exit_status(rv);

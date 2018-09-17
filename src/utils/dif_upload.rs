@@ -954,8 +954,7 @@ fn upload_missing_chunks(
             .map(|(index, (batch, size))| {
                 let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
                 Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
-            })
-            .collect::<Result<(), _>>()
+            }).collect::<Result<(), _>>()
     })?;
 
     progress.finish_and_clear();
@@ -1030,18 +1029,16 @@ fn poll_dif_assemble(
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
     successes.sort_by(|a, b| {
-        let name_a = a
-            .1
-            .dif
-            .as_ref()
-            .map(|x| x.object_name.as_str())
-            .unwrap_or("");
-        let name_b = b
-            .1
-            .dif
-            .as_ref()
-            .map(|x| x.object_name.as_str())
-            .unwrap_or("");
+        let name_a =
+            a.1.dif
+                .as_ref()
+                .map(|x| x.object_name.as_str())
+                .unwrap_or("");
+        let name_b =
+            b.1.dif
+                .as_ref()
+                .map(|x| x.object_name.as_str())
+                .unwrap_or("");
         name_a.cmp(name_b)
     });
 
