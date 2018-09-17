@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use clap::ArgMatches;
+use dirs;
 use dotenv;
 use failure::{err_msg, Error, ResultExt};
 use ini::Ini;
@@ -420,7 +421,7 @@ fn find_project_config_file() -> Option<PathBuf> {
 }
 
 fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
-    let mut home_fn = env::home_dir().ok_or_else(|| err_msg("Could not find home dir"))?;
+    let mut home_fn = dirs::home_dir().ok_or_else(|| err_msg("Could not find home dir"))?;
     home_fn.push(CONFIG_RC_FILE_NAME);
 
     let mut rv = match fs::File::open(&home_fn) {

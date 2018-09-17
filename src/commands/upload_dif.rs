@@ -5,6 +5,7 @@ use std::str::{self, FromStr};
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use dirs;
 use failure::{err_msg, Error};
 use indicatif::{ProgressBar, ProgressStyle};
 use symbolic::common::types::{ObjectClass, ObjectKind};
@@ -173,7 +174,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
 
     // Add a path to XCode's DerivedData, if configured
     if matches.is_present("derived_data") {
-        let derived_data = env::home_dir().map(|x| x.join(DERIVED_DATA));
+        let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA));
         if let Some(path) = derived_data {
             if path.is_dir() {
                 upload.search_path(path);

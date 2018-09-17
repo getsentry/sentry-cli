@@ -4,13 +4,28 @@
 
 #![recursion_limit = "128"]
 
+#[macro_use]
+#[cfg(not(windows))]
+extern crate chan;
+#[macro_use]
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
+#[macro_use]
+extern crate if_chain;
+#[macro_use]
+extern crate lazy_static;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate sentry;
+#[macro_use]
+extern crate serde_derive;
+
 extern crate anylog;
 extern crate app_dirs;
 extern crate backtrace;
 extern crate brotli2;
-#[cfg(not(windows))]
-#[macro_use]
-extern crate chan;
 #[cfg(not(windows))]
 extern crate chan_signal;
 extern crate chardet;
@@ -18,29 +33,20 @@ extern crate chrono;
 extern crate clap;
 extern crate console;
 extern crate curl;
+extern crate dirs;
 extern crate dotenv;
 extern crate elementtree;
 extern crate encoding;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
 extern crate flate2;
 extern crate git2;
 extern crate glob;
 extern crate hostname;
-#[macro_use]
-extern crate if_chain;
 extern crate ignore;
 extern crate indicatif;
 extern crate ini;
 extern crate itertools;
 extern crate java_properties;
-#[macro_use]
-extern crate lazy_static;
 extern crate libc;
-#[macro_use]
-extern crate log;
 #[cfg(target_os = "macos")]
 extern crate mac_process_info;
 extern crate might_be_minified;
@@ -55,11 +61,7 @@ extern crate prettytable;
 extern crate rayon;
 extern crate regex;
 extern crate runas;
-#[macro_use]
-extern crate sentry;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 extern crate serde_json;
 extern crate sha1;
 extern crate sourcemap;

@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use dirs;
 use failure::Error;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde_json;
@@ -238,7 +239,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     if_chain! {
         if with_well_known;
         if types.contains(&DifType::Dsym);
-        if let Some(path) = env::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
+        if let Some(path) = dirs::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
         if path.is_dir();
         then {
             paths.insert(path);
