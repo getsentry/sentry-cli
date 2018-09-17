@@ -420,7 +420,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
-                if (&repos).iter().any(|r| r.name == commit_spec.repo) {
+                if repos.iter().any(|r| r.name == commit_spec.repo) {
                     commit_specs.push(commit_spec);
                 } else {
                     bail!("Unknown repo '{}'", commit_spec.repo);
