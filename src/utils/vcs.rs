@@ -121,11 +121,20 @@ impl VcsUrl {
                 Regex::new(r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
             static ref GIT_SSH_RE: Regex = Regex::new(r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
+
         if let Some(caps) = GIT_URL_RE.captures(url) {
             if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
                 return rv;
+            } else {
+                return VcsUrl {
+                    provider: VcsProvider::Generic,
+                    id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
+                    ty: VcsType::Unknown,
+                };
             }
-        } else if let Some(caps) = GIT_SSH_RE.captures(url) {
+        }
+
+        if let Some(caps) = GIT_SSH_RE.captures(url) {
             if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
                 return rv;
             } else {
@@ -395,6 +404,14 @@ fn test_url_parsing() {
             ty: VcsType::Git,
         }
     );
+    assert_eq!(
+        VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
+        VcsUrl {
+            provider: VcsProvider::Generic,
+            id: "github.myenterprise.com/mitsuhiko/flask".into(),
+            ty: VcsType::Unknown,
+        }
+    )
 }
 
 #[test]
