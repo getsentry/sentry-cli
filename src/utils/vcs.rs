@@ -37,8 +37,29 @@ pub struct CommitSpec {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct VcsUrl {
-    pub provider: &'static str,
+enum VcsProvider {
+    Generic,
+    Git,
+    GitHub,
+    Bitbucket,
+    Vsts,
+}
+
+impl fmt::Display for VcsProvider {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            VcsProvider::Generic => write!(f, "generic"),
+            VcsProvider::Git => write!(f, "git"),
+            VcsProvider::GitHub => write!(f, "github"),
+            VcsProvider::Bitbucket => write!(f, "bitbucket"),
+            VcsProvider::Vsts => write!(f, "vsts"),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct VcsUrl {
+    pub provider: VcsProvider,
     pub id: String,
     pub ty: VcsType,
 }
@@ -100,23 +121,33 @@ impl VcsUrl {
                 Regex::new(r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
             static ref GIT_SSH_RE: Regex = Regex::new(r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
+
         if let Some(caps) = GIT_URL_RE.captures(url) {
-            if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
-                return rv;
-            }
-        } else if let Some(caps) = GIT_SSH_RE.captures(url) {
             if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
                 return rv;
             } else {
                 return VcsUrl {
-                    provider: "git",
+                    provider: VcsProvider::Generic,
+                    id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
+                    ty: VcsType::Unknown,
+                };
+            }
+        }
+
+        if let Some(caps) = GIT_SSH_RE.captures(url) {
+            if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
+                return rv;
+            } else {
+                return VcsUrl {
+                    provider: VcsProvider::Git,
                     id: url.into(),
                     ty: VcsType::Git,
                 };
             }
         }
+
         VcsUrl {
-            provider: "generic",
+            provider: VcsProvider::Generic,
             id: url.into(),
             ty: VcsType::Unknown,
         }
@@ -129,13 +160,13 @@ impl VcsUrl {
         }
         if host == "github.com" {
             return Some(VcsUrl {
-                provider: "github",
+                provider: VcsProvider::GitHub,
                 id: strip_git_suffix(path).into(),
                 ty: VcsType::Git,
             });
         } else if host == "bitbucket.org" {
             return Some(VcsUrl {
-                provider: "bitbucket",
+                provider: VcsProvider::Bitbucket,
                 id: strip_git_suffix(path).into(),
                 ty: VcsType::Git,
             });
@@ -143,7 +174,7 @@ impl VcsUrl {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return Some(VcsUrl {
-                    provider: "visualstudio",
+                    provider: VcsProvider::Vsts,
                     id: format!("{}/{}", username, &caps[1]),
                     ty: VcsType::Git,
                 });
@@ -165,7 +196,14 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
         }
 
         match configured_repo.provider.id.as_str() {
-            "github" | "bitbucket" | "visualstudio" | "git" => {
+            "git"
+            | "github"
+            | "bitbucket"
+            | "visualstudio"
+            | "integrations:github"
+            | "integrations:github_enterprise"
+            | "integrations:bitbucket"
+            | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
                     return Ok(url.clone());
                 }
@@ -218,29 +256,22 @@ fn find_matching_rev(
 
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
-        if_chain! {
-            if let Some(submodule_url) = submodule.url();
-            if is_matching_url(submodule_url, &reference_url);
-            then {
+        if let Some(submodule_url) = submodule.url() {
+            if is_matching_url(submodule_url, &reference_url) {
                 // heads on submodules is easier so let's start with that
                 // because that does not require the submodule to be
                 // checked out.
-                if_chain! {
-                    if r == "HEAD";
-                    if let Some(head_oid) = submodule.head_id();
-                    then {
+                if r == "HEAD" {
+                    if let Some(head_oid) = submodule.head_id() {
                         return Ok(Some(head_oid.to_string()));
                     }
                 }
 
                 // otherwise we need to open the submodule which requires
                 // it to be checked out.
-                if_chain! {
-                    if let Ok(subrepo) = submodule.open();
-                    then {
-                        let head = subrepo.revparse_single(r)?;
-                        return Ok(Some(head.id().to_string()));
-                    }
+                if let Ok(subrepo) = submodule.open() {
+                    let head = subrepo.revparse_single(r)?;
+                    return Ok(Some(head.id().to_string()));
                 }
             }
         }
@@ -336,7 +367,7 @@ fn test_url_parsing() {
     assert_eq!(
         VcsUrl::parse("http://github.com/mitsuhiko/flask"),
         VcsUrl {
-            provider: "github",
+            provider: VcsProvider::GitHub,
             id: "mitsuhiko/flask".into(),
             ty: VcsType::Git,
         }
@@ -344,7 +375,7 @@ fn test_url_parsing() {
     assert_eq!(
         VcsUrl::parse("git@github.com:mitsuhiko/flask.git"),
         VcsUrl {
-            provider: "github",
+            provider: VcsProvider::GitHub,
             id: "mitsuhiko/flask".into(),
             ty: VcsType::Git,
         }
@@ -352,7 +383,7 @@ fn test_url_parsing() {
     assert_eq!(
         VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"),
         VcsUrl {
-            provider: "bitbucket",
+            provider: VcsProvider::Bitbucket,
             id: "mitsuhiko/flask".into(),
             ty: VcsType::Git,
         }
@@ -360,7 +391,7 @@ fn test_url_parsing() {
     assert_eq!(
         VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"),
         VcsUrl {
-            provider: "bitbucket",
+            provider: VcsProvider::Bitbucket,
             id: "mitsuhiko/flask".into(),
             ty: VcsType::Git,
         }
@@ -368,11 +399,19 @@ fn test_url_parsing() {
     assert_eq!(
         VcsUrl::parse("https://neilmanvar.visualstudio.com/_git/sentry-demo"),
         VcsUrl {
-            provider: "visualstudio",
+            provider: VcsProvider::Vsts,
             id: "neilmanvar/sentry-demo".into(),
             ty: VcsType::Git,
         }
     );
+    assert_eq!(
+        VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
+        VcsUrl {
+            provider: VcsProvider::Generic,
+            id: "github.myenterprise.com/mitsuhiko/flask".into(),
+            ty: VcsType::Unknown,
+        }
+    )
 }
 
 #[test]
