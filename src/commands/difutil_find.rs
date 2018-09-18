@@ -4,7 +4,7 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use console::style;
 use dirs;
 use failure::Error;
@@ -33,47 +33,17 @@ struct DifMatch {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Locate debug information files for given debug identifiers.")
-        .arg(
-            Arg::with_name("types")
-                .long("type")
-                .short("t")
-                .value_name("TYPE")
-                .multiple(true)
-                .number_of_values(1)
-                .possible_values(&["dsym", "proguard", "breakpad"])
-                .help(
-                    "Only consider debug information files of the given \
-                     type.  By default all types are considered.",
-                ),
-        ).arg(
-            Arg::with_name("no_well_known")
-                .long("no-well-known")
-                .help("Do not look for debug symbols in well known locations."),
-        ).arg(
-            Arg::with_name("no_cwd")
-                .long("no-cwd")
-                .help("Do not look for debug symbols in the current working directory."),
-        ).arg(
-            Arg::with_name("paths")
-                .long("path")
-                .short("p")
-                .multiple(true)
-                .number_of_values(1)
-                .help("Add a path to search recursively for debug info files."),
-        ).arg(
-            Arg::with_name("json")
-                .long("json")
-                .help("Format outputs as JSON."),
-        ).arg(
-            Arg::with_name("ids")
-                .index(1)
-                .value_name("ID")
-                .help("The debug identifiers of the files to search for.")
-                .validator(validate_id)
-                .multiple(true)
-                .number_of_values(1),
-        )
+    clap_app!(@app (app)
+        (about: "Locate debug information files for given debug identifiers.")
+        (@arg types: -t --type [TYPE]... possible_values(&["dsym", "proguard", "breakpad"])
+            "Only consider debug information files of the given type. \
+             By default all types are considered.")
+        (@arg no_well_known: --("no-well-known") "Don't look for files in well known locations.")
+        (@arg no_cwd: --("no-cwd") "Don't look for files in the current working directory.")
+        (@arg paths: -p --path [PATH]... "Add a path to search recursively for debug info files.")
+        (@arg json: --json "Format outputs as JSON.")
+        (@arg ids: <ID>... {validate_id} "The debug identifiers of the files to search for.")
+    )
 }
 
 fn id_hint(id: &DebugId) -> &'static str {

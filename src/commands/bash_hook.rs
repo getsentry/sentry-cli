@@ -6,7 +6,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use failure::Error;
 use regex::Regex;
 use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
@@ -23,27 +23,13 @@ lazy_static! {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Prints out a bash script that does error handling.")
-        .arg(
-            Arg::with_name("no_exit")
-                .long("no-exit")
-                .help("Do not turn on -e (exit immediately) flag automatically"),
-        ).arg(
-            Arg::with_name("send_event")
-                .long("send-event")
-                .requires_all(&["traceback", "log"])
-                .hidden(true),
-        ).arg(
-            Arg::with_name("traceback")
-                .long("traceback")
-                .value_name("PATH")
-                .hidden(true),
-        ).arg(
-            Arg::with_name("log")
-                .long("log")
-                .value_name("PATH")
-                .hidden(true),
-        )
+    clap_app!(@app (app)
+        (about: "Prints out a bash script that does error handling.")
+        (@arg no_exit: --no-exit "Do not turn on -e (exit immediately) flag automatically")
+        (@arg send_event: --("send-event") requires[traceback log] +hidden)
+        (@arg traceback: --traceback [PATH] +hidden)
+        (@arg log: --log [PATH] +hidden)
+    )
 }
 
 fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {

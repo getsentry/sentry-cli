@@ -1,7 +1,7 @@
 //! Implements a command for sending events to Sentry.
 use std::env;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
 use sentry::protocol::{Event, Level, LogEntry, User};
@@ -14,98 +14,21 @@ use utils::releases::detect_release_name;
 use utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Send a manual event to Sentry.")
-        .arg(
-            Arg::with_name("level")
-                .value_name("LEVEL")
-                .long("level")
-                .short("l")
-                .help("Optional event severity/log level. [defaults to 'error']"),
-        ).arg(
-            Arg::with_name("release")
-                .value_name("RELEASE")
-                .long("release")
-                .short("r")
-                .help("Optional identifier of the release."),
-        ).arg(
-            Arg::with_name("dist")
-                .value_name("DISTRIBUTION")
-                .long("dist")
-                .short("d")
-                .help("Set the distribution."),
-        ).arg(
-            Arg::with_name("environment")
-                .value_name("ENVIRONMENT")
-                .long("env")
-                .short("E")
-                .help("Send with a specific environment."),
-        ).arg(
-            Arg::with_name("no_environ")
-                .long("no-environ")
-                .help("Do not send environment variables along"),
-        ).arg(
-            Arg::with_name("message")
-                .value_name("MESSAGE")
-                .long("message")
-                .short("m")
-                .multiple(true)
-                .number_of_values(1)
-                .help("The event message."),
-        ).arg(
-            Arg::with_name("message_args")
-                .value_name("MESSAGE_ARG")
-                .long("message-arg")
-                .short("a")
-                .multiple(true)
-                .number_of_values(1)
-                .help("Arguments for the event message."),
-        ).arg(
-            Arg::with_name("platform")
-                .value_name("PLATFORM")
-                .long("platform")
-                .short("p")
-                .help("Override the default 'other' platform specifier."),
-        ).arg(
-            Arg::with_name("tags")
-                .value_name("KEY:VALUE")
-                .long("tag")
-                .short("t")
-                .multiple(true)
-                .number_of_values(1)
-                .help("Add a tag (key:value) to the event."),
-        ).arg(
-            Arg::with_name("extra")
-                .value_name("KEY:VALUE")
-                .long("extra")
-                .short("e")
-                .multiple(true)
-                .number_of_values(1)
-                .help("Add extra information (key:value) to the event."),
-        ).arg(
-            Arg::with_name("user_data")
-                .value_name("KEY:VALUE")
-                .long("user")
-                .short("u")
-                .multiple(true)
-                .number_of_values(1)
-                .help(
-                    "Add user information (key:value) to the event. \
-                     [eg: id:42, username:foo]",
-                ),
-        ).arg(
-            Arg::with_name("fingerprint")
-                .value_name("FINGERPRINT")
-                .long("fingerprint")
-                .short("f")
-                .multiple(true)
-                .number_of_values(1)
-                .help("Change the fingerprint of the event."),
-        ).arg(
-            Arg::with_name("logfile")
-                .value_name("PATH")
-                .long("logfile")
-                .help("Send a logfile as breadcrumbs with the event (last 100 records)"),
-        )
+    clap_app!(@app (app)
+        (@arg level: -l --level [LEVEL] "Optional event severity/log level. [defaults to 'error']")
+        (@arg release: -r --release [RELEASE] "Optional identifier of the release.")
+        (@arg dist: -d --dist [DISTRIBUTION] "Set the distribution.")
+        (@arg environment: -E --env [ENVIRONMENT] "Send with a specific environment.")
+        (@arg no_environ: --("no-environ") "Do not send environment variables along.")
+        (@arg message: -m --message [MESSAGE]... "The event message.")
+        (@arg message_args: -a --("message-arg") [MESSAGE_ARG]... "Arguments for the event message.")
+        (@arg platform: -p --platform [PLATFORM] "Override the default 'other' platform specifier.")
+        (@arg tags: -t --tag [KEY_VALUE]... "Add a tag (key:value) to the event.")
+        (@arg extra: -e --extra [KEY_VALUE]... "Add extra information (key:value) to the event.")
+        (@arg user_data: -u --user [KEY_VALUE]... "Add user information (key:value) to the event. [eg: id:42, username:foo]")
+        (@arg fingerprint: -f --fingerprint [FINGERPRINT]... "Change the fingerprint of the event.")
+        (@arg logfile: --logfile [PATH] "Send a logfile as breadcrumbs with the event (last 100 records)")
+    )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {

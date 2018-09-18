@@ -3,7 +3,7 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use console::style;
 use failure::{Error, SyncFailure};
 use symbolic::common::byteview::ByteView;
@@ -14,7 +14,7 @@ use zip;
 use api::{Api, AssociateDsyms};
 use config::Config;
 use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
-use utils::args::{validate_uuid, ArgExt};
+use utils::args::{validate_org, validate_project, validate_uuid};
 use utils::fs::{get_sha1_checksum, TempFile};
 use utils::system::QuietExit;
 use utils::ui::{copy_with_progress, make_byte_progress_bar};
@@ -27,98 +27,48 @@ struct MappingRef {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Upload ProGuard mapping files to a project.")
-        .org_project_args()
-        .arg(
-            Arg::with_name("paths")
-                .value_name("PATH")
-                .help("The path to the mapping files.")
-                .multiple(true)
-                .number_of_values(1)
-                .index(1),
-        ).arg(
-            Arg::with_name("version")
-                .long("version")
-                .value_name("VERSION")
-                .requires("app_id")
-                .help(
-                    "Optionally associate the mapping files with a human \
-                     readable version.{n}This helps you understand which \
-                     ProGuard files go with which version of your app.",
-                ),
-        ).arg(
-            Arg::with_name("version_code")
-                .long("version-code")
-                .value_name("VERSION_CODE")
-                .requires("app_id")
-                .requires("version")
-                .help(
-                    "Optionally associate the mapping files with a version \
-                     code.{n}This helps you understand which ProGuard files \
-                     go with which version of your app.",
-                ),
-        ).arg(
-            Arg::with_name("app_id")
-                .long("app-id")
-                .value_name("APP_ID")
-                .requires("version")
-                .help(
-                    "Optionally associate the mapping files with an application \
-                     ID.{n}If you have multiple apps in one sentry project you can \
-                     then easlier tell them apart.",
-                ),
-        ).arg(
-            Arg::with_name("platform")
-                .long("platform")
-                .value_name("PLATFORM")
-                .requires("app_id")
-                .help(
-                    "Optionally defines the platform for the app association. \
-                     [defaults to 'android']",
-                ),
-        ).arg(
-            Arg::with_name("no_reprocessing")
-                .long("no-reprocessing")
-                .help("Do not trigger reprocessing after upload."),
-        ).arg(Arg::with_name("no_upload").long("no-upload").help(
+    clap_app!(@app (app)
+        (about: "Upload ProGuard mapping files to a project.")
+        (@arg org: -o --org [ORGANIZATION] {validate_org} "The organization slug.")
+        (@arg project: -p --project [PROJECT] {validate_project} "The project slug.")
+        (@arg paths: [PATH]... "The path to the mapping files.")
+        (@arg version: --version [VERSION] requires[app_id]
+            "Optionally associate the mapping files with a human \
+             readable version.{n}This helps you understand which \
+             ProGuard files go with which version of your app.")
+        (@arg version_code: --("version-code") [VERSION_CODE] requires[app_id version]
+            "Optionally associate the mapping files with a version \
+             code.{n}This helps you understand which ProGuard files \
+             go with which version of your app.")
+        (@arg app_id: --("app-id") [APP_ID] requires[version]
+            "Optionally associate the mapping files with an application \
+             ID.{n}If you have multiple apps in one sentry project you can \
+             then easlier tell them apart.")
+        (@arg platform: --platform [PLATFORM] requires[app_id]
+            "Optionally defines the platform for the app association. \
+             [defaults to 'android']")
+        (@arg no_reprocessing: --("no-reprocessing") "Do not trigger reprocessing after upload.")
+        (@arg no_upload: --("no-upload")
             "Disable the actual upload.{n}This runs all steps for the \
              processing but does not trigger the upload (this also \
              automatically disables reprocessing.  This is useful if you \
              just want to verify the mapping files and write the \
-             proguard UUIDs into a properties file.",
-        )).arg(
-            Arg::with_name("android_manifest")
-                .long("android-manifest")
-                .value_name("PATH")
-                .conflicts_with("app_id")
-                .help("Read version and version code from an Android manifest file."),
-        ).arg(
-            Arg::with_name("write_properties")
-                .long("write-properties")
-                .value_name("PATH")
-                .help(
-                    "Write the UUIDs for the processed mapping files into \
-                     the given properties file.",
-                ),
-        ).arg(
-            Arg::with_name("require_one")
-                .long("require-one")
-                .help("Requires at least one file to upload or the command will error."),
-        ).arg(
-            Arg::with_name("uuid")
-                .long("uuid")
-                .short("u")
-                .value_name("UUID")
-                .validator(validate_uuid)
-                .help(
-                    "Explicitly override the UUID of the mapping file with another one.{n}\
-                     This should be used with caution as it means that you can upload \
-                     multiple mapping files if you don't take care.  This however can \
-                     be useful if you have a build process in which you need to know \
-                     the UUID of the proguard file before it was created.  If you upload \
-                     a file with a forced UUID you can only upload a single proguard file.",
-                ),
-        )
+             proguard UUIDs into a properties file.")
+        (@arg android_manifest: --("android-manifest") [PATH] conflicts_with[app_id]
+            "Read version and version code from an Android manifest file.")
+        (@arg write_properties: --("write-properties") [PATH]
+            "Write the UUIDs for the processed mapping files into \
+             the given properties file.")
+        (@arg require_one: --("require-one")
+            "Requires at least one file to upload or the command will error.")
+        (@arg uuid: -u --uuid [UUID] {validate_uuid}
+            "Explicitly override the UUID of the mapping file with another one.{n}\
+             This should be used with caution as it means that you can upload \
+             multiple mapping files if you don't take care.  This however can \
+             be useful if you have a build process in which you need to know \
+             the UUID of the proguard file before it was created.  If you upload \
+             a file with a forced UUID you can only upload a single proguard file.")
+    )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {

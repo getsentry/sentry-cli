@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use std::path::Path;
 use std::rc::Rc;
 
-use chrono::{DateTime, Duration, Utc};
-use clap::{App, AppSettings, Arg, ArgMatches};
+use chrono::{DateTime, Duration, TimeZone, Utc};
+use clap::{App, AppSettings, ArgMatches};
 use failure::{err_msg, Error};
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
@@ -14,7 +14,7 @@ use regex::Regex;
 
 use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
 use config::Config;
-use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
+use utils::args::{validate_org, validate_project};
 use utils::formatting::{HumanDuration, Table};
 use utils::releases::detect_release_name;
 use utils::sourcemaps::SourceMapProcessor;
@@ -54,261 +54,204 @@ impl<'a> ReleaseContext<'a> {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Manage releases on Sentry.")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_arg()
-        .arg(Arg::with_name("project")
-            .hidden(true)
-            .value_name("PROJECT")
-            .long("project")
-            .short("p")
-            .validator(validate_project))
-        .subcommand(App::new("new")
-            .about("Create a new release.")
-            .version_arg(1)
-            .projects_arg()
-            // this is deprecated and no longer does anything
-            .arg(Arg::with_name("ref")
-                .long("ref")
-                .value_name("REF")
-                .hidden(true)
-                .hidden(true))
-            .arg(Arg::with_name("url")
-                .long("url")
-                .value_name("URL")
-                .help("Optional URL to the release for information purposes."))
-            .arg(Arg::with_name("finalize")
-                 .long("finalize")
-                 .help("Immediately finalize the release. (sets it to released)")))
-        .subcommand(App::new("propose-version")
-            .about("Propose a version name for a new release."))
-        .subcommand(App::new("set-commits")
-            .about("Set commits of a release.")
-            .version_arg(1)
-            .arg(Arg::with_name("clear")
-                 .long("clear")
-                 .help("Clear all current commits from the release."))
-            .arg(Arg::with_name("auto")
-                 .long("auto")
-                 .help("Enable completely automated commit management.{n}\
-                        This requires that the command is run from within a git repository.  \
-                        sentry-cli will then automatically find remotely configured \
-                        repositories and discover commits."))
-            .arg(Arg::with_name("commits")
-                 .long("commit")
-                 .short("c")
-                 .value_name("SPEC")
-                 .multiple(true)
-                 .number_of_values(1)
-                 .help("Defines a single commit for a repo as \
-                        identified by the repo name in the remote Sentry config. \
-                        If no commit has been specified sentry-cli will attempt \
-                        to auto discover that repository in the local git repo \
-                        and then use the HEAD commit.  This will either use the \
-                        current git repository or attempt to auto discover a \
-                        submodule with a compatible URL.\n\n\
-                        The value can be provided as `REPO` in which case sentry-cli \
-                        will auto-discover the commit based on reachable repositories. \
-                        Alternatively it can be provided as `REPO#PATH` in which case \
-                        the current commit of the repository at the given PATH is \
-                        assumed.  To override the revision `@REV` can be appended \
-                        which will force the revision to a certain value.")))
-        .subcommand(App::new("delete")
-            .about("Delete a release.")
-            .version_arg(1))
-        .subcommand(App::new("finalize")
-            .about("Mark a release as finalized and released.")
-            .version_arg(1)
-            .arg(Arg::with_name("started")
-                 .long("started")
-                 .validator(validate_timestamp)
-                 .value_name("TIMESTAMP")
-                 .help("Set the release start date."))
-            .arg(Arg::with_name("released")
-                 .long("released")
-                 .validator(validate_timestamp)
-                 .value_name("TIMESTAMP")
-                 .help("Set the release time. [defaults to the current time]")))
-        .subcommand(App::new("list")
-            .about("List the most recent releases.")
-            .arg(Arg::with_name("no_abbrev")
-                .long("no-abbrev")
-                .help("Do not abbreviate the release version.")))
-        .subcommand(App::new("info")
-            .about("Print information about a release.")
-            .version_arg(1)
-            .arg(Arg::with_name("quiet")
-                .short("q")
-                .long("quiet")
-                .help("Do not print any output.{n}If this is passed the command can be \
-                       used to determine if a release already exists.  The exit status \
-                       will be 0 if the release exists or 1 otherwise.")))
-        .subcommand(App::new("files")
-            .about("Manage release artifacts.")
-            .setting(AppSettings::SubcommandRequiredElseHelp)
-            .version_arg(1)
-            .subcommand(App::new("list").about("List all release files."))
-            .subcommand(App::new("delete")
-                .about("Delete a release file.")
-                .arg(Arg::with_name("all")
-                    .short("A")
-                    .long("all")
-                    .help("Delete all files."))
-                .arg(Arg::with_name("names")
-                    .value_name("NAMES")
-                    .index(1)
-                    .multiple(true)
-                    .help("Filenames to delete.")))
-            .subcommand(App::new("upload")
-                .about("Upload a file for a release.")
-                .arg(Arg::with_name("dist")
-                    .long("dist")
-                    .short("d")
-                    .value_name("DISTRIBUTION")
-                    .help("Optional distribution identifier for this file."))
-                .arg(Arg::with_name("headers")
-                    .long("header")
-                    .short("H")
-                    .value_name("KEY VALUE")
-                    .multiple(true)
-                    .number_of_values(1)
-                    .help("Store a header with this file."))
-                .arg(Arg::with_name("path")
-                    .value_name("PATH")
-                    .index(1)
-                    .required(true)
-                    .help("The path to the file to upload."))
-                .arg(Arg::with_name("name")
-                    .index(2)
-                    .value_name("NAME")
-                    .help("The name of the file on the server.")))
-            .subcommand(App::new("upload-sourcemaps")
-                .about("Upload sourcemaps for a release.")
-                .arg(Arg::with_name("paths")
-                    .value_name("PATHS")
-                    .index(1)
-                    .required(true)
-                    .multiple(true)
-                    .help("The files to upload."))
-                .arg(Arg::with_name("url_prefix")
-                    .short("u")
-                    .long("url-prefix")
-                    .value_name("PREFIX")
-                    .help("The URL prefix to prepend to all filenames."))
-                .arg(Arg::with_name("url_suffix")
-                    .long("url-suffix")
-                    .value_name("SUFFIX")
-                    .help("The URL suffix to append to all filenames."))
-                .arg(Arg::with_name("dist")
-                    .long("dist")
-                    .short("d")
-                    .value_name("DISTRIBUTION")
-                    .help("Optional distribution identifier for the sourcemaps."))
-                .arg(Arg::with_name("validate")
-                    .long("validate")
-                    .help("Enable basic sourcemap validation."))
-                .arg(Arg::with_name("no_sourcemap_reference")
-                    .long("no-sourcemap-reference")
-                    .help("Disable emitting of automatic sourcemap references.{n}\
-                           By default the tool will store a 'Sourcemap' header with \
-                           minified files so that sourcemaps are located automatically \
-                           if the tool can detect a link. If this causes issues it can \
-                           be disabled."))
-                .arg(Arg::with_name("no_rewrite")
-                    .long("no-rewrite")
-                    .help("Disables rewriting of matching sourcemaps \
-                           so that indexed maps are flattened and missing \
-                           sources are inlined if possible.{n}This fundamentally \
-                           changes the upload process to be based on sourcemaps \
-                           and minified files exclusively and comes in handy for \
-                           setups like react-native that generate sourcemaps that \
-                           would otherwise not work for sentry."))
-                .arg(Arg::with_name("rewrite")
-                    .long("rewrite")
-                    .help("Enables rewriting of matching sourcemaps \
-                           so that indexed maps are flattened and missing \
-                           sources are inlined if possible.{n}This fundamentally \
-                           changes the upload process to be based on sourcemaps \
-                           and minified files exclusively and comes in handy for \
-                           setups like react-native that generate sourcemaps that \
-                           would otherwise not work for sentry."))
-                .arg(Arg::with_name("strip_prefix")
-                    .long("strip-prefix")
-                    .value_name("PREFIX")
-                    .multiple(true)
-                    .number_of_values(1)
-                    .help("Strip the given prefix from all filenames.{n}\
-                           Only files that start with the given prefix will be stripped."))
-                .arg(Arg::with_name("strip_common_prefix")
-                    .long("strip-common-prefix")
-                    .help("Similar to --strip-prefix but strips the most common \
-                           prefix on all sources."))
-                .arg(Arg::with_name("ignore")
-                    .long("ignore")
-                    .short("i")
-                    .value_name("IGNORE")
-                    .multiple(true)
-                    .help("Ignores all files and folders matching the given glob"))
-                .arg(Arg::with_name("ignore_file")
-                    .long("ignore-file")
-                    .short("I")
-                    .value_name("IGNORE_FILE")
-                    .help("Ignore all files and folders specified in the given \
-                           ignore file, e.g. .gitignore."))
-                // legacy parameter
-                .arg(Arg::with_name("verbose")
-                    .long("verbose")
-                    .short("v")
-                    .hidden(true))
-                .arg(Arg::with_name("extensions")
-                    .long("ext")
-                    .short("x")
-                    .value_name("EXT")
-                    .multiple(true)
-                    .number_of_values(1)
-                    .help("Add a file extension to the list of files to upload."))))
-        .subcommand(App::new("deploys")
-            .about("Manage release deployments.")
-            .setting(AppSettings::SubcommandRequiredElseHelp)
-            .version_arg(1)
-            .subcommand(App::new("new")
-                .about("Creates a new release deployment.")
-                .arg(Arg::with_name("env")
-                     .long("env")
-                     .short("e")
-                     .value_name("ENV")
-                     .required(true)
-                     .help("Set the environment for this release.{n}This argument is required.  \
-                            Values that make sense here would be 'production' or 'staging'."))
-                .arg(Arg::with_name("name")
-                     .long("name")
-                     .short("n")
-                     .value_name("NAME")
-                     .help("Optional human readable name for this deployment."))
-                .arg(Arg::with_name("url")
-                     .long("url")
-                     .short("u")
-                     .value_name("URL")
-                     .help("Optional URL that points to the deployment."))
-                .arg(Arg::with_name("started")
-                     .long("started")
-                     .value_name("TIMESTAMP")
-                     .validator(validate_timestamp)
-                     .help("Optional unix timestamp when the deployment started."))
-                .arg(Arg::with_name("finished")
-                     .long("finished")
-                     .value_name("TIMESTAMP")
-                     .validator(validate_timestamp)
-                     .help("Optional unix timestamp when the deployment finished."))
-                .arg(Arg::with_name("time")
-                     .long("time")
-                     .short("t")
-                     .value_name("SECONDS")
-                     .validator(validate_seconds)
-                     .help("Optional deployment duration in seconds.{n}\
-                            This can be specified alternatively to `--started` and `--finished`.")))
-            .subcommand(App::new("list")
-                .about("List all deployments of a release.")))
+    clap_app!(@app (app)
+        (about: "Manage releases on Sentry.")
+        (setting: AppSettings::SubcommandRequiredElseHelp)
+        (@arg org: -o --org [ORGANIZATION] {validate_org} "The organization slug.")
+        (@arg project: -p --project [PROJECT] {validate_project} +hidden)
+        (@subcommand new =>
+            (about: "Create a new release.")
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+            (@arg projects: -p --project [PROJECT]... {validate_project} "Project slugs.")
+            (@arg ref: --ref [REF] +hidden)
+            (@arg url: --url [URL] "Optional URL to the release for information purposes.")
+            (@arg finalize: --finalize "Immediately finalize the release (sets it to released).")
+        )
+        (@subcommand propose_version => (about: "Propose a version name for a new release."))
+        (@subcommand set_commits =>
+            (about: "Set commits of a release.")
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+            (@arg clear: --clear "Clear all current commits from the release.")
+            (@arg auto: --auto
+                "Enable completely automated commit management.{n}\
+                 This requires that the command is run from within a git repository.  \
+                 sentry-cli will then automatically find remotely configured \
+                 repositories and discover commits.")
+            (@arg commits: -c --commit [SPEC]...
+                "Defines a single commit for a repo as \
+                 identified by the repo name in the remote Sentry config. \
+                 If no commit has been specified sentry-cli will attempt \
+                 to auto discover that repository in the local git repo \
+                 and then use the HEAD commit.  This will either use the \
+                 current git repository or attempt to auto discover a \
+                 submodule with a compatible URL.{n}{n}\
+                 The value can be provided as `REPO` in which case sentry-cli \
+                 will auto-discover the commit based on reachable repositories. \
+                 Alternatively it can be provided as `REPO#PATH` in which case \
+                 the current commit of the repository at the given PATH is \
+                 assumed.  To override the revision `@REV` can be appended \
+                 which will force the revision to a certain value.")
+        )
+        (@subcommand delete =>
+            (about: "Delete a release.")
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+        )
+        (@subcommand finalize =>
+            (about: "Mark a release as finalized and released.")
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+            (@arg started: --started [TIMESTAMP] {validate_timestamp} "Set the release start date.")
+            (@arg released: --released [TIMESTAMP] {validate_timestamp}
+                "Set the release time. [defaults to the current time]")
+        )
+        (@subcommand list =>
+            (about: "List the most recent release.")
+            (@arg no_abbrev: --("no-abbrev") "Do not abbreviate the release version.")
+        )
+        (@subcommand info =>
+            (about: "Print information about a release."))
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+            (@arg quiet: -q --quiet
+                "Do not print any output.{n}If this is passed the command can be \
+                 used to determine if a release already exists.  The exit status \
+                 will be 0 if the release exists or 1 otherwise.")
+        (@subcommand files =>
+            (about: "Manage release artifacts.")
+            (setting: AppSettings::SubcommandRequiredElseHelp)
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+            (@subcommand list => (about: "List all release files."))
+            (@subcommand delete =>
+                (about: "Delete a release file.")
+                (@arg all: -A --all "Delete all files")
+                (@arg names: [NAMES]... "Filenames to delete.")
+            )
+            (@subcommand upload =>
+                (about: "Upload a file for a release.")
+                (@arg dist: -d --dist [DISTRIBUTION] "Optional distribution identifier.")
+                (@arg headers: -H --header [KEY_VALUE]... "Store a header with this file.")
+                (@arg path: <PATH> "The path to the file to upload.")
+                (@arg name: [NAME] "The name of the file on the server.")
+            )
+            (@subcommand upload_sourcemap =>
+                (about: "Upload sourcemaps for a release.")
+                (@arg paths: <PATH>... "The files to upload")
+                (@arg url_prefix: -u --("url-prefix") [PREFIX] "The URL prefix to prepend to all filenames.")
+                (@arg url_suffix: --("url-suffix") [SUFFIX] "The URL suffix to append to all filenames.")
+                (@arg dist: -d --dist [DISTRIBUTION] "Optional distribution identifier for the sourcemaps.")
+                (@arg validate: --validate "Enable basic sourcemap validation.")
+                (@arg no_sourcemap_reference: --("no-sourcemap-reference")
+                    "Disable emitting of automatic sourcemap references.{n}\
+                     By default the tool will store a 'Sourcemap' header with \
+                     minified files so that sourcemaps are located automatically \
+                     if the tool can detect a link. If this causes issues it can \
+                     be disabled.")
+                (@arg no_rewrite: --("no-rewrite")
+                    "Disables rewriting of matching sourcemaps \
+                     so that indexed maps are flattened and missing \
+                     sources are inlined if possible.{n}This fundamentally \
+                     changes the upload process to be based on sourcemaps \
+                     and minified files exclusively and comes in handy for \
+                     setups like react-native that generate sourcemaps that \
+                     would otherwise not work for sentry.")
+                (@arg rewrite: --rewrite
+                    "Enables rewriting of matching sourcemaps \
+                     so that indexed maps are flattened and missing \
+                     sources are inlined if possible.{n}This fundamentally \
+                     changes the upload process to be based on sourcemaps \
+                     and minified files exclusively and comes in handy for \
+                     setups like react-native that generate sourcemaps that \
+                     would otherwise not work for sentry.")
+                (@arg strip_prefix: --("strip-prefix") [PREFIX]...
+                    "Strip the given prefix from all filenames.{n}\
+                     Only files that start with the given prefix will be stripped.")
+                (@arg strip_common_prefix: --("strip-common-prefix")
+                    "Similar to --strip-prefix but strips the most common \
+                     prefix on all sources.")
+                (@arg ignore: -i --ignore [GLOB]...
+                    "Ignores all files and folders matching the given glob.")
+                (@arg ignore_file: -I --("ignore-file") [GLOB]...
+                    "Ignore all files and folders specified in the given \
+                     ignore file, e.g. .gitignore.")
+                (@arg extensions: -x --ext [EXT]...
+                    "Add a file extension to the list of files to upload.")
+                (@arg verbose: -v --verbose +hidden)
+            )
+        )
+        (@subcommand deploys =>
+            (about: "Manage release deployments.")
+            (setting: AppSettings::SubcommandRequiredElseHelp)
+            (@arg version: <VERSION> {validate_version} "The version of the release.")
+            (@subcommand new =>
+                (about: "Creates a new release deployment.")
+                (@arg env: -e --env <ENV>
+                    "Set the environment for this release.{n}This argument is required.  \
+                     Values that make sense here would be 'production' or 'staging'.")
+                (@arg name: -n --name [NAME] "Optional human readable name for this deployment.")
+                (@arg url: -u --url [URL] "Optional URL that points to the deployment.")
+                (@arg started: --started [TIMESTAMP] {validate_timestamp}
+                    "Optional unix timestamp when the deployment started.")
+                (@arg finished: --finished [TIMESTAMP] {validate_timestamp}
+                    "Optional unix timestamp when the deployment finished.")
+                (@arg time: -t --time [SECONDS] {validate_seconds}
+                    "Optional deployment duration in seconds.{n}\
+                     This can be specified alternatively to `--started` and `--finished`.")
+            )
+            (@subcommand list =>
+                (about: "List all deployments of a release.")
+            )
+        )
+    )
+}
+
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+fn validate_version(v: String) -> Result<(), String> {
+    if v.trim() != v {
+        return Err(
+            "Invalid release version. Releases must not contain leading or trailing spaces."
+                .to_string(),
+        );
+    }
+
+    if v.is_empty() || v == "." || v == ".." || v
+        .find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
+        .is_some()
+    {
+        return Err(
+            "Invalid release version. Slashes and certain whitespace characters are not permitted."
+                .to_string(),
+        );
+    }
+
+    Ok(())
+}
+
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+fn validate_seconds(v: String) -> Result<(), String> {
+    if v.parse::<i64>().is_ok() {
+        Ok(())
+    } else {
+        Err("Invalid value (seconds as integer required)".to_string())
+    }
+}
+
+fn get_timestamp(value: &str) -> Result<DateTime<Utc>, Error> {
+    if let Ok(int) = value.parse::<i64>() {
+        Ok(Utc.timestamp(int, 0))
+    } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
+        Ok(dt.with_timezone(&Utc))
+    } else if let Ok(dt) = DateTime::parse_from_rfc2822(value) {
+        Ok(dt.with_timezone(&Utc))
+    } else {
+        bail!("not in valid format. Unix timestamp or ISO 8601 date expected.");
+    }
+}
+
+#[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+fn validate_timestamp(v: String) -> Result<(), String> {
+    if let Err(err) = get_timestamp(&v) {
+        Err(err.to_string())
+    } else {
+        Ok(())
+    }
 }
 
 fn strip_sha(sha: &str) -> &str {

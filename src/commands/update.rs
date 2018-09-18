@@ -1,23 +1,17 @@
 //! Implements a command for updating `sentry-cli`
 use std::env;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, ArgMatches};
 use failure::Error;
 
 use utils::update::{can_update_sentrycli, get_latest_sentrycli_release};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Update the sentry-cli executable.")
-        .settings(&if !can_update_sentrycli() {
-            vec![AppSettings::Hidden]
-        } else {
-            vec![]
-        }).arg(
-            Arg::with_name("force")
-                .long("force")
-                .short("f")
-                .help("Force the update even if the latest version is already installed."),
-        )
+    clap_app!(@app (app)
+        (about: "Update the sentry-cli executable.")
+        (settings: if !can_update_sentrycli() { &[AppSettings::Hidden][..] } else { &[][..] })
+        (@arg force: -f --force "Force the update even if the latest version is already installed.")
+    )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {

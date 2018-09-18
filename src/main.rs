@@ -8,6 +8,8 @@
 #[cfg(not(windows))]
 extern crate chan;
 #[macro_use]
+extern crate clap;
+#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -30,7 +32,6 @@ extern crate brotli2;
 extern crate chan_signal;
 extern crate chardet;
 extern crate chrono;
-extern crate clap;
 extern crate console;
 extern crate curl;
 extern crate dirs;
