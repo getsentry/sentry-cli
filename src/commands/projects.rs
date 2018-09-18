@@ -22,11 +22,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     projects.sort_by_key(|p| (p.team.name.clone(), p.name.clone()));
 
     let mut table = Table::new();
-    table.title_row().add("Slug").add("Team").add("Name");
+    table
+        .title_row()
+        .add("ID")
+        .add("Slug")
+        .add("Team")
+        .add("Name");
 
     for project in &projects {
         table
             .add_row()
+            .add(&project.id)
             .add(&project.slug)
             .add(&project.team.name)
             .add(&project.name);
