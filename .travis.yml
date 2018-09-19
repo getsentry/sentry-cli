@@ -99,11 +99,10 @@ matrix:
       language: node_js
       node_js: "8"
       install: true
-      before_deploy: mkdir -p dist && mv *.tgz dist/package.tgz
       env: TARGET=npm
       script: npm pack
       after_success:
-        - zeus upload -t "application/tar+npm" -n package.tgz *.tgz
+        - zeus upload -t "application/tar+npm" *.tgz
 
 notifications:
   webhooks:
