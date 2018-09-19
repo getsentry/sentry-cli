@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use std::io;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use failure::Error;
 use serde_json;
 
@@ -25,19 +25,14 @@ pub struct ConfigStatus {
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Print information about the Sentry server.")
-        .arg(Arg::with_name("quiet").short("q").long("quiet").help(
-            "Do not output anything, just report a status \
-             code for correct config.",
-        )).arg(
-            Arg::with_name("config_status_json")
-                .long("config-status-json")
-                .help(
-                    "Return the status of the config that sentry-cli loads \
-                     as JSON dump. This can be used by external tools to aid \
-                     the user towards configuration.",
-                ),
-        )
+    clap_app!(@app (app)
+        (@arg quiet: -q --quiet
+            "Do not output anything, just report a status code for correct config.")
+        (@arg config_status_json: --("config-status-json")
+            "Return the status of the config that sentry-cli loads \
+             as JSON dump. This can be used by external tools to aid \
+             the user towards configuration.")
+    )
 }
 
 fn describe_auth(auth: Option<&Auth>) -> &str {

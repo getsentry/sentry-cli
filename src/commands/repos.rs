@@ -4,14 +4,18 @@ use failure::Error;
 
 use api::Api;
 use config::Config;
-use utils::args::ArgExt;
+use utils::args::validate_org;
 use utils::formatting::Table;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Manage repositories on Sentry.")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_arg()
-        .subcommand(App::new("list").about("List all repositories in your organization."))
+    clap_app!(@app (app)
+        (about: "Manage repositories on Sentry.")
+        (setting: AppSettings::SubcommandRequiredElseHelp)
+        (@arg org: -o --org [ORGANIZATION] {validate_org} "The organization slug.")
+        (@subcommand list =>
+            (about: "List all repositories in your organization.")
+        )
+    )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {

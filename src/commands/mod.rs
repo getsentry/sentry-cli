@@ -3,7 +3,7 @@
 use std::env;
 use std::process;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, ArgMatches};
 use failure::Error;
 
 use api::Api;
@@ -177,37 +177,24 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         return Ok(());
     }
 
-    let mut app =
-        App::new("sentry-cli")
-            .help_message("Print this help message.")
-            .version(VERSION)
-            .version_message("Print version information.")
-            .about(ABOUT)
-            .max_term_width(100)
-            .setting(AppSettings::VersionlessSubcommands)
-            .setting(AppSettings::SubcommandRequiredElseHelp)
-            .global_setting(AppSettings::UnifiedHelpMessage)
-            .arg(Arg::with_name("url").value_name("URL").long("url").help(
-                "Fully qualified URL to the Sentry server.{n}[defaults to https://sentry.io/]",
-            )).arg(
-                Arg::with_name("auth_token")
-                    .value_name("AUTH_TOKEN")
-                    .long("auth-token")
-                    .help("Use the given Sentry auth token."),
-            ).arg(
-                Arg::with_name("api_key")
-                    .value_name("API_KEY")
-                    .long("api-key")
-                    .help("The given Sentry API key."),
-            ).arg(
-                Arg::with_name("log_level")
-                    .value_name("LOG_LEVEL")
-                    .long("log-level")
-                    .help(
-                        "Set the log output verbosity.{n}\
-                         [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]",
-                    ),
-            );
+    let mut app = clap_app!(("sentry-cli") =>
+        (about: ABOUT)
+        (version: VERSION)
+        (version_message: "Print version information.")
+        (help_message: "Print this help message.")
+        (max_term_width: 100)
+        (setting: AppSettings::VersionlessSubcommands)
+        (setting: AppSettings::SubcommandRequiredElseHelp)
+        (global_setting: AppSettings::UnifiedHelpMessage)
+        (@arg api_key: --("api-key") [API_KEY] "Use the given Sentry API key for auth.")
+        (@arg auth_token: --("auth-token") [AUTH_TOKEN] "Use the given Sentry token for auth.")
+        (@arg url: --url <URL>
+              "Fully qualified URL to the Sentry server.{n}\
+              [defaults to https://sentry.io/]")
+        (@arg log_level: --("log-level") [LOG_LEVEL]
+              "Set the log output verbosity.{n}\
+               [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]")
+    );
 
     app = add_commands(app);
     let matches = app.get_matches_from_safe(args)?;

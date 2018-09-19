@@ -1,45 +1,32 @@
 //! Implements a command for issue management.
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{App, AppSettings, ArgMatches};
 use failure::{Error, ResultExt};
 
 use api::{Api, IssueChanges, IssueFilter};
 use config::Config;
-use utils::args::ArgExt;
+use utils::args::{validate_org, validate_project};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Manage issues in Sentry.")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_project_args()
-        .arg(
-            Arg::with_name("status")
-                .long("status")
-                .short("s")
-                .value_name("STATUS")
-                .possible_values(&["resolved", "muted", "unresolved"])
-                .help("Select all issues matching a given status."),
-        ).arg(
-            Arg::with_name("all")
-                .long("all")
-                .short("a")
-                .help("Select all issues (this might be limited)."),
-        ).arg(
-            Arg::with_name("id")
-                .multiple(true)
-                .number_of_values(1)
-                .short("i")
-                .long("id")
-                .help("Select the issue with the given ID."),
-        ).subcommand(
-            App::new("resolve")
-                .about("Bulk resolve all selected issues.")
-                .arg(
-                    Arg::with_name("next_release")
-                        .long("next-release")
-                        .short("n")
-                        .help("Only select issues in the next release."),
-                ),
-        ).subcommand(App::new("mute").about("Bulk mute all selected issues."))
-        .subcommand(App::new("unresolve").about("Bulk unresolve all selected issues."))
+    clap_app!(@app (app)
+        (setting: AppSettings::SubcommandRequiredElseHelp)
+        (about: "Manage issues in Sentry.")
+        (@arg org: -o --org [ORGANIZATION] {validate_org} "The organization slug.")
+        (@arg project: -p --project [PROJECT] {validate_project} "The project slug.")
+        (@arg status: -s --status [STATUS] possible_values(&["resolved", "muted", "unresolved"])
+            "Select all issues matching a given status.")
+        (@arg all: -a --all "Select all issues (this might be limited).")
+        (@arg id: -i --id [ID]... "Select the issue with the given ID.")
+        (@subcommand resolve =>
+            (about: "Bulk resolve all selected issues.")
+            (@arg next_release: -n --next-releases "Only select issues in the next release.")
+        )
+        (@subcommand mute =>
+            (about: "Bulk mute all selected issues.")
+        )
+        (@subcommand unresolve =>
+            (about: "Bulk unresolve all selected issues.")
+        )
+    )
 }
 
 fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter, Error> {

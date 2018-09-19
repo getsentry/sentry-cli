@@ -9,7 +9,9 @@ use config::{Auth, Config};
 use utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Authenticate with the Sentry server.")
+    clap_app!(@app (app)
+        (about: "Authenticate with the Sentry server.")
+    )
 }
 
 fn update_config(config: &Config, token: &str) -> Result<(), Error> {

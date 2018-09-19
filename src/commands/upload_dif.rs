@@ -3,7 +3,7 @@ use std::collections::BTreeSet;
 use std::env;
 use std::str::{self, FromStr};
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use console::style;
 use dirs;
 use failure::{err_msg, Error};
@@ -13,7 +13,7 @@ use symbolic::debuginfo::DebugId;
 
 use api::Api;
 use config::Config;
-use utils::args::{validate_id, ArgExt};
+use utils::args::{validate_id, validate_org, validate_project};
 use utils::dif_upload::DifUpload;
 use utils::system::QuietExit;
 use utils::xcode::{InfoPlist, MayDetach};
@@ -21,93 +21,43 @@ use utils::xcode::{InfoPlist, MayDetach};
 static DERIVED_DATA: &'static str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Upload debugging information files.")
-        .org_project_args()
-        .arg(
-            Arg::with_name("paths")
-                .value_name("PATH")
-                .help("A path to search recursively for symbol files.")
-                .multiple(true)
-                .number_of_values(1)
-                .index(1),
-        ).arg(
-            Arg::with_name("types")
-                .long("type")
-                .short("t")
-                .value_name("TYPE")
-                .multiple(true)
-                .number_of_values(1)
-                .possible_values(&["dsym", "elf", "breakpad"])
-                .help(
-                    "Only consider debug information files of the given \
-                     type.  By default, all types are considered.",
-                ),
-        ).arg(
-            Arg::with_name("no_executables")
-                .long("no-bin")
-                .help("Exclude executables and libraries and look for debug symbols only."),
-        ).arg(
-            Arg::with_name("no_debug_only")
-                .long("no-debug")
-                .help("Exclude files containing only stripped debugging info.")
-                .conflicts_with("no_executables"),
-        ).arg(
-            Arg::with_name("ids")
-                .value_name("ID")
-                .long("id")
-                .help("Search for specific debug identifiers.")
-                .validator(validate_id)
-                .multiple(true)
-                .number_of_values(1),
-        ).arg(
-            Arg::with_name("require_all")
-                .long("require-all")
-                .help("Errors if not all identifiers specified with --id could be found."),
-        ).arg(
-            Arg::with_name("symbol_maps")
-                .long("symbol-maps")
-                .value_name("PATH")
-                .help(
-                    "Optional path to BCSymbolMap files which are used to \
-                     resolve hidden symbols in dSYM files downloaded from \
-                     iTunes Connect.  This requires the dsymutil tool to be \
-                     available.",
-                ),
-        ).arg(
-            Arg::with_name("derived_data")
-                .long("derived-data")
-                .help("Search for debug symbols in Xcode's derived data."),
-        ).arg(
-            Arg::with_name("no_zips")
-                .long("no-zips")
-                .help("Do not search in ZIP files."),
-        ).arg(
-            Arg::with_name("info_plist")
-                .long("info-plist")
-                .value_name("PATH")
-                .help(
-                    "Optional path to the Info.plist.{n}We will try to find this \
-                     automatically if run from Xcode.  Providing this information \
-                     will associate the debug symbols with a specific ITC application \
-                     and build in Sentry.  Note that if you provide the plist \
-                     explicitly it must already be processed.",
-                ),
-        ).arg(
-            Arg::with_name("no_reprocessing")
-                .long("no-reprocessing")
-                .help("Do not trigger reprocessing after uploading."),
-        ).arg(
-            Arg::with_name("force_foreground")
-                .long("force-foreground")
-                .help(
-                    "Wait for the process to finish.{n}\
-                     By default, the upload process will detach and continue in the \
-                     background when triggered from Xcode.  When an error happens, \
-                     a dialog is shown.  If this parameter is passed Xcode will wait \
-                     for the process to finish before the build finishes and output \
-                     will be shown in the Xcode build output.",
-                ),
-        )
+    clap_app!(@app (app)
+        (about: "Upload debugging information files.")
+        (@arg org: -o --org [ORGANIZATION] {validate_org} "The organization slug.")
+        (@arg project: -p --project [PROJECT] {validate_project} "The project slug.")
+        (@arg paths: [PATH]... "A path to search recursively for symbol files.")
+        (@arg types: -t --type [TYPE]... possible_values(&["dsym", "elf", "breakpad"])
+            "Only consider debug information files of the given \
+             type.  By default, all types are considered.")
+        (@arg no_executables: --("no-bin") conflicts_with[no_debug_only]
+            "Exclude executables and libraries and look for debug symbols only.")
+        (@arg no_debug_only: --("no-debug") conflicts_with[no_executables]
+            "Exclude files containing only stripped debugging info.")
+        (@arg ids: --id [ID]... {validate_id} "Search for specific debug identifiers.")
+        (@arg require_all: --("require-all")
+            "Errors if not all identifiers specified with --id could be found.")
+        (@arg symbol_maps: --("symbol-maps") [PATH]
+            "Optional path to BCSymbolMap files which are used to \
+             resolve hidden symbols in dSYM files downloaded from \
+             iTunes Connect.  This requires the dsymutil tool to be \
+             available.")
+        (@arg derived_data: --("derived-data") "Search for debug symbols in Xcode's derived data.")
+        (@arg no_zips: --("no-zips") "Do not search in ZIP files.")
+        (@arg info_plist: --("info-plist") [PATH]
+            "Optional path to the Info.plist.{n}We will try to find this \
+             automatically if run from Xcode.  Providing this information \
+             will associate the debug symbols with a specific ITC application \
+             and build in Sentry.  Note that if you provide the plist \
+             explicitly it must already be processed.")
+        (@arg no_reprocessing: --("no-reprocessing") "Do not trigger reprocessing after uploading.")
+        (@arg force_foreground: --("force-foreground")
+            "Wait for the process to finish.{n}\
+             By default, the upload process will detach and continue in the \
+             background when triggered from Xcode.  When an error happens, \
+             a dialog is shown.  If this parameter is passed Xcode will wait \
+             for the process to finish before the build finishes and output \
+             will be shown in the Xcode build output.")
+    )
 }
 
 fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {

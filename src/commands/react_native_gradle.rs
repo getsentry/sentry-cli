@@ -1,44 +1,24 @@
 use std::env;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, ArgMatches};
 use failure::Error;
 
 use api::{Api, NewRelease};
 use config::Config;
-use utils::args::ArgExt;
+use utils::args::{validate_org, validate_project};
 use utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Upload react-native projects in a gradle build step.")
-        .org_project_args()
-        .arg(
-            Arg::with_name("sourcemap")
-                .long("sourcemap")
-                .value_name("PATH")
-                .required(true)
-                .help("The path to a sourcemap that should be uploaded."),
-        ).arg(
-            Arg::with_name("bundle")
-                .long("bundle")
-                .value_name("PATH")
-                .required(true)
-                .help("The path to a bundle that should be uploaded."),
-        ).arg(
-            Arg::with_name("release")
-                .long("release")
-                .value_name("RELEASE")
-                .required(true)
-                .help("The name of the release to publish."),
-        ).arg(
-            Arg::with_name("dist")
-                .long("dist")
-                .value_name("DISTRIBUTION")
-                .required(true)
-                .multiple(true)
-                .number_of_values(1)
-                .help("The names of the distributions to publish. Can be supplied multiple times."),
-        )
+    clap_app!(@app (app)
+        (about: "Upload react-native projects in a gradle build step.")
+        (@arg org: -o --org [ORGANIZATION] {validate_org} "The organization slug.")
+        (@arg project: -p --project [PROJECT] {validate_project} "The project slug.")
+        (@arg sourcemap: --sourcemap <PATH> "The path to a sourcemap that should be uploaded.")
+        (@arg bundle: --bundle <PATH> "The path to a bundle that should be uploaded.")
+        (@arg release: --release <RELEASE> "The name of the release to publish.")
+        (@arg dist: --dist <DISTRIBUTION>... "The name(s) of the distributions to publish.")
+    )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
