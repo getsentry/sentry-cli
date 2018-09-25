@@ -489,21 +489,38 @@ impl Api {
         project: Option<&str>,
         release: &str,
     ) -> ApiResult<Vec<Artifact>> {
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(release)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/",
-                PathArg(org),
-                PathArg(release)
-            )
-        };
-        self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let path = if let Some(project) = project {
+                format!(
+                    "/projects/{}/{}/releases/{}/files/cursor={}",
+                    PathArg(org),
+                    PathArg(project),
+                    PathArg(release),
+                    QueryArg(cursor),
+                )
+            } else {
+                format!(
+                    "/organizations/{}/releases/{}/files/?cursor={}",
+                    PathArg(org),
+                    PathArg(release),
+                    QueryArg(cursor),
+                )
+            };
+            let resp = self.get(&path)?;
+            let pagination = resp.pagination();
+            rv.extend(
+                resp.convert_rnf::<Vec<Artifact>>(ApiErrorKind::ReleaseNotFound)?
+                    .into_iter(),
+            );
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
