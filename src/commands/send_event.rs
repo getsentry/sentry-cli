@@ -152,7 +152,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         event.tags.insert(key.into(), value.into());
     }
 
-    if !matches.is_present("no-environ") {
+    if !matches.is_present("no_environ") {
         event.extra.insert(
             "environ".into(),
             Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
