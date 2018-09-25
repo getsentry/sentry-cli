@@ -8,6 +8,7 @@ use config::Config;
 use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
 use clap;
+use console::style;
 use dotenv;
 use failure::Error;
 use regex::{Captures, Regex};
@@ -119,14 +120,15 @@ pub fn print_error(err: &Error) {
 
     for (idx, cause) in err.iter_chain().enumerate() {
         match idx {
-            0 => eprintln!("error: {}", cause),
-            _ => eprintln!("  caused by: {}", cause),
+            0 => eprintln!("{} {}", style("error:").red(), cause),
+            _ => eprintln!("  {} {}", style("caused by:").dim(), cause),
         }
     }
 
     if env::var("RUST_BACKTRACE") == Ok("1".into()) {
         eprintln!();
-        eprintln!("{:?}", err.backtrace());
+        let backtrace = format!("{:?}", err.backtrace());
+        eprintln!("{}", style(&backtrace).dim());
     }
 }
 

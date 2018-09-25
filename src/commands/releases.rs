@@ -407,10 +407,16 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
     let heads = if matches.is_present("auto") {
         let commits = find_heads(None, &repos)?;
         if commits.is_empty() {
+            let config = Config::get_current();
+
             bail!(
-                "Could not determine any commits to be associated \
-                 automatically. You will have to explicitly provide \
-                 commits on the command line."
+                "Could not determine any commits to be associated automatically.\n\
+                 Please provide commits explicitly using --commit | -c.\n\
+                 \n\
+                 HINT: Did you add the repo to your organization?\n\
+                 Configure it at {}/settings/{}/repos/",
+                config.get_base_url()?,
+                org
             );
         }
         Some(commits)
