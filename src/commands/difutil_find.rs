@@ -13,7 +13,7 @@ use serde_json;
 use symbolic::common::byteview::ByteView;
 use symbolic::debuginfo::DebugId;
 use symbolic::proguard::ProguardMappingView;
-use uuid::UuidVersion;
+use uuid::Version as UuidVersion;
 use walkdir::WalkDir;
 
 use utils::args::validate_id;

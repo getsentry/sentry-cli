@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use failure::Error;
 use sha1::{Digest, Sha1};
-use uuid::{Uuid, UuidVersion};
+use uuid::Uuid;
 
 pub trait SeekRead: Seek + Read {}
 impl<T: Seek + Read> SeekRead for T {}
@@ -22,12 +22,7 @@ impl TempDir {
     /// Creates a new tempdir
     pub fn new() -> io::Result<TempDir> {
         let mut path = env::temp_dir();
-        path.push(
-            Uuid::new(UuidVersion::Random)
-                .unwrap()
-                .hyphenated()
-                .to_string(),
-        );
+        path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
         fs::create_dir(&path)?;
         Ok(TempDir { path })
     }
@@ -55,12 +50,7 @@ impl TempFile {
     /// Creates a new tempfile.
     pub fn new() -> io::Result<TempFile> {
         let mut path = env::temp_dir();
-        path.push(
-            Uuid::new(UuidVersion::Random)
-                .unwrap()
-                .hyphenated()
-                .to_string(),
-        );
+        path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
 
         let f = fs::OpenOptions::new()
             .read(true)
@@ -77,12 +67,7 @@ impl TempFile {
     /// Assumes ownership over an existing file and moves it to a temp location.
     pub fn take<P: AsRef<Path>>(path: P) -> io::Result<TempFile> {
         let mut destination = env::temp_dir();
-        destination.push(
-            Uuid::new(UuidVersion::Random)
-                .unwrap()
-                .hyphenated()
-                .to_string(),
-        );
+        destination.push(Uuid::new_v4().to_hyphenated_ref().to_string());
 
         fs::rename(&path, &destination)?;
         let f = fs::OpenOptions::new()

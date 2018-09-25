@@ -522,7 +522,7 @@ fn find_uuid_plists(
     //        ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //        └─ DWARF
     //           └─ App
-    let plist_name = format!("{:X}.plist", uuid.hyphenated());
+    let plist_name = format!("{:X}.plist", uuid.to_hyphenated_ref());
     let plist = match source.get_relative(format!("../{}", &plist_name)) {
         Some(plist) => plist,
         None => return None,
