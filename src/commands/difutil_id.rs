@@ -41,7 +41,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let f = DifFile::open_path(path, ty)?;
 
     if !f.is_usable() {
-        println_stderr!(
+        eprintln!(
             "error: debug info file is not usable: {}",
             f.get_problem().unwrap_or("unknown error")
         );

@@ -159,7 +159,7 @@ pub fn init_backtrace() {
 
         match info.location() {
             Some(location) => {
-                println_stderr!(
+                eprintln!(
                     "thread '{}' panicked at '{}': {}:{}\n\n{:?}",
                     thread,
                     msg,
@@ -168,7 +168,7 @@ pub fn init_backtrace() {
                     backtrace
                 );
             }
-            None => println_stderr!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+            None => eprintln!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
         }
 
         #[cfg(feature = "with_client_implementation")]

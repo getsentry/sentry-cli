@@ -77,8 +77,6 @@ extern crate walkdir;
 extern crate which;
 extern crate zip;
 
-mod macros;
-
 pub mod api;
 pub mod commands;
 pub mod config;

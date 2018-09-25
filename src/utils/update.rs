@@ -225,8 +225,8 @@ fn update_nagger_impl() -> Result<(), Error> {
     }
 
     if check.is_outdated() {
-        println_stderr!("");
-        println_stderr!(
+        eprintln!("");
+        eprintln!(
             "{}",
             style(format!(
                 "sentry-cli update to {} is available!",
@@ -234,14 +234,14 @@ fn update_nagger_impl() -> Result<(), Error> {
             )).yellow()
         );
         if is_homebrew_install() {
-            println_stderr!("{}", style("run brew upgrade sentry-cli to update").dim());
+            eprintln!("{}", style("run brew upgrade sentry-cli to update").dim());
         } else if is_npm_install() {
-            println_stderr!(
+            eprintln!(
                 "{}",
                 style("Please use npm/yarn to update sentry-cli").dim()
             )
         } else {
-            println_stderr!("{}", style("run sentry-cli update to update").dim());
+            eprintln!("{}", style("run sentry-cli update to update").dim());
         }
     }
 

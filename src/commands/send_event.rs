@@ -208,7 +208,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     if let Some(id) = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None)) {
         println!("Event sent: {}", id);
     } else {
-        println_stderr!("error: could not send event");
+        eprintln!("error: could not send event");
         return Err(QuietExit(1).into());
     }
 

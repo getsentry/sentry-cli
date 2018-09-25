@@ -246,8 +246,8 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
 
             if !missing_ids.is_empty() {
                 println!();
-                println_stderr!("{}", style("Error: Some symbols could not be found!").red());
-                println_stderr!("The following symbols are still missing:");
+                eprintln!("{}", style("Error: Some symbols could not be found!").red());
+                eprintln!("The following symbols are still missing:");
                 for id in missing_ids {
                     println!("  {}", id);
                 }

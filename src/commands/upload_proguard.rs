@@ -157,7 +157,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 let byteview = ByteView::from_path(path).map_err(SyncFailure::new)?;
                 let mapping = ProguardMappingView::parse(byteview).map_err(SyncFailure::new)?;
                 if !mapping.has_line_info() {
-                    println_stderr!(
+                    eprintln!(
                         "warning: proguard mapping '{}' was ignored because it \
                          does not contain any line information.",
                         path
@@ -173,7 +173,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 }
             }
             Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
-                println_stderr!(
+                eprintln!(
                     "warning: proguard mapping '{}' does not exist. This \
                      might be because the build process did not generate \
                      one (for instance because -dontobfuscate is used)",
@@ -190,7 +190,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     if mappings.is_empty() && matches.is_present("require_one") {
         println!();
-        println_stderr!("{}", style("error: found no mapping files to upload").red());
+        eprintln!("{}", style("error: found no mapping files to upload").red());
         return Err(QuietExit(1).into());
     }
 

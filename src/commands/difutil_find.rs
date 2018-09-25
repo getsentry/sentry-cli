@@ -204,10 +204,10 @@ fn find_ids(
             );
         }
         if !remaining.is_empty() {
-            println_stderr!("");
-            println_stderr!("missing debug information files:");
+            eprintln!("");
+            eprintln!("missing debug information files:");
             for id in &remaining {
-                println_stderr!("  {} ({})", id, id_hint(&id),);
+                eprintln!("  {} ({})", id, id_hint(&id),);
             }
         }
     }
