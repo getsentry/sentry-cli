@@ -1248,7 +1248,7 @@ impl<'a> ApiRequest<'a> {
         url: &str,
         auth: Option<&Auth>,
     ) -> ApiResult<ApiRequest<'a>> {
-        info!("request {} {}", method, url);
+        debug!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
@@ -1290,12 +1290,12 @@ impl<'a> ApiRequest<'a> {
         match *auth {
             Auth::Key(ref key) => {
                 self.handle.username(key)?;
-                info!("using key based authentication");
+                debug!("using key based authentication");
             }
             Auth::Token(ref token) => {
                 self.headers
                     .append(&format!("Authorization: Bearer {}", token))?;
-                info!("using token authentication");
+                debug!("using token authentication");
             }
         }
 
@@ -1313,7 +1313,7 @@ impl<'a> ApiRequest<'a> {
         let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)
             .context(ApiErrorKind::CannotSerializeAsJson)?;
-        info!("sending JSON data ({} bytes)", body_bytes.len());
+        debug!("sending JSON data ({} bytes)", body_bytes.len());
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
         Ok(self)
@@ -1321,7 +1321,7 @@ impl<'a> ApiRequest<'a> {
 
     /// attaches some form data to the request.
     pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
-        info!("sending form data");
+        debug!("sending form data");
         self.handle.httppost(form)?;
         self.body = None;
         Ok(self)
@@ -1329,7 +1329,7 @@ impl<'a> ApiRequest<'a> {
 
     /// enables or disables redirects.  The default is off.
     pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
-        info!("follow redirects: {}", val);
+        debug!("follow redirects: {}", val);
         self.handle.follow_location(val)?;
         Ok(self)
     }
@@ -1345,7 +1345,7 @@ impl<'a> ApiRequest<'a> {
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
         let (status, headers) = send_req(&mut self.handle, out, self.body, self.progress_bar_mode)?;
-        info!("response: {}", status);
+        debug!("response: {}", status);
         Ok(ApiResponse {
             status,
             headers,
@@ -1382,7 +1382,7 @@ impl ApiResponse {
     /// non okay response codes into errors.
     pub fn into_result(self) -> ApiResult<ApiResponse> {
         if let Some(ref body) = self.body {
-            info!("body: {}", String::from_utf8_lossy(body));
+            debug!("body: {}", String::from_utf8_lossy(body));
         }
         if self.ok() {
             return Ok(self);
@@ -1511,7 +1511,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 };
                 format!("{}: {} {}", &caps[1], &caps[2], info)
             });
-            info!("{} {}", if is_response { ">" } else { "<" }, replaced);
+            debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }
     }
 }
@@ -1773,6 +1773,16 @@ pub struct Repo {
     pub status: String,
     #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
+}
+
+impl fmt::Display for Repo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", &self.provider.id, &self.id)?;
+        if let Some(ref url) = self.url {
+            write!(f, " ({})", url)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
