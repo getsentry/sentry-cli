@@ -11,6 +11,7 @@ pub mod enc;
 pub mod event;
 pub mod formatting;
 pub mod fs;
+pub mod http;
 pub mod iter;
 pub mod logging;
 pub mod releases;

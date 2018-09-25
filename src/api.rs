@@ -29,11 +29,12 @@ use serde::Serialize;
 use serde_json;
 use sha1::Digest;
 use symbolic::debuginfo::DebugId;
-use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use config::{Auth, Config};
 use constants::{ARCH, EXT, PLATFORM, VERSION};
 use utils::android::AndroidManifest;
+use utils::http::parse_link_header;
 use utils::sourcemaps::get_sourcemap_reference_from_headers;
 use utils::ui::{capitalize_string, make_byte_progress_bar};
 use utils::xcode::InfoPlist;
@@ -41,8 +42,56 @@ use utils::xcode::InfoPlist;
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
 
+/// Wrapper that escapes arguments for URL query segments.
+pub struct QueryArg<A: fmt::Display>(A);
+
 thread_local! {
     static API: Rc<Api> = Rc::new(Api::new());
+}
+
+#[derive(Debug, Clone)]
+pub struct Link {
+    results: bool,
+    cursor: String,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Pagination {
+    next: Option<Link>,
+}
+
+impl Pagination {
+    pub fn into_next_cursor(self) -> Option<String> {
+        self.next
+            .and_then(|x| if x.results { Some(x.cursor) } else { None })
+    }
+}
+
+impl str::FromStr for Pagination {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Pagination, ()> {
+        let mut rv = Pagination::default();
+        for item in parse_link_header(s) {
+            let target = match item.get("rel") {
+                Some(&"next") => &mut rv.next,
+                _ => continue,
+            };
+
+            *target = Some(Link {
+                results: item.get("results") == Some(&"true"),
+                cursor: item.get("cursor").unwrap_or(&"").to_string(),
+            });
+        }
+
+        Ok(rv)
+    }
+}
+
+impl<A: fmt::Display> fmt::Display for QueryArg<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        utf8_percent_encode(&format!("{}", self.0), QUERY_ENCODE_SET).fmt(f)
+    }
 }
 
 impl<A: fmt::Display> fmt::Display for PathArg<A> {
@@ -687,11 +736,14 @@ impl Api {
     pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
         if let Some(project) = project {
             let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
-            self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
+            Ok(self
+                .get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)?)
         } else {
             let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.get(&path)?
-                .convert_rnf(ApiErrorKind::OrganizationNotFound)
+            Ok(self
+                .get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)?)
         }
     }
 
@@ -1009,19 +1061,56 @@ impl Api {
 
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
-        self.get(&format!("/organizations/{}/projects/", PathArg(org)))?
-            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let resp = self.get(&format!(
+                "/organizations/{}/projects/?cursor={}",
+                PathArg(org),
+                QueryArg(&cursor)
+            ))?;
+            if resp.status() == 404 {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                } else {
+                    break;
+                }
+            }
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Project>>()?.into_iter());
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
     }
 
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
-        let path = format!("/organizations/{}/repos/", PathArg(org));
-        let resp = self.request(Method::Get, &path)?.send()?;
-        if resp.status() == 404 {
-            Ok(vec![])
-        } else {
-            Ok(resp.convert()?)
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let path = format!(
+                "/organizations/{}/repos/?cursor={}",
+                PathArg(org),
+                QueryArg(&cursor)
+            );
+            let resp = self.request(Method::Get, &path)?.send()?;
+            if resp.status() == 404 {
+                break;
+            } else {
+                let pagination = resp.pagination();
+                rv.extend(resp.convert::<Vec<Repo>>()?.into_iter());
+                if let Some(next) = pagination.into_next_cursor() {
+                    cursor = next;
+                } else {
+                    break;
+                }
+            }
         }
+        Ok(rv)
     }
 }
 
@@ -1388,6 +1477,13 @@ impl ApiResponse {
             }
         }
         None
+    }
+
+    /// Returns the pagination info
+    pub fn pagination(&self) -> Pagination {
+        self.get_header("link")
+            .and_then(|x| x.parse().ok())
+            .unwrap_or_else(Default::default)
     }
 
     /// Returns true if the response is JSON.
