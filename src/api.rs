@@ -736,14 +736,12 @@ impl Api {
     pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
         if let Some(project) = project {
             let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
-            Ok(self
-                .get(&path)?
-                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)?)
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
         } else {
             let path = format!("/organizations/{}/releases/", PathArg(org));
-            Ok(self
-                .get(&path)?
-                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)?)
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
         }
     }
 
