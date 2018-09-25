@@ -33,8 +33,8 @@ pub fn parse_link_header<'a>(s: &'a str) -> Vec<HashMap<&'a str, &'a str>> {
     let mut item = HashMap::new();
 
     for caps in LINK_TOKEN_RE.captures_iter(s) {
-        if let Some(link) = caps.name("_link") {
-            item.insert("link", link.as_str());
+        if let Some(link) = caps.name("link") {
+            item.insert("_link", link.as_str());
         } else if let Some(key) = caps.name("key") {
             item.insert(
                 key.as_str(),
