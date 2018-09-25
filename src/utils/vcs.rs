@@ -36,6 +36,12 @@ pub struct CommitSpec {
     pub prev_rev: Option<String>,
 }
 
+impl fmt::Display for CommitSpec {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}@{}", &self.repo, &self.rev)
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 enum VcsProvider {
     Generic,
@@ -205,10 +211,12 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "integrations:bitbucket"
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
+                    debug!("  Got reference URL for repo {}: {}", repo, url);
                     return Ok(url.clone());
                 }
             }
             _ => {
+                debug!("  unknown repository {} skipped", configured_repo);
                 found_non_git = true;
             }
         }
@@ -227,9 +235,19 @@ fn find_matching_rev(
     repos: &[Repo],
     disable_discovery: bool,
 ) -> Result<Option<String>, Error> {
+    macro_rules! log_match {
+        ($ex:expr) => {{
+            let val = $ex;
+            info!("  -> found matching revision {}", val);
+            val
+        }};
+    }
+
+    info!("Resolving {} ({})", &reference, spec);
+
     let r = match reference {
         GitReference::Commit(commit) => {
-            return Ok(Some(commit.to_string()));
+            return Ok(Some(log_match!(commit.to_string())));
         }
         GitReference::Symbolic(r) => r,
     };
@@ -241,29 +259,39 @@ fn find_matching_rev(
     };
 
     let reference_url = find_reference_url(&spec.repo, repos)?;
+    debug!("  Looking for reference URL {}", &reference_url);
 
     // direct reference in root repository found.  If we are in discovery
     // mode we want to also check for matching URLs.
     if_chain! {
         if let Ok(remote) = repo.find_remote("origin");
         if let Some(url) = remote.url();
-        if !discovery || is_matching_url(url, &reference_url);
         then {
-            let head = repo.revparse_single(r)?;
-            return Ok(Some(head.id().to_string()));
+            if !discovery || is_matching_url(url, &reference_url) {
+                debug!("  found match: {} == {}", url, &reference_url);
+                let head = repo.revparse_single(r)?;
+                return Ok(Some(log_match!(head.id().to_string())));
+            } else {
+                debug!("  not a match: {} != {}", url, &reference_url);
+            }
         }
     }
 
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
+            debug!("  found submodule with URL {}", submodule_url);
             if is_matching_url(submodule_url, &reference_url) {
+                debug!(
+                    "  found submodule match: {} == {}",
+                    submodule_url, &reference_url
+                );
                 // heads on submodules is easier so let's start with that
                 // because that does not require the submodule to be
                 // checked out.
                 if r == "HEAD" {
                     if let Some(head_oid) = submodule.head_id() {
-                        return Ok(Some(head_oid.to_string()));
+                        return Ok(Some(log_match!(head_oid.to_string())));
                     }
                 }
 
@@ -271,12 +299,18 @@ fn find_matching_rev(
                 // it to be checked out.
                 if let Ok(subrepo) = submodule.open() {
                     let head = subrepo.revparse_single(r)?;
-                    return Ok(Some(head.id().to_string()));
+                    return Ok(Some(log_match!(head.id().to_string())));
                 }
+            } else {
+                debug!(
+                    "  not a submodule match: {} != {}",
+                    submodule_url, &reference_url
+                );
             }
         }
     }
 
+    info!("  -> no matching revision found");
     Ok(None)
 }
 
