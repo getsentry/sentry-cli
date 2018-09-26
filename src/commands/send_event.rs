@@ -14,7 +14,13 @@ use utils::releases::detect_release_name;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")
-        .arg(
+        .long_about(
+            "Send a manual event to Sentry.{n}{n}\
+             NOTE: This command will validate input parameters and attempt to send an event to \
+             Sentry. Due to network errors, rate limits or sampling the event is not guaranteed to \
+             actually arrive. Check debug output for transmission errors by passing --log-level=\
+             debug or setting `SENTRY_LOG_LEVEL=debug`.",
+        ).arg(
             Arg::with_name("level")
                 .value_name("LEVEL")
                 .long("level")
