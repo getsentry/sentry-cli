@@ -11,7 +11,6 @@ use username::get_user_name;
 use config::Config;
 use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use utils::releases::detect_release_name;
-use utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")
@@ -205,12 +204,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         attach_logfile(&mut event, logfile, false)?;
     }
 
-    if let Some(id) = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None)) {
-        println!("Event sent: {}", id);
-    } else {
-        eprintln!("error: could not send event");
-        return Err(QuietExit(1).into());
-    }
+    let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
+    println!("{}", id);
 
     Ok(())
 }

@@ -150,9 +150,8 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
         ..Default::default()
     });
 
-    if let Some(id) = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None)) {
-        println!("{}", id);
-    }
+    let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
+    println!("{}", id);
 
     Ok(())
 }
