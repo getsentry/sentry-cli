@@ -25,27 +25,42 @@ before_install:
 
 matrix:
   allow_failures:
-    - name: format-check
-    - name: lint
+    - name: "check: format"
+    - name: "check: lint"
 
   include:
-    # Tests and linters
-    - name: format-check
+    - name: "check: format"
       language: rust
       install: rustup component add rustfmt-preview
       script: make format-check
 
-    - name: lint
+    - name: "check: lint"
       language: rust
       install: rustup component add clippy-preview
       script: make lint
 
-    - name: tests
+    - name: "test: rust"
       language: rust
       script: make test
 
-    # Linux 32-bit statically linked binary
-    - os: linux
+    - name: "test: node 4"
+      os: linux
+      language: node_js
+      node_js: "4"
+      install: true
+      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+      script: npm install && npm test
+
+    - name: "test: node 10"
+      os: linux
+      language: node_js
+      node_js: "10"
+      install: true
+      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+      script: npm install && npm test
+
+    - name: "build: linux x86"
+      os: linux
       sudo: required
       env:
         - TARGET=i686-unknown-linux-musl
@@ -56,8 +71,8 @@ matrix:
                       -n "sentry-cli-Linux-i686"
                       "./target/${TARGET}/release/sentry-cli"
 
-    # Linux 64-bit statically linked binary
-    - os: linux
+    - name: "build: linux x86_64"
+      os: linux
       sudo: required
       env:
         - TARGET=x86_64-unknown-linux-musl
@@ -68,8 +83,9 @@ matrix:
                       -n "sentry-cli-Linux-x86_64"
                       "./target/${TARGET}/release/sentry-cli"
 
-    # Build on older OS X for more portable binaries
-    - os: osx
+    - name: "build: macOS x86_64"
+      os: osx
+      # Build on older OS X for more portable binaries
       osx_image: xcode8
       language: rust
       env:
@@ -82,24 +98,8 @@ matrix:
                       -n "sentry-cli-Darwin-x86_64"
                       "./target/release/sentry-cli"
 
-    # Test minimum js
-    - os: linux
-      language: node_js
-      node_js: "4"
-      install: true
-      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
-      script: npm install && npm test
-
-    # Test latest js
-    - os: linux
-      language: node_js
-      node_js: "8"
-      install: true
-      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
-      script: npm install && npm test
-
-    # Build the @sentry/cli NPM package
-    - os: linux
+    - name: "build: NPM package"
+      os: linux
       language: node_js
       node_js: "8"
       install: true
