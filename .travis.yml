@@ -24,6 +24,10 @@ before_install:
   - npm install -g @zeus-ci/cli
 
 matrix:
+  allow_failures:
+    - name: format-check
+    - name: lint
+
   include:
     # Tests and linters
     - name: format-check
