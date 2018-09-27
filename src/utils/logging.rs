@@ -24,6 +24,11 @@ pub fn set_max_level(level: log::LevelFilter) {
 
 impl log::Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
+        if max_level() <= log::LevelFilter::Debug {
+            if metadata.target() == "tokio_reactor" || metadata.target().starts_with("hyper::proto::") {
+                return false;
+            }
+        }
         metadata.level() <= max_level()
     }
 
@@ -33,7 +38,7 @@ impl log::Log for Logger {
         }
 
         let level = record.metadata().level();
-        let msg = format!("[{}] {} {}", level, record.target(), record.args());
+        let msg = format!("[{}] {}: {}", level, record.target().split("::").next().unwrap_or(""), record.args());
         let styled = style(msg).fg(match level {
             log::Level::Error | log::Level::Warn => Color::Red,
             log::Level::Info => Color::Cyan,
