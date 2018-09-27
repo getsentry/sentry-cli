@@ -1,4 +1,5 @@
 ---
+minVersion: '0.5.1'
 github:
   owner: getsentry
   repo: sentry-cli
@@ -11,9 +12,9 @@ targets:
       class SentryCli < Formula
         desc "This is a Sentry command-line client for some generic tasks."
         homepage "https://github.com/getsentry/sentry-cli"
-        url "https://github.com/getsentry/sentry-cli/releases/download/${ref}/sentry-cli-Darwin-x86_64"
-        version "${ref}"
-        sha256 "${checksums['sentry-cli-Darwin-x86_64']}"
+        url "https://github.com/getsentry/sentry-cli/releases/download/{{version}}/sentry-cli-Darwin-x86_64"
+        version "{{version}}"
+        sha256 "{{checksums.sentry-cli-Darwin-x86_64}}"
 
         def install
           mv "sentry-cli-Darwin-x86_64", "sentry-cli"
@@ -25,3 +26,16 @@ targets:
         end
       end
   - name: github
+  - name: gcs
+    bucket: sentry-sdk-assets
+    paths:
+      - path: /sentry-cli/{{version}}/
+        maxCacheAge: 2592000
+      - path: /sentry-cli/latest/
+        maxCacheAge: 600
+  - name: registry
+    type: app
+    urlTemplate: "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}"
+    includeNames: /^.*sentry-cli.*$/
+    config:
+      canonical: "app:sentry-cli"
