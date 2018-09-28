@@ -26,8 +26,10 @@ targets:
         end
       end
   - name: github
+    includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
   - name: gcs
     bucket: sentry-sdk-assets
+    includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
     paths:
       - path: /sentry-cli/{{version}}/
         metadata:
