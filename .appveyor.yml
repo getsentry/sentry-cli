@@ -42,7 +42,7 @@ test_script:
   - cargo run --release -- releases list
 
 on_success:
-  - zeus upload -t "application/octet-stream" -n sentry-cli-Windows-%arch%.exe .\target\release\sentry-cli.exe
+  - zeus upload -t "application/octet-stream" -n sentry-cli-Windows-%arch%.exe .\target\release\sentry-cli.exe || [[ ! "$APPVEYOR_REPO_BRANCH" =~ ^release/ ]]
   - zeus job update --status=passed
 
 on_failure:
