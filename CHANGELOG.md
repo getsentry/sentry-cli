@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.36.1
+
+* Fixes a bug that prevented listing and creating releases
+
 ## sentry-cli 1.36.0
 
 * Show project IDs in project listing (#384)
