@@ -40,6 +40,6 @@ targets:
   - name: registry
     type: app
     urlTemplate: "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}"
-    includeNames: /^sentry-cli-.*$/
+    includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
     config:
       canonical: "app:sentry-cli"
