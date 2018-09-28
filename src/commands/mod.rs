@@ -215,6 +215,10 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();
+    info!(
+        "Loaded config from {}",
+        Config::get_current().get_filename().display()
+    );
 
     run_command(&matches)
 }
