@@ -1,5 +1,5 @@
 ---
-minVersion: '0.5.1'
+minVersion: '0.6.0'
 github:
   owner: getsentry
   repo: sentry-cli
@@ -30,12 +30,14 @@ targets:
     bucket: sentry-sdk-assets
     paths:
       - path: /sentry-cli/{{version}}/
-        maxCacheAge: 2592000
+        metadata:
+          cacheControl: 'public, max-age=2592000'
       - path: /sentry-cli/latest/
-        maxCacheAge: 600
+        metadata:
+          cacheControl: 'public, max-age=600'
   - name: registry
     type: app
     urlTemplate: "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}"
-    includeNames: /^.*sentry-cli.*$/
+    includeNames: /^sentry-cli-.*$/
     config:
       canonical: "app:sentry-cli"
