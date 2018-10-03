@@ -18,22 +18,19 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("PATH")
                 .required(true)
                 .help("The path to a sourcemap that should be uploaded."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("bundle")
                 .long("bundle")
                 .value_name("PATH")
                 .required(true)
                 .help("The path to a bundle that should be uploaded."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("release")
                 .long("release")
                 .value_name("RELEASE")
                 .required(true)
                 .help("The name of the release to publish."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
@@ -65,7 +62,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let mut processor = SourceMapProcessor::new();
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
-    processor.rewrite(&vec![base.to_str().unwrap()])?;
+    processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
     let release = api.new_release(

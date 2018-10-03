@@ -6,13 +6,14 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use dirs;
 use failure::Error;
 use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde_json;
 use symbolic::common::byteview::ByteView;
 use symbolic::debuginfo::DebugId;
 use symbolic::proguard::ProguardMappingView;
-use uuid::UuidVersion;
+use uuid::Version as UuidVersion;
 use walkdir::WalkDir;
 
 use utils::args::validate_id;
@@ -45,31 +46,26 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
                 ),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no_well_known")
                 .long("no-well-known")
                 .help("Do not look for debug symbols in well known locations."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no_cwd")
                 .long("no-cwd")
                 .help("Do not look for debug symbols in the current working directory."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("paths")
                 .long("path")
                 .short("p")
                 .multiple(true)
                 .number_of_values(1)
                 .help("Add a path to search recursively for debug info files."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("json")
                 .long("json")
                 .help("Format outputs as JSON."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("ids")
                 .index(1)
                 .value_name("ID")
@@ -93,10 +89,12 @@ fn id_hint(id: &DebugId) -> &'static str {
     }
 }
 
+// TODO: Reduce complexity of this function
+#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
 fn find_ids(
-    paths: HashSet<PathBuf>,
-    types: HashSet<DifType>,
-    ids: HashSet<DebugId>,
+    paths: &HashSet<PathBuf>,
+    types: &HashSet<DifType>,
+    ids: &HashSet<DebugId>,
     as_json: bool,
 ) -> Result<bool, Error> {
     let mut remaining = ids.clone();
@@ -108,7 +106,7 @@ fn find_ids(
 
     let iter = paths
         .iter()
-        .flat_map(|p| WalkDir::new(p))
+        .flat_map(WalkDir::new)
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file());
 
@@ -184,11 +182,8 @@ fn find_ids(
         }
 
         for (id, ty) in found {
-            found_files.push(DifMatch {
-                ty: ty,
-                id: id,
-                path: dirent.path().to_path_buf(),
-            });
+            let path = dirent.path().to_path_buf();
+            found_files.push(DifMatch { ty, id, path });
             remaining.remove(&id);
             proguard_uuids.remove(&id.uuid());
         }
@@ -198,7 +193,7 @@ fn find_ids(
 
     if as_json {
         serde_json::to_writer_pretty(&mut io::stdout(), &found_files)?;
-        println!("");
+        println!();
     } else {
         for m in found_files {
             println!(
@@ -209,10 +204,10 @@ fn find_ids(
             );
         }
         if !remaining.is_empty() {
-            println_stderr!("");
-            println_stderr!("missing debug information files:");
+            eprintln!("");
+            eprintln!("missing debug information files:");
             for id in &remaining {
-                println_stderr!("  {} ({})", id, id_hint(&id),);
+                eprintln!("  {} ({})", id, id_hint(&id),);
             }
         }
     }
@@ -243,7 +238,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     if_chain! {
         if with_well_known;
         if types.contains(&DifType::Dsym);
-        if let Some(path) = env::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
+        if let Some(path) = dirs::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
         if path.is_dir();
         then {
             paths.insert(path);
@@ -275,7 +270,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         return Ok(());
     }
 
-    if !find_ids(paths, types, ids, matches.is_present("json"))? {
+    if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
         return Err(QuietExit(1).into());
     }
 

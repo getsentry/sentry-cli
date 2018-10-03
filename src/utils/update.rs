@@ -71,7 +71,7 @@ pub struct LastUpdateCheck {
 }
 
 impl LastUpdateCheck {
-    pub fn update_for_info(&mut self, ui: SentryCliUpdateInfo) {
+    pub fn update_for_info(&mut self, ui: &SentryCliUpdateInfo) {
         self.last_check_timestamp = Some(Utc::now());
         self.last_check_version = Some(ui.current_version().to_string());
         self.last_fetched_version = Some(ui.latest_version().to_string());
@@ -147,7 +147,7 @@ impl SentryCliUpdateInfo {
         if is_homebrew_install() {
             println!("This installation of sentry-cli is managed through homebrew");
             println!("Please use homebrew to update sentry-cli:");
-            println!("");
+            println!();
             println!("{} brew upgrade sentry-cli", style("$").dim());
             return Err(QuietExit(1).into());
         }
@@ -215,18 +215,22 @@ fn update_nagger_impl() -> Result<(), Error> {
     }
 
     if check.should_run_check() {
+        info!("Running update nagger update check");
         let ui = get_latest_sentrycli_release()?;
         if ui.have_version_info() {
-            check.update_for_info(ui);
+            check.update_for_info(&ui);
             let mut f = fs::File::create(&path)?;
             serde_json::to_writer_pretty(&mut f, &check)?;
             f.write_all(b"\n")?;
         }
+    } else {
+        info!("Skipping update nagger update check");
     }
 
     if check.is_outdated() {
-        println_stderr!("");
-        println_stderr!(
+        info!("Update nagger determined outdated installation");
+        eprintln!("");
+        eprintln!(
             "{}",
             style(format!(
                 "sentry-cli update to {} is available!",
@@ -234,14 +238,14 @@ fn update_nagger_impl() -> Result<(), Error> {
             )).yellow()
         );
         if is_homebrew_install() {
-            println_stderr!("{}", style("run brew upgrade sentry-cli to update").dim());
+            eprintln!("{}", style("run brew upgrade sentry-cli to update").dim());
         } else if is_npm_install() {
-            println_stderr!(
+            eprintln!(
                 "{}",
                 style("Please use npm/yarn to update sentry-cli").dim()
             )
         } else {
-            println_stderr!("{}", style("run sentry-cli update to update").dim());
+            eprintln!("{}", style("run sentry-cli update to update").dim());
         }
     }
 
@@ -261,6 +265,7 @@ pub fn run_sentrycli_update_nagger() {
 
     // Do not run update nagger if stdout/stdin is not a terminal
     if !user_attended() {
+        debug!("skipping update nagger because session is not attended");
         return;
     }
 

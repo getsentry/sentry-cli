@@ -26,7 +26,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
     println!("This helps you signing in your sentry-cli with an authentication token.");
     println!("If you do not yet have a token ready we can bring up a browser for you");
     println!("to create a token now.");
-    println!("");
+    println!();
     println!(
         "Sentry server: {}",
         Url::parse(&config.get_base_url()?)?
@@ -34,10 +34,8 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
             .unwrap_or("<unknown>")
     );
 
-    if prompt_to_continue("Open browser now?")? {
-        if open::that(&token_url).is_err() {
-            println!("Cannot open browser. Please manually go to {}", &token_url);
-        }
+    if prompt_to_continue("Open browser now?")? && open::that(&token_url).is_err() {
+        println!("Cannot open browser. Please manually go to {}", &token_url);
     }
 
     let mut token;
@@ -62,7 +60,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     update_config(&config, &token)?;
-    println!("");
+    println!();
     println!("Stored token in {}", config.get_filename().display());
 
     Ok(())

@@ -23,9 +23,9 @@ pub enum DifType {
 impl fmt::Display for DifType {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            &DifType::Dsym => write!(f, "dsym"),
-            &DifType::Breakpad => write!(f, "breakpad"),
-            &DifType::Proguard => write!(f, "proguard"),
+            DifType::Dsym => write!(f, "dsym"),
+            DifType::Breakpad => write!(f, "breakpad"),
+            DifType::Proguard => write!(f, "proguard"),
         }
     }
 }
@@ -115,48 +115,47 @@ impl DifFile {
 
     pub fn ty(&self) -> DifType {
         match self {
-            &DifFile::Object(ref fat) => match fat.kind() {
+            DifFile::Object(ref fat) => match fat.kind() {
                 ObjectKind::MachO => DifType::Dsym,
                 ObjectKind::Breakpad => DifType::Breakpad,
                 _ => unreachable!(),
             },
-            &DifFile::Proguard(..) => DifType::Proguard,
+            DifFile::Proguard(..) => DifType::Proguard,
         }
     }
 
     pub fn variants(&self) -> BTreeMap<DebugId, Option<&'static str>> {
         match self {
-            &DifFile::Object(ref fat) => fat
+            DifFile::Object(ref fat) => fat
                 .objects()
                 .filter_map(|result| result.ok())
                 .filter_map(|object| {
                     object
                         .id()
                         .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
-                })
-                .collect(),
-            &DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
+                }).collect(),
+            DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
     }
 
     pub fn ids(&self) -> Vec<DebugId> {
         match self {
-            &DifFile::Object(ref fat) => fat
+            DifFile::Object(ref fat) => fat
                 .objects()
                 .filter_map(|result| result.ok())
                 .filter_map(|object| object.id())
                 .collect(),
-            &DifFile::Proguard(ref pg) => vec![pg.uuid().into()],
+            DifFile::Proguard(ref pg) => vec![pg.uuid().into()],
         }
     }
 
     pub fn is_usable(&self) -> bool {
         match self {
-            &DifFile::Object(ref fat) => fat
+            DifFile::Object(ref fat) => fat
                 .objects()
                 .filter_map(|result| result.ok())
                 .any(|object| object.debug_kind().is_some()),
-            &DifFile::Proguard(ref pg) => pg.has_line_info(),
+            DifFile::Proguard(ref pg) => pg.has_line_info(),
         }
     }
 
@@ -165,8 +164,8 @@ impl DifFile {
             None
         } else {
             Some(match self {
-                &DifFile::Object(..) => "missing DWARF debug info",
-                &DifFile::Proguard(..) => "missing line information",
+                DifFile::Object(..) => "missing DWARF debug info",
+                DifFile::Proguard(..) => "missing line information",
             })
         }
     }

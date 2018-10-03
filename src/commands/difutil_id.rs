@@ -21,13 +21,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Explicitly set the type of the debug info file. \
                      This should not be needed as files are auto detected.",
                 ),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("json")
                 .long("json")
                 .help("Format outputs as JSON."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("path")
                 .index(1)
                 .required(true)
@@ -43,7 +41,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let f = DifFile::open_path(path, ty)?;
 
     if !f.is_usable() {
-        println_stderr!(
+        eprintln!(
             "error: debug info file is not usable: {}",
             f.get_problem().unwrap_or("unknown error")
         );
@@ -54,11 +52,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         for id in f.ids() {
             println!("{}", id);
         }
-    } else {
-        if matches.is_present("json") {
-            serde_json::to_writer_pretty(&mut io::stdout(), &f.ids())?;
-            println!("");
-        }
+    } else if matches.is_present("json") {
+        serde_json::to_writer_pretty(&mut io::stdout(), &f.ids())?;
+        println!();
     }
 
     Ok(())

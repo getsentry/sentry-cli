@@ -17,22 +17,19 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("STATUS")
                 .possible_values(&["resolved", "muted", "unresolved"])
                 .help("Select all issues matching a given status."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("all")
                 .long("all")
                 .short("a")
                 .help("Select all issues (this might be limited)."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("id")
                 .multiple(true)
                 .number_of_values(1)
                 .short("i")
                 .long("id")
                 .help("Select the issue with the given ID."),
-        )
-        .subcommand(
+        ).subcommand(
             App::new("resolve")
                 .about("Bulk resolve all selected issues.")
                 .arg(
@@ -41,8 +38,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         .short("n")
                         .help("Only select issues in the next release."),
                 ),
-        )
-        .subcommand(App::new("mute").about("Bulk mute all selected issues."))
+        ).subcommand(App::new("mute").about("Bulk mute all selected issues."))
         .subcommand(App::new("unresolve").about("Bulk unresolve all selected issues."))
 }
 
@@ -96,11 +92,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         } else {
             changes.new_status = Some("resolved".into());
         }
-    } else if let Some(_) = matches.subcommand_matches("mute") {
+    } else if matches.subcommand_matches("mute").is_some() {
         changes.new_status = Some("muted".into());
-    } else if let Some(_) = matches.subcommand_matches("unresolve") {
+    } else if matches.subcommand_matches("unresolve").is_some() {
         changes.new_status = Some("unresolved".into());
     }
 
-    return execute_change(&org, &project, &filter, &changes);
+    execute_change(&org, &project, &filter, &changes)
 }

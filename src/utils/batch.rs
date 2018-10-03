@@ -48,9 +48,9 @@ where
 {
     pub fn new(items: &'data [T], max_size: u64, max_items: u64) -> Batches<'data, T> {
         Batches {
-            items: items,
-            max_size: max_size,
-            max_items: max_items,
+            items,
+            max_size,
+            max_items,
             index: 0,
         }
     }

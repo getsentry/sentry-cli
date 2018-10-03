@@ -5,6 +5,7 @@ use std::str::{self, FromStr};
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
+use dirs;
 use failure::{err_msg, Error};
 use indicatif::{ProgressBar, ProgressStyle};
 use symbolic::common::types::{ObjectClass, ObjectKind};
@@ -29,8 +30,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .index(1),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("types")
                 .long("type")
                 .short("t")
@@ -42,19 +42,16 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Only consider debug information files of the given \
                      type.  By default, all types are considered.",
                 ),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no_executables")
                 .long("no-bin")
                 .help("Exclude executables and libraries and look for debug symbols only."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no_debug_only")
                 .long("no-debug")
                 .help("Exclude files containing only stripped debugging info.")
                 .conflicts_with("no_executables"),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("ids")
                 .value_name("ID")
                 .long("id")
@@ -62,13 +59,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .validator(validate_id)
                 .multiple(true)
                 .number_of_values(1),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("require_all")
                 .long("require-all")
                 .help("Errors if not all identifiers specified with --id could be found."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("symbol_maps")
                 .long("symbol-maps")
                 .value_name("PATH")
@@ -78,18 +73,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      iTunes Connect.  This requires the dsymutil tool to be \
                      available.",
                 ),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("derived_data")
                 .long("derived-data")
                 .help("Search for debug symbols in Xcode's derived data."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no_zips")
                 .long("no-zips")
                 .help("Do not search in ZIP files."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("info_plist")
                 .long("info-plist")
                 .value_name("PATH")
@@ -100,13 +92,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      and build in Sentry.  Note that if you provide the plist \
                      explicitly it must already be processed.",
                 ),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("no_reprocessing")
                 .long("no-reprocessing")
                 .help("Do not trigger reprocessing after uploading."),
-        )
-        .arg(
+        ).arg(
             Arg::with_name("force_foreground")
                 .long("force-foreground")
                 .help(
@@ -184,7 +174,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
 
     // Add a path to XCode's DerivedData, if configured
     if matches.is_present("derived_data") {
-        let derived_data = env::home_dir().map(|x| x.join(DERIVED_DATA));
+        let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA));
         if let Some(path) = derived_data {
             if path.is_dir() {
                 upload.search_path(path);
@@ -222,7 +212,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
             progress.finish_and_clear();
 
             if let Some(association) = response {
-                if association.associated_dsyms.len() == 0 {
+                if association.associated_dsyms.is_empty() {
                     println!("{} No new debug symbols to associate.", style(">").dim());
                 } else {
                     println!(
@@ -255,9 +245,9 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
             let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
 
             if !missing_ids.is_empty() {
-                println!("");
-                println_stderr!("{}", style("Error: Some symbols could not be found!").red());
-                println_stderr!("The following symbols are still missing:");
+                println!();
+                eprintln!("{}", style("Error: Some symbols could not be found!").red());
+                eprintln!("The following symbols are still missing:");
                 for id in missing_ids {
                     println!("  {}", id);
                 }

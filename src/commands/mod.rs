@@ -3,7 +3,7 @@
 use std::env;
 use std::process;
 
-use clap::{App, AppSettings, Arg};
+use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::Error;
 
 use api::Api;
@@ -12,7 +12,7 @@ use constants::VERSION;
 use utils::system::{print_error, QuietExit};
 use utils::update::run_sentrycli_update_nagger;
 
-const ABOUT: &'static str = "
+const ABOUT: &str = "
 Command line utility for Sentry.
 
 This tool helps you manage remote resources on a Sentry server like
@@ -49,7 +49,7 @@ macro_rules! each_subcommand {
 }
 
 // commands we want to run the update nagger on
-const UPDATE_NAGGER_CMDS: &'static [&'static str] = &[
+const UPDATE_NAGGER_CMDS: &[&str] = &[
     "releases", "issues", "repos", "projects", "info", "login", "difutil",
 ];
 
@@ -102,52 +102,34 @@ fn preexecute_hooks() -> Result<bool, Error> {
     }
 }
 
-/// Given an argument vector and a `Config` this executes the
-/// command line and returns the result.
-pub fn execute(args: Vec<String>) -> Result<(), Error> {
-    let mut config = Config::from_cli_config()?;
-
-    // special case for the xcode integration for react native.  For more
-    // information see commands/react_native_xcode.rs
-    if preexecute_hooks()? {
-        return Ok(());
+fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<(), Error> {
+    if let Some(url) = matches.value_of("url") {
+        config.set_base_url(url);
     }
 
-    let mut app =
-        App::new("sentry-cli")
-            .help_message("Print this help message.")
-            .version(VERSION)
-            .version_message("Print version information.")
-            .about(ABOUT)
-            .max_term_width(100)
-            .setting(AppSettings::VersionlessSubcommands)
-            .setting(AppSettings::SubcommandRequiredElseHelp)
-            .global_setting(AppSettings::UnifiedHelpMessage)
-            .arg(Arg::with_name("url").value_name("URL").long("url").help(
-                "Fully qualified URL to the Sentry server.{n}[defaults to https://sentry.io/]",
-            ))
-            .arg(
-                Arg::with_name("auth_token")
-                    .value_name("AUTH_TOKEN")
-                    .long("auth-token")
-                    .help("Use the given Sentry auth token."),
-            )
-            .arg(
-                Arg::with_name("api_key")
-                    .value_name("API_KEY")
-                    .long("api-key")
-                    .help("The given Sentry API key."),
-            )
-            .arg(
-                Arg::with_name("log_level")
-                    .value_name("LOG_LEVEL")
-                    .long("log-level")
-                    .help(
-                        "Set the log output verbosity.{n}\
-                         [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]",
-                    ),
-            );
+    if let Some(api_key) = matches.value_of("api_key") {
+        config.set_auth(Auth::Key(api_key.to_owned()));
+    }
 
+    if let Some(auth_token) = matches.value_of("auth_token") {
+        config.set_auth(Auth::Token(auth_token.to_owned()));
+    }
+
+    if let Some(level_str) = matches.value_of("log_level") {
+        match level_str.parse() {
+            Ok(level) => {
+                config.set_log_level(level);
+            }
+            Err(_) => {
+                bail!("Unknown log level: {}", level_str);
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     macro_rules! add_subcommand {
         ($name:ident) => {{
             let mut cmd = $name::make_app(App::new(stringify!($name).replace("_", "-").as_str()));
@@ -160,33 +142,13 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
             app = app.subcommand(cmd);
         }};
     }
+
     each_subcommand!(add_subcommand);
+    app
+}
 
-    let matches = app.get_matches_from_safe(args)?;
-
-    if let Some(url) = matches.value_of("url") {
-        config.set_base_url(url);
-    }
-    if let Some(api_key) = matches.value_of("api_key") {
-        config.set_auth(Auth::Key(api_key.to_owned()));
-    }
-    if let Some(auth_token) = matches.value_of("auth_token") {
-        config.set_auth(Auth::Token(auth_token.to_owned()));
-    }
-    if let Some(level_str) = matches.value_of("log_level") {
-        match level_str.parse() {
-            Ok(level) => {
-                config.set_log_level(level);
-            }
-            Err(_) => {
-                bail!("Unknown log level: {}", level_str);
-            }
-        }
-    }
-
-    // bind the config to the process and fetch an immutable reference to it
-    config.bind_to_process();
-
+#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
+fn run_command(matches: &ArgMatches) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
@@ -199,13 +161,71 @@ pub fn execute(args: Vec<String>) -> Result<(), Error> {
             }
         }};
     }
+
     each_subcommand!(execute_subcommand);
     unreachable!();
 }
 
+/// Given an argument vector and a `Config` this executes the
+/// command line and returns the result.
+pub fn execute(args: &[String]) -> Result<(), Error> {
+    let mut config = Config::from_cli_config()?;
+
+    // special case for the xcode integration for react native.  For more
+    // information see commands/react_native_xcode.rs
+    if preexecute_hooks()? {
+        return Ok(());
+    }
+
+    let mut app = App::new("sentry-cli")
+        .help_message("Print this help message.")
+        .version(VERSION)
+        .version_message("Print version information.")
+        .about(ABOUT)
+        .max_term_width(100)
+        .setting(AppSettings::VersionlessSubcommands)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .global_setting(AppSettings::UnifiedHelpMessage)
+        .arg(Arg::with_name("url").value_name("URL").long("url").help(
+            "Fully qualified URL to the Sentry server.{n}\
+             [defaults to https://sentry.io/]",
+        )).arg(
+            Arg::with_name("auth_token")
+                .value_name("AUTH_TOKEN")
+                .long("auth-token")
+                .help("Use the given Sentry auth token."),
+        ).arg(
+            Arg::with_name("api_key")
+                .value_name("API_KEY")
+                .long("api-key")
+                .help("The given Sentry API key."),
+        ).arg(
+            Arg::with_name("log_level")
+                .value_name("LOG_LEVEL")
+                .long("log-level")
+                .help(
+                    "Set the log output verbosity.{n}\
+                     [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]",
+                ),
+        );
+
+    app = add_commands(app);
+    let matches = app.get_matches_from_safe(args)?;
+    configure_args(&mut config, &matches)?;
+
+    // bind the config to the process and fetch an immutable reference to it
+    config.bind_to_process();
+    info!(
+        "Loaded config from {}",
+        Config::get_current().get_filename().display()
+    );
+
+    run_command(&matches)
+}
+
 fn run() -> Result<(), Error> {
     prepare_environment();
-    match execute(env::args().collect()) {
+    match execute(&env::args().collect::<Vec<String>>()) {
         Ok(()) => Ok(()),
         Err(err) => {
             // if the user hit an error, it might be time to run the update

@@ -54,6 +54,12 @@ impl TableRow {
     }
 }
 
+impl Default for TableRow {
+    fn default() -> Self {
+        TableRow::new()
+    }
+}
+
 impl Table {
     pub fn new() -> Table {
         Table {
@@ -92,5 +98,11 @@ impl Table {
             tbl.add_row(row.make_row());
         }
         tbl.print_tty(false);
+    }
+}
+
+impl Default for Table {
+    fn default() -> Self {
+        Table::new()
     }
 }

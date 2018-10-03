@@ -29,11 +29,12 @@ use serde::Serialize;
 use serde_json;
 use sha1::Digest;
 use symbolic::debuginfo::DebugId;
-use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET};
+use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use config::{Auth, Config};
 use constants::{ARCH, EXT, PLATFORM, VERSION};
 use utils::android::AndroidManifest;
+use utils::http::parse_link_header;
 use utils::sourcemaps::get_sourcemap_reference_from_headers;
 use utils::ui::{capitalize_string, make_byte_progress_bar};
 use utils::xcode::InfoPlist;
@@ -41,8 +42,56 @@ use utils::xcode::InfoPlist;
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
 
+/// Wrapper that escapes arguments for URL query segments.
+pub struct QueryArg<A: fmt::Display>(A);
+
 thread_local! {
     static API: Rc<Api> = Rc::new(Api::new());
+}
+
+#[derive(Debug, Clone)]
+pub struct Link {
+    results: bool,
+    cursor: String,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct Pagination {
+    next: Option<Link>,
+}
+
+impl Pagination {
+    pub fn into_next_cursor(self) -> Option<String> {
+        self.next
+            .and_then(|x| if x.results { Some(x.cursor) } else { None })
+    }
+}
+
+impl str::FromStr for Pagination {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Pagination, ()> {
+        let mut rv = Pagination::default();
+        for item in parse_link_header(s) {
+            let target = match item.get("rel") {
+                Some(&"next") => &mut rv.next,
+                _ => continue,
+            };
+
+            *target = Some(Link {
+                results: item.get("results") == Some(&"true"),
+                cursor: item.get("cursor").unwrap_or(&"").to_string(),
+            });
+        }
+
+        Ok(rv)
+    }
+}
+
+impl<A: fmt::Display> fmt::Display for QueryArg<A> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        utf8_percent_encode(&format!("{}", self.0), QUERY_ENCODE_SET).fmt(f)
+    }
 }
 
 impl<A: fmt::Display> fmt::Display for PathArg<A> {
@@ -275,6 +324,12 @@ pub struct ApiResponse {
     body: Option<Vec<u8>>,
 }
 
+impl Default for Api {
+    fn default() -> Self {
+        Api::new()
+    }
+}
+
 impl Api {
     /// Creates a new API access helper.  For as long as it lives HTTP
     /// keepalive can be used.  When the object is recreated new
@@ -304,7 +359,7 @@ impl Api {
     /// Similar to `new` but uses a specific config.
     pub fn with_config(config: Arc<Config>) -> Api {
         Api {
-            config: config,
+            config,
             shared_handle: RefCell::new(curl::easy::Easy::new()),
         }
     }
@@ -319,6 +374,7 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     pub fn request<'a>(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
         handle.reset();
@@ -336,9 +392,7 @@ impl Api {
             (
                 Cow::Owned(match self.config.get_api_endpoint(url) {
                     Ok(rv) => rv,
-                    Err(err) => {
-                        return Err(Error::from(err).context(ApiErrorKind::BadApiUrl).into())
-                    }
+                    Err(err) => return Err(err.context(ApiErrorKind::BadApiUrl).into()),
                 }),
                 self.config.get_auth(),
             )
@@ -357,7 +411,7 @@ impl Api {
         // This toggles gzipping, useful for uploading large files
         handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
-        ApiRequest::new(handle, method, &url, auth)
+        ApiRequest::new(handle, &method, &url, auth)
     }
 
     /// Convenience method that performs a `GET` request.
@@ -435,21 +489,38 @@ impl Api {
         project: Option<&str>,
         release: &str,
     ) -> ApiResult<Vec<Artifact>> {
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(release)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/",
-                PathArg(org),
-                PathArg(release)
-            )
-        };
-        self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let path = if let Some(project) = project {
+                format!(
+                    "/projects/{}/{}/releases/{}/files/?cursor={}",
+                    PathArg(org),
+                    PathArg(project),
+                    PathArg(release),
+                    QueryArg(cursor),
+                )
+            } else {
+                format!(
+                    "/organizations/{}/releases/{}/files/?cursor={}",
+                    PathArg(org),
+                    PathArg(release),
+                    QueryArg(cursor),
+                )
+            };
+            let resp = self.get(&path)?;
+            let pagination = resp.pagination();
+            rv.extend(
+                resp.convert_rnf::<Vec<Artifact>>(ApiErrorKind::ReleaseNotFound)?
+                    .into_iter(),
+            );
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
@@ -482,18 +553,20 @@ impl Api {
         if resp.status() == 404 {
             Ok(false)
         } else {
-            resp.to_result().map(|_| true)
+            resp.into_result().map(|_| true)
         }
     }
 
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
+    // TODO: Simplify this function interface
+    #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
     pub fn upload_release_file(
         &self,
         org: &str,
         project: Option<&str>,
         version: &str,
-        contents: FileContents,
+        contents: &FileContents,
         name: &str,
         dist: Option<&str>,
         headers: Option<&[(String, String)]>,
@@ -641,7 +714,7 @@ impl Api {
         if resp.status() == 404 {
             Ok(false)
         } else {
-            resp.to_result().map(|_| true)
+            resp.into_result().map(|_| true)
         }
     }
 
@@ -680,11 +753,12 @@ impl Api {
     pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
         if let Some(project) = project {
             let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
-            self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
         } else {
             let path = format!("/organizations/{}/releases/", PathArg(org));
             self.get(&path)?
-                .convert_rnf(ApiErrorKind::OrganizationNotFound)
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
         }
     }
 
@@ -733,9 +807,8 @@ impl Api {
                 qs
             ),
             changes,
-        )?
-            .to_result()
-            .map(|_| true)
+        )?.into_result()
+        .map(|_| true)
     }
 
     /// Finds the latest release for sentry-cli on GitHub.
@@ -747,7 +820,7 @@ impl Api {
         if resp.status() == 404 {
             Ok(None)
         } else {
-            let info: GitHubRelease = resp.to_result()?.convert()?;
+            let info: GitHubRelease = resp.into_result()?.convert()?;
             for asset in info.assets {
                 info!("Found asset {}", asset.name);
                 if asset.name == ref_name {
@@ -886,7 +959,8 @@ impl Api {
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
             let name = compression.field_name();
-            let buffer = Api::compress(data, compression).context(ApiErrorKind::CompressionFailed)?;
+            let buffer =
+                Api::compress(data, compression).context(ApiErrorKind::CompressionFailed)?;
             form.part(name).buffer(&checksum, buffer).add()?
         }
 
@@ -904,7 +978,7 @@ impl Api {
             None => request,
         };
 
-        request.send()?.to_result()?;
+        request.send()?.into_result()?;
         Ok(())
     }
 
@@ -921,7 +995,7 @@ impl Api {
             project,
             &AssociateDsyms {
                 platform: "apple".to_string(),
-                checksums: checksums,
+                checksums,
                 name: info_plist.name().to_string(),
                 app_id: info_plist.bundle_id().to_string(),
                 version: info_plist.version().to_string(),
@@ -943,7 +1017,7 @@ impl Api {
             project,
             &AssociateDsyms {
                 platform: "android".to_string(),
-                checksums: checksums,
+                checksums,
                 name: manifest.name(),
                 app_id: manifest.package().to_string(),
                 version: manifest.version_name().to_string(),
@@ -996,25 +1070,62 @@ impl Api {
         if resp.status() == 404 {
             Ok(false)
         } else {
-            resp.to_result().map(|_| true)
+            resp.into_result().map(|_| true)
         }
     }
 
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
-        self.get(&format!("/organizations/{}/projects/", PathArg(org)))?
-            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let resp = self.get(&format!(
+                "/organizations/{}/projects/?cursor={}",
+                PathArg(org),
+                QueryArg(&cursor)
+            ))?;
+            if resp.status() == 404 {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                } else {
+                    break;
+                }
+            }
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Project>>()?.into_iter());
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
     }
 
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
-        let path = format!("/organizations/{}/repos/", PathArg(org));
-        let resp = self.request(Method::Get, &path)?.send()?;
-        if resp.status() == 404 {
-            Ok(vec![])
-        } else {
-            Ok(resp.convert()?)
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let path = format!(
+                "/organizations/{}/repos/?cursor={}",
+                PathArg(org),
+                QueryArg(&cursor)
+            );
+            let resp = self.request(Method::Get, &path)?.send()?;
+            if resp.status() == 404 {
+                break;
+            } else {
+                let pagination = resp.pagination();
+                rv.extend(resp.convert::<Vec<Repo>>()?.into_iter());
+                if let Some(next) = pagination.into_next_cursor() {
+                    cursor = next;
+                } else {
+                    break;
+                }
+            }
         }
+        Ok(rv)
     }
 }
 
@@ -1060,7 +1171,7 @@ fn handle_req<W: Write>(
             handle.progress_function(move |_, _, total, uploaded| {
                 if uploaded > 0f64 && uploaded < total {
                     counts.write()[idx] = (uploaded / total * (len as f64)) as u64;
-                    pb_progress.set_position(counts.read().iter().map(|&x| x).sum());
+                    pb_progress.set_position(counts.read().iter().sum());
                 }
                 true
             })?;
@@ -1150,11 +1261,11 @@ impl<'a> Iterator for Headers<'a> {
 impl<'a> ApiRequest<'a> {
     fn new(
         mut handle: RefMut<'a, curl::easy::Easy>,
-        method: Method,
+        method: &Method,
         url: &str,
         auth: Option<&Auth>,
     ) -> ApiResult<ApiRequest<'a>> {
-        info!("request {} {}", method, url);
+        debug!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
@@ -1177,8 +1288,8 @@ impl<'a> ApiRequest<'a> {
         handle.url(&url)?;
 
         let request = ApiRequest {
-            handle: handle,
-            headers: headers,
+            handle,
+            headers,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
         };
@@ -1196,12 +1307,12 @@ impl<'a> ApiRequest<'a> {
         match *auth {
             Auth::Key(ref key) => {
                 self.handle.username(key)?;
-                info!("using key based authentication");
+                debug!("using key based authentication");
             }
             Auth::Token(ref token) => {
                 self.headers
                     .append(&format!("Authorization: Bearer {}", token))?;
-                info!("using token authentication");
+                debug!("using token authentication");
             }
         }
 
@@ -1217,8 +1328,9 @@ impl<'a> ApiRequest<'a> {
     /// sets the JSON request body for the request.
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
         let mut body_bytes: Vec<u8> = vec![];
-        serde_json::to_writer(&mut body_bytes, &body).context(ApiErrorKind::CannotSerializeAsJson)?;
-        info!("sending JSON data ({} bytes)", body_bytes.len());
+        serde_json::to_writer(&mut body_bytes, &body)
+            .context(ApiErrorKind::CannotSerializeAsJson)?;
+        debug!("sending JSON data ({} bytes)", body_bytes.len());
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
         Ok(self)
@@ -1226,7 +1338,7 @@ impl<'a> ApiRequest<'a> {
 
     /// attaches some form data to the request.
     pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
-        info!("sending form data");
+        debug!("sending form data");
         self.handle.httppost(form)?;
         self.body = None;
         Ok(self)
@@ -1234,7 +1346,7 @@ impl<'a> ApiRequest<'a> {
 
     /// enables or disables redirects.  The default is off.
     pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
-        info!("follow redirects: {}", val);
+        debug!("follow redirects: {}", val);
         self.handle.follow_location(val)?;
         Ok(self)
     }
@@ -1250,10 +1362,10 @@ impl<'a> ApiRequest<'a> {
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
         let (status, headers) = send_req(&mut self.handle, out, self.body, self.progress_bar_mode)?;
-        info!("response: {}", status);
+        debug!("response: {}", status);
         Ok(ApiResponse {
-            status: status,
-            headers: headers,
+            status,
+            headers,
             body: None,
         })
     }
@@ -1285,9 +1397,9 @@ impl ApiResponse {
 
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
-    pub fn to_result(self) -> ApiResult<ApiResponse> {
+    pub fn into_result(self) -> ApiResult<ApiResponse> {
         if let Some(ref body) = self.body {
-            info!("body: {}", String::from_utf8_lossy(body));
+            debug!("body: {}", String::from_utf8_lossy(body));
         }
         if self.ok() {
             return Ok(self);
@@ -1301,21 +1413,21 @@ impl ApiResponse {
                 }),
                 extra: None,
             }.context(ApiErrorKind::RequestFailed)
-                .into())
+            .into())
         } else if let Ok(value) = self.deserialize::<serde_json::Value>() {
             Err(SentryError {
                 status: self.status(),
                 detail: Some("request failure".into()),
                 extra: Some(value),
             }.context(ApiErrorKind::RequestFailed)
-                .into())
+            .into())
         } else {
             Err(SentryError {
                 status: self.status(),
                 detail: None,
                 extra: None,
             }.context(ApiErrorKind::RequestFailed)
-                .into())
+            .into())
         }
     }
 
@@ -1333,7 +1445,7 @@ impl ApiResponse {
     /// Like `deserialize` but consumes the response and will convert
     /// failed requests into proper errors.
     pub fn convert<T: DeserializeOwned>(self) -> ApiResult<T> {
-        self.to_result().and_then(|x| x.deserialize())
+        self.into_result().and_then(|x| x.deserialize())
     }
 
     /// Like convert but produces resource not found errors.
@@ -1358,7 +1470,7 @@ impl ApiResponse {
                 }
             }
             404 => Err(res_err.into()),
-            _ => self.to_result().and_then(|x| x.deserialize()),
+            _ => self.into_result().and_then(|x| x.deserialize()),
         }
     }
 
@@ -1382,11 +1494,19 @@ impl ApiResponse {
         None
     }
 
+    /// Returns the pagination info
+    pub fn pagination(&self) -> Pagination {
+        self.get_header("link")
+            .and_then(|x| x.parse().ok())
+            .unwrap_or_else(Default::default)
+    }
+
     /// Returns true if the response is JSON.
     pub fn is_json(&self) -> bool {
         self.get_header("content-type")
             .and_then(|x| x.split(';').next())
-            .unwrap_or("") == "application/json"
+            .unwrap_or("")
+            == "application/json"
     }
 }
 
@@ -1408,7 +1528,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 };
                 format!("{}: {} {}", &caps[1], &caps[2], info)
             });
-            info!("{} {}", if is_response { ">" } else { "<" }, replaced);
+            debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }
     }
 }
@@ -1454,7 +1574,7 @@ pub struct Artifact {
 impl Artifact {
     pub fn get_header<'a, 'b>(&'a self, key: &'b str) -> Option<&'a str> {
         let ikey = key.to_lowercase();
-        for (k, v) in self.headers.iter() {
+        for (k, v) in &self.headers {
             if k.to_lowercase() == ikey {
                 return Some(v.as_str());
             }
@@ -1474,9 +1594,15 @@ pub struct NewRelease {
     pub projects: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "dateStarted",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub date_started: Option<DateTime<Utc>>,
-    #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "dateReleased",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub date_released: Option<DateTime<Utc>>,
 }
 
@@ -1498,9 +1624,15 @@ pub struct UpdatedRelease {
     pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "dateStarted",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub date_started: Option<DateTime<Utc>>,
-    #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "dateReleased",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub date_released: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refs: Option<Vec<Ref>>,
@@ -1660,6 +1792,16 @@ pub struct Repo {
     pub date_created: DateTime<Utc>,
 }
 
+impl fmt::Display for Repo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}:{}", &self.provider.id, &self.id)?;
+        if let Some(ref url) = self.url {
+            write!(f, " ({})", url)?;
+        }
+        Ok(())
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Deploy {
     #[serde(rename = "environment")]
@@ -1689,8 +1831,8 @@ pub enum ChunkCompression {
 }
 
 impl ChunkCompression {
-    fn field_name(&self) -> &'static str {
-        match *self {
+    fn field_name(self) -> &'static str {
+        match self {
             ChunkCompression::Uncompressed => "file",
             ChunkCompression::Gzip => "file_gzip",
             ChunkCompression::Brotli => "file_brotli",

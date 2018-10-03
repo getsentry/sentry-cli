@@ -196,7 +196,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("PREFIX")
                     .help("The URL prefix to prepend to all filenames."))
                 .arg(Arg::with_name("url_suffix")
-                    .short("u")
                     .long("url-suffix")
                     .value_name("SUFFIX")
                     .help("The URL suffix to append to all filenames."))
@@ -358,7 +357,6 @@ fn execute_new<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<(),
             } else {
                 None
             },
-            ..Default::default()
         },
     )?;
     println!("Created release {}.", info_rv.version);
@@ -407,12 +405,18 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
     }
 
     let heads = if matches.is_present("auto") {
-        let commits = find_heads(None, repos)?;
+        let commits = find_heads(None, &repos)?;
         if commits.is_empty() {
+            let config = Config::get_current();
+
             bail!(
-                "Could not determine any commits to be associated \
-                 automatically. You will have to explicitly provide \
-                 commits on the command line."
+                "Could not determine any commits to be associated automatically.\n\
+                 Please provide commits explicitly using --commit | -c.\n\
+                 \n\
+                 HINT: Did you add the repo to your organization?\n\
+                 Configure it at {}/settings/{}/repos/",
+                config.get_base_url()?,
+                org
             );
         }
         Some(commits)
@@ -422,19 +426,14 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
-                if (&repos)
-                    .iter()
-                    .filter(|r| r.name == commit_spec.repo)
-                    .next()
-                    .is_some()
-                {
+                if repos.iter().any(|r| r.name == commit_spec.repo) {
                     commit_specs.push(commit_spec);
                 } else {
                     bail!("Unknown repo '{}'", commit_spec.repo);
                 }
             }
         }
-        let commits = find_heads(Some(commit_specs), repos)?;
+        let commits = find_heads(Some(commit_specs), &repos)?;
         if commits.is_empty() {
             None
         } else {
@@ -448,7 +447,7 @@ fn execute_set_commits<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Re
             &org,
             &NewRelease {
                 version: version.into(),
-                projects: projects,
+                projects,
                 ..Default::default()
             },
         )?;
@@ -563,7 +562,7 @@ fn execute_info<'a>(ctx: &ReleaseContext, matches: &ArgMatches<'a>) -> Result<()
         let short_version = strip_version(&release.version);
         let mut tbl = Table::new();
         tbl.add_row().add("Version").add(short_version);
-        if short_version != &release.version {
+        if short_version != release.version {
             tbl.add_row().add("Full version").add(&release.version);
         }
         tbl.add_row().add("Date created").add(&release.date_created);
@@ -593,9 +592,9 @@ fn execute_files_list<'a>(
 
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for artifact in ctx
-        .api
-        .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
+    for artifact in
+        ctx.api
+            .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
     {
         let row = table.add_row();
         row.add(&artifact.name);
@@ -679,7 +678,7 @@ fn execute_files_upload<'a>(
         org,
         project.as_ref().map(|x| x.as_str()),
         &version,
-        FileContents::FromPath(&path),
+        &FileContents::FromPath(&path),
         &name,
         dist,
         Some(&headers[..]),
@@ -699,15 +698,13 @@ fn execute_files_upload_sourcemaps<'a>(
     let url_prefix = matches
         .value_of("url_prefix")
         .unwrap_or("~")
-        .trim_right_matches("/");
-    let url_suffix = matches
-        .value_of("url_suffix")
-        .unwrap_or("");
+        .trim_right_matches('/');
+    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")
-        .map(|extensions| extensions.map(|ext| ext.trim_left_matches(".")).collect())
-        .unwrap_or(vec!["js", "map", "jsbundle", "bundle"]);
+        .map(|extensions| extensions.map(|ext| ext.trim_left_matches('.')).collect())
+        .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
         .values_of("ignore")
         .map(|ignores| ignores.map(|i| format!("!{}", i)).collect::<Vec<_>>());

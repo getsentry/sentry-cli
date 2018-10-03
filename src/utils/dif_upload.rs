@@ -249,8 +249,8 @@ impl<'data> ChunkedDifMatch<'data> {
         let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size)?;
         Ok(ChunkedDifMatch {
             inner: HashedDifMatch { inner, checksum },
-            chunks: chunks,
-            chunk_size: chunk_size,
+            chunks,
+            chunk_size,
         })
     }
 
@@ -522,7 +522,7 @@ fn find_uuid_plists(
     //        ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //        └─ DWARF
     //           └─ App
-    let plist_name = format!("{:X}.plist", uuid.hyphenated());
+    let plist_name = format!("{:X}.plist", uuid.to_hyphenated_ref());
     let plist = match source.get_relative(format!("../{}", &plist_name)) {
         Some(plist) => plist,
         None => return None,
@@ -530,7 +530,7 @@ fn find_uuid_plists(
 
     let mut plists = BTreeMap::new();
     plists.insert(plist_name, plist);
-    return Some(plists);
+    Some(plists)
 }
 
 /// Searches matching debug information files.
@@ -617,7 +617,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     fat: fat.clone(),
                     object_index: index,
                     name: name.clone(),
-                    attachments: attachments,
+                    attachments,
                 });
 
                 progress.set_prefix(&collected.len().to_string());
@@ -954,8 +954,7 @@ fn upload_missing_chunks(
             .map(|(index, (batch, size))| {
                 let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
                 Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
-            })
-            .collect::<Result<(), _>>()
+            }).collect::<Result<(), _>>()
     })?;
 
     progress.finish_and_clear();
@@ -996,7 +995,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 /// Returns a list of `DebugInfoFile`s that have been created successfully and
 /// also prints a summary to the user.
 fn poll_dif_assemble(
-    difs: Vec<&ChunkedDifMatch>,
+    difs: &[&ChunkedDifMatch],
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>, Error> {
     let progress_style = ProgressStyle::default_bar().template(
@@ -1030,18 +1029,16 @@ fn poll_dif_assemble(
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
     successes.sort_by(|a, b| {
-        let name_a = a
-            .1
-            .dif
-            .as_ref()
-            .map(|x| x.object_name.as_str())
-            .unwrap_or("");
-        let name_b = b
-            .1
-            .dif
-            .as_ref()
-            .map(|x| x.object_name.as_str())
-            .unwrap_or("");
+        let name_a =
+            a.1.dif
+                .as_ref()
+                .map(|x| x.object_name.as_str())
+                .unwrap_or("");
+        let name_b =
+            b.1.dif
+                .as_ref()
+                .map(|x| x.object_name.as_str())
+                .unwrap_or("");
         name_a.cmp(name_b)
     });
 
@@ -1112,7 +1109,7 @@ fn upload_difs_chunked(
     // Only if DIFs were missing, poll until assembling is complete
     let (missing_difs, _) = missing_info;
     if !missing_difs.is_empty() {
-        poll_dif_assemble(missing_difs, options)
+        poll_dif_assemble(&missing_difs, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
@@ -1155,7 +1152,7 @@ fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile, Error> {
     let tf = TempFile::new()?;
     let mut zip = ZipWriter::new(tf.open());
 
-    for ref symbol in difs {
+    for symbol in difs {
         zip.start_file(symbol.file_name(), FileOptions::default())?;
         copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
     }
@@ -1166,7 +1163,7 @@ fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile, Error> {
 
 /// Uploads the given DIFs to the server in batched ZIP archives.
 fn upload_in_batches(
-    objects: Vec<HashedDifMatch>,
+    objects: &[HashedDifMatch],
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>, Error> {
     let api = Api::get_current();
@@ -1204,11 +1201,11 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>, Error>
     let processed = process_symbol_maps(found, symbol_map)?;
 
     // Calculate checksums
-    let hashed = prepare_difs(processed, |m| HashedDifMatch::from(m))?;
+    let hashed = prepare_difs(processed, HashedDifMatch::from)?;
 
     // Check which files are missing on the server
     let missing = get_missing_difs(hashed, options)?;
-    if missing.len() == 0 {
+    if missing.is_empty() {
         println!(
             "{} Nothing to upload, all files are on the server",
             style(">").dim()
@@ -1218,8 +1215,8 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>, Error>
     }
 
     // Upload missing DIFs in batches
-    let uploaded = upload_in_batches(missing, options)?;
-    if uploaded.len() > 0 {
+    let uploaded = upload_in_batches(&missing, options)?;
+    if !uploaded.is_empty() {
         println!("{} File upload complete:\n", style(">").dim());
         for dif in &uploaded {
             println!(
@@ -1294,8 +1291,8 @@ impl DifUpload {
     /// ```
     pub fn new(org: String, project: String) -> DifUpload {
         DifUpload {
-            org: org,
-            project: project,
+            org,
+            project,
             paths: Default::default(),
             ids: Default::default(),
             kinds: Default::default(),
@@ -1470,7 +1467,7 @@ impl DifUpload {
 
     /// Determines if this file extension matches the search criteria.
     fn valid_extension(&self, ext: Option<&OsStr>) -> bool {
-        self.extensions.is_empty() || ext.map_or(false, |e| self.extensions.contains(e.into()))
+        self.extensions.is_empty() || ext.map_or(false, |e| self.extensions.contains(e))
     }
 
     /// Determines if this `ObjectKind` matches the search criteria.

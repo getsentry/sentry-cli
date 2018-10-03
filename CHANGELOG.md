@@ -1,8 +1,26 @@
 # Changelog
 
+## sentry-cli 1.36.1
+
+* Fixes a bug that prevented listing and creating releases
+
+## sentry-cli 1.36.0
+
+* Show project IDs in project listing (#384)
+* Fetch all projects, repos and releases if you have more than 100 (#388, #390)
+* Support debug symbols with DWARF 5 debug information (#389)
+* Fix `--no-environ` parameter in `send-event` (#391)
+* Remove a misleading success message in `send-event` (#397)
+* Improve debug logs and error output (#393, #394, #399)
+
+## sentry-cli 1.35.6
+
+* Fix a bug introduced with the `--url-suffix` option in `upload-sourcemaps`
+* Fix broken commit detection for releases (#378, #381)
+
 ## sentry-cli 1.35.5
 
-* Add url-suffix option
+* Add `--url-suffix` option for `upload-sourcemaps` (#373)
 
 ## sentry-cli 1.35.4
 
