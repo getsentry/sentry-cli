@@ -10,11 +10,11 @@ module.exports = {
   rewrite: {
     param: '--rewrite',
     invertedParam: '--no-rewrite',
-    type: 'toggle',
+    type: 'boolean',
   },
   sourceMapReference: {
-    param: '--no-sourcemap-reference',
-    type: 'inverted-boolean',
+    invertedParam: '--no-sourcemap-reference',
+    type: 'boolean',
   },
   stripPrefix: {
     param: '--strip-prefix',
