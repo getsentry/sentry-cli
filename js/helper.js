@@ -48,12 +48,13 @@ function mockBinaryPath(mockPath) {
  * @returns {string[]} An arguments array that can be passed via command line.
  */
 function serializeOptions(schema, options) {
-  return Object.keys(schema).reduce((newOptions2, option) => {
+  return Object.keys(schema).reduce((newOptions, option) => {
     const paramValue = options[option];
     if (paramValue === undefined) {
-      return newOptions2;
+      return newOptions;
     }
 
+    // eslint-disable-next-line no-shadow
     return schema[option].reduce((newOptions, action) => {
       const paramType = action.type;
       const paramName = action.param;
@@ -83,7 +84,7 @@ function serializeOptions(schema, options) {
       }
 
       return newOptions.concat(paramName, paramValue);
-    }, newOptions2);
+    }, newOptions);
   }, []);
 }
 
