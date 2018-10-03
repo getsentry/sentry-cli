@@ -54,37 +54,44 @@ function serializeOptions(schema, options) {
       return newOptions;
     }
 
-    // eslint-disable-next-line no-shadow
-    return schema[option].reduce((newOptions, action) => {
-      const paramType = action.type;
-      const paramName = action.param;
+    const paramType = schema[option].type;
+    const paramName = schema[option].param;
 
-      if (paramType === 'array') {
-        if (!Array.isArray(paramValue)) {
-          throw new Error(`${option} should be an array`);
-        }
-
-        return newOptions.concat(
-          paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
-        );
+    if (paramType === 'array') {
+      if (!Array.isArray(paramValue)) {
+        throw new Error(`${option} should be an array`);
       }
 
-      if (paramType === 'boolean' || paramType === 'inverted-boolean') {
-        if (typeof paramValue !== 'boolean') {
-          throw new Error(`${option} should be a bool`);
-        }
-        if (paramType === 'boolean' && paramValue) {
-          return newOptions.concat([paramName]);
-        }
+      return newOptions.concat(
+        paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
+      );
+    }
 
-        if (paramType === 'inverted-boolean' && paramValue === false) {
-          return newOptions.concat([paramName]);
-        }
-        return newOptions;
+    if (paramType === 'boolean' || paramType === 'inverted-boolean') {
+      if (typeof paramValue !== 'boolean') {
+        throw new Error(`${option} should be a bool`);
       }
 
-      return newOptions.concat(paramName, paramValue);
-    }, newOptions);
+      if (paramType === 'boolean' && paramValue) {
+        return newOptions.concat([paramName]);
+      }
+
+      if (paramType === 'inverted-boolean' && paramValue === false) {
+        return newOptions.concat([paramName]);
+      }
+
+      return newOptions;
+    }
+
+    if (paramType === 'toggle') {
+      if (typeof paramValue !== 'boolean') {
+        throw new Error(`${option} should be a bool`);
+      }
+
+      return newOptions.concat([paramValue ? paramName : schema[option].invertedParam]);
+    }
+
+    return newOptions.concat(paramName, paramValue);
   }, []);
 }
 
