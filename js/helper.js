@@ -48,42 +48,42 @@ function mockBinaryPath(mockPath) {
  * @returns {string[]} An arguments array that can be passed via command line.
  */
 function serializeOptions(schema, options) {
-  return Object.keys(schema).reduce((newOptions, option) => {
+  return Object.keys(schema).reduce((newOptions2, option) => {
     const paramValue = options[option];
     if (paramValue === undefined) {
-      return newOptions;
+      return newOptions2;
     }
 
-    const paramType = schema[option].type;
-    const paramName = schema[option].param;
+    return schema[option].reduce((newOptions, action) => {
+      const paramType = action.type;
+      const paramName = action.param;
 
-    if (paramType === 'array') {
-      if (!Array.isArray(paramValue)) {
-        throw new Error(`${option} should be an array`);
+      if (paramType === 'array') {
+        if (!Array.isArray(paramValue)) {
+          throw new Error(`${option} should be an array`);
+        }
+
+        return newOptions.concat(
+          paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
+        );
       }
 
-      return newOptions.concat(
-        paramValue.reduce((acc, value) => acc.concat([paramName, String(value)]), [])
-      );
-    }
+      if (paramType === 'boolean' || paramType === 'inverted-boolean') {
+        if (typeof paramValue !== 'boolean') {
+          throw new Error(`${option} should be a bool`);
+        }
+        if (paramType === 'boolean' && paramValue) {
+          return newOptions.concat([paramName]);
+        }
 
-    if (paramType === 'boolean' || paramType === 'inverted-boolean') {
-      if (typeof paramValue !== 'boolean') {
-        throw new Error(`${option} should be a bool`);
+        if (paramType === 'inverted-boolean' && paramValue === false) {
+          return newOptions.concat([paramName]);
+        }
+        return newOptions;
       }
 
-      if (paramType === 'boolean' && paramValue) {
-        return newOptions.concat([paramName]);
-      }
-
-      if (paramType === 'inverted-boolean' && paramValue === false) {
-        return newOptions.concat([paramName]);
-      }
-
-      return newOptions;
-    }
-
-    return newOptions.concat(paramName, paramValue);
+      return newOptions.concat(paramName, paramValue);
+    }, newOptions2);
   }, []);
 }
 

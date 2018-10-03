@@ -81,6 +81,17 @@ describe('SentryCli helper', () => {
       ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null', '--rewrite']
     );
 
+    expect(
+      helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: false })
+    ).toEqual([
+      'releases',
+      'files',
+      'release',
+      'upload-sourcemaps',
+      '/dev/null',
+      '--no-rewrite',
+    ]);
+
     expect(() => {
       helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { sourceMapReference: 'node' });
     }).toThrow();
