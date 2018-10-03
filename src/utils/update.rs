@@ -215,6 +215,7 @@ fn update_nagger_impl() -> Result<(), Error> {
     }
 
     if check.should_run_check() {
+        info!("Running update nagger update check");
         let ui = get_latest_sentrycli_release()?;
         if ui.have_version_info() {
             check.update_for_info(&ui);
@@ -222,9 +223,12 @@ fn update_nagger_impl() -> Result<(), Error> {
             serde_json::to_writer_pretty(&mut f, &check)?;
             f.write_all(b"\n")?;
         }
+    } else {
+        info!("Skipping update nagger update check");
     }
 
     if check.is_outdated() {
+        info!("Update nagger determined outdated installation");
         eprintln!("");
         eprintln!(
             "{}",
@@ -261,6 +265,7 @@ pub fn run_sentrycli_update_nagger() {
 
     // Do not run update nagger if stdout/stdin is not a terminal
     if !user_attended() {
+        debug!("skipping update nagger because session is not attended");
         return;
     }
 

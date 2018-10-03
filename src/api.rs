@@ -494,7 +494,7 @@ impl Api {
         loop {
             let path = if let Some(project) = project {
                 format!(
-                    "/projects/{}/{}/releases/{}/files/cursor={}",
+                    "/projects/{}/{}/releases/{}/files/?cursor={}",
                     PathArg(org),
                     PathArg(project),
                     PathArg(release),

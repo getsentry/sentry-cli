@@ -65,11 +65,11 @@ matrix:
       env:
         - TARGET=i686-unknown-linux-musl
         - DOCKER_TAG=i686-musl
-      script: bash scripts/build-in-docker.sh
-      after_success:
+      script:
+        - bash scripts/build-in-docker.sh
         - zeus upload -t "application/octet-stream"
                       -n "sentry-cli-Linux-i686"
-                      "./target/${TARGET}/release/sentry-cli"
+                      "./target/${TARGET}/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
     - name: "build: linux x86_64"
       os: linux
@@ -77,11 +77,11 @@ matrix:
       env:
         - TARGET=x86_64-unknown-linux-musl
         - DOCKER_TAG=x86_64-musl
-      script: bash scripts/build-in-docker.sh
-      after_success:
+      script:
+        - bash scripts/build-in-docker.sh
         - zeus upload -t "application/octet-stream"
                       -n "sentry-cli-Linux-x86_64"
-                      "./target/${TARGET}/release/sentry-cli"
+                      "./target/${TARGET}/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
     - name: "build: macOS x86_64"
       os: osx
@@ -93,10 +93,9 @@ matrix:
       script:
         - cargo build --release --locked
         - cargo run --release -- releases list
-      after_success:
         - zeus upload -t "application/octet-stream"
                       -n "sentry-cli-Darwin-x86_64"
-                      "./target/release/sentry-cli"
+                      "./target/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
     - name: "build: NPM package"
       os: linux
@@ -104,9 +103,9 @@ matrix:
       node_js: "8"
       install: true
       env: TARGET=npm
-      script: npm pack
-      after_success:
-        - zeus upload -t "application/tar+npm" *.tgz
+      script:
+        - npm pack
+        - zeus upload -t "application/tar+npm" *.tgz || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
 notifications:
   webhooks:
