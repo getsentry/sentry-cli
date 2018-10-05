@@ -67,17 +67,19 @@ function serializeOptions(schema, options) {
       );
     }
 
-    if (paramType === 'boolean' || paramType === 'inverted-boolean') {
+    if (paramType === 'boolean') {
       if (typeof paramValue !== 'boolean') {
         throw new Error(`${option} should be a bool`);
       }
 
-      if (paramType === 'boolean' && paramValue) {
+      const invertedParamName = schema[option].invertedParam;
+
+      if (paramValue && paramName !== undefined) {
         return newOptions.concat([paramName]);
       }
 
-      if (paramType === 'inverted-boolean' && paramValue === false) {
-        return newOptions.concat([paramName]);
+      if (!paramValue && invertedParamName !== undefined) {
+        return newOptions.concat([invertedParamName]);
       }
 
       return newOptions;
