@@ -72,7 +72,6 @@ module.exports = {
    *   include: ['build'],
    *
    *   // default options:
-   *   live: false,               // whether to stream live output from command
    *   ignore: ['node_modules'],  // globs for files to ignore
    *   ignoreFile: null,          // path to a file with ignore rules
    *   rewrite: false,            // preprocess sourcemaps before uploading
@@ -95,12 +94,6 @@ module.exports = {
       throw new Error('options.include must be a vaild path(s)');
     }
 
-    let live = false
-    if (options.live) {
-      live = true
-      delete(options.live)
-    }
-    
     const uploads = options.include.map(sourcemapPath => {
       const newOptions = Object.assign({}, options);
       if (!newOptions.ignoreFile && !newOptions.ignore) {
@@ -108,7 +101,7 @@ module.exports = {
       }
 
       const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
-      return helper.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, options), live);
+      return helper.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, options), true);
     });
 
     return Promise.all(uploads);
