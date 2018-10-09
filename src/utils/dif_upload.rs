@@ -1049,11 +1049,15 @@ fn poll_dif_assemble(
         // will always return one.
         if let Some(ref dif) = success.dif {
             println!(
-                "     {} {} ({}; {})",
+                "     {} {} ({}; {}{})",
                 style("OK").green(),
                 style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
+                dif.data
+                    .class
+                    .map(|c| format!(" {:#}", c))
+                    .unwrap_or_default()
             );
 
             render_detail(&success.detail, None);
