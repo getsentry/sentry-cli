@@ -195,7 +195,8 @@ impl<'data> fmt::Debug for DifMatch<'data> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("DifMatch")
             .field("fat", &self.fat)
-            .field("object_count", &self.name)
+            .field("object_index", &self.object_index)
+            .field("name", &self.name)
             .finish()
     }
 }
