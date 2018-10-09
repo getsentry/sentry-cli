@@ -546,7 +546,6 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
     progress.set_style(progress_style);
 
     let mut collected = Vec::new();
-    let mut found_ids = BTreeSet::new();
     for base_path in &options.paths {
         walk_difs_directory(base_path, options, |mut source, name, buffer| {
             progress.set_message(&name);
@@ -599,7 +598,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 };
 
                 // Make sure we haven't converted this object already.
-                if !options.valid_id(id) || found_ids.contains(&id) {
+                if !options.valid_id(id) {
                     continue;
                 }
 
@@ -612,7 +611,6 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     _ => None,
                 };
 
-                found_ids.insert(id);
                 collected.push(DifMatch {
                     _backing: None,
                     fat: fat.clone(),
