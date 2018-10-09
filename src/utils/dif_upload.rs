@@ -835,6 +835,11 @@ fn try_assemble_difs<'data>(
                 // it shows up in the final report.
                 difs.push(chunked_match);
             }
+            ChunkedFileState::Assembling => {
+                // This file is currently assembling. The caller will have to poll this file later
+                // until it either resolves or errors.
+                difs.push(chunked_match);
+            }
             ChunkedFileState::NotFound => {
                 // Assembling for one of the files has not started because some
                 // (or all) of its chunks have not been found. We report its
@@ -858,9 +863,7 @@ fn try_assemble_difs<'data>(
                 chunks.extend(missing_chunks);
             }
             _ => {
-                // This file is currently assembling or has already finished. No
-                // action required anymore. The caller will have to poll this
-                // file later until it either resolves or errors.
+                // This file has already finished. No action required anymore.
             }
         }
     }
