@@ -116,7 +116,7 @@ function checkVersion() {
     const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
     if (version !== expected) {
       throw new Error(
-        `Unexpected sentry-cli version "${version}", expected "${expected}`
+        `Unexpected sentry-cli version "${version}", expected "${expected}"`
       );
     }
   });
