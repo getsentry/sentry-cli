@@ -1,5 +1,9 @@
 # Changelog
 
+## [Unreleased]
+
+* Download packages from Fastly's CDN when installing via NPM and Brew
+
 ## sentry-cli 1.36.1
 
 * Fixes a bug that prevented listing and creating releases

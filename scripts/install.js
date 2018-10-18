@@ -19,7 +19,7 @@ const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
   process.env.npm_config_sentrycli_cdnurl ||
   process.env.SENTRYCLI_CDNURL ||
-  'https://github.com/getsentry/sentry-cli/releases/download';
+  'https://downloads.sentry-cdn.com/sentry-cli';
 
 function getDownloadUrl(platform, arch) {
   const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli`;

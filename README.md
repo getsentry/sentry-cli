@@ -38,11 +38,8 @@ install as root:
 
     sudo npm install -g @sentry/cli --unsafe-perm
 
-By default, this package will download sentry-cli from
-[releases](https://github.com/getsentry/sentry-cli/releases). This should work
-fine for most people. If you are experiencing issues with downloading from
-GitHub, you may need to use a different download mirror. To use a custom CDN,
-set the npm config property `sentrycli_cdnurl`. The downloader will append
+By default, this package will download sentry-cli from the CDN managed by [Fastly](https://www.fastly.com/).
+To use a custom CDN, set the npm config property `sentrycli_cdnurl`. The downloader will append
 `"/<version>/sentry-cli-<dist>"`.
 
 ```sh
