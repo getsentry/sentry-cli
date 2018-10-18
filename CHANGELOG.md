@@ -1,8 +1,9 @@
 # Changelog
 
-## [Unreleased]
+## sentry-cli 1.36.2
 
 * Download packages from Fastly's CDN when installing via NPM and Brew (#417)
+* Allow uploading executables and debug symbols in one go (#412)
 
 ## sentry-cli 1.36.1
 
