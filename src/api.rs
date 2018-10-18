@@ -28,6 +28,7 @@ use serde::de::{Deserialize, DeserializeOwned, Deserializer};
 use serde::Serialize;
 use serde_json;
 use sha1::Digest;
+use symbolic::common::types::ObjectClass;
 use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
@@ -1671,6 +1672,14 @@ pub struct SentryCliRelease {
     pub download_url: String,
 }
 
+#[derive(Debug, Deserialize, Default)]
+pub struct DebugInfoData {
+    #[serde(default, rename = "type")]
+    pub class: Option<ObjectClass>,
+    #[serde(default)]
+    pub features: Vec<String>,
+}
+
 /// Debug information files as processed and stored on the server.
 /// Can be dSYMs, ELF debug infos, Breakpad symbols, etc...
 #[derive(Debug, Deserialize)]
@@ -1685,6 +1694,8 @@ pub struct DebugInfoFile {
     pub cpu_name: String,
     #[serde(rename = "sha1")]
     pub checksum: String,
+    #[serde(default)]
+    pub data: DebugInfoData,
 }
 
 impl DebugInfoFile {

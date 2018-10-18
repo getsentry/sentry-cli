@@ -195,7 +195,8 @@ impl<'data> fmt::Debug for DifMatch<'data> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct("DifMatch")
             .field("fat", &self.fat)
-            .field("object_count", &self.name)
+            .field("object_index", &self.object_index)
+            .field("name", &self.name)
             .finish()
     }
 }
@@ -545,7 +546,6 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
     progress.set_style(progress_style);
 
     let mut collected = Vec::new();
-    let mut found_ids = BTreeSet::new();
     for base_path in &options.paths {
         walk_difs_directory(base_path, options, |mut source, name, buffer| {
             progress.set_message(&name);
@@ -598,7 +598,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 };
 
                 // Make sure we haven't converted this object already.
-                if !options.valid_id(id) || found_ids.contains(&id) {
+                if !options.valid_id(id) {
                     continue;
                 }
 
@@ -611,7 +611,6 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     _ => None,
                 };
 
-                found_ids.insert(id);
                 collected.push(DifMatch {
                     _backing: None,
                     fat: fat.clone(),
@@ -836,6 +835,11 @@ fn try_assemble_difs<'data>(
                 // it shows up in the final report.
                 difs.push(chunked_match);
             }
+            ChunkedFileState::Assembling => {
+                // This file is currently assembling. The caller will have to poll this file later
+                // until it either resolves or errors.
+                difs.push(chunked_match);
+            }
             ChunkedFileState::NotFound => {
                 // Assembling for one of the files has not started because some
                 // (or all) of its chunks have not been found. We report its
@@ -859,9 +863,7 @@ fn try_assemble_difs<'data>(
                 chunks.extend(missing_chunks);
             }
             _ => {
-                // This file is currently assembling or has already finished. No
-                // action required anymore. The caller will have to poll this
-                // file later until it either resolves or errors.
+                // This file has already finished. No action required anymore.
             }
         }
     }
@@ -1047,11 +1049,15 @@ fn poll_dif_assemble(
         // will always return one.
         if let Some(ref dif) = success.dif {
             println!(
-                "     {} {} ({}; {})",
+                "     {} {} ({}; {}{})",
                 style("OK").green(),
                 style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
+                dif.data
+                    .class
+                    .map(|c| format!(" {:#}", c))
+                    .unwrap_or_default()
             );
 
             render_detail(&success.detail, None);
