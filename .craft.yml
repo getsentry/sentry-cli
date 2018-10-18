@@ -5,6 +5,16 @@ github:
   repo: sentry-cli
 changelogPolicy: simple
 targets:
+  - name: gcs
+    bucket: sentry-sdk-assets
+    includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
+    paths:
+      - path: /sentry-cli/{{version}}/
+        metadata:
+          cacheControl: 'public, max-age=2592000'
+      - path: /sentry-cli/latest/
+        metadata:
+          cacheControl: 'public, max-age=600'
   - name: npm
   - name: brew
     tap: getsentry/tools
@@ -27,16 +37,6 @@ targets:
       end
   - name: github
     includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
-  - name: gcs
-    bucket: sentry-sdk-assets
-    includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
-    paths:
-      - path: /sentry-cli/{{version}}/
-        metadata:
-          cacheControl: 'public, max-age=2592000'
-      - path: /sentry-cli/latest/
-        metadata:
-          cacheControl: 'public, max-age=600'
   - name: registry
     type: app
     urlTemplate: "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}"
