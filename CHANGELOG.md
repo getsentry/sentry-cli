@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-* Download packages from Fastly's CDN when installing via NPM and Brew
+* Download packages from Fastly's CDN when installing via NPM and Brew (#417)
 
 ## sentry-cli 1.36.1
 
