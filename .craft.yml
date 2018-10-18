@@ -12,7 +12,7 @@ targets:
       class SentryCli < Formula
         desc "This is a Sentry command-line client for some generic tasks."
         homepage "https://github.com/getsentry/sentry-cli"
-        url "https://github.com/getsentry/sentry-cli/releases/download/{{version}}/sentry-cli-Darwin-x86_64"
+        url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-x86_64"
         version "{{version}}"
         sha256 "{{checksums.sentry-cli-Darwin-x86_64}}"
 
