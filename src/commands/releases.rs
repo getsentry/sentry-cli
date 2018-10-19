@@ -766,8 +766,10 @@ fn execute_files_upload_sourcemaps<'a>(
     // We want to change the default from --no-rewrite to --rewrite, but we need to transition
     // users to explicitly pass the option first such that we don't break their setup when we do.
     if !matches.is_present("no_rewrite") && !matches.is_present("rewrite") {
-        warn!("The default --no-rewrite will disappear. Please specify --rewrite or \
-              --no-rewrite explicitly during sourcemap upload.")
+        warn!(
+            "The default --no-rewrite will disappear. Please specify --rewrite or \
+             --no-rewrite explicitly during sourcemap upload."
+        )
     }
 
     if matches.is_present("rewrite") {

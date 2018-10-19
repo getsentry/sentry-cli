@@ -1,6 +1,7 @@
 //! This module implements the root command of the CLI tool.
 
 use std::env;
+use std::fmt;
 use std::process;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -166,6 +167,20 @@ fn run_command(matches: &ArgMatches) -> Result<(), Error> {
     unreachable!();
 }
 
+struct DebugArgs<'a>(Vec<&'a str>);
+
+impl<'a> fmt::Display for DebugArgs<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for (idx, arg) in self.0.iter().enumerate() {
+            if idx > 0 {
+                write!(f, " ")?;
+            }
+            write!(f, "{:?}", arg)?;
+        }
+        Ok(())
+    }
+}
+
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
 pub fn execute(args: &[String]) -> Result<(), Error> {
@@ -210,7 +225,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         );
 
     app = add_commands(app);
-    let matches = app.get_matches_from_safe(args)?;
+    let matches = app.get_matches_from_safe(&args[..])?;
     configure_args(&mut config, &matches)?;
 
     // bind the config to the process and fetch an immutable reference to it
@@ -218,6 +233,11 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
     info!(
         "Loaded config from {}",
         Config::get_current().get_filename().display()
+    );
+
+    info!(
+        "sentry-cli was invoked with the following command line: {}",
+        DebugArgs(args.iter().map(|x| x.as_str()).collect())
     );
 
     run_command(&matches)
