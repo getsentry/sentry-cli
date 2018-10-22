@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.36.3
+
+* Print out how sentry-cli was invoked in debug log
+
 ## sentry-cli 1.36.2
 
 * Download packages from Fastly's CDN when installing via NPM and Brew (#417)
