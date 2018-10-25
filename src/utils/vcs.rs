@@ -47,6 +47,7 @@ enum VcsProvider {
     Generic,
     Git,
     GitHub,
+    GitLab,
     Bitbucket,
     Vsts,
 }
@@ -57,6 +58,7 @@ impl fmt::Display for VcsProvider {
             VcsProvider::Generic => write!(f, "generic"),
             VcsProvider::Git => write!(f, "git"),
             VcsProvider::GitHub => write!(f, "github"),
+            VcsProvider::GitLab => write!(f, "gitlab"),
             VcsProvider::Bitbucket => write!(f, "bitbucket"),
             VcsProvider::Vsts => write!(f, "vsts"),
         }
@@ -170,6 +172,12 @@ impl VcsUrl {
                 id: strip_git_suffix(path).into(),
                 ty: VcsType::Git,
             });
+        } else if host == "gitlab.com" {
+            return Some(VcsUrl {
+                provider: VcsProvider::GitLab,
+                id: strip_git_suffix(path).into(),
+                ty: VcsType::Git,
+            });
         } else if host == "bitbucket.org" {
             return Some(VcsUrl {
                 provider: VcsProvider::Bitbucket,
@@ -208,6 +216,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "visualstudio"
             | "integrations:github"
             | "integrations:github_enterprise"
+            | "integrations:gitlab"
             | "integrations:bitbucket"
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
@@ -444,6 +453,14 @@ fn test_url_parsing() {
             provider: VcsProvider::Generic,
             id: "github.myenterprise.com/mitsuhiko/flask".into(),
             ty: VcsType::Unknown,
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://gitlab.com/gitlab-org/gitlab-ce"),
+        VcsUrl {
+            provider: VcsProvider::GitLab,
+            id: "gitlab-org/gitlab-ce".into(),
+            ty: VcsType::Git,
         }
     )
 }
