@@ -6,11 +6,11 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 
-use api::{Api, NewRelease};
-use config::Config;
-use utils::args::ArgExt;
-use utils::codepush::{get_codepush_package, get_react_native_codepush_release};
-use utils::sourcemaps::SourceMapProcessor;
+use crate::api::{Api, NewRelease};
+use crate::config::Config;
+use crate::utils::args::ArgExt;
+use crate::utils::codepush::{get_codepush_package, get_react_native_codepush_release};
+use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("DEPRECATED: Upload react-native projects for CodePush.")

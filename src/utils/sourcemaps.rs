@@ -15,8 +15,8 @@ use might_be_minified;
 use sourcemap;
 use url::Url;
 
-use api::{Api, FileContents};
-use utils::enc::decode_unknown_string;
+use crate::api::{Api, FileContents};
+use crate::utils::enc::decode_unknown_string;
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);

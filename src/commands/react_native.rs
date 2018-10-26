@@ -1,7 +1,7 @@
 use clap::{App, AppSettings, ArgMatches};
 use failure::Error;
 
-use commands;
+use crate::commands;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {

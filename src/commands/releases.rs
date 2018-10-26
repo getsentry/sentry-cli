@@ -12,14 +12,14 @@ use ignore::WalkBuilder;
 use indicatif::HumanBytes;
 use regex::Regex;
 
-use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
-use config::Config;
-use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
-use utils::formatting::{HumanDuration, Table};
-use utils::releases::detect_release_name;
-use utils::sourcemaps::SourceMapProcessor;
-use utils::system::QuietExit;
-use utils::vcs::{find_heads, CommitSpec};
+use crate::api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
+use crate::config::Config;
+use crate::utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
+use crate::utils::formatting::{HumanDuration, Table};
+use crate::utils::releases::detect_release_name;
+use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::system::QuietExit;
+use crate::utils::vcs::{find_heads, CommitSpec};
 
 struct ReleaseContext<'a> {
     pub api: Rc<Api>,

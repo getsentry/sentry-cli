@@ -9,13 +9,13 @@ use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use serde_json;
 
-use api::{Api, NewRelease};
-use config::Config;
-use utils::args::ArgExt;
-use utils::fs::TempFile;
-use utils::sourcemaps::SourceMapProcessor;
-use utils::system::propagate_exit_status;
-use utils::xcode::{InfoPlist, MayDetach};
+use crate::api::{Api, NewRelease};
+use crate::config::Config;
+use crate::utils::args::ArgExt;
+use crate::utils::fs::TempFile;
+use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::system::propagate_exit_status;
+use crate::utils::xcode::{InfoPlist, MayDetach};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct SourceMapReport {

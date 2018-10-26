@@ -7,8 +7,8 @@ use log::Log;
 use sentry::integrations::{failure, log, panic};
 use sentry::{Client, ClientOptions, Hub};
 
-use config::Config;
-use constants::USER_AGENT;
+use crate::config::Config;
+use crate::constants::USER_AGENT;
 
 pub fn setup(log: Box<Log>) {
     log::init(Some(log), Default::default());

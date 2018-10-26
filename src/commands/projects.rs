@@ -2,10 +2,10 @@
 use clap::{App, AppSettings, ArgMatches};
 use failure::Error;
 
-use api::Api;
-use config::Config;
-use utils::args::ArgExt;
-use utils::formatting::Table;
+use crate::api::Api;
+use crate::config::Config;
+use crate::utils::args::ArgExt;
+use crate::utils::formatting::Table;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage projects on Sentry.")

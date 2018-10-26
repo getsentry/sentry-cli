@@ -11,12 +11,12 @@ use indicatif::{ProgressBar, ProgressStyle};
 use symbolic::common::types::{ObjectClass, ObjectKind};
 use symbolic::debuginfo::DebugId;
 
-use api::Api;
-use config::Config;
-use utils::args::{validate_id, ArgExt};
-use utils::dif_upload::DifUpload;
-use utils::system::QuietExit;
-use utils::xcode::{InfoPlist, MayDetach};
+use crate::api::Api;
+use crate::config::Config;
+use crate::utils::args::{validate_id, ArgExt};
+use crate::utils::dif_upload::DifUpload;
+use crate::utils::system::QuietExit;
+use crate::utils::xcode::{InfoPlist, MayDetach};
 
 static DERIVED_DATA: &'static str = "Library/Developer/Xcode/DerivedData";
 

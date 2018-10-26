@@ -5,8 +5,8 @@ use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use serde_json;
 
-use utils::dif::DifFile;
-use utils::system::QuietExit;
+use crate::utils::dif::DifFile;
+use crate::utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Print debug identifier(s) from a debug info file.")

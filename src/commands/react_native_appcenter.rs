@@ -6,11 +6,11 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 
-use api::{Api, NewRelease};
-use config::Config;
-use utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
-use utils::args::ArgExt;
-use utils::sourcemaps::SourceMapProcessor;
+use crate::api::{Api, NewRelease};
+use crate::config::Config;
+use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
+use crate::utils::args::ArgExt;
+use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects for AppCenter.")

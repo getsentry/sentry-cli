@@ -20,8 +20,8 @@ use serde_json;
 #[cfg(target_os = "macos")]
 use unix_daemonize::{daemonize_redirect, ChdirMode};
 
-use utils::fs::{SeekRead, TempFile};
-use utils::system::expand_vars;
+use crate::utils::fs::{SeekRead, TempFile};
+use crate::utils::system::expand_vars;
 
 #[derive(Deserialize, Debug)]
 pub struct InfoPlist {
@@ -351,7 +351,7 @@ impl<'a> MayDetach<'a> {
         use open;
         use std::thread;
         use std::time::Duration;
-        use utils::system::print_error;
+        use crate::utils::system::print_error;
 
         let mut md = MayDetach::new(task_name);
         match f(&mut md) {
@@ -465,7 +465,7 @@ pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
 /// Shows a notification in xcode
 #[cfg(target_os = "macos")]
 pub fn show_notification(title: &str, message: &str) -> Result<(), Error> {
-    use config::Config;
+    use crate::config::Config;
 
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(

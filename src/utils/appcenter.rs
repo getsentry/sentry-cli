@@ -12,8 +12,8 @@ use glob::{glob_with, MatchOptions};
 use serde::de;
 use serde_json;
 
-use utils::releases::{get_xcode_release_name, infer_gradle_release_name};
-use utils::xcode::{InfoPlist, XcodeProjectInfo};
+use crate::utils::releases::{get_xcode_release_name, infer_gradle_release_name};
+use crate::utils::xcode::{InfoPlist, XcodeProjectInfo};
 
 #[cfg(not(windows))]
 static APPCENTER_BIN_PATH: &str = "appcenter";

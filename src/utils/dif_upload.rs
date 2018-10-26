@@ -34,12 +34,12 @@ use which::which;
 use zip::write::FileOptions;
 use zip::{ZipArchive, ZipWriter};
 
-use api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
-use config::Config;
-use utils::batch::{BatchedSliceExt, ItemSize};
-use utils::dif::DebuggingInformation;
-use utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
-use utils::ui::{copy_with_progress, make_byte_progress_bar};
+use crate::api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
+use crate::config::Config;
+use crate::utils::batch::{BatchedSliceExt, ItemSize};
+use crate::utils::dif::DebuggingInformation;
+use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
+use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.
 pub use api::DebugInfoFile;

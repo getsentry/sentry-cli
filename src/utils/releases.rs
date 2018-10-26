@@ -6,9 +6,9 @@ use std::path::PathBuf;
 use failure::Error;
 use regex::Regex;
 
-use utils::cordova::CordovaConfig;
-use utils::vcs;
-use utils::xcode::InfoPlist;
+use crate::utils::cordova::CordovaConfig;
+use crate::utils::vcs;
+use crate::utils::xcode::InfoPlist;
 
 pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     let here = path.unwrap_or(env::current_dir()?);

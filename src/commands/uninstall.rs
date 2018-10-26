@@ -7,9 +7,9 @@ use console::style;
 use failure::Error;
 use runas;
 
-use utils::fs::is_writable;
-use utils::system::{is_homebrew_install, is_npm_install, QuietExit};
-use utils::ui::prompt_to_continue;
+use crate::utils::fs::is_writable;
+use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
+use crate::utils::ui::prompt_to_continue;
 
 fn is_hidden() -> bool {
     cfg!(windows) || is_homebrew_install() || is_npm_install()

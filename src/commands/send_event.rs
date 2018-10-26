@@ -8,9 +8,9 @@ use sentry::protocol::{Event, Level, LogEntry, User};
 use serde_json::Value;
 use username::get_user_name;
 
-use config::Config;
-use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
-use utils::releases::detect_release_name;
+use crate::config::Config;
+use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
+use crate::utils::releases::detect_release_name;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Send a manual event to Sentry.")

@@ -16,8 +16,8 @@ use log;
 use parking_lot::Mutex;
 use sentry::Dsn;
 
-use constants::{CONFIG_RC_FILE_NAME, DEFAULT_URL};
-use utils::logging::set_max_level;
+use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_URL};
+use crate::utils::logging::set_max_level;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -98,7 +98,7 @@ impl Config {
         set_max_level(self.get_log_level());
         #[cfg(feature = "with_crash_reporting")]
         {
-            use utils::crashreporting;
+            use crate::utils::crashreporting;
             crashreporting::bind_configured_client(Some(self));
         }
         if env::var("http_proxy").is_err() {

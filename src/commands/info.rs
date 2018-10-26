@@ -6,9 +6,9 @@ use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use serde_json;
 
-use api::Api;
-use config::{Auth, Config};
-use utils::system::QuietExit;
+use crate::api::Api;
+use crate::config::{Auth, Config};
+use crate::utils::system::QuietExit;
 
 #[derive(Serialize, Default)]
 pub struct AuthStatus {
