@@ -27,46 +27,55 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a Xcode build step.")
         .org_project_args()
         // legacy parameter
-        .arg(Arg::with_name("verbose")
-            .long("verbose")
-            .short("v")
-            .hidden(true))
-        .arg(Arg::with_name("force")
-             .long("force")
-             .short("f")
-             .help("Force the script to run, even in debug configuration.{n}This rarely \
-                    does what you want because the default build script does not actually \
-                    produce any information that the sentry build tool could pick up on."))
-        .arg(Arg::with_name("allow_fetch")
-             .long("allow-fetch")
-             .help("Enable sourcemap fetching from the packager.{n}If this is enabled \
-                    the react native packager needs to run and sourcemaps are downloade \
-                    from it if the simulator platform is detected."))
-        .arg(Arg::with_name("fetch_from")
-             .long("fetch-from")
-             .value_name("URL")
-             .help("Set the URL to fetch sourcemaps from.{n}\
-                    The default is http://127.0.0.1:8081/, where the react-native \
-                    packager runs by default."))
-        .arg(Arg::with_name("force_foreground")
-             .long("force-foreground")
-             .help("Wait for the process to finish.{n}\
-                    By default part of the build process will when triggered from Xcode \
-                    detach and continue in the background.  When an error happens, \
-                    a dialog is shown.  If this parameter is passed, Xcode will wait \
-                    for the process to finish before the build finishes and output \
-                    will be shown in the Xcode build output."))
-        .arg(Arg::with_name("build_script")
-             .value_name("BUILD_SCRIPT")
-             .index(1)
-             .help("Optional path to the build script.{n}\
-                    This is the path to the `react-native-xcode.sh` script you want \
-                    to use.  By default the bundled build script is used."))
-        .arg(Arg::with_name("args")
-             .value_name("ARGS")
-             .multiple(true)
-             .last(true)
-             .help("Optional arguments to pass to the build script."))
+        .arg(
+            Arg::with_name("verbose")
+                .long("verbose")
+                .short("v")
+                .hidden(true),
+        ).arg(Arg::with_name("force").long("force").short("f").help(
+            "Force the script to run, even in debug configuration.{n}This rarely \
+             does what you want because the default build script does not actually \
+             produce any information that the sentry build tool could pick up on.",
+        )).arg(Arg::with_name("allow_fetch").long("allow-fetch").help(
+            "Enable sourcemap fetching from the packager.{n}If this is enabled \
+             the react native packager needs to run and sourcemaps are downloade \
+             from it if the simulator platform is detected.",
+        )).arg(
+            Arg::with_name("fetch_from")
+                .long("fetch-from")
+                .value_name("URL")
+                .help(
+                    "Set the URL to fetch sourcemaps from.{n}\
+                     The default is http://127.0.0.1:8081/, where the react-native \
+                     packager runs by default.",
+                ),
+        ).arg(
+            Arg::with_name("force_foreground")
+                .long("force-foreground")
+                .help(
+                    "Wait for the process to finish.{n}\
+                     By default part of the build process will when triggered from Xcode \
+                     detach and continue in the background.  When an error happens, \
+                     a dialog is shown.  If this parameter is passed, Xcode will wait \
+                     for the process to finish before the build finishes and output \
+                     will be shown in the Xcode build output.",
+                ),
+        ).arg(
+            Arg::with_name("build_script")
+                .value_name("BUILD_SCRIPT")
+                .index(1)
+                .help(
+                    "Optional path to the build script.{n}\
+                     This is the path to the `react-native-xcode.sh` script you want \
+                     to use.  By default the bundled build script is used.",
+                ),
+        ).arg(
+            Arg::with_name("args")
+                .value_name("ARGS")
+                .multiple(true)
+                .last(true)
+                .help("Optional arguments to pass to the build script."),
+        )
 }
 
 fn find_node() -> String {

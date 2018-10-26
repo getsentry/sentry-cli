@@ -14,7 +14,9 @@ use regex::Regex;
 
 use crate::api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
+use crate::utils::args::{
+    get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt,
+};
 use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::releases::detect_release_name;
 use crate::utils::sourcemaps::SourceMapProcessor;

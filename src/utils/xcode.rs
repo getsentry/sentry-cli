@@ -348,10 +348,10 @@ impl<'a> MayDetach<'a> {
         task_name: &'a str,
         f: F,
     ) -> Result<T, Error> {
+        use crate::utils::system::print_error;
         use open;
         use std::thread;
         use std::time::Duration;
-        use crate::utils::system::print_error;
 
         let mut md = MayDetach::new(task_name);
         match f(&mut md) {
