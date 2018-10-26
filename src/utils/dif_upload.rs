@@ -42,7 +42,7 @@ use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile}
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.
-pub use api::DebugInfoFile;
+pub use crate::api::DebugInfoFile;
 
 /// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;

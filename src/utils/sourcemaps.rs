@@ -253,7 +253,7 @@ impl SourceMapProcessor {
             pb.set_message(&url);
             let mut f = fs::File::open(&path)?;
             let mut contents: Vec<u8> = vec![];
-            try!(f.read_to_end(&mut contents));
+            f.read_to_end(&mut contents)?;
             let ty = if sourcemap::is_sourcemap_slice(&contents) {
                 SourceType::SourceMap
             } else if path
