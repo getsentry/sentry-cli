@@ -12,14 +12,16 @@ use ignore::WalkBuilder;
 use indicatif::HumanBytes;
 use regex::Regex;
 
-use api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
-use config::Config;
-use utils::args::{get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt};
-use utils::formatting::{HumanDuration, Table};
-use utils::releases::detect_release_name;
-use utils::sourcemaps::SourceMapProcessor;
-use utils::system::QuietExit;
-use utils::vcs::{find_heads, CommitSpec};
+use crate::api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
+use crate::config::Config;
+use crate::utils::args::{
+    get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt,
+};
+use crate::utils::formatting::{HumanDuration, Table};
+use crate::utils::releases::detect_release_name;
+use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::system::QuietExit;
+use crate::utils::vcs::{find_heads, CommitSpec};
 
 struct ReleaseContext<'a> {
     pub api: Rc<Api>,
@@ -694,12 +696,12 @@ fn execute_files_upload_sourcemaps<'a>(
     let url_prefix = matches
         .value_of("url_prefix")
         .unwrap_or("~")
-        .trim_right_matches('/');
+        .trim_end_matches('/');
     let url_suffix = matches.value_of("url_suffix").unwrap_or("");
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")
-        .map(|extensions| extensions.map(|ext| ext.trim_left_matches('.')).collect())
+        .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
         .values_of("ignore")

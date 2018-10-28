@@ -13,9 +13,9 @@ use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
 use username::get_user_name;
 use uuid::Uuid;
 
-use config::Config;
-use utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
-use utils::releases::detect_release_name;
+use crate::config::Config;
+use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
+use crate::utils::releases::detect_release_name;
 
 const BASH_SCRIPT: &str = include_str!("../bashsupport.sh");
 lazy_static! {

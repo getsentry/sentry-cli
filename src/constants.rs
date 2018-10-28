@@ -31,7 +31,7 @@ pub const EXT: &str = "";
 /*
 #[cfg(feature = "with_crash_reporting")]
 lazy_static! {
-    pub static ref INTERNAL_SENTRY_DSN: ::sentry::Dsn =
+    pub static ref INTERNAL_SENTRY_DSN: sentry::Dsn =
         "https://4b5ba00d320841efbb18a330cf539f4a@sentry.io/1192882".parse().unwrap();
 }
 */

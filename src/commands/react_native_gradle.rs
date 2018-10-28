@@ -4,10 +4,10 @@ use std::path::PathBuf;
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
 
-use api::{Api, NewRelease};
-use config::Config;
-use utils::args::ArgExt;
-use utils::sourcemaps::SourceMapProcessor;
+use crate::api::{Api, NewRelease};
+use crate::config::Config;
+use crate::utils::args::ArgExt;
+use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a gradle build step.")

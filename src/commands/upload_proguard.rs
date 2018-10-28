@@ -11,13 +11,13 @@ use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
 use zip;
 
-use api::{Api, AssociateDsyms};
-use config::Config;
-use utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
-use utils::args::{validate_uuid, ArgExt};
-use utils::fs::{get_sha1_checksum, TempFile};
-use utils::system::QuietExit;
-use utils::ui::{copy_with_progress, make_byte_progress_bar};
+use crate::api::{Api, AssociateDsyms};
+use crate::config::Config;
+use crate::utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
+use crate::utils::args::{validate_uuid, ArgExt};
+use crate::utils::fs::{get_sha1_checksum, TempFile};
+use crate::utils::system::QuietExit;
+use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 #[derive(Debug)]
 struct MappingRef {

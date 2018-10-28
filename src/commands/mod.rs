@@ -7,11 +7,11 @@ use std::process;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::Error;
 
-use api::Api;
-use config::{prepare_environment, Auth, Config};
-use constants::VERSION;
-use utils::system::{print_error, QuietExit};
-use utils::update::run_sentrycli_update_nagger;
+use crate::api::Api;
+use crate::config::{prepare_environment, Auth, Config};
+use crate::constants::VERSION;
+use crate::utils::system::{print_error, QuietExit};
+use crate::utils::update::run_sentrycli_update_nagger;
 
 const ABOUT: &str = "
 Command line utility for Sentry.
@@ -258,9 +258,9 @@ fn run() -> Result<(), Error> {
 }
 
 fn setup() {
-    use log;
-    use utils::logging::Logger;
-    use utils::system::{init_backtrace, load_dotenv};
+    use crate::log;
+    use crate::utils::logging::Logger;
+    use crate::utils::system::{init_backtrace, load_dotenv};
 
     init_backtrace();
     load_dotenv();
@@ -273,7 +273,7 @@ fn setup() {
     // also configures the logger.
     #[cfg(feature = "with_crash_reporting")]
     {
-        use utils::crashreporting::setup;
+        use crate::utils::crashreporting::setup;
         setup(Box::new(Logger));
     }
     #[cfg(not(feature = "with_crash_reporting"))]
@@ -301,7 +301,7 @@ pub fn main() {
                 print_error(&err);
                 #[cfg(feature = "with_crash_reporting")]
                 {
-                    use utils::crashreporting::try_report_to_sentry;
+                    use crate::utils::crashreporting::try_report_to_sentry;
                     try_report_to_sentry(&err);
                 }
                 process::exit(1);

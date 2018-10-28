@@ -2,8 +2,8 @@
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::Error;
 
-use commands::upload_dif;
-use utils::args::{validate_uuid, ArgExt};
+use crate::commands::upload_dif;
+use crate::utils::args::{validate_uuid, ArgExt};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("DEPRECATED: Upload Mac debug symbols to a project.")

@@ -15,8 +15,8 @@ use might_be_minified;
 use sourcemap;
 use url::Url;
 
-use api::{Api, FileContents};
-use utils::enc::decode_unknown_string;
+use crate::api::{Api, FileContents};
+use crate::utils::enc::decode_unknown_string;
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);
@@ -253,7 +253,7 @@ impl SourceMapProcessor {
             pb.set_message(&url);
             let mut f = fs::File::open(&path)?;
             let mut contents: Vec<u8> = vec![];
-            try!(f.read_to_end(&mut contents));
+            f.read_to_end(&mut contents)?;
             let ty = if sourcemap::is_sourcemap_slice(&contents) {
                 SourceType::SourceMap
             } else if path

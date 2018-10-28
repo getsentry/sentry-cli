@@ -32,13 +32,13 @@ use symbolic::common::types::ObjectClass;
 use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
-use config::{Auth, Config};
-use constants::{ARCH, EXT, PLATFORM, VERSION};
-use utils::android::AndroidManifest;
-use utils::http::parse_link_header;
-use utils::sourcemaps::get_sourcemap_reference_from_headers;
-use utils::ui::{capitalize_string, make_byte_progress_bar};
-use utils::xcode::InfoPlist;
+use crate::config::{Auth, Config};
+use crate::constants::{ARCH, EXT, PLATFORM, VERSION};
+use crate::utils::android::AndroidManifest;
+use crate::utils::http::parse_link_header;
+use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
+use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
+use crate::utils::xcode::InfoPlist;
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);

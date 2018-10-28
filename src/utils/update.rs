@@ -11,11 +11,11 @@ use failure::{Error, ResultExt};
 use runas;
 use serde_json;
 
-use api::{Api, SentryCliRelease};
-use config::Config;
-use constants::{APP_INFO, VERSION};
-use utils::fs::{is_writable, set_executable_mode};
-use utils::system::{is_homebrew_install, is_npm_install, QuietExit};
+use crate::api::{Api, SentryCliRelease};
+use crate::config::Config;
+use crate::constants::{APP_INFO, VERSION};
+use crate::utils::fs::{is_writable, set_executable_mode};
+use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {

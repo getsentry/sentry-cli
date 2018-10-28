@@ -10,7 +10,7 @@ use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
 use sentry::{Client, ClientOptions, Dsn};
 
-use constants::USER_AGENT;
+use crate::constants::USER_AGENT;
 
 lazy_static! {
     static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();

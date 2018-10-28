@@ -2,8 +2,6 @@ use std::borrow::Cow;
 use std::env;
 use std::process;
 
-use config::Config;
-
 #[cfg(not(windows))]
 use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
@@ -12,6 +10,8 @@ use console::style;
 use dotenv;
 use failure::Error;
 use regex::{Captures, Regex};
+
+use crate::config::Config;
 
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)
@@ -23,7 +23,7 @@ where
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);
-    ::std::thread::spawn(move || run(sdone));
+    std::thread::spawn(move || run(sdone));
 
     let mut rv = None;
 
@@ -173,7 +173,7 @@ pub fn init_backtrace() {
 
         #[cfg(feature = "with_client_implementation")]
         {
-            use utils::crashreporting::flush_events;
+            use crate::utils::crashreporting::flush_events;
             flush_events();
         }
     }));

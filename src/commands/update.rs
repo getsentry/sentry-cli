@@ -4,7 +4,7 @@ use std::env;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::Error;
 
-use utils::update::{can_update_sentrycli, get_latest_sentrycli_release};
+use crate::utils::update::{can_update_sentrycli, get_latest_sentrycli_release};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Update the sentry-cli executable.")

@@ -16,9 +16,9 @@ use symbolic::proguard::ProguardMappingView;
 use uuid::Version as UuidVersion;
 use walkdir::WalkDir;
 
-use utils::args::validate_id;
-use utils::dif::{DifFile, DifType};
-use utils::system::QuietExit;
+use crate::utils::args::validate_id;
+use crate::utils::dif::{DifFile, DifType};
+use crate::utils::system::QuietExit;
 
 // text files larger than 32 megabytes are not considered to be
 // valid mapping files when scanning
