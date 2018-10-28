@@ -153,7 +153,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             if !matches.is_present("force_foreground") {
                 md.may_detach()?;
             }
-            let url = url.trim_right_matches('/');
+            let url = url.trim_end_matches('/');
             bundle_file = TempFile::new()?;
             bundle_path = bundle_file.path().to_path_buf();
             bundle_url = "~/index.ios.bundle".to_string();

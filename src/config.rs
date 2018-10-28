@@ -168,7 +168,7 @@ impl Config {
 
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str, Error> {
-        let base = self.cached_base_url.trim_right_matches('/');
+        let base = self.cached_base_url.trim_end_matches('/');
         if !base.starts_with("http://") && !base.starts_with("https://") {
             bail!("bad sentry url: unknown scheme ({})", base);
         }
@@ -181,7 +181,7 @@ impl Config {
     /// Returns the API URL for a path
     pub fn get_api_endpoint(&self, path: &str) -> Result<String, Error> {
         let base = self.get_base_url()?;
-        Ok(format!("{}/api/0/{}", base, path.trim_left_matches('/')))
+        Ok(format!("{}/api/0/{}", base, path.trim_start_matches('/')))
     }
 
     /// Returns the log level.

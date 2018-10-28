@@ -696,12 +696,12 @@ fn execute_files_upload_sourcemaps<'a>(
     let url_prefix = matches
         .value_of("url_prefix")
         .unwrap_or("~")
-        .trim_right_matches('/');
+        .trim_end_matches('/');
     let url_suffix = matches.value_of("url_suffix").unwrap_or("");
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")
-        .map(|extensions| extensions.map(|ext| ext.trim_left_matches('.')).collect())
+        .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
         .values_of("ignore")

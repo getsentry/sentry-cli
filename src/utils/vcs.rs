@@ -119,7 +119,7 @@ impl CommitSpec {
 }
 
 fn strip_git_suffix(s: &str) -> &str {
-    s.trim_right_matches(".git")
+    s.trim_end_matches(".git")
 }
 
 impl VcsUrl {
