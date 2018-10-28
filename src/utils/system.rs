@@ -23,7 +23,7 @@ where
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);
-    ::std::thread::spawn(move || run(sdone));
+    std::thread::spawn(move || run(sdone));
 
     let mut rv = None;
 
