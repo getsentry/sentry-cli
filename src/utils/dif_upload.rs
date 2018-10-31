@@ -437,7 +437,7 @@ where
     Ok(())
 }
 
-/// Recursively searches the given directory for potential DIFs and passes them
+/// Recursively searches the given location for potential DIFs and passes them
 /// to the callback.
 ///
 /// If `DifUpload::allow_zips` is set, then this function will attempt to open
@@ -446,14 +446,20 @@ where
 ///
 /// To avoid unnecessary file operations, the file extension is already checked
 /// for every entry before opening it.
-fn walk_difs_directory<F, P>(directory: P, options: &DifUpload, mut func: F) -> Result<(), Error>
+fn walk_difs_directory<F, P>(location: P, options: &DifUpload, mut func: F) -> Result<(), Error>
 where
     P: AsRef<Path>,
     F: FnMut(DifSource, String, ByteView<'static>) -> Result<(), Error>,
 {
-    let directory = directory.as_ref();
-    debug!("searching location {}", directory.display());
-    for entry in WalkDir::new(&directory).into_iter().filter_map(|e| e.ok()) {
+    let location = location.as_ref();
+    let directory = if location.is_dir() {
+        location
+    } else {
+        location.parent().unwrap()
+    };
+
+    debug!("searching location {}", location.display());
+    for entry in WalkDir::new(location).into_iter().filter_map(|e| e.ok()) {
         if !entry.metadata()?.is_file() {
             // Walkdir recurses automatically into folders
             continue;
@@ -483,7 +489,7 @@ where
 
         let buffer = ByteView::from_path(path).map_err(SyncFailure::new)?;
         let name = path
-            .strip_prefix(&directory)
+            .strip_prefix(directory)
             .unwrap()
             .to_string_lossy()
             .into_owned();
