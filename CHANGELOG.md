@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.36.4
+
+* Add support for GitLab in `releases set-commits` (#419)
+* Fix a bug where uploaded debug files might show up as _"Generic"_ (#420)
+
 ## sentry-cli 1.36.3
 
 * Print out how sentry-cli was invoked in debug log
