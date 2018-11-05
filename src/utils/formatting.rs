@@ -31,7 +31,7 @@ pub struct Table {
 }
 
 pub struct TableRow {
-    cells: Vec<prettytable::cell::Cell>,
+    cells: Vec<prettytable::Cell>,
 }
 
 impl TableRow {
@@ -40,13 +40,12 @@ impl TableRow {
     }
 
     pub fn add<D: fmt::Display>(&mut self, text: D) -> &mut TableRow {
-        self.cells
-            .push(prettytable::cell::Cell::new(&text.to_string()));
+        self.cells.push(prettytable::Cell::new(&text.to_string()));
         self
     }
 
-    fn make_row(&self) -> prettytable::row::Row {
-        let mut row = prettytable::row::Row::empty();
+    fn make_row(&self) -> prettytable::Row {
+        let mut row = prettytable::Row::empty();
         for cell in &self.cells {
             row.add_cell(cell.clone());
         }
