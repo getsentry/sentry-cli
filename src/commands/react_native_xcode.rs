@@ -99,7 +99,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let script = if let Some(path) = matches.value_of("build_script") {
         base.join(path)
     } else {
-        base.join("../node_modules/react-native/packager/react-native-xcode.sh")
+        base.join("../node_modules/react-native/scripts/react-native-xcode.sh")
     }.canonicalize()?;
 
     // if we allow fetching and we detect a simulator run, then we need to switch
