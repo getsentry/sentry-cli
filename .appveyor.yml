@@ -40,7 +40,11 @@ build: false
 test_script:
   - set RUSTFLAGS=-Ctarget-feature=+crt-static
   - cargo build --release --locked
-  - if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [getsentry/sentry-cli]
+  # Smoke test, but only when building from the same repo
+  - set SECRETS_AVAILABLE=false
+  - if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [getsentry/sentry-cli] (set SECRETS_AVAILABLE=true)
+  - if not defined APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME (set SECRETS_AVAILABLE=true)
+  - if [%SECRETS_AVAILABLE%] == [true]
       cargo run --release -- releases list
 
 on_success:
