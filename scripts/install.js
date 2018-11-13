@@ -66,8 +66,13 @@ function createProgressBar(name, total) {
   return { tick: () => {} };
 }
 
+function copyFileSync(src, dest) {
+  const data = fs.readFileSync(src);
+  fs.writeFileSync(dest, data);
+}
+
 function npmCache() {
-  var env = process.env;
+  const env = process.env;
   return (
     env.npm_config_cache ||
     env.npm_config_yarn_offline_mirror ||
@@ -76,7 +81,7 @@ function npmCache() {
 }
 
 function getCachedPath(url) {
-  var digest = crypto
+  const digest = crypto
     .createHash('md5')
     .update(url)
     .digest('hex')
@@ -84,21 +89,14 @@ function getCachedPath(url) {
 
   return path.join(
     npmCache(),
-    digest + '-' + path.basename(url).replace(/[^a-zA-Z0-9.]+/g, '-')
+    `${digest}-${path.basename(url).replace(/[^a-zA-Z0-9.]+/g, '-')}`
   );
 }
 
 function getTempFile(cached) {
-  return (
-    cached +
-    '.' +
-    process.pid +
-    '-' +
-    Math.random()
-      .toString(16)
-      .slice(2) +
-    '.tmp'
-  );
+  return `${cached}.${process.pid}-${Math.random()
+    .toString(16)
+    .slice(2)}.tmp`;
 }
 
 function downloadBinary() {
@@ -120,7 +118,7 @@ function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    fs.copyFileSync(cachedPath, outputPath);
+    copyFileSync(cachedPath, outputPath);
     return Promise.resolve();
   }
 
@@ -151,8 +149,8 @@ function downloadBinary() {
         .on('error', e => reject(e))
         .on('close', () => resolve());
     }).then(() => {
-      fs.copyFileSync(tempPath, cachedPath);
-      fs.copyFileSync(tempPath, outputPath);
+      copyFileSync(tempPath, cachedPath);
+      copyFileSync(tempPath, outputPath);
       fs.unlinkSync(tempPath);
     });
   });
