@@ -91,7 +91,7 @@ matrix:
       env:
         - TARGET=x86_64-apple-darwin
       script:
-        - echo $SENTRY_AUTH_TOKEN
+        - if [ -z ${SENTRY_AUTH_TOKEN+x} ]; then echo "var is unset"; else echo "var is set to '$SENTRY_AUTH_TOKEN'"; fi
         - cargo build --release --locked
         - cargo run --release -- releases list || [[ "${SENTRY_AUTH_TOKEN?x}" == "" ]]
         - zeus upload -t "application/octet-stream"
