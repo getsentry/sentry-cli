@@ -16,8 +16,10 @@ docker run \
   ${DOCKER_RUN_OPTS} \
   cargo build --release --target=${TARGET} --locked
 
-# Smoke test (but only when building from the same repo)
-if [[ "${SENTRY_AUTH_TOKEN?x}" != "" ]]; then
+# Smoke test (but only when building from the same repo).
+# $TRAVIS_PULL_REQUEST_SLUG is set either to head repo slug, or to "" when
+# building branches.
+if [[ "${TRAVIS_PULL_REQUEST_SLUG?x}" =~ ^(getsentry/sentry-cli)?$ ]]; then
   env | grep SENTRY_ > .env
   docker run \
     --env-file=.env \
