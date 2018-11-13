@@ -2,7 +2,7 @@
 
 'use strict';
 
-const fs = require('fs');
+const fs = require('fs-extra');
 const http = require('http');
 const os = require('os');
 const path = require('path');
@@ -66,11 +66,6 @@ function createProgressBar(name, total) {
   return { tick: () => {} };
 }
 
-function copyFileSync(src, dest) {
-  const data = fs.readFileSync(src);
-  fs.writeFileSync(dest, data);
-}
-
 function npmCache() {
   const env = process.env;
   return (
@@ -89,6 +84,7 @@ function getCachedPath(url) {
 
   return path.join(
     npmCache(),
+    'sentry-cli',
     `${digest}-${path.basename(url).replace(/[^a-zA-Z0-9.]+/g, '-')}`
   );
 }
@@ -118,7 +114,7 @@ function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    copyFileSync(cachedPath, outputPath);
+    fs.copyFileSync(cachedPath, outputPath);
     return Promise.resolve();
   }
 
@@ -140,6 +136,7 @@ function downloadBinary() {
     const progressBar = createProgressBar(name, total);
 
     const tempPath = getTempFile(cachedPath);
+    fs.ensureDirSync(path.dirname(tempPath));
 
     return new Promise((resolve, reject) => {
       response.body
@@ -149,8 +146,8 @@ function downloadBinary() {
         .on('error', e => reject(e))
         .on('close', () => resolve());
     }).then(() => {
-      copyFileSync(tempPath, cachedPath);
-      copyFileSync(tempPath, outputPath);
+      fs.copyFileSync(tempPath, cachedPath);
+      fs.copyFileSync(tempPath, outputPath);
       fs.unlinkSync(tempPath);
     });
   });
