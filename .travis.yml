@@ -92,7 +92,7 @@ matrix:
         - TARGET=x86_64-apple-darwin
       script:
         - cargo build --release --locked
-        - cargo run --release -- releases list
+        - cargo run --release -- releases list || [[ "${SENTRY_AUTH_TOKEN?x}" == "" ]]
         - zeus upload -t "application/octet-stream"
                       -n "sentry-cli-Darwin-x86_64"
                       "./target/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
