@@ -40,9 +40,8 @@ build: false
 test_script:
   - set RUSTFLAGS=-Ctarget-feature=+crt-static
   - cargo build --release --locked
-  - echo %APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%
-  - cargo run --release -- releases list ||
-      if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [getsentry/sentry-cli] (fail) else (echo "Building branch or fork PR, ignoring")
+  - if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [getsentry/sentry-cli]
+      cargo run --release -- releases list
 
 on_success:
   - zeus upload -t "application/octet-stream" -n sentry-cli-Windows-%arch%.exe .\target\release\sentry-cli.exe ||
