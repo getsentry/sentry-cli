@@ -6,6 +6,7 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 
 const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
@@ -65,6 +66,41 @@ function createProgressBar(name, total) {
   return { tick: () => {} };
 }
 
+function npmCache() {
+  var env = process.env;
+  return (
+    env.npm_config_cache ||
+    env.npm_config_yarn_offline_mirror ||
+    (env.APPDATA ? path.join(env.APPDATA, 'npm-cache') : path.join(os.homedir(), '.npm'))
+  );
+}
+
+function getCachedPath(url) {
+  var digest = crypto
+    .createHash('md5')
+    .update(url)
+    .digest('hex')
+    .slice(0, 6);
+
+  return path.join(
+    npmCache(),
+    digest + '-' + path.basename(url).replace(/[^a-zA-Z0-9.]+/g, '-')
+  );
+}
+
+function getTempFile(cached) {
+  return (
+    cached +
+    '.' +
+    process.pid +
+    '-' +
+    Math.random()
+      .toString(16)
+      .slice(2) +
+    '.tmp'
+  );
+}
+
 function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
@@ -80,6 +116,12 @@ function downloadBinary() {
   const downloadUrl = getDownloadUrl(platform, arch);
   if (!downloadUrl) {
     return Promise.reject(new Error(`unsupported target ${platform}-${arch}`));
+  }
+
+  const cachedPath = getCachedPath(downloadUrl);
+  if (fs.existsSync(cachedPath)) {
+    fs.copyFileSync(cachedPath, outputPath);
+    return Promise.resolve();
   }
 
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
@@ -99,13 +141,19 @@ function downloadBinary() {
     const total = parseInt(response.headers.get('content-length'), 10);
     const progressBar = createProgressBar(name, total);
 
+    const tempPath = getTempFile(cachedPath);
+
     return new Promise((resolve, reject) => {
       response.body
         .on('error', e => reject(e))
         .on('data', chunk => progressBar.tick(chunk.length))
-        .pipe(fs.createWriteStream(outputPath, { mode: '0755' }))
+        .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
         .on('error', e => reject(e))
         .on('close', () => resolve());
+    }).then(() => {
+      fs.copyFileSync(tempPath, cachedPath);
+      fs.copyFileSync(tempPath, outputPath);
+      fs.unlinkSync(tempPath);
     });
   });
 }
