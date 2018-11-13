@@ -40,6 +40,7 @@ build: false
 test_script:
   - set RUSTFLAGS=-Ctarget-feature=+crt-static
   - cargo build --release --locked
+  - echo %APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%
   - cargo run --release -- releases list ||
       if [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [getsentry/sentry-cli] (fail) else (echo "Building branch or fork PR, ignoring")
 
