@@ -124,6 +124,8 @@ pub fn print_error(err: &Error) {
             _ => eprintln!("  {} {}", style("caused by:").dim(), cause),
         }
     }
+    eprintln!("{}", style("Add --log-level=info or SENTRY_LOG_LEVEL=info to receive more.").blue());
+    eprintln!("{}", style("Please also attach the full output in case your are creating an issue.").blue());
 
     if env::var("RUST_BACKTRACE") == Ok("1".into()) {
         eprintln!();
