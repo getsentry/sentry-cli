@@ -2,7 +2,7 @@
 
 'use strict';
 
-const fs = require('fs-extra');
+const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
@@ -12,6 +12,8 @@ const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
+const copyFileSync = require('fs-copy-file-sync');
+const mkdirp = require('mkdirp');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
@@ -114,7 +116,7 @@ function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    fs.copyFileSync(cachedPath, outputPath);
+    copyFileSync(cachedPath, outputPath);
     return Promise.resolve();
   }
 
@@ -136,7 +138,7 @@ function downloadBinary() {
     const progressBar = createProgressBar(name, total);
 
     const tempPath = getTempFile(cachedPath);
-    fs.ensureDirSync(path.dirname(tempPath));
+    mkdirp.sync(path.dirname(tempPath));
 
     return new Promise((resolve, reject) => {
       response.body
@@ -146,8 +148,8 @@ function downloadBinary() {
         .on('error', e => reject(e))
         .on('close', () => resolve());
     }).then(() => {
-      fs.copyFileSync(tempPath, cachedPath);
-      fs.copyFileSync(tempPath, outputPath);
+      copyFileSync(tempPath, cachedPath);
+      copyFileSync(tempPath, outputPath);
       fs.unlinkSync(tempPath);
     });
   });

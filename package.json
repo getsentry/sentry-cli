@@ -30,8 +30,9 @@
     "sentry-cli": "bin/sentry-cli"
   },
   "dependencies": {
-    "fs-extra": "^7.0.1",
+    "fs-copy-file-sync": "^1.1.1",
     "https-proxy-agent": "^2.2.1",
+    "mkdirp": "^0.5.1",
     "node-fetch": "^2.1.2",
     "progress": "2.0.0",
     "proxy-from-env": "^1.0.0"
