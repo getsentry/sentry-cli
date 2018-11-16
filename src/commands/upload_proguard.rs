@@ -195,7 +195,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("{} compressing mappings", style(">").dim());
-    let tf = TempFile::new()?;
+    let tf = TempFile::create()?;
 
     // add a scope here so we will flush before uploading
     {

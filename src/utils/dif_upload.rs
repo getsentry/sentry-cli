@@ -671,7 +671,7 @@ fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<Di
     //     ├─ 1C228684-3EE5-472B-AB8D-29B3FBF63A70.plist
     //     └─ DWARF
     //        └─ ObjectFile
-    let temp_dir = TempDir::new()?;
+    let temp_dir = TempDir::create()?;
     fs::create_dir_all(temp_dir.path().join("DWARF"))?;
 
     // Copy the object file binary
@@ -1174,7 +1174,7 @@ fn get_missing_difs<'data>(
 fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile, Error> {
     let total_bytes = difs.iter().map(|sym| sym.size()).sum();
     let pb = make_byte_progress_bar(total_bytes);
-    let tf = TempFile::new()?;
+    let tf = TempFile::create()?;
     let mut zip = ZipWriter::new(tf.open());
 
     for symbol in difs {

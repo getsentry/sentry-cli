@@ -134,7 +134,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         None => bail!("Could not find info.plist"),
     };
     info!("Parse result from Info.plist: {:?}", &plist);
-    let report_file = TempFile::new()?;
+    let report_file = TempFile::create()?;
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
 
@@ -154,10 +154,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 md.may_detach()?;
             }
             let url = url.trim_end_matches('/');
-            bundle_file = TempFile::new()?;
+            bundle_file = TempFile::create()?;
             bundle_path = bundle_file.path().to_path_buf();
             bundle_url = "~/index.ios.bundle".to_string();
-            sourcemap_file = TempFile::new()?;
+            sourcemap_file = TempFile::create()?;
             sourcemap_path = sourcemap_file.path().to_path_buf();
             sourcemap_url = "~/index.ios.map".to_string();
 
