@@ -412,7 +412,7 @@ impl Api {
         // This toggles gzipping, useful for uploading large files
         handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
-        ApiRequest::new(handle, &method, &url, auth)
+        ApiRequest::create(handle, &method, &url, auth)
     }
 
     /// Convenience method that performs a `GET` request.
@@ -1260,12 +1260,12 @@ impl<'a> Iterator for Headers<'a> {
 }
 
 impl<'a> ApiRequest<'a> {
-    fn new(
+    fn create(
         mut handle: RefMut<'a, curl::easy::Easy>,
         method: &Method,
         url: &str,
         auth: Option<&Auth>,
-    ) -> ApiResult<ApiRequest<'a>> {
+    ) -> ApiResult<Self> {
         debug!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
@@ -1321,13 +1321,13 @@ impl<'a> ApiRequest<'a> {
     }
 
     /// adds a specific header to the request
-    pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<ApiRequest<'a>> {
+    pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<Self> {
         self.headers.append(&format!("{}: {}", key, value))?;
         Ok(self)
     }
 
     /// sets the JSON request body for the request.
-    pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<ApiRequest<'a>> {
+    pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<Self> {
         let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)
             .context(ApiErrorKind::CannotSerializeAsJson)?;
@@ -1338,7 +1338,7 @@ impl<'a> ApiRequest<'a> {
     }
 
     /// attaches some form data to the request.
-    pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<ApiRequest<'a>> {
+    pub fn with_form_data(mut self, form: curl::easy::Form) -> ApiResult<Self> {
         debug!("sending form data");
         self.handle.httppost(form)?;
         self.body = None;
@@ -1346,14 +1346,14 @@ impl<'a> ApiRequest<'a> {
     }
 
     /// enables or disables redirects.  The default is off.
-    pub fn follow_location(mut self, val: bool) -> ApiResult<ApiRequest<'a>> {
+    pub fn follow_location(mut self, val: bool) -> ApiResult<Self> {
         debug!("follow redirects: {}", val);
         self.handle.follow_location(val)?;
         Ok(self)
     }
 
     /// enables a progress bar.
-    pub fn progress_bar_mode(mut self, mode: ProgressBarMode) -> ApiResult<ApiRequest<'a>> {
+    pub fn progress_bar_mode(mut self, mode: ProgressBarMode) -> ApiResult<Self> {
         self.progress_bar_mode = mode;
         Ok(self)
     }
@@ -1398,7 +1398,7 @@ impl ApiResponse {
 
     /// Converts the API response into a result object.  This also converts
     /// non okay response codes into errors.
-    pub fn into_result(self) -> ApiResult<ApiResponse> {
+    pub fn into_result(self) -> ApiResult<Self> {
         if let Some(ref body) = self.body {
             debug!("body: {}", String::from_utf8_lossy(body));
         }
@@ -1899,7 +1899,7 @@ pub struct ChunkUploadOptions {
     pub compression: Vec<ChunkCompression>,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ChunkedFileState {
     #[serde(rename = "error")]
     Error,
@@ -1914,16 +1914,16 @@ pub enum ChunkedFileState {
 }
 
 impl ChunkedFileState {
-    pub fn finished(&self) -> bool {
-        *self == ChunkedFileState::Error || *self == ChunkedFileState::Ok
+    pub fn finished(self) -> bool {
+        self == ChunkedFileState::Error || self == ChunkedFileState::Ok
     }
 
-    pub fn pending(&self) -> bool {
+    pub fn pending(self) -> bool {
         !self.finished()
     }
 
-    pub fn ok(&self) -> bool {
-        *self == ChunkedFileState::Ok
+    pub fn ok(self) -> bool {
+        self == ChunkedFileState::Ok
     }
 }
 

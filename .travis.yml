@@ -38,6 +38,7 @@ matrix:
       language: rust
       install: rustup component add clippy-preview
       script: make lint
+      rust: beta
 
     - name: "test: rust"
       language: rust

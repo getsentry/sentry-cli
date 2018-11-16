@@ -13,7 +13,7 @@ chardet = "0.2.4"
 chrono = { version = "0.4.6", features = ["serde"] }
 clap = { version = "2.32.0", default-features = false, features = ["suggestions", "wrap_help"] }
 console = "0.6.2"
-curl = "0.4.18"
+curl = "0.4.19"
 dirs = "1.0.4"
 dotenv = "0.13.0"
 elementtree = "0.5.0"
@@ -38,20 +38,20 @@ parking_lot = "0.6.4"
 plist = "0.3.0"
 prettytable-rs = "0.8.0"
 rayon = "1.0.3"
-regex = "1.0.5"
+regex = "1.0.6"
 runas = "0.1.4"
 rust-ini = "0.13.0"
 sentry = { version = "0.12.0", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
 serde = "1.0.80"
 serde_derive = "1.0.80"
-serde_json = "1.0.32"
+serde_json = "1.0.33"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = "2.2.1"
-symbolic = { version = "5.5.4", features = ["debuginfo", "proguard", "with_serde", "with_serde_debuginfo"] }
-url = "1.7.1"
+symbolic = { version = "5.5.6", features = ["debuginfo", "proguard", "with_serde", "with_serde_debuginfo"] }
+url = "1.7.2"
 username = "0.2.0"
 uuid = { version = "0.7.1", features = ["v4", "serde"] }
-walkdir = "2.2.6"
+walkdir = "2.2.7"
 which = "2.0.0"
 zip = "0.4.2"
 

@@ -20,7 +20,7 @@ pub struct TempDir {
 
 impl TempDir {
     /// Creates a new tempdir
-    pub fn new() -> io::Result<TempDir> {
+    pub fn create() -> io::Result<Self> {
         let mut path = env::temp_dir();
         path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
         fs::create_dir(&path)?;
@@ -48,7 +48,7 @@ pub struct TempFile {
 
 impl TempFile {
     /// Creates a new tempfile.
-    pub fn new() -> io::Result<TempFile> {
+    pub fn create() -> io::Result<Self> {
         let mut path = env::temp_dir();
         path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
 
