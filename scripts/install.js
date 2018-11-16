@@ -6,11 +6,14 @@ const fs = require('fs');
 const http = require('http');
 const os = require('os');
 const path = require('path');
+const crypto = require('crypto');
 
 const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
+const copyFileSync = require('fs-copy-file-sync');
+const mkdirp = require('mkdirp');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
@@ -65,6 +68,35 @@ function createProgressBar(name, total) {
   return { tick: () => {} };
 }
 
+function npmCache() {
+  const env = process.env;
+  return (
+    env.npm_config_cache ||
+    env.npm_config_yarn_offline_mirror ||
+    (env.APPDATA ? path.join(env.APPDATA, 'npm-cache') : path.join(os.homedir(), '.npm'))
+  );
+}
+
+function getCachedPath(url) {
+  const digest = crypto
+    .createHash('md5')
+    .update(url)
+    .digest('hex')
+    .slice(0, 6);
+
+  return path.join(
+    npmCache(),
+    'sentry-cli',
+    `${digest}-${path.basename(url).replace(/[^a-zA-Z0-9.]+/g, '-')}`
+  );
+}
+
+function getTempFile(cached) {
+  return `${cached}.${process.pid}-${Math.random()
+    .toString(16)
+    .slice(2)}.tmp`;
+}
+
 function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
@@ -80,6 +112,12 @@ function downloadBinary() {
   const downloadUrl = getDownloadUrl(platform, arch);
   if (!downloadUrl) {
     return Promise.reject(new Error(`unsupported target ${platform}-${arch}`));
+  }
+
+  const cachedPath = getCachedPath(downloadUrl);
+  if (fs.existsSync(cachedPath)) {
+    copyFileSync(cachedPath, outputPath);
+    return Promise.resolve();
   }
 
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
@@ -99,13 +137,20 @@ function downloadBinary() {
     const total = parseInt(response.headers.get('content-length'), 10);
     const progressBar = createProgressBar(name, total);
 
+    const tempPath = getTempFile(cachedPath);
+    mkdirp.sync(path.dirname(tempPath));
+
     return new Promise((resolve, reject) => {
       response.body
         .on('error', e => reject(e))
         .on('data', chunk => progressBar.tick(chunk.length))
-        .pipe(fs.createWriteStream(outputPath, { mode: '0755' }))
+        .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
         .on('error', e => reject(e))
         .on('close', () => resolve());
+    }).then(() => {
+      copyFileSync(tempPath, cachedPath);
+      copyFileSync(tempPath, outputPath);
+      fs.unlinkSync(tempPath);
     });
   });
 }
