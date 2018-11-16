@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use clap;
 use console::style;
 use dotenv;
+use log;
 use failure::Error;
 use regex::{Captures, Regex};
 
@@ -123,6 +124,12 @@ pub fn print_error(err: &Error) {
             0 => eprintln!("{} {}", style("error:").red(), cause),
             _ => eprintln!("  {} {}", style("caused by:").dim(), cause),
         }
+    }
+
+    if Config::get_current().get_log_level() < log::LevelFilter::Info {
+        eprintln!();
+        eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
+        eprintln!("{}", style("Please also attach the full debug log in case your are creating a new issue.").dim());
     }
 
     if env::var("RUST_BACKTRACE") == Ok("1".into()) {
