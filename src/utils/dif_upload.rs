@@ -999,9 +999,11 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
     }
 }
 
-/// Polls the assemble endpoint until all DIFs have either completed or errored.
-/// Returns a list of `DebugInfoFile`s that have been created successfully and
-/// also prints a summary to the user.
+/// Polls the assemble endpoint until all DIFs have either completed or errored. Returns a list of
+/// `DebugInfoFile`s that have been created successfully and also prints a summary to the user.
+///
+/// This function assumes that all chunks have been uploaded successfully. If there are still
+/// missing chunks in the assemble response, this likely indicates a bug in the server.
 fn poll_dif_assemble(
     difs: &[&ChunkedDifMatch],
     options: &DifUpload,
@@ -1019,6 +1021,17 @@ fn poll_dif_assemble(
     let request = difs.iter().map(|d| d.to_assemble()).collect();
     let response = loop {
         let response = api.assemble_difs(&options.org, &options.project, &request)?;
+
+        let chunks_missing = response
+            .values()
+            .any(|r| r.state == ChunkedFileState::NotFound);
+        if chunks_missing {
+            return Err(err_msg(
+                "Some uploaded files are now missing on the server. Please retry by running \
+                 `sentry-cli upload-dif` again. If this problem persists, please report a bug.",
+            ));
+        }
+
         let pending = response.iter().filter(|&(_, r)| r.state.pending()).count();
         progress.set_position((difs.len() - pending) as u64);
 

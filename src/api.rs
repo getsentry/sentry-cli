@@ -1899,7 +1899,7 @@ pub struct ChunkUploadOptions {
     pub compression: Vec<ChunkCompression>,
 }
 
-#[derive(Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ChunkedFileState {
     #[serde(rename = "error")]
     Error,
@@ -1914,16 +1914,16 @@ pub enum ChunkedFileState {
 }
 
 impl ChunkedFileState {
-    pub fn finished(&self) -> bool {
-        *self == ChunkedFileState::Error || *self == ChunkedFileState::Ok
+    pub fn finished(self) -> bool {
+        self == ChunkedFileState::Error || self == ChunkedFileState::Ok
     }
 
-    pub fn pending(&self) -> bool {
+    pub fn pending(self) -> bool {
         !self.finished()
     }
 
-    pub fn ok(&self) -> bool {
-        *self == ChunkedFileState::Ok
+    pub fn ok(self) -> bool {
+        self == ChunkedFileState::Ok
     }
 }
 
