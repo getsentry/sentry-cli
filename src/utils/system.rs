@@ -127,8 +127,9 @@ pub fn print_error(err: &Error) {
     }
 
     if Config::get_current().get_log_level() < log::LevelFilter::Info {
-        eprintln!("{}", style("Add --log-level=[info|debug] or SENTRY_LOG_LEVEL=[info|debug] to see more output.").cyan());
-        eprintln!("{}", style("Please also attach the full output in case your are creating a new issue.").cyan());
+        eprintln!();
+        eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
+        eprintln!("{}", style("Please also attach the full debug log in case your are creating a new issue.").dim());
     }
 
     if env::var("RUST_BACKTRACE") == Ok("1".into()) {

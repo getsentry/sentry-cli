@@ -218,6 +218,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
             Arg::with_name("log_level")
                 .value_name("LOG_LEVEL")
                 .long("log-level")
+                .global(true)
                 .help(
                     "Set the log output verbosity.{n}\
                      [valid levels: TRACE, DEBUG, INFO, WARN, ERROR]",
