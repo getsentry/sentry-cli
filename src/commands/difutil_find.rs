@@ -8,7 +8,6 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use dirs;
 use failure::Error;
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use serde_json;
 use symbolic::common::byteview::ByteView;
 use symbolic::debuginfo::DebugId;
@@ -18,6 +17,7 @@ use walkdir::WalkDir;
 
 use crate::utils::args::validate_id;
 use crate::utils::dif::{DifFile, DifType};
+use crate::utils::progress::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use crate::utils::system::QuietExit;
 
 // text files larger than 32 megabytes are not considered to be

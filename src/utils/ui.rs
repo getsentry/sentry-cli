@@ -1,7 +1,7 @@
 use std::io;
 use std::io::{Read, Write};
 
-use indicatif::{ProgressBar, ProgressStyle};
+use crate::utils::progress::{ProgressBar, ProgressStyle};
 
 /// Prints a message and loops until yes or no is entered.
 pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
