@@ -7,7 +7,6 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use dirs;
 use failure::{err_msg, Error};
-use indicatif::{ProgressBar, ProgressStyle};
 use symbolic::common::types::{ObjectClass, ObjectKind};
 use symbolic::debuginfo::DebugId;
 
@@ -15,6 +14,7 @@ use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_id, ArgExt};
 use crate::utils::dif_upload::DifUpload;
+use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 

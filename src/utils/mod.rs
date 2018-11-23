@@ -14,6 +14,7 @@ pub mod fs;
 pub mod http;
 pub mod iter;
 pub mod logging;
+pub mod progress;
 pub mod releases;
 pub mod sourcemaps;
 pub mod system;

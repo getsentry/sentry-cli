@@ -19,7 +19,6 @@ use std::time::Duration;
 
 use console::style;
 use failure::{err_msg, Error, SyncFailure};
-use indicatif::{ProgressBar, ProgressStyle};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -39,6 +38,7 @@ use crate::config::Config;
 use crate::utils::batch::{BatchedSliceExt, ItemSize};
 use crate::utils::dif::DebuggingInformation;
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
+use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.

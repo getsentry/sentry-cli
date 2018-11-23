@@ -10,13 +10,13 @@ use std::str;
 
 use console::{style, Term};
 use failure::Error;
-use indicatif::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 use might_be_minified;
 use sourcemap;
 use url::Url;
 
 use crate::api::{Api, FileContents};
 use crate::utils::enc::decode_unknown_string;
+use crate::utils::progress::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);
