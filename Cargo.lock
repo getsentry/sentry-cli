@@ -1721,7 +1721,7 @@ dependencies = [
 
 [[package]]
 name = "sentry-cli"
-version = "1.36.4"
+version = "1.37.0"
 dependencies = [
  "anylog 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "app_dirs 1.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
