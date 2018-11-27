@@ -1889,6 +1889,8 @@ pub struct ChunkUploadOptions {
     pub max_chunks: u64,
     #[serde(rename = "maxRequestSize")]
     pub max_size: u64,
+    #[serde(rename = "maxFileSize", default)]
+    pub max_file_size: u64,
     #[serde(rename = "hashAlgorithm")]
     pub hash_algorithm: ChunkHashAlgorithm,
     #[serde(rename = "chunkSize")]

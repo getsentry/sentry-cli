@@ -19,6 +19,7 @@ use std::time::Duration;
 
 use console::style;
 use failure::{err_msg, Error, SyncFailure};
+use indicatif::HumanBytes;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -603,9 +604,20 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     None => continue,
                 };
 
-                // Make sure we haven't converted this object already.
+                // Skip this object if we're only looking for certain IDs.
                 if !options.valid_id(id) {
                     continue;
+                }
+
+                // Skip this entire file if it exceeds the maximum allowed file size.
+                if object.as_bytes().len() as u64 > options.max_file_size {
+                    warn!(
+                        "Skipping debug file since it exceeds {}: {} ({})",
+                        HumanBytes(options.max_file_size),
+                        name,
+                        HumanBytes(object.as_bytes().len() as u64),
+                    );
+                    break;
                 }
 
                 // Invoke logic to retrieve attachments specific to the kind
@@ -1295,6 +1307,7 @@ pub struct DifUpload {
     extensions: BTreeSet<OsString>,
     symbol_map: Option<PathBuf>,
     zips_allowed: bool,
+    max_file_size: u64,
 }
 
 impl DifUpload {
@@ -1325,6 +1338,7 @@ impl DifUpload {
             extensions: Default::default(),
             symbol_map: None,
             zips_allowed: true,
+            max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
         }
     }
 
@@ -1479,6 +1493,10 @@ impl DifUpload {
 
         let api = Api::get_current();
         if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
+            if chunk_options.max_file_size > 0 {
+                self.max_file_size = chunk_options.max_file_size;
+            }
+
             upload_difs_chunked(self, chunk_options)
         } else {
             upload_difs_batched(self)
