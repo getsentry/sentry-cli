@@ -3,7 +3,7 @@
 ## sentry-cli 1.37.0
 
 * Support React Native >= 0.46 (@stephan-nordnes-eriksen, #377)
-* Cache binaries to speed up NPM package installation (@timfish, #377)
+* Cache binaries to speed up NPM package installation (@timfish, #425)
 * Check for successful upload of debug files (#429)
 * Limit debug file uploads to 2GB (maximum allowed by Sentry) (#432)
 
