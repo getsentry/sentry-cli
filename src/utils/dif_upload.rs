@@ -1338,7 +1338,7 @@ impl DifUpload {
             extensions: Default::default(),
             symbol_map: None,
             zips_allowed: true,
-            max_file_size: 500 * 1024 * 1024, // 500 MB
+            max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
         }
     }
 
