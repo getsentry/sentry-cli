@@ -24,11 +24,8 @@ use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sha1::Digest;
-use symbolic::common::{
-    byteview::ByteView,
-    types::{ObjectClass, ObjectKind},
-};
-use symbolic::debuginfo::{DebugId, FatObject, Object};
+use symbolic::common::{byteview::ByteView, types::ObjectKind};
+use symbolic::debuginfo::{DebugFeatures, DebugId, FatObject, Object, ObjectFeature};
 use walkdir::WalkDir;
 use which::which;
 use zip::write::FileOptions;
@@ -587,12 +584,11 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     Err(_) => continue,
                 };
 
-                // If an object object class was specified, this will skip all
-                // other objects. Usually, the user will search for
-                // `ObjectClass::Debug` (i.e. dSYM or Breakpad) only, but in
-                // future we might want to upload other files (e.g. executables),
-                // too.
-                if !options.valid_class(object.class()) {
+                // We can only process objects with features, such as a symbol
+                // table or debug information. If this object has no features,
+                // Sentry cannot process it and so we skip the upload. If object
+                // features were specified, this will skip all other objects.
+                if !options.valid_features(&object.features()) {
                     continue;
                 }
 
@@ -1303,7 +1299,7 @@ pub struct DifUpload {
     paths: Vec<PathBuf>,
     ids: BTreeSet<DebugId>,
     kinds: BTreeSet<ObjectKind>,
-    classes: BTreeSet<ObjectClass>,
+    features: BTreeSet<ObjectFeature>,
     extensions: BTreeSet<OsString>,
     symbol_map: Option<PathBuf>,
     zips_allowed: bool,
@@ -1334,7 +1330,7 @@ impl DifUpload {
             paths: Default::default(),
             ids: Default::default(),
             kinds: Default::default(),
-            classes: Default::default(),
+            features: Default::default(),
             extensions: Default::default(),
             symbol_map: None,
             zips_allowed: true,
@@ -1409,23 +1405,23 @@ impl DifUpload {
         self
     }
 
-    /// Add an `ObjectClass` to filter for.
+    /// Add an `ObjectFeature` to filter for.
     ///
-    /// By default, all object classes will be included.
-    pub fn filter_class(&mut self, class: ObjectClass) -> &mut Self {
-        self.classes.insert(class);
+    /// By default, all object features will be included.
+    pub fn filter_feature(&mut self, feature: ObjectFeature) -> &mut Self {
+        self.features.insert(feature);
         self
     }
 
-    /// Add `ObjectClass`es to filter for.
+    /// Add `ObjectFeature`s to filter for.
     ///
-    /// By default, all object classes will be included. If `kinds` is empty, this
-    /// will not be changed.
-    pub fn filter_classes<I>(&mut self, classes: I) -> &mut Self
+    /// By default, all object features will be included. If `features` is empty,
+    /// this will not be changed.
+    pub fn filter_classes<I>(&mut self, features: I) -> &mut Self
     where
-        I: IntoIterator<Item = ObjectClass>,
+        I: IntoIterator<Item = ObjectFeature>,
     {
-        self.classes.extend(classes);
+        self.features.extend(features);
         self
     }
 
@@ -1518,8 +1514,16 @@ impl DifUpload {
         self.kinds.is_empty() || self.kinds.contains(&kind)
     }
 
-    /// Determines if this `ObjectClass` matches the search criteria.
-    fn valid_class(&self, class: ObjectClass) -> bool {
-        self.classes.is_empty() || self.classes.contains(&class)
+    /// Determines if the given `ObjectFeature`s match the search criteria.
+    fn valid_features(&self, features: &BTreeSet<ObjectFeature>) -> bool {
+        if features.is_empty() {
+            return false;
+        }
+
+        if self.features.is_empty() {
+            return true;
+        }
+
+        !self.features.is_disjoint(features)
     }
 }

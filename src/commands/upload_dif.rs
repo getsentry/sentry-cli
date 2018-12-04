@@ -7,8 +7,8 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use dirs;
 use failure::{err_msg, Error};
-use symbolic::common::types::{ObjectClass, ObjectKind};
-use symbolic::debuginfo::DebugId;
+use symbolic::common::types::ObjectKind;
+use symbolic::debuginfo::{DebugId, ObjectFeature};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -131,7 +131,7 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
         // Configure `upload-dsym` behavior (only dSYM files)
         upload
             .filter_kind(ObjectKind::MachO)
-            .filter_class(ObjectClass::Debug);
+            .filter_feature(ObjectFeature::DebugInfo);
 
         if !matches.is_present("paths") {
             if let Some(dsym_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
@@ -149,19 +149,20 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
             });
         }
 
-        // Allow executables and dynamic/shared libraries, but not object fiels.
-        // They may optionally contain debugging information (such as DWARF) or
-        // stackwalking info (for instance `eh_frame`).
+        // Allow executables and dynamic/shared libraries, but not object files.
+        // They are guaranteed to contain unwind info, for instance `eh_frame`,
+        // and may optionally contain debugging information such as DWARF.
         if !matches.is_present("no_executables") {
-            upload
-                .filter_class(ObjectClass::Executable)
-                .filter_class(ObjectClass::Library);
+            upload.filter_feature(ObjectFeature::UnwindInfo);
         }
 
         // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
-        // with `objcopy --only-keep-debug` or Breakpad symbols.
+        // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
+        // we also upload all files with a public symbol table.
         if !matches.is_present("no_debug_only") {
-            upload.filter_class(ObjectClass::Debug);
+            upload
+                .filter_feature(ObjectFeature::DebugInfo)
+                .filter_feature(ObjectFeature::SymbolTable);
         }
     }
 
