@@ -44,13 +44,25 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         ).arg(
             Arg::with_name("no_executables")
-                .long("no-bin")
-                .help("Exclude executables and libraries and look for debug symbols only."),
+                .alias("no-bin")
+                .long("no-unwind")
+                .help(
+                    "Do not scan for stack unwinding information. Specify \
+                     this flag for builds with disabled FPO, or when \
+                     stackwalking occurs on the device. This usually \
+                     excludes executables and dynamic libraries. They might \
+                     still be uploaded, if they contain additional \
+                     processable information (see other flags).",
+                ),
         ).arg(
             Arg::with_name("no_debug_only")
                 .long("no-debug")
-                .help("Exclude files containing only stripped debugging info.")
-                .conflicts_with("no_executables"),
+                .help(
+                    "Do not scan for debugging information. This will \
+                     usually exclude debug companion files. They might \
+                     still be uploaded, if they contain additonal \
+                     processable information (see other flags).",
+                ).conflicts_with("no_executables"),
         ).arg(
             Arg::with_name("ids")
                 .value_name("ID")
