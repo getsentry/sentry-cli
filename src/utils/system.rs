@@ -76,7 +76,6 @@ fn is_homebrew_install_result() -> Result<bool, Error> {
 
 fn is_npm_install_result() -> Result<bool, Error> {
     let mut exe = env::current_exe()?.canonicalize()?;
-    exe.pop();
     exe.set_file_name("package.json");
     Ok(exe.is_file())
 }
