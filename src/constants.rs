@@ -19,6 +19,10 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// The name of the configuration file.
 pub const CONFIG_RC_FILE_NAME: &str = ".sentryclirc";
 
+/// The release registry URL where the latest released version of sentry-cli can be found
+pub const RELEASE_REGISTRY_LATEST_URL: &str =
+    "https://release-registry.services.sentry.io/apps/sentry-cli/latest";
+
 /// The file extension of the binary (.exe or empty string)
 #[cfg(windows)]
 pub const EXT: &str = ".exe";

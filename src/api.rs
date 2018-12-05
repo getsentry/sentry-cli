@@ -32,7 +32,7 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, VERSION};
+use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::parse_link_header;
 use crate::utils::progress::ProgressBar;
@@ -814,7 +814,7 @@ impl Api {
 
     /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
-        let resp = self.get("https://release-registry.services.sentry.io/apps/sentry-cli/lates")?;
+        let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
         let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), ARCH, EXT);
         info!("Looking for file named: {}", ref_name);
 
