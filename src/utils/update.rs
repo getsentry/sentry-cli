@@ -143,25 +143,6 @@ impl SentryCliUpdateInfo {
         }
     }
 
-    pub fn assert_updatable(&self) -> Result<(), Error> {
-        if is_homebrew_install() {
-            println!("This installation of sentry-cli is managed through homebrew");
-            println!("Please use homebrew to update sentry-cli:");
-            println!();
-            println!("{} brew upgrade sentry-cli", style("$").dim());
-            return Err(QuietExit(1).into());
-        }
-        if is_npm_install() {
-            println!("This installation of sentry-cli is managed through npm/yarn");
-            println!("Please use npm/yarn to update sentry-cli");
-            return Err(QuietExit(1).into());
-        }
-        if self.latest_release.is_none() {
-            bail!("Could not get the latest release version.");
-        }
-        Ok(())
-    }
-
     pub fn download(&self) -> Result<(), Error> {
         let exe = env::current_exe()?;
         let elevate = !is_writable(&exe);
@@ -200,6 +181,21 @@ pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo, Error> {
 
 pub fn can_update_sentrycli() -> bool {
     !is_homebrew_install() && !is_npm_install()
+}
+
+pub fn assert_updatable() -> Result<(), Error> {
+    if is_homebrew_install() {
+        println!("This installation of sentry-cli is managed through homebrew");
+        println!("Please use homebrew to update sentry-cli:");
+        println!();
+        println!("{} brew upgrade sentry-cli", style("$").dim());
+        return Err(QuietExit(1).into());
+    } else if is_npm_install() {
+        println!("This installation of sentry-cli is managed through npm/yarn");
+        println!("Please use npm/yarn to update sentry-cli");
+        return Err(QuietExit(1).into());
+    }
+    Ok(())
 }
 
 fn update_nagger_impl() -> Result<(), Error> {

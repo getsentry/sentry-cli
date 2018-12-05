@@ -814,24 +814,25 @@ impl Api {
 
     /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
-        let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
+        let resp = self.get("https://release-registry.services.sentry.io/apps/sentry-cli/lates")?;
         let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), ARCH, EXT);
         info!("Looking for file named: {}", ref_name);
 
-        if resp.status() == 404 {
-            Ok(None)
-        } else {
-            let info: GitHubRelease = resp.into_result()?.convert()?;
-            for asset in info.assets {
-                info!("Found asset {}", asset.name);
-                if asset.name == ref_name {
+        if resp.status() == 200 {
+            let info: RegistryRelease = resp.convert()?;
+            for (filename, download_url) in info.file_urls {
+                info!("Found asset {}", filename);
+                if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
-                        version: info.tag_name,
-                        download_url: asset.browser_download_url,
+                        version: info.version,
+                        download_url: download_url,
                     }));
                 }
             }
             warn!("Unable to find release file");
+            Ok(None)
+        } else {
+            info!("Release registry returned {}", resp.status());
             Ok(None)
         }
     }
@@ -1664,6 +1665,12 @@ struct GitHubAsset {
 struct GitHubRelease {
     tag_name: String,
     assets: Vec<GitHubAsset>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RegistryRelease {
+    version: String,
+    file_urls: HashMap<String, String>,
 }
 
 /// Information about sentry CLI releases
