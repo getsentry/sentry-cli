@@ -149,7 +149,7 @@ fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     app
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
+#[allow(clippy::cyclomatic_complexity)]
 fn run_command(matches: &ArgMatches) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{

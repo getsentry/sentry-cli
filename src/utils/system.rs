@@ -2,14 +2,11 @@ use std::borrow::Cow;
 use std::env;
 use std::process;
 
-#[cfg(not(windows))]
-use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
 use clap;
 use console::style;
 use dotenv;
 use failure::{Error, Fail};
-use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log;
 use regex::{Captures, Regex};
@@ -24,6 +21,8 @@ where
 {
     use chan;
     use chan::chan_select;
+    use chan_signal::{notify, Signal};
+
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);
@@ -228,7 +227,9 @@ pub fn get_family() -> Option<String> {
         return Some(family);
     }
 
+    use if_chain::if_chain;
     use regex::Regex;
+
     lazy_static! {
         static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
     }

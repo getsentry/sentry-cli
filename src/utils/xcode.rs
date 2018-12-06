@@ -1,5 +1,3 @@
-#[cfg(target_os = "macos")]
-use libc::getpid;
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
@@ -12,16 +10,17 @@ use std::process;
 use failure::{Error, ResultExt};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
-#[cfg(target_os = "macos")]
-use mac_process_info;
-#[cfg(target_os = "macos")]
-use osascript;
 use plist::serde::deserialize;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use serde_json;
+
 #[cfg(target_os = "macos")]
-use unix_daemonize::{daemonize_redirect, ChdirMode};
+use {
+    libc::getpid,
+    mac_process_info, osascript,
+    unix_daemonize::{daemonize_redirect, ChdirMode},
+};
 
 use crate::utils::fs::{SeekRead, TempFile};
 use crate::utils::system::expand_vars;
@@ -434,6 +433,8 @@ pub fn launched_from_xcode() -> bool {
 /// `true` if the `show details` button has been pressed.
 #[cfg(target_os = "macos")]
 pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
+    use serde::Serialize;
+
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
             "
@@ -471,6 +472,7 @@ pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
 #[cfg(target_os = "macos")]
 pub fn show_notification(title: &str, message: &str) -> Result<(), Error> {
     use crate::config::Config;
+    use serde::Serialize;
 
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(

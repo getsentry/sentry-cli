@@ -97,7 +97,7 @@ fn id_hint(id: &DebugId) -> &'static str {
 }
 
 // TODO: Reduce complexity of this function
-#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
+#[allow(clippy::cyclomatic_complexity)]
 fn find_ids(
     paths: &HashSet<PathBuf>,
     types: &HashSet<DifType>,

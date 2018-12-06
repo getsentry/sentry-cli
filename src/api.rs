@@ -378,7 +378,7 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+    #[allow(clippy::needless_pass_by_value)]
     pub fn request<'a>(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
         let mut handle = self.shared_handle.borrow_mut();
         handle.reset();
@@ -564,7 +564,7 @@ impl Api {
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
     // TODO: Simplify this function interface
-    #[cfg_attr(feature = "cargo-clippy", allow(too_many_arguments))]
+    #[allow(clippy::too_many_arguments)]
     pub fn upload_release_file(
         &self,
         org: &str,
