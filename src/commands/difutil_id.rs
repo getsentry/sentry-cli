@@ -21,11 +21,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Explicitly set the type of the debug info file. \
                      This should not be needed as files are auto detected.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("json")
                 .long("json")
                 .help("Format outputs as JSON."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("path")
                 .index(1)
                 .required(true)

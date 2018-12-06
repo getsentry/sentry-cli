@@ -61,7 +61,8 @@ fn split_url(url: &str) -> (Option<&str>, &str, Option<&str>) {
         .map(|x| {
             let mut fn_iter = x.splitn(2, '.');
             (fn_iter.next(), fn_iter.next())
-        }).unwrap_or((None, None));
+        })
+        .unwrap_or((None, None));
     let path = part_iter.next();
     (path, filename.unwrap_or(""), ext)
 }
@@ -304,14 +305,18 @@ impl SourceMapProcessor {
 
     fn validate_sourcemap(&self, source: &Source) -> Result<(), Error> {
         match sourcemap::decode_slice(&source.contents)? {
-            sourcemap::DecodedMap::Regular(sm) => for idx in 0..sm.get_source_count() {
-                let source_url = sm.get_source(idx).unwrap_or("??");
-                if sm.get_source_contents(idx).is_some() || self.sources.get(source_url).is_some() {
-                    info!("validator found source ({})", source_url);
-                } else {
-                    source.warn(format!("missing sourcecode ({})", source_url));
+            sourcemap::DecodedMap::Regular(sm) => {
+                for idx in 0..sm.get_source_count() {
+                    let source_url = sm.get_source(idx).unwrap_or("??");
+                    if sm.get_source_contents(idx).is_some()
+                        || self.sources.get(source_url).is_some()
+                    {
+                        info!("validator found source ({})", source_url);
+                    } else {
+                        source.warn(format!("missing sourcecode ({})", source_url));
+                    }
                 }
-            },
+            }
             sourcemap::DecodedMap::Index(_) => {
                 source.warn("encountered indexed sourcemap. We cannot validate those.".into());
             }
@@ -335,7 +340,8 @@ impl SourceMapProcessor {
                         SourceType::Script => "Scripts",
                         SourceType::MinifiedScript => "Minified Scripts",
                         SourceType::SourceMap => "Source Maps",
-                    }).yellow()
+                    })
+                    .yellow()
                     .bold()
                 );
                 sect = Some(source.ty);

@@ -16,6 +16,7 @@ use mac_process_info;
 use osascript;
 use plist::serde::deserialize;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
 use serde_json;
 #[cfg(target_os = "macos")]
 use unix_daemonize::{daemonize_redirect, ChdirMode};
@@ -75,7 +76,8 @@ where
             Some("identifier") => SEP_RE.replace_all(value, "_").into_owned(),
             None | Some(_) => value.to_string(),
         }
-    }).into_owned()
+    })
+    .into_owned()
 }
 
 fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error> {
@@ -330,7 +332,8 @@ impl<'a> MayDetach<'a> {
             Some(output_file.path()),
             Some(output_file.path()),
             ChdirMode::NoChdir,
-        ).unwrap();
+        )
+        .unwrap();
         self.output_file = Some(output_file);
         Ok(true)
     }

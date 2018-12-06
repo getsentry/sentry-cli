@@ -30,7 +30,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .index(1),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("types")
                 .long("type")
                 .short("t")
@@ -42,7 +43,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Only consider debug information files of the given \
                      type.  By default, all types are considered.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_executables")
                 .alias("no-bin")
                 .long("no-unwind")
@@ -54,7 +56,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      still be uploaded, if they contain additional \
                      processable information (see other flags).",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_debug_only")
                 .long("no-debug")
                 .help(
@@ -62,8 +65,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      usually exclude debug companion files. They might \
                      still be uploaded, if they contain additonal \
                      processable information (see other flags).",
-                ).conflicts_with("no_executables"),
-        ).arg(
+                )
+                .conflicts_with("no_executables"),
+        )
+        .arg(
             Arg::with_name("ids")
                 .value_name("ID")
                 .long("id")
@@ -71,11 +76,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .validator(validate_id)
                 .multiple(true)
                 .number_of_values(1),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("require_all")
                 .long("require-all")
                 .help("Errors if not all identifiers specified with --id could be found."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("symbol_maps")
                 .long("symbol-maps")
                 .value_name("PATH")
@@ -85,15 +92,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      iTunes Connect.  This requires the dsymutil tool to be \
                      available.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("derived_data")
                 .long("derived-data")
                 .help("Search for debug symbols in Xcode's derived data."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_zips")
                 .long("no-zips")
                 .help("Do not search in ZIP files."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("info_plist")
                 .long("info-plist")
                 .value_name("PATH")
@@ -104,11 +114,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      and build in Sentry.  Note that if you provide the plist \
                      explicitly it must already be processed.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_reprocessing")
                 .long("no-reprocessing")
                 .help("Do not trigger reprocessing after uploading."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("force_foreground")
                 .long("force-foreground")
                 .help(

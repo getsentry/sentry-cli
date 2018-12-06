@@ -77,7 +77,8 @@ pub fn get_appcenter_error(output: &Output) -> Error {
         &stripped[7..]
     } else {
         &stripped
-    }.to_string();
+    }
+    .to_string();
 
     err_msg(cause)
 }

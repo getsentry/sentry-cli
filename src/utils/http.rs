@@ -22,7 +22,8 @@ lazy_static! {
             \s*
         )
     "#
-    ).unwrap();
+    )
+    .unwrap();
 }
 
 /// Parses a link header into a vector of hash maps.

@@ -12,7 +12,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             vec![AppSettings::Hidden]
         } else {
             vec![]
-        }).arg(
+        })
+        .arg(
             Arg::with_name("force")
                 .long("force")
                 .short("f")

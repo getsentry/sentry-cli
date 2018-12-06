@@ -7,6 +7,7 @@ use std::str;
 use console::strip_ansi_codes;
 use failure::{err_msg, Error};
 use glob::{glob_with, MatchOptions};
+use serde::Deserialize;
 use serde_json;
 
 use crate::utils::releases::{get_xcode_release_name, infer_gradle_release_name};
@@ -43,7 +44,8 @@ fn get_codepush_error(output: &process::Output) -> Error {
                 &stripped[8..]
             } else {
                 &stripped
-            }.to_string(),
+            }
+            .to_string(),
         )
     } else {
         err_msg("Unknown Error")

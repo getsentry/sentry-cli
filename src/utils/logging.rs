@@ -67,7 +67,8 @@ impl log::Log for Logger {
                 format!("  (from {})", short_target)
             } else {
                 "".to_string()
-            }).dim(),
+            })
+            .dim(),
         );
 
         if let Some(pb) = get_progress_bar() {

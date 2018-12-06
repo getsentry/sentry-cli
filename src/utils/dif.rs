@@ -5,7 +5,8 @@ use std::path::Path;
 use std::str;
 
 use failure::{Error, SyncFailure};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use serde::ser::{SerializeStruct, Serializer};
+use serde::Serialize;
 use symbolic::common::{byteview::ByteView, types::ObjectKind};
 use symbolic::debuginfo::{DebugId, FatObject, Object, SymbolTable};
 use symbolic::proguard::ProguardMappingView;
@@ -133,7 +134,8 @@ impl DifFile {
                     object
                         .id()
                         .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
-                }).collect(),
+                })
+                .collect(),
             DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
     }

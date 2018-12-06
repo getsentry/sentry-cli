@@ -9,6 +9,7 @@ use chrono::{DateTime, Duration, Utc};
 use console::{style, user_attended};
 use failure::{Error, ResultExt};
 use runas;
+use serde::{Deserialize, Serialize};
 use serde_json;
 
 use crate::api::{Api, SentryCliRelease};
@@ -231,7 +232,8 @@ fn update_nagger_impl() -> Result<(), Error> {
             style(format!(
                 "sentry-cli update to {} is available!",
                 check.latest_version()
-            )).yellow()
+            ))
+            .yellow()
         );
         if is_homebrew_install() {
             eprintln!("{}", style("run brew upgrade sentry-cli to update").dim());

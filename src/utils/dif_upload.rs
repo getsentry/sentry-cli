@@ -970,7 +970,8 @@ fn upload_missing_chunks(
             .map(|(index, (batch, size))| {
                 let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
                 Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
-            }).collect::<Result<(), _>>()
+            })
+            .collect::<Result<(), _>>()
     })?;
 
     progress.finish_and_clear();

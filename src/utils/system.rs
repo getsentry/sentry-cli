@@ -9,7 +9,7 @@ use clap;
 use console::style;
 use dotenv;
 use failure::Error;
-use log;
+use ::log;
 use regex::{Captures, Regex};
 
 use crate::config::Config;

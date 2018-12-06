@@ -204,17 +204,20 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         .arg(Arg::with_name("url").value_name("URL").long("url").help(
             "Fully qualified URL to the Sentry server.{n}\
              [defaults to https://sentry.io/]",
-        )).arg(
+        ))
+        .arg(
             Arg::with_name("auth_token")
                 .value_name("AUTH_TOKEN")
                 .long("auth-token")
                 .help("Use the given Sentry auth token."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("api_key")
                 .value_name("API_KEY")
                 .long("api-key")
                 .help("The given Sentry API key."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("log_level")
                 .value_name("LOG_LEVEL")
                 .long("log-level")

@@ -19,63 +19,6 @@ extern crate lazy_static;
 extern crate log;
 #[macro_use]
 extern crate sentry;
-#[macro_use]
-extern crate serde_derive;
-
-extern crate anylog;
-extern crate app_dirs;
-extern crate backtrace;
-extern crate brotli2;
-#[cfg(not(windows))]
-extern crate chan_signal;
-extern crate chardet;
-extern crate chrono;
-extern crate clap;
-extern crate console;
-extern crate curl;
-extern crate dirs;
-extern crate dotenv;
-extern crate elementtree;
-extern crate encoding;
-extern crate flate2;
-extern crate git2;
-extern crate glob;
-extern crate hostname;
-extern crate ignore;
-extern crate indicatif;
-extern crate ini;
-extern crate itertools;
-extern crate java_properties;
-extern crate libc;
-#[cfg(target_os = "macos")]
-extern crate mac_process_info;
-extern crate might_be_minified;
-extern crate open;
-#[cfg(not(windows))]
-extern crate openssl_probe;
-#[cfg(target_os = "macos")]
-extern crate osascript;
-extern crate parking_lot;
-extern crate plist;
-extern crate prettytable;
-extern crate rayon;
-extern crate regex;
-extern crate runas;
-extern crate serde;
-extern crate serde_json;
-extern crate sha1;
-extern crate sourcemap;
-extern crate symbolic;
-#[cfg(not(windows))]
-extern crate uname;
-#[cfg(target_os = "macos")]
-extern crate unix_daemonize;
-extern crate url;
-extern crate username;
-extern crate uuid;
-extern crate walkdir;
-extern crate which;
-extern crate zip;
 
 pub mod api;
 pub mod commands;

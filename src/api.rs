@@ -23,8 +23,8 @@ use failure::{Backtrace, Context, Error, Fail, ResultExt};
 use flate2::write::GzEncoder;
 use parking_lot::RwLock;
 use regex::{Captures, Regex};
-use serde::de::{Deserialize, DeserializeOwned, Deserializer};
-use serde::Serialize;
+use serde::de::{DeserializeOwned, Deserializer};
+use serde::{Deserialize, Serialize};
 use serde_json;
 use sha1::Digest;
 use symbolic::common::types::ObjectClass;
@@ -808,7 +808,8 @@ impl Api {
                 qs
             ),
             changes,
-        )?.into_result()
+        )?
+        .into_result()
         .map(|_| true)
     }
 
@@ -1166,7 +1167,7 @@ fn handle_req<W: Write>(
     let mut headers = Vec::new();
     let pb: Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
     {
-        let mut headers = &mut headers;
+        let headers = &mut headers;
         let mut handle = handle.transfer();
 
         if let ProgressBarMode::Shared((pb_progress, len, idx, counts)) = progress_bar_mode {
@@ -1414,21 +1415,24 @@ impl ApiResponse {
                     ErrorInfo::Error(val) => val,
                 }),
                 extra: None,
-            }.context(ApiErrorKind::RequestFailed)
+            }
+            .context(ApiErrorKind::RequestFailed)
             .into())
         } else if let Ok(value) = self.deserialize::<serde_json::Value>() {
             Err(SentryError {
                 status: self.status(),
                 detail: Some("request failure".into()),
                 extra: Some(value),
-            }.context(ApiErrorKind::RequestFailed)
+            }
+            .context(ApiErrorKind::RequestFailed)
             .into())
         } else {
             Err(SentryError {
                 status: self.status(),
                 detail: None,
                 extra: None,
-            }.context(ApiErrorKind::RequestFailed)
+            }
+            .context(ApiErrorKind::RequestFailed)
             .into())
         }
     }
@@ -1441,7 +1445,8 @@ impl ApiResponse {
         Ok(serde_json::from_reader(match self.body {
             Some(ref body) => body,
             None => &b""[..],
-        }).context(ApiErrorKind::BadJson)?)
+        })
+        .context(ApiErrorKind::BadJson)?)
     }
 
     /// Like `deserialize` but consumes the response and will convert
@@ -1596,15 +1601,9 @@ pub struct NewRelease {
     pub projects: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(
-        rename = "dateStarted",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
     pub date_started: Option<DateTime<Utc>>,
-    #[serde(
-        rename = "dateReleased",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
     pub date_released: Option<DateTime<Utc>>,
 }
 
@@ -1626,15 +1625,9 @@ pub struct UpdatedRelease {
     pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(
-        rename = "dateStarted",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
     pub date_started: Option<DateTime<Utc>>,
-    #[serde(
-        rename = "dateReleased",
-        skip_serializing_if = "Option::is_none"
-    )]
+    #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
     pub date_released: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refs: Option<Vec<Ref>>,

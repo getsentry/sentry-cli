@@ -3,6 +3,7 @@ authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 name = "sentry-cli"
 version = "1.37.0"
+edition = "2018"
 
 [dependencies]
 anylog = "0.2.1"
@@ -42,7 +43,7 @@ regex = "1.1.0"
 runas = "0.1.4"
 rust-ini = "0.13.0"
 sentry = { version = "0.12.0", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
-serde = "1.0.80"
+serde = { version = "1.0.80", features = ["derive"] }
 serde_derive = "1.0.80"
 serde_json = "1.0.33"
 sha1 = { version = "0.6.0", features = ["serde"] }
