@@ -6,7 +6,8 @@ use std::str::{self, FromStr};
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use dirs;
-use failure::{err_msg, Error};
+use failure::{bail, err_msg, Error};
+use log::info;
 use symbolic::common::types::ObjectKind;
 use symbolic::debuginfo::{DebugId, ObjectFeature};
 

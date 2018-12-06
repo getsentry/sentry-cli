@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use failure::{Error, ResultExt};
+use if_chain::if_chain;
+use lazy_static::lazy_static;
 #[cfg(target_os = "macos")]
 use mac_process_info;
 #[cfg(target_os = "macos")]

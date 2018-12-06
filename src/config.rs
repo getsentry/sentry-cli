@@ -9,10 +9,11 @@ use std::sync::Arc;
 use clap::ArgMatches;
 use dirs;
 use dotenv;
-use failure::{err_msg, Error, ResultExt};
+use failure::{bail, err_msg, Error, ResultExt};
 use ini::Ini;
 use java_properties;
-use ::log;
+use lazy_static::lazy_static;
+use log;
 use parking_lot::Mutex;
 use sentry::Dsn;
 

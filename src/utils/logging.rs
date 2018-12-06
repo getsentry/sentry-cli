@@ -7,6 +7,7 @@ use std::sync::{Arc, Weak};
 use chrono::Local;
 use console::{style, Color};
 use indicatif::ProgressBar;
+use lazy_static::lazy_static;
 use parking_lot::RwLock;
 
 lazy_static! {

@@ -4,7 +4,7 @@ use std::fmt;
 use std::path::Path;
 use std::str;
 
-use failure::{Error, SyncFailure};
+use failure::{bail, Error, SyncFailure};
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 use symbolic::common::{byteview::ByteView, types::ObjectKind};

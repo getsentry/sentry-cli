@@ -9,7 +9,9 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use console::{style, Term};
-use failure::Error;
+use failure::{bail, Error};
+use if_chain::if_chain;
+use log::info;
 use might_be_minified;
 use sourcemap;
 use url::Url;

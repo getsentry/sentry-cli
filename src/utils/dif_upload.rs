@@ -18,8 +18,9 @@ use std::thread;
 use std::time::Duration;
 
 use console::style;
-use failure::{err_msg, Error, SyncFailure};
+use failure::{bail, err_msg, Error, SyncFailure};
 use indicatif::HumanBytes;
+use log::{debug, info, warn};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;

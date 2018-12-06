@@ -4,7 +4,8 @@ use std::str;
 use chardet::detect;
 use encoding::label::encoding_from_whatwg_label;
 use encoding::DecoderTrap;
-use failure::Error;
+use failure::{Error, Fail};
+use if_chain::if_chain;
 
 #[derive(Fail, Debug)]
 #[fail(display = "unknown encoding for string")]

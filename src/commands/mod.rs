@@ -5,7 +5,8 @@ use std::fmt;
 use std::process;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::Error;
+use failure::{bail, Error};
+use log::{debug, info};
 
 use crate::api::Api;
 use crate::config::{prepare_environment, Auth, Config};
@@ -263,9 +264,9 @@ fn run() -> Result<(), Error> {
 }
 
 fn setup() {
-    use crate::log;
     use crate::utils::logging::Logger;
     use crate::utils::system::{init_backtrace, load_dotenv};
+    use log;
 
     init_backtrace();
     load_dotenv();

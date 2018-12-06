@@ -6,6 +6,8 @@ use std::time::Duration;
 use anylog;
 use chrono::Utc;
 use failure::{Error, ResultExt};
+use if_chain::if_chain;
+use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
 use sentry::{Client, ClientOptions, Dsn};

@@ -8,8 +8,10 @@ use chrono::{DateTime, Utc};
 use clap;
 use console::style;
 use dotenv;
-use failure::Error;
-use ::log;
+use failure::{Error, Fail};
+use if_chain::if_chain;
+use lazy_static::lazy_static;
+use log;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
@@ -21,6 +23,7 @@ where
     F: Send + 'static,
 {
     use chan;
+    use chan::chan_select;
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);

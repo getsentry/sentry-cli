@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
-use failure::{Error, SyncFailure};
+use failure::{bail, Error, SyncFailure};
 use symbolic::common::byteview::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;

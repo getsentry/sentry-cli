@@ -3,7 +3,9 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 
-use failure::Error;
+use failure::{bail, Error};
+use if_chain::if_chain;
+use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::utils::cordova::CordovaConfig;

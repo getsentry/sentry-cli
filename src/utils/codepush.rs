@@ -5,8 +5,9 @@ use std::process;
 use std::str;
 
 use console::strip_ansi_codes;
-use failure::{err_msg, Error};
+use failure::{bail, err_msg, Error};
 use glob::{glob_with, MatchOptions};
+use if_chain::if_chain;
 use serde::Deserialize;
 use serde_json;
 

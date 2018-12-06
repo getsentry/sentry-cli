@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use clap;
-use failure::Error;
+use failure::{bail, Error};
 use symbolic::debuginfo::DebugId;
 use uuid::Uuid;
 

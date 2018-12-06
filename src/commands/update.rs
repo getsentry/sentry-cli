@@ -2,7 +2,7 @@
 use std::env;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::Error;
+use failure::{bail, Error};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
 

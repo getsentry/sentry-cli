@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
+use log::info;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;

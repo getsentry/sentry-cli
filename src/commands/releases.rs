@@ -5,11 +5,13 @@ use std::rc::Rc;
 
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::{err_msg, Error};
+use failure::{bail, err_msg, Error};
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
 use indicatif::HumanBytes;
+use lazy_static::lazy_static;
+use log::{info, warn};
 use regex::Regex;
 
 use crate::api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};

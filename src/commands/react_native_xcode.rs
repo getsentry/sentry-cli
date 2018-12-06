@@ -6,7 +6,9 @@ use std::process;
 
 use chrono::Duration;
 use clap::{App, Arg, ArgMatches};
-use failure::Error;
+use failure::{bail, Error};
+use if_chain::if_chain;
+use log::info;
 use serde::{Deserialize, Serialize};
 use serde_json;
 

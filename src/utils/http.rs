@@ -1,5 +1,7 @@
-use regex::Regex;
 use std::collections::HashMap;
+
+use lazy_static::lazy_static;
+use regex::Regex;
 
 lazy_static! {
     static ref LINK_TOKEN_RE: Regex = Regex::new(

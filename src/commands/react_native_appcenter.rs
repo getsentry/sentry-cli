@@ -5,6 +5,7 @@ use std::fs;
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::Error;
+use if_chain::if_chain;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;

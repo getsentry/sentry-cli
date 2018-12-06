@@ -6,9 +6,10 @@ use std::process::{Command, Output};
 use std::str;
 
 use console::strip_ansi_codes;
-use failure::{err_msg, Error};
+use failure::{bail, err_msg, Error};
 use glob::{glob_with, MatchOptions};
 // use serde::de::{Deserialize, Deserializer, Error as DeError};
+use if_chain::if_chain;
 use serde::de;
 use serde_json;
 

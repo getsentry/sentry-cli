@@ -5,7 +5,7 @@ use std::time::Duration;
 use ::failure::Error;
 use ::log::Log;
 use sentry::integrations::{failure, log, panic};
-use sentry::{Client, ClientOptions, Hub};
+use sentry::{sentry_crate_release, Client, ClientOptions, Hub};
 
 use crate::config::Config;
 use crate::constants::USER_AGENT;
