@@ -9,11 +9,10 @@ const childProcess = require('child_process');
  * @type {string}
  */
 // istanbul ignore next
-let binaryPath =
-  os.platform() === 'win32'
-    ? path.resolve(__dirname, '..\\bin\\sentry-cli.exe')
-    : path.resolve(__dirname, '../sentry-cli');
-
+let binaryPath = path.resolve(
+  __dirname,
+  os.platform() === 'win32' ? '..\\sentry-cli.exe' : '../sentry-cli'
+);
 /**
  * Overrides the default binary path with a mock value, useful for testing.
  *
