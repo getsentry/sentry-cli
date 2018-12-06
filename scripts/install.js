@@ -105,10 +105,6 @@ function downloadBinary() {
     platform === 'win32' ? '../sentry-cli.exe' : '../sentry-cli'
   );
 
-  if (fs.existsSync(outputPath)) {
-    return Promise.resolve();
-  }
-
   const downloadUrl = getDownloadUrl(platform, arch);
   if (!downloadUrl) {
     return Promise.reject(new Error(`unsupported target ${platform}-${arch}`));
