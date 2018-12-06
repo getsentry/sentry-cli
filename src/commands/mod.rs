@@ -252,6 +252,7 @@ fn run() -> Result<(), Error> {
             // if the user hit an error, it might be time to run the update
             // nagger because maybe they tried to do something only newer
             // versions support.
+            debug!("error: running update nagger");
             run_sentrycli_update_nagger();
             Err(err)
         }

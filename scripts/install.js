@@ -100,14 +100,7 @@ function getTempFile(cached) {
 function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
-  const outputPath = path.resolve(
-    __dirname,
-    platform === 'win32' ? '../bin/sentry-cli.exe' : '../sentry-cli'
-  );
-
-  if (fs.existsSync(outputPath)) {
-    return Promise.resolve();
-  }
+  const outputPath = helper.getPath();
 
   const downloadUrl = getDownloadUrl(platform, arch);
   if (!downloadUrl) {

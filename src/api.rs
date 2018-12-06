@@ -32,7 +32,7 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, VERSION};
+use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::parse_link_header;
 use crate::utils::progress::ProgressBar;
@@ -814,24 +814,25 @@ impl Api {
 
     /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
-        let resp = self.get("https://api.github.com/repos/getsentry/sentry-cli/releases/latest")?;
+        let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
         let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), ARCH, EXT);
         info!("Looking for file named: {}", ref_name);
 
-        if resp.status() == 404 {
-            Ok(None)
-        } else {
-            let info: GitHubRelease = resp.into_result()?.convert()?;
-            for asset in info.assets {
-                info!("Found asset {}", asset.name);
-                if asset.name == ref_name {
+        if resp.status() == 200 {
+            let info: RegistryRelease = resp.convert()?;
+            for (filename, download_url) in info.file_urls {
+                info!("Found asset {}", filename);
+                if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
-                        version: info.tag_name,
-                        download_url: asset.browser_download_url,
+                        version: info.version,
+                        download_url: download_url,
                     }));
                 }
             }
             warn!("Unable to find release file");
+            Ok(None)
+        } else {
+            info!("Release registry returned {}", resp.status());
             Ok(None)
         }
     }
@@ -1664,6 +1665,12 @@ struct GitHubAsset {
 struct GitHubRelease {
     tag_name: String,
     assets: Vec<GitHubAsset>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct RegistryRelease {
+    version: String,
+    file_urls: HashMap<String, String>,
 }
 
 /// Information about sentry CLI releases
