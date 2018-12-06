@@ -829,7 +829,7 @@ impl Api {
                 if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
                         version: info.version,
-                        download_url: download_url,
+                        download_url,
                     }));
                 }
             }
