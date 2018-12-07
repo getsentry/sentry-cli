@@ -391,7 +391,10 @@ fn execute_propose_version() -> Result<(), Error> {
     Ok(())
 }
 
-fn execute_set_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_set_commits<'a>(
+    ctx: &ReleaseContext<'_>,
+    matches: &ArgMatches<'a>,
+) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let repos = ctx.api.list_organization_repos(org)?;

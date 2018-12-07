@@ -19,7 +19,11 @@ lazy_static! {
 }
 
 /// Attaches all logs from a logfile as breadcrumbs to the given event.
-pub fn attach_logfile(event: &mut Event<'_>, logfile: &str, with_component: bool) -> Result<(), Error> {
+pub fn attach_logfile(
+    event: &mut Event<'_>,
+    logfile: &str,
+    with_component: bool,
+) -> Result<(), Error> {
     let f = fs::File::open(logfile).context("Could not open logfile")?;
 
     // sentry currently requires timestamps for breadcrumbs at all times.
