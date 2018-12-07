@@ -34,7 +34,7 @@ where
 /// This struct is created by `BatchedSliceExt::batches`.
 pub struct Batches<'data, T>
 where
-    T: ItemSize + 'data,
+    T: ItemSize,
 {
     items: &'data [T],
     max_size: u64,
@@ -105,7 +105,7 @@ pub trait BatchedSliceExt<T: ItemSize> {
     /// assert_eq!(batches.next(), &[1, 1, 1]);
     /// assert_eq!(batches.next(), &[1]);
     /// ```
-    fn batches(&self, max_size: u64, max_items: u64) -> Batches<T>;
+    fn batches(&self, max_size: u64, max_items: u64) -> Batches<'_, T>;
 }
 
 impl<S, T> BatchedSliceExt<T> for S
@@ -113,7 +113,7 @@ where
     S: AsRef<[T]>,
     T: ItemSize,
 {
-    fn batches(&self, max_size: u64, max_items: u64) -> Batches<T> {
+    fn batches(&self, max_size: u64, max_items: u64) -> Batches<'_, T> {
         Batches::new(self.as_ref(), max_size, max_items)
     }
 }

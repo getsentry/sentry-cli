@@ -2,13 +2,12 @@ use std::borrow::Cow;
 use std::env;
 use std::process;
 
-#[cfg(not(windows))]
-use chan_signal::{notify, Signal};
 use chrono::{DateTime, Utc};
 use clap;
 use console::style;
 use dotenv;
-use failure::Error;
+use failure::{Error, Fail};
+use lazy_static::lazy_static;
 use log;
 use regex::{Captures, Regex};
 
@@ -21,6 +20,9 @@ where
     F: Send + 'static,
 {
     use chan;
+    use chan::chan_select;
+    use chan_signal::{notify, Signal};
+
     let run = |_sdone: chan::Sender<()>| f();
     let signal = notify(&[Signal::INT, Signal::TERM]);
     let (sdone, rdone) = chan::sync(0);
@@ -91,16 +93,16 @@ pub fn is_npm_install() -> bool {
 }
 
 /// Expands environment variables in a string
-pub fn expand_envvars(s: &str) -> Cow<str> {
+pub fn expand_envvars(s: &str) -> Cow<'_, str> {
     expand_vars(s, |key| env::var(key).unwrap_or_else(|_| "".to_string()))
 }
 
 /// Expands variables in a string
-pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<str> {
+pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<'_, str> {
     lazy_static! {
         static ref VAR_RE: Regex = Regex::new(r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").unwrap();
     }
-    VAR_RE.replace_all(s, |caps: &Captures| {
+    VAR_RE.replace_all(s, |caps: &Captures<'_>| {
         let key = &caps[1];
         if key == "$" {
             "$".into()
@@ -225,7 +227,9 @@ pub fn get_family() -> Option<String> {
         return Some(family);
     }
 
+    use if_chain::if_chain;
     use regex::Regex;
+
     lazy_static! {
         static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
     }

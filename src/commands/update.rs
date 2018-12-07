@@ -2,7 +2,7 @@
 use std::env;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::Error;
+use failure::{bail, Error};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
 
@@ -12,7 +12,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             vec![AppSettings::Hidden]
         } else {
             vec![]
-        }).arg(
+        })
+        .arg(
             Arg::with_name("force")
                 .long("force")
                 .short("f")

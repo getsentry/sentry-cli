@@ -5,7 +5,8 @@ use std::fmt;
 use std::process;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::Error;
+use failure::{bail, Error};
+use log::{debug, info};
 
 use crate::api::Api;
 use crate::config::{prepare_environment, Auth, Config};
@@ -103,7 +104,7 @@ fn preexecute_hooks() -> Result<bool, Error> {
     }
 }
 
-fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<(), Error> {
+fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), Error> {
     if let Some(url) = matches.value_of("url") {
         config.set_base_url(url);
     }
@@ -148,8 +149,8 @@ fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     app
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
-fn run_command(matches: &ArgMatches) -> Result<(), Error> {
+#[allow(clippy::cyclomatic_complexity)]
+fn run_command(matches: &ArgMatches<'_>) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
@@ -170,7 +171,7 @@ fn run_command(matches: &ArgMatches) -> Result<(), Error> {
 struct DebugArgs<'a>(Vec<&'a str>);
 
 impl<'a> fmt::Display for DebugArgs<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (idx, arg) in self.0.iter().enumerate() {
             if idx > 0 {
                 write!(f, " ")?;
@@ -204,17 +205,20 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         .arg(Arg::with_name("url").value_name("URL").long("url").help(
             "Fully qualified URL to the Sentry server.{n}\
              [defaults to https://sentry.io/]",
-        )).arg(
+        ))
+        .arg(
             Arg::with_name("auth_token")
                 .value_name("AUTH_TOKEN")
                 .long("auth-token")
                 .help("Use the given Sentry auth token."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("api_key")
                 .value_name("API_KEY")
                 .long("api-key")
                 .help("The given Sentry API key."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("log_level")
                 .value_name("LOG_LEVEL")
                 .long("log-level")
@@ -260,9 +264,9 @@ fn run() -> Result<(), Error> {
 }
 
 fn setup() {
-    use crate::log;
     use crate::utils::logging::Logger;
     use crate::utils::system::{init_backtrace, load_dotenv};
+    use log;
 
     init_backtrace();
     load_dotenv();

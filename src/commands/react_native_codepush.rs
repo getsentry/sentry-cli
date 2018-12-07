@@ -5,6 +5,7 @@ use std::fs;
 use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
 use failure::Error;
+use if_chain::if_chain;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -21,7 +22,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .long("deployment")
                 .value_name("DEPLOYMENT")
                 .help("The name of the deployment. [Production, Staging]"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("bundle_id")
                 .value_name("BUNDLE_ID")
                 .long("bundle-id")
@@ -32,23 +34,27 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      codepush releases for Android when you use different \
                      bundle IDs for release and debug etc.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("print_release_name")
                 .long("print-release-name")
                 .help("Print the release name instead."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("app_name")
                 .value_name("APP_NAME")
                 .index(1)
                 .required(true)
                 .help("The name of the CodePush application."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("platform")
                 .value_name("PLATFORM")
                 .index(2)
                 .required(true)
                 .help("The name of the CodePush platform. [ios, android]"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("paths")
                 .value_name("PATH")
                 .index(3)

@@ -5,7 +5,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::mem;
 use std::path::{Path, PathBuf};
 
-use failure::Error;
+use failure::{bail, Error};
 use sha1::{Digest, Sha1};
 use uuid::Uuid;
 

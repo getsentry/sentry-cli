@@ -6,7 +6,10 @@ use std::process;
 
 use chrono::Duration;
 use clap::{App, Arg, ArgMatches};
-use failure::Error;
+use failure::{bail, Error};
+use if_chain::if_chain;
+use log::info;
+use serde::{Deserialize, Serialize};
 use serde_json;
 
 use crate::api::{Api, NewRelease};
@@ -32,15 +35,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .long("verbose")
                 .short("v")
                 .hidden(true),
-        ).arg(Arg::with_name("force").long("force").short("f").help(
+        )
+        .arg(Arg::with_name("force").long("force").short("f").help(
             "Force the script to run, even in debug configuration.{n}This rarely \
              does what you want because the default build script does not actually \
              produce any information that the sentry build tool could pick up on.",
-        )).arg(Arg::with_name("allow_fetch").long("allow-fetch").help(
+        ))
+        .arg(Arg::with_name("allow_fetch").long("allow-fetch").help(
             "Enable sourcemap fetching from the packager.{n}If this is enabled \
              the react native packager needs to run and sourcemaps are downloade \
              from it if the simulator platform is detected.",
-        )).arg(
+        ))
+        .arg(
             Arg::with_name("fetch_from")
                 .long("fetch-from")
                 .value_name("URL")
@@ -49,7 +55,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      The default is http://127.0.0.1:8081/, where the react-native \
                      packager runs by default.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("force_foreground")
                 .long("force-foreground")
                 .help(
@@ -60,7 +67,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      for the process to finish before the build finishes and output \
                      will be shown in the Xcode build output.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("build_script")
                 .value_name("BUILD_SCRIPT")
                 .index(1)
@@ -69,7 +77,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      This is the path to the `react-native-xcode.sh` script you want \
                      to use.  By default the bundled build script is used.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("args")
                 .value_name("ARGS")
                 .multiple(true)
@@ -91,16 +100,18 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::get_current();
-    let should_wrap = matches.is_present("force") || match env::var("CONFIGURATION") {
-        Ok(config) => &config != "Debug",
-        Err(_) => bail!("Need to run this from Xcode"),
-    };
+    let should_wrap = matches.is_present("force")
+        || match env::var("CONFIGURATION") {
+            Ok(config) => &config != "Debug",
+            Err(_) => bail!("Need to run this from Xcode"),
+        };
     let base = env::current_dir()?;
     let script = if let Some(path) = matches.value_of("build_script") {
         base.join(path)
     } else {
         base.join("../node_modules/react-native/scripts/react-native-xcode.sh")
-    }.canonicalize()?;
+    }
+    .canonicalize()?;
 
     // if we allow fetching and we detect a simulator run, then we need to switch
     // to simulator mode.
@@ -198,7 +209,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 .env(
                     "SENTRY_RN_SOURCEMAP_REPORT",
                     report_file.path().to_str().unwrap(),
-                ).env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
+                )
+                .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
                 .spawn()?
                 .wait()?;
             propagate_exit_status(rv);

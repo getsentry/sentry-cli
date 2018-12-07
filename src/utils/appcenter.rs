@@ -6,9 +6,10 @@ use std::process::{Command, Output};
 use std::str;
 
 use console::strip_ansi_codes;
-use failure::{err_msg, Error};
+use failure::{bail, err_msg, Error};
 use glob::{glob_with, MatchOptions};
 // use serde::de::{Deserialize, Deserializer, Error as DeError};
+use if_chain::if_chain;
 use serde::de;
 use serde_json;
 
@@ -41,7 +42,7 @@ impl<'de> de::Deserialize<'de> for AppCenterPackage {
         impl<'de> de::Visitor<'de> for PackageVisitor {
             type Value = AppCenterPackage;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a deployment history entry")
             }
 
@@ -77,7 +78,8 @@ pub fn get_appcenter_error(output: &Output) -> Error {
         &stripped[7..]
     } else {
         &stripped
-    }.to_string();
+    }
+    .to_string();
 
     err_msg(cause)
 }

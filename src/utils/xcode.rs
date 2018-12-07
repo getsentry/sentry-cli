@@ -1,5 +1,3 @@
-#[cfg(target_os = "macos")]
-use libc::getpid;
 use std::collections::HashMap;
 use std::env;
 use std::fmt;
@@ -10,15 +8,19 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use failure::{Error, ResultExt};
-#[cfg(target_os = "macos")]
-use mac_process_info;
-#[cfg(target_os = "macos")]
-use osascript;
+use if_chain::if_chain;
+use lazy_static::lazy_static;
 use plist::serde::deserialize;
 use regex::Regex;
+use serde::Deserialize;
 use serde_json;
+
 #[cfg(target_os = "macos")]
-use unix_daemonize::{daemonize_redirect, ChdirMode};
+use {
+    libc::getpid,
+    mac_process_info, osascript,
+    unix_daemonize::{daemonize_redirect, ChdirMode},
+};
 
 use crate::utils::fs::{SeekRead, TempFile};
 use crate::utils::system::expand_vars;
@@ -46,7 +48,7 @@ pub struct XcodeProjectInfo {
 }
 
 impl fmt::Display for InfoPlist {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.name(), &self.version)
     }
 }
@@ -75,7 +77,8 @@ where
             Some("identifier") => SEP_RE.replace_all(value, "_").into_owned(),
             None | Some(_) => value.to_string(),
         }
-    }).into_owned()
+    })
+    .into_owned()
 }
 
 fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error> {
@@ -330,7 +333,8 @@ impl<'a> MayDetach<'a> {
             Some(output_file.path()),
             Some(output_file.path()),
             ChdirMode::NoChdir,
-        ).unwrap();
+        )
+        .unwrap();
         self.output_file = Some(output_file);
         Ok(true)
     }
@@ -344,7 +348,7 @@ impl<'a> MayDetach<'a> {
     /// Wraps the execution of a code block.  Does not detach until someone
     /// calls into `may_detach`.
     #[cfg(target_os = "macos")]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T, Error>>(
+    pub fn wrap<T, F: FnOnce(&mut MayDetach<'_>) -> Result<T, Error>>(
         task_name: &'a str,
         f: F,
     ) -> Result<T, Error> {
@@ -429,6 +433,8 @@ pub fn launched_from_xcode() -> bool {
 /// `true` if the `show details` button has been pressed.
 #[cfg(target_os = "macos")]
 pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
+    use serde::Serialize;
+
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
             "
@@ -466,6 +472,7 @@ pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
 #[cfg(target_os = "macos")]
 pub fn show_notification(title: &str, message: &str) -> Result<(), Error> {
     use crate::config::Config;
+    use serde::Serialize;
 
     lazy_static! {
         static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(

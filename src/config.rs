@@ -9,9 +9,10 @@ use std::sync::Arc;
 use clap::ArgMatches;
 use dirs;
 use dotenv;
-use failure::{err_msg, Error, ResultExt};
+use failure::{bail, err_msg, Error, ResultExt};
 use ini::Ini;
 use java_properties;
+use lazy_static::lazy_static;
 use log;
 use parking_lot::Mutex;
 use sentry::Dsn;
@@ -258,7 +259,7 @@ impl Config {
     }
 
     /// Given a match object from clap, this returns the org from it.
-    pub fn get_org(&self, matches: &ArgMatches) -> Result<String, Error> {
+    pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
         Ok(matches
             .value_of("org")
             .map(|x| x.to_owned())
@@ -267,13 +268,14 @@ impl Config {
                 self.ini
                     .get_from(Some("defaults"), "org")
                     .map(|x| x.to_owned())
-            }).ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
+            })
+            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
     }
 
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
-    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String), Error> {
+    pub fn get_org_and_project(&self, matches: &ArgMatches<'_>) -> Result<(String, String), Error> {
         let org = self.get_org(matches)?;
         let project = if let Some(project) = matches.value_of("project") {
             project.to_owned()
@@ -291,7 +293,8 @@ impl Config {
                 self.ini
                     .get_from(Some("defaults"), "project")
                     .map(|x| x.to_owned())
-            }).ok_or_else(|| err_msg("A project slug is required"))?)
+            })
+            .ok_or_else(|| err_msg("A project slug is required"))?)
     }
 
     /// Returns the defaults for org and project.
@@ -477,7 +480,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
                         .context(format!(
                             "Failed to load file referenced by SENTRY_PROPERTIES ({})",
                             &prop_path
-                        )).into());
+                        ))
+                        .into());
                 }
             }
         }

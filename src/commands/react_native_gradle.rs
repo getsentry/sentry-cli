@@ -3,6 +3,7 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
+use log::info;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -18,19 +19,22 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("PATH")
                 .required(true)
                 .help("The path to a sourcemap that should be uploaded."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("bundle")
                 .long("bundle")
                 .value_name("PATH")
                 .required(true)
                 .help("The path to a bundle that should be uploaded."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("release")
                 .long("release")
                 .value_name("RELEASE")
                 .required(true)
                 .help("The name of the release to publish."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")

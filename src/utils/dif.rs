@@ -4,8 +4,9 @@ use std::fmt;
 use std::path::Path;
 use std::str;
 
-use failure::{Error, SyncFailure};
-use serde::ser::{Serialize, SerializeStruct, Serializer};
+use failure::{bail, Error, SyncFailure};
+use serde::ser::{SerializeStruct, Serializer};
+use serde::Serialize;
 use symbolic::common::{byteview::ByteView, types::ObjectKind};
 use symbolic::debuginfo::{DebugId, FatObject, Object, SymbolTable};
 use symbolic::proguard::ProguardMappingView;
@@ -21,7 +22,7 @@ pub enum DifType {
 }
 
 impl fmt::Display for DifType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DifType::Dsym => write!(f, "dsym"),
             DifType::Breakpad => write!(f, "breakpad"),
@@ -133,7 +134,8 @@ impl DifFile {
                     object
                         .id()
                         .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
-                }).collect(),
+                })
+                .collect(),
             DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
     }

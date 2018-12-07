@@ -8,6 +8,8 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use dirs;
 use failure::Error;
+use if_chain::if_chain;
+use serde::Serialize;
 use serde_json;
 use symbolic::common::byteview::ByteView;
 use symbolic::debuginfo::DebugId;
@@ -46,26 +48,31 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_well_known")
                 .long("no-well-known")
                 .help("Do not look for debug symbols in well known locations."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_cwd")
                 .long("no-cwd")
                 .help("Do not look for debug symbols in the current working directory."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("paths")
                 .long("path")
                 .short("p")
                 .multiple(true)
                 .number_of_values(1)
                 .help("Add a path to search recursively for debug info files."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("json")
                 .long("json")
                 .help("Format outputs as JSON."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("ids")
                 .index(1)
                 .value_name("ID")
@@ -90,7 +97,7 @@ fn id_hint(id: &DebugId) -> &'static str {
 }
 
 // TODO: Reduce complexity of this function
-#[cfg_attr(feature = "cargo-clippy", allow(cyclomatic_complexity))]
+#[allow(clippy::cyclomatic_complexity)]
 fn find_ids(
     paths: &HashSet<PathBuf>,
     types: &HashSet<DifType>,

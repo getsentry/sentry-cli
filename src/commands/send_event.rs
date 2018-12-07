@@ -20,35 +20,41 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              Sentry. Due to network errors, rate limits or sampling the event is not guaranteed to \
              actually arrive. Check debug output for transmission errors by passing --log-level=\
              debug or setting `SENTRY_LOG_LEVEL=debug`.",
-        ).arg(
+        )
+        .arg(
             Arg::with_name("level")
                 .value_name("LEVEL")
                 .long("level")
                 .short("l")
                 .help("Optional event severity/log level. [defaults to 'error']"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("release")
                 .value_name("RELEASE")
                 .long("release")
                 .short("r")
                 .help("Optional identifier of the release."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("dist")
                 .value_name("DISTRIBUTION")
                 .long("dist")
                 .short("d")
                 .help("Set the distribution."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("environment")
                 .value_name("ENVIRONMENT")
                 .long("env")
                 .short("E")
                 .help("Send with a specific environment."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_environ")
                 .long("no-environ")
                 .help("Do not send environment variables along"),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("message")
                 .value_name("MESSAGE")
                 .long("message")
@@ -56,7 +62,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .help("The event message."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("message_args")
                 .value_name("MESSAGE_ARG")
                 .long("message-arg")
@@ -64,13 +71,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .help("Arguments for the event message."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("platform")
                 .value_name("PLATFORM")
                 .long("platform")
                 .short("p")
                 .help("Override the default 'other' platform specifier."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("tags")
                 .value_name("KEY:VALUE")
                 .long("tag")
@@ -78,7 +87,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .help("Add a tag (key:value) to the event."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("extra")
                 .value_name("KEY:VALUE")
                 .long("extra")
@@ -86,7 +96,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .help("Add extra information (key:value) to the event."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("user_data")
                 .value_name("KEY:VALUE")
                 .long("user")
@@ -97,7 +108,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Add user information (key:value) to the event. \
                      [eg: id:42, username:foo]",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("fingerprint")
                 .value_name("FINGERPRINT")
                 .long("fingerprint")
@@ -105,7 +117,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .help("Change the fingerprint of the event."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("logfile")
                 .value_name("PATH")
                 .long("logfile")

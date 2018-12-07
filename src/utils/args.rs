@@ -1,10 +1,10 @@
-#![cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+#![allow(clippy::needless_pass_by_value)]
 
 use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use clap;
-use failure::Error;
+use failure::{bail, Error};
 use symbolic::debuginfo::DebugId;
 use uuid::Uuid;
 
@@ -37,9 +37,11 @@ fn validate_version(v: String) -> Result<(), String> {
             "Invalid release version. Releases must not contain leading or trailing spaces."
                 .to_string(),
         )
-    } else if v.is_empty() || v == "." || v == ".." || v
-        .find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
-        .is_some()
+    } else if v.is_empty()
+        || v == "."
+        || v == ".."
+        || v.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
+            .is_some()
     {
         Err(
             "Invalid release version. Slashes and certain whitespace characters are not permitted."

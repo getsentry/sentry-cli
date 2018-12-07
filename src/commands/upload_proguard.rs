@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
-use failure::{Error, SyncFailure};
+use failure::{bail, Error, SyncFailure};
 use symbolic::common::byteview::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
@@ -36,7 +36,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .index(1),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("version")
                 .long("version")
                 .value_name("VERSION")
@@ -46,7 +47,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      readable version.{n}This helps you understand which \
                      ProGuard files go with which version of your app.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("version_code")
                 .long("version-code")
                 .value_name("VERSION_CODE")
@@ -57,7 +59,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      code.{n}This helps you understand which ProGuard files \
                      go with which version of your app.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("app_id")
                 .long("app-id")
                 .value_name("APP_ID")
@@ -67,7 +70,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      ID.{n}If you have multiple apps in one sentry project you can \
                      then easlier tell them apart.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("platform")
                 .long("platform")
                 .value_name("PLATFORM")
@@ -76,23 +80,27 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Optionally defines the platform for the app association. \
                      [defaults to 'android']",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("no_reprocessing")
                 .long("no-reprocessing")
                 .help("Do not trigger reprocessing after upload."),
-        ).arg(Arg::with_name("no_upload").long("no-upload").help(
+        )
+        .arg(Arg::with_name("no_upload").long("no-upload").help(
             "Disable the actual upload.{n}This runs all steps for the \
              processing but does not trigger the upload (this also \
              automatically disables reprocessing.  This is useful if you \
              just want to verify the mapping files and write the \
              proguard UUIDs into a properties file.",
-        )).arg(
+        ))
+        .arg(
             Arg::with_name("android_manifest")
                 .long("android-manifest")
                 .value_name("PATH")
                 .conflicts_with("app_id")
                 .help("Read version and version code from an Android manifest file."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("write_properties")
                 .long("write-properties")
                 .value_name("PATH")
@@ -100,11 +108,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Write the UUIDs for the processed mapping files into \
                      the given properties file.",
                 ),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("require_one")
                 .long("require-one")
                 .help("Requires at least one file to upload or the command will error."),
-        ).arg(
+        )
+        .arg(
             Arg::with_name("uuid")
                 .long("uuid")
                 .short("u")

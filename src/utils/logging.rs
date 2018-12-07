@@ -7,6 +7,7 @@ use std::sync::{Arc, Weak};
 use chrono::Local;
 use console::{style, Color};
 use indicatif::ProgressBar;
+use lazy_static::lazy_static;
 use parking_lot::RwLock;
 
 lazy_static! {
@@ -27,7 +28,7 @@ pub fn set_max_level(level: log::LevelFilter) {
 pub struct Logger;
 
 impl Logger {
-    fn get_actual_level(&self, metadata: &log::Metadata) -> log::Level {
+    fn get_actual_level(&self, metadata: &log::Metadata<'_>) -> log::Level {
         let mut level = metadata.level();
         if level == log::Level::Debug
             && (metadata.target() == "tokio_reactor"
@@ -40,11 +41,11 @@ impl Logger {
 }
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
         self.get_actual_level(metadata) <= max_level()
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         if !self.enabled(record.metadata()) {
             return;
         }
@@ -67,7 +68,8 @@ impl log::Log for Logger {
                 format!("  (from {})", short_target)
             } else {
                 "".to_string()
-            }).dim(),
+            })
+            .dim(),
         );
 
         if let Some(pb) = get_progress_bar() {
