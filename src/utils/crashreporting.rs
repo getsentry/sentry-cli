@@ -2,17 +2,17 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::time::Duration;
 
-use ::failure::Error;
-use ::log::Log;
-use sentry::integrations::{failure, log, panic};
+use failure::Error;
+use log::Log;
+use sentry::integrations;
 use sentry::{sentry_crate_release, Client, ClientOptions, Hub};
 
 use crate::config::Config;
 use crate::constants::USER_AGENT;
 
 pub fn setup(log: Box<Log>) {
-    log::init(Some(log), Default::default());
-    panic::register_panic_handler();
+    integrations::log::init(Some(log), Default::default());
+    integrations::panic::register_panic_handler();
     bind_configured_client(None);
 }
 
@@ -36,7 +36,7 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
 }
 
 pub fn try_report_to_sentry(err: &Error) {
-    failure::capture_error(err);
+    integrations::failure::capture_error(err);
     flush_events();
 }
 
