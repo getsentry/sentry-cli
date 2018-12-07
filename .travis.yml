@@ -31,12 +31,10 @@ matrix:
   include:
     - name: "check: format"
       language: rust
-      install: rustup component add rustfmt
       script: make format-check
 
     - name: "check: lint"
       language: rust
-      install: rustup component add clippy
       script: make lint
 
     - name: "test: rust"
