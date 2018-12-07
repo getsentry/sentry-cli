@@ -95,28 +95,13 @@ matrix:
     #                   -n "sentry-cli-Darwin-x86_64"
     #                   "./target/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
-    - name: "node test"
-      os: windows
-      language: node_js
-      node_js: 10
-      install: npm install -g @zeus-ci/cli
-      script: zeus completion
-
     - name: "build: Windows x86_64"
       os: windows
-      language: node_js
-      node_js: 10
+      language: rust
       env:
         - TARGET=x86_64-pc-windows-msvc
-      before_install:
-        # - curl -sSf https://build.travis-ci.com/files/rustup-init.sh | sh -s -- -y
-        - npm install -g @zeus-ci/cli
-      script:
-        - cargo build --release --locked
-        - cargo run --release -- releases list || [[ ! "${TRAVIS_PULL_REQUEST_SLUG?x}" =~ ^(getsentry/sentry-cli)?$ ]]
-        - zeus upload -t "application/octet-stream"
-                      -n "sentry-cli-Windows-x86_64-travis.exe"
-                      "./target/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
+      before_install: skip
+      script: cargo build --release --locked
 
     # - name: "build: NPM package"
     #   os: linux
