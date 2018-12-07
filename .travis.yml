@@ -29,81 +29,93 @@ matrix:
     - name: "check: lint"
 
   include:
-    - name: "check: format"
+    # - name: "check: format"
+    #   language: rust
+    #   script: make format-check
+
+    # - name: "check: lint"
+    #   language: rust
+    #   script: make lint
+
+    # - name: "test: rust"
+    #   language: rust
+    #   script: make test
+
+    # - name: "test: node 4"
+    #   os: linux
+    #   language: node_js
+    #   node_js: "4"
+    #   install: true
+    #   env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+    #   script: npm install && npm test
+
+    # - name: "test: node 10"
+    #   os: linux
+    #   language: node_js
+    #   node_js: "10"
+    #   install: true
+    #   env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+    #   script: npm install && npm test
+
+    # - name: "build: linux x86"
+    #   os: linux
+    #   sudo: required
+    #   env:
+    #     - TARGET=i686-unknown-linux-musl
+    #     - DOCKER_TAG=i686-musl
+    #   script:
+    #     - bash scripts/build-in-docker.sh
+    #     - zeus upload -t "application/octet-stream"
+    #                   -n "sentry-cli-Linux-i686"
+    #                   "./target/${TARGET}/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
+
+    # - name: "build: linux x86_64"
+    #   os: linux
+    #   sudo: required
+    #   env:
+    #     - TARGET=x86_64-unknown-linux-musl
+    #     - DOCKER_TAG=x86_64-musl
+    #   script:
+    #     - bash scripts/build-in-docker.sh
+    #     - zeus upload -t "application/octet-stream"
+    #                   -n "sentry-cli-Linux-x86_64"
+    #                   "./target/${TARGET}/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
+
+    # - name: "build: macOS x86_64"
+    #   os: osx
+    #   # Build on older OS X for more portable binaries
+    #   osx_image: xcode8
+    #   language: rust
+    #   env:
+    #     - TARGET=x86_64-apple-darwin
+    #   script:
+    #     - cargo build --release --locked
+    #     - cargo run --release -- releases list || [[ ! "${TRAVIS_PULL_REQUEST_SLUG?x}" =~ ^(getsentry/sentry-cli)?$ ]]
+    #     - zeus upload -t "application/octet-stream"
+    #                   -n "sentry-cli-Darwin-x86_64"
+    #                   "./target/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
+
+    - name: "build: Windows x86_64"
+      os: windows
       language: rust
-      script: make format-check
-
-    - name: "check: lint"
-      language: rust
-      script: make lint
-
-    - name: "test: rust"
-      language: rust
-      script: make test
-
-    - name: "test: node 4"
-      os: linux
-      language: node_js
-      node_js: "4"
-      install: true
-      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
-      script: npm install && npm test
-
-    - name: "test: node 10"
-      os: linux
-      language: node_js
-      node_js: "10"
-      install: true
-      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
-      script: npm install && npm test
-
-    - name: "build: linux x86"
-      os: linux
-      sudo: required
       env:
-        - TARGET=i686-unknown-linux-musl
-        - DOCKER_TAG=i686-musl
-      script:
-        - bash scripts/build-in-docker.sh
-        - zeus upload -t "application/octet-stream"
-                      -n "sentry-cli-Linux-i686"
-                      "./target/${TARGET}/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
-
-    - name: "build: linux x86_64"
-      os: linux
-      sudo: required
-      env:
-        - TARGET=x86_64-unknown-linux-musl
-        - DOCKER_TAG=x86_64-musl
-      script:
-        - bash scripts/build-in-docker.sh
-        - zeus upload -t "application/octet-stream"
-                      -n "sentry-cli-Linux-x86_64"
-                      "./target/${TARGET}/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
-
-    - name: "build: macOS x86_64"
-      os: osx
-      # Build on older OS X for more portable binaries
-      osx_image: xcode8
-      language: rust
-      env:
-        - TARGET=x86_64-apple-darwin
+        - TARGET=x86_64-pc-windows-msvc
       script:
         - cargo build --release --locked
         - cargo run --release -- releases list || [[ ! "${TRAVIS_PULL_REQUEST_SLUG?x}" =~ ^(getsentry/sentry-cli)?$ ]]
         - zeus upload -t "application/octet-stream"
-                      -n "sentry-cli-Darwin-x86_64"
+                      -n "sentry-cli-Windows-x86_64-travis.exe"
                       "./target/release/sentry-cli" || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
-    - name: "build: NPM package"
-      os: linux
-      language: node_js
-      node_js: "8"
-      install: true
-      env: TARGET=npm
-      script:
-        - npm pack
-        - zeus upload -t "application/tar+npm" *.tgz || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
+    # - name: "build: NPM package"
+    #   os: linux
+    #   language: node_js
+    #   node_js: "8"
+    #   install: true
+    #   env: TARGET=npm
+    #   script:
+    #     - npm pack
+    #     - zeus upload -t "application/tar+npm" *.tgz || [[ ! "$TRAVIS_BRANCH" =~ ^release/ ]]
 
 notifications:
   webhooks:
