@@ -76,7 +76,7 @@ impl AndroidManifest {
 }
 
 impl fmt::Debug for AndroidManifest {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("AndroidManifest")
             .field("package", &self.package())
             .field("version_code", &self.version_code())

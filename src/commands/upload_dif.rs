@@ -135,7 +135,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
-fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
+fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
     let api = Api::get_current();
     let config = Config::get_current();
     let (org, project) = config.get_org_and_project(matches)?;
@@ -286,10 +286,10 @@ fn execute_internal(matches: &ArgMatches, legacy: bool) -> Result<(), Error> {
     })
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     execute_internal(matches, false)
 }
 
-pub fn execute_legacy(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute_legacy(matches: &ArgMatches<'_>) -> Result<(), Error> {
     execute_internal(matches, true)
 }

@@ -93,13 +93,13 @@ impl str::FromStr for Pagination {
 }
 
 impl<A: fmt::Display> fmt::Display for QueryArg<A> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         utf8_percent_encode(&format!("{}", self.0), QUERY_ENCODE_SET).fmt(f)
     }
 }
 
 impl<A: fmt::Display> fmt::Display for PathArg<A> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // if we put values into the path we need to url encode them.  However
         // special care needs to be taken for any slash character or path
         // segments that would end up as ".." or "." for security reasons.
@@ -174,7 +174,7 @@ pub struct SentryError {
 }
 
 impl fmt::Display for SentryError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let detail = self.detail.as_ref().map(|x| x.as_str()).unwrap_or("");
         write!(
             f,
@@ -239,7 +239,7 @@ pub struct ApiError {
 pub struct ProjectRenamedError(String);
 
 impl Fail for ApiError {
-    fn cause(&self) -> Option<&Fail> {
+    fn cause(&self) -> Option<&dyn Fail> {
         self.inner.cause()
     }
 
@@ -249,7 +249,7 @@ impl Fail for ApiError {
 }
 
 impl fmt::Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Display::fmt(&self.inner, f)
     }
 }
@@ -300,7 +300,7 @@ pub enum Method {
 }
 
 impl fmt::Display for Method {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Method::Get => write!(f, "GET"),
             Method::Head => write!(f, "HEAD"),
@@ -570,7 +570,7 @@ impl Api {
         org: &str,
         project: Option<&str>,
         version: &str,
-        contents: &FileContents,
+        contents: &FileContents<'_>,
         name: &str,
         dist: Option<&str>,
         headers: Option<&[(String, String)]>,
@@ -913,7 +913,7 @@ impl Api {
         &self,
         org: &str,
         project: &str,
-        request: &AssembleDifsRequest,
+        request: &AssembleDifsRequest<'_>,
     ) -> ApiResult<AssembleDifsResponse> {
         let url = format!("/projects/{}/{}/files/difs/assemble/", org, project);
         self.request(Method::Post, &url)?
@@ -1158,7 +1158,7 @@ fn handle_req<W: Write>(
     handle: &mut curl::easy::Easy,
     out: &mut W,
     progress_bar_mode: ProgressBarMode,
-    read: &mut FnMut(&mut [u8]) -> usize,
+    read: &mut dyn FnMut(&mut [u8]) -> usize,
 ) -> ApiResult<(u32, Vec<String>)> {
     if progress_bar_mode.active() {
         handle.progress(true)?;
@@ -1486,7 +1486,7 @@ impl ApiResponse {
 
     /// Iterates over the headers.
     #[allow(dead_code)]
-    pub fn headers(&self) -> Headers {
+    pub fn headers(&self) -> Headers<'_> {
         Headers {
             lines: &self.headers[..],
             idx: 0,
@@ -1530,7 +1530,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 continue;
             }
 
-            let replaced = AUTH_RE.replace_all(line, |caps: &Captures| {
+            let replaced = AUTH_RE.replace_all(line, |caps: &Captures<'_>| {
                 let info = if &caps[1].to_lowercase() == "basic" {
                     caps[3].split(':').next().unwrap().to_string()
                 } else {
@@ -1807,7 +1807,7 @@ pub struct Repo {
 }
 
 impl fmt::Display for Repo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{}", &self.provider.id, &self.id)?;
         if let Some(ref url) = self.url {
             write!(f, " ({})", url)?;
@@ -1861,7 +1861,7 @@ impl Default for ChunkCompression {
 }
 
 impl fmt::Display for ChunkCompression {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             ChunkCompression::Uncompressed => write!(f, "uncompressed"),
             ChunkCompression::Gzip => write!(f, "gzip"),

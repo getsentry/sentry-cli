@@ -28,7 +28,7 @@ pub fn set_max_level(level: log::LevelFilter) {
 pub struct Logger;
 
 impl Logger {
-    fn get_actual_level(&self, metadata: &log::Metadata) -> log::Level {
+    fn get_actual_level(&self, metadata: &log::Metadata<'_>) -> log::Level {
         let mut level = metadata.level();
         if level == log::Level::Debug
             && (metadata.target() == "tokio_reactor"
@@ -41,11 +41,11 @@ impl Logger {
 }
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata) -> bool {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
         self.get_actual_level(metadata) <= max_level()
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         if !self.enabled(record.metadata()) {
             return;
         }

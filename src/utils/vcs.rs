@@ -23,7 +23,7 @@ pub enum GitReference<'a> {
 }
 
 impl<'a> fmt::Display for GitReference<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             GitReference::Commit(ref c) => write!(f, "{}", c),
             GitReference::Symbolic(ref s) => write!(f, "{}", s),
@@ -40,7 +40,7 @@ pub struct CommitSpec {
 }
 
 impl fmt::Display for CommitSpec {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}@{}", &self.repo, &self.rev)
     }
 }
@@ -56,7 +56,7 @@ enum VcsProvider {
 }
 
 impl fmt::Display for VcsProvider {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             VcsProvider::Generic => write!(f, "generic"),
             VcsProvider::Git => write!(f, "git"),
@@ -102,7 +102,7 @@ impl CommitSpec {
         }
     }
 
-    pub fn reference(&self) -> GitReference {
+    pub fn reference(&self) -> GitReference<'_> {
         if let Ok(oid) = git2::Oid::from_str(&self.rev) {
             GitReference::Commit(oid)
         } else {
@@ -110,7 +110,7 @@ impl CommitSpec {
         }
     }
 
-    pub fn prev_reference(&self) -> Option<GitReference> {
+    pub fn prev_reference(&self) -> Option<GitReference<'_>> {
         self.prev_rev.as_ref().map(|rev| {
             if let Ok(oid) = git2::Oid::from_str(rev) {
                 GitReference::Commit(oid)
@@ -242,7 +242,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
 }
 
 fn find_matching_rev(
-    reference: GitReference,
+    reference: GitReference<'_>,
     spec: &CommitSpec,
     repos: &[Repo],
     disable_discovery: bool,
@@ -331,7 +331,7 @@ fn find_matching_revs(
     repos: &[Repo],
     disable_discovery: bool,
 ) -> Result<(Option<String>, String), Error> {
-    fn error(r: GitReference, repo: &str) -> Error {
+    fn error(r: GitReference<'_>, repo: &str) -> Error {
         format_err!(
             "Could not find commit '{}' for '{}'. If you do not have local \
              checkouts of the repositories in question referencing tags or \

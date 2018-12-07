@@ -104,7 +104,7 @@ fn preexecute_hooks() -> Result<bool, Error> {
     }
 }
 
-fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<(), Error> {
+fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), Error> {
     if let Some(url) = matches.value_of("url") {
         config.set_base_url(url);
     }
@@ -150,7 +150,7 @@ fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 #[allow(clippy::cyclomatic_complexity)]
-fn run_command(matches: &ArgMatches) -> Result<(), Error> {
+fn run_command(matches: &ArgMatches<'_>) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
@@ -171,7 +171,7 @@ fn run_command(matches: &ArgMatches) -> Result<(), Error> {
 struct DebugArgs<'a>(Vec<&'a str>);
 
 impl<'a> fmt::Display for DebugArgs<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (idx, arg) in self.0.iter().enumerate() {
             if idx > 0 {
                 write!(f, " ")?;

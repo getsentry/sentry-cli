@@ -42,7 +42,7 @@ impl<'de> de::Deserialize<'de> for AppCenterPackage {
         impl<'de> de::Visitor<'de> for PackageVisitor {
             type Value = AppCenterPackage;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a deployment history entry")
             }
 

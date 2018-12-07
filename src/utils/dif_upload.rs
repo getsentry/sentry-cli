@@ -137,7 +137,7 @@ impl<'data> DifMatch<'data> {
     }
 
     /// Returns the parsed `Object` of this DIF.
-    pub fn object(&self) -> Object {
+    pub fn object(&self) -> Object<'_> {
         // Errors can be ignored at this point since the `DifMatch` is only
         // created if the referenced Object is valid.
         self.fat.get_object(self.object_index).unwrap().unwrap()
@@ -167,7 +167,7 @@ impl<'data> DifMatch<'data> {
     }
 
     /// Returns attachments of this DIF, if any.
-    pub fn attachments(&self) -> Option<&BTreeMap<String, ByteView>> {
+    pub fn attachments(&self) -> Option<&BTreeMap<String, ByteView<'_>>> {
         self.attachments.as_ref()
     }
 
@@ -191,7 +191,7 @@ impl<'data> DifMatch<'data> {
 }
 
 impl<'data> fmt::Debug for DifMatch<'data> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DifMatch")
             .field("fat", &self.fat)
             .field("object_index", &self.object_index)
@@ -209,7 +209,7 @@ struct HashedDifMatch<'data> {
 
 impl<'data> HashedDifMatch<'data> {
     /// Calculates the SHA1 checksum for the given DIF.
-    fn from(inner: DifMatch) -> Result<HashedDifMatch, Error> {
+    fn from(inner: DifMatch<'_>) -> Result<HashedDifMatch<'_>, Error> {
         let checksum = get_sha1_checksum(inner.data())?;
         Ok(HashedDifMatch { inner, checksum })
     }
@@ -245,7 +245,7 @@ struct ChunkedDifMatch<'data> {
 impl<'data> ChunkedDifMatch<'data> {
     /// Slices the DIF into chunks of `chunk_size` bytes each, and computes SHA1
     /// checksums for every chunk as well as the entire DIF.
-    pub fn from(inner: DifMatch, chunk_size: u64) -> Result<ChunkedDifMatch, Error> {
+    pub fn from(inner: DifMatch<'_>, chunk_size: u64) -> Result<ChunkedDifMatch<'_>, Error> {
         let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size)?;
         Ok(ChunkedDifMatch {
             inner: HashedDifMatch { inner, checksum },
@@ -255,12 +255,12 @@ impl<'data> ChunkedDifMatch<'data> {
     }
 
     /// Returns an iterator over all chunk checksums.
-    pub fn checksums(&self) -> Iter<Digest> {
+    pub fn checksums(&self) -> Iter<'_, Digest> {
         self.chunks.iter()
     }
 
     /// Returns an iterator over all `DifChunk`s.
-    pub fn chunks(&self) -> DifChunks {
+    pub fn chunks(&self) -> DifChunks<'_> {
         DifChunks {
             checksums: self.checksums(),
             iter: self.data().chunks(self.chunk_size as usize),
@@ -268,7 +268,7 @@ impl<'data> ChunkedDifMatch<'data> {
     }
 
     /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
-    pub fn to_assemble(&self) -> (Digest, ChunkedDifRequest) {
+    pub fn to_assemble(&self) -> (Digest, ChunkedDifRequest<'_>) {
         (
             self.checksum(),
             ChunkedDifRequest {
@@ -413,7 +413,7 @@ fn walk_difs_zip<F>(
     mut func: F,
 ) -> Result<(), Error>
 where
-    F: FnMut(DifSource, String, ByteView<'static>) -> Result<(), Error>,
+    F: FnMut(DifSource<'_>, String, ByteView<'static>) -> Result<(), Error>,
 {
     for index in 0..zip.len() {
         let (name, buffer) = {
@@ -448,7 +448,7 @@ where
 fn walk_difs_directory<F, P>(location: P, options: &DifUpload, mut func: F) -> Result<(), Error>
 where
     P: AsRef<Path>,
-    F: FnMut(DifSource, String, ByteView<'static>) -> Result<(), Error>,
+    F: FnMut(DifSource<'_>, String, ByteView<'static>) -> Result<(), Error>,
 {
     let location = location.as_ref();
     let directory = if location.is_dir() {
@@ -504,8 +504,8 @@ where
 /// of Plist name to owning buffer of the file's contents. This function should
 /// only be called for dSYMs.
 fn find_uuid_plists(
-    object: &Object,
-    source: &mut DifSource,
+    object: &Object<'_>,
+    source: &mut DifSource<'_>,
 ) -> Option<BTreeMap<String, ByteView<'static>>> {
     let uuid = match object.id() {
         Some(id) => id.uuid(),
@@ -892,7 +892,7 @@ fn try_assemble_difs<'data>(
 ///
 /// This function blocks until all chunks have been uploaded.
 fn upload_missing_chunks(
-    missing_info: &MissingDifsInfo,
+    missing_info: &MissingDifsInfo<'_>,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<(), Error> {
     let &(ref difs, ref chunks) = missing_info;
@@ -1015,7 +1015,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 /// This function assumes that all chunks have been uploaded successfully. If there are still
 /// missing chunks in the assemble response, this likely indicates a bug in the server.
 fn poll_dif_assemble(
-    difs: &[&ChunkedDifMatch],
+    difs: &[&ChunkedDifMatch<'_>],
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>, Error> {
     let progress_style = ProgressStyle::default_bar().template(
@@ -1181,7 +1181,7 @@ fn get_missing_difs<'data>(
 }
 
 /// Compresses the given batch into a ZIP archive.
-fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile, Error> {
+fn create_batch_archive(difs: &[HashedDifMatch<'_>]) -> Result<TempFile, Error> {
     let total_bytes = difs.iter().map(|sym| sym.size()).sum();
     let pb = make_byte_progress_bar(total_bytes);
     let tf = TempFile::create()?;
@@ -1198,7 +1198,7 @@ fn create_batch_archive(difs: &[HashedDifMatch]) -> Result<TempFile, Error> {
 
 /// Uploads the given DIFs to the server in batched ZIP archives.
 fn upload_in_batches(
-    objects: &[HashedDifMatch],
+    objects: &[HashedDifMatch<'_>],
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>, Error> {
     let api = Api::get_current();

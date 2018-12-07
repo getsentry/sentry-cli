@@ -10,7 +10,7 @@ use sentry::{sentry_crate_release, Client, ClientOptions, Hub};
 use crate::config::Config;
 use crate::constants::USER_AGENT;
 
-pub fn setup(log: Box<Log>) {
+pub fn setup(log: Box<dyn Log>) {
     integrations::log::init(Some(log), Default::default());
     integrations::panic::register_panic_handler();
     bind_configured_client(None);

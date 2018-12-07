@@ -12,7 +12,7 @@ use if_chain::if_chain;
 pub struct UnknownEncodingError;
 
 // Decodes bytes from an unknown encoding
-pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<str>, Error> {
+pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<'_, str>, Error> {
     if let Ok(s) = str::from_utf8(bytes) {
         Ok(Cow::Borrowed(s))
     } else {

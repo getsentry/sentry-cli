@@ -48,7 +48,7 @@ pub struct XcodeProjectInfo {
 }
 
 impl fmt::Display for InfoPlist {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{} ({})", self.name(), &self.version)
     }
 }
@@ -348,7 +348,7 @@ impl<'a> MayDetach<'a> {
     /// Wraps the execution of a code block.  Does not detach until someone
     /// calls into `may_detach`.
     #[cfg(target_os = "macos")]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T, Error>>(
+    pub fn wrap<T, F: FnOnce(&mut MayDetach<'_>) -> Result<T, Error>>(
         task_name: &'a str,
         f: F,
     ) -> Result<T, Error> {

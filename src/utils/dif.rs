@@ -22,7 +22,7 @@ pub enum DifType {
 }
 
 impl fmt::Display for DifType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DifType::Dsym => write!(f, "dsym"),
             DifType::Breakpad => write!(f, "breakpad"),
