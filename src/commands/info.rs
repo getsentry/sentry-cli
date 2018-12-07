@@ -5,7 +5,6 @@ use std::io;
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use serde::Serialize;
-use serde_json;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};

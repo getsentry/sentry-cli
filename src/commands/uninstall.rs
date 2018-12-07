@@ -5,7 +5,6 @@ use std::fs;
 use clap::{App, AppSettings, ArgMatches};
 use console::style;
 use failure::Error;
-use runas;
 
 use crate::utils::fs::is_writable;
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};

@@ -9,7 +9,6 @@ use failure::{bail, Error, SyncFailure};
 use symbolic::common::byteview::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
-use zip;
 
 use crate::api::{Api, AssociateDsyms};
 use crate::config::Config;

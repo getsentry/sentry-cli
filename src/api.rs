@@ -18,7 +18,6 @@ use std::thread;
 
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, Utc};
-use curl;
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
@@ -28,7 +27,6 @@ use parking_lot::RwLock;
 use regex::{Captures, Regex};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
-use serde_json;
 use sha1::Digest;
 use symbolic::common::types::ObjectClass;
 use symbolic::debuginfo::DebugId;

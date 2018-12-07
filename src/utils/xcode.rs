@@ -13,7 +13,6 @@ use lazy_static::lazy_static;
 use plist::serde::deserialize;
 use regex::Regex;
 use serde::Deserialize;
-use serde_json;
 
 #[cfg(target_os = "macos")]
 use {
@@ -352,9 +351,6 @@ impl<'a> MayDetach<'a> {
         task_name: &'a str,
         f: F,
     ) -> Result<T, Error> {
-        use crate::utils::system::print_error;
-        use open;
-        use std::thread;
         use std::time::Duration;
 
         let mut md = MayDetach::new(task_name);
@@ -365,10 +361,10 @@ impl<'a> MayDetach<'a> {
             }
             Err(err) => {
                 if let Some(ref output_file) = md.output_file {
-                    print_error(&err);
+                    crate::utils::system::print_error(&err);
                     if md.show_critical_info()? {
                         open::that(&output_file.path())?;
-                        thread::sleep(Duration::from_millis(5000));
+                        std::thread::sleep(Duration::from_millis(5000));
                     }
                 }
                 Err(err)

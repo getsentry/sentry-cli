@@ -10,7 +10,6 @@ use failure::{bail, Error};
 use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;

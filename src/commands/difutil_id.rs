@@ -3,7 +3,6 @@ use std::path::Path;
 
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
-use serde_json;
 
 use crate::utils::dif::DifFile;
 use crate::utils::system::QuietExit;

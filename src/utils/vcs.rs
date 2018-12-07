@@ -2,7 +2,6 @@ use std::fmt;
 use std::path::PathBuf;
 
 use failure::{bail, format_err, Error};
-use git2;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info};

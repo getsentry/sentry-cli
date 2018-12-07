@@ -3,7 +3,6 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 
-use anylog;
 use chrono::Utc;
 use failure::{Error, ResultExt};
 use if_chain::if_chain;

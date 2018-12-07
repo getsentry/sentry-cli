@@ -7,13 +7,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use clap::ArgMatches;
-use dirs;
-use dotenv;
 use failure::{bail, err_msg, Error, ResultExt};
 use ini::Ini;
-use java_properties;
 use lazy_static::lazy_static;
-use log;
 use parking_lot::Mutex;
 use sentry::Dsn;
 
@@ -99,8 +95,7 @@ impl Config {
         set_max_level(self.get_log_level());
         #[cfg(feature = "with_crash_reporting")]
         {
-            use crate::utils::crashreporting;
-            crashreporting::bind_configured_client(Some(self));
+            crate::utils::crashreporting::bind_configured_client(Some(self));
         }
         if env::var("http_proxy").is_err() {
             if let Some(proxy) = self.get_proxy_url() {
@@ -109,8 +104,7 @@ impl Config {
         }
         #[cfg(not(windows))]
         {
-            use openssl_probe::init_ssl_cert_env_vars;
-            init_ssl_cert_env_vars();
+            openssl_probe::init_ssl_cert_env_vars();
         }
     }
 

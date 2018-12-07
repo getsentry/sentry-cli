@@ -12,8 +12,6 @@ use console::{style, Term};
 use failure::{bail, Error};
 use if_chain::if_chain;
 use log::info;
-use might_be_minified;
-use sourcemap;
 use url::Url;
 
 use crate::api::{Api, FileContents};

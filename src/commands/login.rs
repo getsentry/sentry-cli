@@ -1,7 +1,6 @@
 //! Implements a command for signing in.
 use clap::{App, ArgMatches};
 use failure::Error;
-use open;
 use url::Url;
 
 use crate::api::Api;

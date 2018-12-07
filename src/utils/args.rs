@@ -3,7 +3,6 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
-use clap;
 use failure::{bail, Error};
 use symbolic::debuginfo::DebugId;
 use uuid::Uuid;

@@ -3,12 +3,9 @@ use std::env;
 use std::process;
 
 use chrono::{DateTime, Utc};
-use clap;
 use console::style;
-use dotenv;
 use failure::{Error, Fail};
 use lazy_static::lazy_static;
-use log;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
@@ -19,7 +16,6 @@ where
     F: FnOnce() -> (),
     F: Send + 'static,
 {
-    use chan;
     use chan::chan_select;
     use chan_signal::{notify, Signal};
 
@@ -150,14 +146,10 @@ pub fn to_timestamp(tm: DateTime<Utc>) -> f64 {
 
 /// Initializes the backtrace support
 pub fn init_backtrace() {
-    use backtrace::Backtrace;
-    use std::panic;
-    use std::thread;
+    std::panic::set_hook(Box::new(|info| {
+        let backtrace = backtrace::Backtrace::new();
 
-    panic::set_hook(Box::new(|info| {
-        let backtrace = Backtrace::new();
-
-        let thread = thread::current();
+        let thread = std::thread::current();
         let thread = thread.name().unwrap_or("unnamed");
 
         let msg = match info.payload().downcast_ref::<&'static str>() {
@@ -184,8 +176,7 @@ pub fn init_backtrace() {
 
         #[cfg(feature = "with_client_implementation")]
         {
-            use crate::utils::crashreporting::flush_events;
-            flush_events();
+            crate::utils::crashreporting::flush_events();
         }
     }));
 }
@@ -196,8 +187,6 @@ pub fn get_model() -> Option<String> {
         return Some(model);
     }
 
-    use libc;
-    use libc::c_void;
     use std::ptr;
 
     unsafe {
@@ -212,7 +201,7 @@ pub fn get_model() -> Option<String> {
         let mut buf = vec![0u8; size as usize];
         libc::sysctlbyname(
             "hw.model\x00".as_ptr() as *const i8,
-            buf.as_mut_ptr() as *mut c_void,
+            buf.as_mut_ptr() as *mut libc::c_void,
             &mut size,
             ptr::null_mut(),
             0,

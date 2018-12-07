@@ -265,11 +265,9 @@ fn run() -> Result<(), Error> {
 
 fn setup() {
     use crate::utils::logging::Logger;
-    use crate::utils::system::{init_backtrace, load_dotenv};
-    use log;
 
-    init_backtrace();
-    load_dotenv();
+    crate::utils::system::init_backtrace();
+    crate::utils::system::load_dotenv();
 
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
@@ -279,8 +277,7 @@ fn setup() {
     // also configures the logger.
     #[cfg(feature = "with_crash_reporting")]
     {
-        use crate::utils::crashreporting::setup;
-        setup(Box::new(Logger));
+        crate::utils::crashreporting::setup(Box::new(Logger));
     }
     #[cfg(not(feature = "with_crash_reporting"))]
     {
@@ -307,8 +304,7 @@ pub fn main() {
                 print_error(&err);
                 #[cfg(feature = "with_crash_reporting")]
                 {
-                    use crate::utils::crashreporting::try_report_to_sentry;
-                    try_report_to_sentry(&err);
+                    crate::utils::crashreporting::try_report_to_sentry(&err);
                 }
                 process::exit(1);
             }

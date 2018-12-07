@@ -6,11 +6,9 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use console::style;
-use dirs;
 use failure::Error;
 use if_chain::if_chain;
 use serde::Serialize;
-use serde_json;
 use symbolic::common::byteview::ByteView;
 use symbolic::debuginfo::DebugId;
 use symbolic::proguard::ProguardMappingView;

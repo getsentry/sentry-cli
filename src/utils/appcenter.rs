@@ -11,7 +11,6 @@ use glob::{glob_with, MatchOptions};
 // use serde::de::{Deserialize, Deserializer, Error as DeError};
 use if_chain::if_chain;
 use serde::de;
-use serde_json;
 
 use crate::utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use crate::utils::xcode::{InfoPlist, XcodeProjectInfo};

@@ -1,7 +1,6 @@
 use std::fmt;
 
 use chrono::Duration;
-use prettytable;
 
 /// Helper for formatting durations.
 pub struct HumanDuration(pub Duration);

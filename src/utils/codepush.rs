@@ -9,7 +9,6 @@ use failure::{bail, err_msg, Error};
 use glob::{glob_with, MatchOptions};
 use if_chain::if_chain;
 use serde::Deserialize;
-use serde_json;
 
 use crate::utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use crate::utils::xcode::{InfoPlist, XcodeProjectInfo};

@@ -4,15 +4,12 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
-use app_dirs;
 use chrono::{DateTime, Duration, Utc};
 use console::{style, user_attended};
 use failure::{bail, Error, ResultExt};
 use if_chain::if_chain;
 use log::{debug, info};
-use runas;
 use serde::{Deserialize, Serialize};
-use serde_json;
 
 use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
