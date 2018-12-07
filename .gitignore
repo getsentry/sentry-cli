@@ -8,3 +8,4 @@ dist
 
 /sentry-cli
 /sentry-cli.exe
+*.snap

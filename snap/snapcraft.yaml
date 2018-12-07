@@ -1,0 +1,26 @@
+name: sentry-cli
+base: core18
+version: '1.37.0'
+summary: A command line utility to work with Sentry.
+description: |
+  This is a Sentry command line client for some generic
+  tasks. Right now this is primarily used to upload
+  debug symbols to Sentry if you are not using the fastlane tools.
+grade: stable
+confinement: strict
+
+parts:
+  sentry-cli:
+    plugin: rust
+    source: https://github.com/getsentry/sentry-cli/archive/$SNAPCRAFT_PROJECT_VERSION.tar.gz
+    build-packages:
+      - pkg-config
+      - libssl-dev
+
+apps:
+  sentry-cli:
+    command: sentry-cli
+    plugs:
+      - home
+      - network
+
