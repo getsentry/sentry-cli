@@ -172,6 +172,19 @@ fn find_ids(
             }
         }
 
+        // look for elfs
+        if_chain! {
+            if types.contains(&DifType::Elf);
+            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Elf));
+            then {
+                for id in dif.ids() {
+                    if remaining.contains(&id) {
+                        found.push((id, DifType::Elf));
+                    }
+                }
+            }
+        }
+
         // look for breakpad files
         if_chain! {
             if types.contains(&DifType::Breakpad);
