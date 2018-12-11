@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fmt;
 use std::path::Path;
@@ -7,8 +7,9 @@ use std::str;
 use failure::{bail, Error, SyncFailure};
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
-use symbolic::common::{byteview::ByteView, types::ObjectKind};
-use symbolic::debuginfo::{DebugId, FatObject, Object, SymbolTable};
+use symbolic::common::byteview::ByteView;
+use symbolic::common::types::{ObjectClass, ObjectKind};
+use symbolic::debuginfo::{DebugFeatures, DebugId, FatObject, Object, ObjectFeature, SymbolTable};
 use symbolic::proguard::ProguardMappingView;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -126,7 +127,7 @@ impl<'a> DifFile<'a> {
 
     pub fn ty(&self) -> DifType {
         match self {
-            DifFile::Object(ref fat) => match fat.kind() {
+            DifFile::Object(fat) => match fat.kind() {
                 ObjectKind::MachO => DifType::Dsym,
                 ObjectKind::Breakpad => DifType::Breakpad,
                 ObjectKind::Elf => DifType::Elf,
@@ -135,9 +136,19 @@ impl<'a> DifFile<'a> {
         }
     }
 
+    pub fn class(&self) -> Option<ObjectClass> {
+        match self {
+            DifFile::Object(fat) => match fat.get_object(0) {
+                Ok(Some(object)) => Some(object.class()),
+                _ => None,
+            },
+            DifFile::Proguard(..) => None,
+        }
+    }
+
     pub fn variants(&self) -> BTreeMap<DebugId, Option<&'static str>> {
         match self {
-            DifFile::Object(ref fat) => fat
+            DifFile::Object(fat) => fat
                 .objects()
                 .filter_map(|result| result.ok())
                 .filter_map(|object| {
@@ -146,28 +157,43 @@ impl<'a> DifFile<'a> {
                         .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
                 })
                 .collect(),
-            DifFile::Proguard(ref pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
+            DifFile::Proguard(pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
         }
     }
 
     pub fn ids(&self) -> Vec<DebugId> {
         match self {
-            DifFile::Object(ref fat) => fat
+            DifFile::Object(fat) => fat
                 .objects()
                 .filter_map(|result| result.ok())
                 .filter_map(|object| object.id())
                 .collect(),
-            DifFile::Proguard(ref pg) => vec![pg.uuid().into()],
+            DifFile::Proguard(pg) => vec![pg.uuid().into()],
+        }
+    }
+
+    pub fn features(&self) -> BTreeSet<ObjectFeature> {
+        match self {
+            DifFile::Object(fat) => fat
+                .objects()
+                .filter_map(|result| result.ok())
+                .flat_map(|object| object.features())
+                .collect(),
+            DifFile::Proguard(..) => {
+                let mut set = BTreeSet::new();
+                set.insert(ObjectFeature::Mapping);
+                set
+            }
         }
     }
 
     pub fn is_usable(&self) -> bool {
         match self {
-            DifFile::Object(ref fat) => fat
+            DifFile::Object(fat) => fat
                 .objects()
                 .filter_map(|result| result.ok())
-                .any(|object| object.debug_kind().is_some()),
-            DifFile::Proguard(ref pg) => pg.has_line_info(),
+                .any(|object| !object.features().is_empty()),
+            DifFile::Proguard(pg) => pg.has_line_info(),
         }
     }
 
@@ -176,7 +202,7 @@ impl<'a> DifFile<'a> {
             None
         } else {
             Some(match self {
-                DifFile::Object(..) => "missing DWARF debug info",
+                DifFile::Object(..) => "missing debug or unwind information",
                 DifFile::Proguard(..) => "missing line information",
             })
         }
@@ -196,10 +222,12 @@ impl Serialize for DifFile<'_> {
     where
         S: Serializer,
     {
-        // 5 is the number of fields in the struct.
-        let mut state = serializer.serialize_struct("DifFile", 5)?;
+        let features: Vec<String> = self.features().into_iter().map(|f| f.to_string()).collect();
+
+        let mut state = serializer.serialize_struct("DifFile", 6)?;
         state.serialize_field("type", &self.ty())?;
         state.serialize_field("variants", &self.variants())?;
+        state.serialize_field("features", &features)?;
         state.serialize_field("is_usable", &self.is_usable())?;
         state.serialize_field("problem", &self.get_problem())?;
         state.serialize_field("note", &self.get_note())?;
@@ -216,8 +244,8 @@ pub trait DebuggingInformation {
 
 impl DebuggingInformation for DifFile<'_> {
     fn has_hidden_symbols(&self) -> Result<bool, Error> {
-        match *self {
-            DifFile::Object(ref fat) => fat.has_hidden_symbols(),
+        match self {
+            DifFile::Object(fat) => fat.has_hidden_symbols(),
             _ => Ok(false),
         }
     }
