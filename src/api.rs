@@ -1334,7 +1334,7 @@ impl<'a> ApiRequest<'a> {
         let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)
             .context(ApiErrorKind::CannotSerializeAsJson)?;
-        debug!("sending JSON data ({} bytes)", body_bytes.len());
+        debug!("json body: {}", &body_bytes);
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
         Ok(self)
