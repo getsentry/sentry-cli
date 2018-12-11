@@ -11,26 +11,29 @@ use symbolic::common::{byteview::ByteView, types::ObjectKind};
 use symbolic::debuginfo::{DebugId, FatObject, Object, SymbolTable};
 use symbolic::proguard::ProguardMappingView;
 
-#[derive(PartialEq, Eq, Debug, Hash, Copy, Clone, Serialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum DifType {
-    #[serde(rename = "dsym")]
     Dsym,
-    #[serde(rename = "elf")]
     Elf,
-    #[serde(rename = "breakpad")]
     Breakpad,
-    #[serde(rename = "proguard")]
     Proguard,
+}
+
+impl DifType {
+    pub fn name(self) -> &'static str {
+        match self {
+            DifType::Dsym => "dsym",
+            DifType::Elf => "elf",
+            DifType::Breakpad => "breakpad",
+            DifType::Proguard => "proguard",
+        }
+    }
 }
 
 impl fmt::Display for DifType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DifType::Dsym => write!(f, "dsym"),
-            DifType::Elf => write!(f, "elf"),
-            DifType::Breakpad => write!(f, "breakpad"),
-            DifType::Proguard => write!(f, "proguard"),
-        }
+        write!(f, "{}", self.name())
     }
 }
 
@@ -48,21 +51,13 @@ impl str::FromStr for DifType {
     }
 }
 
-pub enum DifFile {
-    Object(FatObject<'static>),
-    Proguard(ProguardMappingView<'static>),
+pub enum DifFile<'a> {
+    Object(FatObject<'a>),
+    Proguard(ProguardMappingView<'a>),
 }
 
-impl DifFile {
-    fn from_object(fat: FatObject<'static>) -> Result<DifFile, Error> {
-        if fat.object_count() < 1 {
-            bail!("Object file is empty");
-        }
-
-        Ok(DifFile::Object(fat))
-    }
-
-    fn open_proguard<P: AsRef<Path>>(path: P) -> Result<DifFile, Error> {
+impl DifFile<'static> {
+    fn open_proguard<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         let data = ByteView::from_path(&path).map_err(SyncFailure::new)?;
         let pg = ProguardMappingView::parse(data).map_err(SyncFailure::new)?;
 
@@ -73,7 +68,7 @@ impl DifFile {
         }
     }
 
-    fn open_object<P: AsRef<Path>>(path: P, kind: ObjectKind) -> Result<DifFile, Error> {
+    fn open_object<P: AsRef<Path>>(path: P, kind: ObjectKind) -> Result<Self, Error> {
         let data = ByteView::from_path(path).map_err(SyncFailure::new)?;
         let fat = FatObject::parse(data)?;
 
@@ -84,7 +79,7 @@ impl DifFile {
         DifFile::from_object(fat)
     }
 
-    fn try_open<P: AsRef<Path>>(path: P) -> Result<DifFile, Error> {
+    fn try_open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         // Try to open the file and map it into memory first. This will
         // return an error if the file does not exist.
         let data = ByteView::from_path(&path).map_err(SyncFailure::new)?;
@@ -109,7 +104,7 @@ impl DifFile {
         bail!("Unsupported file");
     }
 
-    pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<DifFile, Error> {
+    pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<Self, Error> {
         match ty {
             Some(DifType::Dsym) => DifFile::open_object(path, ObjectKind::MachO),
             Some(DifType::Elf) => DifFile::open_object(path, ObjectKind::Elf),
@@ -117,6 +112,16 @@ impl DifFile {
             Some(DifType::Proguard) => DifFile::open_proguard(path),
             None => DifFile::try_open(path),
         }
+    }
+}
+
+impl<'a> DifFile<'a> {
+    fn from_object(fat: FatObject<'a>) -> Result<Self, Error> {
+        if fat.object_count() < 1 {
+            bail!("Object file is empty");
+        }
+
+        Ok(DifFile::Object(fat))
     }
 
     pub fn ty(&self) -> DifType {
@@ -166,7 +171,7 @@ impl DifFile {
         }
     }
 
-    pub fn get_problem(&self) -> Option<&str> {
+    pub fn get_problem(&self) -> Option<&'static str> {
         if self.is_usable() {
             None
         } else {
@@ -177,7 +182,7 @@ impl DifFile {
         }
     }
 
-    pub fn get_note(&self) -> Option<&str> {
+    pub fn get_note(&self) -> Option<&'static str> {
         if self.has_hidden_symbols().unwrap_or(false) {
             Some("contains hidden symbols (needs BCSymbolMaps)")
         } else {
@@ -186,7 +191,7 @@ impl DifFile {
     }
 }
 
-impl Serialize for DifFile {
+impl Serialize for DifFile<'_> {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -209,7 +214,7 @@ pub trait DebuggingInformation {
     fn has_hidden_symbols(&self) -> Result<bool, Error>;
 }
 
-impl DebuggingInformation for DifFile {
+impl DebuggingInformation for DifFile<'_> {
     fn has_hidden_symbols(&self) -> Result<bool, Error> {
         match *self {
             DifFile::Object(ref fat) => fat.has_hidden_symbols(),
