@@ -24,10 +24,6 @@ before_install:
   - npm install -g @zeus-ci/cli
 
 matrix:
-  allow_failures:
-    - name: "check: format"
-    - name: "check: lint"
-
   include:
     - name: "check: format"
       language: rust
