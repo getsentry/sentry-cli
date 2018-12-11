@@ -41,7 +41,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("TYPE")
                 .multiple(true)
                 .number_of_values(1)
-                .possible_values(&["dsym", "proguard", "breakpad"])
+                .possible_values(&["dsym", "elf", "proguard", "breakpad"])
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",

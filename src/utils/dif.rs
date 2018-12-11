@@ -15,6 +15,8 @@ use symbolic::proguard::ProguardMappingView;
 pub enum DifType {
     #[serde(rename = "dsym")]
     Dsym,
+    #[serde(rename = "elf")]
+    Elf,
     #[serde(rename = "breakpad")]
     Breakpad,
     #[serde(rename = "proguard")]
@@ -25,6 +27,7 @@ impl fmt::Display for DifType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             DifType::Dsym => write!(f, "dsym"),
+            DifType::Elf => write!(f, "elf"),
             DifType::Breakpad => write!(f, "breakpad"),
             DifType::Proguard => write!(f, "proguard"),
         }
@@ -37,6 +40,7 @@ impl str::FromStr for DifType {
     fn from_str(s: &str) -> Result<DifType, Error> {
         match s {
             "dsym" => Ok(DifType::Dsym),
+            "elf" => Ok(DifType::Elf),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
             _ => bail!("Invalid debug info file type"),
@@ -90,8 +94,8 @@ impl DifFile {
         if let Ok(fat) = FatObject::parse(data) {
             match fat.kind() {
                 ObjectKind::MachO => return DifFile::from_object(fat),
+                ObjectKind::Elf => return DifFile::from_object(fat),
                 ObjectKind::Breakpad => return DifFile::from_object(fat),
-                _ => bail!("Unsupported object file"),
             }
         }
 
@@ -108,6 +112,7 @@ impl DifFile {
     pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<DifFile, Error> {
         match ty {
             Some(DifType::Dsym) => DifFile::open_object(path, ObjectKind::MachO),
+            Some(DifType::Elf) => DifFile::open_object(path, ObjectKind::Elf),
             Some(DifType::Breakpad) => DifFile::open_object(path, ObjectKind::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
             None => DifFile::try_open(path),
@@ -119,7 +124,7 @@ impl DifFile {
             DifFile::Object(ref fat) => match fat.kind() {
                 ObjectKind::MachO => DifType::Dsym,
                 ObjectKind::Breakpad => DifType::Breakpad,
-                _ => unreachable!(),
+                ObjectKind::Elf => DifType::Elf,
             },
             DifFile::Proguard(..) => DifType::Proguard,
         }
