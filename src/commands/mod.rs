@@ -10,7 +10,7 @@ use log::{debug, info};
 
 use crate::api::Api;
 use crate::config::{prepare_environment, Auth, Config};
-use crate::constants::VERSION;
+use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::system::{print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 
@@ -240,6 +240,11 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         Config::get_current().get_filename().display()
     );
 
+    debug!(
+        "sentry-cli version: {}, platform: \"{}\", architecture: \"{}\"",
+        VERSION, PLATFORM, ARCH
+    );
+
     info!(
         "sentry-cli was invoked with the following command line: {}",
         DebugArgs(args.iter().map(|x| x.as_str()).collect())
@@ -286,7 +291,7 @@ fn setup() {
     }
 }
 
-/// Executes the command line application and exists the process.
+/// Executes the command line application and exits the process.
 pub fn main() {
     setup();
     let result = run();
