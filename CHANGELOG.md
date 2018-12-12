@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.37.1
+
+* Fix the detection of debug information in ELF files (#437)
+* Add support for ELF files in the `difutil` commands (#447)
+* Speed up `sentry-cli update` by using the Sentry release registry (#438)
+* Dump http requests in debug mode for better debugging (#448)
+
 ## sentry-cli 1.37.0
 
 * Support React Native >= 0.46 (@stephan-nordnes-eriksen, #377)
