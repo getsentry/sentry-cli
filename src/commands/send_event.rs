@@ -127,7 +127,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(
             Arg::with_name("with_categories")
                 .long("with-categories")
-                .help("Parses off a leading category for breadcrumbs from the logfile")
+                .help("Parses off a leading category for breadcrumbs from the logfile"),
         )
 }
 

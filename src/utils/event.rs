@@ -40,8 +40,8 @@ pub fn attach_logfile(
         let rec = anylog::LogEntry::parse(line.as_bytes());
 
         let (component, message) = if with_component {
-            let rv = rec.component_and_message();
-            (rv.0.unwrap_or("log".into()), rv.1)
+            let (component, message) = rec.component_and_message();
+            (component.unwrap_or_else(|| "log".into()), message)
         } else {
             ("log".into(), rec.message().to_string())
         };
