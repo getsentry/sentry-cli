@@ -6,7 +6,7 @@ version = "1.37.1"
 edition = "2018"
 
 [dependencies]
-anylog = "0.2.1"
+anylog = "0.3.0"
 app_dirs = "1.2.1"
 backtrace = "0.3.9"
 brotli2 = "0.3.2"

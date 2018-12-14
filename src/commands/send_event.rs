@@ -124,6 +124,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .long("logfile")
                 .help("Send a logfile as breadcrumbs with the event (last 100 records)"),
         )
+        .arg(
+            Arg::with_name("with_categories")
+                .long("with-categories")
+                .help("Parses off a leading category for breadcrumbs from the logfile")
+        )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
@@ -220,7 +225,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     if let Some(logfile) = matches.value_of("logfile") {
-        attach_logfile(&mut event, logfile, false)?;
+        attach_logfile(&mut event, logfile, matches.is_present("with_categories"))?;
     }
 
     let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
