@@ -5,7 +5,6 @@ use std::time::Duration;
 
 use chrono::Utc;
 use failure::{Error, ResultExt};
-use if_chain::if_chain;
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
@@ -39,20 +38,13 @@ pub fn attach_logfile(
     for line in reader.lines() {
         let line = line?;
         let rec = anylog::LogEntry::parse(line.as_bytes());
-        let component;
-        let message;
 
-        if_chain! {
-            if with_component;
-            if let Some(caps) = COMPONENT_RE.captures(&rec.message());
-            then {
-                component = caps.get(1).map(|x| x.as_str().to_string()).unwrap();
-                message = caps.get(2).map(|x| x.as_str().to_string()).unwrap();
-            } else {
-                component = "log".to_string();
-                message = rec.message().to_string();
-            }
-        }
+        let (component, message) = if with_component {
+            let (component, message) = rec.component_and_message();
+            (component.unwrap_or_else(|| "log".into()), message)
+        } else {
+            ("log".into(), rec.message().to_string())
+        };
 
         event.breadcrumbs.values.push(Breadcrumb {
             timestamp: rec.utc_timestamp().unwrap_or(fallback_timestamp),
