@@ -112,6 +112,7 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
     }
 }
 
+#[derive(Clone)]
 pub enum ProgressBarMode {
     Disabled,
     Request,
@@ -316,6 +317,8 @@ pub struct ApiRequest<'a> {
     headers: curl::easy::List,
     body: Option<Vec<u8>>,
     progress_bar_mode: ProgressBarMode,
+    max_retries: u32,
+    retry_on_statuses: &'static [u32],
 }
 
 /// Represents an API response.
@@ -971,6 +974,7 @@ impl Api {
         let request = self
             .request(Method::Post, url)?
             .with_form_data(form)?
+            .with_retry(5, &[502, 504])?
             .progress_bar_mode(progress_bar_mode)?;
 
         // The request is performed to an absolute URL. Thus, `Self::request()` will
@@ -1136,12 +1140,11 @@ impl Api {
 fn send_req<W: Write>(
     handle: &mut curl::easy::Easy,
     out: &mut W,
-    body: Option<Vec<u8>>,
+    body: Option<&[u8]>,
     progress_bar_mode: ProgressBarMode,
 ) -> ApiResult<(u32, Vec<String>)> {
     match body {
-        Some(body) => {
-            let mut body = &body[..];
+        Some(mut body) => {
             handle.upload(true)?;
             handle.in_filesize(body.len() as u64)?;
             handle_req(handle, out, progress_bar_mode, &mut |buf| {
@@ -1296,6 +1299,8 @@ impl<'a> ApiRequest<'a> {
             headers,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
+            max_retries: 0,
+            retry_on_statuses: &[],
         };
 
         let request = match auth {
@@ -1361,17 +1366,42 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
+    pub fn with_retry(
+        mut self,
+        max_retries: u32,
+        retry_on_statuses: &'static [u32],
+    ) -> ApiResult<Self> {
+        self.max_retries = max_retries;
+        self.retry_on_statuses = retry_on_statuses;
+        Ok(self)
+    }
+
     /// Sends the request and writes response data into the given file
     /// instead of the response object's in memory buffer.
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
-        let (status, headers) = send_req(&mut self.handle, out, self.body, self.progress_bar_mode)?;
-        debug!("response: {}", status);
-        Ok(ApiResponse {
-            status,
-            headers,
-            body: None,
-        })
+
+        let mut retry_number = 0;
+        loop {
+            let body = self.body.as_ref().map(|v| v.as_slice());
+            let (status, headers) =
+                send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
+            debug!("response: {}", status);
+
+            if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&status) {
+                return Ok(ApiResponse {
+                    status,
+                    headers,
+                    body: None,
+                });
+            }
+
+            retry_number += 1;
+            debug!(
+                "retry number {}, max retries: {}",
+                retry_number, self.max_retries
+            );
+        }
     }
 
     /// Sends the request and reads the response body into the response object.
