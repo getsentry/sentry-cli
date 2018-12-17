@@ -895,7 +895,9 @@ impl Api {
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
         let url = format!("/organizations/{}/chunk-upload/", org);
         match self
-            .get(&url)?
+            .request(Method::Get, &url)?
+            .with_retry(3, &[502])?
+            .send()?
             .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
         {
             Ok(options) => Ok(Some(options)),
@@ -1382,6 +1384,9 @@ impl<'a> ApiRequest<'a> {
         self.handle.http_headers(self.headers)?;
 
         let mut retry_number = 0;
+        // FIXME
+        let mut wait_ms = 500;
+        let max_wait_ms = 4000;
         loop {
             let body = self.body.as_ref().map(|v| v.as_slice());
             let (status, headers) =
@@ -1398,9 +1403,15 @@ impl<'a> ApiRequest<'a> {
 
             retry_number += 1;
             debug!(
-                "retry number {}, max retries: {}",
-                retry_number, self.max_retries
+                "retry number {}, max retries: {}, retrying again in {}ms",
+                retry_number, self.max_retries, wait_ms
             );
+
+            // Exponential backoff with max value
+            thread::sleep(Duration::milliseconds(wait_ms).to_std().unwrap());
+            if 2 * wait_ms <= max_wait_ms {
+                wait_ms *= 2;
+            }
         }
     }
 
