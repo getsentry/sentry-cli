@@ -1399,8 +1399,7 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
-    /// Sends the request and writes response data into the given file
-    /// instead of the response object's in memory buffer.
+    /// Sends the request and writes response data into the given buffer
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
 

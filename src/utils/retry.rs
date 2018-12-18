@@ -30,6 +30,6 @@ pub trait DurationAsMilliseconds {
 
 impl DurationAsMilliseconds for Duration {
     fn as_milliseconds(&self) -> u64 {
-        self.as_secs() * 1000 + self.subsec_millis() as u64
+        self.as_secs() * 1000 + u64::from(self.subsec_millis())
     }
 }
