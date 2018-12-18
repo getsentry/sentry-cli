@@ -34,9 +34,7 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use crate::config::{Auth, Config};
-use crate::constants::{
-    ARCH, DEFAULT_RETRIES, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION,
-};
+use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::{
     parse_link_header, HTTP_STATUS_502_BAD_GATEWAY, HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -928,7 +926,7 @@ impl Api {
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .with_retry(
-                DEFAULT_RETRIES,
+                self.config.get_max_retry_count().unwrap(),
                 &[
                     HTTP_STATUS_502_BAD_GATEWAY,
                     HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -991,7 +989,7 @@ impl Api {
             .request(Method::Post, url)?
             .with_form_data(form)?
             .with_retry(
-                DEFAULT_RETRIES,
+                self.config.get_max_retry_count().unwrap(),
                 &[
                     HTTP_STATUS_502_BAD_GATEWAY,
                     HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1410,14 +1408,18 @@ impl<'a> ApiRequest<'a> {
             // Temporary buffer that will be written to "out" after the last attempt
             let mut tmp_out = vec![];
             let body = self.body.as_ref().map(|v| v.as_slice());
+            debug!(
+                "retry number {}, max retries: {}",
+                retry_number, self.max_retries,
+            );
+
             let (status, headers) = send_req(
                 &mut self.handle,
                 &mut tmp_out,
                 body,
                 self.progress_bar_mode.clone(),
             )?;
-
-            debug!("response: {}", status);
+            debug!("response status: {}", status);
 
             if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&status) {
                 out.write_all(&tmp_out)
@@ -1428,17 +1430,17 @@ impl<'a> ApiRequest<'a> {
                     body: None,
                 });
             }
-            retry_number += 1;
 
             // Exponential backoff
             let backoff_timeout = backoff.next_backoff().unwrap();
             debug!(
-                "retry number {}, max retries: {}, retrying again in {} ms",
+                "retry number {}, retrying again in {} ms",
                 retry_number,
-                self.max_retries,
                 backoff_timeout.as_milliseconds()
             );
             thread::sleep(backoff_timeout);
+
+            retry_number += 1;
         }
     }
 
