@@ -1275,7 +1275,7 @@ impl<'a> Iterator for Headers<'a> {
 }
 
 pub fn get_default_backoff() -> ExponentialBackoff {
-    return ExponentialBackoff {
+    let mut eb = ExponentialBackoff {
         current_interval: time::Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
         initial_interval: time::Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
         randomization_factor: DEFAULT_RANDOMIZATION,
@@ -1285,6 +1285,8 @@ pub fn get_default_backoff() -> ExponentialBackoff {
         clock: Default::default(),
         start_time: time::Instant::now(),
     };
+    eb.reset();
+    eb
 }
 
 impl<'a> ApiRequest<'a> {
@@ -1404,18 +1406,8 @@ impl<'a> ApiRequest<'a> {
         self.handle.http_headers(self.headers)?;
 
         let mut retry_number = 0;
-        let mut wait_ms = 500;
-        let max_wait_ms = 4000;
 
         let mut backoff = get_default_backoff();
-
-        for i in 0..10 {
-            let dur = backoff.next_backoff().unwrap();
-            debug!(
-                "next backoff {}",
-                dur.as_secs() * 1000 + dur.subsec_millis() as u64
-            )
-        }
 
         loop {
             let body = self.body.as_ref().map(|v| v.as_slice());
@@ -1433,16 +1425,17 @@ impl<'a> ApiRequest<'a> {
             }
 
             retry_number += 1;
+
+            let backoff_timeout = backoff.next_backoff().unwrap();
+            let backoff_timeout_ms =
+                backoff_timeout.as_secs() * 1000 + backoff_timeout.subsec_millis() as u64;
             debug!(
                 "retry number {}, max retries: {}, retrying again in {}ms",
-                retry_number, self.max_retries, wait_ms
+                retry_number, self.max_retries, backoff_timeout_ms
             );
 
             // Exponential backoff with max value
-            thread::sleep(Duration::milliseconds(wait_ms).to_std().unwrap());
-            if 2 * wait_ms <= max_wait_ms {
-                wait_ms *= 2;
-            }
+            thread::sleep(backoff_timeout);
         }
     }
 
