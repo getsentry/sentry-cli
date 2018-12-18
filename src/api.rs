@@ -34,9 +34,14 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
+use crate::constants::{
+    ARCH, DEFAULT_RETRIES, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION,
+};
 use crate::utils::android::AndroidManifest;
-use crate::utils::http::parse_link_header;
+use crate::utils::http::{
+    parse_link_header, HTTP_STATUS_502_BAD_GATEWAY, HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+};
 use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, AsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
@@ -898,7 +903,6 @@ impl Api {
         let url = format!("/organizations/{}/chunk-upload/", org);
         match self
             .request(Method::Get, &url)?
-            .with_retry(3, &[502])?
             .send()?
             .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
         {
@@ -923,6 +927,14 @@ impl Api {
         let url = format!("/projects/{}/{}/files/difs/assemble/", org, project);
         self.request(Method::Post, &url)?
             .with_json_body(request)?
+            .with_retry(
+                DEFAULT_RETRIES,
+                &[
+                    HTTP_STATUS_502_BAD_GATEWAY,
+                    HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
@@ -978,7 +990,14 @@ impl Api {
         let request = self
             .request(Method::Post, url)?
             .with_form_data(form)?
-            .with_retry(5, &[502, 504])?
+            .with_retry(
+                DEFAULT_RETRIES,
+                &[
+                    HTTP_STATUS_502_BAD_GATEWAY,
+                    HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
             .progress_bar_mode(progress_bar_mode)?;
 
         // The request is performed to an absolute URL. Thus, `Self::request()` will
@@ -1389,13 +1408,21 @@ impl<'a> ApiRequest<'a> {
         let mut retry_number = 0;
 
         loop {
+            // Temporary buffer that will be written to "out" after the last attempt
+            let mut tmp_out = vec![];
             let body = self.body.as_ref().map(|v| v.as_slice());
-            let (status, headers) =
-                send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
+            let (status, headers) = send_req(
+                &mut self.handle,
+                &mut tmp_out,
+                body,
+                self.progress_bar_mode.clone(),
+            )?;
 
             debug!("response: {}", status);
 
             if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&status) {
+                out.write_all(&tmp_out)
+                    .map_err(|_error| ApiError::from(ApiErrorKind::RequestFailed))?;
                 return Ok(ApiResponse {
                     status,
                     headers,
@@ -1407,7 +1434,7 @@ impl<'a> ApiRequest<'a> {
             // Exponential backoff
             let backoff_timeout = backoff.next_backoff().unwrap();
             debug!(
-                "retry number {}, max retries: {}, retrying again in {}ms",
+                "retry number {}, max retries: {}, retrying again in {} ms",
                 retry_number,
                 self.max_retries,
                 backoff_timeout.as_milliseconds()
