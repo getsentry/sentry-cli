@@ -15,10 +15,8 @@ use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 use std::thread;
-use std::time;
 
 use backoff::backoff::Backoff;
-use backoff::ExponentialBackoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, Utc};
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
@@ -36,13 +34,11 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use crate::config::{Auth, Config};
-use crate::constants::{
-    ARCH, DEFAULT_INITIAL_INTERVAL, DEFAULT_MAX_INTERVAL, DEFAULT_MULTIPLIER,
-    DEFAULT_RANDOMIZATION, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION,
-};
+use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::parse_link_header;
 use crate::utils::progress::ProgressBar;
+use crate::utils::retry::{get_default_backoff, AsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
@@ -899,7 +895,6 @@ impl Api {
 
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
-        self.request(Method::Get, "https://test")?.send()?;
         let url = format!("/organizations/{}/chunk-upload/", org);
         match self
             .request(Method::Get, &url)?
@@ -1274,21 +1269,6 @@ impl<'a> Iterator for Headers<'a> {
     }
 }
 
-pub fn get_default_backoff() -> ExponentialBackoff {
-    let mut eb = ExponentialBackoff {
-        current_interval: time::Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
-        initial_interval: time::Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
-        randomization_factor: DEFAULT_RANDOMIZATION,
-        multiplier: DEFAULT_MULTIPLIER,
-        max_interval: time::Duration::from_millis(DEFAULT_MAX_INTERVAL),
-        max_elapsed_time: None,
-        clock: Default::default(),
-        start_time: time::Instant::now(),
-    };
-    eb.reset();
-    eb
-}
-
 impl<'a> ApiRequest<'a> {
     fn create(
         mut handle: RefMut<'a, curl::easy::Easy>,
@@ -1405,9 +1385,8 @@ impl<'a> ApiRequest<'a> {
     pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
         self.handle.http_headers(self.headers)?;
 
-        let mut retry_number = 0;
-
         let mut backoff = get_default_backoff();
+        let mut retry_number = 0;
 
         loop {
             let body = self.body.as_ref().map(|v| v.as_slice());
@@ -1423,18 +1402,16 @@ impl<'a> ApiRequest<'a> {
                     body: None,
                 });
             }
-
             retry_number += 1;
 
+            // Exponential backoff
             let backoff_timeout = backoff.next_backoff().unwrap();
-            let backoff_timeout_ms =
-                backoff_timeout.as_secs() * 1000 + backoff_timeout.subsec_millis() as u64;
             debug!(
                 "retry number {}, max retries: {}, retrying again in {}ms",
-                retry_number, self.max_retries, backoff_timeout_ms
+                retry_number,
+                self.max_retries,
+                backoff_timeout.as_milliseconds()
             );
-
-            // Exponential backoff with max value
             thread::sleep(backoff_timeout);
         }
     }
