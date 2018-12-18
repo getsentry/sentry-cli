@@ -43,7 +43,7 @@ lazy_static! {
 /// Backoff multiplier (1.5 which is 50% increase per backoff).
 pub const DEFAULT_MULTIPLIER: f64 = 1.5;
 /// Backoff randomization factor (0 means no randomization).
-pub const DEFAULT_RANDOMIZATION: f64 = 0.0;
+pub const DEFAULT_RANDOMIZATION: f64 = 0.1;
 /// Initial backoff interval in milliseconds.
 pub const DEFAULT_INITIAL_INTERVAL: u64 = 500;
 /// Maximum backoff interval in milliseconds.
