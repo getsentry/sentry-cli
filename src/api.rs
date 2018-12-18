@@ -43,7 +43,7 @@ use crate::utils::http::{
     HTTP_STATUS_504_GATEWAY_TIMEOUT,
 };
 use crate::utils::progress::ProgressBar;
-use crate::utils::retry::{get_default_backoff, AsMilliseconds};
+use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;

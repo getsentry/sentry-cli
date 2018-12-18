@@ -24,11 +24,11 @@ pub fn get_default_backoff() -> ExponentialBackoff {
 }
 
 /// Trait for displaying duration-like in milliseconds
-pub trait AsMilliseconds {
+pub trait DurationAsMilliseconds {
     fn as_milliseconds(&self) -> u64;
 }
 
-impl AsMilliseconds for Duration {
+impl DurationAsMilliseconds for Duration {
     fn as_milliseconds(&self) -> u64 {
         self.as_secs() * 1000 + self.subsec_millis() as u64
     }
