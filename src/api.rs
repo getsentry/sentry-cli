@@ -15,7 +15,10 @@ use std::rc::Rc;
 use std::str;
 use std::sync::Arc;
 use std::thread;
+use std::time;
 
+use backoff::backoff::Backoff;
+use backoff::ExponentialBackoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, Utc};
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
@@ -33,7 +36,10 @@ use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
+use crate::constants::{
+    ARCH, DEFAULT_INITIAL_INTERVAL, DEFAULT_MAX_INTERVAL, DEFAULT_MULTIPLIER,
+    DEFAULT_RANDOMIZATION, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION,
+};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::parse_link_header;
 use crate::utils::progress::ProgressBar;
@@ -893,6 +899,7 @@ impl Api {
 
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
+        self.request(Method::Get, "https://test")?.send()?;
         let url = format!("/organizations/{}/chunk-upload/", org);
         match self
             .request(Method::Get, &url)?
@@ -1267,6 +1274,19 @@ impl<'a> Iterator for Headers<'a> {
     }
 }
 
+pub fn get_default_backoff() -> ExponentialBackoff {
+    return ExponentialBackoff {
+        current_interval: time::Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
+        initial_interval: time::Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
+        randomization_factor: DEFAULT_RANDOMIZATION,
+        multiplier: DEFAULT_MULTIPLIER,
+        max_interval: time::Duration::from_millis(DEFAULT_MAX_INTERVAL),
+        max_elapsed_time: None,
+        clock: Default::default(),
+        start_time: time::Instant::now(),
+    };
+}
+
 impl<'a> ApiRequest<'a> {
     fn create(
         mut handle: RefMut<'a, curl::easy::Easy>,
@@ -1384,13 +1404,24 @@ impl<'a> ApiRequest<'a> {
         self.handle.http_headers(self.headers)?;
 
         let mut retry_number = 0;
-        // FIXME
         let mut wait_ms = 500;
         let max_wait_ms = 4000;
+
+        let mut backoff = get_default_backoff();
+
+        for i in 0..10 {
+            let dur = backoff.next_backoff().unwrap();
+            debug!(
+                "next backoff {}",
+                dur.as_secs() * 1000 + dur.subsec_millis() as u64
+            )
+        }
+
         loop {
             let body = self.body.as_ref().map(|v| v.as_slice());
             let (status, headers) =
                 send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
+
             debug!("response: {}", status);
 
             if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&status) {

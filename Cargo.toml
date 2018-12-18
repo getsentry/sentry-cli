@@ -8,6 +8,7 @@ edition = "2018"
 [dependencies]
 anylog = "0.3.0"
 app_dirs = "1.2.1"
+backoff = "0.1.2"
 backtrace = "0.3.9"
 brotli2 = "0.3.2"
 chardet = "0.2.4"
