@@ -905,8 +905,7 @@ impl Api {
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
         let url = format!("/organizations/{}/chunk-upload/", org);
         match self
-            .request(Method::Get, &url)?
-            .send()?
+            .get(&url)?
             .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
         {
             Ok(options) => Ok(Some(options)),
