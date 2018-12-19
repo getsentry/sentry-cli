@@ -326,9 +326,9 @@ impl Config {
     }
 
     pub fn get_max_retry_count(&self) -> Result<u32, Error> {
-        if env::var_os("SENTRY_REQUEST_MAX_RETRY").is_some() {
-            Ok(env::var("SENTRY_REQUEST_MAX_RETRY")?.parse()?)
-        } else if let Some(val) = self.ini.get_from(Some("http"), "max_retry_count") {
+        if env::var_os("SENTRY_HTTP_MAX_RETRIES").is_some() {
+            Ok(env::var("SENTRY_HTTP_MAX_RETRIES")?.parse()?)
+        } else if let Some(val) = self.ini.get_from(Some("http"), "max_retries") {
             Ok(val.parse()?)
         } else {
             Ok(DEFAULT_RETRIES)
