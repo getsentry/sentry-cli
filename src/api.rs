@@ -36,10 +36,7 @@ use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCOD
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
-use crate::utils::http::{
-    parse_link_header, HTTP_STATUS_502_BAD_GATEWAY, HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-    HTTP_STATUS_504_GATEWAY_TIMEOUT,
-};
+use crate::utils::http::{self, parse_link_header};
 use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
@@ -114,21 +111,6 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
             val = "\u{fffd}".into();
         }
         utf8_percent_encode(&val, DEFAULT_ENCODE_SET).fmt(f)
-    }
-}
-
-trait CloneExt {
-    fn clone_ext(&self) -> Self;
-}
-
-impl CloneExt for curl::easy::List {
-    fn clone_ext(&self) -> curl::easy::List {
-        let mut result = curl::easy::List::new();
-        for header_bytes in self.iter() {
-            let header = String::from_utf8(header_bytes.to_vec()).unwrap();
-            result.append(&header).ok();
-        }
-        result
     }
 }
 
@@ -642,9 +624,9 @@ impl Api {
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
                 &[
-                    HTTP_STATUS_502_BAD_GATEWAY,
-                    HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
             )?
             .progress_bar_mode(ProgressBarMode::Request)?
@@ -951,9 +933,9 @@ impl Api {
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
                 &[
-                    HTTP_STATUS_502_BAD_GATEWAY,
-                    HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
             )?
             .send()?
@@ -1014,9 +996,9 @@ impl Api {
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
                 &[
-                    HTTP_STATUS_502_BAD_GATEWAY,
-                    HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
             )?
             .progress_bar_mode(progress_bar_mode)?;
@@ -1420,10 +1402,21 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
+    /// Get a copy of the header list
+    fn get_headers(&self) -> curl::easy::List {
+        let mut result = curl::easy::List::new();
+        for header_bytes in self.headers.iter() {
+            let header = String::from_utf8(header_bytes.to_vec()).unwrap();
+            result.append(&header).ok();
+        }
+        result
+    }
+
     /// Sends the request and writes response data into the given file
     /// instead of the response object's in memory buffer.
     pub fn send_into<W: Write>(&mut self, out: &mut W) -> ApiResult<ApiResponse> {
-        self.handle.http_headers(self.headers.clone_ext())?;
+        let headers = self.get_headers();
+        self.handle.http_headers(headers)?;
         let body = self.body.as_ref().map(|v| v.as_slice());
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
