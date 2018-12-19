@@ -117,6 +117,21 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
     }
 }
 
+trait CloneExt {
+    fn clone_ext(&self) -> Self;
+}
+
+impl CloneExt for curl::easy::List {
+    fn clone_ext(&self) -> curl::easy::List {
+        let mut result = curl::easy::List::new();
+        for header_bytes in self.iter() {
+            let header = String::from_utf8(header_bytes.to_vec()).unwrap();
+            result.append(&header).ok();
+        }
+        result
+    }
+}
+
 #[derive(Clone)]
 pub enum ProgressBarMode {
     Disabled,
@@ -624,6 +639,14 @@ impl Api {
         let resp = self
             .request(Method::Post, &path)?
             .with_form_data(form)?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    HTTP_STATUS_502_BAD_GATEWAY,
+                    HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?;
         if resp.status() == 409 {
@@ -1397,38 +1420,37 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
-    /// Sends the request and writes response data into the given buffer
-    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
-        self.handle.http_headers(self.headers)?;
+    /// Sends the request and writes response data into the given file
+    /// instead of the response object's in memory buffer.
+    pub fn send_into<W: Write>(&mut self, out: &mut W) -> ApiResult<ApiResponse> {
+        self.handle.http_headers(self.headers.clone_ext())?;
+        let body = self.body.as_ref().map(|v| v.as_slice());
+        let (status, headers) =
+            send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
+        debug!("response status: {}", status);
+        Ok(ApiResponse {
+            status,
+            headers,
+            body: None,
+        })
+    }
 
+    /// Sends the request and reads the response body into the response object.
+    pub fn send(mut self) -> ApiResult<ApiResponse> {
         let mut backoff = get_default_backoff();
         let mut retry_number = 0;
 
         loop {
-            // Temporary buffer that will be written to "out" after the last attempt
-            let mut tmp_out = vec![];
-            let body = self.body.as_ref().map(|v| v.as_slice());
+            let mut out = vec![];
             debug!(
                 "retry number {}, max retries: {}",
                 retry_number, self.max_retries,
             );
 
-            let (status, headers) = send_req(
-                &mut self.handle,
-                &mut tmp_out,
-                body,
-                self.progress_bar_mode.clone(),
-            )?;
-            debug!("response status: {}", status);
-
-            if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&status) {
-                out.write_all(&tmp_out)
-                    .map_err(|_error| ApiError::from(ApiErrorKind::RequestFailed))?;
-                return Ok(ApiResponse {
-                    status,
-                    headers,
-                    body: None,
-                });
+            let mut rv = self.send_into(&mut out)?;
+            if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&rv.status) {
+                rv.body = Some(out);
+                return Ok(rv);
             }
 
             // Exponential backoff
@@ -1442,14 +1464,6 @@ impl<'a> ApiRequest<'a> {
 
             retry_number += 1;
         }
-    }
-
-    /// Sends the request and reads the response body into the response object.
-    pub fn send(self) -> ApiResult<ApiResponse> {
-        let mut out = vec![];
-        let mut rv = self.send_into(&mut out)?;
-        rv.body = Some(out);
-        Ok(rv)
     }
 }
 
