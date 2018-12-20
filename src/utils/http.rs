@@ -3,6 +3,11 @@ use std::collections::HashMap;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+// Http statuses
+pub const HTTP_STATUS_502_BAD_GATEWAY: u32 = 502;
+pub const HTTP_STATUS_503_SERVICE_UNAVAILABLE: u32 = 503;
+pub const HTTP_STATUS_504_GATEWAY_TIMEOUT: u32 = 504;
+
 lazy_static! {
     static ref LINK_TOKEN_RE: Regex = Regex::new(
         r#"(?x)

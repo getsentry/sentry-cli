@@ -13,7 +13,7 @@ use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use sentry::Dsn;
 
-use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_URL};
+use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
 use crate::utils::logging::set_max_level;
 
 /// Represents the auth information
@@ -323,6 +323,16 @@ impl Config {
             .get_from(Some("dsym"), "max_upload_size")
             .and_then(|x| x.parse().ok())
             .unwrap_or(35 * 1024 * 1024))
+    }
+
+    pub fn get_max_retry_count(&self) -> Result<u32, Error> {
+        if env::var_os("SENTRY_HTTP_MAX_RETRIES").is_some() {
+            Ok(env::var("SENTRY_HTTP_MAX_RETRIES")?.parse()?)
+        } else if let Some(val) = self.ini.get_from(Some("http"), "max_retries") {
+            Ok(val.parse()?)
+        } else {
+            Ok(DEFAULT_RETRIES)
+        }
     }
 
     /// Return the DSN
