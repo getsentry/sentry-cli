@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.37.2
+
+* Retry on upload-related operations (chunk-upload, assemble) (#456)
+* Add new anylog version (#455)
+
 ## sentry-cli 1.37.1
 
 * Fix the detection of debug information in ELF files (#437)
