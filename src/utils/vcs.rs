@@ -130,7 +130,7 @@ impl VcsUrl {
                 };
             }
         }
-        return VcsUrl {
+        VcsUrl {
             provider: host.into(),
             id: strip_git_suffix(path).into(),
         }
@@ -420,11 +420,11 @@ fn test_url_parsing() {
 
 #[test]
 fn test_url_normalization() {
-    assert!(false == is_matching_url(
+    assert!(!is_matching_url(
         "http://github.mycompany.com/mitsuhiko/flask",
         "git@github.com:mitsuhiko/flask.git"
     ));
-    assert!(false == is_matching_url(
+    assert!(!is_matching_url(
         "git@github.mycompany.com/mitsuhiko/flask",
         "git@github.com:mitsuhiko/flask.git"
     ));
