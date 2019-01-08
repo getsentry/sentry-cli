@@ -186,6 +186,8 @@ impl fmt::Display for SentryError {
                     401 => "unauthorized",
                     404 => "not found",
                     500 => "internal server error",
+                    502 => "bad gateway",
+                    504 => "gateway timeout",
                     _ => "unknown error",
                 }
             } else {
