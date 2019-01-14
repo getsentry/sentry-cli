@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.37.3
+
+* Report non zero status for server side processing errors on dif upload (#465)
+* Improve error messages for 502/504 (#459)
+* Relax VCS url comparisions to improve on-prem support
+
 ## sentry-cli 1.37.2
 
 * Retry on upload-related operations (chunk-upload, assemble) (#456)
