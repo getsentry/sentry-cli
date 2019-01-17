@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.37.4
+
+* Added `SENTRY_NO_PROGRESS_BAR` environment variable to suppress progress
+  bars (#467)
+* Fixed an issue where dif uploads would indicate failure if no files where
+  to upload.
+
 ## sentry-cli 1.37.3
 
 * Report non zero status for server side processing errors on dif upload (#465)
