@@ -1,3 +1,4 @@
+use std::env;
 use std::ops::Deref;
 use std::sync::Arc;
 
@@ -5,21 +6,33 @@ use crate::utils::logging;
 
 pub use indicatif::{ProgressDrawTarget, ProgressStyle};
 
+pub fn is_progress_bar_visible() -> bool {
+    env::var("SENTRY_NO_PROGRESS_BAR") != Ok("1".into())
+}
+
 pub struct ProgressBar {
     inner: Arc<indicatif::ProgressBar>,
 }
 
 impl ProgressBar {
     pub fn new(len: u64) -> Self {
-        indicatif::ProgressBar::new(len).into()
+        if is_progress_bar_visible() {
+            indicatif::ProgressBar::new(len).into()
+        } else {
+            Self::hidden()
+        }
+    }
+
+    pub fn new_spinner() -> Self {
+        if is_progress_bar_visible() {
+            indicatif::ProgressBar::new_spinner().into()
+        } else {
+            Self::hidden()
+        }
     }
 
     pub fn hidden() -> Self {
         indicatif::ProgressBar::hidden().into()
-    }
-
-    pub fn new_spinner() -> Self {
-        indicatif::ProgressBar::new_spinner().into()
     }
 
     pub fn finish(&self) {
@@ -35,6 +48,12 @@ impl ProgressBar {
     pub fn finish_and_clear(&self) {
         self.inner.finish_and_clear();
         logging::set_progress_bar(None);
+    }
+
+    pub fn set_draw_target(&self, target: ProgressDrawTarget) {
+        if is_progress_bar_visible() {
+            self.inner.set_draw_target(target);
+        }
     }
 }
 
