@@ -1155,7 +1155,7 @@ fn upload_difs_chunked(
             style(">").dim()
         );
 
-        Ok((Default::default(), true))
+        Ok((Default::default(), false))
     }
 }
 
