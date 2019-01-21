@@ -97,7 +97,7 @@ matrix:
       env:
         - TARGET=x86_64-pc-windows-msvc
       before_install: skip
-      script: cargo build --release --locked
+      script: travis_wait 30 cargo build --release --locked
 
     # - name: "build: NPM package"
     #   os: linux
