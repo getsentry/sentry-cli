@@ -40,4 +40,15 @@ lazy_static! {
 }
 */
 
+/// Backoff multiplier (1.5 which is 50% increase per backoff).
+pub const DEFAULT_MULTIPLIER: f64 = 1.5;
+/// Backoff randomization factor (0 means no randomization).
+pub const DEFAULT_RANDOMIZATION: f64 = 0.1;
+/// Initial backoff interval in milliseconds.
+pub const DEFAULT_INITIAL_INTERVAL: u64 = 1000;
+/// Maximum backoff interval in milliseconds.
+pub const DEFAULT_MAX_INTERVAL: u64 = 5000;
+/// Default number of retry attempts
+pub const DEFAULT_RETRIES: u32 = 5;
+
 include!(concat!(env!("OUT_DIR"), "/constants.gen.rs"));

@@ -9,12 +9,6 @@ use regex::Regex;
 
 use crate::api::{Ref, Repo};
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum VcsType {
-    Git,
-    Unknown,
-}
-
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
     Commit(git2::Oid),
@@ -45,33 +39,9 @@ impl fmt::Display for CommitSpec {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum VcsProvider {
-    Generic,
-    Git,
-    GitHub,
-    GitLab,
-    Bitbucket,
-    Vsts,
-}
-
-impl fmt::Display for VcsProvider {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            VcsProvider::Generic => write!(f, "generic"),
-            VcsProvider::Git => write!(f, "git"),
-            VcsProvider::GitHub => write!(f, "github"),
-            VcsProvider::GitLab => write!(f, "gitlab"),
-            VcsProvider::Bitbucket => write!(f, "bitbucket"),
-            VcsProvider::Vsts => write!(f, "vsts"),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq)]
 struct VcsUrl {
-    pub provider: VcsProvider,
+    pub provider: String,
     pub id: String,
-    pub ty: VcsType,
 }
 
 fn parse_rev_range(rng: &str) -> (Option<String>, String) {
@@ -133,70 +103,37 @@ impl VcsUrl {
         }
 
         if let Some(caps) = GIT_URL_RE.captures(url) {
-            if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
-                return rv;
-            } else {
-                return VcsUrl {
-                    provider: VcsProvider::Generic,
-                    id: format!("{}/{}", &caps[1], strip_git_suffix(&caps[2])),
-                    ty: VcsType::Unknown,
-                };
-            }
+            return VcsUrl::from_git_parts(&caps[1], &caps[2]);
         }
 
         if let Some(caps) = GIT_SSH_RE.captures(url) {
-            if let Some(rv) = VcsUrl::from_git_parts(&caps[1], &caps[2]) {
-                return rv;
-            } else {
-                return VcsUrl {
-                    provider: VcsProvider::Git,
-                    id: url.into(),
-                    ty: VcsType::Git,
-                };
-            }
+            return VcsUrl::from_git_parts(&caps[1], &caps[2]);
         }
 
         VcsUrl {
-            provider: VcsProvider::Generic,
+            provider: "".into(),
             id: url.into(),
-            ty: VcsType::Unknown,
         }
     }
 
-    fn from_git_parts(host: &str, path: &str) -> Option<VcsUrl> {
+    fn from_git_parts(host: &str, path: &str) -> VcsUrl {
         lazy_static! {
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
         }
-        if host == "github.com" {
-            return Some(VcsUrl {
-                provider: VcsProvider::GitHub,
-                id: strip_git_suffix(path).into(),
-                ty: VcsType::Git,
-            });
-        } else if host == "gitlab.com" {
-            return Some(VcsUrl {
-                provider: VcsProvider::GitLab,
-                id: strip_git_suffix(path).into(),
-                ty: VcsType::Git,
-            });
-        } else if host == "bitbucket.org" {
-            return Some(VcsUrl {
-                provider: VcsProvider::Bitbucket,
-                id: strip_git_suffix(path).into(),
-                ty: VcsType::Git,
-            });
-        } else if let Some(caps) = VS_DOMAIN_RE.captures(host) {
+        if let Some(caps) = VS_DOMAIN_RE.captures(host) {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
-                return Some(VcsUrl {
-                    provider: VcsProvider::Vsts,
+                return VcsUrl {
+                    provider: host.into(),
                     id: format!("{}/{}", username, &caps[1]),
-                    ty: VcsType::Git,
-                });
+                };
             }
         }
-        None
+        VcsUrl {
+            provider: host.into(),
+            id: strip_git_suffix(path).into(),
+        }
     }
 }
 
@@ -279,7 +216,7 @@ fn find_matching_rev(
         if let Some(url) = remote.url();
         then {
             if !discovery || is_matching_url(url, &reference_url) {
-                debug!("  found match: {} == {}", url, &reference_url);
+            debug!("  found match: {} == {}", url, &reference_url);
                 let head = repo.revparse_single(r)?;
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
@@ -412,65 +349,95 @@ fn test_url_parsing() {
     assert_eq!(
         VcsUrl::parse("http://github.com/mitsuhiko/flask"),
         VcsUrl {
-            provider: VcsProvider::GitHub,
+            provider: "github.com".into(),
             id: "mitsuhiko/flask".into(),
-            ty: VcsType::Git,
         }
     );
     assert_eq!(
         VcsUrl::parse("git@github.com:mitsuhiko/flask.git"),
         VcsUrl {
-            provider: VcsProvider::GitHub,
+            provider: "github.com".into(),
             id: "mitsuhiko/flask".into(),
-            ty: VcsType::Git,
         }
     );
     assert_eq!(
         VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"),
         VcsUrl {
-            provider: VcsProvider::Bitbucket,
+            provider: "bitbucket.org".into(),
             id: "mitsuhiko/flask".into(),
-            ty: VcsType::Git,
         }
     );
     assert_eq!(
         VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"),
         VcsUrl {
-            provider: VcsProvider::Bitbucket,
+            provider: "bitbucket.org".into(),
             id: "mitsuhiko/flask".into(),
-            ty: VcsType::Git,
         }
     );
     assert_eq!(
         VcsUrl::parse("https://neilmanvar.visualstudio.com/_git/sentry-demo"),
         VcsUrl {
-            provider: VcsProvider::Vsts,
+            provider: "neilmanvar.visualstudio.com".into(),
             id: "neilmanvar/sentry-demo".into(),
-            ty: VcsType::Git,
         }
     );
     assert_eq!(
         VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
         VcsUrl {
-            provider: VcsProvider::Generic,
-            id: "github.myenterprise.com/mitsuhiko/flask".into(),
-            ty: VcsType::Unknown,
+            provider: "github.myenterprise.com".into(),
+            id: "mitsuhiko/flask".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://gitlab.example.com/gitlab-org/gitlab-ce"),
+        VcsUrl {
+            provider: "gitlab.example.com".into(),
+            id: "gitlab-org/gitlab-ce".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@gitlab.example.com:gitlab-org/gitlab-ce.git"),
+        VcsUrl {
+            provider: "gitlab.example.com".into(),
+            id: "gitlab-org/gitlab-ce".into(),
         }
     );
     assert_eq!(
         VcsUrl::parse("https://gitlab.com/gitlab-org/gitlab-ce"),
         VcsUrl {
-            provider: VcsProvider::GitLab,
+            provider: "gitlab.com".into(),
             id: "gitlab-org/gitlab-ce".into(),
-            ty: VcsType::Git,
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@gitlab.com:gitlab-org/gitlab-ce.git"),
+        VcsUrl {
+            provider: "gitlab.com".into(),
+            id: "gitlab-org/gitlab-ce".into(),
         }
     )
 }
 
 #[test]
 fn test_url_normalization() {
+    assert!(!is_matching_url(
+        "http://github.mycompany.com/mitsuhiko/flask",
+        "git@github.com:mitsuhiko/flask.git"
+    ));
+    assert!(!is_matching_url(
+        "git@github.mycompany.com/mitsuhiko/flask",
+        "git@github.com:mitsuhiko/flask.git"
+    ));
     assert!(is_matching_url(
         "http://github.com/mitsuhiko/flask",
         "git@github.com:mitsuhiko/flask.git"
     ));
+    assert!(is_matching_url(
+        "https://gitlab.com/gitlab-org/gitlab-ce",
+        "git@gitlab.com:gitlab-org/gitlab-ce.git"
+    ));
+    assert!(is_matching_url(
+        "https://gitlab.example.com/gitlab-org/gitlab-ce",
+        "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
+    ))
 }

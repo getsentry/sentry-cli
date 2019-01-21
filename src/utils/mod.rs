@@ -16,6 +16,7 @@ pub mod iter;
 pub mod logging;
 pub mod progress;
 pub mod releases;
+pub mod retry;
 pub mod sourcemaps;
 pub mod system;
 pub mod ui;

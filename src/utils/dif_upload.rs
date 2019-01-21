@@ -1017,7 +1017,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 fn poll_dif_assemble(
     difs: &[&ChunkedDifMatch<'_>],
     options: &DifUpload,
-) -> Result<Vec<DebugInfoFile>, Error> {
+) -> Result<(Vec<DebugInfoFile>, bool), Error> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
          \n{wide_bar}  {pos}/{len}",
@@ -1104,20 +1104,24 @@ fn poll_dif_assemble(
     }
     errored.sort_by_key(|x| x.0.file_name());
 
+    let has_errors = !errored.is_empty();
     for (dif, error) in errored {
         println!("  {} {}", style("ERROR").red(), dif.file_name());
         render_detail(&error.detail, Some("An unknown error occurred"));
     }
 
     // Return only successful uploads
-    Ok(successes.into_iter().filter_map(|(_, r)| r.dif).collect())
+    Ok((
+        successes.into_iter().filter_map(|(_, r)| r.dif).collect(),
+        has_errors,
+    ))
 }
 
 /// Uploads debug info files using the chunk-upload endpoint.
 fn upload_difs_chunked(
     options: &DifUpload,
     chunk_options: &ChunkUploadOptions,
-) -> Result<Vec<DebugInfoFile>, Error> {
+) -> Result<(Vec<DebugInfoFile>, bool), Error> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
@@ -1151,7 +1155,7 @@ fn upload_difs_chunked(
             style(">").dim()
         );
 
-        Ok(Default::default())
+        Ok((Default::default(), false))
     }
 }
 
@@ -1483,7 +1487,10 @@ impl DifUpload {
     ///     .search_path(".")
     ///     .upload()?;
     /// ```
-    pub fn upload(&mut self) -> Result<Vec<DebugInfoFile>, Error> {
+    ///
+    /// The okay part of the return value is `(files, has_errors)`.  The
+    /// latter can be used to indicate a fail state from the upload.
+    pub fn upload(&mut self) -> Result<(Vec<DebugInfoFile>, bool), Error> {
         if self.paths.is_empty() {
             println!("{}: No paths were provided.", style("Warning").yellow());
             return Ok(Default::default());
@@ -1497,7 +1504,7 @@ impl DifUpload {
 
             upload_difs_chunked(self, chunk_options)
         } else {
-            upload_difs_batched(self)
+            Ok((upload_difs_batched(self)?, false))
         }
     }
 

@@ -16,6 +16,7 @@ use std::str;
 use std::sync::Arc;
 use std::thread;
 
+use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, Utc};
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
@@ -35,8 +36,9 @@ use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCOD
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
-use crate::utils::http::parse_link_header;
+use crate::utils::http::{self, parse_link_header};
 use crate::utils::progress::ProgressBar;
+use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
@@ -112,6 +114,7 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
     }
 }
 
+#[derive(Clone)]
 pub enum ProgressBarMode {
     Disabled,
     Request,
@@ -183,6 +186,8 @@ impl fmt::Display for SentryError {
                     401 => "unauthorized",
                     404 => "not found",
                     500 => "internal server error",
+                    502 => "bad gateway",
+                    504 => "gateway timeout",
                     _ => "unknown error",
                 }
             } else {
@@ -316,6 +321,8 @@ pub struct ApiRequest<'a> {
     headers: curl::easy::List,
     body: Option<Vec<u8>>,
     progress_bar_mode: ProgressBarMode,
+    max_retries: u32,
+    retry_on_statuses: &'static [u32],
 }
 
 /// Represents an API response.
@@ -616,6 +623,14 @@ impl Api {
         let resp = self
             .request(Method::Post, &path)?
             .with_form_data(form)?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?;
         if resp.status() == 409 {
@@ -916,6 +931,14 @@ impl Api {
         let url = format!("/projects/{}/{}/files/difs/assemble/", org, project);
         self.request(Method::Post, &url)?
             .with_json_body(request)?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
@@ -971,6 +994,14 @@ impl Api {
         let request = self
             .request(Method::Post, url)?
             .with_form_data(form)?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
             .progress_bar_mode(progress_bar_mode)?;
 
         // The request is performed to an absolute URL. Thus, `Self::request()` will
@@ -1136,12 +1167,11 @@ impl Api {
 fn send_req<W: Write>(
     handle: &mut curl::easy::Easy,
     out: &mut W,
-    body: Option<Vec<u8>>,
+    body: Option<&[u8]>,
     progress_bar_mode: ProgressBarMode,
 ) -> ApiResult<(u32, Vec<String>)> {
     match body {
-        Some(body) => {
-            let mut body = &body[..];
+        Some(mut body) => {
             handle.upload(true)?;
             handle.in_filesize(body.len() as u64)?;
             handle_req(handle, out, progress_bar_mode, &mut |buf| {
@@ -1296,6 +1326,8 @@ impl<'a> ApiRequest<'a> {
             headers,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
+            max_retries: 0,
+            retry_on_statuses: &[],
         };
 
         let request = match auth {
@@ -1334,7 +1366,7 @@ impl<'a> ApiRequest<'a> {
         let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)
             .context(ApiErrorKind::CannotSerializeAsJson)?;
-        debug!("sending JSON data ({} bytes)", body_bytes.len());
+        debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
         Ok(self)
@@ -1361,12 +1393,35 @@ impl<'a> ApiRequest<'a> {
         Ok(self)
     }
 
+    pub fn with_retry(
+        mut self,
+        max_retries: u32,
+        retry_on_statuses: &'static [u32],
+    ) -> ApiResult<Self> {
+        self.max_retries = max_retries;
+        self.retry_on_statuses = retry_on_statuses;
+        Ok(self)
+    }
+
+    /// Get a copy of the header list
+    fn get_headers(&self) -> curl::easy::List {
+        let mut result = curl::easy::List::new();
+        for header_bytes in self.headers.iter() {
+            let header = String::from_utf8(header_bytes.to_vec()).unwrap();
+            result.append(&header).ok();
+        }
+        result
+    }
+
     /// Sends the request and writes response data into the given file
     /// instead of the response object's in memory buffer.
-    pub fn send_into<W: Write>(mut self, out: &mut W) -> ApiResult<ApiResponse> {
-        self.handle.http_headers(self.headers)?;
-        let (status, headers) = send_req(&mut self.handle, out, self.body, self.progress_bar_mode)?;
-        debug!("response: {}", status);
+    pub fn send_into<W: Write>(&mut self, out: &mut W) -> ApiResult<ApiResponse> {
+        let headers = self.get_headers();
+        self.handle.http_headers(headers)?;
+        let body = self.body.as_ref().map(|v| v.as_slice());
+        let (status, headers) =
+            send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
+        debug!("response status: {}", status);
         Ok(ApiResponse {
             status,
             headers,
@@ -1375,11 +1430,34 @@ impl<'a> ApiRequest<'a> {
     }
 
     /// Sends the request and reads the response body into the response object.
-    pub fn send(self) -> ApiResult<ApiResponse> {
-        let mut out = vec![];
-        let mut rv = self.send_into(&mut out)?;
-        rv.body = Some(out);
-        Ok(rv)
+    pub fn send(mut self) -> ApiResult<ApiResponse> {
+        let mut backoff = get_default_backoff();
+        let mut retry_number = 0;
+
+        loop {
+            let mut out = vec![];
+            debug!(
+                "retry number {}, max retries: {}",
+                retry_number, self.max_retries,
+            );
+
+            let mut rv = self.send_into(&mut out)?;
+            if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&rv.status) {
+                rv.body = Some(out);
+                return Ok(rv);
+            }
+
+            // Exponential backoff
+            let backoff_timeout = backoff.next_backoff().unwrap();
+            debug!(
+                "retry number {}, retrying again in {} ms",
+                retry_number,
+                backoff_timeout.as_milliseconds()
+            );
+            thread::sleep(backoff_timeout);
+
+            retry_number += 1;
+        }
     }
 }
 

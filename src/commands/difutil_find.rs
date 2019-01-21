@@ -41,7 +41,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("TYPE")
                 .multiple(true)
                 .number_of_values(1)
-                .possible_values(&["dsym", "proguard", "breakpad"])
+                .possible_values(&["dsym", "elf", "proguard", "breakpad"])
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
@@ -167,6 +167,19 @@ fn find_ids(
                 for id in dif.ids() {
                     if remaining.contains(&id) {
                         found.push((id, DifType::Dsym));
+                    }
+                }
+            }
+        }
+
+        // look for elfs
+        if_chain! {
+            if types.contains(&DifType::Elf);
+            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Elf));
+            then {
+                for id in dif.ids() {
+                    if remaining.contains(&id) {
+                        found.push((id, DifType::Elf));
                     }
                 }
             }

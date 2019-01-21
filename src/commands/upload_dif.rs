@@ -220,7 +220,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
         }
 
         // Execute the upload
-        let uploaded = upload.upload()?;
+        let (uploaded, has_processing_errors) = upload.upload()?;
 
         // Associate the dSYMs with the Info.plist data, if available
         if let Some(ref info_plist) = info_plist {
@@ -270,7 +270,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
             let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
 
             if !missing_ids.is_empty() {
-                println!();
+                eprintln!();
                 eprintln!("{}", style("Error: Some symbols could not be found!").red());
                 eprintln!("The following symbols are still missing:");
                 for id in missing_ids {
@@ -279,6 +279,16 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
 
                 return Err(QuietExit(1).into());
             }
+        }
+
+        // report a non 0 status code if the server encountered issues.
+        if has_processing_errors {
+            eprintln!();
+            eprintln!(
+                "{}",
+                style("Error: some symbols did not process correctly/")
+            );
+            return Err(QuietExit(1).into());
         }
 
         Ok(())
