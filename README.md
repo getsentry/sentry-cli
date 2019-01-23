@@ -85,7 +85,7 @@ docker run --rm -v $(pwd):/work getsentry/sentry-cli --help
 In case you want to compile this yourself, you need to install at minimum the
 following dependencies:
 
-* Rust 1.23 and Cargo
+* Rust stable and Cargo
 * Make, CMake and a C compiler
 * OpenSSL 1.0.2n with development headers
 * Curl 7.50 with development headers
