@@ -1844,6 +1844,7 @@ dependencies = [
  "serde_json 1.0.33 (registry+https://github.com/rust-lang/crates.io-index)",
  "sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "sourcemap 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "subprocess 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "symbolic 5.7.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "uname 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2060,6 +2061,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 name = "strsim"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "subprocess"
+version = "0.1.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "crossbeam-utils 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.45 (registry+https://github.com/rust-lang/crates.io-index)",
+ "winapi 0.3.6 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "symbolic"
@@ -2875,6 +2886,7 @@ dependencies = [
 "checksum string_cache_codegen 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1eea1eee654ef80933142157fdad9dd8bc43cf7c74e999e369263496f04ff4da"
 "checksum string_cache_shared 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b1884d1bc09741d466d9b14e6d37ac89d6909cbcac41dd9ae982d4d063bbedfc"
 "checksum strsim 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "bb4f380125926a99e52bc279241539c018323fab05ad6368b56f93d9369ff550"
+"checksum subprocess 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)" = "28fc0f40f0c0da73339d347aa7d6d2b90341a95683a47722bc4eebed71ff3c00"
 "checksum symbolic 5.7.4 (registry+https://github.com/rust-lang/crates.io-index)" = "f281c383d73dfe768041f4f47a2d6769baad9c5122523f657dc9213d75dd4253"
 "checksum symbolic-common 5.7.4 (registry+https://github.com/rust-lang/crates.io-index)" = "3ad1cb21ce6a8f37197621c4be6ab20d28572cec29f131b3d2efe502d2367a7a"
 "checksum symbolic-debuginfo 5.7.4 (registry+https://github.com/rust-lang/crates.io-index)" = "88f39dd566586b1cdfa40dc7adb2a30f71935267ad70ca2f6db8a7601fdd774c"

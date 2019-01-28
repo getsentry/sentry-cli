@@ -30,6 +30,7 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(repos);
         $mac!(projects);
+        $mac!(monitors);
         #[cfg(not(feature = "managed"))]
         $mac!(update);
         #[cfg(not(feature = "managed"))]
@@ -52,7 +53,7 @@ macro_rules! each_subcommand {
 
 // commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &[&str] = &[
-    "releases", "issues", "repos", "projects", "info", "login", "difutil",
+    "releases", "issues", "repos", "projects", "monitors", "info", "login", "difutil",
 ];
 
 // it would be great if this could be a macro expansion as well
@@ -61,6 +62,7 @@ pub mod bash_hook;
 pub mod info;
 pub mod issues;
 pub mod login;
+pub mod monitors;
 pub mod projects;
 pub mod releases;
 pub mod repos;
