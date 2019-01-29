@@ -1,4 +1,7 @@
 {
+    "files.exclude": {
+        "target": true
+    },
     "[javascript]": {
         "editor.formatOnSave": true
     },
