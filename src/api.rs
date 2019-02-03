@@ -1937,13 +1937,12 @@ pub struct Monitor {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum MonitorStatus {
-    #[serde(rename = "ok")]
-    Success,
-    #[serde(rename = "in_progress")]
+    Unknown,
+    Ok,
     InProgress,
-    #[serde(rename = "error")]
-    Failure,
+    Error,
 }
 
 #[derive(Debug, Deserialize)]

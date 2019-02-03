@@ -27,6 +27,7 @@ impl<'a> MonitorContext {
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage monitors on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
+        .setting(AppSettings::Hidden)
         .org_arg()
         .subcommand(App::new("list").about("List all monitors for an organization."))
         .subcommand(
@@ -110,9 +111,9 @@ fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(),
             &checkin.id,
             &UpdateMonitorCheckIn {
                 status: Some(if exit_status.success() {
-                    MonitorStatus::Success
+                    MonitorStatus::Ok
                 } else {
-                    MonitorStatus::Failure
+                    MonitorStatus::Error
                 }),
                 duration: Some({
                     let elapsed = started.elapsed();
