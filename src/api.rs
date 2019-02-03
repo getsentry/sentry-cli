@@ -32,6 +32,7 @@ use sha1::Digest;
 use symbolic::common::types::ObjectClass;
 use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
+use uuid::Uuid;
 
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
@@ -1153,7 +1154,7 @@ impl Api {
     }
 
     /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(&self, monitor: &str, checkin_id: &str, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
+    pub fn update_monitor_checkin(&self, monitor: &str, checkin_id: &Uuid, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
             PathArg(monitor),
@@ -1930,10 +1931,19 @@ pub struct Monitor {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MonitorStatus {
+    Unknown,
+    Success,
+    InProgress,
+    Failure,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct MonitorCheckIn {
-    pub id: String,
-    pub status: String,
-    pub duration: u64,
+    pub id: Uuid,
+    pub status: MonitorStatus,
+    pub duration: Option<u64>,
 }
 
 #[derive(Debug, Serialize, Default)]
