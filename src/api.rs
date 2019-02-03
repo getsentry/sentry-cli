@@ -1149,21 +1149,21 @@ impl Api {
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
-        return resp.convert();
+        resp.convert()
     }
 
     /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(&self, monitor: &str, checkinId: &str, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
+    pub fn update_monitor_checkin(&self, monitor: &str, checkin_id: &str, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
             PathArg(monitor),
-            PathArg(checkinId),
+            PathArg(checkin_id),
         );
         let resp = self.put(&path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
-        return resp.convert();
+        resp.convert()
     }
 
     /// List all projects associated with an organization

@@ -49,7 +49,6 @@ serde_derive = "1.0.80"
 serde_json = "1.0.33"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = "2.2.1"
-subprocess = "0.1.18"
 symbolic = { version = "5.7.2", features = ["debuginfo", "proguard", "with_serde", "with_serde_debuginfo"] }
 url = "1.7.2"
 username = "0.2.0"

@@ -2,12 +2,13 @@
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::Error;
 use std::rc::Rc;
-use subprocess::{Popen, PopenConfig};
+use std::process;
 
 use crate::api::{CreateMonitorCheckIn, UpdateMonitorCheckIn, Api};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
+use crate::utils::system::QuietExit;
 
 struct MonitorContext {
     pub api: Rc<Api>,
@@ -25,7 +26,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .org_arg()
         .subcommand(App::new("list").about("List all monitors for an organization."))
-        .subcommand(App::new("checkin")
+        .subcommand(App::new("run")
+            .about("Wraps a command")
             .arg(Arg::with_name("monitor")
                 .help("The monitor ID")
                 .required(true)
@@ -47,8 +49,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_list(&ctx, sub_matches);
     }
-    if let Some(sub_matches) = matches.subcommand_matches("checkin") {
-        return execute_checkin(&ctx, sub_matches);
+    if let Some(sub_matches) = matches.subcommand_matches("run") {
+        return execute_run(&ctx, sub_matches);
     }
     unreachable!();
 }
@@ -77,31 +79,24 @@ fn execute_list<'a>(ctx: &MonitorContext, _matches: &ArgMatches<'a>) -> Result<(
     Ok(())
 }
 
-fn execute_checkin<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
-    // [cmd] checkin [monitor guid] [raw args]
-    // if raw args == "foo --bar"
-
+fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let monitor = matches.value_of("monitor").unwrap();
     let args: Vec<_> = matches.values_of("args").unwrap().collect();
 
-    // TODO(dcramer): does it automatically pass as a reference?
     let checkin = ctx.api.create_monitor_checkin(monitor, &CreateMonitorCheckIn {
         status: "in_progress".to_string(),
     })?;
 
-    // TODO(dcramer):
-    // - is this doing passthru on stdout/err
-    // - what about the shell/env?
-    let mut p = Popen::create(&args, PopenConfig::default())?;
+    let mut p = process::Command::new(args[0]);
+    p.args(&args[1..]);
 
-    let exit_status = p.wait()?;
+    let exit_status = p.status()?;
 
-    let mut status = "";
-    if exit_status.success() {
-        status = "ok";
+    let status = if exit_status.success() {
+        "ok"
     } else {
-        status = "error";
-    }
+        "error"
+    };
 
     // write the result
     ctx.api.update_monitor_checkin(monitor, &checkin.id, &UpdateMonitorCheckIn {
@@ -109,5 +104,13 @@ fn execute_checkin<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result
         duration: Some(0),
     })?;
 
-    Ok(())
+    if !exit_status.success() {
+        if let Some(code) = exit_status.code() {
+            Err(QuietExit(code).into())
+        } else {
+            Err(QuietExit(1).into())
+        }
+    } else {
+        Ok(())
+    }
 }
