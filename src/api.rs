@@ -1141,7 +1141,7 @@ impl Api {
     }
 
     /// Create a new checkin for a monitor
-    pub fn create_monitor_checkin(&self, monitor: &str, checkin: &CreateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
+    pub fn create_monitor_checkin(&self, monitor: &Uuid, checkin: &CreateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/",
             PathArg(monitor),
@@ -1154,7 +1154,7 @@ impl Api {
     }
 
     /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(&self, monitor: &str, checkin_id: &Uuid, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
+    pub fn update_monitor_checkin(&self, monitor: &Uuid, checkin_id: &Uuid, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
             PathArg(monitor),

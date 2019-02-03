@@ -1,8 +1,10 @@
 //! Implements a command for managing projects.
-use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::Error;
 use std::rc::Rc;
 use std::process;
+
+use clap::{App, AppSettings, Arg, ArgMatches};
+use failure::{ResultExt, Error};
+use uuid::Uuid;
 
 use crate::api::{CreateMonitorCheckIn, UpdateMonitorCheckIn, Api};
 use crate::config::Config;
@@ -80,10 +82,10 @@ fn execute_list<'a>(ctx: &MonitorContext, _matches: &ArgMatches<'a>) -> Result<(
 }
 
 fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let monitor = matches.value_of("monitor").unwrap();
+    let monitor = matches.value_of("monitor").unwrap().parse::<Uuid>().context("invalid monitor ID")?;
     let args: Vec<_> = matches.values_of("args").unwrap().collect();
 
-    let checkin = ctx.api.create_monitor_checkin(monitor, &CreateMonitorCheckIn {
+    let checkin = ctx.api.create_monitor_checkin(&monitor, &CreateMonitorCheckIn {
         status: "in_progress".to_string(),
     })?;
 
@@ -99,7 +101,7 @@ fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(),
     };
 
     // write the result
-    ctx.api.update_monitor_checkin(monitor, &checkin.id, &UpdateMonitorCheckIn {
+    ctx.api.update_monitor_checkin(&monitor, &checkin.id, &UpdateMonitorCheckIn {
         status: Some(status.to_string()),
         duration: Some(0),
     })?;
