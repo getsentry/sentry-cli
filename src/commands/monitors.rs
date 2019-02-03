@@ -1,12 +1,13 @@
 //! Implements a command for managing projects.
 use std::process;
 use std::rc::Rc;
+use std::time::Instant;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{Error, ResultExt};
 use uuid::Uuid;
 
-use crate::api::{Api, CreateMonitorCheckIn, UpdateMonitorCheckIn};
+use crate::api::{Api, CreateMonitorCheckIn, MonitorStatus, UpdateMonitorCheckIn};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
@@ -94,26 +95,32 @@ fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(),
     let checkin = ctx.api.create_monitor_checkin(
         &monitor,
         &CreateMonitorCheckIn {
-            status: "in_progress".to_string(),
+            status: MonitorStatus::InProgress,
         },
     )?;
 
+    let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
-
     let exit_status = p.status()?;
 
-    let status = if exit_status.success() { "ok" } else { "error" };
-
-    // write the result
-    ctx.api.update_monitor_checkin(
-        &monitor,
-        &checkin.id,
-        &UpdateMonitorCheckIn {
-            status: Some(status.to_string()),
-            duration: Some(0),
-        },
-    )?;
+    ctx.api
+        .update_monitor_checkin(
+            &monitor,
+            &checkin.id,
+            &UpdateMonitorCheckIn {
+                status: Some(if exit_status.success() {
+                    MonitorStatus::Success
+                } else {
+                    MonitorStatus::Failure
+                }),
+                duration: Some({
+                    let elapsed = started.elapsed();
+                    elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis())
+                }),
+            },
+        )
+        .ok();
 
     if !exit_status.success() {
         if let Some(code) = exit_status.code() {

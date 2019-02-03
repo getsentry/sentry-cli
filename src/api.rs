@@ -1936,12 +1936,13 @@ pub struct Monitor {
     pub status: String,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum MonitorStatus {
-    Unknown,
+    #[serde(rename = "ok")]
     Success,
+    #[serde(rename = "in_progress")]
     InProgress,
+    #[serde(rename = "error")]
     Failure,
 }
 
@@ -1952,15 +1953,15 @@ pub struct MonitorCheckIn {
     pub duration: Option<u64>,
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize)]
 pub struct CreateMonitorCheckIn {
-    pub status: String,
+    pub status: MonitorStatus,
 }
 
 #[derive(Debug, Serialize, Default)]
 pub struct UpdateMonitorCheckIn {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
+    pub status: Option<MonitorStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<u64>,
 }
