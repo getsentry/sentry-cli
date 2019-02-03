@@ -1,12 +1,12 @@
 //! Implements a command for managing projects.
-use std::rc::Rc;
 use std::process;
+use std::rc::Rc;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::{ResultExt, Error};
+use failure::{Error, ResultExt};
 use uuid::Uuid;
 
-use crate::api::{CreateMonitorCheckIn, UpdateMonitorCheckIn, Api};
+use crate::api::{Api, CreateMonitorCheckIn, UpdateMonitorCheckIn};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
@@ -28,16 +28,22 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .org_arg()
         .subcommand(App::new("list").about("List all monitors for an organization."))
-        .subcommand(App::new("run")
-            .about("Wraps a command")
-            .arg(Arg::with_name("monitor")
-                .help("The monitor ID")
-                .required(true)
-                .index(1))
-            .arg(Arg::with_name("args")
-                .required(true)
-                .multiple(true)
-                .last(true)))
+        .subcommand(
+            App::new("run")
+                .about("Wraps a command")
+                .arg(
+                    Arg::with_name("monitor")
+                        .help("The monitor ID")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("args")
+                        .required(true)
+                        .multiple(true)
+                        .last(true),
+                ),
+        )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
@@ -62,11 +68,7 @@ fn execute_list<'a>(ctx: &MonitorContext, _matches: &ArgMatches<'a>) -> Result<(
     monitors.sort_by_key(|p| (p.name.clone()));
 
     let mut table = Table::new();
-    table
-        .title_row()
-        .add("ID")
-        .add("Name")
-        .add("Status");
+    table.title_row().add("ID").add("Name").add("Status");
 
     for monitor in &monitors {
         table
@@ -82,29 +84,36 @@ fn execute_list<'a>(ctx: &MonitorContext, _matches: &ArgMatches<'a>) -> Result<(
 }
 
 fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let monitor = matches.value_of("monitor").unwrap().parse::<Uuid>().context("invalid monitor ID")?;
+    let monitor = matches
+        .value_of("monitor")
+        .unwrap()
+        .parse::<Uuid>()
+        .context("invalid monitor ID")?;
     let args: Vec<_> = matches.values_of("args").unwrap().collect();
 
-    let checkin = ctx.api.create_monitor_checkin(&monitor, &CreateMonitorCheckIn {
-        status: "in_progress".to_string(),
-    })?;
+    let checkin = ctx.api.create_monitor_checkin(
+        &monitor,
+        &CreateMonitorCheckIn {
+            status: "in_progress".to_string(),
+        },
+    )?;
 
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
 
     let exit_status = p.status()?;
 
-    let status = if exit_status.success() {
-        "ok"
-    } else {
-        "error"
-    };
+    let status = if exit_status.success() { "ok" } else { "error" };
 
     // write the result
-    ctx.api.update_monitor_checkin(&monitor, &checkin.id, &UpdateMonitorCheckIn {
-        status: Some(status.to_string()),
-        duration: Some(0),
-    })?;
+    ctx.api.update_monitor_checkin(
+        &monitor,
+        &checkin.id,
+        &UpdateMonitorCheckIn {
+            status: Some(status.to_string()),
+            duration: Some(0),
+        },
+    )?;
 
     if !exit_status.success() {
         if let Some(code) = exit_status.code() {

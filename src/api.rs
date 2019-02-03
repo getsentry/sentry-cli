@@ -1141,11 +1141,12 @@ impl Api {
     }
 
     /// Create a new checkin for a monitor
-    pub fn create_monitor_checkin(&self, monitor: &Uuid, checkin: &CreateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
-        let path = &format!(
-            "/monitors/{}/checkins/",
-            PathArg(monitor),
-        );
+    pub fn create_monitor_checkin(
+        &self,
+        monitor: &Uuid,
+        checkin: &CreateMonitorCheckIn,
+    ) -> ApiResult<MonitorCheckIn> {
+        let path = &format!("/monitors/{}/checkins/", PathArg(monitor),);
         let resp = self.post(&path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
@@ -1154,7 +1155,12 @@ impl Api {
     }
 
     /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(&self, monitor: &Uuid, checkin_id: &Uuid, checkin: &UpdateMonitorCheckIn) -> ApiResult<MonitorCheckIn> {
+    pub fn update_monitor_checkin(
+        &self,
+        monitor: &Uuid,
+        checkin_id: &Uuid,
+        checkin: &UpdateMonitorCheckIn,
+    ) -> ApiResult<MonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
             PathArg(monitor),
