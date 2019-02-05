@@ -5,7 +5,7 @@ use std::time::Duration;
 use failure::Error;
 use log::Log;
 use sentry::integrations;
-use sentry::{sentry_crate_release, Client, ClientOptions, Hub};
+use sentry::{release_name, Client, ClientOptions, Hub};
 
 use crate::config::Config;
 use crate::constants::USER_AGENT;
@@ -23,7 +23,7 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
             Some(dsn) => Client::from_config((
                 dsn,
                 ClientOptions {
-                    release: sentry_crate_release!(),
+                    release: release_name!(),
                     user_agent: Cow::Borrowed(USER_AGENT),
                     ..Default::default()
                 },
