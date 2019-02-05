@@ -6,6 +6,7 @@ use std::path::PathBuf;
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::{bail, Error, SyncFailure};
+use log::debug;
 use symbolic::common::byteview::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
@@ -173,7 +174,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                     );
                 } else {
                     let mut f = fs::File::open(path)?;
-                    all_checksums.push(get_sha1_checksum(&mut f)?.to_string());
+                    let sha = get_sha1_checksum(&mut f)?.to_string();
+                    debug!("SHA1 for mapping file '{}': '{}'", path, sha);
+                    all_checksums.push(sha);
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
                         size: md.len(),
