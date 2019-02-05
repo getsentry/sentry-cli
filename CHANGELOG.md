@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.38.0
+
+* Upgraded symbolic which offers support top R8 code shrinker.
+* Upgraded all rust dependencies.
+
 ## sentry-cli 1.37.4
 
 * Added `SENTRY_NO_PROGRESS_BAR` environment variable to suppress progress
