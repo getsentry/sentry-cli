@@ -11,7 +11,6 @@ use failure::{bail, err_msg, Error, ResultExt};
 use ini::Ini;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use sentry::Dsn;
 
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
 use crate::utils::logging::set_max_level;
@@ -336,7 +335,7 @@ impl Config {
     }
 
     /// Return the DSN
-    pub fn get_dsn(&self) -> Result<Dsn, Error> {
+    pub fn get_dsn(&self) -> Result<String, Error> {
         if let Ok(val) = env::var("SENTRY_DSN") {
             Ok(val.parse()?)
         } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
@@ -391,7 +390,7 @@ impl Config {
     }
 
     /// Does this installation want errors to sentry?
-    pub fn internal_sentry_dsn(&self) -> Option<Dsn> {
+    pub fn internal_sentry_dsn(&self) -> Option<String> {
         if !self
             .ini
             .get_from(Some("crash_reporting"), "enabled")

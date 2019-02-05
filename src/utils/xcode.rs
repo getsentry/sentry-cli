@@ -10,7 +10,6 @@ use std::process;
 use failure::{Error, ResultExt};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
-use plist::serde::deserialize;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -270,7 +269,7 @@ impl InfoPlist {
     /// Loads an info plist file from a reader.
     pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist, Error> {
         let mut rdr = BufReader::new(rdr);
-        Ok(deserialize(&mut rdr).context("Could not parse Info.plist file")?)
+        Ok(serde_json::from_reader(&mut rdr).context("Could not parse Info.plist file")?)
     }
 
     pub fn get_release_name(&self) -> String {
