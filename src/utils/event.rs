@@ -8,7 +8,7 @@ use failure::{Error, ResultExt};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
-use sentry::{Client, ClientOptions, Dsn};
+use sentry::{internals::Dsn, Client, ClientOptions};
 
 use crate::constants::USER_AGENT;
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.38.1
+
+* Fix plist parsing
+
 ## sentry-cli 1.38.0
 
 * Upgraded symbolic which offers support top R8 code shrinker.
