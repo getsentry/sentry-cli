@@ -8,7 +8,7 @@ use failure::{Error, ResultExt};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
-use sentry::{Client, ClientOptions};
+use sentry::{Client, ClientOptions, Dsn};
 
 use crate::constants::USER_AGENT;
 
@@ -77,7 +77,7 @@ pub fn get_sdk_info() -> Cow<'static, ClientSdkInfo> {
 /// Use the client's API to capture exceptions or manual events. The client will automatically drop
 /// after the callback has finished and drain its queue with a timeout of 2 seconds. The return
 /// value of the callback is passed through to the caller.
-pub fn with_sentry_client<F, R>(dsn: String, callback: F) -> R
+pub fn with_sentry_client<F, R>(dsn: Dsn, callback: F) -> R
 where
     F: FnOnce(&Client) -> R,
 {

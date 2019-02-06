@@ -268,8 +268,8 @@ impl InfoPlist {
 
     /// Loads an info plist file from a reader.
     pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist, Error> {
-        let mut rdr = BufReader::new(rdr);
-        Ok(serde_json::from_reader(&mut rdr).context("Could not parse Info.plist file")?)
+        let rdr = BufReader::new(rdr);
+        Ok(plist::from_reader(rdr).context("Could not parse Info.plist file")?)
     }
 
     pub fn get_release_name(&self) -> String {
