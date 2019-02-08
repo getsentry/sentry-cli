@@ -32,6 +32,7 @@ use sha1::Digest;
 use symbolic::common::types::ObjectClass;
 use symbolic::debuginfo::DebugId;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
+use uuid::Uuid;
 
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
@@ -217,6 +218,8 @@ pub enum ApiErrorKind {
     BadApiUrl,
     #[fail(display = "organization not found")]
     OrganizationNotFound,
+    #[fail(display = "resource not found")]
+    ResourceNotFound,
     #[fail(display = "project not found")]
     ProjectNotFound,
     #[fail(display = "release not found")]
@@ -1109,6 +1112,67 @@ impl Api {
         }
     }
 
+    /// List all monitors associated with an organization
+    pub fn list_organization_monitors(&self, org: &str) -> ApiResult<Vec<Monitor>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let resp = self.get(&format!(
+                "/organizations/{}/monitors/?cursor={}",
+                PathArg(org),
+                QueryArg(&cursor)
+            ))?;
+            if resp.status() == 404 {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::ResourceNotFound.into());
+                } else {
+                    break;
+                }
+            }
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Monitor>>()?.into_iter());
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
+    }
+
+    /// Create a new checkin for a monitor
+    pub fn create_monitor_checkin(
+        &self,
+        monitor: &Uuid,
+        checkin: &CreateMonitorCheckIn,
+    ) -> ApiResult<MonitorCheckIn> {
+        let path = &format!("/monitors/{}/checkins/", PathArg(monitor),);
+        let resp = self.post(&path, checkin)?;
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+        resp.convert()
+    }
+
+    /// Update a checkin for a monitor
+    pub fn update_monitor_checkin(
+        &self,
+        monitor: &Uuid,
+        checkin_id: &Uuid,
+        checkin: &UpdateMonitorCheckIn,
+    ) -> ApiResult<MonitorCheckIn> {
+        let path = &format!(
+            "/monitors/{}/checkins/{}/",
+            PathArg(monitor),
+            PathArg(checkin_id),
+        );
+        let resp = self.put(&path, checkin)?;
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+        resp.convert()
+    }
+
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
         let mut rv = vec![];
@@ -1863,6 +1927,42 @@ pub struct Project {
     pub slug: String,
     pub name: String,
     pub team: Team,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Monitor {
+    pub id: String,
+    pub name: String,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MonitorStatus {
+    Unknown,
+    Ok,
+    InProgress,
+    Error,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct MonitorCheckIn {
+    pub id: Uuid,
+    pub status: MonitorStatus,
+    pub duration: Option<u64>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct CreateMonitorCheckIn {
+    pub status: MonitorStatus,
+}
+
+#[derive(Debug, Serialize, Default)]
+pub struct UpdateMonitorCheckIn {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<MonitorStatus>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub duration: Option<u64>,
 }
 
 #[derive(Deserialize, Debug)]
