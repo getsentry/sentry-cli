@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.39.0
+
+* Release enabling an internal sentry experiment.
+
+* Fix plist parsing
+
 ## sentry-cli 1.38.1
 
 * Fix plist parsing
