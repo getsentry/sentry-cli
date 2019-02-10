@@ -120,6 +120,8 @@ impl VcsUrl {
         lazy_static! {
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
+            static ref GCB_DOMAIN_RE: Regex = Regex::new(r"^source\.developers\.google\.com$").unwrap();
+            static ref GCB_GIT_PATH_RE: Regex = Regex::new(r"^p/.+/r/github_(.+?)_(.+?)(?:\.git)?$").unwrap();
         }
         if let Some(caps) = VS_DOMAIN_RE.captures(host) {
             let username = &caps[1];
@@ -130,6 +132,16 @@ impl VcsUrl {
                 };
             }
         }
+
+        if let Some(_caps) = GCB_DOMAIN_RE.captures(host) {
+            if let Some(caps) = GCB_GIT_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: host.into(),
+                    id: format!("{}/{}", &caps[1], &caps[2]),
+                };
+            }
+        }
+
         VcsUrl {
             provider: host.into(),
             id: strip_git_suffix(path).into(),
@@ -153,6 +165,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "github"
             | "bitbucket"
             | "visualstudio"
+            | "google"
             | "integrations:github"
             | "integrations:github_enterprise"
             | "integrations:gitlab"
@@ -414,6 +427,13 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "gitlab.com".into(),
             id: "gitlab-org/gitlab-ce".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://source.developers.google.com/p/project-slug/r/github_org-slug_repo-slug"),
+        VcsUrl {
+            provider: "source.developers.google.com".into(),
+            id: "org-slug/repo-slug".into(),
         }
     )
 }
