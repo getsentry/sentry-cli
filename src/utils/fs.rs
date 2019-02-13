@@ -81,22 +81,21 @@ impl TempFile {
         })
     }
 
-    /// Opens the tempfile
-    pub fn open(&self) -> fs::File {
-        let mut f = self.f.as_ref().unwrap().try_clone().unwrap();
-        let _ = f.seek(SeekFrom::Start(0));
-        f
+    /// Opens the tempfile at the beginning.
+    pub fn open(&mut self) -> io::Result<&mut fs::File> {
+        let f = self.f.as_mut().unwrap();
+        f.seek(SeekFrom::Start(0)).ok();
+        Ok(f)
     }
 
-    /// Returns the path to the tempfile
+    /// Returns the path to the tempfile.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
     /// Returns the size of the temp file.
-    pub fn size(&self) -> io::Result<u64> {
-        let mut f = self.open();
-        Ok(f.seek(SeekFrom::End(0))?)
+    pub fn size(&mut self) -> io::Result<u64> {
+        self.open()?.seek(SeekFrom::End(0))
     }
 }
 

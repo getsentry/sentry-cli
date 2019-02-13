@@ -207,20 +207,23 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("{} compressing mappings", style(">").dim());
-    let tf = TempFile::create()?;
-
-    // add a scope here so we will flush before uploading
+    let mut tf = TempFile::create()?;
     {
-        let mut zip = zip::ZipWriter::new(tf.open());
-        for mapping in &mappings {
-            let pb = make_byte_progress_bar(mapping.size);
-            zip.start_file(
-                format!("proguard/{}.txt", mapping.uuid),
-                zip::write::FileOptions::default(),
-            )?;
-            copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
-            pb.finish_and_clear();
+        let mut handle = tf.open()?;
+        {
+            let mut zip = zip::ZipWriter::new(&mut handle);
+
+            for mapping in &mappings {
+                let pb = make_byte_progress_bar(mapping.size);
+                zip.start_file(
+                    format!("proguard/{}.txt", mapping.uuid),
+                    zip::write::FileOptions::default(),
+                )?;
+                copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
+                pb.finish_and_clear();
+            }
         }
+        handle.sync_all()?;
     }
 
     // write UUIDs into the mapping file.

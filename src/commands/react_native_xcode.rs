@@ -153,8 +153,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         let sourcemap_path;
         let bundle_url;
         let sourcemap_url;
-        let bundle_file;
-        let sourcemap_file;
+        let mut bundle_file;
+        let mut sourcemap_file;
 
         // If we have a fetch URL we need to fetch them from there now.  In that
         // case we do indeed fetch it right from the running packager and then
@@ -178,11 +178,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
             api.download(
                 &format!("{}/index.ios.bundle?platform=ios&dev=true", url),
-                &mut bundle_file.open(),
+                bundle_file.open()?,
             )?;
             api.download(
                 &format!("{}/index.ios.map?platform=ios&dev=true", url),
-                &mut sourcemap_file.open(),
+                sourcemap_file.open()?,
             )?;
 
         // This is the case where we need to hook into the release process to

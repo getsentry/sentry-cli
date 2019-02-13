@@ -1188,12 +1188,19 @@ fn get_missing_difs<'data>(
 fn create_batch_archive(difs: &[HashedDifMatch<'_>]) -> Result<TempFile, Error> {
     let total_bytes = difs.iter().map(|sym| sym.size()).sum();
     let pb = make_byte_progress_bar(total_bytes);
-    let tf = TempFile::create()?;
-    let mut zip = ZipWriter::new(tf.open());
+    let mut tf = TempFile::create()?;
 
-    for symbol in difs {
-        zip.start_file(symbol.file_name(), FileOptions::default())?;
-        copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
+    {
+        let mut handle = tf.open()?;
+        {
+            let mut zip = ZipWriter::new(&mut handle);
+
+            for symbol in difs {
+                zip.start_file(symbol.file_name(), FileOptions::default())?;
+                copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
+            }
+        }
+        handle.sync_all()?;
     }
 
     pb.finish_and_clear();
