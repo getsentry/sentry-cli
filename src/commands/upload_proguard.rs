@@ -210,20 +210,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let mut tf = TempFile::create()?;
     {
         let mut handle = tf.open()?;
-        {
-            let mut zip = zip::ZipWriter::new(&mut handle);
+        let mut zip = zip::ZipWriter::new(&mut handle);
 
-            for mapping in &mappings {
-                let pb = make_byte_progress_bar(mapping.size);
-                zip.start_file(
-                    format!("proguard/{}.txt", mapping.uuid),
-                    zip::write::FileOptions::default(),
-                )?;
-                copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
-                pb.finish_and_clear();
-            }
+        for mapping in &mappings {
+            let pb = make_byte_progress_bar(mapping.size);
+            zip.start_file(
+                format!("proguard/{}.txt", mapping.uuid),
+                zip::write::FileOptions::default(),
+            )?;
+            copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
+            pb.finish_and_clear();
         }
-        handle.sync_all()?;
     }
 
     // write UUIDs into the mapping file.

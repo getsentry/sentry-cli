@@ -1191,16 +1191,12 @@ fn create_batch_archive(difs: &[HashedDifMatch<'_>]) -> Result<TempFile, Error> 
     let mut tf = TempFile::create()?;
 
     {
-        let mut handle = tf.open()?;
-        {
-            let mut zip = ZipWriter::new(&mut handle);
+        let mut zip = ZipWriter::new(tf.open()?);
 
-            for symbol in difs {
-                zip.start_file(symbol.file_name(), FileOptions::default())?;
-                copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
-            }
+        for symbol in difs {
+            zip.start_file(symbol.file_name(), FileOptions::default())?;
+            copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
         }
-        handle.sync_all()?;
     }
 
     pb.finish_and_clear();
