@@ -89,7 +89,6 @@ impl TempFile {
 
 impl Drop for TempFile {
     fn drop(&mut self) {
-        // mem::drop(self.f.take());
         fs::remove_file(&self.path).ok();
     }
 }

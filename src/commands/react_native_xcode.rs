@@ -153,8 +153,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         let sourcemap_path;
         let bundle_url;
         let sourcemap_url;
-        let mut bundle_file;
-        let mut sourcemap_file;
+        let bundle_file;
+        let sourcemap_file;
 
         // If we have a fetch URL we need to fetch them from there now.  In that
         // case we do indeed fetch it right from the running packager and then
