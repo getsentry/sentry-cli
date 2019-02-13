@@ -178,11 +178,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
             api.download(
                 &format!("{}/index.ios.bundle?platform=ios&dev=true", url),
-                &mut bundle_file.open(),
+                &mut bundle_file.open()?,
             )?;
             api.download(
                 &format!("{}/index.ios.map?platform=ios&dev=true", url),
-                &mut sourcemap_file.open(),
+                &mut sourcemap_file.open()?,
             )?;
 
         // This is the case where we need to hook into the release process to

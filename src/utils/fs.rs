@@ -2,7 +2,6 @@ use std::env;
 use std::fs;
 use std::io;
 use std::io::{Read, Seek, SeekFrom};
-use std::mem;
 use std::path::{Path, PathBuf};
 
 use failure::{bail, Error};
@@ -42,7 +41,6 @@ impl Drop for TempDir {
 /// Helper for temporary file access
 #[derive(Debug)]
 pub struct TempFile {
-    f: Option<fs::File>,
     path: PathBuf,
 }
 
@@ -52,16 +50,9 @@ impl TempFile {
         let mut path = env::temp_dir();
         path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
 
-        let f = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(&path)?;
-
-        Ok(TempFile {
-            f: Some(f),
-            path: path.to_path_buf(),
-        })
+        let tf = TempFile { path };
+        tf.open()?;
+        Ok(tf)
     }
 
     /// Assumes ownership over an existing file and moves it to a temp location.
@@ -70,40 +61,35 @@ impl TempFile {
         destination.push(Uuid::new_v4().to_hyphenated_ref().to_string());
 
         fs::rename(&path, &destination)?;
-        let f = fs::OpenOptions::new()
+        Ok(TempFile { path: destination })
+    }
+
+    /// Opens the tempfile at the beginning.
+    pub fn open(&self) -> io::Result<fs::File> {
+        let mut f = fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&destination)?;
+            .create(true)
+            .open(&self.path)?;
 
-        Ok(TempFile {
-            f: Some(f),
-            path: destination,
-        })
+        f.seek(SeekFrom::Start(0)).ok();
+        Ok(f)
     }
 
-    /// Opens the tempfile
-    pub fn open(&self) -> fs::File {
-        let mut f = self.f.as_ref().unwrap().try_clone().unwrap();
-        let _ = f.seek(SeekFrom::Start(0));
-        f
-    }
-
-    /// Returns the path to the tempfile
+    /// Returns the path to the tempfile.
     pub fn path(&self) -> &Path {
         &self.path
     }
 
     /// Returns the size of the temp file.
     pub fn size(&self) -> io::Result<u64> {
-        let mut f = self.open();
-        Ok(f.seek(SeekFrom::End(0))?)
+        self.open()?.seek(SeekFrom::End(0))
     }
 }
 
 impl Drop for TempFile {
     fn drop(&mut self) {
-        mem::drop(self.f.take());
-        let _ = fs::remove_file(&self.path);
+        fs::remove_file(&self.path).ok();
     }
 }
 

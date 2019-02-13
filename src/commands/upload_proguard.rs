@@ -208,10 +208,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     println!("{} compressing mappings", style(">").dim());
     let tf = TempFile::create()?;
-
-    // add a scope here so we will flush before uploading
     {
-        let mut zip = zip::ZipWriter::new(tf.open());
+        let mut zip = zip::ZipWriter::new(tf.open()?);
+
         for mapping in &mappings {
             let pb = make_byte_progress_bar(mapping.size);
             zip.start_file(
