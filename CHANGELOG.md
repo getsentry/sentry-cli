@@ -1,10 +1,12 @@
 # Changelog
 
+## sentry-cli 1.39.1
+
+* Fix Proguard upload issues on Windows (#484).
+
 ## sentry-cli 1.39.0
 
 * Release enabling an internal sentry experiment.
-
-* Fix plist parsing
 
 ## sentry-cli 1.38.1
 
@@ -13,7 +15,6 @@
 ## sentry-cli 1.38.0
 
 * Upgraded symbolic which offers support top R8 code shrinker.
-* Upgraded all rust dependencies.
 
 ## sentry-cli 1.37.4
 
