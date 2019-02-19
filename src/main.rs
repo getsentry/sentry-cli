@@ -1,6 +1,6 @@
 //! This is the library that powers the `sentry-cli` tool.  The primary
 //! exported function is `main` which is directly invoked from the
-//! compiled binrary that links against this library.
+//! compiled binary that links against this library.
 
 #![recursion_limit = "128"]
 
