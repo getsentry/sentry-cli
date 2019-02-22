@@ -82,3 +82,4 @@ uname = "0.1.1"
 
 [profile.release]
 opt-level = 3
+panic = "abort"
