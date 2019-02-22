@@ -57,8 +57,6 @@ uuid = { version = "0.7.2", features = ["v4", "serde"] }
 walkdir = "2.2.7"
 which = "2.0.1"
 zip = "0.5.0"
-signal-hook = "0.1.7"
-crossbeam-channel = "0.3.8"
 
 [features]
 default = ["with_crash_reporting"]
@@ -79,6 +77,8 @@ unix-daemonize = "0.1.2"
 [target."cfg(unix)".dependencies]
 openssl-probe = "0.1.2"
 uname = "0.1.1"
+signal-hook = "0.1.7"
+crossbeam-channel = "0.3.8"
 
 [profile.release]
 opt-level = 3
