@@ -41,14 +41,14 @@ pub fn attach_logfile(
 
         let (component, message) = if with_component {
             let (component, message) = rec.component_and_message();
-            (component.unwrap_or_else(|| "log".into()), message)
+            (component.unwrap_or("log"), message)
         } else {
-            ("log".into(), rec.message().to_string())
+            ("log", rec.message())
         };
 
         event.breadcrumbs.values.push(Breadcrumb {
             timestamp: rec.utc_timestamp().unwrap_or(fallback_timestamp),
-            message: Some(message),
+            message: Some(message.to_string()),
             category: Some(component.to_string()),
             ..Default::default()
         })
