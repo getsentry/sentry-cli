@@ -961,7 +961,6 @@ fn upload_missing_chunks(
 
     let pool = ThreadPoolBuilder::new()
         .num_threads(chunk_options.concurrency as usize)
-        .exit_handler(|_| Api::get_current().reset())
         .build()?;
 
     pool.install(|| {

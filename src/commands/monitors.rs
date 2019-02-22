@@ -1,6 +1,6 @@
 //! Implements a command for managing projects.
 use std::process;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Instant;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -14,7 +14,7 @@ use crate::utils::formatting::Table;
 use crate::utils::system::QuietExit;
 
 struct MonitorContext {
-    pub api: Rc<Api>,
+    pub api: Arc<Api>,
     pub org: String,
 }
 

@@ -8,7 +8,6 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{bail, Error};
 use log::{debug, info};
 
-use crate::api::Api;
 use crate::config::{prepare_environment, Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::system::{print_error, QuietExit};
@@ -297,10 +296,6 @@ fn setup() {
 pub fn main() {
     setup();
     let result = run();
-
-    if let Some(api) = Api::get_current_opt() {
-        api.reset();
-    }
 
     match result {
         Ok(()) => process::exit(0),

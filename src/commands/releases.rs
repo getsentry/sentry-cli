@@ -1,7 +1,7 @@
 //! Implements a command for managing releases.
 use std::collections::HashSet;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -26,7 +26,7 @@ use crate::utils::system::QuietExit;
 use crate::utils::vcs::{find_heads, CommitSpec};
 
 struct ReleaseContext<'a> {
-    pub api: Rc<Api>,
+    pub api: Arc<Api>,
     pub org: String,
     pub project_default: Option<&'a str>,
 }

@@ -4,7 +4,7 @@
 //! sentry-cli tool.
 
 use std::borrow::Cow;
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::cmp;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
@@ -50,8 +50,27 @@ pub struct PathArg<A: fmt::Display>(A);
 /// Wrapper that escapes arguments for URL query segments.
 pub struct QueryArg<A: fmt::Display>(A);
 
-thread_local! {
-    static API: Rc<Api> = Rc::new(Api::new());
+struct CurlConnectionManager;
+
+impl r2d2::ManageConnection for CurlConnectionManager {
+    type Connection = curl::easy::Easy;
+    type Error = curl::Error;
+
+    fn connect(&self) -> Result<curl::easy::Easy, curl::Error> {
+        Ok(curl::easy::Easy::new())
+    }
+
+    fn is_valid(&self, _conn: &mut curl::easy::Easy) -> Result<(), curl::Error> {
+        Ok(())
+    }
+
+    fn has_broken(&self, _conn: &mut curl::easy::Easy) -> bool {
+        false
+    }
+}
+
+lazy_static! {
+    static ref API: Arc<Api> = Arc::new(Api::new());
 }
 
 #[derive(Debug, Clone)]
@@ -153,13 +172,7 @@ impl ProgressBarMode {
 /// Helper for the API access.
 pub struct Api {
     config: Arc<Config>,
-    shared_handle: RefCell<curl::easy::Easy>,
-}
-
-impl Drop for Api {
-    fn drop(&mut self) {
-        self.reset();
-    }
+    pool: r2d2::Pool<CurlConnectionManager>,
 }
 
 /// Represents file contents temporarily
@@ -319,8 +332,8 @@ impl fmt::Display for Method {
 
 /// Represents an API request.  This can be customized before
 /// sending but only sent once.
-pub struct ApiRequest<'a> {
-    handle: RefMut<'a, curl::easy::Easy>,
+pub struct ApiRequest {
+    handle: r2d2::PooledConnection<CurlConnectionManager>,
     headers: curl::easy::List,
     body: Option<Vec<u8>>,
     progress_bar_mode: ProgressBarMode,
@@ -354,12 +367,12 @@ impl Api {
     ///
     /// Threads other than the main thread must call `Api::reset` when
     /// shutting down to prevent `process::exit` from hanging afterwards.
-    pub fn get_current() -> Rc<Api> {
-        API.with(|api| api.clone())
+    pub fn get_current() -> Arc<Api> {
+        API.clone()
     }
 
-    /// Returns the current api for the thread if bound.
-    pub fn get_current_opt() -> Option<Rc<Api>> {
+    /// Returns the current api.
+    pub fn get_current_opt() -> Option<Arc<Api>> {
         // `Api::get_current` fails if there is no config yet.
         if Config::get_current_opt().is_some() {
             Some(Api::get_current())
@@ -372,23 +385,21 @@ impl Api {
     pub fn with_config(config: Arc<Config>) -> Api {
         Api {
             config,
-            shared_handle: RefCell::new(curl::easy::Easy::new()),
+            pool: r2d2::Pool::builder()
+                .max_size(16)
+                .build(CurlConnectionManager)
+                .unwrap(),
         }
     }
 
     // Low Level Methods
 
-    /// Resets the curl handle of this API client.
-    pub fn reset(&self) {
-        *self.shared_handle.borrow_mut() = curl::easy::Easy::new();
-    }
-
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
     #[allow(clippy::needless_pass_by_value)]
-    pub fn request<'a>(&'a self, method: Method, url: &str) -> ApiResult<ApiRequest<'a>> {
-        let mut handle = self.shared_handle.borrow_mut();
+    pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        let mut handle = self.pool.get().unwrap();
         handle.reset();
         if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();
@@ -1356,9 +1367,9 @@ impl<'a> Iterator for Headers<'a> {
     }
 }
 
-impl<'a> ApiRequest<'a> {
+impl ApiRequest {
     fn create(
-        mut handle: RefMut<'a, curl::easy::Easy>,
+        mut handle: r2d2::PooledConnection<CurlConnectionManager>,
         method: &Method,
         url: &str,
         auth: Option<&Auth>,
