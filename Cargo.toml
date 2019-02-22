@@ -6,10 +6,10 @@ version = "1.39.1"
 edition = "2018"
 
 [dependencies]
-anylog = "0.3.1"
+anylog = "0.4.0"
 app_dirs = "1.2.1"
 backoff = "0.1.2"
-backtrace = "0.3.13"
+backtrace = "0.3.14"
 brotli2 = "0.3.2"
 chardet = "0.2.4"
 chrono = { version = "0.4.6", features = ["serde"] }
@@ -34,21 +34,21 @@ java-properties = "1.1.1"
 lazy_static = "1.2.0"
 libc = "0.2.48"
 log = { version = "0.4.6", features = ["std"] }
-might-be-minified = "0.2.1"
+might-be-minified = "0.3.0"
 open = "1.2.2"
 parking_lot = "0.7.1"
-plist = "0.4.0"
+plist = "0.4.1"
 prettytable-rs = "0.8.0"
 rayon = "1.0.3"
 regex = "1.1.0"
 runas = "0.1.4"
 rust-ini = "0.13.0"
-sentry = { version = "0.13.0", default-features = false, features = ["with_client_implementation", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
-serde = { version = "1.0.87", features = ["derive"] }
-serde_derive = "1.0.87"
+sentry = { version = "0.14.2", default-features = false, features = ["with_client_implementation", "with_curl_transport", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
+serde = { version = "1.0.88", features = ["derive"] }
+serde_derive = "1.0.88"
 serde_json = "1.0.38"
 sha1 = { version = "0.6.0", features = ["serde"] }
-sourcemap = "2.2.1"
+sourcemap = "3.0.0"
 symbolic = { git = "https://github.com/getsentry/symbolic", tag = "5.8.1", features = ["debuginfo", "proguard", "with_serde", "with_serde_debuginfo"] }
 url = "1.7.2"
 username = "0.2.0"
@@ -56,6 +56,8 @@ uuid = { version = "0.7.2", features = ["v4", "serde"] }
 walkdir = "2.2.7"
 which = "2.0.1"
 zip = "0.5.0"
+signal-hook = "0.1.7"
+crossbeam-channel = "0.3.8"
 
 [features]
 default = ["with_crash_reporting"]
@@ -74,7 +76,5 @@ unix-daemonize = "0.1.2"
 [target."cfg(unix)"]
 
 [target."cfg(unix)".dependencies]
-chan = "0.1.23"
-chan-signal = "0.3.2"
 openssl-probe = "0.1.2"
 uname = "0.1.1"

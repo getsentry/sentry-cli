@@ -16,25 +16,29 @@ where
     F: FnOnce() -> (),
     F: Send + 'static,
 {
-    use chan::chan_select;
-    use chan_signal::{notify, Signal};
+    let (tx, rx) = crossbeam_channel::bounded(100);
+    let signals = signal_hook::iterator::Signals::new(&[
+        signal_hook::SIGTERM,
+        signal_hook::SIGINT,
+    ]).unwrap();
 
-    let run = |_sdone: chan::Sender<()>| f();
-    let signal = notify(&[Signal::INT, Signal::TERM]);
-    let (sdone, rdone) = chan::sync(0);
-    std::thread::spawn(move || run(sdone));
-
-    let mut rv = None;
-
-    chan_select! {
-        signal.recv() -> signal => { rv = signal; },
-        rdone.recv() => {}
+    {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            f();
+            tx.send(0).ok();
+        });
     }
 
-    if let Some(signal) = rv {
-        use chan_signal::Signal;
-        if signal == Signal::INT {
-            println!("Interrupted!");
+    std::thread::spawn(move || {
+        for signal in signals.forever() {
+            tx.send(signal).ok();
+        }
+    });
+
+    if let Ok(signal) = rx.recv() {
+        if signal == signal_hook::SIGINT {
+            eprintln!("Interrupted!");
         }
     }
 }
