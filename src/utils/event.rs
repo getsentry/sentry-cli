@@ -41,7 +41,7 @@ pub fn attach_logfile(
 
         let (component, message) = if with_component {
             let (component, message) = rec.component_and_message();
-            (component.unwrap_or_else(|| "log".into()), message)
+            (component.unwrap_or("log"), message)
         } else {
             ("log", rec.message())
         };

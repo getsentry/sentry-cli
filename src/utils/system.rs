@@ -17,10 +17,8 @@ where
     F: Send + 'static,
 {
     let (tx, rx) = crossbeam_channel::bounded(100);
-    let signals = signal_hook::iterator::Signals::new(&[
-        signal_hook::SIGTERM,
-        signal_hook::SIGINT,
-    ]).unwrap();
+    let signals =
+        signal_hook::iterator::Signals::new(&[signal_hook::SIGTERM, signal_hook::SIGINT]).unwrap();
 
     {
         let tx = tx.clone();
