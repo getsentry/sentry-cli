@@ -70,7 +70,7 @@ with_crash_reporting = []
 [target."cfg(target_os = \"macos\")"]
 
 [target."cfg(target_os = \"macos\")".dependencies]
-mac-process-info = "0.1.0"
+mac-process-info = "0.2.0"
 osascript = "0.3.0"
 unix-daemonize = "0.1.2"
 
