@@ -567,7 +567,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             let fat = match FatObject::parse(buffer) {
                 Ok(fat) => Rc::new(fat),
                 Err(e) => {
-                    warn!("Skipping invalid debug file: {}", e);
+                    warn!("Skipping invalid debug file {}: {}", name, e);
                     return Ok(());
                 }
             };
