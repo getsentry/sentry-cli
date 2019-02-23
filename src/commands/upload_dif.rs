@@ -135,8 +135,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
-    let api = Api::get_current();
-    let config = Config::get_current();
+    let api = Api::current();
+    let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
     let ids = matches

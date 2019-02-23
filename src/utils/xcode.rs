@@ -481,7 +481,7 @@ pub fn show_notification(title: &str, message: &str) -> Result<(), Error> {
         );
     }
 
-    let config = Config::get_current();
+    let config = Config::current();
     if !config.show_notifications()? {
         return Ok(());
     }

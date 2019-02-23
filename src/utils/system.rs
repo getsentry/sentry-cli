@@ -125,7 +125,7 @@ pub fn print_error(err: &Error) {
         }
     }
 
-    if Config::get_current().get_log_level() < log::LevelFilter::Info {
+    if Config::current().get_log_level() < log::LevelFilter::Info {
         eprintln!();
         eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
         eprintln!(
@@ -185,7 +185,7 @@ pub fn init_backtrace() {
 
 #[cfg(target_os = "macos")]
 pub fn get_model() -> Option<String> {
-    if let Some(model) = Config::get_current().get_model() {
+    if let Some(model) = Config::current().get_model() {
         return Some(model);
     }
 
@@ -214,7 +214,7 @@ pub fn get_model() -> Option<String> {
 
 #[cfg(target_os = "macos")]
 pub fn get_family() -> Option<String> {
-    if let Some(family) = Config::get_current().get_family() {
+    if let Some(family) = Config::current().get_family() {
         return Some(family);
     }
 
@@ -239,12 +239,12 @@ pub fn get_family() -> Option<String> {
 
 #[cfg(not(target_os = "macos"))]
 pub fn get_model() -> Option<String> {
-    Config::get_current().get_model()
+    Config::current().get_model()
 }
 
 #[cfg(not(target_os = "macos"))]
 pub fn get_family() -> Option<String> {
-    Config::get_current().get_family()
+    Config::current().get_family()
 }
 
 /// Indicates that sentry-cli should quit without printing anything.

@@ -153,7 +153,7 @@ impl SentryCliUpdateInfo {
             exe.parent().unwrap().join(".sentry-cli.part")
         };
         let mut f = fs::File::create(&tmp_path)?;
-        let api = Api::get_current();
+        let api = Api::current();
         match api.download_with_progress(self.download_url()?, &mut f) {
             Ok(_) => {}
             Err(err) => {
@@ -169,7 +169,7 @@ impl SentryCliUpdateInfo {
 }
 
 pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo, Error> {
-    let api = Api::get_current();
+    let api = Api::current();
     Ok(SentryCliUpdateInfo {
         latest_release: if let Ok(release) = api.get_latest_sentrycli_release() {
             release
@@ -250,7 +250,7 @@ fn update_nagger_impl() -> Result<(), Error> {
 }
 
 pub fn run_sentrycli_update_nagger() {
-    let config = match Config::get_current_opt() {
+    let config = match Config::current_opt() {
         Some(config) => config,
         None => return,
     };

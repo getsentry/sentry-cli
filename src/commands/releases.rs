@@ -40,7 +40,7 @@ impl<'a> ReleaseContext<'a> {
         if let Some(ref proj) = self.project_default {
             Ok(proj.to_string())
         } else {
-            let config = Config::get_current();
+            let config = Config::current();
             Ok(config.get_project_default()?)
         }
     }
@@ -51,7 +51,7 @@ impl<'a> ReleaseContext<'a> {
         } else if let Some(project) = self.project_default {
             Ok(vec![project.to_string()])
         } else {
-            let config = Config::get_current();
+            let config = Config::current();
             Ok(vec![config.get_project_default()?])
         }
     }
@@ -410,7 +410,7 @@ fn execute_set_commits<'a>(
     let heads = if matches.is_present("auto") {
         let commits = find_heads(None, &repos)?;
         if commits.is_empty() {
-            let config = Config::get_current();
+            let config = Config::current();
 
             bail!(
                 "Could not determine any commits to be associated automatically.\n\
@@ -926,9 +926,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         return execute_propose_version();
     }
 
-    let config = Config::get_current();
+    let config = Config::current();
     let ctx = ReleaseContext {
-        api: Api::get_current(),
+        api: Api::current(),
         org: config.get_org(matches)?,
         project_default: matches.value_of("project"),
     };

@@ -24,7 +24,7 @@ use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use regex::{Captures, Regex};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
@@ -70,7 +70,7 @@ impl r2d2::ManageConnection for CurlConnectionManager {
 }
 
 lazy_static! {
-    static ref API: Arc<Api> = Arc::new(Api::new());
+    static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
 }
 
 #[derive(Debug, Clone)]
@@ -349,33 +349,27 @@ pub struct ApiResponse {
     body: Option<Vec<u8>>,
 }
 
-impl Default for Api {
-    fn default() -> Self {
-        Api::new()
-    }
-}
-
 impl Api {
-    /// Creates a new API access helper.  For as long as it lives HTTP
-    /// keepalive can be used.  When the object is recreated new
-    /// connections will be established.
-    pub fn new() -> Api {
-        Api::with_config(Config::get_current())
-    }
-
     /// Returns the current api for the thread.
     ///
     /// Threads other than the main thread must call `Api::reset` when
     /// shutting down to prevent `process::exit` from hanging afterwards.
-    pub fn get_current() -> Arc<Api> {
-        API.clone()
+    pub fn current() -> Arc<Api> {
+        let mut api_opt = API.lock();
+        if let Some(ref api) = *api_opt {
+            api.clone()
+        } else {
+            let api = Arc::new(Api::with_config(Config::current()));
+            *api_opt = Some(api.clone());
+            api
+        }
     }
 
     /// Returns the current api.
-    pub fn get_current_opt() -> Option<Arc<Api>> {
-        // `Api::get_current` fails if there is no config yet.
-        if Config::get_current_opt().is_some() {
-            Some(Api::get_current())
+    pub fn current_opt() -> Option<Arc<Api>> {
+        // `Api::current` fails if there is no config yet.
+        if Config::current_opt().is_some() {
+            Some(Api::current())
         } else {
             None
         }
@@ -390,6 +384,11 @@ impl Api {
                 .build(CurlConnectionManager)
                 .unwrap(),
         }
+    }
+
+    /// Utility method that unbinds the current api.
+    pub fn dispose_pool() {
+        *API.lock() = None;
     }
 
     // Low Level Methods
@@ -1022,7 +1021,7 @@ impl Api {
         // not add the authorization header, by default. Since the URL is guaranteed
         // to be a Sentry-compatible endpoint, we force the Authorization header at
         // this point.
-        let request = match Config::get_current().get_auth() {
+        let request = match Config::current().get_auth() {
             Some(auth) => request.with_auth(auth)?,
             None => request,
         };

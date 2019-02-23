@@ -8,6 +8,7 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{bail, Error};
 use log::{debug, info};
 
+use crate::api::Api;
 use crate::config::{prepare_environment, Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::system::{print_error, QuietExit};
@@ -238,7 +239,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
     config.bind_to_process();
     info!(
         "Loaded config from {}",
-        Config::get_current().get_filename().display()
+        Config::current().get_filename().display()
     );
 
     debug!(
@@ -297,19 +298,25 @@ pub fn main() {
     setup();
     let result = run();
 
-    match result {
-        Ok(()) => process::exit(0),
+    let status_code = match result {
+        Ok(()) => 0,
         Err(err) => {
             if let Some(&QuietExit(code)) = err.downcast_ref() {
-                process::exit(code);
+                code
             } else {
                 print_error(&err);
                 #[cfg(feature = "with_crash_reporting")]
                 {
                     crate::utils::crashreporting::try_report_to_sentry(&err);
                 }
-                process::exit(1);
+                1
             }
         }
-    }
+    };
+
+    // before we shut down we unbind the api to give the connection pool
+    // a chance to collect.  Not doing so has shown to cause hung threads
+    // on windows.
+    Api::dispose_pool();
+    process::exit(status_code);
 }

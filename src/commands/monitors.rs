@@ -49,10 +49,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
 
     let ctx = MonitorContext {
-        api: Api::get_current(),
+        api: Api::current(),
         org: config.get_org(matches)?,
     };
 

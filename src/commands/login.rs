@@ -19,7 +19,7 @@ fn update_config(config: &Config, token: &str) -> Result<(), Error> {
 }
 
 pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
