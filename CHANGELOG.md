@@ -6,6 +6,7 @@
 * Use a connection pool for the outgoing API requests.  This is likely to resolve
   some issues in curl itself that manifested itself as malloc errors on shutdown (#489)
 * Upgrade internal dependencies and shrink overall binary (#488)
+* Upgrade internal sentry crate
 
 ## sentry-cli 1.39.1
 
