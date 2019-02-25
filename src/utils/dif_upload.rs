@@ -824,7 +824,7 @@ fn try_assemble_difs<'data>(
     difs: &'data [ChunkedDifMatch<'data>],
     options: &DifUpload,
 ) -> Result<MissingDifsInfo<'data>, Error> {
-    let api = Api::get_current();
+    let api = Api::current();
     let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
     let response = api.assemble_difs(&options.org, &options.project, &request)?;
 
@@ -961,7 +961,6 @@ fn upload_missing_chunks(
 
     let pool = ThreadPoolBuilder::new()
         .num_threads(chunk_options.concurrency as usize)
-        .exit_handler(|_| Api::get_current().reset())
         .build()?;
 
     pool.install(|| {
@@ -970,7 +969,7 @@ fn upload_missing_chunks(
             .enumerate()
             .map(|(index, (batch, size))| {
                 let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
-                Api::get_current().upload_chunks(&chunk_options.url, batch, mode, compression)
+                Api::current().upload_chunks(&chunk_options.url, batch, mode, compression)
             })
             .collect::<Result<(), _>>()
     })?;
@@ -1023,7 +1022,7 @@ fn poll_dif_assemble(
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let api = Api::get_current();
+    let api = Api::current();
     let progress = ProgressBar::new(difs.len() as u64);
     progress.set_style(progress_style);
     progress.set_prefix(">");
@@ -1169,7 +1168,7 @@ fn get_missing_difs<'data>(
         &objects
     );
 
-    let api = Api::get_current();
+    let api = Api::current();
     let missing_checksums = {
         let checksums = objects.iter().map(|s| s.checksum());
         api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
@@ -1208,8 +1207,8 @@ fn upload_in_batches(
     objects: &[HashedDifMatch<'_>],
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>, Error> {
-    let api = Api::get_current();
-    let max_size = Config::get_current().get_max_dif_archive_size()?;
+    let api = Api::current();
+    let max_size = Config::current().get_max_dif_archive_size()?;
     let mut dsyms = Vec::new();
 
     for (i, (batch, _)) in objects.batches(max_size, MAX_CHUNKS).enumerate() {
@@ -1499,7 +1498,7 @@ impl DifUpload {
             return Ok(Default::default());
         }
 
-        let api = Api::get_current();
+        let api = Api::current();
         if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;

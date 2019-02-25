@@ -64,17 +64,17 @@ impl Config {
             let mut cfg = CONFIG.lock();
             *cfg = Some(Arc::new(self));
         }
-        Config::get_current()
+        Config::current()
     }
 
     /// Return the currently bound config as option.
-    pub fn get_current_opt() -> Option<Arc<Config>> {
+    pub fn current_opt() -> Option<Arc<Config>> {
         CONFIG.lock().as_ref().cloned()
     }
 
     /// Return the currently bound config.
-    pub fn get_current() -> Arc<Config> {
-        Config::get_current_opt().expect("Config not bound yet")
+    pub fn current() -> Arc<Config> {
+        Config::current_opt().expect("Config not bound yet")
     }
 
     /// Makes a copy of the config in a closure and boxes it.

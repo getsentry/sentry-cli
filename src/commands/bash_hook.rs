@@ -51,7 +51,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let mut event = Event::default();
 
     event.environment = config.get_environment().map(|e| e.into());

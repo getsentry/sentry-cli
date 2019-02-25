@@ -1,6 +1,6 @@
 //! Implements a command for managing projects.
 use std::process;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Instant;
 
 use clap::{App, AppSettings, Arg, ArgMatches};
@@ -14,7 +14,7 @@ use crate::utils::formatting::Table;
 use crate::utils::system::QuietExit;
 
 struct MonitorContext {
-    pub api: Rc<Api>,
+    pub api: Arc<Api>,
     pub org: String,
 }
 
@@ -49,10 +49,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
 
     let ctx = MonitorContext {
-        api: Api::get_current(),
+        api: Api::current(),
         org: config.get_org(matches)?,
     };
 

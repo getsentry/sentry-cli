@@ -65,14 +65,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
     let (org, project) = config.get_org_and_project(matches)?;
     let app = matches.value_of("app_name").unwrap();
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
-    let api = Api::get_current();
+    let api = Api::current();
     let print_release_name = matches.is_present("print_release_name");
 
     if !print_release_name {

@@ -57,6 +57,7 @@ uuid = { version = "0.7.2", features = ["v4", "serde"] }
 walkdir = "2.2.7"
 which = "2.0.1"
 zip = "0.5.0"
+r2d2 = "0.8.3"
 
 [features]
 default = ["with_crash_reporting"]

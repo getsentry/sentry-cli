@@ -132,7 +132,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let api = Api::get_current();
+    let api = Api::current();
 
     let paths: Vec<_> = match matches.values_of("paths") {
         Some(paths) => paths.collect(),
@@ -234,7 +234,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("{} uploading mappings", style(">").dim());
-    let config = Config::get_current();
+    let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let rv = api.upload_dif_archive(&org, &project, tf.path())?;
     println!(

@@ -46,9 +46,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let api = Api::get_current();
+    let api = Api::current();
     let base = env::current_dir()?;
 
     let sourcemap_path = PathBuf::from(matches.value_of("sourcemap").unwrap());
