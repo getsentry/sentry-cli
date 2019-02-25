@@ -44,7 +44,7 @@ rayon = "1.0.3"
 regex = "1.1.0"
 runas = "0.1.4"
 rust-ini = "0.13.0"
-sentry = { version = "0.14.2", default-features = false, features = ["with_client_implementation", "with_curl_transport", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
+sentry = { version = "0.15.0", default-features = false, features = ["with_client_implementation", "with_curl_transport", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
 serde = { version = "1.0.88", features = ["derive"] }
 serde_derive = "1.0.88"
 serde_json = "1.0.38"
