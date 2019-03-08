@@ -9,8 +9,7 @@ use console::style;
 use failure::Error;
 use if_chain::if_chain;
 use serde::Serialize;
-use symbolic::common::byteview::ByteView;
-use symbolic::debuginfo::DebugId;
+use symbolic::common::{ByteView, DebugId};
 use symbolic::proguard::ProguardMappingView;
 use uuid::Version as UuidVersion;
 use walkdir::WalkDir;
@@ -148,7 +147,7 @@ fn find_ids(
             if dirent.path().extension() == Some(OsStr::new("txt"));
             if let Ok(md) = dirent.metadata();
             if md.len() < MAX_MAPPING_FILE;
-            if let Ok(byteview) = ByteView::from_path(dirent.path());
+            if let Ok(byteview) = ByteView::open(dirent.path());
             if let Ok(mapping) = ProguardMappingView::parse(byteview);
             if proguard_uuids.contains(&mapping.uuid());
             then {

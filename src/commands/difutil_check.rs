@@ -52,7 +52,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("{}", style("Debug Info File Check").dim().bold());
-    match dif.class() {
+    match dif.kind() {
         Some(class) => println!(
             "  Type: {} {:#}",
             style(dif.ty()).cyan(),
@@ -70,9 +70,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("  Contained debug information:");
-    for feature in dif.features() {
-        println!("    > {}", feature)
-    }
+    println!("    > {}", dif.features());
 
     if let Some(msg) = dif.get_note() {
         println!("  Note: {}", msg);

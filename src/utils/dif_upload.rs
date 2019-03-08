@@ -7,10 +7,10 @@ use std::fmt;
 use std::fs::{self, File};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::iter::IntoIterator;
+use std::mem::transmute;
 use std::ops::Deref;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
-use std::rc::Rc;
 use std::slice::{Chunks, Iter};
 use std::str;
 use std::sync::Arc;
@@ -25,8 +25,8 @@ use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sha1::Digest;
-use symbolic::common::{byteview::ByteView, types::ObjectKind};
-use symbolic::debuginfo::{DebugFeatures, DebugId, FatObject, Object, ObjectFeature};
+use symbolic::common::{ByteView, DebugId, SelfCell};
+use symbolic::debuginfo::{Archive, FileFormat, Object};
 use walkdir::WalkDir;
 use which::which;
 use zip::write::FileOptions;
@@ -35,7 +35,7 @@ use zip::{ZipArchive, ZipWriter};
 use crate::api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
 use crate::config::Config;
 use crate::utils::batch::{BatchedSliceExt, ItemSize};
-use crate::utils::dif::DebuggingInformation;
+use crate::utils::dif::DifFeatures;
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
@@ -103,8 +103,7 @@ enum DifBacking {
 /// files used to further process this file, such as dSYM PLists.
 struct DifMatch<'data> {
     _backing: Option<DifBacking>,
-    fat: Rc<FatObject<'data>>,
-    object_index: usize,
+    object: SelfCell<ByteView<'data>, Object<'data>>,
     name: String,
     attachments: Option<BTreeMap<String, ByteView<'static>>>,
 }
@@ -115,37 +114,30 @@ impl<'data> DifMatch<'data> {
     /// `DifMatch` is dropped.
     ///
     /// The path must point to a `FatObject` containing exactly one `Object`.
-    fn take_temp<P, S>(path: P, name: S) -> Result<DifMatch<'static>, Error>
+    fn take_temp<P, S>(path: P, name: S) -> Result<Self, Error>
     where
         P: AsRef<Path>,
         S: Into<String>,
     {
         let temp_file = TempFile::take(path)?;
-        let buffer = ByteView::from_path(temp_file.path()).map_err(SyncFailure::new)?;
-        let fat = FatObject::parse(buffer)?;
-        if fat.object_count() != 1 {
-            bail!("Multi-arch binaries not supported here");
-        }
+        let buffer = ByteView::open(temp_file.path()).map_err(SyncFailure::new)?;
 
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
-            fat: Rc::new(fat),
-            object_index: 0,
+            object: SelfCell::try_new(buffer, |b| Object::parse(unsafe { &*b }))?,
             name: name.into(),
             attachments: None,
         })
     }
 
     /// Returns the parsed `Object` of this DIF.
-    pub fn object(&self) -> Object<'_> {
-        // Errors can be ignored at this point since the `DifMatch` is only
-        // created if the referenced Object is valid.
-        self.fat.get_object(self.object_index).unwrap().unwrap()
+    pub fn object(&self) -> &Object<'_> {
+        self.object.get()
     }
 
     /// Returns the raw binary data of this DIF.
     pub fn data(&self) -> &[u8] {
-        self.object().as_bytes()
+        self.object().data()
     }
 
     /// Returns the size of of this DIF in bytes.
@@ -167,7 +159,7 @@ impl<'data> DifMatch<'data> {
     }
 
     /// Returns attachments of this DIF, if any.
-    pub fn attachments(&self) -> Option<&BTreeMap<String, ByteView<'_>>> {
+    pub fn attachments(&self) -> Option<&BTreeMap<String, ByteView<'static>>> {
         self.attachments.as_ref()
     }
 
@@ -186,15 +178,17 @@ impl<'data> DifMatch<'data> {
             return false;
         }
 
-        self.object().has_hidden_symbols().unwrap_or(false)
+        match self.object() {
+            Object::MachO(ref macho) => macho.requires_symbolmap(),
+            _ => false,
+        }
     }
 }
 
 impl<'data> fmt::Debug for DifMatch<'data> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DifMatch")
-            .field("fat", &self.fat)
-            .field("object_index", &self.object_index)
+            .field("object", &self.object())
             .field("name", &self.name)
             .finish()
     }
@@ -209,7 +203,7 @@ struct HashedDifMatch<'data> {
 
 impl<'data> HashedDifMatch<'data> {
     /// Calculates the SHA1 checksum for the given DIF.
-    fn from(inner: DifMatch<'_>) -> Result<HashedDifMatch<'_>, Error> {
+    fn from(inner: DifMatch<'data>) -> Result<Self, Error> {
         let checksum = get_sha1_checksum(inner.data())?;
         Ok(HashedDifMatch { inner, checksum })
     }
@@ -245,7 +239,7 @@ struct ChunkedDifMatch<'data> {
 impl<'data> ChunkedDifMatch<'data> {
     /// Slices the DIF into chunks of `chunk_size` bytes each, and computes SHA1
     /// checksums for every chunk as well as the entire DIF.
-    pub fn from(inner: DifMatch<'_>, chunk_size: u64) -> Result<ChunkedDifMatch<'_>, Error> {
+    pub fn from(inner: DifMatch<'data>, chunk_size: u64) -> Result<Self, Error> {
         let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size)?;
         Ok(ChunkedDifMatch {
             inner: HashedDifMatch { inner, checksum },
@@ -315,7 +309,7 @@ impl<'a> DifSource<'a> {
         // there. ByteView will internally cannonicalize the path and resolve
         // symlinks.
         base.parent()
-            .and_then(|p| ByteView::from_path(p.join(path)).ok())
+            .and_then(|p| ByteView::open(p.join(path)).ok())
     }
 
     /// Extracts a file relative to the directory of `name`, stripping of the
@@ -351,7 +345,7 @@ impl<'a> DifSource<'a> {
         zip_path
             .to_str()
             .and_then(|name| zip.by_name(name).ok())
-            .and_then(|f| ByteView::from_reader(f).ok())
+            .and_then(|f| ByteView::read(f).ok())
     }
 
     /// Resolves a file relative to this source and reads it into a `ByteView`.
@@ -376,7 +370,7 @@ impl<'a> DifSource<'a> {
 
 /// Information returned by `assemble_difs` containing flat lists of incomplete
 /// DIFs and their missing chunks.
-type MissingDifsInfo<'data> = (Vec<&'data ChunkedDifMatch<'data>>, Vec<DifChunk<'data>>);
+type MissingDifsInfo<'data, 'm> = (Vec<&'m ChunkedDifMatch<'data>>, Vec<DifChunk<'m>>);
 
 /// Verifies that the given path contains a ZIP file and opens it.
 fn try_open_zip<P>(path: P) -> Result<Option<ZipArchive<File>>, Error>
@@ -424,10 +418,7 @@ where
                 continue;
             }
 
-            (
-                name,
-                ByteView::from_reader(zip_file).map_err(SyncFailure::new)?,
-            )
+            (name, ByteView::read(zip_file).map_err(SyncFailure::new)?)
         };
 
         func(DifSource::Zip(&mut zip, &name), name.clone(), buffer)?;
@@ -486,7 +477,7 @@ where
             continue;
         }
 
-        let buffer = ByteView::from_path(path).map_err(SyncFailure::new)?;
+        let buffer = ByteView::open(path).map_err(SyncFailure::new)?;
         let name = path
             .strip_prefix(directory)
             .unwrap()
@@ -507,10 +498,10 @@ fn find_uuid_plists(
     object: &Object<'_>,
     source: &mut DifSource<'_>,
 ) -> Option<BTreeMap<String, ByteView<'static>>> {
-    let uuid = match object.id() {
-        Some(id) => id.uuid(),
-        None => return None,
-    };
+    let uuid = object.debug_id().uuid();
+    if uuid.is_nil() {
+        return None;
+    }
 
     // When uploading an XCode build archive to iTunes Connect, Apple will
     // re-build the app for different architectures, causing new UUIDs in the
@@ -558,14 +549,14 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // Try to parse a potential object file. If this is not possible,
             // then we're not dealing with an object file, thus silently
             // skipping it.
-            let kind = FatObject::peek(&buffer).unwrap_or(None);
-            if !kind.map_or(false, |k| options.valid_kind(k)) {
+            let format = Archive::peek(&buffer);
+            if !options.valid_format(format) {
                 return Ok(());
             }
 
             debug!("trying to parse dif {}", name);
-            let fat = match FatObject::parse(buffer) {
-                Ok(fat) => Rc::new(fat),
+            let archive = match Archive::parse(&buffer) {
+                Ok(archive) => archive,
                 Err(e) => {
                     warn!("Skipping invalid debug file {}: {}", name, e);
                     return Ok(());
@@ -576,7 +567,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // which needs to retain a reference to the original fat file. We
             // create a shared instance here and clone it into `DifMatche`s
             // below.
-            for (index, object) in fat.objects().enumerate() {
+            for object in archive.objects() {
                 // Silently skip all objects that we cannot process. This can
                 // happen due to invalid object files, which we then just
                 // discard rather than stopping the scan.
@@ -589,17 +580,17 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 // table or debug information. If this object has no features,
                 // Sentry cannot process it and so we skip the upload. If object
                 // features were specified, this will skip all other objects.
-                if !options.valid_features(&object.features()) {
+                if !options.valid_features(&object) {
                     continue;
                 }
 
                 // Objects without UUID will be skipped altogether. While frames
                 // during symbolication might be lacking debug identifiers,
                 // Sentry requires object files to have one during upload.
-                let id = match object.id() {
-                    Some(id) => id,
-                    None => continue,
-                };
+                let id = object.debug_id();
+                if id.is_nil() {
+                    continue;
+                }
 
                 // Skip this object if we're only looking for certain IDs.
                 if !options.valid_id(id) {
@@ -607,12 +598,13 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 }
 
                 // Skip this entire file if it exceeds the maximum allowed file size.
-                if object.as_bytes().len() as u64 > options.max_file_size {
+                let file_size = object.data().len() as u64;
+                if file_size > options.max_file_size {
                     warn!(
                         "Skipping debug file since it exceeds {}: {} ({})",
                         HumanBytes(options.max_file_size),
                         name,
-                        HumanBytes(object.as_bytes().len() as u64),
+                        HumanBytes(file_size),
                     );
                     break;
                 }
@@ -621,15 +613,19 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 // of object file. These are used for processing. Since only
                 // dSYMs equire processing currently, all other kinds are
                 // skipped.
-                let attachments = match fat.kind() {
-                    ObjectKind::MachO => find_uuid_plists(&object, &mut source),
+                let attachments = match object.file_format() {
+                    FileFormat::MachO => find_uuid_plists(&object, &mut source),
                     _ => None,
                 };
 
+                // We retain the buffer and the borrowed object in a new SelfCell. This is
+                // incredibly unsafe, but in our case it is fine, since the SelfCell owns the same
+                // buffer that was used to retrieve the object.
+                let cell = unsafe { SelfCell::from_raw(buffer.clone(), transmute(object)) };
+
                 collected.push(DifMatch {
                     _backing: None,
-                    fat: fat.clone(),
-                    object_index: index,
+                    object: cell,
                     name: name.clone(),
                     attachments,
                 });
@@ -820,10 +816,10 @@ fn process_symbol_maps<'a>(
 ///
 /// The returned value containes separate vectors for incomplete DIFs and
 /// missing chunks for convenience.
-fn try_assemble_difs<'data>(
-    difs: &'data [ChunkedDifMatch<'data>],
+fn try_assemble_difs<'data, 'm>(
+    difs: &'m [ChunkedDifMatch<'data>],
     options: &DifUpload,
-) -> Result<MissingDifsInfo<'data>, Error> {
+) -> Result<MissingDifsInfo<'data, 'm>, Error> {
     let api = Api::current();
     let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
     let response = api.assemble_difs(&options.org, &options.project, &request)?;
@@ -834,7 +830,10 @@ fn try_assemble_difs<'data>(
     // performed twice with the same data. While this is redundant, it is also
     // fast enough and keeping it here makes the `try_assemble_difs` interface
     // nicer.
-    let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
+    let difs_by_checksum = difs
+        .iter()
+        .map(|m| (m.checksum, m))
+        .collect::<BTreeMap<_, _>>();
 
     let mut difs = Vec::new();
     let mut chunks = Vec::new();
@@ -892,7 +891,7 @@ fn try_assemble_difs<'data>(
 ///
 /// This function blocks until all chunks have been uploaded.
 fn upload_missing_chunks(
-    missing_info: &MissingDifsInfo<'_>,
+    missing_info: &MissingDifsInfo<'_, '_>,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<(), Error> {
     let &(ref difs, ref chunks) = missing_info;
@@ -1083,7 +1082,7 @@ fn poll_dif_assemble(
                 dif.object_name,
                 dif.cpu_name,
                 dif.data
-                    .class
+                    .kind
                     .map(|c| format!(" {:#}", c))
                     .unwrap_or_default()
             );
@@ -1306,8 +1305,8 @@ pub struct DifUpload {
     project: String,
     paths: Vec<PathBuf>,
     ids: BTreeSet<DebugId>,
-    kinds: BTreeSet<ObjectKind>,
-    features: BTreeSet<ObjectFeature>,
+    formats: BTreeSet<FileFormat>,
+    features: DifFeatures,
     extensions: BTreeSet<OsString>,
     symbol_map: Option<PathBuf>,
     zips_allowed: bool,
@@ -1331,15 +1330,15 @@ impl DifUpload {
     ///     .search_path(".")
     ///     .upload()?;
     /// ```
-    pub fn new(org: String, project: String) -> DifUpload {
+    pub fn new(org: String, project: String) -> Self {
         DifUpload {
             org,
             project,
-            paths: Default::default(),
-            ids: Default::default(),
-            kinds: Default::default(),
-            features: Default::default(),
-            extensions: Default::default(),
+            paths: Vec::new(),
+            ids: BTreeSet::new(),
+            formats: BTreeSet::new(),
+            features: DifFeatures::all(),
+            extensions: BTreeSet::new(),
             symbol_map: None,
             zips_allowed: true,
             max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
@@ -1393,43 +1392,31 @@ impl DifUpload {
         self
     }
 
-    /// Add an `ObjectKind` to filter for.
+    /// Add an `FileFormat` to filter for.
     ///
-    /// By default, all object kinds will be included.
-    pub fn filter_kind(&mut self, kind: ObjectKind) -> &mut Self {
-        self.kinds.insert(kind);
+    /// By default, all object formats will be included.
+    pub fn filter_format(&mut self, format: FileFormat) -> &mut Self {
+        self.formats.insert(format);
         self
     }
 
-    /// Add `ObjectKind`s to filter for.
+    /// Add `FileFormat`s to filter for.
     ///
-    /// By default, all object kinds will be included. If `kinds` is empty, this
+    /// By default, all object formats will be included. If `formats` is empty, this
     /// will not be changed.
-    pub fn filter_kinds<I>(&mut self, kinds: I) -> &mut Self
+    pub fn filter_formats<I>(&mut self, formats: I) -> &mut Self
     where
-        I: IntoIterator<Item = ObjectKind>,
+        I: IntoIterator<Item = FileFormat>,
     {
-        self.kinds.extend(kinds);
+        self.formats.extend(formats);
         self
     }
 
     /// Add an `ObjectFeature` to filter for.
     ///
     /// By default, all object features will be included.
-    pub fn filter_feature(&mut self, feature: ObjectFeature) -> &mut Self {
-        self.features.insert(feature);
-        self
-    }
-
-    /// Add `ObjectFeature`s to filter for.
-    ///
-    /// By default, all object features will be included. If `features` is empty,
-    /// this will not be changed.
-    pub fn filter_classes<I>(&mut self, features: I) -> &mut Self
-    where
-        I: IntoIterator<Item = ObjectFeature>,
-    {
-        self.features.extend(features);
+    pub fn filter_features(&mut self, features: DifFeatures) -> &mut Self {
+        self.features = features;
         self
     }
 
@@ -1520,21 +1507,15 @@ impl DifUpload {
         self.extensions.is_empty() || ext.map_or(false, |e| self.extensions.contains(e))
     }
 
-    /// Determines if this `ObjectKind` matches the search criteria.
-    fn valid_kind(&self, kind: ObjectKind) -> bool {
-        self.kinds.is_empty() || self.kinds.contains(&kind)
+    /// Determines if this `FileFormat` matches the search criteria.
+    fn valid_format(&self, format: FileFormat) -> bool {
+        format != FileFormat::Unknown && (self.formats.is_empty() || self.formats.contains(&format))
     }
 
-    /// Determines if the given `ObjectFeature`s match the search criteria.
-    fn valid_features(&self, features: &BTreeSet<ObjectFeature>) -> bool {
-        if features.is_empty() {
-            return false;
-        }
-
-        if self.features.is_empty() {
-            return true;
-        }
-
-        !self.features.is_disjoint(features)
+    /// Determines if the given `Object` matches the features search criteria.
+    fn valid_features(&self, object: &Object<'_>) -> bool {
+        self.features.symtab && object.has_symbols()
+            || self.features.debug && object.has_debug_info()
+            || self.features.unwind && object.has_unwind_info()
     }
 }

@@ -7,7 +7,7 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::{bail, Error, SyncFailure};
 use log::debug;
-use symbolic::common::byteview::ByteView;
+use symbolic::common::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
 
@@ -164,7 +164,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     for path in &paths {
         match fs::metadata(path) {
             Ok(md) => {
-                let byteview = ByteView::from_path(path).map_err(SyncFailure::new)?;
+                let byteview = ByteView::open(path).map_err(SyncFailure::new)?;
                 let mapping = ProguardMappingView::parse(byteview).map_err(SyncFailure::new)?;
                 if !mapping.has_line_info() {
                     eprintln!(
