@@ -1,0 +1,37 @@
+parameters:
+  toolchain: "stable"
+  target_host: ""
+
+steps:
+  # Windows.
+  - script: |
+      @echo on
+      curl -sSf -o rustup-init.exe https://win.rustup.rs
+      set TARGET_HOST="${{ parameters.target_host }}"
+      if [%TARGET_HOST%] == [] (
+        set ARGS=
+      ) else (
+        set ARGS=--default-host %TARGET_HOST%
+      )
+      rustup-init.exe -y --default-toolchain "${{ parameters.toolchain }}" %ARGS%
+      set PATH=%PATH%;%USERPROFILE%\.cargo\bin
+      echo "##vso[task.setvariable variable=PATH;]%PATH%;%USERPROFILE%\.cargo\bin"
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
+    displayName: Install stable Rust (Windows)
+  - bash: |
+      set -eux
+      TARGET_HOST="${{ parameters.target_host }}"
+      if [[ "$TARGET_HOST" == "" ]]; then
+        ARGS=""
+      else
+        ARGS="--default-host $TARGET_HOST"
+      fi
+      curl https://sh.rustup.rs -sSf | sh -s -- -y --default-toolchain "${{ parameters.toolchain }}" $ARGS
+      # A small hack to update PATH in further steps
+      echo "##vso[task.setvariable variable=PATH;]$PATH:$HOME/.cargo/bin"
+    condition: ne( variables['Agent.OS'], 'Windows_NT' )
+    displayName: Install stable Rust (non-Windows)
+  - bash: |
+      rustc -vV
+      cargo -vV
+    displayName: Display rust and cargo versions
