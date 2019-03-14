@@ -15,7 +15,7 @@ chardet = "0.2.4"
 chrono = { version = "0.4.6", features = ["serde"] }
 clap = { version = "2.32.0", default-features = false, features = ["suggestions", "wrap_help"] }
 console = "0.7.5"
-curl = "0.4.19"
+curl = "0.4.20"
 dirs = "1.0.5"
 dotenv = "0.13.0"
 elementtree = "0.5.0"
@@ -48,14 +48,14 @@ serde = { version = "1.0.89", features = ["derive"] }
 serde_derive = "1.0.89"
 serde_json = "1.0.39"
 sha1 = { version = "0.6.0", features = ["serde"] }
-sourcemap = "3.0.0"
-symbolic = { git = "https://github.com/getsentry/symbolic", branch = "ref/everything", features = ["debuginfo", "proguard", "serde"] }
+sourcemap = "3.0.1"
+symbolic = { version = "6.0.3", features = ["debuginfo-serde", "proguard"] }
 url = "1.7.2"
 username = "0.2.0"
 uuid = { version = "0.7.2", features = ["v4", "serde"] }
 walkdir = "2.2.7"
 which = "2.0.1"
-zip = "0.5.0"
+zip = "0.5.1"
 r2d2 = "0.8.3"
 
 [features]
