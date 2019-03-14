@@ -1509,7 +1509,10 @@ impl DifUpload {
 
     /// Determines if this `FileFormat` matches the search criteria.
     fn valid_format(&self, format: FileFormat) -> bool {
-        format != FileFormat::Unknown && (self.formats.is_empty() || self.formats.contains(&format))
+        match format {
+            FileFormat::Unknown | FileFormat::Pdb | FileFormat::Pe => false,
+            format => self.formats.is_empty() || self.formats.contains(&format),
+        }
     }
 
     /// Determines if the given `Object` matches the features search criteria.
