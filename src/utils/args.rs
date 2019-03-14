@@ -4,7 +4,7 @@ use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
 use failure::{bail, Error};
-use symbolic::debuginfo::DebugId;
+use symbolic::common::DebugId;
 use uuid::Uuid;
 
 fn validate_org(v: String) -> Result<(), String> {

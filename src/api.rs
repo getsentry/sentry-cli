@@ -29,8 +29,8 @@ use regex::{Captures, Regex};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
 use sha1::Digest;
-use symbolic::common::types::ObjectClass;
-use symbolic::debuginfo::DebugId;
+use symbolic::common::DebugId;
+use symbolic::debuginfo::ObjectKind;
 use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 use uuid::Uuid;
 
@@ -1828,7 +1828,7 @@ pub struct SentryCliRelease {
 #[derive(Debug, Deserialize, Default)]
 pub struct DebugInfoData {
     #[serde(default, rename = "type")]
-    pub class: Option<ObjectClass>,
+    pub kind: Option<ObjectKind>,
     #[serde(default)]
     pub features: Vec<String>,
 }

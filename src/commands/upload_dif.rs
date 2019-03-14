@@ -7,12 +7,13 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::{bail, err_msg, Error};
 use log::info;
-use symbolic::common::types::ObjectKind;
-use symbolic::debuginfo::{DebugId, ObjectFeature};
+use symbolic::common::DebugId;
+use symbolic::debuginfo::FileFormat;
 
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_id, ArgExt};
+use crate::utils::dif::DifFeatures;
 use crate::utils::dif_upload::DifUpload;
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
@@ -45,9 +46,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("no_executables")
-                .alias("no-bin")
+            Arg::with_name("no_unwind")
                 .long("no-unwind")
+                .alias("no-bin")
                 .help(
                     "Do not scan for stack unwinding information. Specify \
                      this flag for builds with disabled FPO, or when \
@@ -58,7 +59,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("no_debug_only")
+            Arg::with_name("no_debug")
                 .long("no-debug")
                 .help(
                     "Do not scan for debugging information. This will \
@@ -66,7 +67,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      still be uploaded, if they contain additonal \
                      processable information (see other flags).",
                 )
-                .conflicts_with("no_executables"),
+                .conflicts_with("no_unwind"),
         )
         .arg(
             Arg::with_name("ids")
@@ -154,8 +155,12 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
     if legacy {
         // Configure `upload-dsym` behavior (only dSYM files)
         upload
-            .filter_kind(ObjectKind::MachO)
-            .filter_feature(ObjectFeature::DebugInfo);
+            .filter_format(FileFormat::MachO)
+            .filter_features(DifFeatures {
+                debug: true,
+                symtab: false,
+                unwind: false,
+            });
 
         if !matches.is_present("paths") {
             if let Some(dsym_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
@@ -165,29 +170,25 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
     } else {
         // Restrict symbol types, if specified by the user
         for ty in matches.values_of("types").unwrap_or_default() {
-            upload.filter_kind(match ty {
-                "dsym" => ObjectKind::MachO,
-                "elf" => ObjectKind::Elf,
-                "breakpad" => ObjectKind::Breakpad,
+            upload.filter_format(match ty {
+                "dsym" => FileFormat::MachO,
+                "elf" => FileFormat::Elf,
+                "breakpad" => FileFormat::Breakpad,
                 other => bail!("Unsupported type: {}", other),
             });
         }
 
-        // Allow executables and dynamic/shared libraries, but not object files.
-        // They are guaranteed to contain unwind info, for instance `eh_frame`,
-        // and may optionally contain debugging information such as DWARF.
-        if !matches.is_present("no_executables") {
-            upload.filter_feature(ObjectFeature::UnwindInfo);
-        }
-
-        // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
-        // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
-        // we also upload all files with a public symbol table.
-        if !matches.is_present("no_debug_only") {
-            upload
-                .filter_feature(ObjectFeature::DebugInfo)
-                .filter_feature(ObjectFeature::SymbolTable);
-        }
+        upload.filter_features(DifFeatures {
+            // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
+            // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
+            // we also upload all files with a public symbol table.
+            debug: !matches.is_present("no_debug"),
+            symtab: !matches.is_present("no_debug"),
+            // Allow executables and dynamic/shared libraries, but not object files.
+            // They are guaranteed to contain unwind info, for instance `eh_frame`,
+            // and may optionally contain debugging information such as DWARF.
+            unwind: !matches.is_present("no_unwind"),
+        });
     }
 
     // Configure BCSymbolMap resolution, if possible
