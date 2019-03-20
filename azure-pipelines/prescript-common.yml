@@ -1,0 +1,5 @@
+steps:
+  - bash: |
+      set -eux
+      env
+    displayName: Agent information
