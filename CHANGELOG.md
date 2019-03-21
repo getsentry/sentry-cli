@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.41.0
+
+* Recognizes GNU compressed debug files on Linux
+* Also uploads Breakpad files and ELF files only containing symbol tables
+
 ## sentry-cli 1.40.0
 
 * Automatically retry on various socket and SSL errors (#466, #490)
