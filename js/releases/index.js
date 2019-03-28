@@ -102,7 +102,7 @@ module.exports = {
 
       const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
       return helper.execute(
-        helper.prepareCommand(args, SOURCEMAPS_SCHEMA, options),
+        helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions),
         true
       );
     });
