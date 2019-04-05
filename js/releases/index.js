@@ -34,6 +34,20 @@ module.exports = {
   },
 
   /**
+   * Associates commits with this release.
+   *
+   * @param {string} release Unique name of the new release.
+   * @param {string} commitsToSet Option designating which commits to associate.
+   * Either 'auto' or 'my-repo@from..to'
+   * @returns {Promise} A promise that resolves when the commits have been associated.
+   * @memberof SentryReleases
+   */
+  setCommits(release, commitsToSet) {
+    const commitFlags = commitsToSet === 'auto' ? ['--auto'] : ['--commit', commitsToSet];
+    return helper.execute(['releases', 'set-commits', release].concat(commitFlags));
+  },
+
+  /**
    * Marks this release as complete. This should be called once all artifacts has been
    * uploaded.
    *
@@ -91,7 +105,7 @@ module.exports = {
    */
   uploadSourceMaps(release, options) {
     if (!options || !options.include) {
-      throw new Error('options.include must be a vaild path(s)');
+      throw new Error('options.include must be a valid path(s)');
     }
 
     const uploads = options.include.map(sourcemapPath => {
