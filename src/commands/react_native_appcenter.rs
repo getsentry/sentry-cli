@@ -35,6 +35,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
+            Arg::with_name("version_name")
+                .value_name("VERSION_NAME")
+                .long("version-name")
+                .help(
+                    "Override version name in release name",
+                ),
+        )
+        .arg(
             Arg::with_name("print_release_name")
                 .long("print-release-name")
                 .help("Print the release name instead."),
@@ -83,7 +91,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     let package = get_appcenter_package(app, deployment)?;
     let release =
-        get_react_native_appcenter_release(&package, platform, matches.value_of("bundle_id"))?;
+        get_react_native_appcenter_release(&package, platform, matches.value_of("bundle_id"), matches.value_of("version_name"))?;
     if print_release_name {
         println!("{}", release);
         return Ok(());
