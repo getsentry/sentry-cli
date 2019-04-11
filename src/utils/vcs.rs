@@ -125,14 +125,14 @@ impl VcsUrl {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.to_lowercase().into(),
+                    provider: host.to_lowercase(),
                     id: format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase()),
                 };
             }
         }
         VcsUrl {
-            provider: host.to_lowercase().into(),
-            id: strip_git_suffix(path).to_lowercase().into(),
+            provider: host.to_lowercase(),
+            id: strip_git_suffix(path).to_lowercase(),
         }
     }
 }
