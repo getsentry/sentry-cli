@@ -285,10 +285,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
         // report a non 0 status code if the server encountered issues.
         if has_processing_errors {
             eprintln!();
-            eprintln!(
-                "{}",
-                style("Error: some symbols did not process correctly")
-            );
+            eprintln!("{}", style("Error: some symbols did not process correctly"));
             return Err(QuietExit(1).into());
         }
 
