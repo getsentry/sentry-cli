@@ -28,11 +28,11 @@ class SentryCli {
    * @param {string} [configFile] Relative or absolute path to the configuration file.
    * @param {Object} [options] More options to pass to the CLI
    */
-  constructor(configFile, options = { silent: false }) {
+  constructor(configFile, options) {
     if (typeof configFile === 'string') {
       process.env.SENTRY_PROPERTIES = configFile;
     }
-    this.options = options;
+    this.options = options || { silent: false };
   }
 
   /**
