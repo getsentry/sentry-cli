@@ -287,7 +287,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
             eprintln!();
             eprintln!(
                 "{}",
-                style("Error: some symbols did not process correctly/")
+                style("Error: some symbols did not process correctly")
             );
             return Err(QuietExit(1).into());
         }
