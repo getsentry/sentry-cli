@@ -31,7 +31,7 @@ pub fn attach_logfile(
     let fallback_timestamp = fs::metadata(logfile)
         .context("Could not get metadata for logfile")?
         .modified()
-        .map(|ts| ts.into())
+        .map(Into::into)
         .unwrap_or_else(|_| Utc::now());
 
     let reader = BufReader::new(f);

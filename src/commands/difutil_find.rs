@@ -104,14 +104,14 @@ fn find_ids(
     let mut remaining = ids.clone();
     let mut proguard_uuids: HashSet<_> = ids
         .iter()
-        .map(|x| x.uuid())
+        .map(DebugId::uuid)
         .filter(|&x| x.get_version() == Some(UuidVersion::Sha1))
         .collect();
 
     let iter = paths
         .iter()
         .flat_map(WalkDir::new)
-        .filter_map(|e| e.ok())
+        .filter_map(Result::ok)
         .filter(|e| e.file_type().is_file());
 
     let mut found_files = vec![];

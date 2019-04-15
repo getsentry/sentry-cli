@@ -1,5 +1,6 @@
 //! Implements a command for managing releases.
 use std::collections::HashSet;
+use std::ffi::OsStr;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -47,7 +48,7 @@ impl<'a> ReleaseContext<'a> {
 
     pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>, Error> {
         if let Some(projects) = matches.values_of("projects") {
-            Ok(projects.map(|x| x.to_string()).collect())
+            Ok(projects.map(str::to_owned).collect())
         } else if let Some(project) = self.project_default {
             Ok(vec![project.to_string()])
         } else {
@@ -350,7 +351,7 @@ fn execute_new<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result
         &NewRelease {
             version: matches.value_of("version").unwrap().to_owned(),
             projects: ctx.get_projects(matches)?,
-            url: matches.value_of("url").map(|x| x.to_owned()),
+            url: matches.value_of("url").map(str::to_owned),
             date_started: Some(Utc::now()),
             date_released: if matches.is_present("finalize") {
                 Some(Utc::now())
@@ -376,7 +377,7 @@ fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> R
         matches.value_of("version").unwrap(),
         &UpdatedRelease {
             projects: ctx.get_projects(matches).ok(),
-            url: matches.value_of("url").map(|x| x.to_owned()),
+            url: matches.value_of("url").map(str::to_owned),
             date_started: get_date(matches.value_of("started"), false)?,
             date_released: get_date(matches.value_of("released"), true)?,
             ..Default::default()
@@ -490,7 +491,7 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
     let project = ctx.get_project_default().ok();
     if ctx.api.delete_release(
         ctx.get_org()?,
-        project.as_ref().map(|x| x.as_str()),
+        project.as_ref().map(String::as_ref),
         version,
     )? {
         println!("Deleted release {}!", version);
@@ -507,7 +508,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     let project = ctx.get_project_default().ok();
     let releases = ctx
         .api
-        .list_releases(ctx.get_org()?, project.as_ref().map(|x| x.as_str()))?;
+        .list_releases(ctx.get_org()?, project.as_ref().map(String::as_ref))?;
     let abbrev = !matches.is_present("no_abbrev");
     let mut table = Table::new();
     table
@@ -551,7 +552,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     let project = ctx.get_project_default().ok();
     let release = ctx
         .api
-        .get_release(org, project.as_ref().map(|x| x.as_str()), &version)?;
+        .get_release(org, project.as_ref().map(String::as_ref), &version)?;
 
     // quiet mode just exists
     if matches.is_present("quiet") {
@@ -597,7 +598,7 @@ fn execute_files_list<'a>(
     let project = ctx.get_project_default().ok();
     for artifact in
         ctx.api
-            .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
+            .list_release_files(org, project.as_ref().map(String::as_ref), release)?
     {
         let row = table.add_row();
         row.add(&artifact.name);
@@ -632,14 +633,14 @@ fn execute_files_delete<'a>(
     let project = ctx.get_project_default().ok();
     for file in ctx
         .api
-        .list_release_files(org, project.as_ref().map(|x| x.as_str()), release)?
+        .list_release_files(org, project.as_ref().map(String::as_ref), release)?
     {
         if !(matches.is_present("all") || files.contains(&file.name)) {
             continue;
         }
         if ctx.api.delete_release_file(
             org,
-            project.as_ref().map(|x| x.as_str()),
+            project.as_ref().map(String::as_ref),
             release,
             &file.id,
         )? {
@@ -659,7 +660,7 @@ fn execute_files_upload<'a>(
         Some(name) => name,
         None => Path::new(path)
             .file_name()
-            .and_then(|x| x.to_str())
+            .and_then(OsStr::to_str)
             .ok_or_else(|| err_msg("No filename provided."))?,
     };
     let dist = matches.value_of("dist");
@@ -679,7 +680,7 @@ fn execute_files_upload<'a>(
     let project = ctx.get_project_default().ok();
     if let Some(artifact) = ctx.api.upload_release_file(
         org,
-        project.as_ref().map(|x| x.as_str()),
+        project.as_ref().map(String::as_ref),
         &version,
         &FileContents::FromPath(&path),
         &name,
@@ -814,7 +815,7 @@ fn execute_files_upload_sourcemaps<'a>(
     processor.upload(
         &ctx.api,
         org,
-        project.as_ref().map(|x| x.as_str()),
+        project.as_ref().map(String::as_ref),
         &release.version,
         dist,
     )?;
@@ -846,8 +847,8 @@ fn execute_deploys_new<'a>(
 ) -> Result<(), Error> {
     let mut deploy = Deploy {
         env: matches.value_of("env").unwrap().to_string(),
-        name: matches.value_of("name").map(|x| x.to_string()),
-        url: matches.value_of("url").map(|x| x.to_string()),
+        name: matches.value_of("name").map(str::to_owned),
+        url: matches.value_of("url").map(str::to_owned),
         ..Default::default()
     };
 
@@ -868,7 +869,7 @@ fn execute_deploys_new<'a>(
 
     let org = ctx.get_org()?;
     let deploy = ctx.api.create_deploy(org, version, &deploy)?;
-    let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
+    let mut name = deploy.name.as_ref().map(String::as_ref).unwrap_or("");
     if name == "" {
         name = "unnamed";
     }
@@ -891,7 +892,7 @@ fn execute_deploys_list<'a>(
         .add("Finished");
 
     for deploy in ctx.api.list_deploys(ctx.get_org()?, version)? {
-        let mut name = deploy.name.as_ref().map(|x| x.as_str()).unwrap_or("");
+        let mut name = deploy.name.as_ref().map(String::as_ref).unwrap_or("");
         if name == "" {
             name = "unnamed";
         }

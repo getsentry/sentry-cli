@@ -5,16 +5,15 @@
 
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::cmp;
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fmt;
-use std::fs;
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
-use std::str;
+use std::str::FromStr;
 use std::sync::Arc;
-use std::thread;
 
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
@@ -91,7 +90,7 @@ impl Pagination {
     }
 }
 
-impl str::FromStr for Pagination {
+impl FromStr for Pagination {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Pagination, ()> {
@@ -190,7 +189,7 @@ pub struct SentryError {
 
 impl fmt::Display for SentryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let detail = self.detail.as_ref().map(|x| x.as_str()).unwrap_or("");
+        let detail = self.detail.as_ref().map(String::as_str).unwrap_or("");
         write!(
             f,
             "sentry reported an error: {} (http status: {})",
@@ -461,7 +460,7 @@ impl Api {
     }
 
     /// Convenience method that downloads a file into the given file object.
-    pub fn download(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
+    pub fn download(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
         self.request(Method::Get, &url)?
             .follow_location(true)?
             .send_into(dst)
@@ -469,7 +468,7 @@ impl Api {
 
     /// Convenience method that downloads a file into the given file object
     /// and show a progress bar
-    pub fn download_with_progress(&self, url: &str, dst: &mut fs::File) -> ApiResult<ApiResponse> {
+    pub fn download_with_progress(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
         self.request(Method::Get, &url)?
             .follow_location(true)?
             .progress_bar_mode(ProgressBarMode::Response)?
@@ -489,7 +488,7 @@ impl Api {
                     }
                 }
             }
-            thread::sleep(Duration::milliseconds(500).to_std().unwrap());
+            std::thread::sleep(Duration::milliseconds(500).to_std().unwrap());
             if Utc::now() - duration > started {
                 return Ok(false);
             }
@@ -615,7 +614,7 @@ impl Api {
             FileContents::FromBytes(bytes) => {
                 let filename = Path::new(name)
                     .file_name()
-                    .and_then(|x| x.to_str())
+                    .and_then(OsStr::to_str)
                     .unwrap_or("unknown.bin");
                 form.part("file").buffer(filename, bytes.to_vec()).add()?;
             }
@@ -992,7 +991,7 @@ impl Api {
         // has completed. The original iterator is not needed anymore after this.
         let stringified_chunks: Vec<_> = chunks
             .into_iter()
-            .map(|item| item.as_ref())
+            .map(T::as_ref)
             .map(|&(checksum, data)| (checksum.to_string(), data))
             .collect();
 
@@ -1492,7 +1491,7 @@ impl ApiRequest {
     pub fn send_into<W: Write>(&mut self, out: &mut W) -> ApiResult<ApiResponse> {
         let headers = self.get_headers();
         self.handle.http_headers(headers)?;
-        let body = self.body.as_ref().map(|v| v.as_slice());
+        let body = self.body.as_ref().map(Vec::as_slice);
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
         debug!("response status: {}", status);
@@ -1528,7 +1527,7 @@ impl ApiRequest {
                 retry_number,
                 backoff_timeout.as_milliseconds()
             );
-            thread::sleep(backoff_timeout);
+            std::thread::sleep(backoff_timeout);
 
             retry_number += 1;
         }
@@ -1674,7 +1673,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
     lazy_static! {
         static ref AUTH_RE: Regex = Regex::new(r"(?i)(authorization):\s*([\w]+)\s+(.*)").unwrap();
     }
-    if let Ok(header) = str::from_utf8(data) {
+    if let Ok(header) = std::str::from_utf8(data) {
         for line in header.lines() {
             if line.is_empty() {
                 continue;
@@ -1684,7 +1683,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 let info = if &caps[1].to_lowercase() == "basic" {
                     caps[3].split(':').next().unwrap().to_string()
                 } else {
-                    format!("{}***", &caps[3][..cmp::min(caps[3].len(), 8)])
+                    format!("{}***", &caps[3][..std::cmp::min(caps[3].len(), 8)])
                 };
                 format!("{}: {} {}", &caps[1], &caps[2], info)
             });

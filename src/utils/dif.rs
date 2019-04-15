@@ -223,7 +223,7 @@ impl<'a> DifFile<'a> {
             DifFile::Archive(archive) => archive
                 .get()
                 .objects()
-                .filter_map(|result| result.ok())
+                .filter_map(Result::ok)
                 .map(|object| (object.debug_id(), Some(object.arch().name())))
                 .collect(),
             DifFile::Proguard(pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
@@ -235,7 +235,7 @@ impl<'a> DifFile<'a> {
             DifFile::Archive(archive) => archive
                 .get()
                 .objects()
-                .filter_map(|result| result.ok())
+                .filter_map(Result::ok)
                 .map(|object| object.debug_id())
                 .collect(),
             DifFile::Proguard(pg) => vec![pg.uuid().into()],
@@ -246,7 +246,7 @@ impl<'a> DifFile<'a> {
         match self {
             DifFile::Archive(archive) => {
                 let mut features = DifFeatures::none();
-                for object in archive.get().objects().filter_map(|r| r.ok()) {
+                for object in archive.get().objects().filter_map(Result::ok) {
                     features.symtab = features.symtab || object.has_symbols();
                     features.debug = features.debug || object.has_debug_info();
                     features.unwind = features.unwind || object.has_unwind_info();

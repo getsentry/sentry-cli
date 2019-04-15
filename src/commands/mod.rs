@@ -249,7 +249,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
 
     info!(
         "sentry-cli was invoked with the following command line: {}",
-        DebugArgs(args.iter().map(|x| x.as_str()).collect())
+        DebugArgs(args.iter().map(String::as_str).collect())
     );
 
     run_command(&matches)

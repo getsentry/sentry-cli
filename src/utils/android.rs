@@ -101,7 +101,7 @@ pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(
 
     props.insert(
         "io.sentry.ProguardUuids".to_string(),
-        uuids.iter().map(|x| x.to_string()).join("|"),
+        uuids.iter().map(Uuid::to_string).join("|"),
     );
 
     if let Some(ref parent) = p.as_ref().parent() {

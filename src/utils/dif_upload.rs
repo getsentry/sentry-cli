@@ -154,7 +154,7 @@ impl<'data> DifMatch<'data> {
     pub fn file_name(&self) -> &str {
         Path::new(self.path())
             .file_name()
-            .and_then(|name| name.to_str())
+            .and_then(OsStr::to_str)
             .unwrap_or("Generic")
     }
 
@@ -449,7 +449,7 @@ where
     };
 
     debug!("searching location {}", location.display());
-    for entry in WalkDir::new(location).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(location).into_iter().filter_map(Result::ok) {
         if !entry.metadata()?.is_file() {
             // Walkdir recurses automatically into folders
             continue;
@@ -760,7 +760,7 @@ fn process_symbol_maps<'a>(
     symbol_map: Option<&Path>,
 ) -> Result<Vec<DifMatch<'a>>, Error> {
     let (with_hidden, mut without_hidden): (Vec<_>, _) =
-        difs.into_iter().partition(|dif| dif.needs_symbol_map());
+        difs.into_iter().partition(DifMatch::needs_symbol_map);
 
     if with_hidden.is_empty() {
         return Ok(without_hidden);
@@ -1169,7 +1169,7 @@ fn get_missing_difs<'data>(
 
     let api = Api::current();
     let missing_checksums = {
-        let checksums = objects.iter().map(|s| s.checksum());
+        let checksums = objects.iter().map(HashedDifMatch::checksum);
         api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
     };
 
@@ -1184,7 +1184,7 @@ fn get_missing_difs<'data>(
 
 /// Compresses the given batch into a ZIP archive.
 fn create_batch_archive(difs: &[HashedDifMatch<'_>]) -> Result<TempFile, Error> {
-    let total_bytes = difs.iter().map(|sym| sym.size()).sum();
+    let total_bytes = difs.iter().map(ItemSize::size).sum();
     let pb = make_byte_progress_bar(total_bytes);
     let tf = TempFile::create()?;
 

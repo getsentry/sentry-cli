@@ -1,6 +1,7 @@
 //! Provides sourcemap validation functionality.
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
 use std::io::Read;
@@ -259,7 +260,7 @@ impl SourceMapProcessor {
                 SourceType::SourceMap
             } else if path
                 .file_name()
-                .and_then(|x| x.to_str())
+                .and_then(OsStr::to_str)
                 .map(|x| x.contains(".min."))
                 .unwrap_or(false)
                 || is_likely_minified_js(&contents)

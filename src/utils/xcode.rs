@@ -67,7 +67,7 @@ where
         let mut iter = key.splitn(2, ':');
         let value = vars
             .get(iter.next().unwrap())
-            .map(|x| x.as_str())
+            .map(String::as_str)
             .unwrap_or("");
 
         match iter.next() {
@@ -188,7 +188,7 @@ impl InfoPlist {
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
             let vars: HashMap<_, _> = env::vars().collect();
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
-                let base = vars.get("PROJECT_DIR").map(|x| x.as_str()).unwrap_or(".");
+                let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
                 Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
             } else {
@@ -236,7 +236,7 @@ impl InfoPlist {
         vars: &HashMap<String, String>,
     ) -> Result<InfoPlist, Error> {
         // do we want to preprocess the plist file?
-        let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(|x| x.as_str()) == Some("YES") {
+        let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
             let mut c = process::Command::new("cc");
             c.arg("-xc").arg("-P").arg("-E");
             if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {

@@ -274,11 +274,11 @@ pub fn wrap_call() -> Result<(), Error> {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "--sourcemap-output" {
-                sourcemap_path = iter.next().map(|x| x.to_string());
+                sourcemap_path = iter.next().cloned();
             } else if item.starts_with("--sourcemap-output=") {
                 sourcemap_path = Some(item[19..].to_string());
             } else if item == "--bundle-output" {
-                bundle_path = iter.next().map(|x| x.to_string());
+                bundle_path = iter.next().cloned();
             } else if item.starts_with("--bundle-output=") {
                 bundle_path = Some(item[16..].to_string());
             }

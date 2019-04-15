@@ -256,12 +256,12 @@ impl Config {
     pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
         Ok(matches
             .value_of("org")
-            .map(|x| x.to_owned())
+            .map(str::to_owned)
             .or_else(|| env::var("SENTRY_ORG").ok())
             .or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "org")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             })
             .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
     }
@@ -286,7 +286,7 @@ impl Config {
             .or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "project")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             })
             .ok_or_else(|| err_msg("A project slug is required"))?)
     }
@@ -297,12 +297,12 @@ impl Config {
             env::var("SENTRY_ORG").ok().or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "org")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             }),
             env::var("SENTRY_PROJECT").ok().or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "project")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             }),
         )
     }

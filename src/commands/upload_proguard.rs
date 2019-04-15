@@ -266,8 +266,8 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 checksums: all_checksums,
                 name: app_id.to_string(),
                 app_id: app_id.to_string(),
-                version: matches.value_of("version").unwrap().to_string(),
-                build: matches.value_of("version_code").map(|x| x.to_string()),
+                version: matches.value_of("version").unwrap().to_owned(),
+                build: matches.value_of("version_code").map(str::to_owned),
             },
         )?;
     }

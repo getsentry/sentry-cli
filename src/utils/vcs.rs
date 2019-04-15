@@ -50,7 +50,7 @@ fn parse_rev_range(rng: &str) -> (Option<String>, String) {
     }
     let mut iter = rng.rsplitn(2, "..");
     let rev = iter.next().unwrap_or("HEAD");
-    (iter.next().map(|x| x.to_string()), rev.to_string())
+    (iter.next().map(str::to_owned), rev.to_string())
 }
 
 impl CommitSpec {
