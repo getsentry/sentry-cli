@@ -487,6 +487,15 @@ impl SourceMapProcessor {
     ) -> Result<(), Error> {
         self.flush_pending_sources()?;
 
+        // Do not permit uploads of more than 20k files. This is a termporary downside protection to
+        // protect users from uploading more sources than we support.
+        if self.sources.len() > 20_000 {
+            bail!(
+                "Too many sources: {} exceeds maximum allowed files per release",
+                self.sources.len()
+            );
+        }
+
         // get a list of release files first so we know the file IDs of
         // files that already exist.
         let release_files: HashMap<_, _> = api
