@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.41.1
+
+* Warn before uploading more than 20.000 files to a release (#513)
+
 ## sentry-cli 1.41.0
 
 * Recognizes GNU compressed debug files on Linux
