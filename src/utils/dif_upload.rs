@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
-use std::io::{Read, Seek, SeekFrom, Write, BufReader};
+use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use std::iter::IntoIterator;
 use std::mem::transmute;
 use std::ops::Deref;
@@ -403,11 +403,7 @@ where
 /// for every entry before opening it.
 ///
 /// This function will not recurse into ZIPs contained in this ZIP.
-fn walk_difs_zip<F>(
-    mut zip: ZipFileArchive,
-    options: &DifUpload,
-    mut func: F,
-) -> Result<(), Error>
+fn walk_difs_zip<F>(mut zip: ZipFileArchive, options: &DifUpload, mut func: F) -> Result<(), Error>
 where
     F: FnMut(DifSource<'_>, String, ByteView<'static>) -> Result<(), Error>,
 {
