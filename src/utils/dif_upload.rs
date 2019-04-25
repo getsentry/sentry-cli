@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, Read, Seek, SeekFrom, Write};
 use std::iter::IntoIterator;
 use std::mem::transmute;
 use std::ops::Deref;
@@ -287,6 +287,8 @@ impl<'data> ItemSize for ChunkedDifMatch<'data> {
     }
 }
 
+type ZipFileArchive = ZipArchive<BufReader<File>>;
+
 /// A handle to the source of a potential `DifMatch` used inside `search_difs`.
 ///
 /// The primary use of this handle is to resolve files relative to the debug
@@ -298,7 +300,7 @@ enum DifSource<'a> {
     /// A file located in the file system
     FileSystem(&'a Path),
     /// An entry in a ZIP file
-    Zip(&'a mut ZipArchive<File>, &'a str),
+    Zip(&'a mut ZipFileArchive, &'a str),
 }
 
 impl<'a> DifSource<'a> {
@@ -315,7 +317,7 @@ impl<'a> DifSource<'a> {
     /// Extracts a file relative to the directory of `name`, stripping of the
     /// file name.
     fn get_relative_zip(
-        zip: &mut ZipArchive<File>,
+        zip: &mut ZipFileArchive,
         name: &str,
         path: &Path,
     ) -> Option<ByteView<'static>> {
@@ -373,7 +375,7 @@ impl<'a> DifSource<'a> {
 type MissingDifsInfo<'data, 'm> = (Vec<&'m ChunkedDifMatch<'data>>, Vec<DifChunk<'m>>);
 
 /// Verifies that the given path contains a ZIP file and opens it.
-fn try_open_zip<P>(path: P) -> Result<Option<ZipArchive<File>>, Error>
+fn try_open_zip<P>(path: P) -> Result<Option<ZipFileArchive>, Error>
 where
     P: AsRef<Path>,
 {
@@ -390,7 +392,7 @@ where
 
     file.seek(SeekFrom::Start(0))?;
     Ok(match &magic {
-        b"PK" => Some(ZipArchive::new(file)?),
+        b"PK" => Some(ZipArchive::new(BufReader::new(file))?),
         _ => None,
     })
 }
@@ -401,11 +403,7 @@ where
 /// for every entry before opening it.
 ///
 /// This function will not recurse into ZIPs contained in this ZIP.
-fn walk_difs_zip<F>(
-    mut zip: ZipArchive<File>,
-    options: &DifUpload,
-    mut func: F,
-) -> Result<(), Error>
+fn walk_difs_zip<F>(mut zip: ZipFileArchive, options: &DifUpload, mut func: F) -> Result<(), Error>
 where
     F: FnMut(DifSource<'_>, String, ByteView<'static>) -> Result<(), Error>,
 {
