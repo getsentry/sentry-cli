@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.41.2
+
+* Fix slow unzipping in debug file upload (#519)
+
 ## sentry-cli 1.41.1
 
 * Warn before uploading more than 20.000 files to a release (#513)
