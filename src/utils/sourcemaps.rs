@@ -146,14 +146,15 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
     );
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
 enum SourceType {
     Script,
     MinifiedScript,
     SourceMap,
+    IndexedRamBundle,
 }
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 enum LogLevel {
     Warning,
     Error,
@@ -168,6 +169,7 @@ impl fmt::Display for LogLevel {
     }
 }
 
+#[derive(Clone)]
 struct Source {
     url: String,
     #[allow(unused)]
@@ -261,6 +263,15 @@ impl SourceMapProcessor {
             } else if path
                 .file_name()
                 .and_then(OsStr::to_str)
+                .map(|x| x.ends_with("bundle"))
+                .unwrap_or(false)
+                && sourcemap::is_ram_bundle_slice(&contents)
+            {
+                println!("YOOOO");
+                SourceType::IndexedRamBundle
+            } else if path
+                .file_name()
+                .and_then(OsStr::to_str)
                 .map(|x| x.contains(".min."))
                 .unwrap_or(false)
                 || is_likely_minified_js(&contents)
@@ -270,6 +281,11 @@ impl SourceMapProcessor {
                 SourceType::Script
             };
 
+            println!("url: {}, path: {}", url, path.display());
+            println!("type: {:#?}", ty);
+            println!("type: {:#?}", ty);
+            println!("type: {:#?}", ty);
+            println!("type: {:#?}", ty);
             self.sources.insert(
                 url.clone(),
                 Source {
@@ -341,6 +357,7 @@ impl SourceMapProcessor {
                         SourceType::Script => "Scripts",
                         SourceType::MinifiedScript => "Minified Scripts",
                         SourceType::SourceMap => "Source Maps",
+                        SourceType::IndexedRamBundle => "Indexed RAM Bundles",
                     })
                     .yellow()
                     .bold()
@@ -398,6 +415,9 @@ impl SourceMapProcessor {
                         failed = true;
                     }
                 }
+                SourceType::IndexedRamBundle => {
+                    // FIXME
+                }
             }
             pb.inc(1);
         }
@@ -411,6 +431,85 @@ impl SourceMapProcessor {
         bail!("Encountered problems when validating source maps.");
     }
 
+    pub fn expand_ram_bundles(&mut self) -> Result<(), Error> {
+        let ram_bundles = Vec::from_iter(
+            self.sources
+                .values()
+                .filter(|source| source.ty == SourceType::IndexedRamBundle)
+                .cloned(),
+        );
+
+        let sourcemaps_references = HashSet::from_iter(
+            self.sources
+                .values()
+                .filter(|x| x.ty == SourceType::SourceMap)
+                .map(|x| x.url.to_string()),
+        );
+
+        for bundle_source in ram_bundles {
+            println!("Creating RAM bundle object...");
+            let ram_bundle = sourcemap::RamBundle::parse(&bundle_source.contents)?;
+            println!("Trying to guess sourcemap reference");
+            let sourcemap_content =
+                match guess_sourcemap_reference(&sourcemaps_references, &bundle_source.url) {
+                    Ok(target_url) => {
+                        println!("Target URL found: {}", target_url);
+                        let source = self.sources.get(&target_url).unwrap();
+                        &source.contents
+                    }
+                    Err(_) => {
+                        println!("Target URL NOT found!");
+                        continue;
+                    }
+                };
+            let ism = match sourcemap::decode_slice(sourcemap_content)? {
+                sourcemap::DecodedMap::Regular(_) => continue,
+                sourcemap::DecodedMap::Index(ism) => ism,
+            };
+
+            let ram_bundle_iter = sourcemap::split_ram_bundle(&ram_bundle, &ism).unwrap();
+            for result in ram_bundle_iter {
+                let (name, sv, sm) = result?;
+
+                println!("Inserting source for {}", name);
+                // Insert source
+                let source_url = join_url(&bundle_source.url, &name)?;
+                self.sources.insert(
+                    source_url.clone(),
+                    Source {
+                        url: source_url.clone(),
+                        file_path: PathBuf::from(name.clone()),
+                        contents: sv.source().as_bytes().to_vec(),
+                        ty: SourceType::MinifiedScript,
+                        skip_upload: false,
+                        headers: vec![],
+                        messages: RefCell::new(vec![]),
+                    },
+                );
+
+                println!("Inserting sourcemap for {}", name);
+                // Insert sourcemap
+                let sourcemap_name = format!("{}.map", name);
+                let sourcemap_url = join_url(&bundle_source.url, &sourcemap_name)?;
+                let mut sourcemap_content: Vec<u8> = vec![];
+                sm.to_writer(&mut sourcemap_content)?;
+                self.sources.insert(
+                    sourcemap_url.clone(),
+                    Source {
+                        url: sourcemap_url.clone(),
+                        file_path: PathBuf::from(sourcemap_name),
+                        contents: sourcemap_content,
+                        ty: SourceType::SourceMap,
+                        skip_upload: false,
+                        headers: vec![],
+                        messages: RefCell::new(vec![]),
+                    },
+                );
+            }
+        }
+        Ok(())
+    }
+
     /// Automatically rewrite all source maps.
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
@@ -418,6 +517,9 @@ impl SourceMapProcessor {
         self.flush_pending_sources()?;
 
         println!("{} Rewriting sources", style(">").dim());
+
+        self.expand_ram_bundles()?;
+
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
             pb.set_message(&source.url);
