@@ -6,13 +6,14 @@ use std::fmt;
 use std::fs;
 use std::io::Read;
 use std::iter::FromIterator;
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
 
 use console::{style, Term};
 use failure::{bail, Error};
 use if_chain::if_chain;
-use log::info;
+use log::{debug, info, warn};
 use url::Url;
 
 use crate::api::{Api, FileContents};
@@ -265,9 +266,8 @@ impl SourceMapProcessor {
                 .and_then(OsStr::to_str)
                 .map(|x| x.ends_with("bundle"))
                 .unwrap_or(false)
-                && sourcemap::is_ram_bundle_slice(&contents)
+                && sourcemap::ram_bundle::is_ram_bundle_slice(&contents)
             {
-                println!("YOOOO");
                 SourceType::IndexedRamBundle
             } else if path
                 .file_name()
@@ -281,11 +281,6 @@ impl SourceMapProcessor {
                 SourceType::Script
             };
 
-            println!("url: {}, path: {}", url, path.display());
-            println!("type: {:#?}", ty);
-            println!("type: {:#?}", ty);
-            println!("type: {:#?}", ty);
-            println!("type: {:#?}", ty);
             self.sources.insert(
                 url.clone(),
                 Source {
@@ -357,7 +352,7 @@ impl SourceMapProcessor {
                         SourceType::Script => "Scripts",
                         SourceType::MinifiedScript => "Minified Scripts",
                         SourceType::SourceMap => "Source Maps",
-                        SourceType::IndexedRamBundle => "Indexed RAM Bundles",
+                        SourceType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
                     })
                     .yellow()
                     .bold()
@@ -415,9 +410,7 @@ impl SourceMapProcessor {
                         failed = true;
                     }
                 }
-                SourceType::IndexedRamBundle => {
-                    // FIXME
-                }
+                SourceType::IndexedRamBundle => (),
             }
             pb.inc(1);
         }
@@ -431,13 +424,109 @@ impl SourceMapProcessor {
         bail!("Encountered problems when validating source maps.");
     }
 
-    pub fn expand_ram_bundles(&mut self) -> Result<(), Error> {
-        let ram_bundles = Vec::from_iter(
-            self.sources
-                .values()
-                .filter(|source| source.ty == SourceType::IndexedRamBundle)
-                .cloned(),
+    fn unpack_single_ram_bundle(
+        &mut self,
+        bundle_source: &Source,
+        sourcemaps_references: &HashSet<String>,
+    ) -> Result<(), Error> {
+        debug!(
+            "Parsing RAM bundle ({})...",
+            bundle_source.file_path.display()
         );
+        let ram_bundle = sourcemap::ram_bundle::RamBundle::parse(&bundle_source.contents)?;
+
+        debug!("Trying to guess the sourcemap reference");
+        let sourcemap_url =
+            match guess_sourcemap_reference(sourcemaps_references, &bundle_source.url) {
+                Ok(filename) => {
+                    let (path, _, _) = split_url(&bundle_source.url);
+                    unsplit_url(path, &filename, None)
+                }
+                Err(_) => {
+                    warn!("Sourcemap reference for {} not found!", bundle_source.url);
+                    return Ok(());
+                }
+            };
+        debug!(
+            "Sourcemap reference for {} found: {}",
+            bundle_source.url, sourcemap_url
+        );
+
+        let sourcemap_content = match self.sources.get(&sourcemap_url) {
+            Some(source) => &source.contents,
+            None => {
+                warn!(
+                    "Cannot find the sourcemap for the RAM bundle using the URL: {}, skipping",
+                    sourcemap_url
+                );
+                return Ok(());
+            }
+        };
+
+        let sourcemap_index = match sourcemap::decode_slice(sourcemap_content)? {
+            sourcemap::DecodedMap::Regular(_) => {
+                warn!("Invalid sourcemap type for RAM bundle, skipping");
+                return Ok(());
+            }
+            sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
+        };
+
+        // We don't need the RAM bundle sourcemap itself
+        self.sources.remove(&sourcemap_url);
+
+        let ram_bundle_iter =
+            sourcemap::ram_bundle::split_ram_bundle(&ram_bundle, &sourcemap_index).unwrap();
+        for result in ram_bundle_iter {
+            let (name, sourceview, sourcemap) = result?;
+
+            debug!("Inserting source for {}", name);
+            let source_url = join_url(&bundle_source.url, &name)?;
+            self.sources.insert(
+                source_url.clone(),
+                Source {
+                    url: source_url.clone(),
+                    file_path: PathBuf::from(name.clone()),
+                    contents: sourceview.source().as_bytes().to_vec(),
+                    ty: SourceType::MinifiedScript,
+                    skip_upload: false,
+                    headers: vec![],
+                    messages: RefCell::new(vec![]),
+                },
+            );
+
+            debug!("Inserting sourcemap for {}", name);
+            let sourcemap_name = format!("{}.map", name);
+            let sourcemap_url = join_url(&bundle_source.url, &sourcemap_name)?;
+            let mut sourcemap_content: Vec<u8> = vec![];
+            sourcemap.to_writer(&mut sourcemap_content)?;
+            self.sources.insert(
+                sourcemap_url.clone(),
+                Source {
+                    url: sourcemap_url.clone(),
+                    file_path: PathBuf::from(sourcemap_name),
+                    contents: sourcemap_content,
+                    ty: SourceType::SourceMap,
+                    skip_upload: false,
+                    headers: vec![],
+                    messages: RefCell::new(vec![]),
+                },
+            );
+        }
+        Ok(())
+    }
+
+    /// Replaces RAM bundle entries with their expanded sources and sourcemaps
+    pub fn unpack_ram_bundles(&mut self) -> Result<(), Error> {
+        let mut ram_bundles = Vec::new();
+
+        // Drain RAM bundles from self.sources
+        for (url, source) in mem::replace(&mut self.sources, Default::default()).into_iter() {
+            if source.ty == SourceType::IndexedRamBundle {
+                ram_bundles.push(source);
+            } else {
+                self.sources.insert(url, source);
+            }
+        }
 
         let sourcemaps_references = HashSet::from_iter(
             self.sources
@@ -447,65 +536,7 @@ impl SourceMapProcessor {
         );
 
         for bundle_source in ram_bundles {
-            println!("Creating RAM bundle object...");
-            let ram_bundle = sourcemap::RamBundle::parse(&bundle_source.contents)?;
-            println!("Trying to guess sourcemap reference");
-            let sourcemap_content =
-                match guess_sourcemap_reference(&sourcemaps_references, &bundle_source.url) {
-                    Ok(target_url) => {
-                        println!("Target URL found: {}", target_url);
-                        let source = self.sources.get(&target_url).unwrap();
-                        &source.contents
-                    }
-                    Err(_) => {
-                        println!("Target URL NOT found!");
-                        continue;
-                    }
-                };
-            let ism = match sourcemap::decode_slice(sourcemap_content)? {
-                sourcemap::DecodedMap::Regular(_) => continue,
-                sourcemap::DecodedMap::Index(ism) => ism,
-            };
-
-            let ram_bundle_iter = sourcemap::split_ram_bundle(&ram_bundle, &ism).unwrap();
-            for result in ram_bundle_iter {
-                let (name, sv, sm) = result?;
-
-                println!("Inserting source for {}", name);
-                // Insert source
-                let source_url = join_url(&bundle_source.url, &name)?;
-                self.sources.insert(
-                    source_url.clone(),
-                    Source {
-                        url: source_url.clone(),
-                        file_path: PathBuf::from(name.clone()),
-                        contents: sv.source().as_bytes().to_vec(),
-                        ty: SourceType::MinifiedScript,
-                        skip_upload: false,
-                        headers: vec![],
-                        messages: RefCell::new(vec![]),
-                    },
-                );
-
-                println!("Inserting sourcemap for {}", name);
-                // Insert sourcemap
-                let sourcemap_name = format!("{}.map", name);
-                let sourcemap_url = join_url(&bundle_source.url, &sourcemap_name)?;
-                let mut sourcemap_content: Vec<u8> = vec![];
-                sm.to_writer(&mut sourcemap_content)?;
-                self.sources.insert(
-                    sourcemap_url.clone(),
-                    Source {
-                        url: sourcemap_url.clone(),
-                        file_path: PathBuf::from(sourcemap_name),
-                        contents: sourcemap_content,
-                        ty: SourceType::SourceMap,
-                        skip_upload: false,
-                        headers: vec![],
-                        messages: RefCell::new(vec![]),
-                    },
-                );
-            }
+            self.unpack_single_ram_bundle(&bundle_source, &sourcemaps_references)?;
         }
         Ok(())
     }
@@ -518,7 +549,7 @@ impl SourceMapProcessor {
 
         println!("{} Rewriting sources", style(">").dim());
 
-        self.expand_ram_bundles()?;
+        self.unpack_ram_bundles()?;
 
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
@@ -561,7 +592,7 @@ impl SourceMapProcessor {
             if source.ty != SourceType::MinifiedScript {
                 continue;
             }
-            // we silently ignore when we can't find a sourcemap. Maybwe we should
+            // we silently ignore when we can't find a sourcemap. Maybe we should
             // log this.
             match guess_sourcemap_reference(&sourcemaps, &source.url) {
                 Ok(target_url) => {
@@ -660,6 +691,10 @@ fn test_split_url() {
     assert_eq!(
         split_url("/foo.deadbeef0123.js"),
         (Some(""), "foo", Some("deadbeef0123.js"))
+    );
+    assert_eq!(
+        split_url("/foo/bar/baz.js"),
+        (Some("/foo/bar"), "baz", Some("js"))
     );
 }
 
