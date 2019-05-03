@@ -270,7 +270,7 @@ pub fn wrap_call() -> Result<(), Error> {
     let mut bundle_path = None;
     let mut sourcemap_path = None;
 
-    if args.len() > 1 && args[1] == "bundle" {
+    if args.len() > 1 && (args[1] == "bundle" || args[1] == "ram-bundle") {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "--sourcemap-output" {
