@@ -120,6 +120,7 @@ impl VcsUrl {
         lazy_static! {
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
+            static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"(.+?)/_git$").unwrap();
         }
         if let Some(caps) = VS_DOMAIN_RE.captures(host) {
             let username = &caps[1];
@@ -127,6 +128,12 @@ impl VcsUrl {
                 return VcsUrl {
                     provider: host.into(),
                     id: format!("{}/{}", username, &caps[1]),
+                };
+            }
+            if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: host.into(),
+                    id: format!("{}", &caps[1]),
                 };
             }
         }
@@ -379,6 +386,13 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "neilmanvar.visualstudio.com".into(),
             id: "neilmanvar/sentry-demo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://project@mydomain.visualstudio.com/project/repo/_git"),
+        VcsUrl {
+            provider: "mydomain.visualstudio.com".into(),
+            id: "project/repo".into(),
         }
     );
     assert_eq!(
