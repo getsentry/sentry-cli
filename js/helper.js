@@ -127,15 +127,16 @@ function getPath() {
  *
  * @param {string[]} args Command line arguments passed to `sentry-cli`.
  * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+ * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
  * @returns {Promise.<string>} A promise that resolves to the standard output.
  */
-function execute(args, live) {
+function execute(args, live, silent) {
   const env = Object.assign({}, process.env);
   return new Promise((resolve, reject) => {
     if (live === true) {
       const pid = childProcess.spawn(getPath(), args, {
         env,
-        stdio: 'inherit',
+        stdio: ['inherit', silent ? 'pipe' : 'inherit', 'inherit'],
       });
       pid.on('exit', () => {
         resolve();
