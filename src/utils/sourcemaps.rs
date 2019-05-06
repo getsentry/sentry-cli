@@ -424,6 +424,9 @@ impl SourceMapProcessor {
         bail!("Encountered problems when validating source maps.");
     }
 
+    /// Unpacks the given RAM bundle into a list of module sources and their sourcemaps
+    ///
+    /// The method also takes a list of sourcemaps and tries to guess a sourcemap for every bundle.
     fn unpack_single_ram_bundle(
         &mut self,
         bundle_source: &Source,
