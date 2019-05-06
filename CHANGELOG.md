@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.42.0
+
+* Add support for Indexed RAM Bundles (#523)
+* Add "silent" option to JS constructor (#512)
+
 ## sentry-cli 1.41.2
 
 * Fix slow unzipping in debug file upload (#519)
