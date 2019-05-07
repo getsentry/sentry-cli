@@ -133,7 +133,7 @@ impl VcsUrl {
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.into(),
-                    id: format!("{}", &caps[1]),
+                    id: caps[1].to_string(),
                 };
             }
         }
@@ -223,7 +223,7 @@ fn find_matching_rev(
         if let Some(url) = remote.url();
         then {
             if !discovery || is_matching_url(url, &reference_url) {
-            debug!("  found match: {} == {}", url, &reference_url);
+                debug!("  found match: {} == {}", url, &reference_url);
                 let head = repo.revparse_single(r)?;
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
