@@ -219,7 +219,6 @@ pub fn get_family() -> Option<String> {
     }
 
     use if_chain::if_chain;
-    use regex::Regex;
 
     lazy_static! {
         static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
