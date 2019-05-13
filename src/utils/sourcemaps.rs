@@ -430,7 +430,7 @@ impl SourceMapProcessor {
     pub fn unpack_ram_bundle(
         &mut self,
         ram_bundle: &sourcemap::ram_bundle::RamBundle,
-        bundle_source_url: &String,
+        bundle_source_url: &str,
     ) -> Result<(), Error> {
         // We need this to flush all pending sourcemaps
         self.flush_pending_sources()?;
@@ -522,8 +522,8 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    /// Replaces RAM bundle entries with their expanded sources and sourcemaps
-    pub fn unpack_all_ram_bundles(&mut self) -> Result<(), Error> {
+    /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
+    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<(), Error> {
         let mut ram_bundles = Vec::new();
 
         // Drain RAM bundles from self.sources
@@ -556,7 +556,7 @@ impl SourceMapProcessor {
 
         println!("{} Rewriting sources", style(">").dim());
 
-        self.unpack_all_ram_bundles()?;
+        self.unpack_indexed_ram_bundles()?;
 
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {

@@ -1,7 +1,7 @@
 //! Implements a command for managing releases.
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
@@ -12,7 +12,7 @@ use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
 use indicatif::HumanBytes;
 use lazy_static::lazy_static;
-use log::{info, warn};
+use log::{debug, info, warn};
 use regex::Regex;
 
 use crate::api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
@@ -192,7 +192,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .arg(Arg::with_name("paths")
                     .value_name("PATHS")
                     .index(1)
-                    .required(true)
+                    .required_unless_one(&["ram_bundle", "ram_bundle_sourcemap"])
                     .multiple(true)
                     .help("The files to upload."))
                 .arg(Arg::with_name("url_prefix")
@@ -256,6 +256,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("IGNORE_FILE")
                     .help("Ignore all files and folders specified in the given \
                            ignore file, e.g. .gitignore."))
+                .arg(Arg::with_name("ram_bundle")
+                    .long("ram-bundle")
+                    .value_name("RAM_BUNDLE")
+                    .conflicts_with("paths")
+                    .requires_all(&["ram_bundle_sourcemap"])
+                    .help("Path to the RAM bundle"))
+                .arg(Arg::with_name("ram_bundle_sourcemap")
+                    .long("ram-bundle-sourcemap")
+                    .value_name("RAM_BUNDLE_SOURCEMAP")
+                    .conflicts_with("paths")
+                    .requires_all(&["ram_bundle"])
+                    .help("Path to the RAM bundle sourcemap"))
                 // legacy parameter
                 .arg(Arg::with_name("verbose")
                     .long("verbose")
@@ -694,16 +706,65 @@ fn execute_files_upload<'a>(
     Ok(())
 }
 
-fn execute_files_upload_sourcemaps<'a>(
-    ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
-    version: &str,
-) -> Result<(), Error> {
-    let url_prefix = matches
+fn get_url_prefix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
+    matches
         .value_of("url_prefix")
         .unwrap_or("~")
-        .trim_end_matches('/');
-    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
+        .trim_end_matches('/')
+}
+
+fn get_url_suffix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
+    matches.value_of("url_suffix").unwrap_or("")
+}
+
+fn process_sources_from_ram_bundle<'a>(
+    matches: &ArgMatches<'a>,
+    processor: &mut SourceMapProcessor,
+) -> Result<(), Error> {
+    let url_prefix = get_url_prefix_from_args(matches);
+    let url_suffix = get_url_suffix_from_args(matches);
+
+    let bundle_path = PathBuf::from(matches.value_of("ram_bundle").unwrap());
+    let bundle_url = format!(
+        "{}/{}{}",
+        url_prefix,
+        bundle_path.file_name().unwrap().to_string_lossy(),
+        url_suffix
+    );
+
+    let sourcemap_path = PathBuf::from(matches.value_of("ram_bundle_sourcemap").unwrap());
+    let sourcemap_url = format!(
+        "{}/{}{}",
+        url_prefix,
+        sourcemap_path.file_name().unwrap().to_string_lossy(),
+        url_suffix
+    );
+
+    debug!("Bundle path: {}", bundle_path.display());
+    debug!("Sourcemap path: {}", sourcemap_path.display());
+
+    processor.add(&bundle_url, &bundle_path)?;
+    processor.add(&sourcemap_url, &sourcemap_path)?;
+
+    // FIXME
+    if let Ok(ram_bundle) = sourcemap::ram_bundle::RamBundle::parse_unbundle_from_path(&bundle_path)
+    {
+        debug!("File RAM bundle found, extracting its contents...");
+        processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
+    } else {
+        debug!("Regular bundle found");
+    }
+
+    processor.rewrite(&["~"])?;
+    processor.add_sourcemap_references()?;
+
+    Ok(())
+}
+
+fn process_sources_from_paths<'a>(
+    matches: &ArgMatches<'a>,
+    processor: &mut SourceMapProcessor,
+) -> Result<(), Error> {
     let paths = matches.values_of("paths").unwrap();
     let extensions = matches
         .values_of("extensions")
@@ -713,9 +774,9 @@ fn execute_files_upload_sourcemaps<'a>(
         .values_of("ignore")
         .map(|ignores| ignores.map(|i| format!("!{}", i)).collect::<Vec<_>>());
     let ignore_file = matches.value_of("ignore_file");
-    let dist = matches.value_of("dist");
 
-    let mut processor = SourceMapProcessor::new();
+    let url_prefix = get_url_prefix_from_args(matches);
+    let url_suffix = get_url_suffix_from_args(matches);
 
     for path in paths {
         // if we start walking over something that is an actual file then
@@ -799,6 +860,22 @@ fn execute_files_upload_sourcemaps<'a>(
         processor.validate_all()?;
     }
 
+    Ok(())
+}
+
+fn execute_files_upload_sourcemaps<'a>(
+    ctx: &ReleaseContext<'_>,
+    matches: &ArgMatches<'a>,
+    version: &str,
+) -> Result<(), Error> {
+    let mut processor = SourceMapProcessor::new();
+
+    if matches.is_present("ram_bundle") && matches.is_present("ram_bundle_sourcemap") {
+        process_sources_from_ram_bundle(matches, &mut processor)?;
+    } else {
+        process_sources_from_paths(matches, &mut processor)?;
+    }
+
     let org = ctx.get_org()?;
 
     // make sure the release exists
@@ -811,6 +888,7 @@ fn execute_files_upload_sourcemaps<'a>(
         },
     )?;
 
+    let dist = matches.value_of("dist");
     let project = ctx.get_project_default().ok();
     processor.upload(
         &ctx.api,

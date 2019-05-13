@@ -68,7 +68,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
 
-    if let Ok(ram_bundle) = RamBundle::parse_file_bundle(&bundle_path) {
+    if let Ok(ram_bundle) = RamBundle::parse_unbundle_from_path(&bundle_path) {
         debug!("File RAM bundle found, extracting its contents...");
         processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
     } else {
