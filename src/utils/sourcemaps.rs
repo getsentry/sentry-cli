@@ -425,8 +425,6 @@ impl SourceMapProcessor {
     }
 
     /// Unpacks the given RAM bundle into a list of module sources and their sourcemaps
-    ///
-    /// The method also takes a list of sourcemaps and tries to guess a sourcemap for the provided bundle.
     pub fn unpack_ram_bundle(
         &mut self,
         ram_bundle: &sourcemap::ram_bundle::RamBundle,
