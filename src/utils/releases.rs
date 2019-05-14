@@ -90,7 +90,7 @@ pub fn detect_release_name() -> Result<String, Error> {
         return Ok(release);
     }
 
-    // try heroku: https://docs.sentry.io/integrations/heroku/#configure-releases
+    // try heroku: https://docs.sentry.io/workflow/integrations/legacy-integrations/heroku/#configure-releases
     if let Ok(release) = env::var("HEROKU_SLUG_COMMIT") {
         if !release.is_empty() {
             return Ok(release);
