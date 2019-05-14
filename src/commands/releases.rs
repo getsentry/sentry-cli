@@ -746,13 +746,15 @@ fn process_sources_from_ram_bundle<'a>(
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
 
-    // FIXME
     if let Ok(ram_bundle) = sourcemap::ram_bundle::RamBundle::parse_unbundle_from_path(&bundle_path)
     {
         debug!("File RAM bundle found, extracting its contents...");
         processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
+    } else if sourcemap::ram_bundle::RamBundle::parse_indexed_from_path(&bundle_path).is_ok() {
+        debug!("Indexed RAM bundle found");
     } else {
-        debug!("Regular bundle found");
+        println!("Cannot parse the provided RAM bundle, aborting");
+        return Err(QuietExit(1).into());
     }
 
     processor.rewrite(&["~"])?;
