@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.43.0
+
+* Add support for File RAM Bundles (#528)
+* Accept more Azure DevOps URLs (#525)
+
 ## sentry-cli 1.42.0
 
 * Add support for Indexed RAM Bundles (#523)
