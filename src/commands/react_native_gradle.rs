@@ -72,7 +72,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         debug!("File RAM bundle found, extracting its contents...");
         processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
     } else {
-        debug!("Regular bundle found");
+        debug!("Non-file bundle found");
     }
 
     processor.rewrite(&[base.to_str().unwrap()])?;

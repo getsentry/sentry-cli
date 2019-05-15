@@ -192,7 +192,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .arg(Arg::with_name("paths")
                     .value_name("PATHS")
                     .index(1)
-                    .required_unless_one(&["ram_bundle", "ram_bundle_sourcemap"])
+                    .required_unless_one(&["bundle", "bundle_sourcemap"])
                     .multiple(true)
                     .help("The files to upload."))
                 .arg(Arg::with_name("url_prefix")
@@ -256,18 +256,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("IGNORE_FILE")
                     .help("Ignore all files and folders specified in the given \
                            ignore file, e.g. .gitignore."))
-                .arg(Arg::with_name("ram_bundle")
-                    .long("ram-bundle")
-                    .value_name("RAM_BUNDLE")
+                .arg(Arg::with_name("bundle")
+                    .long("bundle")
+                    .value_name("BUNDLE")
                     .conflicts_with("paths")
-                    .requires_all(&["ram_bundle_sourcemap"])
-                    .help("Path to the RAM bundle"))
-                .arg(Arg::with_name("ram_bundle_sourcemap")
-                    .long("ram-bundle-sourcemap")
-                    .value_name("RAM_BUNDLE_SOURCEMAP")
+                    .requires_all(&["bundle_sourcemap"])
+                    .help("Path to the application bundle (indexed, file, or regular)"))
+                .arg(Arg::with_name("bundle_sourcemap")
+                    .long("bundle-sourcemap")
+                    .value_name("BUNDLE_SOURCEMAP")
                     .conflicts_with("paths")
-                    .requires_all(&["ram_bundle"])
-                    .help("Path to the RAM bundle sourcemap"))
+                    .requires_all(&["bundle"])
+                    .help("Path to the bundle sourcemap"))
                 // legacy parameter
                 .arg(Arg::with_name("verbose")
                     .long("verbose")
@@ -717,14 +717,25 @@ fn get_url_suffix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
     matches.value_of("url_suffix").unwrap_or("")
 }
 
-fn process_sources_from_ram_bundle<'a>(
+fn get_prefixes_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> Vec<&'b str> {
+    let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
+        Some(paths) => paths.collect(),
+        None => vec![],
+    };
+    if matches.is_present("strip_common_prefix") {
+        prefixes.push("~");
+    }
+    prefixes
+}
+
+fn process_sources_from_bundle<'a>(
     matches: &ArgMatches<'a>,
     processor: &mut SourceMapProcessor,
 ) -> Result<(), Error> {
     let url_prefix = get_url_prefix_from_args(matches);
     let url_suffix = get_url_suffix_from_args(matches);
 
-    let bundle_path = PathBuf::from(matches.value_of("ram_bundle").unwrap());
+    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
     let bundle_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -732,7 +743,7 @@ fn process_sources_from_ram_bundle<'a>(
         url_suffix
     );
 
-    let sourcemap_path = PathBuf::from(matches.value_of("ram_bundle_sourcemap").unwrap());
+    let sourcemap_path = PathBuf::from(matches.value_of("bundle_sourcemap").unwrap());
     let sourcemap_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -749,15 +760,22 @@ fn process_sources_from_ram_bundle<'a>(
     if let Ok(ram_bundle) = sourcemap::ram_bundle::RamBundle::parse_unbundle_from_path(&bundle_path)
     {
         debug!("File RAM bundle found, extracting its contents...");
+        // For file ("unbundle") RAM bundles we need to explicitly unpack it, otherwise we cannot detect it
+        // reliably inside "processor.rewrite()"
         processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
     } else if sourcemap::ram_bundle::RamBundle::parse_indexed_from_path(&bundle_path).is_ok() {
         debug!("Indexed RAM bundle found");
     } else {
-        println!("Cannot parse the provided RAM bundle, aborting");
-        return Err(QuietExit(1).into());
+        warn!("Regular bundle found");
     }
 
-    processor.rewrite(&["~"])?;
+    let mut prefixes = get_prefixes_from_args(matches);
+    if !prefixes.contains(&"~") {
+        prefixes.push("~");
+    }
+    debug!("Prefixes: {:?}", prefixes);
+
+    processor.rewrite(&prefixes)?;
     processor.add_sourcemap_references()?;
 
     Ok(())
@@ -844,13 +862,7 @@ fn process_sources_from_paths<'a>(
     }
 
     if matches.is_present("rewrite") {
-        let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
-            Some(paths) => paths.collect(),
-            None => vec![],
-        };
-        if matches.is_present("strip_common_prefix") {
-            prefixes.push("~");
-        }
+        let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
     }
 
@@ -872,8 +884,8 @@ fn execute_files_upload_sourcemaps<'a>(
 ) -> Result<(), Error> {
     let mut processor = SourceMapProcessor::new();
 
-    if matches.is_present("ram_bundle") && matches.is_present("ram_bundle_sourcemap") {
-        process_sources_from_ram_bundle(matches, &mut processor)?;
+    if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
+        process_sources_from_bundle(matches, &mut processor)?;
     } else {
         process_sources_from_paths(matches, &mut processor)?;
     }
