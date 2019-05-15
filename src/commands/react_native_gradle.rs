@@ -3,7 +3,8 @@ use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use failure::Error;
-use log::info;
+use log::{debug, info};
+use sourcemap::ram_bundle::RamBundle;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -66,6 +67,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let mut processor = SourceMapProcessor::new();
     processor.add(&bundle_url, &bundle_path)?;
     processor.add(&sourcemap_url, &sourcemap_path)?;
+
+    if let Ok(ram_bundle) = RamBundle::parse_unbundle_from_path(&bundle_path) {
+        debug!("File RAM bundle found, extracting its contents...");
+        processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
+    } else {
+        debug!("Non-file bundle found");
+    }
+
     processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 

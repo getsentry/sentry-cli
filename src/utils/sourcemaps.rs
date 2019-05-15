@@ -425,34 +425,36 @@ impl SourceMapProcessor {
     }
 
     /// Unpacks the given RAM bundle into a list of module sources and their sourcemaps
-    ///
-    /// The method also takes a list of sourcemaps and tries to guess a sourcemap for every bundle.
-    fn unpack_single_ram_bundle(
+    pub fn unpack_ram_bundle(
         &mut self,
-        bundle_source: &Source,
-        sourcemaps_references: &HashSet<String>,
+        ram_bundle: &sourcemap::ram_bundle::RamBundle,
+        bundle_source_url: &str,
     ) -> Result<(), Error> {
-        debug!(
-            "Parsing RAM bundle ({})...",
-            bundle_source.file_path.display()
-        );
-        let ram_bundle = sourcemap::ram_bundle::RamBundle::parse(&bundle_source.contents)?;
+        // We need this to flush all pending sourcemaps
+        self.flush_pending_sources()?;
 
         debug!("Trying to guess the sourcemap reference");
+        let sourcemaps_references = HashSet::from_iter(
+            self.sources
+                .values()
+                .filter(|x| x.ty == SourceType::SourceMap)
+                .map(|x| x.url.to_string()),
+        );
+
         let sourcemap_url =
-            match guess_sourcemap_reference(sourcemaps_references, &bundle_source.url) {
+            match guess_sourcemap_reference(&sourcemaps_references, bundle_source_url) {
                 Ok(filename) => {
-                    let (path, _, _) = split_url(&bundle_source.url);
+                    let (path, _, _) = split_url(bundle_source_url);
                     unsplit_url(path, &filename, None)
                 }
                 Err(_) => {
-                    warn!("Sourcemap reference for {} not found!", bundle_source.url);
+                    warn!("Sourcemap reference for {} not found!", bundle_source_url);
                     return Ok(());
                 }
             };
         debug!(
             "Sourcemap reference for {} found: {}",
-            bundle_source.url, sourcemap_url
+            bundle_source_url, sourcemap_url
         );
 
         let sourcemap_content = match self.sources.get(&sourcemap_url) {
@@ -483,7 +485,7 @@ impl SourceMapProcessor {
             let (name, sourceview, sourcemap) = result?;
 
             debug!("Inserting source for {}", name);
-            let source_url = join_url(&bundle_source.url, &name)?;
+            let source_url = join_url(&bundle_source_url, &name)?;
             self.sources.insert(
                 source_url.clone(),
                 Source {
@@ -499,7 +501,7 @@ impl SourceMapProcessor {
 
             debug!("Inserting sourcemap for {}", name);
             let sourcemap_name = format!("{}.map", name);
-            let sourcemap_url = join_url(&bundle_source.url, &sourcemap_name)?;
+            let sourcemap_url = join_url(bundle_source_url, &sourcemap_name)?;
             let mut sourcemap_content: Vec<u8> = vec![];
             sourcemap.to_writer(&mut sourcemap_content)?;
             self.sources.insert(
@@ -518,8 +520,8 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    /// Replaces RAM bundle entries with their expanded sources and sourcemaps
-    pub fn unpack_ram_bundles(&mut self) -> Result<(), Error> {
+    /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
+    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<(), Error> {
         let mut ram_bundles = Vec::new();
 
         // Drain RAM bundles from self.sources
@@ -531,15 +533,15 @@ impl SourceMapProcessor {
             }
         }
 
-        let sourcemaps_references = HashSet::from_iter(
-            self.sources
-                .values()
-                .filter(|x| x.ty == SourceType::SourceMap)
-                .map(|x| x.url.to_string()),
-        );
-
         for bundle_source in ram_bundles {
-            self.unpack_single_ram_bundle(&bundle_source, &sourcemaps_references)?;
+            debug!(
+                "Parsing RAM bundle ({})...",
+                bundle_source.file_path.display()
+            );
+            let ram_bundle = sourcemap::ram_bundle::RamBundle::parse_indexed_from_slice(
+                &bundle_source.contents,
+            )?;
+            self.unpack_ram_bundle(&ram_bundle, &bundle_source.url)?;
         }
         Ok(())
     }
@@ -552,7 +554,7 @@ impl SourceMapProcessor {
 
         println!("{} Rewriting sources", style(">").dim());
 
-        self.unpack_ram_bundles()?;
+        self.unpack_indexed_ram_bundles()?;
 
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
