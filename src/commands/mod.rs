@@ -151,7 +151,7 @@ fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     app
 }
 
-#[allow(clippy::cyclomatic_complexity)]
+#[allow(clippy::cognitive_complexity)]
 fn run_command(matches: &ArgMatches<'_>) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
