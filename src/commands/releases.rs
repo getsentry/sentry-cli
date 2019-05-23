@@ -15,7 +15,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
 
-use crate::api::{Api, Deploy, FileContents, NewRelease, UpdatedRelease};
+use crate::api::{Api, Deploy, FileContents, NewRelease, ProgressBarMode, UpdatedRelease};
 use crate::config::Config;
 use crate::utils::args::{
     get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt,
@@ -698,6 +698,7 @@ fn execute_files_upload<'a>(
         &name,
         dist,
         Some(&headers[..]),
+        ProgressBarMode::Request,
     )? {
         println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
     } else {

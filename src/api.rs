@@ -591,6 +591,7 @@ impl Api {
         name: &str,
         dist: Option<&str>,
         headers: Option<&[(String, String)]>,
+        progress_bar_mode: ProgressBarMode,
     ) -> ApiResult<Option<Artifact>> {
         let path = if let Some(project) = project {
             format!(
@@ -643,7 +644,7 @@ impl Api {
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
             )?
-            .progress_bar_mode(ProgressBarMode::Request)?
+            .progress_bar_mode(progress_bar_mode)?
             .send()?;
         if resp.status() == 409 {
             Ok(None)
