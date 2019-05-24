@@ -1,5 +1,4 @@
 //! Provides sourcemap validation functionality.
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt;
@@ -9,14 +8,18 @@ use std::iter::FromIterator;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
+use std::sync::Arc;
 
 use console::{style, Term};
 use failure::{bail, Error};
 use if_chain::if_chain;
 use log::{debug, info, warn};
+use parking_lot::RwLock;
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
 use url::Url;
 
-use crate::api::{Api, FileContents};
+use crate::api::{Api, FileContents, ProgressBarMode};
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::progress::{ProgressBar, ProgressDrawTarget, ProgressStyle};
 
@@ -170,7 +173,6 @@ impl fmt::Display for LogLevel {
     }
 }
 
-#[derive(Clone)]
 struct Source {
     url: String,
     #[allow(unused)]
@@ -179,7 +181,21 @@ struct Source {
     ty: SourceType,
     skip_upload: bool,
     headers: Vec<(String, String)>,
-    messages: RefCell<Vec<(LogLevel, String)>>,
+    messages: RwLock<Vec<(LogLevel, String)>>,
+}
+
+impl Clone for Source {
+    fn clone(&self) -> Source {
+        Source {
+            url: self.url.clone(),
+            file_path: self.file_path.clone(),
+            contents: self.contents.clone(),
+            ty: self.ty,
+            skip_upload: self.skip_upload,
+            headers: self.headers.clone(),
+            messages: RwLock::new(self.messages.read().clone()),
+        }
+    }
 }
 
 pub struct SourceMapProcessor {
@@ -189,7 +205,7 @@ pub struct SourceMapProcessor {
 
 impl Source {
     fn log(&self, level: LogLevel, msg: String) {
-        self.messages.borrow_mut().push((level, msg));
+        self.messages.write().push((level, msg));
     }
 
     fn warn(&self, msg: String) {
@@ -290,7 +306,7 @@ impl SourceMapProcessor {
                     ty,
                     skip_upload: false,
                     headers: vec![],
-                    messages: RefCell::new(vec![]),
+                    messages: RwLock::new(vec![]),
                 },
             );
             pb.inc(1);
@@ -378,8 +394,8 @@ impl SourceMapProcessor {
                 println!("    {}", &source.url);
             }
 
-            if !source.messages.borrow().is_empty() {
-                for msg in source.messages.borrow().iter() {
+            if !source.messages.read().is_empty() {
+                for msg in source.messages.read().iter() {
                     println!("      - {}: {}", style(&msg.0).red(), msg.1);
                 }
             }
@@ -495,7 +511,7 @@ impl SourceMapProcessor {
                     ty: SourceType::MinifiedScript,
                     skip_upload: false,
                     headers: vec![],
-                    messages: RefCell::new(vec![]),
+                    messages: RwLock::new(vec![]),
                 },
             );
 
@@ -513,7 +529,7 @@ impl SourceMapProcessor {
                     ty: SourceType::SourceMap,
                     skip_upload: false,
                     headers: vec![],
-                    messages: RefCell::new(vec![]),
+                    messages: RwLock::new(vec![]),
                 },
             );
         }
@@ -604,7 +620,7 @@ impl SourceMapProcessor {
                     source.headers.push(("Sourcemap".to_string(), target_url));
                 }
                 Err(err) => {
-                    source.messages.borrow_mut().push((
+                    source.messages.write().push((
                         LogLevel::Warning,
                         format!("could not determine a source map reference ({})", err),
                     ));
@@ -648,32 +664,70 @@ impl SourceMapProcessor {
             style(release).cyan()
         );
 
-        let pb = make_progress_bar(self.sources.len() as u64);
-        for source in self.sources.values() {
-            pb.tick();
-            if source.skip_upload {
-                pb.inc(1);
-                continue;
-            }
-            pb.set_message(&source.url);
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} Uploading {} source map{}...\
+             \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+            style(">").dim(),
+            style(self.sources.len().to_string()).yellow(),
+            if self.sources.len() == 1 { "" } else { "s" }
+        ));
+        let total_bytes = self
+            .sources
+            .values()
+            .filter(|x| !x.skip_upload)
+            .map(|x| x.contents.len() as u64)
+            .sum();
+        let pb = Arc::new(ProgressBar::new(total_bytes));
+        pb.set_style(progress_style);
 
-            // try to delete old file if we have one
-            if let Some(old_id) = release_files.get(&(dist.map(|x| x.into()), source.url.clone())) {
-                api.delete_release_file(org, project, &release, &old_id)
-                    .ok();
-            }
+        let chunk_options = api.get_chunk_upload_options(org)?;
+        let max_threads = chunk_options.map_or(4, |options| options.concurrency);
+        let pool = ThreadPoolBuilder::new()
+            .num_threads(max_threads as usize)
+            .build()?;
+        let bytes = Arc::new(RwLock::new(vec![0u64; self.sources.len()]));
 
-            api.upload_release_file(
-                org,
-                project,
-                &release,
-                &FileContents::FromBytes(&source.contents),
-                &source.url,
-                dist,
-                Some(source.headers.as_slice()),
-            )?;
-            pb.inc(1);
-        }
+        pool.install(|| {
+            let sources = self.sources.values().collect::<Vec<_>>();
+            (0..self.sources.len())
+                .into_par_iter()
+                .map(|index| -> Result<(), Error> {
+                    let source = sources[index];
+
+                    if source.skip_upload {
+                        return Ok(());
+                    }
+
+                    let mode = ProgressBarMode::Shared((
+                        pb.clone(),
+                        source.contents.len() as u64,
+                        index,
+                        bytes.clone(),
+                    ));
+
+                    if let Some(old_id) =
+                        release_files.get(&(dist.map(|x| x.into()), source.url.clone()))
+                    {
+                        api.delete_release_file(org, project, &release, &old_id)
+                            .ok();
+                    }
+
+                    api.upload_release_file(
+                        org,
+                        project,
+                        &release,
+                        &FileContents::FromBytes(&source.contents),
+                        &source.url,
+                        dist,
+                        Some(source.headers.as_slice()),
+                        mode,
+                    )?;
+
+                    Ok(())
+                })
+                .collect::<Result<(), _>>()
+        })?;
+
         pb.finish_and_clear();
 
         self.dump_log("Source Map Upload Report");
