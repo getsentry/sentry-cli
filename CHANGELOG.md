@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.44.1
+
+* Fixed a segfault in curl on empty file uploading (#535)
+
 ## sentry-cli 1.44.0
 
 * Parallelize source map uploads (#533)
