@@ -113,7 +113,7 @@ pub fn get_react_native_codepush_release(
         }
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
-        for entry_rv in glob_with("ios/*.xcodeproj", &opts)? {
+        for entry_rv in glob_with("ios/*.xcodeproj", opts)? {
             if let Ok(entry) = entry_rv {
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
