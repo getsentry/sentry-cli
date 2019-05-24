@@ -15,7 +15,7 @@ chardet = "0.2.4"
 chrono = { version = "0.4.6", features = ["serde"] }
 clap = { version = "2.33.0", default-features = false, features = ["suggestions", "wrap_help"] }
 console = "0.7.5"
-curl = "0.4.20"
+curl = "0.4.21"
 dirs = "1.0.5"
 dotenv = "0.13.0"
 elementtree = "0.5.0"
@@ -83,3 +83,6 @@ crossbeam-channel = "0.3.8"
 [profile.release]
 opt-level = 3
 panic = "abort"
+
+[patch.crates-io]
+curl = { git = "https://github.com/mitsuhiko/curl-rust", rev = "ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689" }
