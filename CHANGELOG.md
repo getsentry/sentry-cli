@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.44.0
+
+* Parallelize source map uploads (#533)
+
 ## sentry-cli 1.43.0
 
 * Add support for File RAM Bundles (#528)
