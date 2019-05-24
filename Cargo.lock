@@ -385,10 +385,10 @@ dependencies = [
 
 [[package]]
 name = "curl"
-version = "0.4.21"
-source = "git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689#ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689"
+version = "0.4.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "curl-sys 0.4.18 (git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689)",
+ "curl-sys 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)",
  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.55 (registry+https://github.com/rust-lang/crates.io-index)",
  "openssl-probe 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -401,7 +401,7 @@ dependencies = [
 [[package]]
 name = "curl-sys"
 version = "0.4.18"
-source = "git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689#ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689"
+source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "cc 1.0.37 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.55 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1554,7 +1554,7 @@ version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "backtrace 0.3.22 (registry+https://github.com/rust-lang/crates.io-index)",
- "curl 0.4.21 (git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689)",
+ "curl 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "hostname 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "httpdate 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1585,7 +1585,7 @@ dependencies = [
  "clap 2.33.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "console 0.7.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "crossbeam-channel 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "curl 0.4.21 (git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689)",
+ "curl 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)",
  "dirs 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "dotenv 0.13.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "elementtree 0.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -2207,8 +2207,8 @@ dependencies = [
 "checksum crossbeam-utils 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)" = "f8306fcef4a7b563b76b7dd949ca48f52bc1141aa067d2ea09565f3e2652aa5c"
 "checksum csv 1.0.7 (registry+https://github.com/rust-lang/crates.io-index)" = "9044e25afb0924b5a5fc5511689b0918629e85d68ea591e5e87fbf1e85ea1b3b"
 "checksum csv-core 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "fa5cdef62f37e6ffe7d1f07a381bc0db32b7a3ff1cac0de56cb0d81e71f53d65"
-"checksum curl 0.4.21 (git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689)" = "<none>"
-"checksum curl-sys 0.4.18 (git+https://github.com/mitsuhiko/curl-rust?rev=ebb6d8eeb59c3cfe935e0ef2ff9e409e6adbe689)" = "<none>"
+"checksum curl 0.4.22 (registry+https://github.com/rust-lang/crates.io-index)" = "f8ed9a22aa8c4e49ac0c896279ef532a43a7df2f54fcd19fa36960de029f965f"
+"checksum curl-sys 0.4.18 (registry+https://github.com/rust-lang/crates.io-index)" = "9d91a0052d5b982887d8e829bee0faffc7218ea3c6ebd3d6c2c8f678a93c9a42"
 "checksum debugid 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "088c9627adec1e494ff9dea77377f1e69893023d631254a0ec68b16ee20be3e9"
 "checksum debugid 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)" = "751dad1347b163aa77262232129c7ac46e2810485c9b095ac9f7caf200e97df4"
 "checksum difference 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)" = "524cbf6897b527295dff137cec09ecf3a05f4fddffd7dfcd1585403449e74198"
