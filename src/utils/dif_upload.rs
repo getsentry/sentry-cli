@@ -30,7 +30,9 @@ use crate::api::{
     Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState,
 };
 use crate::config::Config;
-use crate::utils::chunks::{upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL};
+use crate::utils::chunks::{
+    upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL,
+};
 use crate::utils::dif::DifFeatures;
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
