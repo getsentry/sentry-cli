@@ -72,7 +72,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let app = matches.value_of("app_name").unwrap();
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
-    let api = Api::current();
     let print_release_name = matches.is_present("print_release_name");
 
     if !print_release_name {
@@ -116,7 +115,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     processor.rewrite(&[here_str])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(
+    let release = Api::current().new_release(
         &org,
         &NewRelease {
             version: release.to_string(),
@@ -124,7 +123,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             ..Default::default()
         },
     )?;
-    processor.upload(&api, &org, Some(&project), &release.version, None)?;
+    processor.upload(&org, Some(&project), &release.version, None)?;
 
     Ok(())
 }

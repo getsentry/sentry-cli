@@ -17,11 +17,20 @@ use log::{debug, info, warn};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use symbolic::common::ByteView;
 use url::Url;
 
-use crate::api::{Api, FileContents, ProgressBarMode};
+use crate::api::{
+    Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedFileState, FileContents, ProgressBarMode,
+};
+use crate::utils::artifacts::{ArtifactBundleWriter, ArtifactInfo, ArtifactType};
+use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::enc::decode_unknown_string;
+use crate::utils::fs::{get_sha1_checksums, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+
+/// Fallback concurrency for release file uploads.
+static DEFAULT_CONCURRENCY: usize = 4;
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);
@@ -84,6 +93,25 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
         rv.push_str(ext);
     }
     rv
+}
+
+fn url_to_bundle_path(url: &str) -> Result<String, Error> {
+    let url = if url.starts_with("~/") {
+        Url::parse(&format!("http://{}", url))?
+    } else {
+        Url::parse(url)?
+    };
+
+    let mut path = url.path();
+    if path.starts_with('/') {
+        path = &path[1..];
+    }
+
+    Ok(match url.host_str() {
+        Some("~") => format!("_/_/{}", path),
+        Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
+        None => format!("{}/_/{}", url.scheme(), path),
+    })
 }
 
 pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, &'a String)>>(
@@ -150,14 +178,6 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
     );
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Debug)]
-enum SourceType {
-    Script,
-    MinifiedScript,
-    SourceMap,
-    IndexedRamBundle,
-}
-
 #[derive(PartialEq, Debug, Copy, Clone)]
 enum LogLevel {
     Warning,
@@ -178,7 +198,7 @@ struct Source {
     #[allow(unused)]
     file_path: PathBuf,
     contents: Vec<u8>,
-    ty: SourceType,
+    ty: ArtifactType,
     skip_upload: bool,
     headers: Vec<(String, String)>,
     messages: RwLock<Vec<(LogLevel, String)>>,
@@ -276,7 +296,7 @@ impl SourceMapProcessor {
             let mut contents: Vec<u8> = vec![];
             f.read_to_end(&mut contents)?;
             let ty = if sourcemap::is_sourcemap_slice(&contents) {
-                SourceType::SourceMap
+                ArtifactType::SourceMap
             } else if path
                 .file_name()
                 .and_then(OsStr::to_str)
@@ -284,7 +304,7 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&contents)
             {
-                SourceType::IndexedRamBundle
+                ArtifactType::IndexedRamBundle
             } else if path
                 .file_name()
                 .and_then(OsStr::to_str)
@@ -292,9 +312,9 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 || is_likely_minified_js(&contents)
             {
-                SourceType::MinifiedScript
+                ArtifactType::MinifiedScript
             } else {
-                SourceType::Script
+                ArtifactType::Script
             };
 
             self.sources.insert(
@@ -325,7 +345,7 @@ impl SourceMapProcessor {
         if let Some(url) = sm_ref.get_url() {
             let full_url = join_url(&source.url, url)?;
             info!("found sourcemap for {} at {}", &source.url, full_url);
-        } else if source.ty == SourceType::MinifiedScript {
+        } else if source.ty == ArtifactType::MinifiedScript {
             source.error("missing sourcemap!".into());
         }
         Ok(())
@@ -365,10 +385,10 @@ impl SourceMapProcessor {
                 println!(
                     "  {}",
                     style(match source.ty {
-                        SourceType::Script => "Scripts",
-                        SourceType::MinifiedScript => "Minified Scripts",
-                        SourceType::SourceMap => "Source Maps",
-                        SourceType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
+                        ArtifactType::Script => "Scripts",
+                        ArtifactType::MinifiedScript => "Minified Scripts",
+                        ArtifactType::SourceMap => "Source Maps",
+                        ArtifactType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
                     })
                     .yellow()
                     .bold()
@@ -378,7 +398,7 @@ impl SourceMapProcessor {
 
             if source.skip_upload {
                 println!("    {} [skipped separate upload]", &source.url);
-            } else if source.ty == SourceType::MinifiedScript {
+            } else if source.ty == ArtifactType::MinifiedScript {
                 let sm_ref = source.get_sourcemap_ref();
                 if_chain! {
                     if sm_ref != sourcemap::SourceMapRef::Missing;
@@ -414,19 +434,19 @@ impl SourceMapProcessor {
         for source in &sources {
             pb.set_message(&source.url);
             match source.ty {
-                SourceType::Script | SourceType::MinifiedScript => {
+                ArtifactType::Script | ArtifactType::MinifiedScript => {
                     if let Err(err) = self.validate_script(&source) {
                         source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
-                SourceType::SourceMap => {
+                ArtifactType::SourceMap => {
                     if let Err(err) = self.validate_sourcemap(&source) {
                         source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
-                SourceType::IndexedRamBundle => (),
+                ArtifactType::IndexedRamBundle => (),
             }
             pb.inc(1);
         }
@@ -453,7 +473,7 @@ impl SourceMapProcessor {
         let sourcemaps_references = HashSet::from_iter(
             self.sources
                 .values()
-                .filter(|x| x.ty == SourceType::SourceMap)
+                .filter(|x| x.ty == ArtifactType::SourceMap)
                 .map(|x| x.url.to_string()),
         );
 
@@ -508,7 +528,7 @@ impl SourceMapProcessor {
                     url: source_url.clone(),
                     file_path: PathBuf::from(name.clone()),
                     contents: sourceview.source().as_bytes().to_vec(),
-                    ty: SourceType::MinifiedScript,
+                    ty: ArtifactType::MinifiedScript,
                     skip_upload: false,
                     headers: vec![],
                     messages: RwLock::new(vec![]),
@@ -526,7 +546,7 @@ impl SourceMapProcessor {
                     url: sourcemap_url.clone(),
                     file_path: PathBuf::from(sourcemap_name),
                     contents: sourcemap_content,
-                    ty: SourceType::SourceMap,
+                    ty: ArtifactType::SourceMap,
                     skip_upload: false,
                     headers: vec![],
                     messages: RwLock::new(vec![]),
@@ -542,7 +562,7 @@ impl SourceMapProcessor {
 
         // Drain RAM bundles from self.sources
         for (url, source) in mem::replace(&mut self.sources, Default::default()).into_iter() {
-            if source.ty == SourceType::IndexedRamBundle {
+            if source.ty == ArtifactType::IndexedRamBundle {
                 ram_bundles.push(source);
             } else {
                 self.sources.insert(url, source);
@@ -575,7 +595,7 @@ impl SourceMapProcessor {
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
             pb.set_message(&source.url);
-            if source.ty != SourceType::SourceMap {
+            if source.ty != ArtifactType::SourceMap {
                 pb.inc(1);
                 continue;
             }
@@ -604,13 +624,13 @@ impl SourceMapProcessor {
             self.sources
                 .iter()
                 .map(|x| x.1)
-                .filter(|x| x.ty == SourceType::SourceMap)
+                .filter(|x| x.ty == ArtifactType::SourceMap)
                 .map(|x| x.url.to_string()),
         );
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
-            if source.ty != SourceType::MinifiedScript {
+            if source.ty != ArtifactType::MinifiedScript {
                 continue;
             }
             // we silently ignore when we can't find a sourcemap. Maybe we should
@@ -630,25 +650,15 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    /// Uploads all files
-    pub fn upload(
-        &mut self,
-        api: &Api,
+    fn upload_files_parallel(
+        &self,
         org: &str,
         project: Option<&str>,
         release: &str,
         dist: Option<&str>,
+        num_threads: usize,
     ) -> Result<(), Error> {
-        self.flush_pending_sources()?;
-
-        // Do not permit uploads of more than 20k files. This is a termporary downside protection to
-        // protect users from uploading more sources than we support.
-        if self.sources.len() > 20_000 {
-            bail!(
-                "Too many sources: {} exceeds maximum allowed files per release",
-                self.sources.len()
-            );
-        }
+        let api = Api::current();
 
         // get a list of release files first so we know the file IDs of
         // files that already exist.
@@ -671,33 +681,30 @@ impl SourceMapProcessor {
             style(self.sources.len().to_string()).yellow(),
             if self.sources.len() == 1 { "" } else { "s" }
         ));
-        let total_bytes = self
+
+        let sources = self
             .sources
             .values()
-            .filter(|x| !x.skip_upload)
-            .map(|x| x.contents.len() as u64)
+            .filter(|source| !source.skip_upload)
+            .collect::<Vec<_>>();
+
+        let total_bytes = sources
+            .iter()
+            .map(|source| source.contents.len() as u64)
             .sum();
+
         let pb = Arc::new(ProgressBar::new(total_bytes));
         pb.set_style(progress_style);
 
-        let chunk_options = api.get_chunk_upload_options(org)?;
-        let max_threads = chunk_options.map_or(4, |options| options.concurrency);
-        let pool = ThreadPoolBuilder::new()
-            .num_threads(max_threads as usize)
-            .build()?;
-        let bytes = Arc::new(RwLock::new(vec![0u64; self.sources.len()]));
+        let pool = ThreadPoolBuilder::new().num_threads(num_threads).build()?;
+        let bytes = Arc::new(RwLock::new(vec![0u64; sources.len()]));
 
         pool.install(|| {
-            let sources = self.sources.values().collect::<Vec<_>>();
-            (0..self.sources.len())
+            sources
                 .into_par_iter()
-                .map(|index| -> Result<(), Error> {
-                    let source = sources[index];
-
-                    if source.skip_upload {
-                        return Ok(());
-                    }
-
+                .enumerate()
+                .map(|(index, source)| -> Result<(), Error> {
+                    let api = Api::current();
                     let mode = ProgressBarMode::Shared((
                         pb.clone(),
                         source.contents.len() as u64,
@@ -730,7 +737,179 @@ impl SourceMapProcessor {
 
         pb.finish_and_clear();
 
+        Ok(())
+    }
+
+    fn build_artifact_bundle(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        dist: Option<&str>,
+    ) -> Result<TempFile, Error> {
+        let sources = self
+            .sources
+            .values()
+            .filter(|source| !source.skip_upload)
+            .collect::<Vec<_>>();
+
+        let progress_style = ProgressStyle::default_bar().template(
+            "{prefix:.dim} Bundling files for upload... {msg:.dim}\
+             \n{wide_bar}  {pos}/{len}",
+        );
+
+        let progress = ProgressBar::new(sources.len() as u64);
+        progress.set_style(progress_style);
+        progress.set_prefix(">");
+
+        let archive = TempFile::create()?;
+        let mut bundle = ArtifactBundleWriter::new(archive.open()?);
+
+        bundle.set_org(org);
+        bundle.set_project(project);
+        bundle.set_release(release);
+        bundle.set_dist(dist);
+
+        for source in self.sources.values() {
+            progress.inc(1);
+            progress.set_message(&source.url);
+
+            let bundle_path = url_to_bundle_path(&source.url)?;
+            let info = ArtifactInfo {
+                url: source.url.clone(),
+                ty: Some(source.ty),
+                headers: source.headers.iter().cloned().collect(),
+            };
+
+            bundle.add_file(bundle_path, source.contents.as_slice(), info)?;
+        }
+
+        bundle.finish()?;
+
+        progress.finish_and_clear();
+        println!(
+            "{} Bundled {} {} for upload",
+            style(">").dim(),
+            style(sources.len()).yellow(),
+            match sources.len() {
+                1 => "file",
+                _ => "files",
+            }
+        );
+
+        Ok(archive)
+    }
+
+    fn upload_files_chunked(
+        &self,
+        options: &ChunkUploadOptions,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        dist: Option<&str>,
+    ) -> Result<(), Error> {
+        let archive = self.build_artifact_bundle(org, project, release, dist)?;
+
+        let progress_style =
+            ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+
+        let progress = ProgressBar::new_spinner();
+        progress.enable_steady_tick(100);
+        progress.set_style(progress_style);
+
+        let view = ByteView::open(archive.path())?;
+        let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
+        let chunks = view
+            .chunks(options.chunk_size as usize)
+            .zip(checksums.iter())
+            .map(|(data, checksum)| Chunk((*checksum, data)))
+            .collect::<Vec<_>>();
+
+        progress.finish_and_clear();
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} Uploading release files...\
+             \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+            style(">").dim(),
+        ));
+
+        upload_chunks(&chunks, options, progress_style)?;
+        println!("{} Uploaded release files to Sentry", style(">").dim(),);
+
+        let progress_style =
+            ProgressStyle::default_spinner().template("{spinner} Processing files...");
+
+        let progress = ProgressBar::new_spinner();
+        progress.enable_steady_tick(100);
+        progress.set_style(progress_style);
+
+        let api = Api::current();
+        let response = loop {
+            let response = api.assemble_artifacts(org, release, checksum, &checksums)?;
+            if response.state.finished() {
+                break response;
+            }
+
+            std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
+        };
+
+        if response.state == ChunkedFileState::Error {
+            let message = match response.detail {
+                Some(ref detail) => detail,
+                None => "unknown error",
+            };
+
+            bail!("Failed to process uploaded files: {}", message);
+        }
+
+        progress.finish_and_clear();
+        println!("{} File processing complete", style(">").dim());
+
+        Ok(())
+    }
+
+    fn do_upload(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        dist: Option<&str>,
+    ) -> Result<(), Error> {
+        let api = Api::current();
+
+        let chunk_options = api.get_chunk_upload_options(org)?;
+        if let Some(ref chunk_options) = chunk_options {
+            if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
+                return self.upload_files_chunked(chunk_options, org, project, release, dist);
+            }
+        }
+
+        let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
+        self.upload_files_parallel(org, project, release, dist, concurrency)
+    }
+
+    /// Uploads all files
+    pub fn upload(
+        &mut self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        dist: Option<&str>,
+    ) -> Result<(), Error> {
+        self.flush_pending_sources()?;
+
+        // Do not permit uploads of more than 20k files. This is a termporary downside protection to
+        // protect users from uploading more sources than we support.
+        if self.sources.len() > 20_000 {
+            bail!(
+                "Too many sources: {} exceeds maximum allowed files per release",
+                self.sources.len()
+            );
+        }
+
+        self.do_upload(org, project, release, dist)?;
         self.dump_log("Source Map Upload Report");
+
         Ok(())
     }
 }

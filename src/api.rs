@@ -956,6 +956,29 @@ impl Api {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
+    pub fn assemble_artifacts(
+        &self,
+        org: &str,
+        release: &str,
+        checksum: Digest,
+        chunks: &[Digest],
+    ) -> ApiResult<AssembleArtifactsResponse> {
+        let url = format!("/organizations/{}/releases/{}/assemble/", org, release);
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedArtifactRequest { checksum, chunks })?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
     /// Compresses a file with the given compression.
     fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
         Ok(match compression {
@@ -2070,24 +2093,54 @@ impl<'de> Deserialize<'de> for ChunkCompression {
     }
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum ChunkUploadCapability {
+    DebugFiles,
+    ReleaseFiles,
+    Unknown,
+}
+
+impl<'de> Deserialize<'de> for ChunkUploadCapability {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(match String::deserialize(deserializer)?.as_str() {
+            "debug_files" => ChunkUploadCapability::DebugFiles,
+            "release_files" => ChunkUploadCapability::ReleaseFiles,
+            _ => ChunkUploadCapability::Unknown,
+        })
+    }
+}
+
+fn default_chunk_upload_accept() -> Vec<ChunkUploadCapability> {
+    vec![ChunkUploadCapability::DebugFiles]
+}
+
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChunkUploadOptions {
-    #[serde(rename = "url")]
     pub url: String,
     #[serde(rename = "chunksPerRequest")]
     pub max_chunks: u64,
     #[serde(rename = "maxRequestSize")]
     pub max_size: u64,
-    #[serde(rename = "maxFileSize", default)]
+    #[serde(default)]
     pub max_file_size: u64,
-    #[serde(rename = "hashAlgorithm")]
     pub hash_algorithm: ChunkHashAlgorithm,
-    #[serde(rename = "chunkSize")]
     pub chunk_size: u64,
-    #[serde(rename = "concurrency")]
     pub concurrency: u8,
-    #[serde(rename = "compression", default)]
+    #[serde(default)]
     pub compression: Vec<ChunkCompression>,
+    #[serde(default = "default_chunk_upload_accept")]
+    pub accept: Vec<ChunkUploadCapability>,
+}
+
+impl ChunkUploadOptions {
+    /// Returns whether the given capability is accepted by the chunk upload endpoint.
+    pub fn supports(&self, capability: ChunkUploadCapability) -> bool {
+        self.accept.contains(&capability)
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
@@ -2120,23 +2173,32 @@ impl ChunkedFileState {
 
 #[derive(Debug, Serialize)]
 pub struct ChunkedDifRequest<'a> {
-    #[serde(rename = "name")]
     pub name: &'a str,
-    #[serde(rename = "chunks")]
     pub chunks: &'a [Digest],
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ChunkedDifResponse {
-    #[serde(rename = "state")]
     pub state: ChunkedFileState,
-    #[serde(rename = "missingChunks")]
     pub missing_chunks: Vec<Digest>,
-    #[serde(default, rename = "detail")]
     pub detail: Option<String>,
-    #[serde(default, rename = "dif")]
     pub dif: Option<DebugInfoFile>,
 }
 
 pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;
 pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
+
+#[derive(Debug, Serialize)]
+pub struct ChunkedArtifactRequest<'a> {
+    pub checksum: Digest,
+    pub chunks: &'a [Digest],
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AssembleArtifactsResponse {
+    pub state: ChunkedFileState,
+    pub missing_chunks: Vec<Digest>,
+    pub detail: Option<String>,
+}

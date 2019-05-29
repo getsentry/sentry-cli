@@ -2,7 +2,8 @@
 pub mod android;
 pub mod appcenter;
 pub mod args;
-pub mod batch;
+pub mod artifacts;
+pub mod chunks;
 pub mod codepush;
 pub mod cordova;
 pub mod dif;

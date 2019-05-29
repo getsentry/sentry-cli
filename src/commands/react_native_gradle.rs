@@ -92,7 +92,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             "Uploading sourcemaps for release {} distribution {}",
             &release.version, dist
         );
-        processor.upload(&api, &org, Some(&project), &release.version, Some(dist))?;
+        processor.upload(&org, Some(&project), &release.version, Some(dist))?;
     }
 
     Ok(())

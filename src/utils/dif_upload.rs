@@ -13,28 +13,24 @@ use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::slice::{Chunks, Iter};
 use std::str;
-use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
 
 use console::style;
 use failure::{bail, err_msg, Error, SyncFailure};
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
-use parking_lot::RwLock;
-use rayon::prelude::*;
-use rayon::ThreadPoolBuilder;
 use sha1::Digest;
 use symbolic::common::{ByteView, DebugId, SelfCell};
 use symbolic::debuginfo::{Archive, FileFormat, Object};
 use walkdir::WalkDir;
 use which::which;
-use zip::write::FileOptions;
-use zip::{ZipArchive, ZipWriter};
+use zip::{write::FileOptions, ZipArchive, ZipWriter};
 
-use crate::api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState, ProgressBarMode};
+use crate::api::{
+    Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState,
+};
 use crate::config::Config;
-use crate::utils::batch::{BatchedSliceExt, ItemSize};
+use crate::utils::chunks::{upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::dif::DifFeatures;
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
@@ -46,27 +42,6 @@ pub use crate::api::DebugInfoFile;
 /// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;
 
-/// A single chunk of a debug information file returned by
-/// `ChunkedDifMatch::chunks`. It carries the binary data slice and a SHA1
-/// checksum of that data.
-///
-/// `DifChunk` implements AsRef<(Digest, &[u8])> so that it can be easily
-/// transformed into a vector or map.
-#[derive(Debug)]
-struct DifChunk<'data>((Digest, &'data [u8]));
-
-impl<'data> AsRef<(Digest, &'data [u8])> for DifChunk<'data> {
-    fn as_ref(&self) -> &(Digest, &'data [u8]) {
-        &self.0
-    }
-}
-
-impl<'data> ItemSize for DifChunk<'data> {
-    fn size(&self) -> u64 {
-        (self.0).1.len() as u64
-    }
-}
-
 /// An iterator over chunks of data in a `ChunkedDifMatch` object.
 ///
 /// This struct is returned by `ChunkedDifMatch::chunks`.
@@ -76,11 +51,11 @@ struct DifChunks<'a> {
 }
 
 impl<'a> Iterator for DifChunks<'a> {
-    type Item = DifChunk<'a>;
+    type Item = Chunk<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         match (self.checksums.next(), self.iter.next()) {
-            (Some(checksum), Some(data)) => Some(DifChunk((*checksum, data))),
+            (Some(checksum), Some(data)) => Some(Chunk((*checksum, data))),
             (_, _) => None,
         }
     }
@@ -372,7 +347,7 @@ impl<'a> DifSource<'a> {
 
 /// Information returned by `assemble_difs` containing flat lists of incomplete
 /// DIFs and their missing chunks.
-type MissingDifsInfo<'data, 'm> = (Vec<&'m ChunkedDifMatch<'data>>, Vec<DifChunk<'m>>);
+type MissingDifsInfo<'data, 'm> = (Vec<&'m ChunkedDifMatch<'data>>, Vec<Chunk<'m>>);
 
 /// Verifies that the given path contains a ZIP file and opens it.
 fn try_open_zip<P>(path: P) -> Result<Option<ZipFileArchive>, Error>
@@ -860,7 +835,7 @@ fn try_assemble_difs<'data, 'm>(
                 // them.
                 let mut missing_chunks = chunked_match
                     .chunks()
-                    .filter(|&DifChunk((c, _))| file_response.missing_chunks.contains(&c))
+                    .filter(|&Chunk((c, _))| file_response.missing_chunks.contains(&c))
                     .peekable();
 
                 // Usually every file that is NotFound should also contain a set
@@ -908,70 +883,7 @@ fn upload_missing_chunks(
         if difs.len() == 1 { "" } else { "s" }
     ));
 
-    // To make the progress bar more consistent for repeated and partial uploads
-    // we also include already uploaded chunks in the progress bar. Thus, the
-    // first chunk's progress starts at the amount of already uploaded bytes.
-    let total_bytes = difs
-        .iter()
-        .flat_map(|m| m.chunks().map(|DifChunk((_, data))| data.len() as u64))
-        .sum();
-    let missing_bytes: u64 = chunks
-        .iter()
-        .map(|&DifChunk((_, data))| data.len() as u64)
-        .sum();
-
-    // Chunks are uploaded in batches, but the progress bar is shared between
-    // multiple requests to simulate one continuous upload to the user. Since we
-    // have to embed the progress bar into a ProgressBarMode and move it into
-    // `Api::upload_chunks`, the progress bar is created in an Arc.
-    let progress = Arc::new(ProgressBar::new(total_bytes));
-    progress.set_style(progress_style);
-
-    // Select the best available compression mechanism. We assume that every
-    // compression algorithm has been implemented for uploading, except `Other`
-    // which is used for unknown compression algorithms. In case the server
-    // does not support compression, we fall back to `Uncompressed`.
-    let compression = chunk_options
-        .compression
-        .iter()
-        .max()
-        .cloned()
-        .unwrap_or_default();
-
-    info!("using '{}' compression for chunk upload", compression);
-
-    // The upload is executed in parallel batches. Each batch aggregates objects
-    // until it exceeds the maximum size configured in ChunkUploadOptions. We
-    // keep track of the overall progress and potential errors. If an error
-    // ocurrs, all subsequent requests will be cancelled and the error returned.
-    // Otherwise, the after every successful update, the overall progress is
-    // updated and rendered.
-    let batches: Vec<_> = chunks
-        .batches(chunk_options.max_size, chunk_options.max_chunks)
-        .collect();
-
-    // We count the progress of each batch separately to avoid synchronization
-    // issues. For a more consistent progress bar in repeated uploads, we also
-    // add the already uploaded bytes to the progress bar.
-    let bytes = Arc::new(RwLock::new(vec![0u64; batches.len()]));
-    bytes.write().push(total_bytes - missing_bytes);
-
-    let pool = ThreadPoolBuilder::new()
-        .num_threads(chunk_options.concurrency as usize)
-        .build()?;
-
-    pool.install(|| {
-        batches
-            .into_par_iter()
-            .enumerate()
-            .map(|(index, (batch, size))| {
-                let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
-                Api::current().upload_chunks(&chunk_options.url, batch, mode, compression)
-            })
-            .collect::<Result<(), _>>()
-    })?;
-
-    progress.finish_and_clear();
+    upload_chunks(chunks, chunk_options, progress_style)?;
 
     println!(
         "{} Uploaded {} missing debug information {}",
@@ -1045,7 +957,7 @@ fn poll_dif_assemble(
             break response;
         }
 
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(ASSEMBLE_POLL_INTERVAL);
     };
 
     progress.finish_and_clear();
@@ -1489,10 +1401,12 @@ impl DifUpload {
                 self.max_file_size = chunk_options.max_file_size;
             }
 
-            upload_difs_chunked(self, chunk_options)
-        } else {
-            Ok((upload_difs_batched(self)?, false))
+            if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
+                return upload_difs_chunked(self, chunk_options);
+            }
         }
+
+        Ok((upload_difs_batched(self)?, false))
     }
 
     /// Determines if this `DebugId` matches the search criteria.
