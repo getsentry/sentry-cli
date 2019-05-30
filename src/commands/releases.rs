@@ -906,7 +906,6 @@ fn execute_files_upload_sourcemaps<'a>(
     let dist = matches.value_of("dist");
     let project = ctx.get_project_default().ok();
     processor.upload(
-        &ctx.api,
         org,
         project.as_ref().map(String::as_ref),
         &release.version,

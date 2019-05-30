@@ -253,13 +253,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 ..Default::default()
             },
         )?;
-        processor.upload(
-            &api,
-            &org,
-            Some(&project),
-            &release.version,
-            Some(&plist.build()),
-        )?;
+        processor.upload(&org, Some(&project), &release.version, Some(&plist.build()))?;
 
         Ok(())
     })
