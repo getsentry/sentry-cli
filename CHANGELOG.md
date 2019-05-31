@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.44.2
+
+* Even faster sourcemap uploads to sentry.io (#540, #542)
+
 ## sentry-cli 1.44.1
 
 * Fixed a segfault in curl on empty file uploading (#535)
