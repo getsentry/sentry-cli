@@ -262,6 +262,14 @@ impl Source {
     }
 }
 
+pub struct UploadContext<'a> {
+    pub org: &'a str,
+    pub project: Option<&'a str>,
+    pub release: &'a str,
+    pub dist: Option<&'a str>,
+    pub wait: bool,
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -652,10 +660,7 @@ impl SourceMapProcessor {
 
     fn upload_files_parallel(
         &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        dist: Option<&str>,
+        context: &UploadContext<'_>,
         num_threads: usize,
     ) -> Result<(), Error> {
         let api = Api::current();
@@ -663,7 +668,7 @@ impl SourceMapProcessor {
         // get a list of release files first so we know the file IDs of
         // files that already exist.
         let release_files: HashMap<_, _> = api
-            .list_release_files(org, project, release)?
+            .list_release_files(context.org, context.project, context.release)?
             .into_iter()
             .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
             .collect();
@@ -671,7 +676,7 @@ impl SourceMapProcessor {
         println!(
             "{} Uploading source maps for release {}",
             style(">").dim(),
-            style(release).cyan()
+            style(context.release).cyan()
         );
 
         let progress_style = ProgressStyle::default_bar().template(&format!(
@@ -713,19 +718,24 @@ impl SourceMapProcessor {
                     ));
 
                     if let Some(old_id) =
-                        release_files.get(&(dist.map(|x| x.into()), source.url.clone()))
+                        release_files.get(&(context.dist.map(|x| x.into()), source.url.clone()))
                     {
-                        api.delete_release_file(org, project, &release, &old_id)
-                            .ok();
+                        api.delete_release_file(
+                            context.org,
+                            context.project,
+                            &context.release,
+                            &old_id,
+                        )
+                        .ok();
                     }
 
                     api.upload_release_file(
-                        org,
-                        project,
-                        &release,
+                        context.org,
+                        context.project,
+                        context.release,
                         &FileContents::FromBytes(&source.contents),
                         &source.url,
-                        dist,
+                        context.dist,
                         Some(source.headers.as_slice()),
                         mode,
                     )?;
@@ -740,13 +750,7 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    fn build_artifact_bundle(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        dist: Option<&str>,
-    ) -> Result<TempFile, Error> {
+    fn build_artifact_bundle(&self, context: &UploadContext<'_>) -> Result<TempFile, Error> {
         let sources = self
             .sources
             .values()
@@ -765,10 +769,10 @@ impl SourceMapProcessor {
         let archive = TempFile::create()?;
         let mut bundle = ArtifactBundleWriter::new(archive.open()?);
 
-        bundle.set_org(org);
-        bundle.set_project(project);
-        bundle.set_release(release);
-        bundle.set_dist(dist);
+        bundle.set_org(context.org);
+        bundle.set_project(context.project);
+        bundle.set_release(context.release);
+        bundle.set_dist(context.dist);
 
         for source in self.sources.values() {
             progress.inc(1);
@@ -802,13 +806,10 @@ impl SourceMapProcessor {
 
     fn upload_files_chunked(
         &self,
+        context: &UploadContext<'_>,
         options: &ChunkUploadOptions,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        dist: Option<&str>,
     ) -> Result<(), Error> {
-        let archive = self.build_artifact_bundle(org, project, release, dist)?;
+        let archive = self.build_artifact_bundle(&context)?;
 
         let progress_style =
             ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
@@ -845,8 +846,13 @@ impl SourceMapProcessor {
 
         let api = Api::current();
         let response = loop {
-            let response = api.assemble_artifacts(org, release, checksum, &checksums)?;
-            if response.state.finished() {
+            let response =
+                api.assemble_artifacts(context.org, context.release, checksum, &checksums)?;
+
+            // Poll until there is a response, unless the user has specified to skip polling. In
+            // that case, we return the potentially partial response from the server. This might
+            // still contain a cached error.
+            if !context.wait || response.state.finished() {
                 break response;
             }
 
@@ -868,34 +874,22 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    fn do_upload(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        dist: Option<&str>,
-    ) -> Result<(), Error> {
+    fn do_upload(&self, context: &UploadContext<'_>) -> Result<(), Error> {
         let api = Api::current();
 
-        let chunk_options = api.get_chunk_upload_options(org)?;
+        let chunk_options = api.get_chunk_upload_options(context.org)?;
         if let Some(ref chunk_options) = chunk_options {
             if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
-                return self.upload_files_chunked(chunk_options, org, project, release, dist);
+                return self.upload_files_chunked(context, chunk_options);
             }
         }
 
         let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
-        self.upload_files_parallel(org, project, release, dist, concurrency)
+        self.upload_files_parallel(context, concurrency)
     }
 
     /// Uploads all files
-    pub fn upload(
-        &mut self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        dist: Option<&str>,
-    ) -> Result<(), Error> {
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
         self.flush_pending_sources()?;
 
         // Do not permit uploads of more than 20k files. This is a termporary downside protection to
@@ -907,7 +901,7 @@ impl SourceMapProcessor {
             );
         }
 
-        self.do_upload(org, project, release, dist)?;
+        self.do_upload(context)?;
         self.dump_log("Source Map Upload Report");
 
         Ok(())

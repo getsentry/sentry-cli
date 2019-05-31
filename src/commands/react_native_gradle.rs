@@ -9,7 +9,7 @@ use sourcemap::ram_bundle::RamBundle;
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
-use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a gradle build step.")
@@ -43,6 +43,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .number_of_values(1)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
+        )
+        .arg(
+            Arg::with_name("no_wait")
+                .long("no-wait")
+                .help("Do not wait for the server to process uploaded files."),
         )
 }
 
@@ -92,7 +97,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             "Uploading sourcemaps for release {} distribution {}",
             &release.version, dist
         );
-        processor.upload(&org, Some(&project), &release.version, Some(dist))?;
+
+        processor.upload(&UploadContext {
+            org: &org,
+            project: Some(&project),
+            release: &release.version,
+            dist: Some(dist),
+            wait: !matches.is_present("no_wait"),
+        })?;
     }
 
     Ok(())
