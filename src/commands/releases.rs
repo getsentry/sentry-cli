@@ -212,9 +212,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .arg(Arg::with_name("validate")
                     .long("validate")
                     .help("Enable basic sourcemap validation."))
-                .arg(Arg::with_name("no_wait")
-                    .long("no-wait")
-                    .help("Do not wait for the server to process uploaded files."))
+        .arg(
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
+        )
                 .arg(Arg::with_name("no_sourcemap_reference")
                     .long("no-sourcemap-reference")
                     .help("Disable emitting of automatic sourcemap references.{n}\
@@ -912,7 +914,7 @@ fn execute_files_upload_sourcemaps<'a>(
         project: project.as_ref().map(String::as_str),
         release: &release.version,
         dist: matches.value_of("dist"),
-        wait: !matches.is_present("no_wait"),
+        wait: matches.is_present("wait"),
     })?;
 
     Ok(())

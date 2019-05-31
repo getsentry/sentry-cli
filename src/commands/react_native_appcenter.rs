@@ -62,9 +62,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("A list of folders with assets that should be processed."),
         )
         .arg(
-            Arg::with_name("no_wait")
-                .long("no-wait")
-                .help("Do not wait for the server to process uploaded files."),
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
         )
 }
 
@@ -134,7 +134,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         project: Some(&project),
         release: &release.version,
         dist: None,
-        wait: !matches.is_present("no_wait"),
+        wait: !matches.is_present("wait"),
     })?;
 
     Ok(())
