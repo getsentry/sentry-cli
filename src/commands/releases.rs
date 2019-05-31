@@ -22,7 +22,7 @@ use crate::utils::args::{
 };
 use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::releases::detect_release_name;
-use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 use crate::utils::system::QuietExit;
 use crate::utils::vcs::{find_heads, CommitSpec};
 
@@ -212,6 +212,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .arg(Arg::with_name("validate")
                     .long("validate")
                     .help("Enable basic sourcemap validation."))
+        .arg(
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
+        )
                 .arg(Arg::with_name("no_sourcemap_reference")
                     .long("no-sourcemap-reference")
                     .help("Disable emitting of automatic sourcemap references.{n}\
@@ -892,6 +897,7 @@ fn execute_files_upload_sourcemaps<'a>(
     }
 
     let org = ctx.get_org()?;
+    let project = ctx.get_project_default().ok();
 
     // make sure the release exists
     let release = ctx.api.new_release(
@@ -903,14 +909,13 @@ fn execute_files_upload_sourcemaps<'a>(
         },
     )?;
 
-    let dist = matches.value_of("dist");
-    let project = ctx.get_project_default().ok();
-    processor.upload(
+    processor.upload(&UploadContext {
         org,
-        project.as_ref().map(String::as_ref),
-        &release.version,
-        dist,
-    )?;
+        project: project.as_ref().map(String::as_str),
+        release: &release.version,
+        dist: matches.value_of("dist"),
+        wait: matches.is_present("wait"),
+    })?;
 
     Ok(())
 }

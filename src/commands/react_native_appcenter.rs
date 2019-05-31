@@ -11,7 +11,7 @@ use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
 use crate::utils::args::ArgExt;
-use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects for AppCenter.")
@@ -60,6 +60,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .required(true)
                 .multiple(true)
                 .help("A list of folders with assets that should be processed."),
+        )
+        .arg(
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
         )
 }
 
@@ -123,7 +128,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             ..Default::default()
         },
     )?;
-    processor.upload(&org, Some(&project), &release.version, None)?;
+
+    processor.upload(&UploadContext {
+        org: &org,
+        project: Some(&project),
+        release: &release.version,
+        dist: None,
+        wait: !matches.is_present("wait"),
+    })?;
 
     Ok(())
 }

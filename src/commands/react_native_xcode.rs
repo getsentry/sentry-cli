@@ -15,7 +15,7 @@ use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::fs::TempFile;
-use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 use crate::utils::system::propagate_exit_status;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 
@@ -83,6 +83,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .last(true)
                 .help("Optional arguments to pass to the build script."),
+        )
+        .arg(
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
         )
 }
 
@@ -253,7 +258,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                 ..Default::default()
             },
         )?;
-        processor.upload(&org, Some(&project), &release.version, Some(&plist.build()))?;
+
+        processor.upload(&UploadContext {
+            org: &org,
+            project: Some(&project),
+            release: &release.version,
+            dist: Some(&plist.build()),
+            wait: matches.is_present("wait"),
+        })?;
 
         Ok(())
     })
