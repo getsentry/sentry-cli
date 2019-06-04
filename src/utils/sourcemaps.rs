@@ -96,10 +96,11 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
 }
 
 fn url_to_bundle_path(url: &str) -> Result<String, Error> {
+    let base = Url::parse("http://~").unwrap();
     let url = if url.starts_with("~/") {
-        Url::parse(&format!("http://{}", url))?
+        base.join(&url[2..])?
     } else {
-        Url::parse(url)?
+        base.join(url)?
     };
 
     let mut path = url.path();
