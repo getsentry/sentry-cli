@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.44.3
+
+* Fix a regression with URL prefixes in sourcemap uploads (#544)
+
 ## sentry-cli 1.44.2
 
 * Even faster sourcemap uploads to sentry.io (#540, #542)
