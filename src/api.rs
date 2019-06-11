@@ -918,7 +918,7 @@ impl Api {
 
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
-        let url = format!("/organizations/{}/chunk-upload/", org);
+        let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
         match self
             .get(&url)?
             .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
@@ -941,7 +941,12 @@ impl Api {
         project: &str,
         request: &AssembleDifsRequest<'_>,
     ) -> ApiResult<AssembleDifsResponse> {
-        let url = format!("/projects/{}/{}/files/difs/assemble/", org, project);
+        let url = format!(
+            "/projects/{}/{}/files/difs/assemble/",
+            PathArg(org),
+            PathArg(project)
+        );
+
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .with_retry(
@@ -963,7 +968,11 @@ impl Api {
         checksum: Digest,
         chunks: &[Digest],
     ) -> ApiResult<AssembleArtifactsResponse> {
-        let url = format!("/organizations/{}/releases/{}/assemble/", org, release);
+        let url = format!(
+            "/organizations/{}/releases/{}/assemble/",
+            PathArg(org),
+            PathArg(release)
+        );
 
         self.request(Method::Post, &url)?
             .with_json_body(&ChunkedArtifactRequest { checksum, chunks })?
