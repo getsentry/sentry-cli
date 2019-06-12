@@ -126,8 +126,8 @@ impl VcsUrl {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.into(),
-                    id: format!("{}/{}", username, &caps[1]),
+                    provider: host.to_lowercase(),
+                    id: format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase()),
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
@@ -138,8 +138,8 @@ impl VcsUrl {
             }
         }
         VcsUrl {
-            provider: host.into(),
-            id: strip_git_suffix(path).into(),
+            provider: host.to_lowercase(),
+            id: strip_git_suffix(path).to_lowercase(),
         }
     }
 }
@@ -429,6 +429,13 @@ fn test_url_parsing() {
             provider: "gitlab.com".into(),
             id: "gitlab-org/gitlab-ce".into(),
         }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
+        VcsUrl {
+            provider: "gitlab.com".into(),
+            id: "gitlab-org/gitlab-ce".into(),
+        }
     )
 }
 
@@ -452,6 +459,10 @@ fn test_url_normalization() {
     ));
     assert!(is_matching_url(
         "https://gitlab.example.com/gitlab-org/gitlab-ce",
+        "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
+    ));
+    assert!(is_matching_url(
+        "https://gitlab.example.com/gitlab-org/GitLab-CE",
         "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
     ))
 }
