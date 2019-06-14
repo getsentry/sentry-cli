@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.44.4
+
+* Emit better version names for react native (#506)
+* Fix a regression in sourcemap uploads for certain release names (#549)
+* Ensure case insensitive git repository matching (#511)
+
 ## sentry-cli 1.44.3
 
 * Fix a regression with URL prefixes in sourcemap uploads (#544)
