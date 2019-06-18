@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.45.0
+
+* Allow ports in VCS urls when associating commits (#551)
+* Support PDB and PE uploads to Sentry (#553)
+
 ## sentry-cli 1.44.4
 
 * Emit better version names for react native (#506)
