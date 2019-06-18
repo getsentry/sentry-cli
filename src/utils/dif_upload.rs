@@ -1223,6 +1223,7 @@ pub struct DifUpload {
     symbol_map: Option<PathBuf>,
     zips_allowed: bool,
     max_file_size: u64,
+    pdbs_allowed: bool,
 }
 
 impl DifUpload {
@@ -1254,6 +1255,7 @@ impl DifUpload {
             symbol_map: None,
             zips_allowed: true,
             max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
+            pdbs_allowed: false,
         }
     }
 
@@ -1403,6 +1405,10 @@ impl DifUpload {
                 self.max_file_size = chunk_options.max_file_size;
             }
 
+            if chunk_options.supports(ChunkUploadCapability::Pdbs) {
+                self.pdbs_allowed = true;
+            }
+
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 return upload_difs_chunked(self, chunk_options);
             }
@@ -1424,7 +1430,8 @@ impl DifUpload {
     /// Determines if this `FileFormat` matches the search criteria.
     fn valid_format(&self, format: FileFormat) -> bool {
         match format {
-            FileFormat::Unknown | FileFormat::Pdb | FileFormat::Pe => false,
+            FileFormat::Unknown => false,
+            FileFormat::Pdb | FileFormat::Pe if !self.pdbs_allowed => false,
             format => self.formats.is_empty() || self.formats.contains(&format),
         }
     }

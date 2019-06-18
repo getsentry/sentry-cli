@@ -39,7 +39,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("TYPE")
                 .multiple(true)
                 .number_of_values(1)
-                .possible_values(&["dsym", "elf", "breakpad"])
+                .possible_values(&["dsym", "elf", "breakpad", "pdb", "pe"])
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default, all types are considered.",
@@ -174,6 +174,8 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
                 "dsym" => FileFormat::MachO,
                 "elf" => FileFormat::Elf,
                 "breakpad" => FileFormat::Breakpad,
+                "pdb" => FileFormat::Pdb,
+                "pe" => FileFormat::Pe,
                 other => bail!("Unsupported type: {}", other),
             });
         }
