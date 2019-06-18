@@ -49,7 +49,7 @@ serde_derive = "1.0.91"
 serde_json = "1.0.39"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = { version = "4.1.0", features = ["ram_bundle"] }
-symbolic = { version = "6.1.3", features = ["debuginfo-serde", "proguard"] }
+symbolic = { git = "https://github.com/getsentry/symbolic", rev = "755c2f3c21c8f44726e51f0bbf93e6eb3c8ae980", features = ["debuginfo-serde", "proguard"] }
 url = "1.7.2"
 username = "0.2.0"
 uuid = { version = "0.7.4", features = ["v4", "serde"] }
