@@ -20,7 +20,7 @@ use failure::{bail, err_msg, Error, SyncFailure};
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1::Digest;
-use symbolic::common::{ByteView, DebugId, SelfCell};
+use symbolic::common::{ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::{Archive, FileFormat, Object};
 use walkdir::WalkDir;
 use which::which;
@@ -82,6 +82,7 @@ struct DifMatch<'data> {
     _backing: Option<DifBacking>,
     object: SelfCell<ByteView<'data>, Object<'data>>,
     name: String,
+    debug_id: Option<DebugId>,
     attachments: Option<BTreeMap<String, ByteView<'static>>>,
 }
 
@@ -103,6 +104,7 @@ impl<'data> DifMatch<'data> {
             _backing: Some(DifBacking::Temp(temp_file)),
             object: SelfCell::try_new(buffer, |b| Object::parse(unsafe { &*b }))?,
             name: name.into(),
+            debug_id: None,
             attachments: None,
         })
     }
@@ -244,6 +246,7 @@ impl<'data> ChunkedDifMatch<'data> {
             self.checksum(),
             ChunkedDifRequest {
                 name: self.file_name(),
+                debug_id: self.debug_id,
                 chunks: &self.chunks,
             },
         )
@@ -505,6 +508,34 @@ fn find_uuid_plists(
     Some(plists)
 }
 
+/// Patch debug identifiers for PDBs where the corresponding PE specifies a different age.
+fn fix_pdb_ages(difs: &mut [DifMatch<'_>], age_overrides: &BTreeMap<Uuid, u32>) {
+    for dif in difs {
+        if dif.object().file_format() != FileFormat::Pdb {
+            continue;
+        }
+
+        let debug_id = dif.object().debug_id();
+        let age = match age_overrides.get(&debug_id.uuid()) {
+            Some(age) => *age,
+            None => continue,
+        };
+
+        if age == debug_id.appendix() {
+            continue;
+        }
+
+        log::debug!(
+            "overriding age for {} ({} -> {})",
+            dif.name,
+            debug_id.appendix(),
+            age
+        );
+
+        dif.debug_id = Some(DebugId::from_parts(debug_id.uuid(), age));
+    }
+}
+
 /// Searches matching debug information files.
 fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
     let progress_style = ProgressStyle::default_spinner().template(
@@ -516,6 +547,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
     progress.enable_steady_tick(100);
     progress.set_style(progress_style);
 
+    let mut age_overrides = BTreeMap::new();
     let mut collected = Vec::new();
     for base_path in &options.paths {
         walk_difs_directory(base_path, options, |mut source, name, buffer| {
@@ -525,7 +557,14 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             // then we're not dealing with an object file, thus silently
             // skipping it.
             let format = Archive::peek(&buffer);
-            if !options.valid_format(format) {
+
+            // Override this behavior for PE files. Their debug identifier is
+            // needed in case PDBs should be uploaded to fix an eventual age
+            // mismatch
+            let should_override_age =
+                format == FileFormat::Pe && options.valid_format(FileFormat::Pdb);
+
+            if !should_override_age && !options.valid_format(format) {
                 return Ok(());
             }
 
@@ -551,19 +590,31 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     Err(_) => continue,
                 };
 
+                // Objects without debug id will be skipped altogether. While frames
+                // during symbolication might be lacking debug identifiers,
+                // Sentry requires object files to have one during upload.
+                let id = object.debug_id();
+                if id.is_nil() {
+                    continue;
+                }
+
+                // Store a mapping of "age" values for all encountered PE files,
+                // regardless of whether they will be uploaded. This is used later
+                // to fix up PDB files.
+                if should_override_age {
+                    age_overrides.insert(id.uuid(), id.appendix());
+
+                    // Skip if this object was only retained for the PDB override.
+                    if !options.valid_format(format) {
+                        continue;
+                    }
+                }
+
                 // We can only process objects with features, such as a symbol
                 // table or debug information. If this object has no features,
                 // Sentry cannot process it and so we skip the upload. If object
                 // features were specified, this will skip all other objects.
                 if !options.valid_features(&object) {
-                    continue;
-                }
-
-                // Objects without UUID will be skipped altogether. While frames
-                // during symbolication might be lacking debug identifiers,
-                // Sentry requires object files to have one during upload.
-                let id = object.debug_id();
-                if id.is_nil() {
                     continue;
                 }
 
@@ -602,6 +653,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     _backing: None,
                     object: cell,
                     name: name.clone(),
+                    debug_id: None,
                     attachments,
                 });
 
@@ -610,6 +662,10 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
 
             Ok(())
         })?;
+    }
+
+    if !age_overrides.is_empty() {
+        fix_pdb_ages(&mut collected, &age_overrides);
     }
 
     progress.finish_and_clear();

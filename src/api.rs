@@ -2185,6 +2185,8 @@ impl ChunkedFileState {
 #[derive(Debug, Serialize)]
 pub struct ChunkedDifRequest<'a> {
     pub name: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug_id: Option<DebugId>,
     pub chunks: &'a [Digest],
 }
 
