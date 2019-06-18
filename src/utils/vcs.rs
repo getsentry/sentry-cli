@@ -121,6 +121,11 @@ impl VcsUrl {
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
             static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"(.+?)/_git$").unwrap();
+            static ref HOST_WITH_PORT: Regex = Regex::new(r"(.*):\d+$").unwrap();
+        }
+
+        if let Some(caps) = HOST_WITH_PORT.captures(host) {
+            return VcsUrl::from_git_parts(&caps[1], path);
         }
         if let Some(caps) = VS_DOMAIN_RE.captures(host) {
             let username = &caps[1];
@@ -464,5 +469,9 @@ fn test_url_normalization() {
     assert!(is_matching_url(
         "https://gitlab.example.com/gitlab-org/GitLab-CE",
         "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
+    ));
+    assert!(is_matching_url(
+        "https://gitlab.example.com/gitlab-org/GitLab-CE",
+        "ssh://git@gitlab.example.com:22/gitlab-org/GitLab-CE"
     ))
 }
