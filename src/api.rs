@@ -2106,6 +2106,7 @@ impl<'de> Deserialize<'de> for ChunkCompression {
 pub enum ChunkUploadCapability {
     DebugFiles,
     ReleaseFiles,
+    Pdbs,
     Unknown,
 }
 
@@ -2117,6 +2118,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
         Ok(match String::deserialize(deserializer)?.as_str() {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
+            "pdbs" => ChunkUploadCapability::Pdbs,
             _ => ChunkUploadCapability::Unknown,
         })
     }
@@ -2183,6 +2185,8 @@ impl ChunkedFileState {
 #[derive(Debug, Serialize)]
 pub struct ChunkedDifRequest<'a> {
     pub name: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub debug_id: Option<DebugId>,
     pub chunks: &'a [Digest],
 }
 
