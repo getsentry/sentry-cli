@@ -18,7 +18,16 @@ const SOURCEMAPS_SCHEMA = require('./options/uploadSourcemaps');
  * Manages releases and release artifacts on Sentry.
  * @namespace SentryReleases
  */
-module.exports = {
+class Releases {
+  /**
+   * Creates a new `Releases` instance.
+   *
+   * @param {Object} [options] More options to pass to the CLI
+   */
+  constructor(options) {
+    this.options = options;
+  }
+
   /**
    * Registers a new release with sentry.
    *
@@ -30,8 +39,8 @@ module.exports = {
    * @memberof SentryReleases
    */
   new(release) {
-    return helper.execute(['releases', 'new', release]);
-  },
+    return helper.execute(['releases', 'new', release], null, this.options.silent);
+  }
 
   /**
    * Marks this release as complete. This should be called once all artifacts has been
@@ -42,8 +51,8 @@ module.exports = {
    * @memberof SentryReleases
    */
   finalize(release) {
-    return helper.execute(['releases', 'finalize', release]);
-  },
+    return helper.execute(['releases', 'finalize', release], null, this.options.silent);
+  }
 
   /**
    * Creates a unique, deterministic version identifier based on the project type and
@@ -54,9 +63,9 @@ module.exports = {
    */
   proposeVersion() {
     return helper
-      .execute(['releases', 'propose-version'])
+      .execute(['releases', 'propose-version'], null, this.options.silent)
       .then(version => version && version.trim());
-  },
+  }
 
   /**
    * Scans the given include folders for JavaScript source maps and uploads them to the
@@ -103,10 +112,13 @@ module.exports = {
       const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
       return helper.execute(
         helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions),
-        true
+        true,
+        this.options.silent
       );
     });
 
     return Promise.all(uploads);
-  },
-};
+  }
+}
+
+module.exports = Releases;

@@ -2,6 +2,7 @@
 
 const pkgInfo = require('../package.json');
 const helper = require('./helper');
+const Releases = require('./releases');
 
 /**
  * Interface to and wrapper around the `sentry-cli` executable.
@@ -33,6 +34,8 @@ class SentryCli {
       process.env.SENTRY_PROPERTIES = configFile;
     }
     this.options = options || { silent: false };
+
+    this.releases = new Releases(this.options);
   }
 
   /**
@@ -61,7 +64,5 @@ class SentryCli {
     return helper.execute(args, live, this.options.silent);
   }
 }
-
-SentryCli.prototype.releases = require('./releases');
 
 module.exports = SentryCli;
