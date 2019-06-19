@@ -117,10 +117,15 @@ impl VcsUrl {
     }
 
     fn from_git_parts(host: &str, path: &str) -> VcsUrl {
+        // Azure Devops has multiple domains and multiple URL styles for the
+        // various different API versions.
         lazy_static! {
+            static ref AZUREDEV_DOMAIN_RE: Regex = Regex::new(r"^(?:ssh\.)?(dev.azure.com)$").unwrap();
+            static ref AZUREDEV_VERSION_PATH_RE: Regex = Regex::new(r"^v3/([^/]+)/([^/]+)").unwrap();
+
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
-            static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"(.+?)/_git$").unwrap();
+            static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"^(.+?)/_git").unwrap();
             static ref HOST_WITH_PORT: Regex = Regex::new(r"(.*):\d+$").unwrap();
         }
 
@@ -138,6 +143,21 @@ impl VcsUrl {
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.into(),
+                    id: caps[1].to_string(),
+                };
+            }
+        }
+        if let Some(caps) = AZUREDEV_DOMAIN_RE.captures(host) {
+            let hostname = &caps[1];
+            if let Some(caps) = AZUREDEV_VERSION_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: hostname.into(),
+                    id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+                };
+            }
+            if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: hostname.into(),
                     id: caps[1].to_string(),
                 };
             }
@@ -401,6 +421,20 @@ fn test_url_parsing() {
         }
     );
     assert_eq!(
+        VcsUrl::parse("git@ssh.dev.azure.com:v3/project/repo/repo"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "project/repo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://dev.azure.com/project/repo/_git/repo"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "project/repo".into(),
+        }
+    );
+    assert_eq!(
         VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
         VcsUrl {
             provider: "github.myenterprise.com".into(),
@@ -473,5 +507,9 @@ fn test_url_normalization() {
     assert!(is_matching_url(
         "https://gitlab.example.com/gitlab-org/GitLab-CE",
         "ssh://git@gitlab.example.com:22/gitlab-org/GitLab-CE"
+    ));
+    assert!(is_matching_url(
+        "git@ssh.dev.azure.com:v3/project/repo/repo",
+        "https://dev.azure.com/project/repo/_git/repo"
     ))
 }
