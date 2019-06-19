@@ -135,11 +135,15 @@ pub fn get_react_native_appcenter_release(
     let bundle_id_ovrr = bundle_id_override.unwrap_or("");
     let version_name_ovrr = version_name_override.unwrap_or("");
 
-    if bundle_id_ovrr != "" && version_name_ovrr != "" {
-        return Ok(format!(
-            "{}-{}-codepush:{}",
-            bundle_id_ovrr, version_name_ovrr, package.label
-        ));
+    if bundle_id_ovrr != "" {
+        if version_name_ovrr == "" {
+            return Ok(format!("{}-codepush:{}", bundle_id_ovrr, package.label));
+        } else {
+            return Ok(format!(
+                "{}-{}-codepush:{}",
+                bundle_id_ovrr, version_name_ovrr, package.label
+            ));
+        }
     }
 
     if platform == "ios" {
