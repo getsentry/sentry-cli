@@ -5,7 +5,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::{OsStr, OsString};
 use std::fmt;
 use std::fs::{self, File};
-use std::io::{BufReader, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::iter::IntoIterator;
 use std::mem::transmute;
 use std::ops::Deref;
@@ -866,13 +866,12 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
     progress.set_style(progress_style);
     progress.set_prefix(">");
 
-
     for dif in difs {
         progress.inc(1);
         progress.set_message(dif.path());
 
         let temp_file = TempFile::create()?;
-        let mut writer = SourceBundleWriter::start(temp_file.open()?)?;
+        let mut writer = SourceBundleWriter::start(BufWriter::new(temp_file.open()?))?;
 
         let object = dif.object();
         let written = writer.add_object(object, dif.file_name())?;
