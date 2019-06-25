@@ -161,7 +161,7 @@ impl DifFile<'static> {
                 FileFormat::Pe => bail!("windows executables are not yet supported"),
                 FileFormat::Pdb => bail!("pdbs are not yet supported"),
                 FileFormat::SourceBundle => (), // pretend that source bundles are no object files
-                FileFormat::Unknown => (), // fallthrough
+                FileFormat::Unknown => (),      // fallthrough
             }
         }
 

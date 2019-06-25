@@ -875,10 +875,6 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
         let mut writer = SourceBundleWriter::start(temp_file.open()?)?;
 
         let object = dif.object();
-        if !object.has_source() {
-            continue;
-        }
-
         let written = writer.add_object(object, dif.file_name())?;
         if !written {
             continue;

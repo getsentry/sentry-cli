@@ -196,6 +196,8 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
             // and may optionally contain debugging information such as DWARF.
             unwind: !matches.is_present("no_unwind"),
         });
+
+        upload.include_sources(matches.is_present("sources"));
     }
 
     // Configure BCSymbolMap resolution, if possible
