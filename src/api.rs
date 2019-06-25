@@ -2104,9 +2104,19 @@ impl<'de> Deserialize<'de> for ChunkCompression {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChunkUploadCapability {
+    /// Chunked upload of debug files
     DebugFiles,
+
+    /// Chunked upload of release files
     ReleaseFiles,
+
+    /// Upload of PDBs and debug id overrides
     Pdbs,
+
+    /// Uploads of source archives
+    Sources,
+
+    /// Any other unsupported capability (ignored)
     Unknown,
 }
 
@@ -2119,6 +2129,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
             "pdbs" => ChunkUploadCapability::Pdbs,
+            "sources" => ChunkUploadCapability::Sources,
             _ => ChunkUploadCapability::Unknown,
         })
     }
