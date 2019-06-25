@@ -160,6 +160,7 @@ impl DifFile<'static> {
                 FileFormat::Breakpad => return DifFile::from_archive(archive),
                 FileFormat::Pe => bail!("windows executables are not yet supported"),
                 FileFormat::Pdb => bail!("pdbs are not yet supported"),
+                FileFormat::SourceBundle => (), // pretend that source bundles are no object files
                 FileFormat::Unknown => (), // fallthrough
             }
         }
@@ -202,6 +203,7 @@ impl<'a> DifFile<'a> {
                 FileFormat::Elf => DifType::Elf,
                 FileFormat::Pdb => unreachable!(),
                 FileFormat::Pe => unreachable!(),
+                FileFormat::SourceBundle => unreachable!(),
                 FileFormat::Unknown => unreachable!(),
             },
             DifFile::Proguard(..) => DifType::Proguard,

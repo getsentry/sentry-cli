@@ -21,7 +21,7 @@ use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1::Digest;
 use symbolic::common::{ByteView, DebugId, SelfCell, Uuid};
-use symbolic::debuginfo::{Archive, FileFormat, Object};
+use symbolic::debuginfo::{sourcebundle::SourceBundleWriter, Archive, FileFormat, Object};
 use walkdir::WalkDir;
 use which::which;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
@@ -87,6 +87,21 @@ struct DifMatch<'data> {
 }
 
 impl<'data> DifMatch<'data> {
+    fn from_temp<S>(temp_file: TempFile, name: S) -> Result<Self, Error>
+    where
+        S: Into<String>,
+    {
+        let buffer = ByteView::open(temp_file.path()).map_err(SyncFailure::new)?;
+
+        Ok(DifMatch {
+            _backing: Some(DifBacking::Temp(temp_file)),
+            object: SelfCell::try_new(buffer, |b| Object::parse(unsafe { &*b }))?,
+            name: name.into(),
+            debug_id: None,
+            attachments: None,
+        })
+    }
+
     /// Moves the specified temporary debug file to a safe location and assumes
     /// ownership. The file will be deleted in the file system when this
     /// `DifMatch` is dropped.
@@ -98,15 +113,7 @@ impl<'data> DifMatch<'data> {
         S: Into<String>,
     {
         let temp_file = TempFile::take(path)?;
-        let buffer = ByteView::open(temp_file.path()).map_err(SyncFailure::new)?;
-
-        Ok(DifMatch {
-            _backing: Some(DifBacking::Temp(temp_file)),
-            object: SelfCell::try_new(buffer, |b| Object::parse(unsafe { &*b }))?,
-            name: name.into(),
-            debug_id: None,
-            attachments: None,
-        })
+        Self::from_temp(temp_file, name)
     }
 
     /// Returns the parsed `Object` of this DIF.
@@ -818,7 +825,7 @@ fn process_symbol_maps<'a>(
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let progress = ProgressBar::new(with_hidden.len() as u64);
+    let progress = ProgressBar::new(len as u64);
     progress.set_style(progress_style);
     progress.set_prefix(">");
 
@@ -840,6 +847,63 @@ fn process_symbol_maps<'a>(
     );
 
     Ok(without_hidden)
+}
+
+/// Resolves BCSymbolMaps for all debug files with hidden symbols. All other
+/// files are not touched. Note that this only applies to Apple dSYMs.
+///
+/// If there are debug files with hidden symbols but no `symbol_map` path is
+/// given, a warning is emitted.
+fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>, Error> {
+    let mut source_bundles = Vec::new();
+
+    let progress_style = ProgressStyle::default_bar().template(
+        "{prefix:.dim} Resolving source code... {msg:.dim}\
+         \n{wide_bar}  {pos}/{len}",
+    );
+
+    let progress = ProgressBar::new(difs.len() as u64);
+    progress.set_style(progress_style);
+    progress.set_prefix(">");
+
+
+    for dif in difs {
+        progress.inc(1);
+        progress.set_message(dif.path());
+
+        let temp_file = TempFile::create()?;
+        let mut writer = SourceBundleWriter::start(temp_file.open()?)?;
+
+        let object = dif.object();
+        if !object.has_source() {
+            continue;
+        }
+
+        let written = writer.add_object(object, dif.file_name())?;
+        if !written {
+            continue;
+        }
+
+        writer.finish()?;
+
+        let mut source_bundle = DifMatch::from_temp(temp_file, dif.path())?;
+        source_bundle.debug_id = dif.debug_id;
+        source_bundles.push(source_bundle);
+    }
+
+    let len = source_bundles.len();
+    progress.finish_and_clear();
+    println!(
+        "{} Resolved source code for {} debug information {}",
+        style(">").dim(),
+        style(len).yellow(),
+        match len {
+            1 => "file",
+            _ => "files",
+        }
+    );
+
+    Ok(source_bundles)
 }
 
 /// Calls the assemble endpoint and returns the state for every `DifMatch` along
@@ -1100,7 +1164,13 @@ fn upload_difs_chunked(
 
     // Try to resolve BCSymbolMaps
     let symbol_map = options.symbol_map.as_ref().map(PathBuf::as_path);
-    let processed = process_symbol_maps(found, symbol_map)?;
+    let mut processed = process_symbol_maps(found, symbol_map)?;
+
+    // Resolve source code context if specified
+    if options.include_sources {
+        let source_bundles = create_source_bundles(&processed)?;
+        processed.extend(source_bundles);
+    }
 
     // Calculate checksums and chunks
     let chunked = prepare_difs(processed, |m| {
@@ -1280,6 +1350,7 @@ pub struct DifUpload {
     zips_allowed: bool,
     max_file_size: u64,
     pdbs_allowed: bool,
+    include_sources: bool,
 }
 
 impl DifUpload {
@@ -1312,6 +1383,7 @@ impl DifUpload {
             zips_allowed: true,
             max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
             pdbs_allowed: false,
+            include_sources: false,
         }
     }
 
@@ -1437,6 +1509,15 @@ impl DifUpload {
         self
     }
 
+    /// Set whether source files should be resolved during the scan process and
+    /// uploaded as a separate archive.
+    ///
+    /// Defaults to `false`.
+    pub fn include_sources(&mut self, include: bool) -> &mut Self {
+        self.include_sources = include;
+        self
+    }
+
     /// Performs the search for DIFs and uploads them.
     ///
     /// ```
@@ -1465,11 +1546,16 @@ impl DifUpload {
                 self.pdbs_allowed = true;
             }
 
+            if !chunk_options.supports(ChunkUploadCapability::Sources) {
+                self.include_sources = false;
+            }
+
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 return upload_difs_chunked(self, chunk_options);
             }
         }
 
+        self.include_sources = false;
         Ok((upload_difs_batched(self)?, false))
     }
 

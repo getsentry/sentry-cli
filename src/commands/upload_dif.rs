@@ -133,6 +133,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      will be shown in the Xcode build output.",
                 ),
         )
+        .arg(
+            Arg::with_name("sources")
+                .long("sources")
+                .help("Include sources from the local file system."),
+        )
 }
 
 fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
