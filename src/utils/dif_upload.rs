@@ -870,15 +870,25 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
         progress.inc(1);
         progress.set_message(dif.path());
 
+        let object = dif.object();
+        if object.has_source() {
+            // Do not create standalone source bundles if the original object already contains
+            // source code. This would just store duplicate information in Sentry.
+            continue;
+        }
+
         let temp_file = TempFile::create()?;
         let mut writer = SourceBundleWriter::start(BufWriter::new(temp_file.open()?))?;
 
-        let object = dif.object();
+        // Resolve source files from the object and write their contents into the archive. Skip to
+        // upload this bundle if no source could be written. This can happen if there is no file or
+        // line information in the object file, or if none of the files could be resolved.
         let written = writer.add_object(object, dif.file_name())?;
         if !written {
             continue;
         }
 
+        // Flush the writer. This also closes the underlying `BufWriter` and closes the file handle.
         writer.finish()?;
 
         let mut source_bundle = DifMatch::from_temp(temp_file, dif.path())?;
