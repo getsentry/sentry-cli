@@ -885,15 +885,8 @@ impl SourceMapProcessor {
             }
         }
 
-        let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
-        self.upload_files_parallel(context, concurrency)
-    }
-
-    /// Uploads all files
-    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
-        self.flush_pending_sources()?;
-
-        // Do not permit uploads of more than 20k files. This is a termporary downside protection to
+        // Do not permit uploads of more than 20k files if the server does not
+        // support artifact bundles.  This is a termporary downside protection to
         // protect users from uploading more sources than we support.
         if self.sources.len() > 20_000 {
             bail!(
@@ -901,6 +894,14 @@ impl SourceMapProcessor {
                 self.sources.len()
             );
         }
+
+        let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
+        self.upload_files_parallel(context, concurrency)
+    }
+
+    /// Uploads all files
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
+        self.flush_pending_sources()?;
 
         self.do_upload(context)?;
         self.dump_log("Source Map Upload Report");
