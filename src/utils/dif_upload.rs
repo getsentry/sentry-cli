@@ -1548,7 +1548,8 @@ impl DifUpload {
                 self.pdbs_allowed = true;
             }
 
-            if !chunk_options.supports(ChunkUploadCapability::Sources) {
+            if self.include_sources && !chunk_options.supports(ChunkUploadCapability::Sources) {
+                warn!("Source uploads are not supported by the configured Sentry server");
                 self.include_sources = false;
             }
 
@@ -1557,7 +1558,11 @@ impl DifUpload {
             }
         }
 
-        self.include_sources = false;
+        if self.include_sources {
+            warn!("Source uploads are not supported by the configured Sentry server");
+            self.include_sources = false;
+        }
+
         Ok((upload_difs_batched(self)?, false))
     }
 
