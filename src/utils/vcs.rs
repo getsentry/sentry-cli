@@ -120,11 +120,10 @@ impl VcsUrl {
         // Azure Devops has multiple domains and multiple URL styles for the
         // various different API versions.
         lazy_static! {
-            static ref AZUREDEV_DOMAIN_RE: Regex = 
+            static ref AZUREDEV_DOMAIN_RE: Regex =
                 Regex::new(r"^(?:ssh\.)?(dev.azure.com)$").unwrap();
             static ref AZUREDEV_VERSION_PATH_RE: Regex =
                 Regex::new(r"^v3/([^/]+)/([^/]+)").unwrap();
-
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
             static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"^(.+?)/_git").unwrap();
