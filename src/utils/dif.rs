@@ -18,6 +18,9 @@ pub enum DifType {
     Elf,
     Breakpad,
     Proguard,
+    SourceBundle,
+    Pe,
+    Pdb,
 }
 
 impl DifType {
@@ -25,6 +28,9 @@ impl DifType {
         match self {
             DifType::Dsym => "dsym",
             DifType::Elf => "elf",
+            DifType::Pe => "pe",
+            DifType::Pdb => "pdb",
+            DifType::SourceBundle => "sourcebundle",
             DifType::Breakpad => "breakpad",
             DifType::Proguard => "proguard",
         }
@@ -44,6 +50,9 @@ impl str::FromStr for DifType {
         match s {
             "dsym" => Ok(DifType::Dsym),
             "elf" => Ok(DifType::Elf),
+            "pe" => Ok(DifType::Pe),
+            "pdb" => Ok(DifType::Pdb),
+            "sourcebundle" => Ok(DifType::SourceBundle),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
             _ => bail!("Invalid debug info file type"),
@@ -60,6 +69,8 @@ pub struct DifFeatures {
     pub symtab: bool,
     /// Includes object files with stack unwind information.
     pub unwind: bool,
+    /// Includes source information.
+    pub source: bool,
 }
 
 impl DifFeatures {
@@ -68,6 +79,7 @@ impl DifFeatures {
             debug: true,
             symtab: true,
             unwind: true,
+            source: true,
         }
     }
 
@@ -76,11 +88,12 @@ impl DifFeatures {
             debug: false,
             symtab: false,
             unwind: false,
+            source: false,
         }
     }
 
     fn has_some(self) -> bool {
-        self.debug || self.symtab || self.unwind
+        self.debug || self.symtab || self.unwind || self.source
     }
 }
 
@@ -109,6 +122,7 @@ impl fmt::Display for DifFeatures {
         append!(self.symtab, "symtab");
         append!(self.debug, "debug");
         append!(self.unwind, "unwind");
+        append!(self.source, "source");
 
         if !written {
             write!(f, "none")?;
@@ -155,13 +169,13 @@ impl DifFile<'static> {
         // sub types, so for unsupported files we throw an error.
         if let Ok(archive) = SelfCell::try_new(data, |d| Archive::parse(unsafe { &*d })) {
             match archive.get().file_format() {
-                FileFormat::MachO => return DifFile::from_archive(archive),
-                FileFormat::Elf => return DifFile::from_archive(archive),
-                FileFormat::Breakpad => return DifFile::from_archive(archive),
-                FileFormat::Pe => bail!("windows executables are not yet supported"),
-                FileFormat::Pdb => bail!("pdbs are not yet supported"),
-                FileFormat::SourceBundle => (), // pretend that source bundles are no object files
-                FileFormat::Unknown => (),      // fallthrough
+                FileFormat::MachO
+                | FileFormat::Elf
+                | FileFormat::Pe
+                | FileFormat::Pdb
+                | FileFormat::Breakpad
+                | FileFormat::SourceBundle => return DifFile::from_archive(archive),
+                FileFormat::Unknown => (), // fallthrough
             }
         }
 
@@ -179,6 +193,9 @@ impl DifFile<'static> {
         match ty {
             Some(DifType::Dsym) => DifFile::open_object(path, FileFormat::MachO),
             Some(DifType::Elf) => DifFile::open_object(path, FileFormat::Elf),
+            Some(DifType::Pe) => DifFile::open_object(path, FileFormat::Pe),
+            Some(DifType::Pdb) => DifFile::open_object(path, FileFormat::Pdb),
+            Some(DifType::SourceBundle) => DifFile::open_object(path, FileFormat::SourceBundle),
             Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
             None => DifFile::try_open(path),
@@ -201,9 +218,9 @@ impl<'a> DifFile<'a> {
                 FileFormat::MachO => DifType::Dsym,
                 FileFormat::Breakpad => DifType::Breakpad,
                 FileFormat::Elf => DifType::Elf,
-                FileFormat::Pdb => unreachable!(),
-                FileFormat::Pe => unreachable!(),
-                FileFormat::SourceBundle => unreachable!(),
+                FileFormat::Pdb => DifType::Pdb,
+                FileFormat::Pe => DifType::Pe,
+                FileFormat::SourceBundle => DifType::SourceBundle,
                 FileFormat::Unknown => unreachable!(),
             },
             DifFile::Proguard(..) => DifType::Proguard,
@@ -252,6 +269,7 @@ impl<'a> DifFile<'a> {
                     features.symtab = features.symtab || object.has_symbols();
                     features.debug = features.debug || object.has_debug_info();
                     features.unwind = features.unwind || object.has_unwind_info();
+                    features.source = features.source || object.has_source();
                 }
                 features
             }

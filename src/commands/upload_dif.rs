@@ -39,7 +39,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("TYPE")
                 .multiple(true)
                 .number_of_values(1)
-                .possible_values(&["dsym", "elf", "breakpad", "pdb", "pe"])
+                .possible_values(&["dsym", "elf", "breakpad", "pdb", "pe", "sourcebundle"])
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default, all types are considered.",
@@ -68,6 +68,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      processable information (see other flags).",
                 )
                 .conflicts_with("no_unwind"),
+        )
+        .arg(
+            Arg::with_name("no_source")
+                .long("no-source")
+                .help(
+                    "Do not scan for source information. This will \
+                     usually exclude source bundle files. They might \
+                     still be uploaded, if they contain additonal \
+                     processable information (see other flags).",
+                )
+                .conflicts_with("no_source"),
         )
         .arg(
             Arg::with_name("ids")
@@ -134,9 +145,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("sources")
-                .long("sources")
-                .help("Include sources from the local file system."),
+            Arg::with_name("include_sources")
+                .long("include-sources")
+                .help(
+                    "Include sources from the local file system and upload \
+                     them as source bundles.",
+                ),
         )
 }
 
@@ -165,6 +179,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
                 debug: true,
                 symtab: false,
                 unwind: false,
+                source: false,
             });
 
         if !matches.is_present("paths") {
@@ -181,6 +196,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
                 "breakpad" => FileFormat::Breakpad,
                 "pdb" => FileFormat::Pdb,
                 "pe" => FileFormat::Pe,
+                "sourcebundle" => FileFormat::SourceBundle,
                 other => bail!("Unsupported type: {}", other),
             });
         }
@@ -195,9 +211,10 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
             // They are guaranteed to contain unwind info, for instance `eh_frame`,
             // and may optionally contain debugging information such as DWARF.
             unwind: !matches.is_present("no_unwind"),
+            source: !matches.is_present("no_source"),
         });
 
-        upload.include_sources(matches.is_present("sources"));
+        upload.include_sources(matches.is_present("include_sources"));
     }
 
     // Configure BCSymbolMap resolution, if possible
