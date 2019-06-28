@@ -51,7 +51,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             }
 
             let mut out = output_path
-                .unwrap_or(path.parent().unwrap())
+                .unwrap_or_else(|| path.parent().unwrap())
                 .join(path.file_name().unwrap());
             if idx > 1 {
                 out.set_extension(&format!("{}.src.zip", idx));
