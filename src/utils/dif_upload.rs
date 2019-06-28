@@ -871,7 +871,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
         progress.set_message(dif.path());
 
         let object = dif.object();
-        if object.has_source() {
+        if object.has_sources() {
             // Do not create standalone source bundles if the original object already contains
             // source code. This would just store duplicate information in Sentry.
             continue;

@@ -45,7 +45,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
         for (idx, object) in archive.objects().enumerate() {
             let object = object?;
-            if object.has_source() {
+            if object.has_sources() {
                 println!("skipping {} because it contains source info", orig_path);
                 continue;
             }

@@ -70,7 +70,7 @@ pub struct DifFeatures {
     /// Includes object files with stack unwind information.
     pub unwind: bool,
     /// Includes source information.
-    pub source: bool,
+    pub sources: bool,
 }
 
 impl DifFeatures {
@@ -79,7 +79,7 @@ impl DifFeatures {
             debug: true,
             symtab: true,
             unwind: true,
-            source: true,
+            sources: true,
         }
     }
 
@@ -88,12 +88,12 @@ impl DifFeatures {
             debug: false,
             symtab: false,
             unwind: false,
-            source: false,
+            sources: false,
         }
     }
 
     fn has_some(self) -> bool {
-        self.debug || self.symtab || self.unwind || self.source
+        self.debug || self.symtab || self.unwind || self.sources
     }
 }
 
@@ -122,7 +122,7 @@ impl fmt::Display for DifFeatures {
         append!(self.symtab, "symtab");
         append!(self.debug, "debug");
         append!(self.unwind, "unwind");
-        append!(self.source, "source");
+        append!(self.sources, "sources");
 
         if !written {
             write!(f, "none")?;
@@ -269,7 +269,7 @@ impl<'a> DifFile<'a> {
                     features.symtab = features.symtab || object.has_symbols();
                     features.debug = features.debug || object.has_debug_info();
                     features.unwind = features.unwind || object.has_unwind_info();
-                    features.source = features.source || object.has_source();
+                    features.sources = features.sources || object.has_sources();
                 }
                 features
             }
