@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.46.0
+
+* Relax the release file limit for sourcemap uploads when artifact bundles
+  are supported by the serntry server (#559)
+
 ## sentry-cli 1.45.0
 
 * Allow ports in VCS urls when associating commits (#551)
