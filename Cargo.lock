@@ -1803,7 +1803,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "symbolic"
 version = "6.1.3"
-source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#f69022b7a4edccfec852f4a01012c1857768ae1d"
+source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#409b792c30d60d4559e399a19e26344e9e001ab0"
 dependencies = [
  "symbolic-common 6.1.3 (git+https://github.com/getsentry/symbolic?branch=feat/sources)",
  "symbolic-debuginfo 6.1.3 (git+https://github.com/getsentry/symbolic?branch=feat/sources)",
@@ -1813,7 +1813,7 @@ dependencies = [
 [[package]]
 name = "symbolic-common"
 version = "6.1.3"
-source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#f69022b7a4edccfec852f4a01012c1857768ae1d"
+source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#409b792c30d60d4559e399a19e26344e9e001ab0"
 dependencies = [
  "debugid 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1826,7 +1826,7 @@ dependencies = [
 [[package]]
 name = "symbolic-debuginfo"
 version = "6.1.3"
-source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#f69022b7a4edccfec852f4a01012c1857768ae1d"
+source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#409b792c30d60d4559e399a19e26344e9e001ab0"
 dependencies = [
  "dmsort 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1851,7 +1851,7 @@ dependencies = [
 [[package]]
 name = "symbolic-proguard"
 version = "6.1.3"
-source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#f69022b7a4edccfec852f4a01012c1857768ae1d"
+source = "git+https://github.com/getsentry/symbolic?branch=feat/sources#409b792c30d60d4559e399a19e26344e9e001ab0"
 dependencies = [
  "proguard 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "symbolic-common 6.1.3 (git+https://github.com/getsentry/symbolic?branch=feat/sources)",
