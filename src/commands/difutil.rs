@@ -5,6 +5,7 @@ use crate::commands;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
+        $mac!(difutil_bundle_sources);
         $mac!(difutil_find);
         $mac!(difutil_check);
         $mac!(difutil_id);
@@ -14,7 +15,9 @@ macro_rules! each_subcommand {
 pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            app = app.subcommand(commands::$name::make_app(App::new(&stringify!($name)[8..])));
+            app = app.subcommand(commands::$name::make_app(App::new(
+                stringify!($name)[8..].replace('_', "-"),
+            )));
         }};
     }
 
@@ -28,7 +31,9 @@ pub fn make_app<'a, 'b: 'a>(mut app: App<'a, 'b>) -> App<'a, 'b> {
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
-            if let Some(sub_matches) = matches.subcommand_matches(&stringify!($name)[8..]) {
+            if let Some(sub_matches) =
+                matches.subcommand_matches(&stringify!($name)[8..].replace('_', "-"))
+            {
                 return Ok(commands::$name::execute(&sub_matches)?);
             }
         }};

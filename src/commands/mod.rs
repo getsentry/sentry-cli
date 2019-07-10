@@ -81,6 +81,7 @@ pub mod react_native_gradle;
 pub mod react_native_xcode;
 
 pub mod difutil;
+pub mod difutil_bundle_sources;
 pub mod difutil_check;
 pub mod difutil_find;
 pub mod difutil_id;

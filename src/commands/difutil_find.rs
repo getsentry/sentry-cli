@@ -40,7 +40,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("TYPE")
                 .multiple(true)
                 .number_of_values(1)
-                .possible_values(&["dsym", "elf", "proguard", "breakpad"])
+                .possible_values(&[
+                    "dsym",
+                    "elf",
+                    "pe",
+                    "pdb",
+                    "proguard",
+                    "breakpad",
+                    "sourcebundle",
+                ])
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
@@ -102,6 +110,7 @@ fn find_ids(
     as_json: bool,
 ) -> Result<bool, Error> {
     let mut remaining = ids.clone();
+    let mut breakpad_found = HashSet::new();
     let mut proguard_uuids: HashSet<_> = ids
         .iter()
         .map(DebugId::uuid)
@@ -184,6 +193,35 @@ fn find_ids(
             }
         }
 
+        // look for PEs
+        if_chain! {
+            if types.contains(&DifType::Pe);
+            if dirent.path().extension() == Some(OsStr::new("exe")) ||
+            dirent.path().extension() == Some(OsStr::new("dll"));
+            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pe));
+            then {
+                for id in dif.ids() {
+                    if remaining.contains(&id) {
+                        found.push((id, DifType::Pe));
+                    }
+                }
+            }
+        }
+
+        // look for PDBs
+        if_chain! {
+            if types.contains(&DifType::Pdb);
+            if dirent.path().extension() == Some(OsStr::new("pdb"));
+            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pdb));
+            then {
+                for id in dif.ids() {
+                    if remaining.contains(&id) {
+                        found.push((id, DifType::Pdb));
+                    }
+                }
+            }
+        }
+
         // look for breakpad files
         if_chain! {
             if types.contains(&DifType::Breakpad);
@@ -198,10 +236,28 @@ fn find_ids(
             }
         }
 
+        // look for source bundles
+        if_chain! {
+            if types.contains(&DifType::SourceBundle);
+            if dirent.path().extension() == Some(OsStr::new("zip"));
+            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::SourceBundle));
+            then {
+                for id in dif.ids() {
+                    if remaining.contains(&id) {
+                        found.push((id, DifType::SourceBundle));
+                    }
+                }
+            }
+        }
+
         for (id, ty) in found {
             let path = dirent.path().to_path_buf();
             found_files.push(DifMatch { ty, id, path });
-            remaining.remove(&id);
+            if ty == DifType::Breakpad {
+                breakpad_found.insert(id);
+            } else {
+                remaining.remove(&id);
+            }
             proguard_uuids.remove(&id.uuid());
         }
     }
@@ -220,6 +276,7 @@ fn find_ids(
                 style(m.ty).yellow()
             );
         }
+        remaining.extend(breakpad_found);
         if !remaining.is_empty() {
             eprintln!("");
             eprintln!("missing debug information files:");
@@ -244,8 +301,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         }
     } else {
         types.insert(DifType::Dsym);
-        types.insert(DifType::Breakpad);
+        types.insert(DifType::Pdb);
+        types.insert(DifType::Pe);
         types.insert(DifType::Proguard);
+        types.insert(DifType::SourceBundle);
+        types.insert(DifType::Breakpad);
     }
 
     let with_well_known = !matches.is_present("no_well_known");

@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
-use std::io::Read;
+use std::io::{BufWriter, Read};
 use std::iter::FromIterator;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -18,12 +18,12 @@ use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use symbolic::common::ByteView;
+use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
 use crate::api::{
     Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedFileState, FileContents, ProgressBarMode,
 };
-use crate::utils::artifacts::{ArtifactBundleWriter, ArtifactInfo, ArtifactType};
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::fs::{get_sha1_checksums, TempFile};
@@ -199,7 +199,7 @@ struct Source {
     #[allow(unused)]
     file_path: PathBuf,
     contents: Vec<u8>,
-    ty: ArtifactType,
+    ty: SourceFileType,
     skip_upload: bool,
     headers: Vec<(String, String)>,
     messages: RwLock<Vec<(LogLevel, String)>>,
@@ -305,7 +305,7 @@ impl SourceMapProcessor {
             let mut contents: Vec<u8> = vec![];
             f.read_to_end(&mut contents)?;
             let ty = if sourcemap::is_sourcemap_slice(&contents) {
-                ArtifactType::SourceMap
+                SourceFileType::SourceMap
             } else if path
                 .file_name()
                 .and_then(OsStr::to_str)
@@ -313,7 +313,7 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&contents)
             {
-                ArtifactType::IndexedRamBundle
+                SourceFileType::IndexedRamBundle
             } else if path
                 .file_name()
                 .and_then(OsStr::to_str)
@@ -321,9 +321,9 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 || is_likely_minified_js(&contents)
             {
-                ArtifactType::MinifiedScript
+                SourceFileType::MinifiedSource
             } else {
-                ArtifactType::Script
+                SourceFileType::Source
             };
 
             self.sources.insert(
@@ -354,7 +354,7 @@ impl SourceMapProcessor {
         if let Some(url) = sm_ref.get_url() {
             let full_url = join_url(&source.url, url)?;
             info!("found sourcemap for {} at {}", &source.url, full_url);
-        } else if source.ty == ArtifactType::MinifiedScript {
+        } else if source.ty == SourceFileType::MinifiedSource {
             source.error("missing sourcemap!".into());
         }
         Ok(())
@@ -394,10 +394,10 @@ impl SourceMapProcessor {
                 println!(
                     "  {}",
                     style(match source.ty {
-                        ArtifactType::Script => "Scripts",
-                        ArtifactType::MinifiedScript => "Minified Scripts",
-                        ArtifactType::SourceMap => "Source Maps",
-                        ArtifactType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
+                        SourceFileType::Source => "Scripts",
+                        SourceFileType::MinifiedSource => "Minified Scripts",
+                        SourceFileType::SourceMap => "Source Maps",
+                        SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
                     })
                     .yellow()
                     .bold()
@@ -407,7 +407,7 @@ impl SourceMapProcessor {
 
             if source.skip_upload {
                 println!("    {} [skipped separate upload]", &source.url);
-            } else if source.ty == ArtifactType::MinifiedScript {
+            } else if source.ty == SourceFileType::MinifiedSource {
                 let sm_ref = source.get_sourcemap_ref();
                 if_chain! {
                     if sm_ref != sourcemap::SourceMapRef::Missing;
@@ -443,19 +443,19 @@ impl SourceMapProcessor {
         for source in &sources {
             pb.set_message(&source.url);
             match source.ty {
-                ArtifactType::Script | ArtifactType::MinifiedScript => {
+                SourceFileType::Source | SourceFileType::MinifiedSource => {
                     if let Err(err) = self.validate_script(&source) {
                         source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
-                ArtifactType::SourceMap => {
+                SourceFileType::SourceMap => {
                     if let Err(err) = self.validate_sourcemap(&source) {
                         source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
-                ArtifactType::IndexedRamBundle => (),
+                SourceFileType::IndexedRamBundle => (),
             }
             pb.inc(1);
         }
@@ -482,7 +482,7 @@ impl SourceMapProcessor {
         let sourcemaps_references = HashSet::from_iter(
             self.sources
                 .values()
-                .filter(|x| x.ty == ArtifactType::SourceMap)
+                .filter(|x| x.ty == SourceFileType::SourceMap)
                 .map(|x| x.url.to_string()),
         );
 
@@ -537,7 +537,7 @@ impl SourceMapProcessor {
                     url: source_url.clone(),
                     file_path: PathBuf::from(name.clone()),
                     contents: sourceview.source().as_bytes().to_vec(),
-                    ty: ArtifactType::MinifiedScript,
+                    ty: SourceFileType::MinifiedSource,
                     skip_upload: false,
                     headers: vec![],
                     messages: RwLock::new(vec![]),
@@ -555,7 +555,7 @@ impl SourceMapProcessor {
                     url: sourcemap_url.clone(),
                     file_path: PathBuf::from(sourcemap_name),
                     contents: sourcemap_content,
-                    ty: ArtifactType::SourceMap,
+                    ty: SourceFileType::SourceMap,
                     skip_upload: false,
                     headers: vec![],
                     messages: RwLock::new(vec![]),
@@ -571,7 +571,7 @@ impl SourceMapProcessor {
 
         // Drain RAM bundles from self.sources
         for (url, source) in mem::replace(&mut self.sources, Default::default()).into_iter() {
-            if source.ty == ArtifactType::IndexedRamBundle {
+            if source.ty == SourceFileType::IndexedRamBundle {
                 ram_bundles.push(source);
             } else {
                 self.sources.insert(url, source);
@@ -604,7 +604,7 @@ impl SourceMapProcessor {
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
             pb.set_message(&source.url);
-            if source.ty != ArtifactType::SourceMap {
+            if source.ty != SourceFileType::SourceMap {
                 pb.inc(1);
                 continue;
             }
@@ -633,13 +633,13 @@ impl SourceMapProcessor {
             self.sources
                 .iter()
                 .map(|x| x.1)
-                .filter(|x| x.ty == ArtifactType::SourceMap)
+                .filter(|x| x.ty == SourceFileType::SourceMap)
                 .map(|x| x.url.to_string()),
         );
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
-            if source.ty != ArtifactType::MinifiedScript {
+            if source.ty != SourceFileType::MinifiedSource {
                 continue;
             }
             // we silently ignore when we can't find a sourcemap. Maybe we should
@@ -768,24 +768,29 @@ impl SourceMapProcessor {
         progress.set_prefix(">");
 
         let archive = TempFile::create()?;
-        let mut bundle = ArtifactBundleWriter::new(archive.open()?);
+        let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
-        bundle.set_org(context.org);
-        bundle.set_project(context.project);
-        bundle.set_release(context.release);
-        bundle.set_dist(context.dist);
+        bundle.set_attribute("org".to_owned(), context.org.to_owned());
+        if let Some(project) = context.project {
+            bundle.set_attribute("project".to_owned(), project.to_owned());
+        }
+        bundle.set_attribute("release".to_owned(), context.release.to_owned());
+        if let Some(dist) = context.dist {
+            bundle.set_attribute("dist".to_owned(), dist.to_owned());
+        }
 
         for source in self.sources.values() {
             progress.inc(1);
             progress.set_message(&source.url);
 
-            let bundle_path = url_to_bundle_path(&source.url)?;
-            let info = ArtifactInfo {
-                url: source.url.clone(),
-                ty: Some(source.ty),
-                headers: source.headers.iter().cloned().collect(),
-            };
+            let mut info = SourceFileInfo::new();
+            info.set_ty(source.ty);
+            info.set_url(source.url.clone());
+            for (k, v) in &source.headers {
+                info.add_header(k.clone(), v.clone());
+            }
 
+            let bundle_path = url_to_bundle_path(&source.url)?;
             bundle.add_file(bundle_path, source.contents.as_slice(), info)?;
         }
 
