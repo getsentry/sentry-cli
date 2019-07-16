@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.47.0
+
+* Trim whitespace in header values to prevent potential header injections
+  through the auth token header.  (#563)
+
 ## sentry-cli 1.46.0
 
 * Relax the release file limit for sourcemap uploads when artifact bundles
