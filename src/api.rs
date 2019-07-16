@@ -1450,19 +1450,18 @@ impl ApiRequest {
             Auth::Key(ref key) => {
                 self.handle.username(key)?;
                 debug!("using key based authentication");
+                Ok(self)
             }
             Auth::Token(ref token) => {
-                self.headers
-                    .append(&format!("Authorization: Bearer {}", token))?;
                 debug!("using token authentication");
+                self.with_header("Authorization", &format!("Bearer {}", token))
             }
         }
-
-        Ok(self)
     }
 
     /// adds a specific header to the request
     pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<Self> {
+        let value = value.trim().lines().next().unwrap_or("");
         self.headers.append(&format!("{}: {}", key, value))?;
         Ok(self)
     }
