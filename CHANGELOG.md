@@ -4,6 +4,8 @@
 
 * Trim whitespace in header values to prevent potential header injections
   through the auth token header.  (#563)
+* Implemented source bundle uploads. (#558)
+* Improved Azure DevOps URL parsing. (#556)
 
 ## sentry-cli 1.46.0
 
