@@ -284,7 +284,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("EXT")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("Add a file extension to the list of files to upload."))))
+                    .help("Add a file extension to the list of files to upload. Must be \
+                           repeated once for each extension.{n}Note that this overrides the \
+                           defaults, so if you use this, you must include ALL desired extensions."))))
         .subcommand(App::new("deploys")
             .about("Manage release deployments.")
             .setting(AppSettings::SubcommandRequiredElseHelp)
