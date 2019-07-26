@@ -1,9 +1,15 @@
 ---
-minVersion: '0.6.0'
+minVersion: '0.8.2'
 github:
   owner: getsentry
   repo: sentry-cli
 changelogPolicy: simple
+requireNames:
+  - /^sentry-cli-Darwin-x86_64$/
+  - /^sentry-cli-Linux-i686$/
+  - /^sentry-cli-Linux-x86_64$/
+  - /^sentry-cli-Windows-i686.exe$/
+  - /^sentry-cli-Windows-x86_64.exe$/
 targets:
   - name: gcs
     bucket: sentry-sdk-assets
@@ -41,5 +47,8 @@ targets:
     type: app
     urlTemplate: "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}"
     includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
+    checksums:
+      - algorithm: sha256
+        format: hex
     config:
       canonical: "app:sentry-cli"
