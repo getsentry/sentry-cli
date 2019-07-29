@@ -9,12 +9,12 @@ edition = "2018"
 anylog = "0.4.0"
 app_dirs = "1.2.1"
 backoff = "0.1.5"
-backtrace = "0.3.22"
+backtrace = "0.3.33"
 brotli2 = "0.3.2"
 chardet = "0.2.4"
-chrono = { version = "0.4.6", features = ["serde"] }
+chrono = { version = "0.4.7", features = ["serde"] }
 clap = { version = "2.33.0", default-features = false, features = ["suggestions", "wrap_help"] }
-console = "0.7.5"
+console = "0.7.7"
 curl = "0.4.22"
 dirs = "1.0.5"
 dotenv = "0.14.1"
@@ -22,41 +22,41 @@ elementtree = "0.5.0"
 encoding = "0.2.33"
 failure = "0.1.5"
 failure_derive = "0.1.5"
-flate2 = { version = "1.0.7", default-features = false, features = ["rust_backend"] }
+flate2 = { version = "1.0.9", default-features = false, features = ["rust_backend"] }
 git2 = { version = "0.8.0", default-features = false }
 glob = "0.3.0"
 hostname = "0.1.5"
 if_chain = "1.0.0"
-ignore = "0.4.7"
+ignore = "0.4.8"
 indicatif = "0.11.0"
 itertools = "0.8.0"
 java-properties = "1.2.0"
 lazy_static = "1.3.0"
-libc = "0.2.55"
-log = { version = "0.4.6", features = ["std"] }
+libc = "0.2.60"
+log = { version = "0.4.8", features = ["std"] }
 might-be-minified = "0.3.0"
-open = "1.2.2"
-parking_lot = "0.8.0"
+open = "1.3.1"
+parking_lot = "0.9.0"
 plist = "0.4.1"
 prettytable-rs = "0.8.0"
-rayon = "1.0.3"
-regex = "1.1.7"
+rayon = "1.1.0"
+regex = "1.2.0"
 runas = "0.1.4"
 rust-ini = "0.13.0"
-sentry = { version = "0.15.5", default-features = false, features = ["with_client_implementation", "with_curl_transport", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
-serde = { version = "1.0.91", features = ["derive"] }
-serde_derive = "1.0.91"
-serde_json = "1.0.39"
+sentry = { version = "0.16.0", default-features = false, features = ["with_client_implementation", "with_curl_transport", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
+serde = { version = "1.0.98", features = ["derive"] }
+serde_derive = "1.0.98"
+serde_json = "1.0.40"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = { version = "4.1.0", features = ["ram_bundle"] }
 symbolic = { git = "https://github.com/getsentry/symbolic", rev = "32df00067d53e57309b7015a9bf1f62d9d011020", features = ["debuginfo-serde", "proguard"] }
 url = "1.7.2"
 username = "0.2.0"
 uuid = { version = "0.7.4", features = ["v4", "serde"] }
-walkdir = "2.2.7"
+walkdir = "2.2.9"
 which = "2.0.1"
 zip = "0.5.2"
-r2d2 = "0.8.4"
+r2d2 = "0.8.5"
 
 [features]
 default = ["with_crash_reporting"]
