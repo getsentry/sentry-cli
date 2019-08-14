@@ -34,6 +34,38 @@ module.exports = {
   },
 
   /**
+   * Specifies the set of commits covered in this release.
+   *
+   * @param {string} release Unique name of the release
+   * @param {object} options A set of options to configure the commits to include
+   * @param {string} options.repo The full repo name as defined in Sentry
+   * @param {boolean} options.auto Automatically choose the associated commit (uses
+   * the current commit). Overrides other options.
+   * @param {string} options.commit The current (last) commit in the release.
+   * @param {string} options.previousCommit The commit before the beginning of this
+   * release (in other words, the last commit of the previous release). If omitted,
+   * this will default to the last commit of the previous release in Sentry. If there
+   * was no previous release, the last 10 commits will be used.
+   * @returns {Promise} A promise that resolves when the commits have been associated
+   * @memberof SentryReleases
+   */
+  setCommits(release, options) {
+    if (!options || !options.repo || (!options.auto && !options.commit)) {
+      throw new Error(
+        'options.repo, and either options.commit or options.auto must be specified'
+      );
+    }
+
+    const commitFlags = options.auto
+      ? ['--auto']
+      : options.previousCommit
+      ? ['--commit', `${options.repo}@${options.previousCommit}..${options.commit}`]
+      : ['--commit', `${options.repo}@${options.commit}`];
+
+    return helper.execute(['releases', 'set-commits', release].concat(commitFlags));
+  },
+
+  /**
    * Marks this release as complete. This should be called once all artifacts has been
    * uploaded.
    *
