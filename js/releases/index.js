@@ -56,11 +56,20 @@ module.exports = {
       );
     }
 
-    const commitFlags = options.auto
-      ? ['--auto']
-      : options.previousCommit
-      ? ['--commit', `${options.repo}@${options.previousCommit}..${options.commit}`]
-      : ['--commit', `${options.repo}@${options.commit}`];
+    let commitFlags = [];
+
+    if (options.auto) {
+      commitFlags = ['--auto'];
+    } else {
+      if (options.previousCommit) {
+        commitFlags = [
+          '--commit',
+          `${options.repo}@${options.previousCommit}..${options.commit}`,
+        ];
+      } else {
+        commitFlags = ['--commit', `${options.repo}@${options.commit}`];
+      }
+    }
 
     return helper.execute(['releases', 'set-commits', release].concat(commitFlags));
   },
