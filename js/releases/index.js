@@ -60,15 +60,13 @@ module.exports = {
 
     if (options.auto) {
       commitFlags = ['--auto'];
+    } else if (options.previousCommit) {
+      commitFlags = [
+        '--commit',
+        `${options.repo}@${options.previousCommit}..${options.commit}`,
+      ];
     } else {
-      if (options.previousCommit) {
-        commitFlags = [
-          '--commit',
-          `${options.repo}@${options.previousCommit}..${options.commit}`,
-        ];
-      } else {
-        commitFlags = ['--commit', `${options.repo}@${options.commit}`];
-      }
+      commitFlags = ['--commit', `${options.repo}@${options.commit}`];
     }
 
     return helper.execute(['releases', 'set-commits', release].concat(commitFlags));
