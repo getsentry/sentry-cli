@@ -19,7 +19,7 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 
-static DERIVED_DATA: &'static str = "Library/Developer/Xcode/DerivedData";
+static DERIVED_DATA: &str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload debugging information files.")

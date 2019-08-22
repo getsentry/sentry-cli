@@ -24,7 +24,7 @@ pub fn decode_unknown_string(bytes: &[u8]) -> Result<Cow<'_, str>, Error> {
             then {
                 Ok(Cow::Owned(s))
             } else {
-                return Err(UnknownEncodingError.into());
+                Err(UnknownEncodingError.into())
             }
         }
     }
