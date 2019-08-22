@@ -135,7 +135,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .value_name("TIMESTAMP")
                  .help("Set the release time. [defaults to the current time]")))
         .subcommand(App::new("list")
-            .about("List the most recent releases.")
+            .about("List the most recent releases."))
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
@@ -506,7 +506,7 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
     Ok(())
 }
 
-fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
     let releases = ctx
         .api
@@ -561,7 +561,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
 
     if let Some(release) = release {
         let mut tbl = Table::new();
-        tbl.add_row().add("Version").add(&release.version));
+        tbl.add_row().add("Version").add(&release.version);
         tbl.add_row().add("Date created").add(&release.date_created);
         if let Some(last_event) = release.last_event {
             tbl.add_row().add("Last event").add(last_event);
