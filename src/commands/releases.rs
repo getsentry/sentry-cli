@@ -138,7 +138,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .about("List the most recent releases.")
             .arg(Arg::with_name("no_abbrev")
                 .long("no-abbrev")
-                .help("Do not abbreviate the release version.")))
+                .hidden(true)))
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
@@ -340,18 +340,6 @@ fn strip_sha(sha: &str) -> &str {
     }
 }
 
-fn strip_version(version: &str) -> &str {
-    lazy_static! {
-        static ref DOTTED_PATH_PREFIX_RE: Regex =
-            Regex::new(r"^([a-z][a-z0-9-]+)(\.[a-z][a-z0-9-]+)+-").unwrap();
-    }
-    if let Some(m) = DOTTED_PATH_PREFIX_RE.find(version) {
-        strip_sha(&version[m.end()..])
-    } else {
-        strip_sha(version)
-    }
-}
-
 #[cfg(windows)]
 fn path_as_url(path: &Path) -> String {
     path.display().to_string().replace("\\", "/")
@@ -521,12 +509,11 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
     Ok(())
 }
 
-fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
     let releases = ctx
         .api
         .list_releases(ctx.get_org()?, project.as_ref().map(String::as_ref))?;
-    let abbrev = !matches.is_present("no_abbrev");
     let mut table = Table::new();
     table
         .title_row()
@@ -544,11 +531,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
         } else {
             row.add("(unreleased)");
         }
-        if abbrev {
-            row.add(strip_version(&release_info.version));
-        } else {
-            row.add(&release_info.version);
-        }
+        row.add(&release_info.version);
         row.add(release_info.new_groups);
         if let Some(date) = release_info.last_event {
             row.add(format!(
@@ -580,12 +563,8 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     }
 
     if let Some(release) = release {
-        let short_version = strip_version(&release.version);
         let mut tbl = Table::new();
-        tbl.add_row().add("Version").add(short_version);
-        if short_version != release.version {
-            tbl.add_row().add("Full version").add(&release.version);
-        }
+        tbl.add_row().add("Version").add(&release.version);
         tbl.add_row().add("Date created").add(&release.date_created);
         if let Some(last_event) = release.last_event {
             tbl.add_row().add("Last event").add(last_event);
