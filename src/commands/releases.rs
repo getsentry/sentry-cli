@@ -243,12 +243,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("PREFIX")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("Strip the given prefix from all filenames.{n}\
-                           Only files that start with the given prefix will be stripped."))
+                    .help("When used with a `--rewrite` option, strips the given prefix from \
+                           all sources references inside the upload sourcemaps (paths used within \
+                           the sourcemap content, to map minified code to it's original source). \
+                           Only sources that start with the given prefix will be stripped.{n} \
+                           This will not modify the uploaded sources paths. To do that, point the upload \
+                           or upload-sourcemaps command to a more precise directory instead.")
+                    .conflicts_with("no_rewrite"))
                 .arg(Arg::with_name("strip_common_prefix")
                     .long("strip-common-prefix")
                     .help("Similar to --strip-prefix but strips the most common \
-                           prefix on all sources."))
+                           prefix on all sources references.")
+                    .conflicts_with("no_rewrite"))
                 .arg(Arg::with_name("ignore")
                     .long("ignore")
                     .short("i")
