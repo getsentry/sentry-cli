@@ -950,8 +950,17 @@ fn test_join() {
     assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
     assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
     assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
-    assert_eq!(&join_url("app:///", "/foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(
+        &join_url("app:///", "/foo.html").unwrap(),
+        "app:///foo.html"
+    );
     assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("https:///example.com/", "foo.html").unwrap(), "https://example.com/foo.html");
-    assert_eq!(&join_url("https://example.com/", "foo.html").unwrap(), "https://example.com/foo.html");
+    assert_eq!(
+        &join_url("https:///example.com/", "foo.html").unwrap(),
+        "https://example.com/foo.html"
+    );
+    assert_eq!(
+        &join_url("https://example.com/", "foo.html").unwrap(),
+        "https://example.com/foo.html"
+    );
 }
