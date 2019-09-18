@@ -250,11 +250,9 @@ fn find_matching_rev(
         then {
             debug!("if_chain macro! {:?}, {:?}, {:?}", url, &reference_url, is_matching_url(url, &reference_url));
             if !discovery || is_matching_url(url, &reference_url) {
-                debug!("  found match: {} == {}", url, &reference_url);
-                debug!("  trying to revparse r (Commit or Tag?): {:?}", r);
+                debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
                 let head = repo.revparse_single(r)?;
                 debug!("  head: {:?}", head);
-                debug!("  head.kind(): {:?}", head.kind());
                 if let Some(tag) = head.as_tag(){
                     debug!("  tag.target(): {:?}", tag.target());
                     if let Ok(tag_commit) = tag.target() {
@@ -391,7 +389,6 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
 #[test]
 fn test_find_matching_rev() {
     //TODO: Make sure this works if you pass reference as GitReference::Commit, and pass in a SHA instead of a tag
-    //TODO: Add in more debug just in case this doesn't fix the issue - the customer can send over the debug output.
     let reference = GitReference::Symbolic("1.9.2");
     let spec = CommitSpec {
         repo: String::from("getsentry/sentry-cli"),
