@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use log::{debug, info};
 use regex::Regex;
 
-use crate::api::{Ref, Repo};
+use crate::api::{Ref, Repo, RepoProvider};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
@@ -248,9 +248,20 @@ fn find_matching_rev(
         if let Ok(remote) = repo.find_remote("origin");
         if let Some(url) = remote.url();
         then {
+            debug!("if_chain macro! {:?}, {:?}, {:?}", url, &reference_url, is_matching_url(url, &reference_url));
             if !discovery || is_matching_url(url, &reference_url) {
                 debug!("  found match: {} == {}", url, &reference_url);
+                debug!("  trying to revparse r (Commit or Tag?): {:?}", r);
                 let head = repo.revparse_single(r)?;
+                debug!("  head: {:?}", head);
+                debug!("  head.kind(): {:?}", head.kind());
+                if let Some(tag) = head.as_tag(){
+                    debug!("  tag.target(): {:?}", tag.target());
+                    if let Ok(tag_commit) = tag.target() {
+                        return Ok(Some(log_match!(tag_commit.id().to_string())));
+                    }
+                }
+                debug!("Not a tag");
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
                 debug!("  not a match: {} != {}", url, &reference_url);
@@ -375,6 +386,56 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
     }
 
     Ok(rv)
+}
+
+#[test]
+fn test_find_matching_rev() {
+    //TODO: Make sure this works if you pass reference as GitReference::Commit, and pass in a SHA instead of a tag
+    //TODO: Add in more debug just in case this doesn't fix the issue - the customer can send over the debug output.
+    let reference = GitReference::Symbolic("1.9.2");
+    let spec = CommitSpec {
+        repo: String::from("getsentry/sentry-cli"),
+        path: None,
+        rev: String::from("1.9.2"),
+        prev_rev: Some(String::from("1.9.1"))
+    };
+
+    let repos = [
+        Repo {
+            id: String::from("1"),
+            name: String::from("getsentry/sentry-cli"),
+            url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+            provider: RepoProvider { id: String::from("integrations:github"), name: String::from("GitHub") },
+            status: String::from("active"),
+            date_created: chrono::Utc::now()
+        }
+    ];
+
+    let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false);
+    assert_eq!(res_with_lightweight_tag.unwrap(), Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942")));
+
+    let reference = GitReference::Symbolic("1.9.2-hw");
+    let spec = CommitSpec {
+        repo: String::from("getsentry/sentry-cli"),
+        path: None,
+        rev: String::from("1.9.2-hw"),
+        prev_rev: Some(String::from("1.9.1"))
+    };
+
+    let repos = [
+        Repo {
+            id: String::from("1"),
+            name: String::from("getsentry/sentry-cli"),
+            url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+            provider: RepoProvider { id: String::from("integrations:github"), name: String::from("GitHub") },
+            status: String::from("active"),
+            date_created: chrono::Utc::now()
+        }
+    ];
+
+    let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false);
+    assert_eq!(res_with_annotated_tag.unwrap(), Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942")));
+
 }
 
 #[test]
