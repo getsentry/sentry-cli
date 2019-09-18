@@ -944,3 +944,14 @@ fn test_unsplit_url() {
     assert_eq!(&unsplit_url(None, "foo", None), "foo");
     assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
 }
+
+#[test]
+fn test_join() {
+    assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
+    assert_eq!(&join_url("app:///", "/foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(&join_url("https:///example.com/", "foo.html").unwrap(), "https://example.com/foo.html");
+    assert_eq!(&join_url("https://example.com/", "foo.html").unwrap(), "https://example.com/foo.html");
+}
