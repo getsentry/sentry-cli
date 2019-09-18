@@ -259,7 +259,7 @@ fn find_matching_rev(
                         return Ok(Some(log_match!(tag_commit.id().to_string())));
                     }
                 }
-                debug!("Not a tag");
+                debug!("  Not a tag");
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
                 debug!("  not a match: {} != {}", url, &reference_url);
@@ -387,8 +387,7 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
 }
 
 #[test]
-fn test_find_matching_rev() {
-    //TODO: Make sure this works if you pass reference as GitReference::Commit, and pass in a SHA instead of a tag
+fn test_find_matching_rev_with_lightweight_tag() {
     let reference = GitReference::Symbolic("1.9.2");
     let spec = CommitSpec {
         repo: String::from("getsentry/sentry-cli"),
@@ -410,7 +409,10 @@ fn test_find_matching_rev() {
 
     let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false);
     assert_eq!(res_with_lightweight_tag.unwrap(), Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942")));
+}
 
+#[test]
+fn test_find_matching_rev_with_annotated_tag() {
     let reference = GitReference::Symbolic("1.9.2-hw");
     let spec = CommitSpec {
         repo: String::from("getsentry/sentry-cli"),
@@ -432,7 +434,6 @@ fn test_find_matching_rev() {
 
     let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false);
     assert_eq!(res_with_annotated_tag.unwrap(), Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942")));
-
 }
 
 #[test]
