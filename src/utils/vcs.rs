@@ -393,22 +393,26 @@ fn test_find_matching_rev_with_lightweight_tag() {
         repo: String::from("getsentry/sentry-cli"),
         path: None,
         rev: String::from("1.9.2"),
-        prev_rev: Some(String::from("1.9.1"))
+        prev_rev: Some(String::from("1.9.1")),
     };
 
-    let repos = [
-        Repo {
-            id: String::from("1"),
-            name: String::from("getsentry/sentry-cli"),
-            url: Some(String::from("https://github.com/getsentry/sentry-cli")),
-            provider: RepoProvider { id: String::from("integrations:github"), name: String::from("GitHub") },
-            status: String::from("active"),
-            date_created: chrono::Utc::now()
-        }
-    ];
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("getsentry/sentry-cli"),
+        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
 
     let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false);
-    assert_eq!(res_with_lightweight_tag.unwrap(), Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942")));
+    assert_eq!(
+        res_with_lightweight_tag.unwrap(),
+        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
+    );
 }
 
 #[test]
@@ -418,22 +422,26 @@ fn test_find_matching_rev_with_annotated_tag() {
         repo: String::from("getsentry/sentry-cli"),
         path: None,
         rev: String::from("1.9.2-hw"),
-        prev_rev: Some(String::from("1.9.1"))
+        prev_rev: Some(String::from("1.9.1")),
     };
 
-    let repos = [
-        Repo {
-            id: String::from("1"),
-            name: String::from("getsentry/sentry-cli"),
-            url: Some(String::from("https://github.com/getsentry/sentry-cli")),
-            provider: RepoProvider { id: String::from("integrations:github"), name: String::from("GitHub") },
-            status: String::from("active"),
-            date_created: chrono::Utc::now()
-        }
-    ];
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("getsentry/sentry-cli"),
+        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
 
     let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false);
-    assert_eq!(res_with_annotated_tag.unwrap(), Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942")));
+    assert_eq!(
+        res_with_annotated_tag.unwrap(),
+        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
+    );
 }
 
 #[test]
