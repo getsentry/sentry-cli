@@ -248,25 +248,42 @@ fn find_matching_rev(
         if let Ok(remote) = repo.find_remote("origin");
         if let Some(url) = remote.url();
         then {
-            debug!("if_chain macro! {:?}, {:?}, {:?}", url, &reference_url, is_matching_url(url, &reference_url));
             if !discovery || is_matching_url(url, &reference_url) {
                 debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
                 let head = repo.revparse_single(r)?;
-                debug!("  head: {:?}", head);
                 if let Some(tag) = head.as_tag(){
                     debug!("  tag.target(): {:?}", tag.target());
                     if let Ok(tag_commit) = tag.target() {
                         return Ok(Some(log_match!(tag_commit.id().to_string())));
                     }
                 }
-                debug!("  Not a tag");
+                debug!("  not a tag");
+
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
                 debug!("  not a match: {} != {}", url, &reference_url);
             }
         }
     }
+    if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
+        return Ok(submodule_match);
+    }
+    info!("  -> no matching revision found");
+    Ok(None)
+}
 
+fn find_matching_submodule(
+    r: &str,
+    reference_url: String,
+    repo: git2::Repository,
+) -> Result<Option<String>, Error> {
+    macro_rules! log_match {
+        ($ex:expr) => {{
+            let val = $ex;
+            info!("  -> found matching revision {}", val);
+            val
+        }};
+    }
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
@@ -299,8 +316,6 @@ fn find_matching_rev(
             }
         }
     }
-
-    info!("  -> no matching revision found");
     Ok(None)
 }
 
