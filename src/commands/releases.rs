@@ -698,9 +698,7 @@ fn execute_files_upload<'a>(
 }
 
 fn get_url_prefix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
-    let mut rv = matches
-        .value_of("url_prefix")
-        .unwrap_or("~");
+    let mut rv = matches.value_of("url_prefix").unwrap_or("~");
     // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
     if rv.ends_with('/') {
         rv = &rv[..rv.len() - 1];
