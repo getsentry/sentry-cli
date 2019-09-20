@@ -212,11 +212,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .arg(Arg::with_name("validate")
                     .long("validate")
                     .help("Enable basic sourcemap validation."))
-        .arg(
-            Arg::with_name("wait")
-                .long("wait")
-                .help("Wait for the server to fully process uploaded files."),
-        )
+                .arg(Arg::with_name("wait")
+                    .long("wait")
+                    .help("Wait for the server to fully process uploaded files."))
                 .arg(Arg::with_name("no_sourcemap_reference")
                     .long("no-sourcemap-reference")
                     .help("Disable emitting of automatic sourcemap references.{n}\
@@ -246,7 +244,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("When used with a `--rewrite` option, strips the given prefix from \
                            all sources references inside the upload sourcemaps (paths used within \
                            the sourcemap content, to map minified code to it's original source). \
-                           Only sources that start with the given prefix will be stripped.{n} \
+                           Only sources that start with the given prefix will be stripped.{n}\
                            This will not modify the uploaded sources paths. To do that, point the upload \
                            or upload-sourcemaps command to a more precise directory instead.")
                     .conflicts_with("no_rewrite"))
@@ -290,7 +288,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("EXT")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("Add a file extension to the list of files to upload."))))
+                    .help("Set the file extensions that are considered for upload. \
+                           This overrides the default extensions. To add an extension, all default \
+                           extensions must be repeated. Specify once per extension.{n}\
+                           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`"))))
         .subcommand(App::new("deploys")
             .about("Manage release deployments.")
             .setting(AppSettings::SubcommandRequiredElseHelp)
