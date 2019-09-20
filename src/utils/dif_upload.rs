@@ -1352,6 +1352,7 @@ pub struct DifUpload {
     zips_allowed: bool,
     max_file_size: u64,
     pdbs_allowed: bool,
+    sources_allowed: bool,
     include_sources: bool,
 }
 
@@ -1385,6 +1386,7 @@ impl DifUpload {
             zips_allowed: true,
             max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
             pdbs_allowed: false,
+            sources_allowed: false,
             include_sources: false,
         }
     }
@@ -1544,26 +1546,36 @@ impl DifUpload {
                 self.max_file_size = chunk_options.max_file_size;
             }
 
-            if chunk_options.supports(ChunkUploadCapability::Pdbs) {
-                self.pdbs_allowed = true;
-            }
-
-            if self.include_sources && !chunk_options.supports(ChunkUploadCapability::Sources) {
-                warn!("Source uploads are not supported by the configured Sentry server");
-                self.include_sources = false;
-            }
+            self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
+            self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
 
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
+                self.validate_capabilities();
                 return upload_difs_chunked(self, chunk_options);
             }
         }
 
-        if self.include_sources {
+        self.validate_capabilities();
+        Ok((upload_difs_batched(self)?, false))
+    }
+
+    /// Validate that the server supports all requested capabilities.
+    fn validate_capabilities(&mut self) {
+        // Checks whether source bundles are *explicitly* requested on the command line.
+        if (self.formats.contains(&FileFormat::SourceBundle) || self.include_sources)
+            && !self.sources_allowed
+        {
             warn!("Source uploads are not supported by the configured Sentry server");
             self.include_sources = false;
         }
 
-        Ok((upload_difs_batched(self)?, false))
+        // Checks whether PDBs or PEs were *explicitly* requested on the command line.
+        if (self.formats.contains(&FileFormat::Pdb) || self.formats.contains(&FileFormat::Pe))
+            && !self.pdbs_allowed
+        {
+            warn!("PDBs and PEs are not supported by the configured Sentry server");
+            // This is validated additionally in .valid_format()
+        }
     }
 
     /// Determines if this `DebugId` matches the search criteria.
@@ -1581,6 +1593,7 @@ impl DifUpload {
         match format {
             FileFormat::Unknown => false,
             FileFormat::Pdb | FileFormat::Pe if !self.pdbs_allowed => false,
+            FileFormat::SourceBundle if !self.sources_allowed => false,
             format => self.formats.is_empty() || self.formats.contains(&format),
         }
     }
@@ -1590,5 +1603,6 @@ impl DifUpload {
         self.features.symtab && object.has_symbols()
             || self.features.debug && object.has_debug_info()
             || self.features.unwind && object.has_unwind_info()
+            || self.features.sources && object.has_sources()
     }
 }
