@@ -1,9 +1,13 @@
 # Changelog
 
+## sentry-cli 1.47.1
+
+* Fix potentially broken payloads in `send-event`.
+
 ## sentry-cli 1.47.0
 
 * Trim whitespace in header values to prevent potential header injections
-  through the auth token header.  (#563)
+  through the auth token header. (#563)
 * Improved Azure DevOps URL parsing. (#556)
 
 ## sentry-cli 1.46.0

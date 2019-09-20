@@ -143,8 +143,8 @@ impl VcsUrl {
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.into(),
-                    id: caps[1].to_string(),
+                    provider: host.to_lowercase(),
+                    id: caps[1].to_lowercase(),
                 };
             }
         }
@@ -158,8 +158,8 @@ impl VcsUrl {
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: hostname.into(),
-                    id: caps[1].to_string(),
+                    provider: hostname.to_lowercase(),
+                    id: caps[1].to_lowercase(),
                 };
             }
         }
@@ -429,10 +429,24 @@ fn test_url_parsing() {
         }
     );
     assert_eq!(
+        VcsUrl::parse("git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "company/repo%20online".into(),
+        }
+    );
+    assert_eq!(
         VcsUrl::parse("https://dev.azure.com/project/repo/_git/repo"),
         VcsUrl {
             provider: "dev.azure.com".into(),
             id: "project/repo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "company/repo%20online".into(),
         }
     );
     assert_eq!(
@@ -512,5 +526,9 @@ fn test_url_normalization() {
     assert!(is_matching_url(
         "git@ssh.dev.azure.com:v3/project/repo/repo",
         "https://dev.azure.com/project/repo/_git/repo"
+    ));
+    assert!(is_matching_url(
+        "git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online",
+        "https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"
     ))
 }

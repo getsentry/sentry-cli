@@ -138,7 +138,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .about("List the most recent releases.")
             .arg(Arg::with_name("no_abbrev")
                 .long("no-abbrev")
-                .help("Do not abbreviate the release version.")))
+                .hidden(true)))
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
@@ -243,12 +243,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .value_name("PREFIX")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("Strip the given prefix from all filenames.{n}\
-                           Only files that start with the given prefix will be stripped."))
+                    .help("When used with a `--rewrite` option, strips the given prefix from \
+                           all sources references inside the upload sourcemaps (paths used within \
+                           the sourcemap content, to map minified code to it's original source). \
+                           Only sources that start with the given prefix will be stripped.{n} \
+                           This will not modify the uploaded sources paths. To do that, point the upload \
+                           or upload-sourcemaps command to a more precise directory instead.")
+                    .conflicts_with("no_rewrite"))
                 .arg(Arg::with_name("strip_common_prefix")
                     .long("strip-common-prefix")
                     .help("Similar to --strip-prefix but strips the most common \
-                           prefix on all sources."))
+                           prefix on all sources references.")
+                    .conflicts_with("no_rewrite"))
                 .arg(Arg::with_name("ignore")
                     .long("ignore")
                     .short("i")
@@ -339,18 +345,6 @@ fn strip_sha(sha: &str) -> &str {
         &sha[..12]
     } else {
         sha
-    }
-}
-
-fn strip_version(version: &str) -> &str {
-    lazy_static! {
-        static ref DOTTED_PATH_PREFIX_RE: Regex =
-            Regex::new(r"^([a-z][a-z0-9-]+)(\.[a-z][a-z0-9-]+)+-").unwrap();
-    }
-    if let Some(m) = DOTTED_PATH_PREFIX_RE.find(version) {
-        strip_sha(&version[m.end()..])
-    } else {
-        strip_sha(version)
     }
 }
 
@@ -523,12 +517,11 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
     Ok(())
 }
 
-fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
     let releases = ctx
         .api
         .list_releases(ctx.get_org()?, project.as_ref().map(String::as_ref))?;
-    let abbrev = !matches.is_present("no_abbrev");
     let mut table = Table::new();
     table
         .title_row()
@@ -546,11 +539,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
         } else {
             row.add("(unreleased)");
         }
-        if abbrev {
-            row.add(strip_version(&release_info.version));
-        } else {
-            row.add(&release_info.version);
-        }
+        row.add(&release_info.version);
         row.add(release_info.new_groups);
         if let Some(date) = release_info.last_event {
             row.add(format!(
@@ -582,12 +571,8 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     }
 
     if let Some(release) = release {
-        let short_version = strip_version(&release.version);
         let mut tbl = Table::new();
-        tbl.add_row().add("Version").add(short_version);
-        if short_version != release.version {
-            tbl.add_row().add("Full version").add(&release.version);
-        }
+        tbl.add_row().add("Version").add(&release.version);
         tbl.add_row().add("Date created").add(&release.date_created);
         if let Some(last_event) = release.last_event {
             tbl.add_row().add("Last event").add(last_event);
@@ -715,10 +700,12 @@ fn execute_files_upload<'a>(
 }
 
 fn get_url_prefix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
-    matches
-        .value_of("url_prefix")
-        .unwrap_or("~")
-        .trim_end_matches('/')
+    let mut rv = matches.value_of("url_prefix").unwrap_or("~");
+    // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
+    if rv.ends_with('/') {
+        rv = &rv[..rv.len() - 1];
+    }
+    rv
 }
 
 fn get_url_suffix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
