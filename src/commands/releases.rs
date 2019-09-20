@@ -698,10 +698,12 @@ fn execute_files_upload<'a>(
 }
 
 fn get_url_prefix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
-    matches
-        .value_of("url_prefix")
-        .unwrap_or("~")
-        .trim_end_matches('/')
+    let mut rv = matches.value_of("url_prefix").unwrap_or("~");
+    // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
+    if rv.ends_with('/') {
+        rv = &rv[..rv.len() - 1];
+    }
+    rv
 }
 
 fn get_url_suffix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
