@@ -44,6 +44,14 @@ struct VcsUrl {
     pub id: String,
 }
 
+macro_rules! log_match {
+    ($ex:expr) => {{
+        let val = $ex;
+        info!("  -> found matching revision {}", val);
+        val
+    }};
+}
+
 fn parse_rev_range(rng: &str) -> (Option<String>, String) {
     if rng == "" {
         return (None, "HEAD".into());
@@ -216,14 +224,6 @@ fn find_matching_rev(
     repos: &[Repo],
     disable_discovery: bool,
 ) -> Result<Option<String>, Error> {
-    macro_rules! log_match {
-        ($ex:expr) => {{
-            let val = $ex;
-            info!("  -> found matching revision {}", val);
-            val
-        }};
-    }
-
     info!("Resolving {} ({})", &reference, spec);
 
     let r = match reference {
@@ -252,13 +252,10 @@ fn find_matching_rev(
                 debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
                 let head = repo.revparse_single(r)?;
                 if let Some(tag) = head.as_tag(){
-                    debug!("  tag.target(): {:?}", tag.target());
                     if let Ok(tag_commit) = tag.target() {
                         return Ok(Some(log_match!(tag_commit.id().to_string())));
                     }
                 }
-                debug!("  not a tag");
-
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
                 debug!("  not a match: {} != {}", url, &reference_url);
@@ -277,13 +274,6 @@ fn find_matching_submodule(
     reference_url: String,
     repo: git2::Repository,
 ) -> Result<Option<String>, Error> {
-    macro_rules! log_match {
-        ($ex:expr) => {{
-            let val = $ex;
-            info!("  -> found matching revision {}", val);
-            val
-        }};
-    }
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
