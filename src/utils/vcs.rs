@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use log::{debug, info};
 use regex::Regex;
 
-use crate::api::{Ref, Repo};
+use crate::api::{Ref, Repo, RepoProvider};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
@@ -42,6 +42,14 @@ impl fmt::Display for CommitSpec {
 struct VcsUrl {
     pub provider: String,
     pub id: String,
+}
+
+macro_rules! log_match {
+    ($ex:expr) => {{
+        let val = $ex;
+        info!("  -> found matching revision {}", val);
+        val
+    }};
 }
 
 fn parse_rev_range(rng: &str) -> (Option<String>, String) {
@@ -216,14 +224,6 @@ fn find_matching_rev(
     repos: &[Repo],
     disable_discovery: bool,
 ) -> Result<Option<String>, Error> {
-    macro_rules! log_match {
-        ($ex:expr) => {{
-            let val = $ex;
-            info!("  -> found matching revision {}", val);
-            val
-        }};
-    }
-
     info!("Resolving {} ({})", &reference, spec);
 
     let r = match reference {
@@ -249,15 +249,31 @@ fn find_matching_rev(
         if let Some(url) = remote.url();
         then {
             if !discovery || is_matching_url(url, &reference_url) {
-                debug!("  found match: {} == {}", url, &reference_url);
+                debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
                 let head = repo.revparse_single(r)?;
+                if let Some(tag) = head.as_tag(){
+                    if let Ok(tag_commit) = tag.target() {
+                        return Ok(Some(log_match!(tag_commit.id().to_string())));
+                    }
+                }
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
                 debug!("  not a match: {} != {}", url, &reference_url);
             }
         }
     }
+    if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
+        return Ok(submodule_match);
+    }
+    info!("  -> no matching revision found");
+    Ok(None)
+}
 
+fn find_matching_submodule(
+    r: &str,
+    reference_url: String,
+    repo: git2::Repository,
+) -> Result<Option<String>, Error> {
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
@@ -290,8 +306,6 @@ fn find_matching_rev(
             }
         }
     }
-
-    info!("  -> no matching revision found");
     Ok(None)
 }
 
@@ -375,6 +389,64 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
     }
 
     Ok(rv)
+}
+
+#[test]
+fn test_find_matching_rev_with_lightweight_tag() {
+    let reference = GitReference::Symbolic("1.9.2");
+    let spec = CommitSpec {
+        repo: String::from("getsentry/sentry-cli"),
+        path: None,
+        rev: String::from("1.9.2"),
+        prev_rev: Some(String::from("1.9.1")),
+    };
+
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("getsentry/sentry-cli"),
+        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
+
+    let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false);
+    assert_eq!(
+        res_with_lightweight_tag.unwrap(),
+        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
+    );
+}
+
+#[test]
+fn test_find_matching_rev_with_annotated_tag() {
+    let reference = GitReference::Symbolic("1.9.2-hw");
+    let spec = CommitSpec {
+        repo: String::from("getsentry/sentry-cli"),
+        path: None,
+        rev: String::from("1.9.2-hw"),
+        prev_rev: Some(String::from("1.9.1")),
+    };
+
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("getsentry/sentry-cli"),
+        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
+
+    let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false);
+    assert_eq!(
+        res_with_annotated_tag.unwrap(),
+        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
+    );
 }
 
 #[test]
