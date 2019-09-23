@@ -1,5 +1,22 @@
 # Changelog
 
+## sentry-cli 1.47.2
+
+**Changes**:
+* Always show the full version in `releases list` (#584).
+* Do not warn when using the standard docker entrypoint.
+
+**JavaScript API**:
+* Pass the `silent` option to `releases` commands in JavaScript (#552).
+* Allow setting commits on a release in JavaScript (#580).
+
+**Fixed bugs**:
+* Fix an error in the bash hook if the log file gets deleted (#583).
+* Fix detection of Azure repositories in `releases set-commits` (#576).
+* Fix detection of annotated tags in `releases set-commits` (#598).
+* Fix normalization of sourcemap URL prefixes with trailing slashes (#599).
+* Fix upload of source bundles created with `difutil bundle-sources` (#602).
+
 ## sentry-cli 1.47.1
 
 * Fix potentially broken payloads in `send-event`.
