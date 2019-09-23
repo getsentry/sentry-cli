@@ -25,7 +25,7 @@ class Releases {
    * @param {Object} [options] More options to pass to the CLI
    */
   constructor(options) {
-    this.options = options;
+    this.options = options || {};
   }
 
   /**
