@@ -391,6 +391,9 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
     Ok(rv)
 }
 
+#[cfg(test)]
+use crate::api::RepoProvider;
+
 #[test]
 fn test_find_matching_rev_with_lightweight_tag() {
     let reference = GitReference::Symbolic("1.9.2");
