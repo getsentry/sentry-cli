@@ -79,7 +79,7 @@ class Releases {
     }
 
     return helper.execute(['releases', 'set-commits', release].concat(commitFlags));
-  },
+  }
 
   /**
    * Marks this release as complete. This should be called once all artifacts has been

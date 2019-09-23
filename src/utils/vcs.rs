@@ -7,7 +7,7 @@ use lazy_static::lazy_static;
 use log::{debug, info};
 use regex::Regex;
 
-use crate::api::{Ref, Repo, RepoProvider};
+use crate::api::{Ref, Repo};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
