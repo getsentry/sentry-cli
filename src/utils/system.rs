@@ -13,8 +13,7 @@ use crate::config::Config;
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)
 where
-    F: FnOnce() -> (),
-    F: Send + 'static,
+    F: FnOnce() -> () + Send + 'static,
 {
     let (tx, rx) = crossbeam_channel::bounded(100);
     let signals =

@@ -1030,8 +1030,10 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
         None => "",
     };
 
-    if string.is_empty() && fallback.is_some() {
-        string = fallback.unwrap();
+    if string.is_empty() {
+        if let Some(fallback) = fallback {
+            string = fallback;
+        }
     }
 
     for line in string.lines() {
