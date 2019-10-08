@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.48.0
+
+* Add support for Brotli, GZip and Deflate compression algorithms for binary download (#607)
+* Fix binary download progress bar calculations (#606)
+
 ## sentry-cli 1.47.2
 
 **Changes**:
