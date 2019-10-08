@@ -8,6 +8,7 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
+const stream = require('stream');
 
 const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
@@ -117,7 +118,7 @@ function downloadBinary() {
     agent,
     compress: false,
     headers: {
-      'accept-encoding': 'gzip',
+      'accept-encoding': 'gzip, deflate, br',
     },
     redirect: 'follow',
   }).then(response => {
@@ -125,6 +126,17 @@ function downloadBinary() {
       throw new Error(`Received ${response.status}: ${response.statusText}`);
     }
 
+    const contentEncoding = response.headers.get('content-encoding');
+    let decompressor;
+    if (/\bgzip\b/.test(contentEncoding)) {
+      decompressor = zlib.createGunzip();
+    } else if (/\bdeflate\b/.test(contentEncoding)) {
+      decompressor = zlib.createInflate();
+    } else if (/\bbr\b/.test(contentEncoding)) {
+      decompressor = zlib.createBrotliDecompress();
+    } else {
+      decompressor = new stream.PassThrough();
+    }
     const name = downloadUrl.match(/.*\/(.*?)$/)[1];
     const total = parseInt(response.headers.get('content-length'), 10);
     const progressBar = createProgressBar(name, total);
@@ -135,7 +147,7 @@ function downloadBinary() {
       response.body
         .on('error', e => reject(e))
         .on('data', chunk => progressBar.tick(chunk.length))
-        .pipe(zlib.createGunzip())
+        .pipe(decompressor)
         .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
         .on('error', e => reject(e))
         .on('close', () => resolve());
@@ -165,7 +177,6 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
     const contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
     response.writeHead(200, {
       'Content-Type': 'application/octet-stream',
-      'Content-Encoding': 'gzip',
       'Content-Length': String(contents.byteLength),
     });
     response.end(contents);
