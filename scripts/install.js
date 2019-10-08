@@ -165,6 +165,7 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
     const contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
     response.writeHead(200, {
       'Content-Type': 'application/octet-stream',
+      'Content-Encoding': 'gzip',
       'Content-Length': String(contents.byteLength),
     });
     response.end(contents);
