@@ -7,6 +7,7 @@ const http = require('http');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
+const zlib = require('zlib');
 
 const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
@@ -50,22 +51,18 @@ function createProgressBar(name, total) {
     });
   }
 
-  if (/yarn/.test(process.env.npm_config_user_agent)) {
-    let pct = null;
-    let current = 0;
-    return {
-      tick: length => {
-        current += length;
-        const next = Math.round((current / total) * 100);
-        if (next > pct) {
-          pct = next;
-          process.stdout.write(`fetching ${name} ${pct}%\n`);
-        }
-      },
-    };
-  }
-
-  return { tick: () => {} };
+  let pct = null;
+  let current = 0;
+  return {
+    tick: length => {
+      current += length;
+      const next = Math.round((current / total) * 100);
+      if (next > pct) {
+        pct = next;
+        process.stdout.write(`fetching ${name} ${pct}%\n`);
+      }
+    },
+  };
 }
 
 function npmCache() {
@@ -116,12 +113,14 @@ function downloadBinary() {
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
   const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
 
-  // temporary fix for https://github.com/TooTallNate/node-https-proxy-agent/pull/43
-  if (agent) {
-    agent.defaultPort = 443;
-  }
-
-  return fetch(downloadUrl, { redirect: 'follow', agent }).then(response => {
+  return fetch(downloadUrl, {
+    agent,
+    compress: false,
+    headers: {
+      'accept-encoding': 'gzip',
+    },
+    redirect: 'follow',
+  }).then(response => {
     if (!response.ok) {
       throw new Error(`Received ${response.status}: ${response.statusText}`);
     }
@@ -129,7 +128,6 @@ function downloadBinary() {
     const name = downloadUrl.match(/.*\/(.*?)$/)[1];
     const total = parseInt(response.headers.get('content-length'), 10);
     const progressBar = createProgressBar(name, total);
-
     const tempPath = getTempFile(cachedPath);
     mkdirp.sync(path.dirname(tempPath));
 
@@ -137,6 +135,7 @@ function downloadBinary() {
       response.body
         .on('error', e => reject(e))
         .on('data', chunk => progressBar.tick(chunk.length))
+        .pipe(zlib.createGunzip())
         .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
         .on('error', e => reject(e))
         .on('close', () => resolve());
