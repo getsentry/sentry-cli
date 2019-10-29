@@ -97,6 +97,13 @@ pub fn detect_release_name() -> Result<String, Error> {
         }
     }
 
+    // Heroku #2 https://devcenter.heroku.com/changelog-items/630
+    if let Ok(release) = env::var("SOURCE_VERSION") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
     // for now only execute this on macs.  The reason is that this uses
     // xcodebuild which does not exist anywhere but there.
     if_chain! {
