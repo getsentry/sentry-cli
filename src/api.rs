@@ -1830,6 +1830,7 @@ pub struct ReleaseInfo {
     pub last_event: Option<DateTime<Utc>>,
     #[serde(rename = "newGroups")]
     pub new_groups: u64,
+    pub projects: Vec<ProjectSlugAndName>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -1958,6 +1959,12 @@ pub struct AssociateDsymsResponse {
 #[derive(Deserialize, Debug)]
 pub struct Team {
     pub id: String,
+    pub slug: String,
+    pub name: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct ProjectSlugAndName {
     pub slug: String,
     pub name: String,
 }
