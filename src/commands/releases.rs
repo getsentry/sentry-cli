@@ -540,7 +540,11 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Resu
             row.add("(unreleased)");
         }
         row.add(&release_info.version);
-        let project_slugs = release_info.projects.iter().map(|p| p.slug.clone()).collect::<Vec<_>>();
+        let project_slugs = release_info
+            .projects
+            .iter()
+            .map(|p| p.slug.clone())
+            .collect::<Vec<_>>();
         if !project_slugs.is_empty() {
             row.add(project_slugs.join(","));
         } else {
