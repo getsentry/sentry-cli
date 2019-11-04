@@ -1160,7 +1160,7 @@ fn upload_difs_chunked(
     let found = search_difs(options)?;
     if found.is_empty() {
         println!(
-            "{} No debug debug information files found",
+            "{} No debug information files found",
             style(">").dim()
         );
         return Ok(Default::default());
