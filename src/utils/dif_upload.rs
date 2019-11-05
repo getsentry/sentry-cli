@@ -1159,10 +1159,7 @@ fn upload_difs_chunked(
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
     if found.is_empty() {
-        println!(
-            "{} No debug information files found",
-            style(">").dim()
-        );
+        println!("{} No debug information files found", style(">").dim());
         return Ok(Default::default());
     }
 
