@@ -59,9 +59,9 @@ class Releases {
    * @memberof SentryReleases
    */
   setCommits(release, options) {
-    if (!options || !options.repo || (!options.auto && !options.commit)) {
+    if (!options || (!options.auto && (!options.repo || !options.commit))) {
       throw new Error(
-        'options.repo, and either options.commit or options.auto must be specified'
+        'options.auto, or options.repo and options.commit must be specified'
       );
     }
 
