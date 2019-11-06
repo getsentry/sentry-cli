@@ -2179,16 +2179,20 @@ pub enum ChunkedFileState {
 }
 
 impl ChunkedFileState {
-    pub fn finished(self) -> bool {
+    pub fn is_finished(self) -> bool {
         self == ChunkedFileState::Error || self == ChunkedFileState::Ok
     }
 
-    pub fn pending(self) -> bool {
-        !self.finished()
+    pub fn is_pending(self) -> bool {
+        !self.is_finished()
     }
 
-    pub fn ok(self) -> bool {
+    pub fn is_ok(self) -> bool {
         self == ChunkedFileState::Ok
+    }
+
+    pub fn is_err(self) -> bool {
+        self == ChunkedFileState::Error || self == ChunkedFileState::NotFound
     }
 }
 

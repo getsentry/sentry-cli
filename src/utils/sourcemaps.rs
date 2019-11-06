@@ -858,7 +858,7 @@ impl SourceMapProcessor {
             // Poll until there is a response, unless the user has specified to skip polling. In
             // that case, we return the potentially partial response from the server. This might
             // still contain a cached error.
-            if !context.wait || response.state.finished() {
+            if !context.wait || response.state.is_finished() {
                 break response;
             }
 
