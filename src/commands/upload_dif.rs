@@ -152,6 +152,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      them as source bundles.",
                 ),
         )
+        .arg(Arg::with_name("wait").long("wait").help(
+            "Wait for the server to fully process uploaded files. Errors \
+             can only be displayed if --wait is specified, but this will \
+             significantly slow down the upload process.",
+        ))
 }
 
 fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
@@ -167,6 +172,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
+        .wait(matches.is_present("wait"))
         .search_paths(matches.values_of("paths").unwrap_or_default())
         .allow_zips(!matches.is_present("no_zips"))
         .filter_ids(ids);

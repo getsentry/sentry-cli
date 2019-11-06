@@ -1069,6 +1069,7 @@ fn poll_dif_assemble(
         let chunks_missing = response
             .values()
             .any(|r| r.state == ChunkedFileState::NotFound);
+
         if chunks_missing {
             return Err(err_msg(
                 "Some uploaded files are now missing on the server. Please retry by running \
@@ -1076,7 +1077,18 @@ fn poll_dif_assemble(
             ));
         }
 
-        let pending = response.iter().filter(|&(_, r)| r.state.pending()).count();
+        // Poll until there is a response, unless the user has specified to skip polling. In
+        // that case, we return the potentially partial response from the server. This might
+        // still contain a cached error.
+        if !options.wait {
+            break response;
+        }
+
+        let pending = response
+            .iter()
+            .filter(|&(_, r)| r.state.is_pending())
+            .count();
+
         progress.set_position((difs.len() - pending) as u64);
 
         if pending == 0 {
@@ -1087,32 +1099,36 @@ fn poll_dif_assemble(
     };
 
     progress.finish_and_clear();
-    println!("{} File processing complete:\n", style(">").dim());
-    let (mut successes, errors): (Vec<_>, _) =
-        response.into_iter().partition(|&(_, ref r)| r.state.ok());
+    if response.values().any(|r| r.state.is_pending()) {
+        println!("{} File upload complete:\n", style(">").dim());
+    } else {
+        println!("{} File processing complete:\n", style(">").dim());
+    }
+
+    let (mut successes, errors): (Vec<_>, _) = response
+        .into_iter()
+        .partition(|&(_, ref r)| !r.state.is_err());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
-    successes.sort_by(|a, b| {
-        let name_a =
-            a.1.dif
-                .as_ref()
-                .map(|x| x.object_name.as_str())
-                .unwrap_or("");
-        let name_b =
-            b.1.dif
-                .as_ref()
-                .map(|x| x.object_name.as_str())
-                .unwrap_or("");
-        name_a.cmp(name_b)
+    successes.sort_by_key(|&(_, ref success)| {
+        success
+            .dif
+            .as_ref()
+            .map(|x| x.object_name.as_str())
+            .unwrap_or("");
     });
 
-    for &(_, ref success) in &successes {
+    let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
+
+    for &(checksum, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
         // will always return one.
         if let Some(ref dif) = success.dif {
+            // Files that have completed processing will contain a `dif` record
+            // returned by the server. Use this to show detailed information.
             println!(
-                "     {} {} ({}; {}{})",
+                "  {:>7} {} ({}; {}{})",
                 style("OK").green(),
                 style(&dif.id()).dim(),
                 dif.object_name,
@@ -1124,11 +1140,29 @@ fn poll_dif_assemble(
             );
 
             render_detail(&success.detail, None);
+        } else if let Some(dif) = difs_by_checksum.get(&checksum) {
+            // If we skip waiting for the server to finish processing, there
+            // are pending entries. We only expect results that have been
+            // uploaded in the first place, so we can skip everything else.
+            let object = dif.object.get();
+            let kind = match object.kind() {
+                symbolic::debuginfo::ObjectKind::None => String::new(),
+                k => format!(" {:#}", k),
+            };
+
+            println!(
+                "  {:>7} {} ({}; {}{})",
+                style("PENDING").yellow(),
+                style(object.debug_id()).dim(),
+                dif.name,
+                object.arch().name(),
+                kind,
+            );
         }
+        // All other entries will be in the `errors` list.
     }
 
     // Print a summary of all errors at the bottom.
-    let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
     let mut errored = vec![];
     for (checksum, error) in errors {
         let dif = difs_by_checksum
@@ -1140,8 +1174,13 @@ fn poll_dif_assemble(
 
     let has_errors = !errored.is_empty();
     for (dif, error) in errored {
-        println!("  {} {}", style("ERROR").red(), dif.file_name());
-        render_detail(&error.detail, Some("An unknown error occurred"));
+        let fallback = match error.state {
+            ChunkedFileState::NotFound => Some("The file could not be saved"),
+            _ => Some("An unknown error occurred"),
+        };
+
+        println!("  {:>7} {}", style("ERROR").red(), dif.file_name());
+        render_detail(&error.detail, fallback);
     }
 
     // Return only successful uploads
@@ -1353,6 +1392,7 @@ pub struct DifUpload {
     pdbs_allowed: bool,
     sources_allowed: bool,
     include_sources: bool,
+    wait: bool,
 }
 
 impl DifUpload {
@@ -1387,6 +1427,7 @@ impl DifUpload {
             pdbs_allowed: false,
             sources_allowed: false,
             include_sources: false,
+            wait: false,
         }
     }
 
@@ -1518,6 +1559,15 @@ impl DifUpload {
     /// Defaults to `false`.
     pub fn include_sources(&mut self, include: bool) -> &mut Self {
         self.include_sources = include;
+        self
+    }
+
+    /// Set whether the upload should wait for the server to complete processing
+    /// files or exit immediately after the upload.
+    ///
+    /// Defaults to `false`.
+    pub fn wait(&mut self, wait: bool) -> &mut Self {
+        self.wait = wait;
         self
     }
 
