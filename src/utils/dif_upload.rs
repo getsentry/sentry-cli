@@ -1099,7 +1099,12 @@ fn poll_dif_assemble(
     };
 
     progress.finish_and_clear();
-    println!("{} File processing complete:\n", style(">").dim());
+    if response.values().any(|r| r.state.is_pending()) {
+        println!("{} File upload complete:\n", style(">").dim());
+    } else {
+        println!("{} File processing complete:\n", style(">").dim());
+    }
+
     let (mut successes, errors): (Vec<_>, _) = response
         .into_iter()
         .partition(|&(_, ref r)| !r.state.is_err());

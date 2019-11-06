@@ -21,9 +21,7 @@ use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
-use crate::api::{
-    Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedFileState, FileContents, ProgressBarMode,
-};
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, FileContents, ProgressBarMode};
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::fs::{get_sha1_checksums, TempFile};
@@ -865,7 +863,7 @@ impl SourceMapProcessor {
             std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
         };
 
-        if response.state == ChunkedFileState::Error {
+        if response.state.is_err() {
             let message = match response.detail {
                 Some(ref detail) => detail,
                 None => "unknown error",
@@ -875,7 +873,12 @@ impl SourceMapProcessor {
         }
 
         progress.finish_and_clear();
-        println!("{} File processing complete", style(">").dim());
+
+        if response.state.is_pending() {
+            println!("{} File upload complete", style(">").dim());
+        } else {
+            println!("{} File processing complete", style(">").dim());
+        }
 
         Ok(())
     }
