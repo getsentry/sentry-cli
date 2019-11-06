@@ -546,7 +546,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Resu
             .map(|p| p.slug)
             .collect::<Vec<_>>();
         if !project_slugs.is_empty() {
-            row.add(project_slugs.join(","));
+            row.add(project_slugs.join("\n"));
         } else {
             row.add("-");
         }
