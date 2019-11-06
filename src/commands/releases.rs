@@ -810,7 +810,8 @@ fn process_sources_from_paths<'a>(
         if check_ignore {
             let mut types_builder = TypesBuilder::new();
             for ext in &extensions {
-                types_builder.add(ext, &format!("*.{}", ext))?;
+                let ext_name = ext.replace('.', "__");
+                types_builder.add(&ext_name, &format!("*.{}", ext))?;
             }
             builder.types(types_builder.select("all").build()?);
 
