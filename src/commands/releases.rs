@@ -527,15 +527,11 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
         .list_releases(ctx.get_org()?, project.as_ref().map(String::as_ref))?;
     let mut table = Table::new();
     let title_row = table.title_row();
-    title_row
-        .add("Released")
-        .add("Version");
+    title_row.add("Released").add("Version");
     if matches.is_present("show_projects") {
         title_row.add("Projects");
     }
-    title_row
-        .add("New Events")
-        .add("Last Event");
+    title_row.add("New Events").add("Last Event");
     for release_info in releases {
         let row = table.add_row();
         if let Some(date) = release_info.date_released {
