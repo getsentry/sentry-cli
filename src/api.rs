@@ -1830,6 +1830,7 @@ pub struct ReleaseInfo {
     pub last_event: Option<DateTime<Utc>>,
     #[serde(rename = "newGroups")]
     pub new_groups: u64,
+    #[serde(default)]
     pub projects: Vec<ProjectSlugAndName>,
 }
 
