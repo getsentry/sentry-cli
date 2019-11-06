@@ -138,7 +138,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .about("List the most recent releases.")
             .arg(Arg::with_name("no_abbrev")
                 .long("no-abbrev")
-                .hidden(true)))
+                .hidden(true))
+            .arg(Arg::with_name("show_projects")
+                .short("P")
+                .long("show-projects")
+                .help("Display the Projects column")))
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
@@ -516,17 +520,20 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
     Ok(())
 }
 
-fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
     let releases = ctx
         .api
         .list_releases(ctx.get_org()?, project.as_ref().map(String::as_ref))?;
     let mut table = Table::new();
-    table
-        .title_row()
+    let title_row = table.title_row();
+    title_row
         .add("Released")
-        .add("Version")
-        .add("Projects")
+        .add("Version");
+    if matches.is_present("show_projects") {
+        title_row.add("Projects");
+    }
+    title_row
         .add("New Events")
         .add("Last Event");
     for release_info in releases {
@@ -540,15 +547,17 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Resu
             row.add("(unreleased)");
         }
         row.add(&release_info.version);
-        let project_slugs = release_info
-            .projects
-            .into_iter()
-            .map(|p| p.slug)
-            .collect::<Vec<_>>();
-        if !project_slugs.is_empty() {
-            row.add(project_slugs.join("\n"));
-        } else {
-            row.add("-");
+        if matches.is_present("show_projects") {
+            let project_slugs = release_info
+                .projects
+                .into_iter()
+                .map(|p| p.slug)
+                .collect::<Vec<_>>();
+            if !project_slugs.is_empty() {
+                row.add(project_slugs.join("\n"));
+            } else {
+                row.add("-");
+            }
         }
         row.add(release_info.new_groups);
         if let Some(date) = release_info.last_event {
