@@ -1,5 +1,20 @@
 # Changelog
 
+## sentry-cli 1.49.0
+
+* Detect Heroku's `SOURCE_VERSION` environment variable (#613)
+* Allow extensions with dots for sourcemap uploads (#605)
+* Fix validation of `releases set-commits` options in JS (#618)
+* Add an optional column for project slugs in `releases list` (#612)
+* Add an optional `--wait` flag for upload-dif (#619)
+
+**NOTE**: This release changes the default behavior of `upload-dif`. Previously,
+the command waited until Sentry had fully processed uploaded files. Now, the
+command terminates after a successful upload but does not wait for server-side
+processing. This will speed up uploads for the common case. Specify `--wait` for
+the old behavior if you want to make sure that debug files are available before
+sending native events.
+
 ## sentry-cli 1.48.0
 
 * Add support for Brotli, GZip and Deflate compression algorithms for binary download (#607)
