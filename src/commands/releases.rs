@@ -542,8 +542,8 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, _matches: &ArgMatches<'a>) -> Resu
         row.add(&release_info.version);
         let project_slugs = release_info
             .projects
-            .iter()
-            .map(|p| p.slug.clone())
+            .into_iter()
+            .map(|p| p.slug)
             .collect::<Vec<_>>();
         if !project_slugs.is_empty() {
             row.add(project_slugs.join(","));
