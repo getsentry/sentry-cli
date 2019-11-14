@@ -21,7 +21,7 @@ use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1::Digest;
 use symbolic::common::{ByteView, DebugId, SelfCell, Uuid};
-use symbolic::debuginfo::{sourcebundle::SourceBundleWriter, Archive, FileFormat, Object};
+use symbolic::debuginfo::{sourcebundle::SourceBundleWriter, Archive, FileFormat, Object, FileEntry};
 use walkdir::WalkDir;
 use which::which;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
@@ -849,6 +849,20 @@ fn process_symbol_maps<'a>(
     Ok(without_hidden)
 }
 
+/// Default filter function to skip over bad sources we do not want to include.
+pub fn filter_bad_sources(entry: &FileEntry) -> bool {
+    // always ignore pch files
+    if entry.name_str().ends_with(".pch") {
+        false
+    // ignore files larger than 1MB
+    } else if let Ok(meta) = fs::metadata(&entry.abs_path_str()) {
+        meta.len() > 1_000_000
+    // if a file metadata could not be read it will be skipped later.
+    } else {
+        true
+    }
+}
+
 /// Resolves BCSymbolMaps for all debug files with hidden symbols. All other
 /// files are not touched. Note that this only applies to Apple dSYMs.
 ///
@@ -883,7 +897,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
         // Resolve source files from the object and write their contents into the archive. Skip to
         // upload this bundle if no source could be written. This can happen if there is no file or
         // line information in the object file, or if none of the files could be resolved.
-        let written = writer.write_object(object, dif.file_name())?;
+        let written = writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
             continue;
         }
