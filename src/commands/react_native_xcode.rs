@@ -78,6 +78,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
+            Arg::with_name("dist")
+                .long("dist")
+                .value_name("DISTRIBUTION")
+                .required(true)
+                .multiple(true)
+                .number_of_values(1)
+                .help("The names of the distributions to publish. Can be supplied multiple times."),
+        )
+        .arg(
             Arg::with_name("args")
                 .value_name("ARGS")
                 .multiple(true)
@@ -259,13 +268,28 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             },
         )?;
 
-        processor.upload(&UploadContext {
-            org: &org,
-            project: Some(&project),
-            release: &release.version,
-            dist: Some(&plist.build()),
-            wait: matches.is_present("wait"),
-        })?;
+        match matches.values_of("dist") {
+            None => {
+                processor.upload(&UploadContext {
+                    org: &org,
+                    project: Some(&project),
+                    release: &release.version,
+                    dist: Some(&plist.build()),
+                    wait: matches.is_present("wait"),
+                })?;
+            }
+            Some(dists) => {
+                for dist in dists {
+                    processor.upload(&UploadContext {
+                        org: &org,
+                        project: Some(&project),
+                        release: &release.version,
+                        dist: Some(dist),
+                        wait: matches.is_present("wait"),
+                    })?;
+                }
+            }
+        }
 
         Ok(())
     })
