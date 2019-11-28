@@ -21,7 +21,9 @@ use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1::Digest;
 use symbolic::common::{ByteView, DebugId, SelfCell, Uuid};
-use symbolic::debuginfo::{sourcebundle::SourceBundleWriter, Archive, FileFormat, Object, FileEntry};
+use symbolic::debuginfo::{
+    sourcebundle::SourceBundleWriter, Archive, FileEntry, FileFormat, Object,
+};
 use walkdir::WalkDir;
 use which::which;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
@@ -897,7 +899,8 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
         // Resolve source files from the object and write their contents into the archive. Skip to
         // upload this bundle if no source could be written. This can happen if there is no file or
         // line information in the object file, or if none of the files could be resolved.
-        let written = writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
+        let written =
+            writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
             continue;
         }

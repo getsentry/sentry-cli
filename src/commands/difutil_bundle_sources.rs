@@ -103,7 +103,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             // Resolve source files from the object and write their contents into the archive. Skip to
             // upload this bundle if no source could be written. This can happen if there is no file or
             // line information in the object file, or if none of the files could be resolved.
-            let written = writer.write_object_with_filter(&object, &filename.to_string_lossy(), filter_bad_sources)?;
+            let written = writer.write_object_with_filter(
+                &object,
+                &filename.to_string_lossy(),
+                filter_bad_sources,
+            )?;
 
             if !written {
                 eprintln!("skipped {} (no files found)", orig_path);
