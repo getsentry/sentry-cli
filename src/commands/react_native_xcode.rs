@@ -81,7 +81,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .required(true)
                 .multiple(true)
                 .number_of_values(1)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
