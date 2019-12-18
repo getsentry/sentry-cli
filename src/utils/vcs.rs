@@ -106,7 +106,7 @@ impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
         lazy_static! {
             static ref GIT_URL_RE: Regex =
-                Regex::new(r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
+                Regex::new(r"^(?:(?:git\+)?(?:git|ssh|https?))://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
             static ref GIT_SSH_RE: Regex = Regex::new(r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
 
@@ -605,5 +605,21 @@ fn test_url_normalization() {
     assert!(is_matching_url(
         "git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online",
         "https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"
-    ))
+    ));
+    assert!(is_matching_url(
+        "git://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
+    assert!(is_matching_url(
+        "git+ssh://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
+    assert!(is_matching_url(
+        "git+http://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
+    assert!(is_matching_url(
+        "git+https://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
 }
