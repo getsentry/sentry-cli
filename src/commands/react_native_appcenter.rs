@@ -133,7 +133,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let release = api.new_release(
         &org,
         &NewRelease {
-            version: release.to_string(),
+            version: (*release).to_string(),
             projects: vec![project.to_string()],
             ..Default::default()
         },

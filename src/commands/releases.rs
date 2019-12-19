@@ -38,7 +38,7 @@ impl<'a> ReleaseContext<'a> {
     }
 
     pub fn get_project_default(&'a self) -> Result<String, Error> {
-        if let Some(ref proj) = self.project_default {
+        if let Some(proj) = self.project_default {
             Ok(proj.to_string())
         } else {
             let config = Config::current();

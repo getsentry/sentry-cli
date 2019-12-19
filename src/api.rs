@@ -103,7 +103,7 @@ impl FromStr for Pagination {
 
             *target = Some(Link {
                 results: item.get("results") == Some(&"true"),
-                cursor: item.get("cursor").unwrap_or(&"").to_string(),
+                cursor: (*item.get("cursor").unwrap_or(&"")).to_string(),
             });
         }
 
