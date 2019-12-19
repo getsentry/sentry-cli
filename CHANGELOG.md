@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.49.1
+
+* Add support for `git://`, `git+ssh://`, and `git+https?://` VCS repos (#636)
+* Allow overriding dist in Xcode (#627)
+* Skip pch and large files in source bundles (#624)
+
 ## sentry-cli 1.49.0
 
 * Detect Heroku's `SOURCE_VERSION` environment variable (#613)
