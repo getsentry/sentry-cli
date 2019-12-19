@@ -106,7 +106,8 @@ impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
         lazy_static! {
             static ref GIT_URL_RE: Regex =
-                Regex::new(r"^(?:(?:git\+)?(?:git|ssh|https?))://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
+                Regex::new(r"^(?:(?:git\+)?(?:git|ssh|https?))://(?:[^@]+@)?([^/]+)/(.+)$")
+                    .unwrap();
             static ref GIT_SSH_RE: Regex = Regex::new(r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
 
