@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fmt;
 use std::path::Path;
@@ -7,7 +6,7 @@ use std::str;
 use failure::{bail, Error, SyncFailure};
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
-use symbolic::common::{ByteView, DebugId, SelfCell};
+use symbolic::common::{ByteView, CodeId, DebugId, SelfCell};
 use symbolic::debuginfo::{Archive, FileFormat, Object, ObjectKind};
 use symbolic::proguard::ProguardMappingView;
 
@@ -203,6 +202,13 @@ impl DifFile<'static> {
     }
 }
 
+#[derive(Serialize)]
+pub struct DifVariant {
+    pub debug_id: DebugId,
+    pub code_id: Option<CodeId>,
+    pub arch: Option<String>,
+}
+
 impl<'a> DifFile<'a> {
     fn from_archive(archive: SelfCell<ByteView<'a>, Archive<'a>>) -> Result<Self, Error> {
         if archive.get().object_count() < 1 {
@@ -237,15 +243,23 @@ impl<'a> DifFile<'a> {
         }
     }
 
-    pub fn variants(&self) -> BTreeMap<DebugId, Option<&'static str>> {
+    pub fn variants(&self) -> Vec<DifVariant> {
         match self {
             DifFile::Archive(archive) => archive
                 .get()
                 .objects()
                 .filter_map(Result::ok)
-                .map(|object| (object.debug_id(), Some(object.arch().name())))
+                .map(|object| DifVariant {
+                    debug_id: object.debug_id(),
+                    arch: Some(object.arch().name().to_string()),
+                    code_id: object.code_id(),
+                })
                 .collect(),
-            DifFile::Proguard(pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
+            DifFile::Proguard(pg) => vec![DifVariant {
+                debug_id: pg.uuid().into(),
+                arch: None,
+                code_id: None,
+            }],
         }
     }
 
