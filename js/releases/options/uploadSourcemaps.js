@@ -7,6 +7,10 @@ module.exports = {
     param: '--ignore-file',
     type: 'string',
   },
+  dist: {
+    param: '--dist',
+    type: 'string',
+  },
   rewrite: {
     param: '--rewrite',
     invertedParam: '--no-rewrite',
