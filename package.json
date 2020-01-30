@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "fs-copy-file-sync": "^1.1.1",
-    "https-proxy-agent": "^3.0.0",
+    "https-proxy-agent": "^4.0.0",
     "mkdirp": "^0.5.1",
     "node-fetch": "^2.1.2",
     "progress": "2.0.0",
