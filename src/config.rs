@@ -39,6 +39,7 @@ pub struct Config {
     cached_auth: Option<Auth>,
     cached_base_url: String,
     cached_log_level: log::LevelFilter,
+    cached_vcs_remote: String,
 }
 
 impl Config {
@@ -51,6 +52,7 @@ impl Config {
             cached_auth: get_default_auth(&ini),
             cached_base_url: get_default_url(&ini),
             cached_log_level: get_default_log_level(&ini)?,
+            cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
         })
     }
@@ -379,6 +381,11 @@ impl Config {
         }
     }
 
+    /// Return VCS remote
+    pub fn get_cached_vcs_remote(&self) -> String {
+        self.cached_vcs_remote.clone()
+    }
+
     /// Should we nag about updates?
     pub fn disable_update_nagger(&self) -> bool {
         if let Ok(var) = env::var("SENTRY_DISABLE_UPDATE_CHECK") {
@@ -503,6 +510,7 @@ impl Clone for Config {
             cached_auth: self.cached_auth.clone(),
             cached_base_url: self.cached_base_url.clone(),
             cached_log_level: self.cached_log_level,
+            cached_vcs_remote: self.cached_vcs_remote.clone(),
         }
     }
 }
@@ -545,4 +553,18 @@ fn get_default_log_level(ini: &Ini) -> Result<log::LevelFilter, Error> {
     }
 
     Ok(log::LevelFilter::Warn)
+}
+
+/// Get the default VCS remote.
+///
+/// To be backward compatible the default remote is still
+/// origin.
+fn get_default_vcs_remote(ini: &Ini) -> String {
+    if let Ok(remote) = env::var("SENTRY_VCS_REMOTE") {
+        remote.to_string()
+    } else if let Some(remote) = ini.get_from(Some("defaults"), "vcs_remote") {
+        remote.to_string()
+    } else {
+        "origin".to_string()
+    }
 }
