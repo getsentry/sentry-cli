@@ -269,6 +269,12 @@ pub struct UploadContext<'a> {
     pub wait: bool,
 }
 
+fn is_hermes_bytecode(slice: &[u8]) -> bool {
+    // The hermes bycode format magic is defined here:
+    // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
+    &slice[..8] == 0x1F1903C103BC1FC6u64.to_le_bytes()
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -320,6 +326,14 @@ impl SourceMapProcessor {
                 || is_likely_minified_js(&contents)
             {
                 SourceFileType::MinifiedSource
+            } else if is_hermes_bytecode(&contents) {
+                // This is actually a big hack:
+                // For the react-native Hermes case, we skip uploading the bytecode bundle,
+                // and rather flag it as an empty "minified source". That way, it
+                // will get a SourceMap reference, and the server side processor
+                // should deal with it accordingly.
+                contents.truncate(0);
+                SourceFileType::MinifiedSource
             } else {
                 SourceFileType::Source
             };
@@ -359,22 +373,24 @@ impl SourceMapProcessor {
     }
 
     fn validate_sourcemap(&self, source: &Source) -> Result<(), Error> {
-        match sourcemap::decode_slice(&source.contents)? {
-            sourcemap::DecodedMap::Regular(sm) => {
-                for idx in 0..sm.get_source_count() {
-                    let source_url = sm.get_source(idx).unwrap_or("??");
-                    if sm.get_source_contents(idx).is_some()
-                        || self.sources.get(source_url).is_some()
-                    {
-                        info!("validator found source ({})", source_url);
-                    } else {
-                        source.warn(format!("missing sourcecode ({})", source_url));
-                    }
+        let validate_regular = |sm: &sourcemap::SourceMap| {
+            for idx in 0..sm.get_source_count() {
+                let source_url = sm.get_source(idx).unwrap_or("??");
+                if sm.get_source_contents(idx).is_some() || self.sources.get(source_url).is_some() {
+                    info!("validator found source ({})", source_url);
+                } else {
+                    source.warn(format!("missing sourcecode ({})", source_url));
                 }
             }
+        };
+
+        match sourcemap::decode_slice(&source.contents)? {
+            sourcemap::DecodedMap::Hermes(smh) => validate_regular(&smh),
+            sourcemap::DecodedMap::Regular(sm) => validate_regular(&sm),
             sourcemap::DecodedMap::Index(_) => {
                 source.warn("encountered indexed sourcemap. We cannot validate those.".into());
             }
+            _ => panic!("invalid sourcemap type"),
         }
         Ok(())
     }
@@ -512,11 +528,11 @@ impl SourceMapProcessor {
         };
 
         let sourcemap_index = match sourcemap::decode_slice(sourcemap_content)? {
-            sourcemap::DecodedMap::Regular(_) => {
+            sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
+            _ => {
                 warn!("Invalid sourcemap type for RAM bundle, skipping");
                 return Ok(());
             }
-            sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
         };
 
         // We don't need the RAM bundle sourcemap itself
@@ -611,12 +627,19 @@ impl SourceMapProcessor {
                 strip_prefixes: prefixes,
                 ..Default::default()
             };
-            let sm = match sourcemap::decode_slice(&source.contents)? {
-                sourcemap::DecodedMap::Regular(sm) => sm.rewrite(&options)?,
-                sourcemap::DecodedMap::Index(smi) => smi.flatten_and_rewrite(&options)?,
-            };
             let mut new_source: Vec<u8> = Vec::new();
-            sm.to_writer(&mut new_source)?;
+            match sourcemap::decode_slice(&source.contents)? {
+                sourcemap::DecodedMap::Regular(sm) => {
+                    sm.rewrite(&options)?.to_writer(&mut new_source)?
+                }
+                sourcemap::DecodedMap::Hermes(smh) => {
+                    smh.rewrite(&options)?.to_writer(&mut new_source)?
+                }
+                sourcemap::DecodedMap::Index(smi) => smi
+                    .flatten_and_rewrite(&options)?
+                    .to_writer(&mut new_source)?,
+                _ => panic!("invalid sourcemap type"),
+            };
             source.contents = new_source;
             pb.inc(1);
         }
