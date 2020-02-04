@@ -272,7 +272,7 @@ pub struct UploadContext<'a> {
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
     // The hermes bycode format magic is defined here:
     // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
-    &slice[..8] == 0x1F1903C103BC1FC6u64.to_le_bytes()
+    slice[..8] == 0x1F19_03C1_03BC_1FC6u64.to_le_bytes()
 }
 
 impl SourceMapProcessor {
@@ -332,7 +332,7 @@ impl SourceMapProcessor {
                 // and rather flag it as an empty "minified source". That way, it
                 // will get a SourceMap reference, and the server side processor
                 // should deal with it accordingly.
-                contents.truncate(0);
+                contents.clear();
                 SourceFileType::MinifiedSource
             } else {
                 SourceFileType::Source
@@ -390,7 +390,6 @@ impl SourceMapProcessor {
             sourcemap::DecodedMap::Index(_) => {
                 source.warn("encountered indexed sourcemap. We cannot validate those.".into());
             }
-            _ => panic!("invalid sourcemap type"),
         }
         Ok(())
     }
@@ -638,7 +637,6 @@ impl SourceMapProcessor {
                 sourcemap::DecodedMap::Index(smi) => smi
                     .flatten_and_rewrite(&options)?
                     .to_writer(&mut new_source)?,
-                _ => panic!("invalid sourcemap type"),
             };
             source.contents = new_source;
             pb.inc(1);
