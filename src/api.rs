@@ -1146,7 +1146,10 @@ impl Api {
             PathArg(org),
             PathArg(project)
         );
-        let resp = self.request(Method::Post, &path)?.send()?;
+        let resp = self
+            .request(Method::Post, &path)?
+            .with_header("Content-Length", "0")?
+            .send()?;
         if resp.status() == 404 {
             Ok(false)
         } else {
