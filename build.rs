@@ -14,11 +14,11 @@ fn main() {
     target_bits.next();
     let platform = target_bits.next().unwrap();
 
-    write!(f, "/// The platform identifier\n").ok();
-    write!(f, "pub const PLATFORM: &str = \"{}\";\n", platform).ok();
-    write!(f, "/// The CPU architecture identifier\n").ok();
-    write!(f, "pub const ARCH: &str = \"{}\";\n", arch).ok();
-    write!(f, "/// The user agent for sentry events\n").ok();
-    write!(f, "pub const USER_AGENT: &str = \"sentry-cli/{}\";\n", arch).ok();
+    writeln!(f, "/// The platform identifier").ok();
+    writeln!(f, "pub const PLATFORM: &str = \"{}\";", platform).ok();
+    writeln!(f, "/// The CPU architecture identifier").ok();
+    writeln!(f, "pub const ARCH: &str = \"{}\";", arch).ok();
+    writeln!(f, "/// The user agent for sentry events").ok();
+    writeln!(f, "pub const USER_AGENT: &str = \"sentry-cli/{}\";", arch).ok();
     println!("cargo:rerun-if-changed=build.rs\n");
 }
