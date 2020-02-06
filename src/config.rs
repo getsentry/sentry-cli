@@ -561,7 +561,7 @@ fn get_default_log_level(ini: &Ini) -> Result<log::LevelFilter, Error> {
 /// origin.
 fn get_default_vcs_remote(ini: &Ini) -> String {
     if let Ok(remote) = env::var("SENTRY_VCS_REMOTE") {
-        remote.to_string()
+        remote
     } else if let Some(remote) = ini.get_from(Some("defaults"), "vcs_remote") {
         remote.to_string()
     } else {

@@ -17,11 +17,7 @@
     "type": "git",
     "url": "https://github.com/getsentry/sentry-cli"
   },
-  "keywords": [
-    "sentry",
-    "sentry-cli",
-    "cli"
-  ],
+  "keywords": ["sentry", "sentry-cli", "cli"],
   "bugs": {
     "url": "https://github.com/getsentry/sentry-cli/issues"
   },
@@ -50,7 +46,7 @@
     "prettier-check": "^2.0.0"
   },
   "engines": {
-    "node": ">= 4.5.0"
+    "node": ">= 8"
   },
   "jest": {
     "collectCoverage": true,
