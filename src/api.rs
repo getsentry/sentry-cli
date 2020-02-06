@@ -919,7 +919,7 @@ impl Api {
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
         let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
-        match self
+        let options = match self
             .get(&url)?
             .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
         {
@@ -931,7 +931,12 @@ impl Api {
                     Err(error)
                 }
             }
-        }
+        };
+        // Override API returned ChunkUploadOptions.url with config generated endpoint URL
+        let mut option_struct : ChunkUploadOptions = options.unwrap().unwrap();
+        let endpoint = self.config.get_api_endpoint(&url).unwrap();
+        option_struct.url = endpoint;
+        return Ok(Some(option_struct))
     }
 
     /// Request DIF assembling and processing from chunks.
