@@ -933,10 +933,10 @@ impl Api {
             }
         };
         // Override API returned ChunkUploadOptions.url with config generated endpoint URL
-        let mut option_struct : ChunkUploadOptions = options.unwrap().unwrap();
+        let mut option_struct: ChunkUploadOptions = options.unwrap().unwrap();
         let endpoint = self.config.get_api_endpoint(&url).unwrap();
         option_struct.url = endpoint;
-        return Ok(Some(option_struct))
+        return Ok(Some(option_struct));
     }
 
     /// Request DIF assembling and processing from chunks.
