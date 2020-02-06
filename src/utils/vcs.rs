@@ -224,6 +224,7 @@ fn find_matching_rev(
     spec: &CommitSpec,
     repos: &[Repo],
     disable_discovery: bool,
+    remote_name: Option<String>,
 ) -> Result<Option<String>, Error> {
     info!("Resolving {} ({})", &reference, spec);
 
@@ -246,7 +247,7 @@ fn find_matching_rev(
     // direct reference in root repository found.  If we are in discovery
     // mode we want to also check for matching URLs.
     if_chain! {
-        if let Ok(remote) = repo.find_remote("origin");
+        if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or("origin".to_string()));
         if let Some(url) = remote.url();
         then {
             if !discovery || is_matching_url(url, &reference_url) {
@@ -314,6 +315,7 @@ fn find_matching_revs(
     spec: &CommitSpec,
     repos: &[Repo],
     disable_discovery: bool,
+    remote_name: Option<String>,
 ) -> Result<(Option<String>, String), Error> {
     fn error(r: GitReference<'_>, repo: &str) -> Error {
         format_err!(
@@ -326,16 +328,26 @@ fn find_matching_revs(
         )
     }
 
-    let rev = if let Some(rev) =
-        find_matching_rev(spec.reference(), &spec, &repos[..], disable_discovery)?
-    {
+    let rev = if let Some(rev) = find_matching_rev(
+        spec.reference(),
+        &spec,
+        &repos[..],
+        disable_discovery,
+        remote_name.clone(),
+    )? {
         rev
     } else {
         return Err(error(spec.reference(), &spec.repo));
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(rv) = find_matching_rev(rev, &spec, &repos[..], disable_discovery)? {
+        if let Some(rv) = find_matching_rev(
+            rev,
+            &spec,
+            &repos[..],
+            disable_discovery,
+            remote_name.clone(),
+        )? {
             Some(rv)
         } else {
             return Err(error(rev, &spec.repo));
@@ -353,16 +365,21 @@ pub fn find_head() -> Result<String, Error> {
     Ok(head.id().to_string())
 }
 
-/// Given commit specs and repos this returns a list of head commits
-/// from it.
-pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<Ref>, Error> {
+/// Given commit specs, repos and remote_name this returns a list of head
+/// commits from it.
+pub fn find_heads(
+    specs: Option<Vec<CommitSpec>>,
+    repos: &[Repo],
+    remote_name: Option<String>,
+) -> Result<Vec<Ref>, Error> {
     let mut rv = vec![];
 
     // if commit specs were explicitly provided find head commits with
     // limited amounts of magic.
     if let Some(specs) = specs {
         for spec in &specs {
-            let (prev_rev, rev) = find_matching_revs(&spec, &repos[..], specs.len() == 1)?;
+            let (prev_rev, rev) =
+                find_matching_revs(&spec, &repos[..], specs.len() == 1, remote_name.clone())?;
             rv.push(Ref {
                 repo: spec.repo.clone(),
                 rev,
@@ -379,7 +396,13 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
                 rev: "HEAD".into(),
                 prev_rev: None,
             };
-            if let Some(rev) = find_matching_rev(spec.reference(), &spec, &repos[..], false)? {
+            if let Some(rev) = find_matching_rev(
+                spec.reference(),
+                &spec,
+                &repos[..],
+                false,
+                remote_name.clone(),
+            )? {
                 rv.push(Ref {
                     repo: repo.name.to_string(),
                     rev,
@@ -417,7 +440,7 @@ fn test_find_matching_rev_with_lightweight_tag() {
         date_created: chrono::Utc::now(),
     }];
 
-    let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false);
+    let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false, None);
     assert_eq!(
         res_with_lightweight_tag.unwrap(),
         Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
@@ -446,7 +469,7 @@ fn test_find_matching_rev_with_annotated_tag() {
         date_created: chrono::Utc::now(),
     }];
 
-    let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false);
+    let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false, None);
     assert_eq!(
         res_with_annotated_tag.unwrap(),
         Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))

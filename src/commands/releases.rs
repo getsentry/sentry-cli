@@ -416,6 +416,7 @@ fn execute_set_commits<'a>(
     let org = ctx.get_org()?;
     let repos = ctx.api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
+    let config = Config::current();
 
     if repos.is_empty() {
         bail!(
@@ -425,7 +426,7 @@ fn execute_set_commits<'a>(
     }
 
     let heads = if matches.is_present("auto") {
-        let commits = find_heads(None, &repos)?;
+        let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
             let config = Config::current();
 
@@ -453,7 +454,11 @@ fn execute_set_commits<'a>(
                 }
             }
         }
-        let commits = find_heads(Some(commit_specs), &repos)?;
+        let commits = find_heads(
+            Some(commit_specs),
+            &repos,
+            Some(config.get_cached_vcs_remote()),
+        )?;
         if commits.is_empty() {
             None
         } else {

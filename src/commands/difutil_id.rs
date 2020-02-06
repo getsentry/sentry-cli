@@ -1,14 +1,17 @@
 use std::io;
 use std::path::Path;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::Error;
 
 use crate::utils::dif::DifFile;
 use crate::utils::system::QuietExit;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+    // this command is hidden.  It only returns debug ids which is not super useful.
+    // it's recommended to use difutil check instead.
     app.about("Print debug identifier(s) from a debug info file.")
+        .setting(AppSettings::Hidden)
         .alias("uuid")
         .arg(
             Arg::with_name("type")
