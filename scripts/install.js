@@ -9,6 +9,7 @@ const path = require('path');
 const crypto = require('crypto');
 const zlib = require('zlib');
 const stream = require('stream');
+const process = require('process');
 
 const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
@@ -25,6 +26,13 @@ const CDN_URL =
   process.env.npm_config_sentrycli_cdnurl ||
   process.env.SENTRYCLI_CDNURL ||
   'https://downloads.sentry-cdn.com/sentry-cli';
+
+function hasSilentFlag() {
+  return (
+    process.argv.some(v => v === '--silent') || // Yarn
+    process.env.npm_config_loglevel === 'silent' // NPM
+  );
+}
 
 function getDownloadUrl(platform, arch) {
   const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli`;
@@ -146,7 +154,7 @@ function downloadBinary() {
     return new Promise((resolve, reject) => {
       response.body
         .on('error', e => reject(e))
-        .on('data', chunk => progressBar.tick(chunk.length))
+        .on('data', chunk => !hasSilentFlag() && progressBar.tick(chunk.length))
         .pipe(decompressor)
         .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
         .on('error', e => reject(e))

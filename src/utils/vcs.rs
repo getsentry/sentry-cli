@@ -247,7 +247,7 @@ fn find_matching_rev(
     // direct reference in root repository found.  If we are in discovery
     // mode we want to also check for matching URLs.
     if_chain! {
-        if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or("origin".to_string()));
+        if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
         if let Some(url) = remote.url();
         then {
             if !discovery || is_matching_url(url, &reference_url) {
@@ -341,13 +341,8 @@ fn find_matching_revs(
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(rv) = find_matching_rev(
-            rev,
-            &spec,
-            &repos[..],
-            disable_discovery,
-            remote_name.clone(),
-        )? {
+        if let Some(rv) = find_matching_rev(rev, &spec, &repos[..], disable_discovery, remote_name)?
+        {
             Some(rv)
         } else {
             return Err(error(rev, &spec.repo));
