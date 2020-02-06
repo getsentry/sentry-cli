@@ -1063,8 +1063,16 @@ impl Api {
             None => request,
         };
 
-        request.send()?.into_result()?;
-        Ok(())
+        // Handle 301 or 302 requests as a missing project
+        let resp = request.send()?;
+        match resp.status() {
+            301 | 302 => Err(ApiErrorKind::ProjectNotFound.into()),
+            _ => {
+                resp.into_result()?;
+                Ok(())
+            }
+        }
+
     }
 
     /// Associate apple debug symbols with a build
