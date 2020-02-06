@@ -270,9 +270,10 @@ pub struct UploadContext<'a> {
 }
 
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
-    // The hermes bycode format magic is defined here:
+    // The hermes bytecode format magic is defined here:
     // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
-    slice[..8] == 0x1F19_03C1_03BC_1FC6u64.to_le_bytes()
+    const HERMES_MAGIC: [u8; 8] = [0xC6, 0x1F, 0xBC, 0x03, 0xC1, 0x03, 0x19, 0x1F];
+    slice.starts_with(&HERMES_MAGIC)
 }
 
 impl SourceMapProcessor {
