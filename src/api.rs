@@ -1072,7 +1072,6 @@ impl Api {
                 Ok(())
             }
         }
-
     }
 
     /// Associate apple debug symbols with a build
