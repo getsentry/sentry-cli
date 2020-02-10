@@ -6,7 +6,6 @@ use clap::{App, AppSettings, ArgMatches};
 use console::style;
 use failure::Error;
 
-use crate::utils::fs::is_writable;
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 use crate::utils::ui::prompt_to_continue;
 
@@ -50,13 +49,14 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
         return Ok(());
     }
 
-    if !is_writable(&exe) {
-        println!("Need to sudo to uninstall {}", exe.display());
-        runas::Command::new("rm").arg("-f").arg(&exe).status()?;
-    } else {
-        fs::remove_file(&exe)?;
+    match fs::remove_file(&exe) {
+        Ok(_) => println!("Uninstalled!"),
+        Err(e) => {
+            println!("Couldn't uninstall {}", exe.display());
+            println!("Reason: {}", e);
+            return Err(QuietExit(1).into());
+        }
     }
-    println!("Uninstalled!");
 
     Ok(())
 }
