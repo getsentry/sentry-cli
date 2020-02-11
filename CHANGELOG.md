@@ -1,5 +1,20 @@
 # Changelog
 
+## sentry-cli 1.50.0
+
+* feat: Allow setting of `git` remote (#637)
+* feat: Expose code IDs from `difutil` check (#639)
+* feat: Implement workarounds for dealing with hermes bytecode (#646)
+* feat: Allow for `--silent` flag in installation script (#648)
+* fix: Support `dist` option in JS API (#642)
+* fix: Add `Content-Length=0` header to reprocessing POST request (#647)
+* ref: Treat `301/302` `upload_chunks` response codes as errors (#651)
+* lint: Update `prettier` parser to one thats up to date (#629)
+* deps: Update `https-proxy-agent` to 4.0.0
+* deps: Update `clippy` to 1.40.0
+* deps: Update `rustfmt` to 1.40.0
+* chore: Update VSCode ESLint autofix
+
 ## sentry-cli 1.49.1
 
 * Add support for `git://`, `git+ssh://`, and `git+https?://` VCS repos (#636)
