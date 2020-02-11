@@ -15,7 +15,9 @@ use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
 use crate::constants::{APP_INFO, VERSION};
 use crate::utils::fs::{is_writable, set_executable_mode};
-use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
+use crate::utils::system::{
+    execute_with_elevated_privileges, is_homebrew_install, is_npm_install, QuietExit,
+};
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {
@@ -27,19 +29,20 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), E
     let tmp = env::temp_dir().join(".sentry-cli.tmp");
 
     if elevate {
-        runas::Command::new("cmd")
-            .arg("/c")
-            .arg("move")
-            .arg(&exe)
-            .arg(&tmp)
-            .arg("&")
-            .arg("move")
-            .arg(&downloaded_path)
-            .arg(&exe)
-            .arg("&")
-            .arg("del")
-            .arg(&tmp)
-            .status()?;
+        execute_with_elevated_privileges(
+            runas::Command::new("cmd")
+                .arg("/c")
+                .arg("move")
+                .arg(&exe)
+                .arg(&tmp)
+                .arg("&")
+                .arg("move")
+                .arg(&downloaded_path)
+                .arg(&exe)
+                .arg("&")
+                .arg("del")
+                .arg(&tmp),
+        )?;
     } else {
         fs::rename(&exe, &tmp)?;
         fs::rename(&downloaded_path, &exe)?;
@@ -53,10 +56,9 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), E
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
-        runas::Command::new("mv")
-            .arg(&downloaded_path)
-            .arg(&exe)
-            .status()?;
+        execute_with_elevated_privileges(
+            runas::Command::new("mv").arg(&downloaded_path).arg(&exe),
+        )?;
     } else {
         fs::rename(&downloaded_path, &exe)?;
     }

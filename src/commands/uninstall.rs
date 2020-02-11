@@ -7,7 +7,9 @@ use console::style;
 use failure::Error;
 
 use crate::utils::fs::is_writable;
-use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
+use crate::utils::system::{
+    execute_with_elevated_privileges, is_homebrew_install, is_npm_install, QuietExit,
+};
 use crate::utils::ui::prompt_to_continue;
 
 fn is_hidden() -> bool {
@@ -52,7 +54,7 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     if !is_writable(&exe) {
         println!("Need to sudo to uninstall {}", exe.display());
-        runas::Command::new("rm").arg("-f").arg(&exe).status()?;
+        execute_with_elevated_privileges(runas::Command::new("rm").arg("-f").arg(&exe))?;
     } else {
         fs::remove_file(&exe)?;
     }

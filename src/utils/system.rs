@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::env;
+use std::io;
 use std::process;
 
 use chrono::{DateTime, Utc};
@@ -7,6 +8,7 @@ use console::style;
 use failure::{Error, Fail};
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
+use which::which;
 
 use crate::config::Config;
 
@@ -58,6 +60,24 @@ pub fn propagate_exit_status(status: process::ExitStatus) {
             process::exit(1);
         }
     }
+}
+
+#[cfg(not(windows))]
+pub fn execute_with_elevated_privileges(
+    cmd: &mut runas::Command,
+) -> io::Result<process::ExitStatus> {
+    match which("sudo") {
+        Ok(_) => cmd.status(),
+        Err(_) => Err(io::Error::new(
+            io::ErrorKind::NotFound,
+            "Command `sudo` not found",
+        )),
+    }
+}
+
+#[cfg(windows)]
+pub fn execute_with_elevated_privileges(cmd: &mut runas::Command) -> io::Result<ExitStatus> {
+    cmd.status()
 }
 
 #[cfg(not(windows))]
