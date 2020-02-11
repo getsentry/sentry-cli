@@ -41,6 +41,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Override version name in release name"),
         )
         .arg(
+            Arg::with_name("dist")
+                .long("dist")
+                .value_name("DISTRIBUTION")
+                .multiple(true)
+                .number_of_values(1)
+                .help("The names of the distributions to publish. Can be supplied multiple times."),
+        )
+        .arg(
             Arg::with_name("print_release_name")
                 .long("print-release-name")
                 .help("Print the release name instead."),
@@ -139,13 +147,38 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         },
     )?;
 
-    processor.upload(&UploadContext {
-        org: &org,
-        project: Some(&project),
-        release: &release.version,
-        dist: None,
-        wait: !matches.is_present("wait"),
-    })?;
+    match matches.values_of("dist") {
+        None => {
+            println!(
+                "Uploading sourcemaps for release {} (no distribution value given; use --dist to set distribution value)",
+                &release.version
+            );
+
+            processor.upload(&UploadContext {
+                org: &org,
+                project: Some(&project),
+                release: &release.version,
+                dist: None,
+                wait: matches.is_present("wait"),
+            })?;
+        }
+        Some(dists) => {
+            for dist in dists {
+                println!(
+                    "Uploading sourcemaps for release {} distribution {}",
+                    &release.version, dist
+                );
+
+                processor.upload(&UploadContext {
+                    org: &org,
+                    project: Some(&project),
+                    release: &release.version,
+                    dist: Some(dist),
+                    wait: matches.is_present("wait"),
+                })?;
+            }
+        }
+    }
 
     Ok(())
 }
