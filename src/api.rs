@@ -1308,8 +1308,19 @@ fn handle_req<W: Write>(
         handle.progress(true)?;
     }
 
-    // enable verbose mode
-    handle.verbose(true)?;
+    if Config::current().get_log_level() == log::LevelFilter::Debug {
+        handle.verbose(true)?;
+
+        handle.debug_function(move |info, data| match info {
+            curl::easy::InfoType::HeaderIn => {
+                log_headers(false, data);
+            }
+            curl::easy::InfoType::HeaderOut => {
+                log_headers(true, data);
+            }
+            _ => {}
+        })?;
+    }
 
     let mut headers = Vec::new();
     let pb: Rc<RefCell<Option<ProgressBar>>> = Rc::new(RefCell::new(None));
@@ -1361,16 +1372,6 @@ fn handle_req<W: Write>(
                 Ok(_) => data.len(),
                 Err(_) => 0,
             })
-        })?;
-
-        handle.debug_function(move |info, data| match info {
-            curl::easy::InfoType::HeaderIn => {
-                log_headers(false, data);
-            }
-            curl::easy::InfoType::HeaderOut => {
-                log_headers(true, data);
-            }
-            _ => {}
         })?;
 
         handle.header_function(move |data| {
