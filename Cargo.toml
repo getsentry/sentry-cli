@@ -41,7 +41,7 @@ plist = "0.4.1"
 prettytable-rs = "0.8.0"
 rayon = "1.1.0"
 regex = "1.2.0"
-runas = "0.1.4"
+runas = "0.2.1"
 rust-ini = "0.13.0"
 sentry = { version = "0.16.0", default-features = false, features = ["with_client_implementation", "with_curl_transport", "with_panic", "with_failure", "with_log", "with_device_info", "with_rust_info", "with_debug_to_log"] }
 serde = { version = "1.0.98", features = ["derive"] }
