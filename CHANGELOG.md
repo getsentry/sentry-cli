@@ -1,10 +1,15 @@
 # Changelog
 
+## Unreleased
+
+* TBD
+
 ## sentry-cli 1.51.0
 
 * feat: Add `dist` option to `react-native appcenter` command (#653)
 * ref: Notify user about missing `sudo` command instead of incorrect "No such file or directory" when updating/uninstalling `sentry-cli` (#656)
-* fix: Remove `Closing connection 0` warnings after every HTTP request (#657)
+* fix: Remove redundant `Closing connection 0` warnings after every HTTP request (#657)
+* fix: Update release structure for XCode React Native calls (#660)
 
 ## sentry-cli 1.50.0
 
