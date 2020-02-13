@@ -261,7 +261,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         let release = api.new_release(
             &org,
             &NewRelease {
-                version: format!("{}-{}", plist.bundle_id(), plist.version()),
+                version: format!("{}@{}+{}", plist.bundle_id(), plist.version(), plist.build()),
                 projects: vec![project.to_string()],
                 ..Default::default()
             },
