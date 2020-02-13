@@ -87,17 +87,10 @@ following dependencies:
 
 * Rust stable and Cargo
 * Make, CMake and a C compiler
-* OpenSSL 1.0.2n with development headers
-* Curl 7.50 with development headers
 
 Use cargo to compile:
 
     $ cargo build
-
-In case you get OpenSSL errors you need to compile with the path to the OpenSSL
-headers. For instance:
-
-    $ CFLAGS=-I/usr/local/opt/openssl/include/ cargo build
 
 Also, there is a Dockerfile that builds an Alpine-based Docker image with
 `sentry-cli` in the PATH. To build and use it, run:
