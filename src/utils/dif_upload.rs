@@ -853,14 +853,14 @@ fn process_symbol_maps<'a>(
 
 /// Default filter function to skip over bad sources we do not want to include.
 pub fn filter_bad_sources(entry: &FileEntry) -> bool {
-    // always ignore pch files
     if entry.name_str().ends_with(".pch") {
+        // always ignore pch files
         false
-    // ignore files larger than 1MB
     } else if let Ok(meta) = fs::metadata(&entry.abs_path_str()) {
-        meta.len() > 1_000_000
-    // if a file metadata could not be read it will be skipped later.
+        // ignore files larger than 1MB
+        meta.len() < 1_000_000
     } else {
+        // if a file metadata could not be read it will be skipped later.
         true
     }
 }
