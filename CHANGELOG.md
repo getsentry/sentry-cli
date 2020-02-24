@@ -4,6 +4,10 @@
 
 * TBD
 
+## sentry-cli 1.51.1
+
+* fix: Skip files larger than 1MB (#662)
+
 ## sentry-cli 1.51.0
 
 * feat: Add `dist` option to `react-native appcenter` command (#653)
