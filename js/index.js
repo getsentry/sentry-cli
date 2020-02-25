@@ -31,7 +31,7 @@ class SentryCli {
    */
   constructor(configFile, options) {
     if (typeof configFile === 'string') {
-      process.env.SENTRY_PROPERTIES = configFile;
+      this.configFile = configFile;
     }
     this.options = options || { silent: false };
 
@@ -61,7 +61,7 @@ class SentryCli {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return helper.execute(args, live, this.options.silent);
+    return helper.execute(args, live, this.options.silent, this.configFile);
   }
 }
 
