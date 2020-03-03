@@ -199,6 +199,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "integrations:github_enterprise"
             | "integrations:gitlab"
             | "integrations:bitbucket"
+            | "integrations:bitbucket_server"
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
                     debug!("  Got reference URL for repo {}: {}", repo, url);
