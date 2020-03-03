@@ -169,6 +169,11 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
         .unwrap_or_default()
         .filter_map(|s| DebugId::from_str(s).ok());
 
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
+
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
