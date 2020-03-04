@@ -1635,7 +1635,7 @@ dependencies = [
  "sha1 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "signal-hook 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
  "sourcemap 5.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "symbolic 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)",
+ "symbolic 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)",
  "uname 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "unix-daemonize 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "url 1.7.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1834,18 +1834,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "symbolic"
-version = "7.0.0"
-source = "git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef#5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef"
+version = "7.1.0"
+source = "git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7#8f9a01756e48dcbba2e42917a064f495d74058b7"
 dependencies = [
- "symbolic-common 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)",
- "symbolic-debuginfo 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)",
- "symbolic-proguard 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)",
+ "symbolic-common 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)",
+ "symbolic-debuginfo 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)",
+ "symbolic-proguard 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)",
 ]
 
 [[package]]
 name = "symbolic-common"
-version = "7.0.0"
-source = "git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef#5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef"
+version = "7.1.0"
+source = "git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7#8f9a01756e48dcbba2e42917a064f495d74058b7"
 dependencies = [
  "debugid 0.5.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1857,8 +1857,8 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "7.0.0"
-source = "git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef#5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef"
+version = "7.1.0"
+source = "git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7#8f9a01756e48dcbba2e42917a064f495d74058b7"
 dependencies = [
  "dmsort 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "failure 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1876,17 +1876,17 @@ dependencies = [
  "serde 1.0.98 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_json 1.0.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "smallvec 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
- "symbolic-common 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)",
+ "symbolic-common 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)",
  "zip 0.5.2 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "symbolic-proguard"
-version = "7.0.0"
-source = "git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef#5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef"
+version = "7.1.0"
+source = "git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7#8f9a01756e48dcbba2e42917a064f495d74058b7"
 dependencies = [
  "proguard 2.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "symbolic-common 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)",
+ "symbolic-common 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)",
 ]
 
 [[package]]
@@ -2400,10 +2400,10 @@ dependencies = [
 "checksum string_cache_codegen 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "1eea1eee654ef80933142157fdad9dd8bc43cf7c74e999e369263496f04ff4da"
 "checksum string_cache_shared 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "b1884d1bc09741d466d9b14e6d37ac89d6909cbcac41dd9ae982d4d063bbedfc"
 "checksum strsim 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
-"checksum symbolic 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)" = "<none>"
-"checksum symbolic-common 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)" = "<none>"
-"checksum symbolic-debuginfo 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)" = "<none>"
-"checksum symbolic-proguard 7.0.0 (git+https://github.com/getsentry/symbolic?rev=5c8de65b2d4eb3095f2aa0380b35aaed3a9e34ef)" = "<none>"
+"checksum symbolic 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)" = "<none>"
+"checksum symbolic-common 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)" = "<none>"
+"checksum symbolic-debuginfo 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)" = "<none>"
+"checksum symbolic-proguard 7.1.0 (git+https://github.com/getsentry/symbolic?rev=8f9a01756e48dcbba2e42917a064f495d74058b7)" = "<none>"
 "checksum syn 0.15.42 (registry+https://github.com/rust-lang/crates.io-index)" = "eadc09306ca51a40555dd6fc2b415538e9e18bc9f870e47b1a524a79fe2dcf5e"
 "checksum syn 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)" = "dff0acdb207ae2fe6d5976617f887eb1e35a2ba52c13c7234c790960cdad9238"
 "checksum synstructure 0.12.3 (registry+https://github.com/rust-lang/crates.io-index)" = "67656ea1dc1b41b1451851562ea232ec2e5a80242139f7e679ceccfb5d61f545"
