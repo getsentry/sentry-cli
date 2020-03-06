@@ -36,7 +36,7 @@ use uuid::Uuid;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
-use crate::utils::http::{self, parse_link_header};
+use crate::utils::http::{self, is_absolute_url, parse_link_header};
 use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
@@ -334,6 +334,7 @@ impl fmt::Display for Method {
 pub struct ApiRequest {
     handle: r2d2::PooledConnection<CurlConnectionManager>,
     headers: curl::easy::List,
+    is_authenticated: bool,
     body: Option<Vec<u8>>,
     progress_bar_mode: ProgressBarMode,
     max_retries: u32,
@@ -407,7 +408,7 @@ impl Api {
             ssl_opts.no_revoke(true);
         }
         handle.ssl_options(&ssl_opts)?;
-        let (url, auth) = if url.starts_with("http://") || url.starts_with("https://") {
+        let (url, auth) = if is_absolute_url(url) {
             (Cow::Borrowed(url), None)
         } else {
             (
@@ -1054,7 +1055,10 @@ impl Api {
         // to be a Sentry-compatible endpoint, we force the Authorization header at
         // this point.
         let request = match Config::current().get_auth() {
-            Some(auth) => request.with_auth(auth)?,
+            // Make sure that we don't authenticate a request
+            // that has been already authenticated
+            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
+            Some(_) => request,
             None => request,
         };
 
@@ -1440,6 +1444,7 @@ impl ApiRequest {
         let request = ApiRequest {
             handle,
             headers,
+            is_authenticated: false,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
             max_retries: 0,
@@ -1456,6 +1461,7 @@ impl ApiRequest {
 
     /// Explicitly overrides the Auth info.
     pub fn with_auth(mut self, auth: &Auth) -> ApiResult<Self> {
+        self.is_authenticated = true;
         match *auth {
             Auth::Key(ref key) => {
                 self.handle.username(key)?;

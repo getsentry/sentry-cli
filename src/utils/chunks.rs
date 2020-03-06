@@ -9,12 +9,14 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use failure::Error;
+use log::warn;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sha1::Digest;
 
 use crate::api::{Api, ChunkUploadOptions, ProgressBarMode};
+use crate::utils::http::is_absolute_url;
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 
 /// Timeout for polling all assemble endpoints.
@@ -205,6 +207,11 @@ pub fn upload_chunks(
     let pool = ThreadPoolBuilder::new()
         .num_threads(chunk_options.concurrency as usize)
         .build()?;
+
+    if !is_absolute_url(&chunk_options.url) {
+        warn!("Uploading chunks to a relative url is not recommended. Please update your `system.url-prefix`\
+           configuration inside `config.yml` or use `Root URL` option at https://<sentry-url>/manage/settings/ directly.");
+    }
 
     pool.install(|| {
         batches
