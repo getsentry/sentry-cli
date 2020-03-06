@@ -14,6 +14,7 @@ use parking_lot::Mutex;
 use sentry::internals::Dsn;
 
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
+use crate::utils::http::is_absolute_url;
 use crate::utils::logging::set_max_level;
 
 /// Represents the auth information
@@ -166,7 +167,7 @@ impl Config {
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str, Error> {
         let base = self.cached_base_url.trim_end_matches('/');
-        if !base.starts_with("http://") && !base.starts_with("https://") {
+        if !is_absolute_url(base) {
             bail!("bad sentry url: unknown scheme ({})", base);
         }
         if base.matches('/').count() != 2 {

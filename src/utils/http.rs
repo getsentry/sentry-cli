@@ -63,6 +63,11 @@ pub fn parse_link_header<'a>(s: &'a str) -> Vec<HashMap<&'a str, &'a str>> {
     rv
 }
 
+/// Checkes whether an url starts with http:// or https:// prefix
+pub fn is_absolute_url(url: &str) -> bool {
+    url.starts_with("http://") || url.starts_with("https://")
+}
+
 #[test]
 fn test_parse_link_header() {
     let rv = parse_link_header("<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\", <https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0>; rel=\"next\"; results=\"true\"; cursor=\"100:1:0\"");
@@ -86,4 +91,17 @@ fn test_parse_link_header() {
     assert_eq!(b.get("cursor").unwrap(), &"100:1:0");
     assert_eq!(b.get("rel").unwrap(), &"next");
     assert_eq!(b.get("results").unwrap(), &"true");
+}
+
+#[test]
+fn test_is_absolute_url() {
+    assert_eq!(is_absolute_url("https://sentry.io"), true);
+    assert_eq!(is_absolute_url("http://sentry.io"), true);
+    assert_eq!(is_absolute_url("https://sentry.io/path"), true);
+    assert_eq!(is_absolute_url("http://sentry.io/path"), true);
+    assert_eq!(is_absolute_url("http://sentry.io/path?query=foo"), true);
+    assert_eq!(is_absolute_url("https://sentry.io/path?query=foo"), true);
+
+    assert_eq!(is_absolute_url("/path"), false);
+    assert_eq!(is_absolute_url("/path?query=foo"), false);
 }
