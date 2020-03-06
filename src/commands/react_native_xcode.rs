@@ -8,9 +8,7 @@ use chrono::Duration;
 use clap::{App, Arg, ArgMatches};
 use failure::{bail, Error};
 use if_chain::if_chain;
-use lazy_static::lazy_static;
 use log::info;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 
 use crate::api::{Api, NewRelease};
@@ -111,16 +109,12 @@ fn find_node() -> String {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    lazy_static! {
-        static ref DEBUG_RE: Regex = Regex::new(r"Debug").unwrap();
-    }
-
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let should_wrap = matches.is_present("force")
         || match env::var("CONFIGURATION") {
-            Ok(config) => !DEBUG_RE.is_match(&config),
+            Ok(config) => !&config.contains("Debug"),
             Err(_) => bail!("Need to run this from Xcode"),
         };
     let base = env::current_dir()?;
@@ -130,6 +124,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         base.join("../node_modules/react-native/scripts/react-native-xcode.sh")
     }
     .canonicalize()?;
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
 
     // if we allow fetching and we detect a simulator run, then we need to switch
     // to simulator mode.

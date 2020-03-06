@@ -6,6 +6,7 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 use if_chain::if_chain;
+use log::info;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -78,6 +79,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
     let print_release_name = matches.is_present("print_release_name");
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
 
     if !print_release_name {
         println!(

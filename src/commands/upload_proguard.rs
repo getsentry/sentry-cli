@@ -6,7 +6,7 @@ use std::path::PathBuf;
 use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::{bail, Error, SyncFailure};
-use log::debug;
+use log::{debug, info};
 use symbolic::common::ByteView;
 use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
@@ -236,6 +236,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     println!("{} uploading mappings", style(">").dim());
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
+
     let rv = api.upload_dif_archive(&org, &project, tf.path())?;
     println!(
         "{} Uploaded a total of {} new mapping files",
