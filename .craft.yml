@@ -26,15 +26,23 @@ targets:
     tap: getsentry/tools
     template: >
       class SentryCli < Formula
-        desc "This is a Sentry command-line client for some generic tasks."
+        desc "Sentry command-line client for some generic tasks"
         homepage "https://github.com/getsentry/sentry-cli"
-        url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-x86_64"
         version "{{version}}"
-        sha256 "{{checksums.sentry-cli-Darwin-x86_64}}"
+
+        if OS.mac?
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-x86_64"
+          sha256 "{{checksums.sentry-cli-Darwin-x86_64}}"
+        elsif Hardware::CPU.is_64_bit?
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-x86_64"
+          sha256 "{{checksums.sentry-cli-Linux-x86_64}}"
+        else
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-i686"
+          sha256 "{{checksums.sentry-cli-Linux-i686}}"
+        end
 
         def install
-          mv "sentry-cli-Darwin-x86_64", "sentry-cli"
-          bin.install "sentry-cli"
+          bin.install Dir["sentry-cli-*"].first => "sentry-cli"
         end
 
         test do
