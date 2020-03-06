@@ -128,7 +128,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(
             Arg::with_name("with_categories")
                 .long("with-categories")
-                .help("Parses off a leading category for breadcrumbs from the logfile"),
+                .help("Parses off a leading category for breadcrumbs from the logfile")
+                .long_help(
+                    "When logfile is provided, this flag will try to assign correct level \
+                    to extracted log breadcrumbs. It uses standard log format of \"category: message\". \
+                    eg. \"INFO: Something broke\" will be parsed as a breadcrumb \
+                    \"{\"level\": \"info\", \"message\": \"Something broke\"}\"")
         )
 }
 
