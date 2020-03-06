@@ -1058,8 +1058,7 @@ impl Api {
             // Make sure that we don't authenticate a request
             // that has been already authenticated
             Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
-            Some(_) => request,
-            None => request,
+            _ => request,
         };
 
         // Handle 301 or 302 requests as a missing project
