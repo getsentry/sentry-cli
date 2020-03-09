@@ -90,15 +90,22 @@ pub fn detect_release_name() -> Result<String, Error> {
         return Ok(release);
     }
 
-    // try heroku: https://docs.sentry.io/workflow/integrations/legacy-integrations/heroku/#configure-releases
+    // try Heroku #1: https://docs.sentry.io/workflow/integrations/legacy-integrations/heroku/#configure-releases
     if let Ok(release) = env::var("HEROKU_SLUG_COMMIT") {
         if !release.is_empty() {
             return Ok(release);
         }
     }
 
-    // Heroku #2 https://devcenter.heroku.com/changelog-items/630
+    // try Heroku #2 https://devcenter.heroku.com/changelog-items/630
     if let Ok(release) = env::var("SOURCE_VERSION") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
+    // try AWS CodeBuild: https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-env-vars.html
+    if let Ok(release) = env::var("CODEBUILD_RESOLVED_SOURCE_VERSION") {
         if !release.is_empty() {
             return Ok(release);
         }
