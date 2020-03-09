@@ -239,6 +239,11 @@ impl InfoPlist {
         let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
             let mut c = process::Command::new("cc");
             c.arg("-xc").arg("-P").arg("-E");
+            if let Some(defs) = vars.get("INFOPLIST_OTHER_PREPROCESSOR_FLAGS") {
+                for token in defs.split_whitespace() {
+                    c.arg(token);
+                }
+            }
             if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
                 for token in defs.split_whitespace() {
                     c.arg(format!("-D{}", token));
