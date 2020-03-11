@@ -111,6 +111,13 @@ pub fn detect_release_name() -> Result<String, Error> {
         }
     }
 
+    // try GitHub Actions: https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables#default-environment-variables
+    if let Ok(release) = env::var("GITHUB_SHA") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
     // for now only execute this on macs.  The reason is that this uses
     // xcodebuild which does not exist anywhere but there.
     if_chain! {
