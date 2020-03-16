@@ -584,7 +584,7 @@ impl SourceMapProcessor {
         let mut ram_bundles = Vec::new();
 
         // Drain RAM bundles from self.sources
-        for (url, source) in mem::replace(&mut self.sources, Default::default()).into_iter() {
+        for (url, source) in mem::take(&mut self.sources).into_iter() {
             if source.ty == SourceFileType::IndexedRamBundle {
                 ram_bundles.push(source);
             } else {

@@ -29,7 +29,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             .add_row()
             .add(&repo.name)
             .add(&repo.provider.name)
-            .add(&repo.url.as_ref().map(String::as_str).unwrap_or("-"));
+            .add(&repo.url.as_deref().unwrap_or("-"));
     }
 
     if table.is_empty() {

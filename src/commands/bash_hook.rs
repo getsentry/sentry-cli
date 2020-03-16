@@ -114,11 +114,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
                 None => continue,
             };
 
-            let filename = frame
-                .filename
-                .as_ref()
-                .map(String::as_str)
-                .expect("frame without location");
+            let filename = frame.filename.as_deref().expect("frame without location");
 
             if !source_caches.contains_key(filename) {
                 if let Ok(f) = fs::File::open(filename) {

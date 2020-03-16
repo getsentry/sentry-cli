@@ -1220,7 +1220,7 @@ fn upload_difs_chunked(
     }
 
     // Try to resolve BCSymbolMaps
-    let symbol_map = options.symbol_map.as_ref().map(PathBuf::as_path);
+    let symbol_map = options.symbol_map.as_deref();
     let mut processed = process_symbol_maps(found, symbol_map)?;
 
     // Resolve source code context if specified
@@ -1332,7 +1332,7 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>, Error>
     }
 
     // Try to resolve BCSymbolMaps
-    let symbol_map = options.symbol_map.as_ref().map(PathBuf::as_path);
+    let symbol_map = options.symbol_map.as_deref();
     let processed = process_symbol_maps(found, symbol_map)?;
 
     // Calculate checksums

@@ -921,7 +921,7 @@ fn execute_files_upload_sourcemaps<'a>(
 
     processor.upload(&UploadContext {
         org,
-        project: project.as_ref().map(String::as_str),
+        project: project.as_deref(),
         release: &release.version,
         dist: matches.value_of("dist"),
         wait: matches.is_present("wait"),
