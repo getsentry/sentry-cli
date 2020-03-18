@@ -103,10 +103,7 @@ impl LastUpdateCheck {
     }
 
     pub fn latest_version(&self) -> &str {
-        self.last_fetched_version
-            .as_ref()
-            .map(String::as_str)
-            .unwrap_or("0.0")
+        self.last_fetched_version.as_deref().unwrap_or("0.0")
     }
 }
 
