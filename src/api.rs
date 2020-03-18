@@ -189,7 +189,7 @@ pub struct SentryError {
 
 impl fmt::Display for SentryError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let detail = self.detail.as_ref().map(String::as_str).unwrap_or("");
+        let detail = self.detail.as_deref().unwrap_or("");
         write!(
             f,
             "sentry reported an error: {} (http status: {})",
@@ -1538,7 +1538,7 @@ impl ApiRequest {
     pub fn send_into<W: Write>(&mut self, out: &mut W) -> ApiResult<ApiResponse> {
         let headers = self.get_headers();
         self.handle.http_headers(headers)?;
-        let body = self.body.as_ref().map(Vec::as_slice);
+        let body = self.body.as_deref();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
         debug!("response status: {}", status);

@@ -510,11 +510,10 @@ fn execute_set_commits<'a>(
 fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let project = ctx.get_project_default().ok();
-    if ctx.api.delete_release(
-        ctx.get_org()?,
-        project.as_ref().map(String::as_ref),
-        version,
-    )? {
+    if ctx
+        .api
+        .delete_release(ctx.get_org()?, project.as_deref(), version)?
+    {
         println!("Deleted release {}!", version);
     } else {
         println!(
@@ -527,9 +526,7 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
 
 fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
-    let releases = ctx
-        .api
-        .list_releases(ctx.get_org()?, project.as_ref().map(String::as_ref))?;
+    let releases = ctx.api.list_releases(ctx.get_org()?, project.as_deref())?;
     let mut table = Table::new();
     let title_row = table.title_row();
     title_row.add("Released").add("Version");
@@ -578,9 +575,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    let release = ctx
-        .api
-        .get_release(org, project.as_ref().map(String::as_ref), &version)?;
+    let release = ctx.api.get_release(org, project.as_deref(), &version)?;
 
     // quiet mode just exists
     if matches.is_present("quiet") {
@@ -620,9 +615,9 @@ fn execute_files_list<'a>(
 
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    for artifact in
-        ctx.api
-            .list_release_files(org, project.as_ref().map(String::as_ref), release)?
+    for artifact in ctx
+        .api
+        .list_release_files(org, project.as_deref(), release)?
     {
         let row = table.add_row();
         row.add(&artifact.name);
@@ -657,17 +652,15 @@ fn execute_files_delete<'a>(
     let project = ctx.get_project_default().ok();
     for file in ctx
         .api
-        .list_release_files(org, project.as_ref().map(String::as_ref), release)?
+        .list_release_files(org, project.as_deref(), release)?
     {
         if !(matches.is_present("all") || files.contains(&file.name)) {
             continue;
         }
-        if ctx.api.delete_release_file(
-            org,
-            project.as_ref().map(String::as_ref),
-            release,
-            &file.id,
-        )? {
+        if ctx
+            .api
+            .delete_release_file(org, project.as_deref(), release, &file.id)?
+        {
             println!("D {}", file.name);
         }
     }
@@ -704,7 +697,7 @@ fn execute_files_upload<'a>(
     let project = ctx.get_project_default().ok();
     if let Some(artifact) = ctx.api.upload_release_file(
         org,
-        project.as_ref().map(String::as_ref),
+        project.as_deref(),
         &version,
         &FileContents::FromPath(&path),
         &name,
@@ -921,7 +914,7 @@ fn execute_files_upload_sourcemaps<'a>(
 
     processor.upload(&UploadContext {
         org,
-        project: project.as_ref().map(String::as_str),
+        project: project.as_deref(),
         release: &release.version,
         dist: matches.value_of("dist"),
         wait: matches.is_present("wait"),
@@ -976,7 +969,7 @@ fn execute_deploys_new<'a>(
 
     let org = ctx.get_org()?;
     let deploy = ctx.api.create_deploy(org, version, &deploy)?;
-    let mut name = deploy.name.as_ref().map(String::as_ref).unwrap_or("");
+    let mut name = deploy.name.as_deref().unwrap_or("");
     if name == "" {
         name = "unnamed";
     }
@@ -999,7 +992,7 @@ fn execute_deploys_list<'a>(
         .add("Finished");
 
     for deploy in ctx.api.list_deploys(ctx.get_org()?, version)? {
-        let mut name = deploy.name.as_ref().map(String::as_ref).unwrap_or("");
+        let mut name = deploy.name.as_deref().unwrap_or("");
         if name == "" {
             name = "unnamed";
         }
