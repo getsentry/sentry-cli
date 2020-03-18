@@ -122,23 +122,6 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<(), Error> {
     Ok(())
 }
 
-fn is_zip_file_as_result<R: Read + Seek>(mut rdr: R) -> Result<bool, Error> {
-    let mut magic: [u8; 2] = [0; 2];
-    rdr.read_exact(&mut magic)?;
-    Ok(match &magic {
-        b"PK" => true,
-        _ => false,
-    })
-}
-
-/// Checks if a file is a zip file but only returns a bool
-pub fn is_zip_file<R: Read + Seek>(rdr: R) -> bool {
-    match is_zip_file_as_result(rdr) {
-        Ok(val) => val,
-        Err(_) => false,
-    }
-}
-
 /// Returns the SHA1 hash of the given input.
 pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest, Error> {
     let mut sha = Sha1::new();

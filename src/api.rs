@@ -151,7 +151,7 @@ impl ProgressBarMode {
         }
     }
 
-    /// Returns whether a progress bar should be displayed for during upload.
+    /// Returns whether a progress bar should be displayed during upload.
     pub fn request(&self) -> bool {
         match *self {
             ProgressBarMode::Request | ProgressBarMode::Both => true,
@@ -159,7 +159,7 @@ impl ProgressBarMode {
         }
     }
 
-    /// Returns whether a progress bar should be displayed for during download.
+    /// Returns whether a progress bar should be displayed during download.
     pub fn response(&self) -> bool {
         match *self {
             ProgressBarMode::Response | ProgressBarMode::Both => true,
@@ -224,8 +224,6 @@ pub enum ApiErrorKind {
     BadJson,
     #[fail(display = "not a JSON response")]
     NotJson,
-    #[fail(display = "no DSN")]
-    NoDsn,
     #[fail(display = "request failed because API URL was incorrectly formatted")]
     BadApiUrl,
     #[fail(display = "organization not found")]
@@ -362,16 +360,6 @@ impl Api {
             let api = Arc::new(Api::with_config(Config::current()));
             *api_opt = Some(api.clone());
             api
-        }
-    }
-
-    /// Returns the current api.
-    pub fn current_opt() -> Option<Arc<Api>> {
-        // `Api::current` fails if there is no config yet.
-        if Config::current_opt().is_some() {
-            Some(Api::current())
-        } else {
-            None
         }
     }
 
@@ -2208,10 +2196,6 @@ impl ChunkedFileState {
 
     pub fn is_pending(self) -> bool {
         !self.is_finished()
-    }
-
-    pub fn is_ok(self) -> bool {
-        self == ChunkedFileState::Ok
     }
 
     pub fn is_err(self) -> bool {

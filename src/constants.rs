@@ -10,9 +10,6 @@ pub const APP_INFO: &AppInfo = &AppInfo {
 /// The default API URL
 pub const DEFAULT_URL: &str = "https://sentry.io/";
 
-/// The protocol version of the library.
-pub const PROTOCOL_VERSION: u32 = 6;
-
 /// The version of the library
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

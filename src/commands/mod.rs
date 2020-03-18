@@ -67,7 +67,9 @@ pub mod projects;
 pub mod releases;
 pub mod repos;
 pub mod send_event;
+#[cfg(not(feature = "managed"))]
 pub mod uninstall;
+#[cfg(not(feature = "managed"))]
 pub mod update;
 pub mod upload_dif;
 pub mod upload_dsym;
