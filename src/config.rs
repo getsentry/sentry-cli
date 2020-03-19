@@ -47,6 +47,11 @@ impl Config {
     /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> Result<Config, Error> {
         let (filename, ini) = load_cli_config()?;
+        Config::from_file(filename, ini)
+    }
+
+    /// Creates Config based on provided config file.
+    pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config, Error> {
         Ok(Config {
             filename,
             process_bound: false,
@@ -157,13 +162,6 @@ impl Config {
         }
     }
 
-    /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) {
-        self.cached_base_url = url.to_owned();
-        self.ini
-            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
-    }
-
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str, Error> {
         let base = self.cached_base_url.trim_end_matches('/');
@@ -174,6 +172,13 @@ impl Config {
             bail!("bad sentry url: not on URL root ({})", base);
         }
         Ok(base)
+    }
+
+    /// Sets the URL
+    pub fn set_base_url(&mut self, url: &str) {
+        self.cached_base_url = url.to_owned();
+        self.ini
+            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
     }
 
     /// Returns the API URL for a path
@@ -394,6 +399,15 @@ impl Config {
     }
 }
 
+fn find_global_config_file() -> Result<PathBuf, Error> {
+    dirs::home_dir()
+        .ok_or_else(|| err_msg("Could not find home dir"))
+        .and_then(|mut path| {
+            path.push(CONFIG_RC_FILE_NAME);
+            Ok(path)
+        })
+}
+
 fn find_project_config_file() -> Option<PathBuf> {
     env::current_dir().ok().and_then(|mut path| loop {
         path.push(CONFIG_RC_FILE_NAME);
@@ -411,22 +425,27 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
-    let mut home_fn = dirs::home_dir().ok_or_else(|| err_msg("Could not find home dir"))?;
-    home_fn.push(CONFIG_RC_FILE_NAME);
-
-    let mut rv = match fs::File::open(&home_fn) {
-        Ok(mut file) => Ini::read_from(&mut file)?,
+pub fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
+    let filename = find_global_config_file()?;
+    match fs::File::open(&filename) {
+        Ok(mut file) => match Ini::read_from(&mut file) {
+            Ok(ini) => Ok((filename, ini)),
+            Err(err) => Err(Error::from(err).into()),
+        },
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
-                Ini::new()
+                Ok((filename, Ini::new()))
             } else {
                 return Err(Error::from(err)
                     .context("Failed to load .sentryclirc file from the home folder.")
                     .into());
             }
         }
-    };
+    }
+}
+
+fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
+    let (global_filename, mut rv) = load_global_config_file()?;
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
         let mut f = fs::File::open(&project_config_path).with_context(|_| {
@@ -444,7 +463,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
         }
         (project_config_path, rv)
     } else {
-        (home_fn, rv)
+        (global_filename, rv)
     };
 
     if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
