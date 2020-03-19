@@ -2,8 +2,6 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binary that links against this library.
 
-#![recursion_limit = "128"]
-
 pub mod api;
 pub mod commands;
 pub mod config;

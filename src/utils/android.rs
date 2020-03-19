@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use elementtree::Element;
 use failure::{err_msg, Error};
@@ -10,7 +10,6 @@ use itertools::Itertools;
 use uuid::Uuid;
 
 pub struct AndroidManifest {
-    path: PathBuf,
     root: Element,
 }
 
@@ -20,10 +19,7 @@ impl AndroidManifest {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<AndroidManifest, Error> {
         let f = fs::File::open(path.as_ref())?;
         let root = Element::from_reader(f)?;
-        Ok(AndroidManifest {
-            path: path.as_ref().to_path_buf(),
-            root,
-        })
+        Ok(AndroidManifest { root })
     }
 
     /// Returns the package ID
@@ -64,13 +60,6 @@ impl AndroidManifest {
         self.root
             .get_attr((ANDROID_NS, "versionName"))
             .unwrap_or("0.0")
-    }
-
-    /// Write back the file.
-    pub fn save(&self) -> Result<(), Error> {
-        let mut f = fs::File::create(&self.path)?;
-        self.root.to_writer(&mut f)?;
-        Ok(())
     }
 }
 

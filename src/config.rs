@@ -360,28 +360,6 @@ impl Config {
         }
     }
 
-    /// Return device model
-    pub fn get_model(&self) -> Option<String> {
-        if env::var_os("DEVICE_MODEL").is_some() {
-            env::var("DEVICE_MODEL").ok()
-        } else if let Some(val) = self.ini.get_from(Some("device"), "model") {
-            Some(String::from(val))
-        } else {
-            None
-        }
-    }
-
-    /// Return device family
-    pub fn get_family(&self) -> Option<String> {
-        if env::var_os("DEVICE_FAMILY").is_some() {
-            env::var("DEVICE_FAMILY").ok()
-        } else if let Some(val) = self.ini.get_from(Some("device"), "family") {
-            Some(String::from(val))
-        } else {
-            None
-        }
-    }
-
     /// Return VCS remote
     pub fn get_cached_vcs_remote(&self) -> String {
         self.cached_vcs_remote.clone()

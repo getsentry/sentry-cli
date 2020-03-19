@@ -34,21 +34,6 @@ impl CordovaConfig {
             .unwrap_or_else(|| self.id())
     }
 
-    pub fn android_version_code(&self) -> u64 {
-        if let Some(version) = self
-            .root
-            .get_attr("android-versionCode")
-            .and_then(|x| x.parse().ok())
-        {
-            return version;
-        }
-        let mut iter = self.version().split('.');
-        let major: u64 = iter.next().and_then(|x| x.parse().ok()).unwrap_or(0);
-        let minor: u64 = iter.next().and_then(|x| x.parse().ok()).unwrap_or(0);
-        let patch: u64 = iter.next().and_then(|x| x.parse().ok()).unwrap_or(0);
-        major * 10000 + minor * 100 + patch
-    }
-
     pub fn ios_bundle_identifier(&self) -> &str {
         self.root
             .get_attr("ios-CFBundleIdentifier")

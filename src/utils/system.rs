@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::env;
 use std::process;
 
-use chrono::{DateTime, Utc};
 use console::style;
 use failure::{Error, Fail};
 use lazy_static::lazy_static;
@@ -89,11 +88,6 @@ pub fn is_npm_install() -> bool {
     is_npm_install_result().unwrap_or(false)
 }
 
-/// Expands environment variables in a string
-pub fn expand_envvars(s: &str) -> Cow<'_, str> {
-    expand_vars(s, |key| env::var(key).unwrap_or_else(|_| "".to_string()))
-}
-
 /// Expands variables in a string
 pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<'_, str> {
     lazy_static! {
@@ -140,11 +134,6 @@ pub fn print_error(err: &Error) {
     }
 }
 
-/// Given a system time returns the unix timestamp as f64
-pub fn to_timestamp(tm: DateTime<Utc>) -> f64 {
-    tm.timestamp() as f64
-}
-
 /// Initializes the backtrace support
 pub fn init_backtrace() {
     std::panic::set_hook(Box::new(|info| {
@@ -180,69 +169,6 @@ pub fn init_backtrace() {
             crate::utils::crashreporting::flush_events();
         }
     }));
-}
-
-#[cfg(target_os = "macos")]
-pub fn get_model() -> Option<String> {
-    if let Some(model) = Config::current().get_model() {
-        return Some(model);
-    }
-
-    use std::ptr;
-
-    unsafe {
-        let mut size = 0;
-        libc::sysctlbyname(
-            "hw.model\x00".as_ptr() as *const i8,
-            ptr::null_mut(),
-            &mut size,
-            ptr::null_mut(),
-            0,
-        );
-        let mut buf = vec![0u8; size as usize];
-        libc::sysctlbyname(
-            "hw.model\x00".as_ptr() as *const i8,
-            buf.as_mut_ptr() as *mut libc::c_void,
-            &mut size,
-            ptr::null_mut(),
-            0,
-        );
-        Some(String::from_utf8_lossy(&buf).to_string())
-    }
-}
-
-#[cfg(target_os = "macos")]
-pub fn get_family() -> Option<String> {
-    if let Some(family) = Config::current().get_family() {
-        return Some(family);
-    }
-
-    use if_chain::if_chain;
-
-    lazy_static! {
-        static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
-    }
-
-    if_chain! {
-        if let Some(model) = get_model();
-        if let Some(m) = FAMILY_RE.captures(&model);
-        if let Some(group) = m.get(1);
-        then {
-            Some(group.as_str().to_string())
-        } else {
-            None
-        }
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn get_model() -> Option<String> {
-    Config::current().get_model()
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn get_family() -> Option<String> {
-    Config::current().get_family()
 }
 
 /// Indicates that sentry-cli should quit without printing anything.
