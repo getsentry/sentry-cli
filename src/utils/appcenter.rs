@@ -131,7 +131,7 @@ pub fn get_react_native_appcenter_release(
     platform: &str,
     bundle_id_override: Option<&str>,
     version_name_override: Option<&str>,
-    release_name_override: Option<&str>
+    release_name_override: Option<&str>,
 ) -> Result<String, Error> {
     let bundle_id_ovrr = bundle_id_override.unwrap_or("");
     let version_name_ovrr = version_name_override.unwrap_or("");
