@@ -436,7 +436,7 @@ fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
     match fs::File::open(&filename) {
         Ok(mut file) => match Ini::read_from(&mut file) {
             Ok(ini) => Ok((filename, ini)),
-            Err(err) => Err(Error::from(err).into()),
+            Err(err) => Err(Error::from(err)),
         },
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
