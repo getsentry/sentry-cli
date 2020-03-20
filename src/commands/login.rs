@@ -1,5 +1,5 @@
 //! Implements a command for signing in.
-use clap::{App, ArgMatches};
+use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use url::Url;
 
@@ -8,7 +8,12 @@ use crate::config::{Auth, Config};
 use crate::utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Authenticate with the Sentry server.")
+    app.about("Authenticate with the Sentry server.").arg(
+        Arg::with_name("global")
+            .short("g")
+            .long("global")
+            .help("Store authentication token globally rather than locally."),
+    )
 }
 
 fn update_config(config: &Config, token: &str) -> Result<(), Error> {
@@ -18,7 +23,7 @@ fn update_config(config: &Config, token: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 
@@ -58,9 +63,18 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
         }
     }
 
-    update_config(&config, &token)?;
+    let config_to_update = if matches.is_present("global") {
+        Config::global()?
+    } else {
+        Config::from_cli_config()?
+    };
+
+    update_config(&config_to_update, &token)?;
     println!();
-    println!("Stored token in {}", config.get_filename().display());
+    println!(
+        "Stored token in {}",
+        config_to_update.get_filename().display()
+    );
 
     Ok(())
 }
