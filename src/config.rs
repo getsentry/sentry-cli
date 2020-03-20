@@ -86,12 +86,9 @@ impl Config {
     }
 
     /// Return the global config reference.
-    pub fn global() -> Result<Arc<Config>, Error> {
+    pub fn global() -> Result<Config, Error> {
         let (global_filename, global_config) = load_global_config_file()?;
-        match Config::from_file(global_filename, global_config) {
-            Ok(config) => Ok(Arc::new(config)),
-            Err(err) => Err(err),
-        }
+        Config::from_file(global_filename, global_config)
     }
 
     /// Makes a copy of the config in a closure and boxes it.

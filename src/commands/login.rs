@@ -24,8 +24,8 @@ fn update_config(config: &Config, token: &str) -> Result<(), Error> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let local_config = Config::current();
-    let token_url = format!("{}/api/", local_config.get_base_url()?);
+    let config = Config::current();
+    let token_url = format!("{}/api/", config.get_base_url()?);
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
     println!("If you do not yet have a token ready we can bring up a browser for you");
@@ -33,7 +33,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     println!();
     println!(
         "Sentry server: {}",
-        Url::parse(&local_config.get_base_url()?)?
+        Url::parse(&config.get_base_url()?)?
             .host_str()
             .unwrap_or("<unknown>")
     );
@@ -46,7 +46,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     loop {
         token = prompt("Enter your token")?;
 
-        let test_cfg = local_config.make_copy(|cfg| {
+        let test_cfg = config.make_copy(|cfg| {
             cfg.set_auth(Auth::Token(token.to_string()));
             Ok(())
         })?;
@@ -63,10 +63,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         }
     }
 
-    let mut config_to_update = local_config;
-    if matches.is_present("global") {
-        config_to_update = Config::global()?;
-    }
+    let config_to_update = if matches.is_present("global") {
+        Config::global()?
+    } else {
+        Config::from_cli_config()?
+    };
 
     update_config(&config_to_update, &token)?;
     println!();
