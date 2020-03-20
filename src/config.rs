@@ -442,9 +442,9 @@ fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
             if err.kind() == io::ErrorKind::NotFound {
                 Ok((filename, Ini::new()))
             } else {
-                return Err(Error::from(err)
+                Err(Error::from(err)
                     .context("Failed to load .sentryclirc file from the home folder.")
-                    .into());
+                    .into())
             }
         }
     }
