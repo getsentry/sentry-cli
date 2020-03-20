@@ -112,7 +112,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         );
     }
 
-
     let package = get_appcenter_package(app, deployment)?;
     let release = get_react_native_appcenter_release(
         &package,
