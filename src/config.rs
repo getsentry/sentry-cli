@@ -85,6 +85,15 @@ impl Config {
         Config::current_opt().expect("Config not bound yet")
     }
 
+    /// Return the global config reference.
+    pub fn global() -> Result<Arc<Config>, Error> {
+        let (global_filename, global_config) = load_global_config_file()?;
+        match Config::from_file(global_filename, global_config) {
+            Ok(config) => Ok(Arc::new(config)),
+            Err(err) => Err(err),
+        }
+    }
+
     /// Makes a copy of the config in a closure and boxes it.
     pub fn make_copy<F: FnOnce(&mut Config) -> Result<(), Error>>(
         &self,
@@ -425,7 +434,7 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-pub fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
+fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
     let filename = find_global_config_file()?;
     match fs::File::open(&filename) {
         Ok(mut file) => match Ini::read_from(&mut file) {

@@ -4,7 +4,7 @@ use failure::Error;
 use url::Url;
 
 use crate::api::Api;
-use crate::config::{load_global_config_file, Auth, Config};
+use crate::config::{Auth, Config};
 use crate::utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -65,13 +65,13 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     let mut config_to_update = local_config;
     if matches.is_present("global") {
-        let (global_filename, global_config) = load_global_config_file()?;
-        config_to_update = Config::from_file(global_filename, global_config)?.bind_to_process();
+        config_to_update = Config::global()?;
     }
 
     update_config(&config_to_update, &token)?;
+    println!();
     println!(
-        "\nStored token in {}",
+        "Stored token in {}",
         config_to_update.get_filename().display()
     );
 
