@@ -24,13 +24,13 @@ use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::{Mutex, RwLock};
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
 use sha1::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
-use url::percent_encoding::{utf8_percent_encode, DEFAULT_ENCODE_SET, QUERY_ENCODE_SET};
 use uuid::Uuid;
 
 use crate::config::{Auth, Config};
@@ -42,6 +42,18 @@ use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
+
+const QUERY_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
+const DEFAULT_ENCODE_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'<')
+    .add(b'>')
+    .add(b'`')
+    .add(b'?')
+    .add(b'{')
+    .add(b'}');
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
