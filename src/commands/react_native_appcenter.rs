@@ -58,6 +58,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             Arg::with_name("release_name")
                 .value_name("RELEASE_NAME")
                 .long("release-name")
+                .conflicts_with_all(&["bundle_id", "version_name"])
                 .help("Override the entire release-name"),
         )
         .arg(
