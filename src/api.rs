@@ -44,12 +44,7 @@ use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
 
 const QUERY_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
-const DEFAULT_ENCODE_SET: &AsciiSet = &CONTROLS
-    .add(b' ')
-    .add(b'"')
-    .add(b'#')
-    .add(b'<')
-    .add(b'>')
+const DEFAULT_ENCODE_SET: &AsciiSet = &QUERY_ENCODE_SET
     .add(b'`')
     .add(b'?')
     .add(b'{')
