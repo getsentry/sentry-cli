@@ -4,6 +4,20 @@
 
 * TBD
 
+## sentry-cli 1.52.0
+
+* feat: Add an optional argument to override the entire release name for a CodePush release (#692)
+* feat: Introduce `g/global` flag for `login` command (#690)
+* feat: Add support for `INFOPLIST_OTHER_PREPROCESSOR_FLAGS` (#682)
+* feat: Detect CodeBuild slug for `propose-version` (#681)
+* feat: Show project and organization when using info log level (#670)
+* feat: Add `bitbucket_server` to reference url check (#668)
+* fix: Log config path only when its actually loaded (#677)
+* fix: Make sure that requests are not authenticated twice and warn for rel urls (#675)
+* fix: Override local `env.SENTRY_PROPERTIES` rather than global `process.env` (#667)
+* fix: `react-native` xcode uses regex to detect Debug builds (#665)
+* meta: Add Linux support to the Homebrew formula (#674)
+
 ## sentry-cli 1.51.1
 
 * fix: Skip files larger than 1MB (#662)
