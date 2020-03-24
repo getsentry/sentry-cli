@@ -463,8 +463,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
         })?;
         let ini = Ini::read_from(&mut f)?;
         for (section, props) in ini.iter() {
-            for (key, value) in props {
-                rv.set_to(section.clone(), key.clone(), value.to_owned());
+            for (key, value) in props.iter() {
+                rv.set_to(section.clone(), key.to_string(), value.to_owned());
             }
         }
         (project_config_path, rv)
