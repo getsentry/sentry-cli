@@ -43,12 +43,8 @@ use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
 
-const QUERY_ENCODE_SET: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
-const DEFAULT_ENCODE_SET: &AsciiSet = &QUERY_ENCODE_SET
-    .add(b'`')
-    .add(b'?')
-    .add(b'{')
-    .add(b'}');
+const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
+const DEFAULT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET.add(b'`').add(b'?').add(b'{').add(b'}');
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
@@ -120,7 +116,7 @@ impl FromStr for Pagination {
 
 impl<A: fmt::Display> fmt::Display for QueryArg<A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        utf8_percent_encode(&format!("{}", self.0), QUERY_ENCODE_SET).fmt(f)
+        utf8_percent_encode(&format!("{}", self.0), &QUERY_ENCODE_SET).fmt(f)
     }
 }
 
@@ -136,7 +132,7 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
         if val == ".." || val == "." {
             val = "\u{fffd}".into();
         }
-        utf8_percent_encode(&val, DEFAULT_ENCODE_SET).fmt(f)
+        utf8_percent_encode(&val, &DEFAULT_ENCODE_SET).fmt(f)
     }
 }
 

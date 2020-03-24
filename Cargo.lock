@@ -110,9 +110,9 @@ dependencies = [
 
 [[package]]
 name = "backtrace"
-version = "0.3.45"
+version = "0.3.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ad235dabf00f36301792cfe82499880ba54c6486be094d1047b02bacb67c14e8"
+checksum = "b1e692897359247cc6bb902933361652380af0f1b7651ae5c5013407f30e109e"
 dependencies = [
  "backtrace-sys",
  "cfg-if",
@@ -122,9 +122,9 @@ dependencies = [
 
 [[package]]
 name = "backtrace-sys"
-version = "0.1.34"
+version = "0.1.35"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ca797db0057bae1a7aa2eef3283a874695455cecf08a43bfb8507ee0ebc1ed69"
+checksum = "7de8aba10a69c8e8d7622c5710229485ec32e9d55fdad160ea559c086fdcd118"
 dependencies = [
  "cc",
  "libc",
@@ -485,26 +485,14 @@ dependencies = [
 
 [[package]]
 name = "debugid"
-version = "0.5.3"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "751dad1347b163aa77262232129c7ac46e2810485c9b095ac9f7caf200e97df4"
+checksum = "36294832663d7747e17832f32492daedb65ae665d5ae1b369edabf52a2a92afc"
 dependencies = [
  "lazy_static",
  "regex",
  "serde",
- "uuid 0.7.4",
-]
-
-[[package]]
-name = "debugid"
-version = "0.7.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c49e2ce8d9607581c6b246ccd1e3ca2185991952e3ac9985291ed61ae668ea4b"
-dependencies = [
- "lazy_static",
- "regex",
- "serde",
- "uuid 0.8.1",
+ "uuid",
 ]
 
 [[package]]
@@ -1264,7 +1252,7 @@ checksum = "b66be5fcea88b52962d3d6fcc5194f1d77666f5aca256926688743a8de1152e4"
 dependencies = [
  "fallible-iterator",
  "scroll 0.10.1",
- "uuid 0.8.1",
+ "uuid",
 ]
 
 [[package]]
@@ -1415,14 +1403,14 @@ dependencies = [
 
 [[package]]
 name = "proguard"
-version = "2.0.0"
+version = "3.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2bff7e1d393e193d61310f6f2d2192afb008371238065bcf630d6fe9ec2ab52e"
+checksum = "d451cea38a9b7b2ffe89ff7c443c0a4c55f3eab20114a73c4d8c1b362cf3fb1b"
 dependencies = [
  "lazy_static",
  "memmap",
  "regex",
- "uuid 0.7.4",
+ "uuid",
 ]
 
 [[package]]
@@ -1915,7 +1903,7 @@ dependencies = [
  "unix-daemonize",
  "url 2.1.1",
  "username",
- "uuid 0.7.4",
+ "uuid",
  "walkdir",
  "which",
  "zip",
@@ -1928,12 +1916,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "12ec406c11c060c8a7d5d67fc6f4beb2888338dcb12b9af409451995f124749d"
 dependencies = [
  "chrono",
- "debugid 0.7.0",
+ "debugid",
  "failure",
  "serde",
  "serde_json",
  "url 2.1.1",
- "uuid 0.8.1",
+ "uuid",
 ]
 
 [[package]]
@@ -2096,9 +2084,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "symbolic"
-version = "7.1.1"
+version = "7.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d028ece4f5c12cb0be103a3040c63e247985db352a8324962740f95b26c5dc06"
+checksum = "1f35c92dbec4bbb4e2ef7e354688a1bf1a839c09c54962efdc6f8063b5970b40"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2107,23 +2095,23 @@ dependencies = [
 
 [[package]]
 name = "symbolic-common"
-version = "7.1.1"
+version = "7.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a597ecaa65720290d5ffa59099985faab7a42cf51ab2b062c1dd9b91df65134"
+checksum = "aceda41e30fa7ae5a036fdad6abe76566695557c9cc54c040897da5b4b536b35"
 dependencies = [
- "debugid 0.5.3",
+ "debugid",
  "failure",
  "memmap",
  "serde",
  "stable_deref_trait",
- "uuid 0.7.4",
+ "uuid",
 ]
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "7.1.1"
+version = "7.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92f028c21bfa246bf91d83b451504af8b3ac3d957d12afc1bfc9a5d01970c0ad"
+checksum = "4957619d5ed15e28a8570def249927c89bb560b0892fbb3e189f313244947a40"
 dependencies = [
  "dmsort",
  "failure",
@@ -2147,9 +2135,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-proguard"
-version = "7.1.1"
+version = "7.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "119850a6134e800a69d0405f2589a01c8099efe11f22becb0a1ab86bdcc3ae80"
+checksum = "aa82dc41f476a83a146bebcaad2406fdafc8d9a3e0bc7931268f1c97311cdcf0"
 dependencies = [
  "proguard",
  "symbolic-common",
@@ -2351,23 +2339,13 @@ dependencies = [
 
 [[package]]
 name = "uuid"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "90dbc611eb48397705a6b0f6e917da23ae517e4d127123d2cf7674206627d32a"
-dependencies = [
- "rand 0.6.5",
- "serde",
- "sha1",
-]
-
-[[package]]
-name = "uuid"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9fde2f6a4bea1d6e007c4ad38c6839fa71cbb63b6dbf5b595aa38dc9b1093c11"
 dependencies = [
  "rand 0.7.3",
  "serde",
+ "sha1",
 ]
 
 [[package]]
