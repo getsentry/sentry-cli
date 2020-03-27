@@ -23,9 +23,13 @@ class Releases {
    * Creates a new `Releases` instance.
    *
    * @param {Object} [options] More options to pass to the CLI
+   * @param {string} [configFile] Relative or absolute path to the CLI configuration file.
    */
-  constructor(options) {
+  constructor(options, configFile) {
     this.options = options || {};
+    if (typeof configFile === 'string') {
+      this.configFile = configFile;
+    }
   }
 
   /**
@@ -39,7 +43,7 @@ class Releases {
    * @memberof SentryReleases
    */
   new(release) {
-    return helper.execute(['releases', 'new', release], null, this.options.silent);
+    return this.execute(['releases', 'new', release], null);
   }
 
   /**
@@ -78,7 +82,7 @@ class Releases {
       commitFlags = ['--commit', `${options.repo}@${options.commit}`];
     }
 
-    return helper.execute(['releases', 'set-commits', release].concat(commitFlags));
+    return this.execute(['releases', 'set-commits', release].concat(commitFlags));
   }
 
   /**
@@ -90,7 +94,7 @@ class Releases {
    * @memberof SentryReleases
    */
   finalize(release) {
-    return helper.execute(['releases', 'finalize', release], null, this.options.silent);
+    return this.execute(['releases', 'finalize', release], null);
   }
 
   /**
@@ -101,9 +105,9 @@ class Releases {
    * @memberof SentryReleases
    */
   proposeVersion() {
-    return helper
-      .execute(['releases', 'propose-version'], null, this.options.silent)
-      .then(version => version && version.trim());
+    return this.execute(['releases', 'propose-version'], null).then(
+      version => version && version.trim()
+    );
   }
 
   /**
@@ -149,14 +153,23 @@ class Releases {
       }
 
       const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
-      return helper.execute(
+      return this.execute(
         helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions),
-        true,
-        this.options.silent
+        true
       );
     });
 
     return Promise.all(uploads);
+  }
+
+  /**
+   * See {helper.execute} docs.
+   * @param {string[]} args Command line arguments passed to `sentry-cli`.
+   * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+   * @returns {Promise.<string>} A promise that resolves to the standard output.
+   */
+  execute(args, live) {
+    return helper.execute(args, live, this.options.silent, this.configFile);
   }
 }
 
