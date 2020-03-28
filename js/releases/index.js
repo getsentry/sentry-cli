@@ -23,13 +23,13 @@ class Releases {
    * Creates a new `Releases` instance.
    *
    * @param {Object} [options] More options to pass to the CLI
-   * @param {string} [configFile] Relative or absolute path to the CLI configuration file.
    */
-  constructor(options, configFile) {
+  constructor(options) {
     this.options = options || {};
-    if (typeof configFile === 'string') {
-      this.configFile = configFile;
+    if (typeof this.options.configFile === 'string') {
+      this.configFile = this.options.configFile;
     }
+    delete this.options.configFile;
   }
 
   /**

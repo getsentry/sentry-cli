@@ -35,7 +35,9 @@ class SentryCli {
     }
     this.options = options || { silent: false };
 
-    this.releases = new Releases(this.options, configFile);
+    this.releases = new Releases(
+      Object.assign({}, this.options, { configFile: configFile })
+    );
   }
 
   /**
