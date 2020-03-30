@@ -64,9 +64,7 @@ class Releases {
    */
   setCommits(release, options) {
     if (!options || (!options.auto && (!options.repo || !options.commit))) {
-      throw new Error(
-        'options.auto, or options.repo and options.commit must be specified'
-      );
+      throw new Error('options.auto, or options.repo and options.commit must be specified');
     }
 
     let commitFlags = [];
@@ -74,10 +72,7 @@ class Releases {
     if (options.auto) {
       commitFlags = ['--auto'];
     } else if (options.previousCommit) {
-      commitFlags = [
-        '--commit',
-        `${options.repo}@${options.previousCommit}..${options.commit}`,
-      ];
+      commitFlags = ['--commit', `${options.repo}@${options.previousCommit}..${options.commit}`];
     } else {
       commitFlags = ['--commit', `${options.repo}@${options.commit}`];
     }
@@ -153,10 +148,7 @@ class Releases {
       }
 
       const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
-      return this.execute(
-        helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions),
-        true
-      );
+      return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
     });
 
     return Promise.all(uploads);

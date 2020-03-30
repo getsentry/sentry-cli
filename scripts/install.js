@@ -29,8 +29,7 @@ const CDN_URL =
 
 function hasSilentFlag() {
   return (
-    process.argv.some(v => v === '--silent') || // Yarn
-    process.env.npm_config_loglevel === 'silent' // NPM
+    process.argv.some(v => v === '--silent') || process.env.npm_config_loglevel === 'silent' // Yarn // NPM
   );
 }
 
@@ -172,9 +171,7 @@ function checkVersion() {
     const version = output.replace('sentry-cli ', '').trim();
     const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
     if (version !== expected) {
-      throw new Error(
-        `Unexpected sentry-cli version "${version}", expected "${expected}"`
-      );
+      throw new Error(`Unexpected sentry-cli version "${version}", expected "${expected}"`);
     }
   });
 }
