@@ -4,6 +4,10 @@
 
 * TBD
 
+## sentry-cli 1.52.1
+
+* fix: Respect `configFile` for release commands invoked through JS API (#700)
+
 ## sentry-cli 1.52.0
 
 * feat: Add an optional argument to override the entire release name for a CodePush release (#692)
