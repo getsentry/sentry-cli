@@ -14,8 +14,10 @@ use serde::{Deserialize, Serialize};
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
+use crate::utils::file_search::ReleaseFileSearch;
+use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::TempFile;
-use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
+use crate::utils::sourcemaps::SourceMapProcessor;
 use crate::utils::system::propagate_exit_status;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 
@@ -258,8 +260,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         info!("  sourcemap path: {}", sourcemap_path.display());
 
         let mut processor = SourceMapProcessor::new();
-        processor.add(&bundle_url, &bundle_path)?;
-        processor.add(&sourcemap_url, &sourcemap_path)?;
+        processor.add(&bundle_url, ReleaseFileSearch::collect_file(bundle_path)?)?;
+        processor.add(
+            &sourcemap_url,
+            ReleaseFileSearch::collect_file(sourcemap_path)?,
+        )?;
         processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
 
