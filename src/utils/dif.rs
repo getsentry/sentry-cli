@@ -293,7 +293,7 @@ impl<'a> DifFile<'a> {
 
     pub fn is_usable(&self) -> bool {
         match self {
-            DifFile::Archive(_) => self.features().has_some(),
+            DifFile::Archive(_) => self.has_ids() && self.features().has_some(),
             DifFile::Proguard(pg) => pg.has_line_info(),
         }
     }
@@ -303,7 +303,13 @@ impl<'a> DifFile<'a> {
             None
         } else {
             Some(match self {
-                DifFile::Archive(..) => "missing debug or unwind information",
+                DifFile::Archive(..) => {
+                    if !self.has_ids() {
+                        "missing debug identifier, likely stripped"
+                    } else {
+                        "missing debug or unwind information"
+                    }
+                }
                 DifFile::Proguard(..) => "missing line information",
             })
         }
@@ -315,6 +321,10 @@ impl<'a> DifFile<'a> {
         } else {
             None
         }
+    }
+
+    fn has_ids(&self) -> bool {
+        self.ids().iter().any(|id| !id.is_nil())
     }
 }
 
