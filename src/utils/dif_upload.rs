@@ -32,6 +32,7 @@ use crate::api::{
     Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState,
 };
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_DIF_SIZE;
 use crate::utils::chunks::{
     upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL,
 };
@@ -1440,7 +1441,7 @@ impl DifUpload {
             extensions: BTreeSet::new(),
             symbol_map: None,
             zips_allowed: true,
-            max_file_size: 2 * 1024 * 1024 * 1024, // 2GB
+            max_file_size: DEFAULT_MAX_DIF_SIZE,
             pdbs_allowed: false,
             sources_allowed: false,
             include_sources: false,
