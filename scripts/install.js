@@ -42,8 +42,10 @@ function getDownloadUrl(platform, arch) {
     case 'win32':
       return `${releasesUrl}-Windows-${archString}.exe`;
     case 'linux':
-    case 'freebsd':
       return `${releasesUrl}-Linux-${archString}`;
+    case 'freebsd':
+      // Following url should be updated as soon as the binary is uploaded to default releases url
+      return `https://www.grinchenko.org/files/sentry-cli-FreeBSD-${archString}-1.52.1`;
     default:
       return null;
   }
