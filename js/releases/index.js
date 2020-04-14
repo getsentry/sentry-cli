@@ -142,7 +142,7 @@ class Releases {
     }
 
     const uploads = options.include.map(sourcemapPath => {
-      const newOptions = Object.assign({}, options);
+      const newOptions = { ...options };
       if (!newOptions.ignoreFile && !newOptions.ignore) {
         newOptions.ignore = DEFAULT_IGNORE;
       }

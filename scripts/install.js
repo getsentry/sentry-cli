@@ -15,7 +15,7 @@ const HttpsProxyAgent = require('https-proxy-agent');
 const fetch = require('node-fetch');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
-const copyFileSync = require('fs-copy-file-sync');
+// NOTE: Can be dropped in favor of `fs.mkdirSync(path, { recursive: true })` once we stop supporting Node 8.x
 const mkdirp = require('mkdirp');
 
 const helper = require('../js/helper');
@@ -114,7 +114,7 @@ function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    copyFileSync(cachedPath, outputPath);
+    fs.copyFileSync(cachedPath, outputPath);
     return Promise.resolve();
   }
 
@@ -159,8 +159,8 @@ function downloadBinary() {
         .on('error', e => reject(e))
         .on('close', () => resolve());
     }).then(() => {
-      copyFileSync(tempPath, cachedPath);
-      copyFileSync(tempPath, outputPath);
+      fs.copyFileSync(tempPath, cachedPath);
+      fs.copyFileSync(tempPath, outputPath);
       fs.unlinkSync(tempPath);
     });
   });
