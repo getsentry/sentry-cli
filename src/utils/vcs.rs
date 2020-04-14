@@ -599,7 +599,7 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "source.developers.google.com".into(),
             id: "org-slug/repo-slug".into(),
-    )
+    );
     assert_eq!(
         VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
         VcsUrl {
