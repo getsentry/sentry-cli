@@ -3,8 +3,10 @@
 
 'use strict';
 
+const child = require('child_process');
 const cli = require('../js');
-const child = require('child_process').spawn(cli.getPath(), process.argv.slice(2), {
+
+child.spawn(cli.getPath(), process.argv.slice(2), {
   stdio: 'inherit',
 });
 

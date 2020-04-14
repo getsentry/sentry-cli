@@ -11,6 +11,7 @@ const childProcess = require('child_process');
 // istanbul ignore next
 let binaryPath = path.resolve(
   __dirname,
+
   os.platform() === 'win32' ? '..\\sentry-cli.exe' : '../sentry-cli'
 );
 /**
@@ -132,7 +133,7 @@ function getPath() {
  * @returns {Promise.<string>} A promise that resolves to the standard output.
  */
 function execute(args, live, silent, configFile) {
-  const env = Object.assign({}, process.env);
+  const env = { ...process.env };
   if (configFile) {
     env.SENTRY_PROPERTIES = configFile;
   }

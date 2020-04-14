@@ -137,14 +137,15 @@ impl VcsUrl {
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
             static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"^(.+?)/_git").unwrap();
             static ref HOST_WITH_PORT: Regex = Regex::new(r"(.*):\d+$").unwrap();
-            static ref GCB_DOMAIN_RE: Regex = Regex::new(r"^source\.developers\.google\.com$").unwrap();
-            static ref GCB_GIT_PATH_RE: Regex = Regex::new(r"^p/.+/r/github_(.+?)_(.+?)(?:\.git)?$").unwrap();
+            static ref GCB_GIT_PATH_RE: Regex =
+                Regex::new(r"^p/.+/r/github_(.+?)_(.+?)(?:\.git)?$").unwrap();
         }
+        static GCB_DOMAIN: &str = "source.developers.google.com";
 
         if let Some(caps) = HOST_WITH_PORT.captures(host) {
             return VcsUrl::from_git_parts(&caps[1], path);
         }
-      
+
         if let Some(caps) = VS_DOMAIN_RE.captures(host) {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
@@ -160,7 +161,7 @@ impl VcsUrl {
                 };
             }
         }
-      
+
         if let Some(caps) = AZUREDEV_DOMAIN_RE.captures(host) {
             let hostname = &caps[1];
             if let Some(caps) = AZUREDEV_VERSION_PATH_RE.captures(path) {
@@ -177,7 +178,7 @@ impl VcsUrl {
             }
         }
 
-        if let Some(_caps) = GCB_DOMAIN_RE.captures(host) {
+        if host == GCB_DOMAIN {
             if let Some(caps) = GCB_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.into(),
@@ -595,10 +596,13 @@ fn test_url_parsing() {
         }
     );
     assert_eq!(
-        VcsUrl::parse("https://source.developers.google.com/p/project-slug/r/github_org-slug_repo-slug"),
+        VcsUrl::parse(
+            "https://source.developers.google.com/p/project-slug/r/github_org-slug_repo-slug"
+        ),
         VcsUrl {
             provider: "source.developers.google.com".into(),
             id: "org-slug/repo-slug".into(),
+        }
     );
     assert_eq!(
         VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
@@ -606,7 +610,7 @@ fn test_url_parsing() {
             provider: "gitlab.com".into(),
             id: "gitlab-org/gitlab-ce".into(),
         }
-    )
+    );
 }
 
 #[test]
