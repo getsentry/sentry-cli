@@ -1,22 +1,34 @@
 //! Provides sourcemap validation functionality.
-use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
+use std::ffi::OsStr;
 use std::fmt;
 use std::fs;
-use std::io::Read;
+use std::io::{BufWriter, Read};
 use std::iter::FromIterator;
+use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
+use std::sync::Arc;
 
 use console::{style, Term};
 use failure::{bail, Error};
 use if_chain::if_chain;
-use log::info;
+use log::{debug, info, warn};
+use parking_lot::RwLock;
+use rayon::prelude::*;
+use rayon::ThreadPoolBuilder;
+use symbolic::common::ByteView;
+use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
-use crate::api::{Api, FileContents};
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, FileContents, ProgressBarMode};
+use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::enc::decode_unknown_string;
+use crate::utils::fs::{get_sha1_checksums, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+
+/// Fallback concurrency for release file uploads.
+static DEFAULT_CONCURRENCY: usize = 4;
 
 fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);
@@ -79,6 +91,26 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
         rv.push_str(ext);
     }
     rv
+}
+
+fn url_to_bundle_path(url: &str) -> Result<String, Error> {
+    let base = Url::parse("http://~").unwrap();
+    let url = if url.starts_with("~/") {
+        base.join(&url[2..])?
+    } else {
+        base.join(url)?
+    };
+
+    let mut path = url.path();
+    if path.starts_with('/') {
+        path = &path[1..];
+    }
+
+    Ok(match url.host_str() {
+        Some("~") => format!("_/_/{}", path),
+        Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
+        None => format!("{}/_/{}", url.scheme(), path),
+    })
 }
 
 pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, &'a String)>>(
@@ -145,14 +177,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
     );
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone)]
-enum SourceType {
-    Script,
-    MinifiedScript,
-    SourceMap,
-}
-
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Copy, Clone)]
 enum LogLevel {
     Warning,
     Error,
@@ -172,10 +197,24 @@ struct Source {
     #[allow(unused)]
     file_path: PathBuf,
     contents: Vec<u8>,
-    ty: SourceType,
+    ty: SourceFileType,
     skip_upload: bool,
     headers: Vec<(String, String)>,
-    messages: RefCell<Vec<(LogLevel, String)>>,
+    messages: RwLock<Vec<(LogLevel, String)>>,
+}
+
+impl Clone for Source {
+    fn clone(&self) -> Source {
+        Source {
+            url: self.url.clone(),
+            file_path: self.file_path.clone(),
+            contents: self.contents.clone(),
+            ty: self.ty,
+            skip_upload: self.skip_upload,
+            headers: self.headers.clone(),
+            messages: RwLock::new(self.messages.read().clone()),
+        }
+    }
 }
 
 pub struct SourceMapProcessor {
@@ -185,7 +224,7 @@ pub struct SourceMapProcessor {
 
 impl Source {
     fn log(&self, level: LogLevel, msg: String) {
-        self.messages.borrow_mut().push((level, msg));
+        self.messages.write().push((level, msg));
     }
 
     fn warn(&self, msg: String) {
@@ -222,6 +261,21 @@ impl Source {
     }
 }
 
+pub struct UploadContext<'a> {
+    pub org: &'a str,
+    pub project: Option<&'a str>,
+    pub release: &'a str,
+    pub dist: Option<&'a str>,
+    pub wait: bool,
+}
+
+fn is_hermes_bytecode(slice: &[u8]) -> bool {
+    // The hermes bytecode format magic is defined here:
+    // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
+    const HERMES_MAGIC: [u8; 8] = [0xC6, 0x1F, 0xBC, 0x03, 0xC1, 0x03, 0x19, 0x1F];
+    slice.starts_with(&HERMES_MAGIC)
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -256,17 +310,33 @@ impl SourceMapProcessor {
             let mut contents: Vec<u8> = vec![];
             f.read_to_end(&mut contents)?;
             let ty = if sourcemap::is_sourcemap_slice(&contents) {
-                SourceType::SourceMap
+                SourceFileType::SourceMap
             } else if path
                 .file_name()
-                .and_then(|x| x.to_str())
+                .and_then(OsStr::to_str)
+                .map(|x| x.ends_with("bundle"))
+                .unwrap_or(false)
+                && sourcemap::ram_bundle::is_ram_bundle_slice(&contents)
+            {
+                SourceFileType::IndexedRamBundle
+            } else if path
+                .file_name()
+                .and_then(OsStr::to_str)
                 .map(|x| x.contains(".min."))
                 .unwrap_or(false)
                 || is_likely_minified_js(&contents)
             {
-                SourceType::MinifiedScript
+                SourceFileType::MinifiedSource
+            } else if is_hermes_bytecode(&contents) {
+                // This is actually a big hack:
+                // For the react-native Hermes case, we skip uploading the bytecode bundle,
+                // and rather flag it as an empty "minified source". That way, it
+                // will get a SourceMap reference, and the server side processor
+                // should deal with it accordingly.
+                contents.clear();
+                SourceFileType::MinifiedSource
             } else {
-                SourceType::Script
+                SourceFileType::Source
             };
 
             self.sources.insert(
@@ -278,7 +348,7 @@ impl SourceMapProcessor {
                     ty,
                     skip_upload: false,
                     headers: vec![],
-                    messages: RefCell::new(vec![]),
+                    messages: RwLock::new(vec![]),
                 },
             );
             pb.inc(1);
@@ -297,26 +367,27 @@ impl SourceMapProcessor {
         if let Some(url) = sm_ref.get_url() {
             let full_url = join_url(&source.url, url)?;
             info!("found sourcemap for {} at {}", &source.url, full_url);
-        } else if source.ty == SourceType::MinifiedScript {
+        } else if source.ty == SourceFileType::MinifiedSource {
             source.error("missing sourcemap!".into());
         }
         Ok(())
     }
 
     fn validate_sourcemap(&self, source: &Source) -> Result<(), Error> {
-        match sourcemap::decode_slice(&source.contents)? {
-            sourcemap::DecodedMap::Regular(sm) => {
-                for idx in 0..sm.get_source_count() {
-                    let source_url = sm.get_source(idx).unwrap_or("??");
-                    if sm.get_source_contents(idx).is_some()
-                        || self.sources.get(source_url).is_some()
-                    {
-                        info!("validator found source ({})", source_url);
-                    } else {
-                        source.warn(format!("missing sourcecode ({})", source_url));
-                    }
+        let validate_regular = |sm: &sourcemap::SourceMap| {
+            for idx in 0..sm.get_source_count() {
+                let source_url = sm.get_source(idx).unwrap_or("??");
+                if sm.get_source_contents(idx).is_some() || self.sources.get(source_url).is_some() {
+                    info!("validator found source ({})", source_url);
+                } else {
+                    source.warn(format!("missing sourcecode ({})", source_url));
                 }
             }
+        };
+
+        match sourcemap::decode_slice(&source.contents)? {
+            sourcemap::DecodedMap::Hermes(smh) => validate_regular(&smh),
+            sourcemap::DecodedMap::Regular(sm) => validate_regular(&sm),
             sourcemap::DecodedMap::Index(_) => {
                 source.warn("encountered indexed sourcemap. We cannot validate those.".into());
             }
@@ -337,9 +408,10 @@ impl SourceMapProcessor {
                 println!(
                     "  {}",
                     style(match source.ty {
-                        SourceType::Script => "Scripts",
-                        SourceType::MinifiedScript => "Minified Scripts",
-                        SourceType::SourceMap => "Source Maps",
+                        SourceFileType::Source => "Scripts",
+                        SourceFileType::MinifiedSource => "Minified Scripts",
+                        SourceFileType::SourceMap => "Source Maps",
+                        SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
                     })
                     .yellow()
                     .bold()
@@ -349,7 +421,7 @@ impl SourceMapProcessor {
 
             if source.skip_upload {
                 println!("    {} [skipped separate upload]", &source.url);
-            } else if source.ty == SourceType::MinifiedScript {
+            } else if source.ty == SourceFileType::MinifiedSource {
                 let sm_ref = source.get_sourcemap_ref();
                 if_chain! {
                     if sm_ref != sourcemap::SourceMapRef::Missing;
@@ -365,8 +437,8 @@ impl SourceMapProcessor {
                 println!("    {}", &source.url);
             }
 
-            if !source.messages.borrow().is_empty() {
-                for msg in source.messages.borrow().iter() {
+            if !source.messages.read().is_empty() {
+                for msg in source.messages.read().iter() {
                     println!("      - {}: {}", style(&msg.0).red(), msg.1);
                 }
             }
@@ -385,18 +457,19 @@ impl SourceMapProcessor {
         for source in &sources {
             pb.set_message(&source.url);
             match source.ty {
-                SourceType::Script | SourceType::MinifiedScript => {
+                SourceFileType::Source | SourceFileType::MinifiedSource => {
                     if let Err(err) = self.validate_script(&source) {
                         source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
-                SourceType::SourceMap => {
+                SourceFileType::SourceMap => {
                     if let Err(err) = self.validate_sourcemap(&source) {
                         source.error(format!("failed to process: {}", err));
                         failed = true;
                     }
                 }
+                SourceFileType::IndexedRamBundle => (),
             }
             pb.inc(1);
         }
@@ -410,6 +483,128 @@ impl SourceMapProcessor {
         bail!("Encountered problems when validating source maps.");
     }
 
+    /// Unpacks the given RAM bundle into a list of module sources and their sourcemaps
+    pub fn unpack_ram_bundle(
+        &mut self,
+        ram_bundle: &sourcemap::ram_bundle::RamBundle,
+        bundle_source_url: &str,
+    ) -> Result<(), Error> {
+        // We need this to flush all pending sourcemaps
+        self.flush_pending_sources()?;
+
+        debug!("Trying to guess the sourcemap reference");
+        let sourcemaps_references = HashSet::from_iter(
+            self.sources
+                .values()
+                .filter(|x| x.ty == SourceFileType::SourceMap)
+                .map(|x| x.url.to_string()),
+        );
+
+        let sourcemap_url =
+            match guess_sourcemap_reference(&sourcemaps_references, bundle_source_url) {
+                Ok(filename) => {
+                    let (path, _, _) = split_url(bundle_source_url);
+                    unsplit_url(path, &filename, None)
+                }
+                Err(_) => {
+                    warn!("Sourcemap reference for {} not found!", bundle_source_url);
+                    return Ok(());
+                }
+            };
+        debug!(
+            "Sourcemap reference for {} found: {}",
+            bundle_source_url, sourcemap_url
+        );
+
+        let sourcemap_content = match self.sources.get(&sourcemap_url) {
+            Some(source) => &source.contents,
+            None => {
+                warn!(
+                    "Cannot find the sourcemap for the RAM bundle using the URL: {}, skipping",
+                    sourcemap_url
+                );
+                return Ok(());
+            }
+        };
+
+        let sourcemap_index = match sourcemap::decode_slice(sourcemap_content)? {
+            sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
+            _ => {
+                warn!("Invalid sourcemap type for RAM bundle, skipping");
+                return Ok(());
+            }
+        };
+
+        // We don't need the RAM bundle sourcemap itself
+        self.sources.remove(&sourcemap_url);
+
+        let ram_bundle_iter =
+            sourcemap::ram_bundle::split_ram_bundle(&ram_bundle, &sourcemap_index).unwrap();
+        for result in ram_bundle_iter {
+            let (name, sourceview, sourcemap) = result?;
+
+            debug!("Inserting source for {}", name);
+            let source_url = join_url(&bundle_source_url, &name)?;
+            self.sources.insert(
+                source_url.clone(),
+                Source {
+                    url: source_url.clone(),
+                    file_path: PathBuf::from(name.clone()),
+                    contents: sourceview.source().as_bytes().to_vec(),
+                    ty: SourceFileType::MinifiedSource,
+                    skip_upload: false,
+                    headers: vec![],
+                    messages: RwLock::new(vec![]),
+                },
+            );
+
+            debug!("Inserting sourcemap for {}", name);
+            let sourcemap_name = format!("{}.map", name);
+            let sourcemap_url = join_url(bundle_source_url, &sourcemap_name)?;
+            let mut sourcemap_content: Vec<u8> = vec![];
+            sourcemap.to_writer(&mut sourcemap_content)?;
+            self.sources.insert(
+                sourcemap_url.clone(),
+                Source {
+                    url: sourcemap_url.clone(),
+                    file_path: PathBuf::from(sourcemap_name),
+                    contents: sourcemap_content,
+                    ty: SourceFileType::SourceMap,
+                    skip_upload: false,
+                    headers: vec![],
+                    messages: RwLock::new(vec![]),
+                },
+            );
+        }
+        Ok(())
+    }
+
+    /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
+    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<(), Error> {
+        let mut ram_bundles = Vec::new();
+
+        // Drain RAM bundles from self.sources
+        for (url, source) in mem::take(&mut self.sources).into_iter() {
+            if source.ty == SourceFileType::IndexedRamBundle {
+                ram_bundles.push(source);
+            } else {
+                self.sources.insert(url, source);
+            }
+        }
+
+        for bundle_source in ram_bundles {
+            debug!(
+                "Parsing RAM bundle ({})...",
+                bundle_source.file_path.display()
+            );
+            let ram_bundle = sourcemap::ram_bundle::RamBundle::parse_indexed_from_slice(
+                &bundle_source.contents,
+            )?;
+            self.unpack_ram_bundle(&ram_bundle, &bundle_source.url)?;
+        }
+        Ok(())
+    }
+
     /// Automatically rewrite all source maps.
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
@@ -417,10 +612,13 @@ impl SourceMapProcessor {
         self.flush_pending_sources()?;
 
         println!("{} Rewriting sources", style(">").dim());
+
+        self.unpack_indexed_ram_bundles()?;
+
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
             pb.set_message(&source.url);
-            if source.ty != SourceType::SourceMap {
+            if source.ty != SourceFileType::SourceMap {
                 pb.inc(1);
                 continue;
             }
@@ -429,12 +627,18 @@ impl SourceMapProcessor {
                 strip_prefixes: prefixes,
                 ..Default::default()
             };
-            let sm = match sourcemap::decode_slice(&source.contents)? {
-                sourcemap::DecodedMap::Regular(sm) => sm.rewrite(&options)?,
-                sourcemap::DecodedMap::Index(smi) => smi.flatten_and_rewrite(&options)?,
-            };
             let mut new_source: Vec<u8> = Vec::new();
-            sm.to_writer(&mut new_source)?;
+            match sourcemap::decode_slice(&source.contents)? {
+                sourcemap::DecodedMap::Regular(sm) => {
+                    sm.rewrite(&options)?.to_writer(&mut new_source)?
+                }
+                sourcemap::DecodedMap::Hermes(smh) => {
+                    smh.rewrite(&options)?.to_writer(&mut new_source)?
+                }
+                sourcemap::DecodedMap::Index(smi) => smi
+                    .flatten_and_rewrite(&options)?
+                    .to_writer(&mut new_source)?,
+            };
             source.contents = new_source;
             pb.inc(1);
         }
@@ -449,23 +653,23 @@ impl SourceMapProcessor {
             self.sources
                 .iter()
                 .map(|x| x.1)
-                .filter(|x| x.ty == SourceType::SourceMap)
+                .filter(|x| x.ty == SourceFileType::SourceMap)
                 .map(|x| x.url.to_string()),
         );
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
-            if source.ty != SourceType::MinifiedScript {
+            if source.ty != SourceFileType::MinifiedSource {
                 continue;
             }
-            // we silently ignore when we can't find a sourcemap. Maybwe we should
+            // we silently ignore when we can't find a sourcemap. Maybe we should
             // log this.
             match guess_sourcemap_reference(&sourcemaps, &source.url) {
                 Ok(target_url) => {
                     source.headers.push(("Sourcemap".to_string(), target_url));
                 }
                 Err(err) => {
-                    source.messages.borrow_mut().push((
+                    source.messages.write().push((
                         LogLevel::Warning,
                         format!("could not determine a source map reference ({})", err),
                     ));
@@ -475,21 +679,17 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    /// Uploads all files
-    pub fn upload(
-        &mut self,
-        api: &Api,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        dist: Option<&str>,
+    fn upload_files_parallel(
+        &self,
+        context: &UploadContext<'_>,
+        num_threads: usize,
     ) -> Result<(), Error> {
-        self.flush_pending_sources()?;
+        let api = Api::current();
 
         // get a list of release files first so we know the file IDs of
         // files that already exist.
         let release_files: HashMap<_, _> = api
-            .list_release_files(org, project, release)?
+            .list_release_files(context.org, context.project, context.release)?
             .into_iter()
             .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
             .collect();
@@ -497,38 +697,245 @@ impl SourceMapProcessor {
         println!(
             "{} Uploading source maps for release {}",
             style(">").dim(),
-            style(release).cyan()
+            style(context.release).cyan()
         );
 
-        let pb = make_progress_bar(self.sources.len() as u64);
-        for source in self.sources.values() {
-            pb.tick();
-            if source.skip_upload {
-                pb.inc(1);
-                continue;
-            }
-            pb.set_message(&source.url);
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} Uploading {} source map{}...\
+             \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+            style(">").dim(),
+            style(self.sources.len().to_string()).yellow(),
+            if self.sources.len() == 1 { "" } else { "s" }
+        ));
 
-            // try to delete old file if we have one
-            if let Some(old_id) = release_files.get(&(dist.map(|x| x.into()), source.url.clone())) {
-                api.delete_release_file(org, project, &release, &old_id)
-                    .ok();
-            }
+        let sources = self
+            .sources
+            .values()
+            .filter(|source| !source.skip_upload)
+            .collect::<Vec<_>>();
 
-            api.upload_release_file(
-                org,
-                project,
-                &release,
-                &FileContents::FromBytes(&source.contents),
-                &source.url,
-                dist,
-                Some(source.headers.as_slice()),
-            )?;
-            pb.inc(1);
-        }
+        let total_bytes = sources
+            .iter()
+            .map(|source| source.contents.len() as u64)
+            .sum();
+
+        let pb = Arc::new(ProgressBar::new(total_bytes));
+        pb.set_style(progress_style);
+
+        let pool = ThreadPoolBuilder::new().num_threads(num_threads).build()?;
+        let bytes = Arc::new(RwLock::new(vec![0u64; sources.len()]));
+
+        pool.install(|| {
+            sources
+                .into_par_iter()
+                .enumerate()
+                .map(|(index, source)| -> Result<(), Error> {
+                    let api = Api::current();
+                    let mode = ProgressBarMode::Shared((
+                        pb.clone(),
+                        source.contents.len() as u64,
+                        index,
+                        bytes.clone(),
+                    ));
+
+                    if let Some(old_id) =
+                        release_files.get(&(context.dist.map(|x| x.into()), source.url.clone()))
+                    {
+                        api.delete_release_file(
+                            context.org,
+                            context.project,
+                            &context.release,
+                            &old_id,
+                        )
+                        .ok();
+                    }
+
+                    api.upload_release_file(
+                        context.org,
+                        context.project,
+                        context.release,
+                        &FileContents::FromBytes(&source.contents),
+                        &source.url,
+                        context.dist,
+                        Some(source.headers.as_slice()),
+                        mode,
+                    )?;
+
+                    Ok(())
+                })
+                .collect::<Result<(), _>>()
+        })?;
+
         pb.finish_and_clear();
 
+        Ok(())
+    }
+
+    fn build_artifact_bundle(&self, context: &UploadContext<'_>) -> Result<TempFile, Error> {
+        let sources = self
+            .sources
+            .values()
+            .filter(|source| !source.skip_upload)
+            .collect::<Vec<_>>();
+
+        let progress_style = ProgressStyle::default_bar().template(
+            "{prefix:.dim} Bundling files for upload... {msg:.dim}\
+             \n{wide_bar}  {pos}/{len}",
+        );
+
+        let progress = ProgressBar::new(sources.len() as u64);
+        progress.set_style(progress_style);
+        progress.set_prefix(">");
+
+        let archive = TempFile::create()?;
+        let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
+
+        bundle.set_attribute("org".to_owned(), context.org.to_owned());
+        if let Some(project) = context.project {
+            bundle.set_attribute("project".to_owned(), project.to_owned());
+        }
+        bundle.set_attribute("release".to_owned(), context.release.to_owned());
+        if let Some(dist) = context.dist {
+            bundle.set_attribute("dist".to_owned(), dist.to_owned());
+        }
+
+        for source in self.sources.values() {
+            progress.inc(1);
+            progress.set_message(&source.url);
+
+            let mut info = SourceFileInfo::new();
+            info.set_ty(source.ty);
+            info.set_url(source.url.clone());
+            for (k, v) in &source.headers {
+                info.add_header(k.clone(), v.clone());
+            }
+
+            let bundle_path = url_to_bundle_path(&source.url)?;
+            bundle.add_file(bundle_path, source.contents.as_slice(), info)?;
+        }
+
+        bundle.finish()?;
+
+        progress.finish_and_clear();
+        println!(
+            "{} Bundled {} {} for upload",
+            style(">").dim(),
+            style(sources.len()).yellow(),
+            match sources.len() {
+                1 => "file",
+                _ => "files",
+            }
+        );
+
+        Ok(archive)
+    }
+
+    fn upload_files_chunked(
+        &self,
+        context: &UploadContext<'_>,
+        options: &ChunkUploadOptions,
+    ) -> Result<(), Error> {
+        let archive = self.build_artifact_bundle(&context)?;
+
+        let progress_style =
+            ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+
+        let progress = ProgressBar::new_spinner();
+        progress.enable_steady_tick(100);
+        progress.set_style(progress_style);
+
+        let view = ByteView::open(archive.path())?;
+        let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
+        let chunks = view
+            .chunks(options.chunk_size as usize)
+            .zip(checksums.iter())
+            .map(|(data, checksum)| Chunk((*checksum, data)))
+            .collect::<Vec<_>>();
+
+        progress.finish_and_clear();
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} Uploading release files...\
+             \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+            style(">").dim(),
+        ));
+
+        upload_chunks(&chunks, options, progress_style)?;
+        println!("{} Uploaded release files to Sentry", style(">").dim(),);
+
+        let progress_style =
+            ProgressStyle::default_spinner().template("{spinner} Processing files...");
+
+        let progress = ProgressBar::new_spinner();
+        progress.enable_steady_tick(100);
+        progress.set_style(progress_style);
+
+        let api = Api::current();
+        let response = loop {
+            let response =
+                api.assemble_artifacts(context.org, context.release, checksum, &checksums)?;
+
+            // Poll until there is a response, unless the user has specified to skip polling. In
+            // that case, we return the potentially partial response from the server. This might
+            // still contain a cached error.
+            if !context.wait || response.state.is_finished() {
+                break response;
+            }
+
+            std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
+        };
+
+        if response.state.is_err() {
+            let message = match response.detail {
+                Some(ref detail) => detail,
+                None => "unknown error",
+            };
+
+            bail!("Failed to process uploaded files: {}", message);
+        }
+
+        progress.finish_and_clear();
+
+        if response.state.is_pending() {
+            println!("{} File upload complete", style(">").dim());
+        } else {
+            println!("{} File processing complete", style(">").dim());
+        }
+
+        Ok(())
+    }
+
+    fn do_upload(&self, context: &UploadContext<'_>) -> Result<(), Error> {
+        let api = Api::current();
+
+        let chunk_options = api.get_chunk_upload_options(context.org)?;
+        if let Some(ref chunk_options) = chunk_options {
+            if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
+                return self.upload_files_chunked(context, chunk_options);
+            }
+        }
+
+        // Do not permit uploads of more than 20k files if the server does not
+        // support artifact bundles.  This is a termporary downside protection to
+        // protect users from uploading more sources than we support.
+        if self.sources.len() > 20_000 {
+            bail!(
+                "Too many sources: {} exceeds maximum allowed files per release",
+                self.sources.len()
+            );
+        }
+
+        let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
+        self.upload_files_parallel(context, concurrency)
+    }
+
+    /// Uploads all files
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
+        self.flush_pending_sources()?;
+
+        self.do_upload(context)?;
         self.dump_log("Source Map Upload Report");
+
         Ok(())
     }
 }
@@ -549,6 +956,10 @@ fn test_split_url() {
         split_url("/foo.deadbeef0123.js"),
         (Some(""), "foo", Some("deadbeef0123.js"))
     );
+    assert_eq!(
+        split_url("/foo/bar/baz.js"),
+        (Some("/foo/bar"), "baz", Some("js"))
+    );
 }
 
 #[test]
@@ -557,4 +968,24 @@ fn test_unsplit_url() {
     assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
     assert_eq!(&unsplit_url(None, "foo", None), "foo");
     assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
+}
+
+#[test]
+fn test_join() {
+    assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
+    assert_eq!(
+        &join_url("app:///", "/foo.html").unwrap(),
+        "app:///foo.html"
+    );
+    assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
+    assert_eq!(
+        &join_url("https:///example.com/", "foo.html").unwrap(),
+        "https://example.com/foo.html"
+    );
+    assert_eq!(
+        &join_url("https://example.com/", "foo.html").unwrap(),
+        "https://example.com/foo.html"
+    );
 }

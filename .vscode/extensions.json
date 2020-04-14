@@ -2,10 +2,16 @@
     // See http://go.microsoft.com/fwlink/?LinkId=827846
     // for the documentation about the extensions.json format
     "recommendations": [
-        "EditorConfig.editorconfig",
-        "rust-lang.rust",
         "esbenp.prettier-vscode",
         "dbaeumer.vscode-eslint",
-        "Orta.vscode-jest"
+        "Orta.vscode-jest",
+        // TOML language support
+        "bungcip.better-toml",
+        // Rust language server
+        "matklad.rust-analyzer",
+        // Crates.io dependency versions
+        "serayuzgur.crates",
+        // Debugger support for Rust and native
+        "vadimcn.vscode-lldb"
     ]
 }

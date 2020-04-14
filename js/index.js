@@ -2,6 +2,7 @@
 
 const pkgInfo = require('../package.json');
 const helper = require('./helper');
+const Releases = require('./releases');
 
 /**
  * Interface to and wrapper around the `sentry-cli` executable.
@@ -26,11 +27,15 @@ class SentryCli {
    * overridden.
    *
    * @param {string} [configFile] Relative or absolute path to the configuration file.
+   * @param {Object} [options] More options to pass to the CLI
    */
-  constructor(configFile) {
+  constructor(configFile, options) {
     if (typeof configFile === 'string') {
-      process.env.SENTRY_PROPERTIES = configFile;
+      this.configFile = configFile;
     }
+    this.options = options || { silent: false };
+
+    this.releases = new Releases(Object.assign({}, this.options, { configFile }));
   }
 
   /**
@@ -56,10 +61,8 @@ class SentryCli {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return helper.execute(args, live);
+    return helper.execute(args, live, this.options.silent, this.configFile);
   }
 }
-
-SentryCli.prototype.releases = require('./releases');
 
 module.exports = SentryCli;

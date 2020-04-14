@@ -15,9 +15,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let api = Api::get_current();
+    let api = Api::current();
 
-    let config = Config::get_current();
+    let config = Config::current();
     let org = config.get_org(matches)?;
     let repos = api.list_organization_repos(&org)?;
 
@@ -29,7 +29,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             .add_row()
             .add(&repo.name)
             .add(&repo.provider.name)
-            .add(&repo.url.as_ref().map(|x| x.as_str()).unwrap_or("-"));
+            .add(&repo.url.as_deref().unwrap_or("-"));
     }
 
     if table.is_empty() {

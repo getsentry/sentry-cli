@@ -50,7 +50,7 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
 }
 
 fn get_config_status_json() -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let mut rv = ConfigStatus::default();
 
     let (org, project) = config.get_org_and_project_defaults();
@@ -63,7 +63,7 @@ fn get_config_status_json() -> Result<(), Error> {
         Auth::Token(_) => "token".into(),
         Auth::Key(_) => "api_key".into(),
     });
-    rv.auth.successful = config.get_auth().is_some() && Api::get_current().get_auth_info().is_ok();
+    rv.auth.successful = config.get_auth().is_some() && Api::current().get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();
 
     serde_json::to_writer_pretty(&mut io::stdout(), &rv)?;
@@ -76,9 +76,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         return get_config_status_json();
     }
 
-    let config = Config::get_current();
+    let config = Config::current();
     let (org, project) = config.get_org_and_project_defaults();
-    let info_rv = Api::get_current().get_auth_info();
+    let info_rv = Api::current().get_auth_info();
     let errors =
         project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
 

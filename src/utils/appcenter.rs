@@ -130,9 +130,22 @@ pub fn get_react_native_appcenter_release(
     package: &AppCenterPackage,
     platform: &str,
     bundle_id_override: Option<&str>,
+    version_name_override: Option<&str>,
+    release_name_override: Option<&str>,
 ) -> Result<String, Error> {
-    if let Some(bundle_id) = bundle_id_override {
-        return Ok(format!("{}-codepush:{}", bundle_id, package.label));
+    let bundle_id_ovrr = bundle_id_override.unwrap_or("");
+    let version_name_ovrr = version_name_override.unwrap_or("");
+    let release_name_ovrr = release_name_override.unwrap_or("");
+
+    if release_name_ovrr != "" {
+        return Ok(release_name_ovrr.to_string());
+    }
+
+    if bundle_id_ovrr != "" && version_name_ovrr != "" {
+        return Ok(format!(
+            "{}-{}-codepush:{}",
+            bundle_id_ovrr, version_name_ovrr, package.label
+        ));
     }
 
     if platform == "ios" {
@@ -143,12 +156,26 @@ pub fn get_react_native_appcenter_release(
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
 
-        for entry_rv in glob_with("ios/*.xcodeproj", &opts)? {
+        for entry_rv in glob_with("ios/*.xcodeproj", opts)? {
             if let Ok(entry) = entry_rv {
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                     if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
-                        return Ok(format!("{}-codepush:{}", release_name, package.label));
+                        let vec: Vec<&str> = release_name.split('-').collect();
+                        let bundle_id = if bundle_id_ovrr == "" {
+                            vec[0]
+                        } else {
+                            bundle_id_ovrr
+                        };
+                        let version_name = if version_name_ovrr == "" {
+                            vec[1]
+                        } else {
+                            version_name_ovrr
+                        };
+                        return Ok(format!(
+                            "{}-{}-codepush:{}",
+                            bundle_id, version_name, package.label
+                        ));
                     }
                 }
             }
@@ -162,7 +189,10 @@ pub fn get_react_native_appcenter_release(
             if android_folder.is_dir();
             then {
                 if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
-                    return Ok(format!("{}-codepush:{}", release_name, package.label));
+                    let vec: Vec<&str> = release_name.split('-').collect();
+                    let bundle_id = if bundle_id_ovrr == "" { vec[0] } else { bundle_id_ovrr };
+                    let version_name = if version_name_ovrr == "" { vec[1] } else { version_name_ovrr };
+                    return Ok(format!("{}-{}-codepush:{}", bundle_id, version_name, package.label));
                 } else {
                     bail!("Could not parse app id from build.gradle");
                 }

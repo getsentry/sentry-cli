@@ -51,11 +51,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let mut event = Event::default();
 
-    event.environment = config.get_environment().map(|e| e.into());
-    event.release = detect_release_name().ok().map(|r| r.into());
+    event.environment = config.get_environment().map(Into::into);
+    event.release = detect_release_name().ok().map(Into::into);
     event.sdk = Some(get_sdk_info());
     event.extra.insert(
         "environ".into(),
@@ -114,11 +114,7 @@ fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
                 None => continue,
             };
 
-            let filename = frame
-                .filename
-                .as_ref()
-                .map(|s| s.as_str())
-                .expect("frame without location");
+            let filename = frame.filename.as_deref().expect("frame without location");
 
             if !source_caches.contains_key(filename) {
                 if let Ok(f) = fs::File::open(filename) {

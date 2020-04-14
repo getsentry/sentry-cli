@@ -1,7 +1,8 @@
 use std::env;
+use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use failure::{bail, Error};
 use if_chain::if_chain;
@@ -14,12 +15,12 @@ use crate::utils::xcode::InfoPlist;
 
 pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
     let here = path.unwrap_or(env::current_dir()?);
-    let platform = match here.file_name().and_then(|x| x.to_str()) {
+    let platform = match here.file_name().and_then(OsStr::to_str) {
         Some("android") => "android",
         Some("ios") => "ios",
         _ => return Ok(None),
     };
-    let base = match here.parent().and_then(|x| x.parent()) {
+    let base = match here.parent().and_then(Path::parent) {
         Some(path) => path,
         None => return Ok(None),
     };
@@ -89,8 +90,22 @@ pub fn detect_release_name() -> Result<String, Error> {
         return Ok(release);
     }
 
-    // try heroku: https://docs.sentry.io/integrations/heroku/#configure-releases
+    // try Heroku #1: https://docs.sentry.io/workflow/integrations/legacy-integrations/heroku/#configure-releases
     if let Ok(release) = env::var("HEROKU_SLUG_COMMIT") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
+    // try Heroku #2 https://devcenter.heroku.com/changelog-items/630
+    if let Ok(release) = env::var("SOURCE_VERSION") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
+    // try AWS CodeBuild: https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-env-vars.html
+    if let Ok(release) = env::var("CODEBUILD_RESOLVED_SOURCE_VERSION") {
         if !release.is_empty() {
             return Ok(release);
         }

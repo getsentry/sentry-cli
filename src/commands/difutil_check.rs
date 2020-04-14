@@ -52,7 +52,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("{}", style("Debug Info File Check").dim().bold());
-    match dif.class() {
+    match dif.kind() {
         Some(class) => println!(
             "  Type: {} {:#}",
             style(dif.ty()).cyan(),
@@ -62,17 +62,28 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     println!("  Contained debug identifiers:");
-    for (id, cpu_type) in dif.variants() {
-        match cpu_type {
-            Some(cpu_type) => println!("    > {} ({})", style(id).dim(), style(cpu_type).cyan()),
-            None => println!("    > {}", style(id).dim()),
+    for variant in dif.variants() {
+        match variant.arch {
+            Some(ref cpu_type) => println!(
+                "    > debug_id: {} ({})",
+                style(variant.debug_id).dim(),
+                style(cpu_type).cyan()
+            ),
+            None => println!("    > debug_id: {}", style(variant.debug_id).dim()),
+        }
+        match (variant.code_id, variant.arch) {
+            (Some(ref code_id), Some(ref cpu_type)) => println!(
+                "    > code_id: {} ({})",
+                style(code_id).dim(),
+                style(cpu_type).cyan()
+            ),
+            (Some(ref code_id), None) => println!("    > code_id: {}", style(code_id).dim()),
+            _ => {}
         }
     }
 
     println!("  Contained debug information:");
-    for feature in dif.features() {
-        println!("    > {}", feature)
-    }
+    println!("    > {}", dif.features());
 
     if let Some(msg) = dif.get_note() {
         println!("  Note: {}", msg);

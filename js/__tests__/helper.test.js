@@ -19,9 +19,7 @@ describe('SentryCli helper', () => {
 
   test('call sentry-cli with wrong command', () => {
     expect.assertions(1);
-    return helper
-      .execute(['fail'])
-      .catch(e => expect(e.message).toMatch('Command failed:'));
+    return helper.execute(['fail']).catch(e => expect(e.message).toMatch('Command failed:'));
   });
 
   test('call prepare command add default ignore', () => {
@@ -77,13 +75,16 @@ describe('SentryCli helper', () => {
       helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { sourceMapReference: true })
     ).toEqual(['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null']);
 
-    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: true })).toEqual(
-      ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null', '--rewrite']
-    );
+    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: true })).toEqual([
+      'releases',
+      'files',
+      'release',
+      'upload-sourcemaps',
+      '/dev/null',
+      '--rewrite',
+    ]);
 
-    expect(
-      helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: false })
-    ).toEqual([
+    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: false })).toEqual([
       'releases',
       'files',
       'release',
@@ -110,9 +111,7 @@ describe('SentryCli helper', () => {
       'js',
     ]);
 
-    expect(
-      helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlPrefix: '~/' })
-    ).toEqual([
+    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlPrefix: '~/' })).toEqual([
       'releases',
       'files',
       'release',
@@ -122,17 +121,17 @@ describe('SentryCli helper', () => {
       '~/',
     ]);
 
-    expect(
-      helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlSuffix: '?hash=1337' })
-    ).toEqual([
-      'releases',
-      'files',
-      'release',
-      'upload-sourcemaps',
-      '/dev/null',
-      '--url-suffix',
-      '?hash=1337',
-    ]);
+    expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlSuffix: '?hash=1337' })).toEqual(
+      [
+        'releases',
+        'files',
+        'release',
+        'upload-sourcemaps',
+        '/dev/null',
+        '--url-suffix',
+        '?hash=1337',
+      ]
+    );
 
     expect(
       helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { ignoreFile: '/js.ignore' })

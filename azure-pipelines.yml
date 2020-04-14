@@ -1,0 +1,99 @@
+trigger:
+  - master
+  - release/*
+
+pr: none
+
+jobs:
+  # Build: Linux
+  - job: sentry_cli_linux
+    displayName: "Build: Linux"
+    pool:
+      vmImage: "ubuntu-16.04"
+    strategy:
+      matrix:
+        i686:
+          target: i686-unknown-linux-musl
+          docker_tag: i686-musl
+        x86_64:
+          target: x86_64-unknown-linux-musl
+          docker_tag: x86_64-musl
+    steps:
+      - template: azure-pipelines/prescript-common.yml
+      - bash: |
+          set -eux
+          bash scripts/build-in-docker.sh
+        env:
+          TARGET: $(target)
+          DOCKER_TAG: $(docker_tag)
+
+  # Build: MacOS
+  - job: sentry_cli_macos
+    displayName: "Build: MacOS x86_64"
+    pool:
+      vmImage: "macos-10.13"
+    steps:
+      - template: azure-pipelines/prescript-common.yml
+      - template: azure-pipelines/install-rust.yml
+      - bash: |
+          set -eux
+          cargo build --release --locked
+        env:
+          TARGET: x86_64-apple-darwin
+
+  # Build: Windows
+  - job: sentry_cli_windows
+    displayName: "Build: Windows"
+    pool:
+      vmImage: "vs2017-win2016"
+    strategy:
+      matrix:
+        i686:
+          target_host: i686-pc-windows-msvc
+        x86_64:
+          target_host: x86_64-pc-windows-msvc
+    steps:
+      - template: azure-pipelines/prescript-common.yml
+      - template: azure-pipelines/install-rust.yml
+        parameters:
+          target_host: $(target_host)
+      - bash: |
+          set -eux
+          export RUSTFLAGS=-Ctarget-feature=+crt-static
+          cargo build --release --locked
+        env:
+          arch: x86_64
+
+  # Checks
+  - job: check_format
+    displayName: "Check: format"
+    pool:
+      vmImage: "macos-10.13"
+    steps:
+      - template: azure-pipelines/prescript-common.yml
+      - template: azure-pipelines/install-rust.yml
+      - bash: |
+          set -eux
+          make format-check
+
+  - job: check_lint
+    displayName: "Check: lint"
+    pool:
+      vmImage: "macos-10.13"
+    steps:
+      - template: azure-pipelines/prescript-common.yml
+      - template: azure-pipelines/install-rust.yml
+      - bash: |
+          set -eux
+          make lint
+
+  - job: check_test_rust
+    displayName: "Test: Rust"
+    pool:
+      vmImage: "macos-10.13"
+    steps:
+      - template: azure-pipelines/prescript-common.yml
+      - template: azure-pipelines/install-rust.yml
+      - bash: |
+          set -eux
+          make test

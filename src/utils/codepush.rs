@@ -14,14 +14,14 @@ use crate::utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use crate::utils::xcode::{InfoPlist, XcodeProjectInfo};
 
 #[cfg(not(windows))]
-static CODEPUSH_BIN_PATH: &'static str = "code-push";
+static CODEPUSH_BIN_PATH: &str = "code-push";
 #[cfg(not(windows))]
-static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push";
+static CODEPUSH_NPM_PATH: &str = "node_modules/.bin/code-push";
 
 #[cfg(windows)]
-static CODEPUSH_BIN_PATH: &'static str = "code-push.cmd";
+static CODEPUSH_BIN_PATH: &str = "code-push.cmd";
 #[cfg(windows)]
-static CODEPUSH_NPM_PATH: &'static str = "node_modules/.bin/code-push.cmd";
+static CODEPUSH_NPM_PATH: &str = "node_modules/.bin/code-push.cmd";
 
 #[derive(Debug, Deserialize)]
 pub struct CodePushPackage {
@@ -113,7 +113,7 @@ pub fn get_react_native_codepush_release(
         }
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
-        for entry_rv in glob_with("ios/*.xcodeproj", &opts)? {
+        for entry_rv in glob_with("ios/*.xcodeproj", opts)? {
             if let Ok(entry) = entry_rv {
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {

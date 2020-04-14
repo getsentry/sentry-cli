@@ -1,6 +1,7 @@
 //! Implements a command for issue management.
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{Error, ResultExt};
+use log::info;
 
 use crate::api::{Api, IssueChanges, IssueFilter};
 use crate::config::Config;
@@ -73,7 +74,7 @@ fn execute_change(
     filter: &IssueFilter,
     changes: &IssueChanges,
 ) -> Result<(), Error> {
-    if Api::get_current().bulk_update_issue(org, project, filter, changes)? {
+    if Api::current().bulk_update_issue(org, project, filter, changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
             println!("  new status: {}", status);
@@ -85,10 +86,15 @@ fn execute_change(
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let filter = get_filter_from_matches(matches)?;
     let mut changes: IssueChanges = Default::default();
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
 
     if let Some(sub_matches) = matches.subcommand_matches("resolve") {
         if sub_matches.is_present("next_release") {

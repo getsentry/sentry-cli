@@ -22,6 +22,7 @@ cache:
 
 before_install:
   - npm install -g @zeus-ci/cli
+  - git fetch --tags
 
 matrix:
   include:
@@ -37,10 +38,10 @@ matrix:
       language: rust
       script: make test
 
-    - name: "test: node 4"
+    - name: "test: node 8"
       os: linux
       language: node_js
-      node_js: "4"
+      node_js: "8"
       install: true
       env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
       script: npm install && npm test
@@ -49,6 +50,14 @@ matrix:
       os: linux
       language: node_js
       node_js: "10"
+      install: true
+      env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
+      script: npm install && npm test
+
+    - name: "test: node 12"
+      os: linux
+      language: node_js
+      node_js: "12"
       install: true
       env: SENTRYCLI_LOCAL_CDNURL="http://localhost:8999/"
       script: npm install && npm test

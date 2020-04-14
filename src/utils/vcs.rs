@@ -44,13 +44,21 @@ struct VcsUrl {
     pub id: String,
 }
 
+macro_rules! log_match {
+    ($ex:expr) => {{
+        let val = $ex;
+        info!("  -> found matching revision {}", val);
+        val
+    }};
+}
+
 fn parse_rev_range(rng: &str) -> (Option<String>, String) {
     if rng == "" {
         return (None, "HEAD".into());
     }
     let mut iter = rng.rsplitn(2, "..");
     let rev = iter.next().unwrap_or("HEAD");
-    (iter.next().map(|x| x.to_string()), rev.to_string())
+    (iter.next().map(str::to_owned), rev.to_string())
 }
 
 impl CommitSpec {
@@ -98,7 +106,8 @@ impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
         lazy_static! {
             static ref GIT_URL_RE: Regex =
-                Regex::new(r"^(?:ssh|https?)://(?:[^@]+@)?([^/]+)/(.+)$").unwrap();
+                Regex::new(r"^(?:(?:git\+)?(?:git|ssh|https?))://(?:[^@]+@)?([^/]+)/(.+)$")
+                    .unwrap();
             static ref GIT_SSH_RE: Regex = Regex::new(r"^(?:[^@]+@)?([^/]+):(.+)$").unwrap();
         }
 
@@ -117,18 +126,53 @@ impl VcsUrl {
     }
 
     fn from_git_parts(host: &str, path: &str) -> VcsUrl {
+        // Azure Devops has multiple domains and multiple URL styles for the
+        // various different API versions.
         lazy_static! {
+            static ref AZUREDEV_DOMAIN_RE: Regex =
+                Regex::new(r"^(?:ssh\.)?(dev.azure.com)$").unwrap();
+            static ref AZUREDEV_VERSION_PATH_RE: Regex =
+                Regex::new(r"^v3/([^/]+)/([^/]+)").unwrap();
             static ref VS_DOMAIN_RE: Regex = Regex::new(r"^([^.]+)\.visualstudio.com$").unwrap();
             static ref VS_GIT_PATH_RE: Regex = Regex::new(r"^_git/(.+?)(?:\.git)?$").unwrap();
+            static ref VS_TRAILING_GIT_PATH_RE: Regex = Regex::new(r"^(.+?)/_git").unwrap();
+            static ref HOST_WITH_PORT: Regex = Regex::new(r"(.*):\d+$").unwrap();
             static ref GCB_DOMAIN_RE: Regex = Regex::new(r"^source\.developers\.google\.com$").unwrap();
             static ref GCB_GIT_PATH_RE: Regex = Regex::new(r"^p/.+/r/github_(.+?)_(.+?)(?:\.git)?$").unwrap();
         }
+
+        if let Some(caps) = HOST_WITH_PORT.captures(host) {
+            return VcsUrl::from_git_parts(&caps[1], path);
+        }
+      
         if let Some(caps) = VS_DOMAIN_RE.captures(host) {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.into(),
-                    id: format!("{}/{}", username, &caps[1]),
+                    provider: host.to_lowercase(),
+                    id: format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase()),
+                };
+            }
+            if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: host.to_lowercase(),
+                    id: caps[1].to_lowercase(),
+                };
+            }
+        }
+      
+        if let Some(caps) = AZUREDEV_DOMAIN_RE.captures(host) {
+            let hostname = &caps[1];
+            if let Some(caps) = AZUREDEV_VERSION_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: hostname.into(),
+                    id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+                };
+            }
+            if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
+                return VcsUrl {
+                    provider: hostname.to_lowercase(),
+                    id: caps[1].to_lowercase(),
                 };
             }
         }
@@ -143,8 +187,8 @@ impl VcsUrl {
         }
 
         VcsUrl {
-            provider: host.into(),
-            id: strip_git_suffix(path).into(),
+            provider: host.to_lowercase(),
+            id: strip_git_suffix(path).to_lowercase(),
         }
     }
 }
@@ -170,6 +214,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "integrations:github_enterprise"
             | "integrations:gitlab"
             | "integrations:bitbucket"
+            | "integrations:bitbucket_server"
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
                     debug!("  Got reference URL for repo {}: {}", repo, url);
@@ -195,15 +240,8 @@ fn find_matching_rev(
     spec: &CommitSpec,
     repos: &[Repo],
     disable_discovery: bool,
+    remote_name: Option<String>,
 ) -> Result<Option<String>, Error> {
-    macro_rules! log_match {
-        ($ex:expr) => {{
-            let val = $ex;
-            info!("  -> found matching revision {}", val);
-            val
-        }};
-    }
-
     info!("Resolving {} ({})", &reference, spec);
 
     let r = match reference {
@@ -225,19 +263,35 @@ fn find_matching_rev(
     // direct reference in root repository found.  If we are in discovery
     // mode we want to also check for matching URLs.
     if_chain! {
-        if let Ok(remote) = repo.find_remote("origin");
+        if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
         if let Some(url) = remote.url();
         then {
             if !discovery || is_matching_url(url, &reference_url) {
-            debug!("  found match: {} == {}", url, &reference_url);
+                debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
                 let head = repo.revparse_single(r)?;
+                if let Some(tag) = head.as_tag(){
+                    if let Ok(tag_commit) = tag.target() {
+                        return Ok(Some(log_match!(tag_commit.id().to_string())));
+                    }
+                }
                 return Ok(Some(log_match!(head.id().to_string())));
             } else {
                 debug!("  not a match: {} != {}", url, &reference_url);
             }
         }
     }
+    if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
+        return Ok(submodule_match);
+    }
+    info!("  -> no matching revision found");
+    Ok(None)
+}
 
+fn find_matching_submodule(
+    r: &str,
+    reference_url: String,
+    repo: git2::Repository,
+) -> Result<Option<String>, Error> {
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
@@ -270,8 +324,6 @@ fn find_matching_rev(
             }
         }
     }
-
-    info!("  -> no matching revision found");
     Ok(None)
 }
 
@@ -279,6 +331,7 @@ fn find_matching_revs(
     spec: &CommitSpec,
     repos: &[Repo],
     disable_discovery: bool,
+    remote_name: Option<String>,
 ) -> Result<(Option<String>, String), Error> {
     fn error(r: GitReference<'_>, repo: &str) -> Error {
         format_err!(
@@ -291,16 +344,21 @@ fn find_matching_revs(
         )
     }
 
-    let rev = if let Some(rev) =
-        find_matching_rev(spec.reference(), &spec, &repos[..], disable_discovery)?
-    {
+    let rev = if let Some(rev) = find_matching_rev(
+        spec.reference(),
+        &spec,
+        &repos[..],
+        disable_discovery,
+        remote_name.clone(),
+    )? {
         rev
     } else {
         return Err(error(spec.reference(), &spec.repo));
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(rv) = find_matching_rev(rev, &spec, &repos[..], disable_discovery)? {
+        if let Some(rv) = find_matching_rev(rev, &spec, &repos[..], disable_discovery, remote_name)?
+        {
             Some(rv)
         } else {
             return Err(error(rev, &spec.repo));
@@ -318,16 +376,21 @@ pub fn find_head() -> Result<String, Error> {
     Ok(head.id().to_string())
 }
 
-/// Given commit specs and repos this returns a list of head commits
-/// from it.
-pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<Ref>, Error> {
+/// Given commit specs, repos and remote_name this returns a list of head
+/// commits from it.
+pub fn find_heads(
+    specs: Option<Vec<CommitSpec>>,
+    repos: &[Repo],
+    remote_name: Option<String>,
+) -> Result<Vec<Ref>, Error> {
     let mut rv = vec![];
 
     // if commit specs were explicitly provided find head commits with
     // limited amounts of magic.
     if let Some(specs) = specs {
         for spec in &specs {
-            let (prev_rev, rev) = find_matching_revs(&spec, &repos[..], specs.len() == 1)?;
+            let (prev_rev, rev) =
+                find_matching_revs(&spec, &repos[..], specs.len() == 1, remote_name.clone())?;
             rv.push(Ref {
                 repo: spec.repo.clone(),
                 rev,
@@ -344,7 +407,13 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
                 rev: "HEAD".into(),
                 prev_rev: None,
             };
-            if let Some(rev) = find_matching_rev(spec.reference(), &spec, &repos[..], false)? {
+            if let Some(rev) = find_matching_rev(
+                spec.reference(),
+                &spec,
+                &repos[..],
+                false,
+                remote_name.clone(),
+            )? {
                 rv.push(Ref {
                     repo: repo.name.to_string(),
                     rev,
@@ -355,6 +424,67 @@ pub fn find_heads(specs: Option<Vec<CommitSpec>>, repos: &[Repo]) -> Result<Vec<
     }
 
     Ok(rv)
+}
+
+#[cfg(test)]
+use crate::api::RepoProvider;
+
+#[test]
+fn test_find_matching_rev_with_lightweight_tag() {
+    let reference = GitReference::Symbolic("1.9.2");
+    let spec = CommitSpec {
+        repo: String::from("getsentry/sentry-cli"),
+        path: None,
+        rev: String::from("1.9.2"),
+        prev_rev: Some(String::from("1.9.1")),
+    };
+
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("getsentry/sentry-cli"),
+        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
+
+    let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false, None);
+    assert_eq!(
+        res_with_lightweight_tag.unwrap(),
+        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
+    );
+}
+
+#[test]
+fn test_find_matching_rev_with_annotated_tag() {
+    let reference = GitReference::Symbolic("1.9.2-hw");
+    let spec = CommitSpec {
+        repo: String::from("getsentry/sentry-cli"),
+        path: None,
+        rev: String::from("1.9.2-hw"),
+        prev_rev: Some(String::from("1.9.1")),
+    };
+
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("getsentry/sentry-cli"),
+        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
+
+    let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false, None);
+    assert_eq!(
+        res_with_annotated_tag.unwrap(),
+        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
+    );
 }
 
 #[test]
@@ -392,6 +522,41 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "neilmanvar.visualstudio.com".into(),
             id: "neilmanvar/sentry-demo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://project@mydomain.visualstudio.com/project/repo/_git"),
+        VcsUrl {
+            provider: "mydomain.visualstudio.com".into(),
+            id: "project/repo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@ssh.dev.azure.com:v3/project/repo/repo"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "project/repo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "company/repo%20online".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://dev.azure.com/project/repo/_git/repo"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "project/repo".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse("https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"),
+        VcsUrl {
+            provider: "dev.azure.com".into(),
+            id: "company/repo%20online".into(),
         }
     );
     assert_eq!(
@@ -434,6 +599,12 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "source.developers.google.com".into(),
             id: "org-slug/repo-slug".into(),
+    )
+    assert_eq!(
+        VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
+        VcsUrl {
+            provider: "gitlab.com".into(),
+            id: "gitlab-org/gitlab-ce".into(),
         }
     )
 }
@@ -459,5 +630,37 @@ fn test_url_normalization() {
     assert!(is_matching_url(
         "https://gitlab.example.com/gitlab-org/gitlab-ce",
         "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
-    ))
+    ));
+    assert!(is_matching_url(
+        "https://gitlab.example.com/gitlab-org/GitLab-CE",
+        "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
+    ));
+    assert!(is_matching_url(
+        "https://gitlab.example.com/gitlab-org/GitLab-CE",
+        "ssh://git@gitlab.example.com:22/gitlab-org/GitLab-CE"
+    ));
+    assert!(is_matching_url(
+        "git@ssh.dev.azure.com:v3/project/repo/repo",
+        "https://dev.azure.com/project/repo/_git/repo"
+    ));
+    assert!(is_matching_url(
+        "git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online",
+        "https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"
+    ));
+    assert!(is_matching_url(
+        "git://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
+    assert!(is_matching_url(
+        "git+ssh://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
+    assert!(is_matching_url(
+        "git+http://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
+    assert!(is_matching_url(
+        "git+https://git@github.com/kamilogorek/picklerick.git",
+        "https://github.com/kamilogorek/picklerick"
+    ));
 }

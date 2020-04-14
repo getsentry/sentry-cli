@@ -10,9 +10,6 @@ pub const APP_INFO: &AppInfo = &AppInfo {
 /// The default API URL
 pub const DEFAULT_URL: &str = "https://sentry.io/";
 
-/// The protocol version of the library.
-pub const PROTOCOL_VERSION: u32 = 6;
-
 /// The version of the library
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
@@ -50,5 +47,7 @@ pub const DEFAULT_INITIAL_INTERVAL: u64 = 1000;
 pub const DEFAULT_MAX_INTERVAL: u64 = 5000;
 /// Default number of retry attempts
 pub const DEFAULT_RETRIES: u32 = 5;
+/// Default maximum file size of DIF uploads.
+pub const DEFAULT_MAX_DIF_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2GB
 
 include!(concat!(env!("OUT_DIR"), "/constants.gen.rs"));

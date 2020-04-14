@@ -1,4 +1,3 @@
-use std::collections::{BTreeMap, BTreeSet};
 use std::ffi::OsStr;
 use std::fmt;
 use std::path::Path;
@@ -7,9 +6,8 @@ use std::str;
 use failure::{bail, Error, SyncFailure};
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
-use symbolic::common::byteview::ByteView;
-use symbolic::common::types::{ObjectClass, ObjectKind};
-use symbolic::debuginfo::{DebugFeatures, DebugId, FatObject, Object, ObjectFeature, SymbolTable};
+use symbolic::common::{ByteView, CodeId, DebugId, SelfCell};
+use symbolic::debuginfo::{Archive, FileFormat, Object, ObjectKind};
 use symbolic::proguard::ProguardMappingView;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
@@ -19,6 +17,9 @@ pub enum DifType {
     Elf,
     Breakpad,
     Proguard,
+    SourceBundle,
+    Pe,
+    Pdb,
 }
 
 impl DifType {
@@ -26,6 +27,9 @@ impl DifType {
         match self {
             DifType::Dsym => "dsym",
             DifType::Elf => "elf",
+            DifType::Pe => "pe",
+            DifType::Pdb => "pdb",
+            DifType::SourceBundle => "sourcebundle",
             DifType::Breakpad => "breakpad",
             DifType::Proguard => "proguard",
         }
@@ -45,6 +49,9 @@ impl str::FromStr for DifType {
         match s {
             "dsym" => Ok(DifType::Dsym),
             "elf" => Ok(DifType::Elf),
+            "pe" => Ok(DifType::Pe),
+            "pdb" => Ok(DifType::Pdb),
+            "sourcebundle" => Ok(DifType::SourceBundle),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
             _ => bail!("Invalid debug info file type"),
@@ -52,14 +59,86 @@ impl str::FromStr for DifType {
     }
 }
 
+/// Declares which features an object may have to be uploaded.
+#[derive(Clone, Copy, Debug)]
+pub struct DifFeatures {
+    /// Includes object files with debug information.
+    pub debug: bool,
+    /// Includes object files with a symbol table.
+    pub symtab: bool,
+    /// Includes object files with stack unwind information.
+    pub unwind: bool,
+    /// Includes source information.
+    pub sources: bool,
+}
+
+impl DifFeatures {
+    pub fn all() -> Self {
+        DifFeatures {
+            debug: true,
+            symtab: true,
+            unwind: true,
+            sources: true,
+        }
+    }
+
+    pub fn none() -> Self {
+        DifFeatures {
+            debug: false,
+            symtab: false,
+            unwind: false,
+            sources: false,
+        }
+    }
+
+    fn has_some(self) -> bool {
+        self.debug || self.symtab || self.unwind || self.sources
+    }
+}
+
+impl Default for DifFeatures {
+    fn default() -> Self {
+        Self::all()
+    }
+}
+
+impl fmt::Display for DifFeatures {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut written = false;
+
+        macro_rules! append {
+            ($condition:expr, $feature:literal) => {
+                if $condition {
+                    if written {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, $feature)?;
+                    written = true;
+                }
+            };
+        }
+
+        append!(self.symtab, "symtab");
+        append!(self.debug, "debug");
+        append!(self.unwind, "unwind");
+        append!(self.sources, "sources");
+
+        if !written {
+            write!(f, "none")?;
+        }
+
+        Ok(())
+    }
+}
+
 pub enum DifFile<'a> {
-    Object(FatObject<'a>),
+    Archive(SelfCell<ByteView<'a>, Archive<'a>>),
     Proguard(ProguardMappingView<'a>),
 }
 
 impl DifFile<'static> {
     fn open_proguard<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let data = ByteView::from_path(&path).map_err(SyncFailure::new)?;
+        let data = ByteView::open(&path).map_err(SyncFailure::new)?;
         let pg = ProguardMappingView::parse(data).map_err(SyncFailure::new)?;
 
         if path.as_ref().extension() == Some(OsStr::new("txt")) || pg.has_line_info() {
@@ -69,29 +148,33 @@ impl DifFile<'static> {
         }
     }
 
-    fn open_object<P: AsRef<Path>>(path: P, kind: ObjectKind) -> Result<Self, Error> {
-        let data = ByteView::from_path(path).map_err(SyncFailure::new)?;
-        let fat = FatObject::parse(data)?;
+    fn open_object<P: AsRef<Path>>(path: P, format: FileFormat) -> Result<Self, Error> {
+        let data = ByteView::open(path).map_err(SyncFailure::new)?;
+        let archive = SelfCell::try_new(data, |d| Archive::parse(unsafe { &*d }))?;
 
-        if fat.kind() != kind {
+        if archive.get().file_format() != format {
             bail!("Unexpected file format");
         }
 
-        DifFile::from_object(fat)
+        DifFile::from_archive(archive)
     }
 
     fn try_open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         // Try to open the file and map it into memory first. This will
         // return an error if the file does not exist.
-        let data = ByteView::from_path(&path).map_err(SyncFailure::new)?;
+        let data = ByteView::open(&path).map_err(SyncFailure::new)?;
 
         // First try to open a (fat) object file. We only support a couple of
         // sub types, so for unsupported files we throw an error.
-        if let Ok(fat) = FatObject::parse(data) {
-            match fat.kind() {
-                ObjectKind::MachO => return DifFile::from_object(fat),
-                ObjectKind::Elf => return DifFile::from_object(fat),
-                ObjectKind::Breakpad => return DifFile::from_object(fat),
+        if let Ok(archive) = SelfCell::try_new(data, |d| Archive::parse(unsafe { &*d })) {
+            match archive.get().file_format() {
+                FileFormat::MachO
+                | FileFormat::Elf
+                | FileFormat::Pe
+                | FileFormat::Pdb
+                | FileFormat::Breakpad
+                | FileFormat::SourceBundle => return DifFile::from_archive(archive),
+                FileFormat::Unknown => (), // fallthrough
             }
         }
 
@@ -107,92 +190,110 @@ impl DifFile<'static> {
 
     pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<Self, Error> {
         match ty {
-            Some(DifType::Dsym) => DifFile::open_object(path, ObjectKind::MachO),
-            Some(DifType::Elf) => DifFile::open_object(path, ObjectKind::Elf),
-            Some(DifType::Breakpad) => DifFile::open_object(path, ObjectKind::Breakpad),
+            Some(DifType::Dsym) => DifFile::open_object(path, FileFormat::MachO),
+            Some(DifType::Elf) => DifFile::open_object(path, FileFormat::Elf),
+            Some(DifType::Pe) => DifFile::open_object(path, FileFormat::Pe),
+            Some(DifType::Pdb) => DifFile::open_object(path, FileFormat::Pdb),
+            Some(DifType::SourceBundle) => DifFile::open_object(path, FileFormat::SourceBundle),
+            Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
             None => DifFile::try_open(path),
         }
     }
 }
 
+#[derive(Serialize)]
+pub struct DifVariant {
+    pub debug_id: DebugId,
+    pub code_id: Option<CodeId>,
+    pub arch: Option<String>,
+}
+
 impl<'a> DifFile<'a> {
-    fn from_object(fat: FatObject<'a>) -> Result<Self, Error> {
-        if fat.object_count() < 1 {
+    fn from_archive(archive: SelfCell<ByteView<'a>, Archive<'a>>) -> Result<Self, Error> {
+        if archive.get().object_count() < 1 {
             bail!("Object file is empty");
         }
 
-        Ok(DifFile::Object(fat))
+        Ok(DifFile::Archive(archive))
     }
 
     pub fn ty(&self) -> DifType {
         match self {
-            DifFile::Object(fat) => match fat.kind() {
-                ObjectKind::MachO => DifType::Dsym,
-                ObjectKind::Breakpad => DifType::Breakpad,
-                ObjectKind::Elf => DifType::Elf,
+            DifFile::Archive(archive) => match archive.get().file_format() {
+                FileFormat::MachO => DifType::Dsym,
+                FileFormat::Breakpad => DifType::Breakpad,
+                FileFormat::Elf => DifType::Elf,
+                FileFormat::Pdb => DifType::Pdb,
+                FileFormat::Pe => DifType::Pe,
+                FileFormat::SourceBundle => DifType::SourceBundle,
+                FileFormat::Unknown => unreachable!(),
             },
             DifFile::Proguard(..) => DifType::Proguard,
         }
     }
 
-    pub fn class(&self) -> Option<ObjectClass> {
+    pub fn kind(&self) -> Option<ObjectKind> {
         match self {
-            DifFile::Object(fat) => match fat.get_object(0) {
-                Ok(Some(object)) => Some(object.class()),
+            DifFile::Archive(archive) => match archive.get().object_by_index(0) {
+                Ok(Some(object)) => Some(object.kind()),
                 _ => None,
             },
             DifFile::Proguard(..) => None,
         }
     }
 
-    pub fn variants(&self) -> BTreeMap<DebugId, Option<&'static str>> {
+    pub fn variants(&self) -> Vec<DifVariant> {
         match self {
-            DifFile::Object(fat) => fat
+            DifFile::Archive(archive) => archive
+                .get()
                 .objects()
-                .filter_map(|result| result.ok())
-                .filter_map(|object| {
-                    object
-                        .id()
-                        .map(|id| (id, Some(object.arch().unwrap_or_default().name())))
+                .filter_map(Result::ok)
+                .map(|object| DifVariant {
+                    debug_id: object.debug_id(),
+                    arch: Some(object.arch().name().to_string()),
+                    code_id: object.code_id(),
                 })
                 .collect(),
-            DifFile::Proguard(pg) => vec![(pg.uuid().into(), None)].into_iter().collect(),
+            DifFile::Proguard(pg) => vec![DifVariant {
+                debug_id: pg.uuid().into(),
+                arch: None,
+                code_id: None,
+            }],
         }
     }
 
     pub fn ids(&self) -> Vec<DebugId> {
         match self {
-            DifFile::Object(fat) => fat
+            DifFile::Archive(archive) => archive
+                .get()
                 .objects()
-                .filter_map(|result| result.ok())
-                .filter_map(|object| object.id())
+                .filter_map(Result::ok)
+                .map(|object| object.debug_id())
                 .collect(),
             DifFile::Proguard(pg) => vec![pg.uuid().into()],
         }
     }
 
-    pub fn features(&self) -> BTreeSet<ObjectFeature> {
+    pub fn features(&self) -> DifFeatures {
         match self {
-            DifFile::Object(fat) => fat
-                .objects()
-                .filter_map(|result| result.ok())
-                .flat_map(|object| object.features())
-                .collect(),
-            DifFile::Proguard(..) => {
-                let mut set = BTreeSet::new();
-                set.insert(ObjectFeature::Mapping);
-                set
+            DifFile::Archive(archive) => {
+                let mut features = DifFeatures::none();
+                for object in archive.get().objects().filter_map(Result::ok) {
+                    features.symtab = features.symtab || object.has_symbols();
+                    features.debug = features.debug || object.has_debug_info();
+                    features.unwind = features.unwind || object.has_unwind_info();
+                    features.sources = features.sources || object.has_sources();
+                }
+                features
             }
+            DifFile::Proguard(..) => DifFeatures::none(),
         }
     }
 
     pub fn is_usable(&self) -> bool {
         match self {
-            DifFile::Object(fat) => fat
-                .objects()
-                .filter_map(|result| result.ok())
-                .any(|object| !object.features().is_empty()),
+            DifFile::Archive(_) => self.has_ids() && self.features().has_some(),
             DifFile::Proguard(pg) => pg.has_line_info(),
         }
     }
@@ -202,7 +303,13 @@ impl<'a> DifFile<'a> {
             None
         } else {
             Some(match self {
-                DifFile::Object(..) => "missing debug or unwind information",
+                DifFile::Archive(..) => {
+                    if !self.has_ids() {
+                        "missing debug identifier, likely stripped"
+                    } else {
+                        "missing debug or unwind information"
+                    }
+                }
                 DifFile::Proguard(..) => "missing line information",
             })
         }
@@ -215,6 +322,10 @@ impl<'a> DifFile<'a> {
             None
         }
     }
+
+    fn has_ids(&self) -> bool {
+        self.ids().iter().any(|id| !id.is_nil())
+    }
 }
 
 impl Serialize for DifFile<'_> {
@@ -222,12 +333,10 @@ impl Serialize for DifFile<'_> {
     where
         S: Serializer,
     {
-        let features: Vec<String> = self.features().into_iter().map(|f| f.to_string()).collect();
-
         let mut state = serializer.serialize_struct("DifFile", 6)?;
         state.serialize_field("type", &self.ty())?;
         state.serialize_field("variants", &self.variants())?;
-        state.serialize_field("features", &features)?;
+        state.serialize_field("features", &self.features().to_string())?;
         state.serialize_field("is_usable", &self.is_usable())?;
         state.serialize_field("problem", &self.get_problem())?;
         state.serialize_field("note", &self.get_note())?;
@@ -245,31 +354,27 @@ pub trait DebuggingInformation {
 impl DebuggingInformation for DifFile<'_> {
     fn has_hidden_symbols(&self) -> Result<bool, Error> {
         match self {
-            DifFile::Object(fat) => fat.has_hidden_symbols(),
+            DifFile::Archive(archive) => archive.get().has_hidden_symbols(),
             _ => Ok(false),
         }
     }
 }
 
-impl<'a> DebuggingInformation for FatObject<'a> {
+impl DebuggingInformation for Archive<'_> {
     fn has_hidden_symbols(&self) -> Result<bool, Error> {
-        if self.kind() != ObjectKind::MachO {
+        // Hidden symbols can only ever occur in Apple's dSYM
+        if self.file_format() != FileFormat::MachO {
             return Ok(false);
         }
 
         for object in self.objects() {
-            if object?.symbols()?.map_or(false, |s| s.requires_symbolmap()) {
-                return Ok(true);
+            if let Object::MachO(macho) = object? {
+                if macho.requires_symbolmap() {
+                    return Ok(true);
+                }
             }
         }
 
         Ok(false)
-    }
-}
-
-impl<'a> DebuggingInformation for Object<'a> {
-    fn has_hidden_symbols(&self) -> Result<bool, Error> {
-        Ok(self.kind() == ObjectKind::MachO
-            && self.symbols()?.map_or(false, |s| s.requires_symbolmap()))
     }
 }

@@ -18,7 +18,20 @@ const SOURCEMAPS_SCHEMA = require('./options/uploadSourcemaps');
  * Manages releases and release artifacts on Sentry.
  * @namespace SentryReleases
  */
-module.exports = {
+class Releases {
+  /**
+   * Creates a new `Releases` instance.
+   *
+   * @param {Object} [options] More options to pass to the CLI
+   */
+  constructor(options) {
+    this.options = options || {};
+    if (typeof this.options.configFile === 'string') {
+      this.configFile = this.options.configFile;
+    }
+    delete this.options.configFile;
+  }
+
   /**
    * Registers a new release with sentry.
    *
@@ -30,8 +43,42 @@ module.exports = {
    * @memberof SentryReleases
    */
   new(release) {
-    return helper.execute(['releases', 'new', release]);
-  },
+    return this.execute(['releases', 'new', release], null);
+  }
+
+  /**
+   * Specifies the set of commits covered in this release.
+   *
+   * @param {string} release Unique name of the release
+   * @param {object} options A set of options to configure the commits to include
+   * @param {string} options.repo The full repo name as defined in Sentry
+   * @param {boolean} options.auto Automatically choose the associated commit (uses
+   * the current commit). Overrides other options.
+   * @param {string} options.commit The current (last) commit in the release.
+   * @param {string} options.previousCommit The commit before the beginning of this
+   * release (in other words, the last commit of the previous release). If omitted,
+   * this will default to the last commit of the previous release in Sentry. If there
+   * was no previous release, the last 10 commits will be used.
+   * @returns {Promise} A promise that resolves when the commits have been associated
+   * @memberof SentryReleases
+   */
+  setCommits(release, options) {
+    if (!options || (!options.auto && (!options.repo || !options.commit))) {
+      throw new Error('options.auto, or options.repo and options.commit must be specified');
+    }
+
+    let commitFlags = [];
+
+    if (options.auto) {
+      commitFlags = ['--auto'];
+    } else if (options.previousCommit) {
+      commitFlags = ['--commit', `${options.repo}@${options.previousCommit}..${options.commit}`];
+    } else {
+      commitFlags = ['--commit', `${options.repo}@${options.commit}`];
+    }
+
+    return this.execute(['releases', 'set-commits', release].concat(commitFlags));
+  }
 
   /**
    * Marks this release as complete. This should be called once all artifacts has been
@@ -42,8 +89,8 @@ module.exports = {
    * @memberof SentryReleases
    */
   finalize(release) {
-    return helper.execute(['releases', 'finalize', release]);
-  },
+    return this.execute(['releases', 'finalize', release], null);
+  }
 
   /**
    * Creates a unique, deterministic version identifier based on the project type and
@@ -53,10 +100,10 @@ module.exports = {
    * @memberof SentryReleases
    */
   proposeVersion() {
-    return helper
-      .execute(['releases', 'propose-version'])
-      .then(version => version && version.trim());
-  },
+    return this.execute(['releases', 'propose-version'], null).then(
+      version => version && version.trim()
+    );
+  }
 
   /**
    * Scans the given include folders for JavaScript source maps and uploads them to the
@@ -101,12 +148,21 @@ module.exports = {
       }
 
       const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
-      return helper.execute(
-        helper.prepareCommand(args, SOURCEMAPS_SCHEMA, options),
-        true
-      );
+      return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
     });
 
     return Promise.all(uploads);
-  },
-};
+  }
+
+  /**
+   * See {helper.execute} docs.
+   * @param {string[]} args Command line arguments passed to `sentry-cli`.
+   * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+   * @returns {Promise.<string>} A promise that resolves to the standard output.
+   */
+  execute(args, live) {
+    return helper.execute(args, live, this.options.silent, this.configFile);
+  }
+}
+
+module.exports = Releases;

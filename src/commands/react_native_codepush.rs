@@ -6,12 +6,13 @@ use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 use if_chain::if_chain;
+use log::info;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::codepush::{get_codepush_package, get_react_native_codepush_release};
-use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("DEPRECATED: Upload react-native projects for CodePush.")
@@ -62,18 +63,27 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .help("A list of folders with assets that should be processed."),
         )
+        .arg(
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
+        )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
     let (org, project) = config.get_org_and_project(matches)?;
     let app = matches.value_of("app_name").unwrap();
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
-    let api = Api::get_current();
     let print_release_name = matches.is_present("print_release_name");
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
 
     if !print_release_name {
         println!(
@@ -116,15 +126,22 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     processor.rewrite(&[here_str])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(
+    let release = Api::current().new_release(
         &org,
         &NewRelease {
-            version: release.to_string(),
+            version: (*release).to_string(),
             projects: vec![project.to_string()],
             ..Default::default()
         },
     )?;
-    processor.upload(&api, &org, Some(&project), &release.version, None)?;
+
+    processor.upload(&UploadContext {
+        org: &org,
+        project: Some(&project),
+        release: &release.version,
+        dist: None,
+        wait: matches.is_present("wait"),
+    })?;
 
     Ok(())
 }

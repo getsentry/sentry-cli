@@ -6,12 +6,13 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 use if_chain::if_chain;
+use log::info;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
 use crate::utils::args::ArgExt;
-use crate::utils::sourcemaps::SourceMapProcessor;
+use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects for AppCenter.")
@@ -35,9 +36,30 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
+            Arg::with_name("version_name")
+                .value_name("VERSION_NAME")
+                .long("version-name")
+                .help("Override version name in release name"),
+        )
+        .arg(
+            Arg::with_name("dist")
+                .long("dist")
+                .value_name("DISTRIBUTION")
+                .multiple(true)
+                .number_of_values(1)
+                .help("The names of the distributions to publish. Can be supplied multiple times."),
+        )
+        .arg(
             Arg::with_name("print_release_name")
                 .long("print-release-name")
                 .help("Print the release name instead."),
+        )
+        .arg(
+            Arg::with_name("release_name")
+                .value_name("RELEASE_NAME")
+                .long("release-name")
+                .conflicts_with_all(&["bundle_id", "version_name"])
+                .help("Override the entire release-name"),
         )
         .arg(
             Arg::with_name("app_name")
@@ -61,18 +83,28 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .multiple(true)
                 .help("A list of folders with assets that should be processed."),
         )
+        .arg(
+            Arg::with_name("wait")
+                .long("wait")
+                .help("Wait for the server to fully process uploaded files."),
+        )
 }
 
 pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let config = Config::get_current();
+    let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
     let (org, project) = config.get_org_and_project(matches)?;
     let app = matches.value_of("app_name").unwrap();
     let platform = matches.value_of("platform").unwrap();
     let deployment = matches.value_of("deployment").unwrap_or("Staging");
-    let api = Api::get_current();
+    let api = Api::current();
     let print_release_name = matches.is_present("print_release_name");
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
+    );
 
     if !print_release_name {
         println!(
@@ -82,8 +114,13 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
 
     let package = get_appcenter_package(app, deployment)?;
-    let release =
-        get_react_native_appcenter_release(&package, platform, matches.value_of("bundle_id"))?;
+    let release = get_react_native_appcenter_release(
+        &package,
+        platform,
+        matches.value_of("bundle_id"),
+        matches.value_of("version_name"),
+        matches.value_of("release_name"),
+    )?;
     if print_release_name {
         println!("{}", release);
         return Ok(());
@@ -118,12 +155,44 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let release = api.new_release(
         &org,
         &NewRelease {
-            version: release.to_string(),
+            version: (*release).to_string(),
             projects: vec![project.to_string()],
             ..Default::default()
         },
     )?;
-    processor.upload(&api, &org, Some(&project), &release.version, None)?;
+
+    match matches.values_of("dist") {
+        None => {
+            println!(
+                "Uploading sourcemaps for release {} (no distribution value given; use --dist to set distribution value)",
+                &release.version
+            );
+
+            processor.upload(&UploadContext {
+                org: &org,
+                project: Some(&project),
+                release: &release.version,
+                dist: None,
+                wait: matches.is_present("wait"),
+            })?;
+        }
+        Some(dists) => {
+            for dist in dists {
+                println!(
+                    "Uploading sourcemaps for release {} distribution {}",
+                    &release.version, dist
+                );
+
+                processor.upload(&UploadContext {
+                    org: &org,
+                    project: Some(&project),
+                    release: &release.version,
+                    dist: Some(dist),
+                    wait: matches.is_present("wait"),
+                })?;
+            }
+        }
+    }
 
     Ok(())
 }

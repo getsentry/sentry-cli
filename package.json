@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli",
-  "version": "1.38.1",
+  "version": "1.52.1",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "scripts": {
     "install": "node scripts/install.js",
@@ -31,8 +31,8 @@
   },
   "dependencies": {
     "fs-copy-file-sync": "^1.1.1",
-    "https-proxy-agent": "^2.2.1",
-    "mkdirp": "^0.5.1",
+    "https-proxy-agent": "^4.0.0",
+    "mkdirp": "^0.5.4",
     "node-fetch": "^2.1.2",
     "progress": "2.0.0",
     "proxy-from-env": "^1.0.0"
@@ -50,7 +50,7 @@
     "prettier-check": "^2.0.0"
   },
   "engines": {
-    "node": ">= 4.5.0"
+    "node": ">= 8"
   },
   "jest": {
     "collectCoverage": true,

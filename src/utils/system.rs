@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::env;
 use std::process;
 
-use chrono::{DateTime, Utc};
 use console::style;
 use failure::{Error, Fail};
 use lazy_static::lazy_static;
@@ -13,28 +12,29 @@ use crate::config::Config;
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)
 where
-    F: FnOnce() -> (),
-    F: Send + 'static,
+    F: FnOnce() -> () + Send + 'static,
 {
-    use chan::chan_select;
-    use chan_signal::{notify, Signal};
+    let (tx, rx) = crossbeam_channel::bounded(100);
+    let signals =
+        signal_hook::iterator::Signals::new(&[signal_hook::SIGTERM, signal_hook::SIGINT]).unwrap();
 
-    let run = |_sdone: chan::Sender<()>| f();
-    let signal = notify(&[Signal::INT, Signal::TERM]);
-    let (sdone, rdone) = chan::sync(0);
-    std::thread::spawn(move || run(sdone));
-
-    let mut rv = None;
-
-    chan_select! {
-        signal.recv() -> signal => { rv = signal; },
-        rdone.recv() => {}
+    {
+        let tx = tx.clone();
+        std::thread::spawn(move || {
+            f();
+            tx.send(0).ok();
+        });
     }
 
-    if let Some(signal) = rv {
-        use chan_signal::Signal;
-        if signal == Signal::INT {
-            println!("Interrupted!");
+    std::thread::spawn(move || {
+        for signal in signals.forever() {
+            tx.send(signal).ok();
+        }
+    });
+
+    if let Ok(signal) = rx.recv() {
+        if signal == signal_hook::SIGINT {
+            eprintln!("Interrupted!");
         }
     }
 }
@@ -88,11 +88,6 @@ pub fn is_npm_install() -> bool {
     is_npm_install_result().unwrap_or(false)
 }
 
-/// Expands environment variables in a string
-pub fn expand_envvars(s: &str) -> Cow<'_, str> {
-    expand_vars(s, |key| env::var(key).unwrap_or_else(|_| "".to_string()))
-}
-
 /// Expands variables in a string
 pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<'_, str> {
     lazy_static! {
@@ -123,7 +118,7 @@ pub fn print_error(err: &Error) {
         }
     }
 
-    if Config::get_current().get_log_level() < log::LevelFilter::Info {
+    if Config::current().get_log_level() < log::LevelFilter::Info {
         eprintln!();
         eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
         eprintln!(
@@ -137,11 +132,6 @@ pub fn print_error(err: &Error) {
         let backtrace = format!("{:?}", err.backtrace());
         eprintln!("{}", style(&backtrace).dim());
     }
-}
-
-/// Given a system time returns the unix timestamp as f64
-pub fn to_timestamp(tm: DateTime<Utc>) -> f64 {
-    tm.timestamp() as f64
 }
 
 /// Initializes the backtrace support
@@ -179,70 +169,6 @@ pub fn init_backtrace() {
             crate::utils::crashreporting::flush_events();
         }
     }));
-}
-
-#[cfg(target_os = "macos")]
-pub fn get_model() -> Option<String> {
-    if let Some(model) = Config::get_current().get_model() {
-        return Some(model);
-    }
-
-    use std::ptr;
-
-    unsafe {
-        let mut size = 0;
-        libc::sysctlbyname(
-            "hw.model\x00".as_ptr() as *const i8,
-            ptr::null_mut(),
-            &mut size,
-            ptr::null_mut(),
-            0,
-        );
-        let mut buf = vec![0u8; size as usize];
-        libc::sysctlbyname(
-            "hw.model\x00".as_ptr() as *const i8,
-            buf.as_mut_ptr() as *mut libc::c_void,
-            &mut size,
-            ptr::null_mut(),
-            0,
-        );
-        Some(String::from_utf8_lossy(&buf).to_string())
-    }
-}
-
-#[cfg(target_os = "macos")]
-pub fn get_family() -> Option<String> {
-    if let Some(family) = Config::get_current().get_family() {
-        return Some(family);
-    }
-
-    use if_chain::if_chain;
-    use regex::Regex;
-
-    lazy_static! {
-        static ref FAMILY_RE: Regex = Regex::new(r#"([a-zA-Z]+)\d"#).unwrap();
-    }
-
-    if_chain! {
-        if let Some(model) = get_model();
-        if let Some(m) = FAMILY_RE.captures(&model);
-        if let Some(group) = m.get(1);
-        then {
-            Some(group.as_str().to_string())
-        } else {
-            None
-        }
-    }
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn get_model() -> Option<String> {
-    Config::get_current().get_model()
-}
-
-#[cfg(not(target_os = "macos"))]
-pub fn get_family() -> Option<String> {
-    Config::get_current().get_family()
 }
 
 /// Indicates that sentry-cli should quit without printing anything.

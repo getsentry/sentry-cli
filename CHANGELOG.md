@@ -1,5 +1,172 @@
 # Changelog
 
+## Unreleased
+
+* TBD
+
+## sentry-cli 1.52.1
+
+* fix: Respect `configFile` for release commands invoked through JS API (#700)
+
+## sentry-cli 1.52.0
+
+* feat: Add an optional argument to override the entire release name for a CodePush release (#692)
+* feat: Introduce `g/global` flag for `login` command (#690)
+* feat: Add support for `INFOPLIST_OTHER_PREPROCESSOR_FLAGS` (#682)
+* feat: Detect CodeBuild slug for `propose-version` (#681)
+* feat: Show project and organization when using info log level (#670)
+* feat: Add `bitbucket_server` to reference url check (#668)
+* fix: Log config path only when its actually loaded (#677)
+* fix: Make sure that requests are not authenticated twice and warn for rel urls (#675)
+* fix: Override local `env.SENTRY_PROPERTIES` rather than global `process.env` (#667)
+* fix: `react-native` xcode uses regex to detect Debug builds (#665)
+* meta: Add Linux support to the Homebrew formula (#674)
+
+## sentry-cli 1.51.1
+
+* fix: Skip files larger than 1MB (#662)
+
+## sentry-cli 1.51.0
+
+* feat: Add `dist` option to `react-native appcenter` command (#653)
+* ref: Notify user about missing `sudo` command instead of incorrect "No such file or directory" when updating/uninstalling `sentry-cli` (#656)
+* fix: Remove redundant `Closing connection 0` warnings after every HTTP request (#657)
+* fix: Update release structure for XCode React Native calls (#660)
+
+## sentry-cli 1.50.0
+
+* feat: Allow setting of `git` remote (#637)
+* feat: Expose code IDs from `difutil` check (#639)
+* feat: Implement workarounds for dealing with hermes bytecode (#646)
+* feat: Allow for `--silent` flag in installation script (#648)
+* feat: Support `dist` option in JS API (#642)
+* ref: Treat `301/302` `upload_chunks` response codes as errors (#651)
+* fix: Add `Content-Length=0` header to reprocessing POST request (#647)
+
+## sentry-cli 1.49.1
+
+* Add support for `git://`, `git+ssh://`, and `git+https?://` VCS repos (#636)
+* Allow overriding dist in Xcode (#627)
+* Skip pch and large files in source bundles (#624)
+
+## sentry-cli 1.49.0
+
+* Detect Heroku's `SOURCE_VERSION` environment variable (#613)
+* Allow extensions with dots for sourcemap uploads (#605)
+* Fix validation of `releases set-commits` options in JS (#618)
+* Add an optional column for project slugs in `releases list` (#612)
+* Add an optional `--wait` flag for upload-dif (#619)
+
+**NOTE**: This release changes the default behavior of `upload-dif`. Previously,
+the command waited until Sentry had fully processed uploaded files. Now, the
+command terminates after a successful upload but does not wait for server-side
+processing. This will speed up uploads for the common case. Specify `--wait` for
+the old behavior if you want to make sure that debug files are available before
+sending native events.
+
+## sentry-cli 1.48.0
+
+* Add support for Brotli, GZip and Deflate compression algorithms for binary download (#607)
+* Fix binary download progress bar calculations (#606)
+
+## sentry-cli 1.47.2
+
+**Changes**:
+* Always show the full version in `releases list` (#584).
+* Do not warn when using the standard docker entrypoint.
+
+**JavaScript API**:
+* Pass the `silent` option to `releases` commands in JavaScript (#552).
+* Allow setting commits on a release in JavaScript (#580).
+
+**Fixed bugs**:
+* Fix an error in the bash hook if the log file gets deleted (#583).
+* Fix detection of Azure repositories in `releases set-commits` (#576).
+* Fix detection of annotated tags in `releases set-commits` (#598).
+* Fix normalization of sourcemap URL prefixes with trailing slashes (#599).
+* Fix upload of source bundles created with `difutil bundle-sources` (#602).
+
+## sentry-cli 1.47.1
+
+* Fix potentially broken payloads in `send-event`.
+
+## sentry-cli 1.47.0
+
+* Trim whitespace in header values to prevent potential header injections
+  through the auth token header. (#563)
+* Improved Azure DevOps URL parsing. (#556)
+
+## sentry-cli 1.46.0
+
+* Relax the release file limit for sourcemap uploads when artifact bundles
+  are supported by the serntry server (#559)
+
+## sentry-cli 1.45.0
+
+* Allow ports in VCS urls when associating commits (#551)
+* Support PDB and PE uploads to Sentry (#553)
+
+## sentry-cli 1.44.4
+
+* Emit better version names for react native (#506)
+* Fix a regression in sourcemap uploads for certain release names (#549)
+* Ensure case insensitive git repository matching (#511)
+
+## sentry-cli 1.44.3
+
+* Fix a regression with URL prefixes in sourcemap uploads (#544)
+
+## sentry-cli 1.44.2
+
+* Even faster sourcemap uploads to sentry.io (#540, #542)
+
+## sentry-cli 1.44.1
+
+* Fixed a segfault in curl on empty file uploading (#535)
+
+## sentry-cli 1.44.0
+
+* Parallelize source map uploads (#533)
+
+## sentry-cli 1.43.0
+
+* Add support for File RAM Bundles (#528)
+* Accept more Azure DevOps URLs (#525)
+
+## sentry-cli 1.42.0
+
+* Add support for Indexed RAM Bundles (#523)
+* Add "silent" option to JS constructor (#512)
+
+## sentry-cli 1.41.2
+
+* Fix slow unzipping in debug file upload (#519)
+
+## sentry-cli 1.41.1
+
+* Warn before uploading more than 20.000 files to a release (#513)
+
+## sentry-cli 1.41.0
+
+* Recognizes GNU compressed debug files on Linux
+* Also uploads Breakpad files and ELF files only containing symbol tables
+
+## sentry-cli 1.40.0
+
+* Automatically retry on various socket and SSL errors (#466, #490)
+* Use a connection pool for the outgoing API requests.  This is likely to resolve
+  some issues in curl itself that manifested itself as malloc errors on shutdown (#489)
+* Upgrade internal dependencies and shrink overall binary (#488)
+* Upgrade internal sentry crate
+
+## sentry-cli 1.39.1
+
+* Fix Proguard upload issues on Windows (#484).
+
+## sentry-cli 1.39.0
+
+* Release enabling an internal sentry experiment.
+
 ## sentry-cli 1.38.1
 
 * Fix plist parsing
@@ -7,7 +174,6 @@
 ## sentry-cli 1.38.0
 
 * Upgraded symbolic which offers support top R8 code shrinker.
-* Upgraded all rust dependencies.
 
 ## sentry-cli 1.37.4
 

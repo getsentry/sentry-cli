@@ -18,7 +18,7 @@ pub fn setup(log: Box<dyn Log>) {
 
 pub fn bind_configured_client(cfg: Option<&Config>) {
     Hub::with(|hub| {
-        let dsn = cfg.and_then(|config| config.internal_sentry_dsn());
+        let dsn = cfg.and_then(Config::internal_sentry_dsn);
         let client = match dsn {
             Some(dsn) => Client::from_config((
                 dsn,

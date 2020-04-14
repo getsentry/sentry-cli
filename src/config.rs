@@ -14,6 +14,7 @@ use parking_lot::Mutex;
 use sentry::internals::Dsn;
 
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
+use crate::utils::http::is_absolute_url;
 use crate::utils::logging::set_max_level;
 
 /// Represents the auth information
@@ -39,18 +40,25 @@ pub struct Config {
     cached_auth: Option<Auth>,
     cached_base_url: String,
     cached_log_level: log::LevelFilter,
+    cached_vcs_remote: String,
 }
 
 impl Config {
     /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> Result<Config, Error> {
         let (filename, ini) = load_cli_config()?;
+        Config::from_file(filename, ini)
+    }
+
+    /// Creates Config based on provided config file.
+    pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config, Error> {
         Ok(Config {
             filename,
             process_bound: false,
             cached_auth: get_default_auth(&ini),
             cached_base_url: get_default_url(&ini),
             cached_log_level: get_default_log_level(&ini)?,
+            cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
         })
     }
@@ -64,17 +72,23 @@ impl Config {
             let mut cfg = CONFIG.lock();
             *cfg = Some(Arc::new(self));
         }
-        Config::get_current()
+        Config::current()
     }
 
     /// Return the currently bound config as option.
-    pub fn get_current_opt() -> Option<Arc<Config>> {
+    pub fn current_opt() -> Option<Arc<Config>> {
         CONFIG.lock().as_ref().cloned()
     }
 
     /// Return the currently bound config.
-    pub fn get_current() -> Arc<Config> {
-        Config::get_current_opt().expect("Config not bound yet")
+    pub fn current() -> Arc<Config> {
+        Config::current_opt().expect("Config not bound yet")
+    }
+
+    /// Return the global config reference.
+    pub fn global() -> Result<Config, Error> {
+        let (global_filename, global_config) = load_global_config_file()?;
+        Config::from_file(global_filename, global_config)
     }
 
     /// Makes a copy of the config in a closure and boxes it.
@@ -154,23 +168,23 @@ impl Config {
         }
     }
 
-    /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) {
-        self.cached_base_url = url.to_owned();
-        self.ini
-            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
-    }
-
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str, Error> {
         let base = self.cached_base_url.trim_end_matches('/');
-        if !base.starts_with("http://") && !base.starts_with("https://") {
+        if !is_absolute_url(base) {
             bail!("bad sentry url: unknown scheme ({})", base);
         }
         if base.matches('/').count() != 2 {
             bail!("bad sentry url: not on URL root ({})", base);
         }
         Ok(base)
+    }
+
+    /// Sets the URL
+    pub fn set_base_url(&mut self, url: &str) {
+        self.cached_base_url = url.to_owned();
+        self.ini
+            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
     }
 
     /// Returns the API URL for a path
@@ -256,12 +270,12 @@ impl Config {
     pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
         Ok(matches
             .value_of("org")
-            .map(|x| x.to_owned())
+            .map(str::to_owned)
             .or_else(|| env::var("SENTRY_ORG").ok())
             .or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "org")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             })
             .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
     }
@@ -286,7 +300,7 @@ impl Config {
             .or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "project")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             })
             .ok_or_else(|| err_msg("A project slug is required"))?)
     }
@@ -297,12 +311,12 @@ impl Config {
             env::var("SENTRY_ORG").ok().or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "org")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             }),
             env::var("SENTRY_PROJECT").ok().or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "project")
-                    .map(|x| x.to_owned())
+                    .map(str::to_owned)
             }),
         )
     }
@@ -357,26 +371,9 @@ impl Config {
         }
     }
 
-    /// Return device model
-    pub fn get_model(&self) -> Option<String> {
-        if env::var_os("DEVICE_MODEL").is_some() {
-            env::var("DEVICE_MODEL").ok()
-        } else if let Some(val) = self.ini.get_from(Some("device"), "model") {
-            Some(String::from(val))
-        } else {
-            None
-        }
-    }
-
-    /// Return device family
-    pub fn get_family(&self) -> Option<String> {
-        if env::var_os("DEVICE_FAMILY").is_some() {
-            env::var("DEVICE_FAMILY").ok()
-        } else if let Some(val) = self.ini.get_from(Some("device"), "family") {
-            Some(String::from(val))
-        } else {
-            None
-        }
+    /// Return VCS remote
+    pub fn get_cached_vcs_remote(&self) -> String {
+        self.cached_vcs_remote.clone()
     }
 
     /// Should we nag about updates?
@@ -408,6 +405,15 @@ impl Config {
     }
 }
 
+fn find_global_config_file() -> Result<PathBuf, Error> {
+    dirs::home_dir()
+        .ok_or_else(|| err_msg("Could not find home dir"))
+        .and_then(|mut path| {
+            path.push(CONFIG_RC_FILE_NAME);
+            Ok(path)
+        })
+}
+
 fn find_project_config_file() -> Option<PathBuf> {
     env::current_dir().ok().and_then(|mut path| loop {
         path.push(CONFIG_RC_FILE_NAME);
@@ -425,22 +431,27 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
-    let mut home_fn = dirs::home_dir().ok_or_else(|| err_msg("Could not find home dir"))?;
-    home_fn.push(CONFIG_RC_FILE_NAME);
-
-    let mut rv = match fs::File::open(&home_fn) {
-        Ok(mut file) => Ini::read_from(&mut file)?,
+fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
+    let filename = find_global_config_file()?;
+    match fs::File::open(&filename) {
+        Ok(mut file) => match Ini::read_from(&mut file) {
+            Ok(ini) => Ok((filename, ini)),
+            Err(err) => Err(Error::from(err)),
+        },
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
-                Ini::new()
+                Ok((filename, Ini::new()))
             } else {
-                return Err(Error::from(err)
+                Err(Error::from(err)
                     .context("Failed to load .sentryclirc file from the home folder.")
-                    .into());
+                    .into())
             }
         }
-    };
+    }
+}
+
+fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
+    let (global_filename, mut rv) = load_global_config_file()?;
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
         let mut f = fs::File::open(&project_config_path).with_context(|_| {
@@ -452,13 +463,13 @@ fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
         })?;
         let ini = Ini::read_from(&mut f)?;
         for (section, props) in ini.iter() {
-            for (key, value) in props {
-                rv.set_to(section.clone(), key.clone(), value.to_owned());
+            for (key, value) in props.iter() {
+                rv.set_to(section.clone(), key.to_string(), value.to_owned());
             }
         }
         (project_config_path, rv)
     } else {
-        (home_fn, rv)
+        (global_filename, rv)
     };
 
     if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
@@ -503,6 +514,7 @@ impl Clone for Config {
             cached_auth: self.cached_auth.clone(),
             cached_base_url: self.cached_base_url.clone(),
             cached_log_level: self.cached_log_level,
+            cached_vcs_remote: self.cached_vcs_remote.clone(),
         }
     }
 }
@@ -545,4 +557,18 @@ fn get_default_log_level(ini: &Ini) -> Result<log::LevelFilter, Error> {
     }
 
     Ok(log::LevelFilter::Warn)
+}
+
+/// Get the default VCS remote.
+///
+/// To be backward compatible the default remote is still
+/// origin.
+fn get_default_vcs_remote(ini: &Ini) -> String {
+    if let Ok(remote) = env::var("SENTRY_VCS_REMOTE") {
+        remote
+    } else if let Some(remote) = ini.get_from(Some("defaults"), "vcs_remote") {
+        remote.to_string()
+    } else {
+        "origin".to_string()
+    }
 }
