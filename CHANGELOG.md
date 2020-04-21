@@ -4,6 +4,11 @@
 
 * TBD
 
+## sentry-cli 1.52.2
+
+* feat: Support Google Cloud Builder VCS detection (#481)
+* fix: Mark files as unusable withid (#709)
+
 ## sentry-cli 1.52.1
 
 * fix: Respect `configFile` for release commands invoked through JS API (#700)
