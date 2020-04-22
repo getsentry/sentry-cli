@@ -4,6 +4,10 @@
 
 * TBD
 
+## sentry-cli 1.52.3
+
+* fix: Correctly store child process before attaching handlers (#718)
+
 ## sentry-cli 1.52.2
 
 **This release sets `node.engine: >=8` which makes it incompatible with Node v6**
