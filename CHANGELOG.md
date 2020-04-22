@@ -6,6 +6,10 @@
 
 ## sentry-cli 1.52.2
 
+**This release sets `node.engine: >=8` which makes it incompatible with Node v6**
+If you need to support Node v6, please pin your dependency to `1.52.1`
+or use selective version resolution: https://classic.yarnpkg.com/en/docs/selective-version-resolutions/
+
 * feat: Support Google Cloud Builder VCS detection (#481)
 * fix: Mark files as unusable withid (#709)
 
