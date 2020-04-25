@@ -64,7 +64,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help(
                     "Do not scan for debugging information. This will \
                      usually exclude debug companion files. They might \
-                     still be uploaded, if they contain additonal \
+                     still be uploaded, if they contain additional \
                      processable information (see other flags).",
                 )
                 .conflicts_with("no_unwind"),
@@ -75,7 +75,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help(
                     "Do not scan for source information. This will \
                      usually exclude source bundle files. They might \
-                     still be uploaded, if they contain additonal \
+                     still be uploaded, if they contain additional \
                      processable information (see other flags).",
                 )
                 .conflicts_with("no_sources"),
