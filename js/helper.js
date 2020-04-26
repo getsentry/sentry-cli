@@ -5,7 +5,7 @@ const path = require('path');
 const childProcess = require('child_process');
 
 /**
- * Absolute path to the sentry-cli binary (platform dependant).
+ * Absolute path to the sentry-cli binary (platform dependent).
  * @type {string}
  */
 // istanbul ignore next

@@ -929,7 +929,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
 /// Calls the assemble endpoint and returns the state for every `DifMatch` along
 /// with info on missing chunks.
 ///
-/// The returned value containes separate vectors for incomplete DIFs and
+/// The returned value contains separate vectors for incomplete DIFs and
 /// missing chunks for convenience.
 fn try_assemble_difs<'data, 'm>(
     difs: &'m [ChunkedDifMatch<'data>],
