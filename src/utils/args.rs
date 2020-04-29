@@ -112,6 +112,7 @@ impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
                 .value_name("ORG")
                 .long("org")
                 .short("o")
+                .global(true)
                 .validator(validate_org)
                 .help("The organization slug"),
         )

@@ -268,16 +268,33 @@ impl Config {
 
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
-        Ok(matches
-            .value_of("org")
-            .map(str::to_owned)
-            .or_else(|| env::var("SENTRY_ORG").ok())
-            .or_else(|| {
-                self.ini
-                    .get_from(Some("defaults"), "org")
-                    .map(str::to_owned)
-            })
-            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
+        // Recursively check the commands and subcommands until "org"
+        // is found. If none is found check the env var or throw an error.
+        if let Some(org) = matches.value_of("org") {
+            Ok(org.to_owned())
+        } else {
+            match matches.subcommand_name() {
+                Some(subcommand) => {
+                    if let Some(sub_matches) = matches.subcommand_matches(subcommand) {
+                        self.get_org(sub_matches)
+                    } else {
+                        Err(err_msg(
+                            "An organization slug is required (provide with --org)",
+                        ))
+                    }
+                }
+                None => env::var("SENTRY_ORG")
+                    .ok()
+                    .or_else(|| {
+                        self.ini
+                            .get_from(Some("defaults"), "org")
+                            .map(str::to_owned)
+                    })
+                    .ok_or_else(|| {
+                        err_msg("An organization slug is required (provide with --org)")
+                    }),
+            }
+        }
     }
 
     /// Given a match object from clap, this returns a tuple in the
