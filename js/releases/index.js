@@ -155,6 +155,19 @@ class Releases {
   }
 
   /**
+   * Creates a new release deployment. This should be called after the release has been
+   * finalized, while deploying on a given environment.
+   *
+   * @param {string} release Unique name of the release.
+   * @param {string} environment Name of the environment.
+   * @returns {Promise} A promise that resolves when the release has been deployed.
+   * @memberof SentryReleases
+   */
+  deploys(release, environment) {
+    return this.execute(['releases', 'deploys', release, 'new', '-e', environment], null);
+  }
+
+  /**
    * See {helper.execute} docs.
    * @param {string[]} args Command line arguments passed to `sentry-cli`.
    * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
