@@ -4,6 +4,11 @@
 
 * TBD
 
+## sentry-cli 1.52.4
+
+* fix: Dont panic on unknown log level (#733)
+* ref: Use temp dir to store jsbundle maps (#737)
+
 ## sentry-cli 1.52.3
 
 * fix: Correctly store child process before attaching handlers (#718)
