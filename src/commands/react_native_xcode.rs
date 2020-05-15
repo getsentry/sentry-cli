@@ -327,10 +327,13 @@ pub fn wrap_call() -> Result<(), Error> {
     let mut sourcemap_report = SourceMapReport::default();
 
     if sourcemap_path.is_none() && bundle_path.is_some() {
-        let path = format!("{}.map", &bundle_path.as_ref().unwrap());
+        let mut path = env::temp_dir();
+        let mut map_path = PathBuf::from(bundle_path.clone().unwrap());
+        map_path.set_extension("jsbundle.map");
+        path.push(map_path.file_name().unwrap());
         sourcemap_report.sourcemap_path = Some(PathBuf::from(&path));
         args.push("--sourcemap-output".into());
-        args.push(path);
+        args.push(path.into_os_string().into_string().unwrap());
     } else if let Some(path) = sourcemap_path {
         sourcemap_report.sourcemap_path = Some(PathBuf::from(path));
     }
