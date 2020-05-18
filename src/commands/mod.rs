@@ -228,6 +228,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
                 .value_name("LOG_LEVEL")
                 .long("log-level")
                 .possible_values(&["trace", "debug", "info", "warn", "error"])
+                .case_insensitive(true)
                 .global(true)
                 .help("Set the log output verbosity."),
         );
