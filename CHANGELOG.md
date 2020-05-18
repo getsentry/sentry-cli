@@ -4,6 +4,11 @@
 
 * TBD
 
+## sentry-cli 1.53.0
+
+* feat: `releases deploys` JavaScript API (#741)
+* fix: `--log-level` should be case insensitive (#740)
+
 ## sentry-cli 1.52.4
 
 * fix: Dont panic on unknown log level (#733)
