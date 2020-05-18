@@ -15,6 +15,12 @@ const DEFAULT_IGNORE = ['node_modules'];
 const SOURCEMAPS_SCHEMA = require('./options/uploadSourcemaps');
 
 /**
+ * Schema for the `deploys new` command.
+ * @type {OptionsSchema}
+ */
+const DEPLOYS_SCHEMA = require('./options/deploys');
+
+/**
  * Manages releases and release artifacts on Sentry.
  * @namespace SentryReleases
  */
@@ -152,6 +158,47 @@ class Releases {
     });
 
     return Promise.all(uploads);
+  }
+
+  /**
+   * List all deploys for a given release.
+   *
+   * @param {string} release Unique name of the release.
+   * @returns {Promise} A promise that resolves when the list comes back from the server.
+   * @memberof SentryReleases
+   */
+  listDeploys(release) {
+    return this.execute(['releases', 'deploys', release, 'list'], null);
+  }
+
+  /**
+   * Creates a new release deployment. This should be called after the release has been
+   * finalized, while deploying on a given environment.
+   *
+   * @example
+   * await cli.releases.newDeploy(cli.releases.proposeVersion(), {
+   *   // required options:
+   *   env: 'production',          // environment for this release. Values that make sense here would be 'production' or 'staging'
+   *
+   *   // optional options:
+   *   started: 42,                // unix timestamp when the deployment started
+   *   finished: 1337,             // unix timestamp when the deployment finished
+   *   time: 1295,                 // deployment duration in seconds. This can be specified alternatively to `started` and `finished`
+   *   name: 'PickleRick',         // human readable name for this deployment
+   *   url: 'https://example.com', // URL that points to the deployment
+   * });
+   *
+   * @param {string} release Unique name of the release.
+   * @param {object} options Options to configure the new release deploy.
+   * @returns {Promise} A promise that resolves when the deploy has been created.
+   * @memberof SentryReleases
+   */
+  newDeploy(release, options) {
+    if (!options || !options.include) {
+      throw new Error('options.env must be a vaild name');
+    }
+    const args = ['releases', 'deploys', release, 'new'];
+    return this.execute(helper.prepareCommand(args, DEPLOYS_SCHEMA, options), null);
   }
 
   /**
