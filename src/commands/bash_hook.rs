@@ -195,7 +195,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     if matches.is_present("no_environ") {
         script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
     } else {
-        script = script.replace("___SENTRY_NO_ENVIRON___", "\x08");
+        script = script.replace("___SENTRY_NO_ENVIRON___", "");
     }
 
     if !matches.is_present("no_exit") {
