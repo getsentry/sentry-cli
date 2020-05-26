@@ -1168,7 +1168,7 @@ impl Api {
                 PathArg(org),
                 QueryArg(&cursor)
             ))?;
-            if resp.status() == 404 {
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
                     return Err(ApiErrorKind::ResourceNotFound.into());
                 } else {
@@ -1229,7 +1229,7 @@ impl Api {
                 PathArg(org),
                 QueryArg(&cursor)
             ))?;
-            if resp.status() == 404 {
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
                     return Err(ApiErrorKind::OrganizationNotFound.into());
                 } else {
