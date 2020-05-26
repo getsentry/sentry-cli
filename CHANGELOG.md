@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* TBD
+* Add `--no-environ` parameter to `bash-hook` (#745)
 
 ## sentry-cli 1.53.0
 

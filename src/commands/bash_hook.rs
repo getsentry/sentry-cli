@@ -31,6 +31,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Do not turn on -e (exit immediately) flag automatically"),
         )
         .arg(
+            Arg::with_name("no_environ")
+                .long("no-environ")
+                .help("Do not send environment variables along"),
+        )
+        .arg(
             Arg::with_name("send_event")
                 .long("send-event")
                 .requires_all(&["traceback", "log"])
@@ -50,22 +55,24 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
-fn send_event(traceback: &str, logfile: &str) -> Result<(), Error> {
+fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<(), Error> {
     let config = Config::current();
     let mut event = Event::default();
 
     event.environment = config.get_environment().map(Into::into);
     event.release = detect_release_name().ok().map(Into::into);
     event.sdk = Some(get_sdk_info());
-    event.extra.insert(
-        "environ".into(),
-        Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
-    );
     event.user = get_user_name().ok().map(|n| User {
         username: Some(n),
         ip_address: Some(Default::default()),
         ..Default::default()
     });
+    if environ {
+        event.extra.insert(
+            "environ".into(),
+            Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
+        );
+    }
 
     let mut cmd = "unknown".to_string();
     let mut exit_code = 1;
@@ -161,6 +168,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         return send_event(
             matches.value_of("traceback").unwrap(),
             matches.value_of("log").unwrap(),
+            !matches.is_present("no_environ"),
         );
     }
 
@@ -183,6 +191,13 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             "___SENTRY_CLI___",
             &env::current_exe().unwrap().display().to_string(),
         );
+
+    if matches.is_present("no_environ") {
+        script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
+    } else {
+        script = script.replace("___SENTRY_NO_ENVIRON___", "");
+    }
+
     if !matches.is_present("no_exit") {
         script.insert_str(0, "set -e\n\n");
     }
