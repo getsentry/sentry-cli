@@ -118,6 +118,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         the current commit of the repository at the given PATH is \
                         assumed.  To override the revision `@REV` can be appended \
                         which will force the revision to a certain value.")))
+        .subcommand(App::new("set-manual-commits")
+            .about("Set commits of a release from local git.")
+            .version_arg(1)
+            .arg(Arg::with_name("default")
+                .long("default")
+                .value_name("DEFAULT")
+                .help("Set the number of commits of the initial release.")))
+            
         .subcommand(App::new("delete")
             .about("Delete a release.")
             .version_arg(1))
