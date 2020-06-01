@@ -516,6 +516,24 @@ fn execute_set_commits<'a>(
     Ok(())
 }
 
+fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+    let version = matches.value_of("version").unwrap();
+    let org = ctx.get_org()?;
+
+    if let Ok(projects) = ctx.get_projects(matches) {
+        ctx.api.new_release(
+            &org,
+            &NewRelease {
+                version: version.into(),
+                projects,
+                ..Default::default()
+            },
+        )?;
+    }
+
+    Ok(())
+}
+
 fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let project = ctx.get_project_default().ok();
@@ -1050,6 +1068,9 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
     if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
         return execute_set_commits(&ctx, sub_matches);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("set-manual-commits") {
+        return execute_set_manual_commits(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         return execute_delete(&ctx, sub_matches);
