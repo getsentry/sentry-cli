@@ -27,10 +27,12 @@ const CDN_URL =
   process.env.SENTRYCLI_CDNURL ||
   'https://downloads.sentry-cdn.com/sentry-cli';
 
-function hasSilentFlag() {
-  return (
-    process.argv.some(v => v === '--silent') || process.env.npm_config_loglevel === 'silent' // Yarn // NPM
-  );
+function shouldRenderProgressBar() {
+  const silentFlag = process.argv.some(v => v === '--silent');
+  const silentConfig = process.env.npm_config_loglevel === 'silent';
+  const silentEnv = process.env.SENTRY_NO_PROGRESS_BAR;
+  // If any of possible options is set, skip rendering of progress bar
+  return !(silentFlag || silentConfig || silentEnv);
 }
 
 function getDownloadUrl(platform, arch) {
@@ -153,7 +155,7 @@ function downloadBinary() {
     return new Promise((resolve, reject) => {
       response.body
         .on('error', e => reject(e))
-        .on('data', chunk => !hasSilentFlag() && progressBar.tick(chunk.length))
+        .on('data', chunk => shouldRenderProgressBar() && progressBar.tick(chunk.length))
         .pipe(decompressor)
         .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
         .on('error', e => reject(e))
