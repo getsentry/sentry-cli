@@ -7,8 +7,8 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::{bail, Error, SyncFailure};
 use log::{debug, info};
+use proguard::ProguardMapping;
 use symbolic::common::ByteView;
-use symbolic::proguard::ProguardMappingView;
 use uuid::Uuid;
 
 use crate::api::{Api, AssociateDsyms};
@@ -165,7 +165,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         match fs::metadata(path) {
             Ok(md) => {
                 let byteview = ByteView::open(path).map_err(SyncFailure::new)?;
-                let mapping = ProguardMappingView::parse(byteview).map_err(SyncFailure::new)?;
+                let mapping = ProguardMapping::new(&byteview);
                 if !mapping.has_line_info() {
                     eprintln!(
                         "warning: proguard mapping '{}' was ignored because it \

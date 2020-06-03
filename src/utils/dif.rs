@@ -1,14 +1,13 @@
-use std::ffi::OsStr;
 use std::fmt;
 use std::path::Path;
 use std::str;
 
 use failure::{bail, Error, SyncFailure};
+use proguard::ProguardMapping;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
 use symbolic::common::{ByteView, CodeId, DebugId, SelfCell};
 use symbolic::debuginfo::{Archive, FileFormat, Object, ObjectKind};
-use symbolic::proguard::ProguardMappingView;
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -131,17 +130,34 @@ impl fmt::Display for DifFeatures {
     }
 }
 
+pub struct SelfProguard<'a>(ProguardMapping<'a>);
+
+impl<'a> std::ops::Deref for SelfProguard<'a> {
+    type Target = ProguardMapping<'a>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'slf> symbolic::common::AsSelf<'slf> for SelfProguard<'_> {
+    type Ref = SelfProguard<'slf>;
+
+    fn as_self(&'slf self) -> &Self::Ref {
+        self
+    }
+}
+
 pub enum DifFile<'a> {
     Archive(SelfCell<ByteView<'a>, Archive<'a>>),
-    Proguard(ProguardMappingView<'a>),
+    Proguard(SelfCell<ByteView<'a>, SelfProguard<'a>>),
 }
 
 impl DifFile<'static> {
     fn open_proguard<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let data = ByteView::open(&path).map_err(SyncFailure::new)?;
-        let pg = ProguardMappingView::parse(data).map_err(SyncFailure::new)?;
+        let data = ByteView::open(path).map_err(SyncFailure::new)?;
+        let pg = SelfCell::new(data, |d| SelfProguard(ProguardMapping::new(unsafe { &*d })));
 
-        if path.as_ref().extension() == Some(OsStr::new("txt")) || pg.has_line_info() {
+        if pg.get().is_valid() {
             Ok(DifFile::Proguard(pg))
         } else {
             bail!("Expected a proguard file")
@@ -256,7 +272,7 @@ impl<'a> DifFile<'a> {
                 })
                 .collect(),
             DifFile::Proguard(pg) => vec![DifVariant {
-                debug_id: pg.uuid().into(),
+                debug_id: pg.get().uuid().into(),
                 arch: None,
                 code_id: None,
             }],
@@ -271,7 +287,7 @@ impl<'a> DifFile<'a> {
                 .filter_map(Result::ok)
                 .map(|object| object.debug_id())
                 .collect(),
-            DifFile::Proguard(pg) => vec![pg.uuid().into()],
+            DifFile::Proguard(pg) => vec![pg.get().uuid().into()],
         }
     }
 
@@ -294,7 +310,7 @@ impl<'a> DifFile<'a> {
     pub fn is_usable(&self) -> bool {
         match self {
             DifFile::Archive(_) => self.has_ids() && self.features().has_some(),
-            DifFile::Proguard(pg) => pg.has_line_info(),
+            DifFile::Proguard(pg) => pg.get().has_line_info(),
         }
     }
 

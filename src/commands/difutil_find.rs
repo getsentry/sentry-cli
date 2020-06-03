@@ -8,9 +8,9 @@ use clap::{App, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 use if_chain::if_chain;
+use proguard::ProguardMapping;
 use serde::Serialize;
 use symbolic::common::{ByteView, DebugId};
-use symbolic::proguard::ProguardMappingView;
 use uuid::Version as UuidVersion;
 use walkdir::WalkDir;
 
@@ -157,7 +157,8 @@ fn find_ids(
             if let Ok(md) = dirent.metadata();
             if md.len() < MAX_MAPPING_FILE;
             if let Ok(byteview) = ByteView::open(dirent.path());
-            if let Ok(mapping) = ProguardMappingView::parse(byteview);
+            let mapping = ProguardMapping::new(&byteview);
+            if mapping.is_valid();
             if proguard_uuids.contains(&mapping.uuid());
             then {
                 found.push((mapping.uuid().into(), DifType::Proguard));
