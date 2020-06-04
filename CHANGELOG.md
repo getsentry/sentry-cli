@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-* TBD
+* fix: Update base "alpine" image in Dockerfile (#757)
 
 ## sentry-cli 1.54.0
 
