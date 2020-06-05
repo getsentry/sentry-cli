@@ -194,7 +194,7 @@ class Releases {
    * @memberof SentryReleases
    */
   newDeploy(release, options) {
-    if (!options || !options.include) {
+    if (!options || !options.env) {
       throw new Error('options.env must be a vaild name');
     }
     const args = ['releases', 'deploys', release, 'new'];

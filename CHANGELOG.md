@@ -2,7 +2,13 @@
 
 ## Unreleased
 
-* Add `--no-environ` parameter to `bash-hook` (#745)
+* fix: Update base "alpine" image in Dockerfile (#757)
+
+## sentry-cli 1.54.0
+
+* feat: Add `--no-environ` parameter to `bash-hook` (#745)
+* feat: Allow for disabling install progress-bar without silencing npm using `SENTRY_NO_PROGRESS_BAR` env var (#754)
+* fix: Use correct required option to `newDeploy` JS api (#755)
 
 ## sentry-cli 1.53.0
 
