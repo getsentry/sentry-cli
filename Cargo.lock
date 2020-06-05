@@ -1400,13 +1400,11 @@ dependencies = [
 
 [[package]]
 name = "proguard"
-version = "3.0.0"
+version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d451cea38a9b7b2ffe89ff7c443c0a4c55f3eab20114a73c4d8c1b362cf3fb1b"
+checksum = "e9c9ed37179fcff805ec8d649b5e43f0f936d2fe9cfe7ac37fb9c631eb2becd1"
 dependencies = [
  "lazy_static",
- "memmap",
- "regex",
  "uuid",
 ]
 
@@ -1885,6 +1883,7 @@ dependencies = [
  "percent-encoding 2.1.0",
  "plist",
  "prettytable-rs",
+ "proguard",
  "r2d2",
  "rayon",
  "regex",
@@ -2087,7 +2086,6 @@ checksum = "514cc39e331991a0ac87e5b6366748ea42d2ab604f524fa17c7868c357a242dc"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
- "symbolic-proguard",
 ]
 
 [[package]]
@@ -2128,16 +2126,6 @@ dependencies = [
  "smallvec",
  "symbolic-common",
  "zip",
-]
-
-[[package]]
-name = "symbolic-proguard"
-version = "7.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cda27b2c35d901938d9adb15044fe599f790208f92f1184ee1b5551e4ad60b81"
-dependencies = [
- "proguard",
- "symbolic-common",
 ]
 
 [[package]]
