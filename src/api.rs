@@ -905,7 +905,7 @@ impl Api {
             .with_form_data(form)?
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?
-            .convert()
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     /// Get the server configuration for chunked file uploads.
@@ -1053,14 +1053,7 @@ impl Api {
         };
 
         // Handle 301 or 302 requests as a missing project
-        let resp = request.send()?;
-        match resp.status() {
-            301 | 302 => Err(ApiErrorKind::ProjectNotFound.into()),
-            _ => {
-                resp.into_result()?;
-                Ok(())
-            }
-        }
+        request.send()?.convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     /// Associate apple debug symbols with a build
@@ -1667,7 +1660,7 @@ impl ApiResponse {
                 }
             }
             404 => Err(res_err.into()),
-            _ => self.into_result().and_then(|x| x.deserialize()),
+            _ => self.convert(),
         }
     }
 
