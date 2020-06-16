@@ -790,7 +790,7 @@ impl Api {
         &self,
         org: &str,
         version: &str,
-    ) -> ApiResult<Option<ReleaseInfo>> {
+    ) -> ApiResult<OptionalReleaseInfo> {
         let path = format!(
             "/organizations/{}/releases/{}/previous-with-commits/",
             PathArg(org),
@@ -798,7 +798,7 @@ impl Api {
         );
         let resp = self.get(&path)?;
         if resp.status() == 404 {
-            Ok(None)
+            Ok(OptionalReleaseInfo::None{})
         } else {
             resp.convert()
         }
@@ -1865,6 +1865,13 @@ pub struct ReleaseInfo {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum OptionalReleaseInfo {
+    None {},
+    Some(ReleaseInfo),
+}
+
+#[derive(Debug, Deserialize)]
 pub struct LastCommit {
     pub id: String,
 }
@@ -2272,6 +2279,7 @@ pub struct AssembleArtifactsResponse {
 #[derive(Debug, Serialize, Clone)]
 pub struct PatchSet {
     pub path: String,
+    #[serde(rename = "type")]
     pub ty: String,
 }
 

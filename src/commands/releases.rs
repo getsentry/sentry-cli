@@ -16,7 +16,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
 
-use crate::api::{Api, Deploy, FileContents, NewRelease, ProgressBarMode, UpdatedRelease};
+use crate::api::{Api, Deploy, FileContents, NewRelease, ProgressBarMode, UpdatedRelease, OptionalReleaseInfo};
 use crate::config::Config;
 use crate::utils::args::{
     get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt,
@@ -534,11 +534,8 @@ fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches
 
     // Get the commit of the most recent release.
     let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
-        Some(prev) => match prev.last_commit {
-            Some(commit) => commit.id,
-            None => "".to_string(),
-        },
-        None => "".to_string(),
+        OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
+        OptionalReleaseInfo::None{} => "".to_string(),
     };
 
     // Find and connect to local git.
