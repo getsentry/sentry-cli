@@ -1,13 +1,15 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use chrono::{DateTime, FixedOffset, TimeZone};
 use failure::{bail, format_err, Error};
+use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info};
 use regex::Regex;
 
-use crate::api::{Ref, Repo};
+use crate::api::{GitCommit, PatchSet, Ref, Repo};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
@@ -196,6 +198,11 @@ impl VcsUrl {
 
 fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
+}
+
+pub fn parse_git_url(repo: &str) -> String {
+    let obj = VcsUrl::parse(repo);
+    obj.id
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
@@ -427,8 +434,136 @@ pub fn find_heads(
     Ok(rv)
 }
 
+// Get commits from git history upto previous commit.
+// Returns a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
+pub fn get_commits_from_git<'a>(
+    repo: &'a Repository,
+    prev_commit: &str,
+) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>), Error> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
+
+    let default_count = 20;
+
+    match git2::Oid::from_str(prev_commit) {
+        Ok(prev) => {
+            let mut found = false;
+            let mut result: Vec<Commit> = revwalk
+                .take_while(|id| match id {
+                    Ok(id) => {
+                        if found {
+                            return false;
+                        }
+                        if prev == *id {
+                            found = true;
+                        }
+                        true
+                    }
+                    _ => true,
+                })
+                .filter_map(move |id| {
+                    let id = id.ok()?;
+
+                    let commit = repo.find_commit(id).ok()?;
+
+                    Some(commit)
+                })
+                .collect();
+            // If there is a previous commit but cannot find it in git history, throw an error.
+            if !found {
+                return Err(format_err!(
+                    "Couldn’t not find the SHA of the previous release in the git history. Increase your git clone depth.",
+                ));
+            }
+            let prev = result.pop();
+            Ok((result, prev))
+        }
+        Err(_) => {
+            // If there is no previous commit, return the default number of commits
+            let mut result: Vec<Commit> = revwalk
+                .take(default_count + 1)
+                .filter_map(move |id| {
+                    let id = id.ok()?;
+
+                    let commit = repo.find_commit(id).ok()?;
+
+                    Some(commit)
+                })
+                .collect();
+
+            if result.len() == default_count + 1 {
+                let prev = result.pop();
+                Ok((result, prev))
+            } else {
+                Ok((result, None))
+            }
+        }
+    }
+}
+
+pub fn generate_patch_set(
+    repo: &Repository,
+    commits: Vec<Commit>,
+    previous: Option<Commit>,
+    repository: &str,
+) -> Result<Vec<GitCommit>, Error> {
+    let mut result = vec![];
+    for (index, commit) in commits.iter().enumerate() {
+        let mut git_commit = GitCommit {
+            id: commit.id().to_string(),
+            author_name: commit.author().name().map(|s| s.to_owned()),
+            author_email: commit.author().email().map(|s| s.to_owned()),
+            message: commit.message().map(|s| s.to_owned()),
+            repository: repository.to_string(),
+            timestamp: get_commit_time(commit.author().when()),
+            patch_set: vec![],
+        };
+
+        let tree1 = commit.tree()?;
+
+        let tree2 = if index + 1 < commits.len() {
+            Some(commits[index + 1].tree()?)
+        } else {
+            match &previous {
+                None => None,
+                Some(c) => Some(c.tree()?),
+            }
+        };
+
+        let diff = repo.diff_tree_to_tree(tree2.as_ref(), Some(&tree1), None)?;
+
+        diff.print(git2::DiffFormat::NameStatus, |_, _, l| {
+            let line = std::str::from_utf8(l.content()).unwrap();
+            let mut parsed = line.trim_end().splitn(2, '\t');
+            let patch_set = PatchSet {
+                ty: parsed.next().unwrap().to_owned(),
+                path: parsed.next().unwrap().to_owned(),
+            };
+            git_commit.patch_set.push(patch_set);
+
+            true
+        })?;
+
+        result.push(git_commit)
+    }
+
+    Ok(result)
+}
+
+pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
+    FixedOffset::east(time.offset_minutes() * 60).timestamp(time.seconds(), 0)
+}
+
 #[cfg(test)]
-use crate::api::RepoProvider;
+use {
+    crate::api::RepoProvider,
+    insta::{assert_debug_snapshot, assert_yaml_snapshot},
+    std::fs::File,
+    std::io::Write,
+    std::path::Path,
+    std::process::Command,
+    tempfile::tempdir,
+};
 
 #[test]
 fn test_find_matching_rev_with_lightweight_tag() {
@@ -667,4 +802,444 @@ fn test_url_normalization() {
         "git+https://git@github.com/kamilogorek/picklerick.git",
         "https://github.com/kamilogorek/picklerick"
     ));
+}
+
+#[cfg(test)]
+fn test_initialize(dir: &Path) {
+    let mut initialize = Command::new("git")
+        .arg("init")
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git init`.");
+
+    initialize.wait().expect("Failed to wait on git init.");
+}
+
+#[cfg(test)]
+fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: &str) {
+    let path = dir.join(file_path);
+    let mut file = File::create(path).expect("Failed to execute.");
+    file.write_all(content).expect("Failed to execute.");
+
+    let mut add = Command::new("git")
+        .args(&["add", "."])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git add .`");
+
+    add.wait().expect("Failed to wait on git add.");
+
+    let mut commit = Command::new("git")
+        .args(&[
+            "commit",
+            "-m",
+            commit_message,
+            "--author",
+            "John Doe <john.doe@example.com>",
+        ])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git commit -m {message}`.");
+
+    commit.wait().expect("Failed to wait on git commit.");
+}
+
+#[test]
+fn test_get_commits_from_git() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 2\");",
+        "\"second commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    let commits = get_commits_from_git(&repo, "").expect("Failed");
+
+    assert_debug_snapshot!(commits.0.iter().map(|c| {
+        (c.author().name().unwrap().to_owned(), c.author().email().unwrap().to_owned(),c.summary())
+    }).collect::<Vec<_>>(), @r###"
+    [
+        (
+            "John Doe",
+            "john.doe@example.com",
+            Some(
+                "\"second commit\"",
+            ),
+        ),
+        (
+            "John Doe",
+            "john.doe@example.com",
+            Some(
+                "\"initial commit\"",
+            ),
+        ),
+    ]
+    "###);
+}
+
+#[test]
+fn test_generate_patch_set_base() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 2\");",
+        "\"second commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 3\");",
+        "\"third commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    let commits = get_commits_from_git(&repo, "").expect("Failed");
+    println!("Commits: {}", commits.0.len());
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    }, @r###"
+    ---
+    - patch_set:
+        - path: foo2.js
+          ty: M
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"third commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo2.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"second commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"initial commit\"\n"
+      id: "[id]"
+    "###);
+}
+
+#[test]
+fn test_generate_patch_set_previous_commit() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 2\");",
+        "\"second commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 3\");",
+        "\"third commit\"",
+    );
+    let head = repo.revparse_single("HEAD").expect("Failed");
+    println!("HEAD: {:?}", head.id());
+
+    git_commit_test(
+        dir.path(),
+        "foo4.js",
+        b"console.log(\"Hello, world! Part 4\");",
+        "\"fourth commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 5\");",
+        "\"fifth commit\"",
+    );
+
+    let commits = get_commits_from_git(&repo, &head.id().to_string()).expect("Failed");
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    }, @r###"
+    ---
+    - patch_set:
+        - path: foo2.js
+          ty: M
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"fifth commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo4.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"fourth commit\"\n"
+      id: "[id]"
+    "###);
+}
+
+#[test]
+fn test_generate_patch_default_twenty() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+    for n in 0..20 {
+        let file = format!("foo{}.js", n);
+        git_commit_test(
+            dir.path(),
+            &file,
+            b"console.log(\"Hello, world! Part 2\");",
+            "\"another commit\"",
+        );
+    }
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world!\");",
+        "\"final commit\"",
+    );
+
+    let commits = get_commits_from_git(&repo, "").expect("Failed");
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    }, @r###"
+    ---
+    - patch_set:
+        - path: foo2.js
+          ty: M
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"final commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo19.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo18.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo17.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo16.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo15.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo14.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo13.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo12.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo11.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo10.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo9.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo8.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo7.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo6.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo5.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo4.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo3.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo2.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    - patch_set:
+        - path: foo1.js
+          ty: A
+      repository: example/test-repo
+      author_name: John Doe
+      author_email: john.doe@example.com
+      timestamp: "[timestamp]"
+      message: "\"another commit\"\n"
+      id: "[id]"
+    "###);
 }

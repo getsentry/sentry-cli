@@ -6,7 +6,8 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::{bail, err_msg, Error};
+use failure::{bail, err_msg, Error, format_err};
+
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
@@ -24,7 +25,7 @@ use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::releases::detect_release_name;
 use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 use crate::utils::system::QuietExit;
-use crate::utils::vcs::{find_heads, CommitSpec};
+use crate::utils::vcs::{find_heads, get_commits_from_git,  generate_patch_set, parse_git_url, CommitSpec};
 
 struct ReleaseContext<'a> {
     pub api: Arc<Api>,
@@ -531,8 +532,50 @@ fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches
         )?;
     }
 
+    // Get the commit of the most recent release.
+    let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
+        Some(prev) => match prev.last_commit {
+            Some(commit) => commit.id,
+            None => "".to_string(),
+        },
+        None => "".to_string(),
+    };
+
+    // Find and connect to local git.
+    let repo = git2::Repository::open_from_env()?;
+
+    // Parse the git url.
+    let remote = repo.find_remote("origin")?;
+    let url = remote.url();   
+    let parsed = match url {
+        Some(url) => parse_git_url(url),
+        None => return Err(format_err!("Failed to parse remote url!"))
+    };
+
+    // Fetch all the commits upto the `prev_commit` or return the default (20).
+    // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
+    let commit_log = get_commits_from_git(&repo, &prev_commit)?;
+    
+    // Calculate the diff for each commit in the Vec<GitCommit>.
+    let commits = generate_patch_set(&repo, commit_log.0, commit_log.1, &parsed)?;
+
+    for chunk in commits.chunks(50) {
+        ctx.api.update_release(
+            ctx.get_org()?,
+            version,
+            &UpdatedRelease {
+                commits: Some(chunk.to_owned()),
+                ..Default::default()
+            },
+        )?;
+    }
+
+    
+    println!("Success! Set commits for release {}.", version);
+
     Ok(())
 }
+
 
 fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
