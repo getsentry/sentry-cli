@@ -535,7 +535,7 @@ fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches
     // Get the commit of the most recent release.
     let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
         OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
-        OptionalReleaseInfo::None{} => "".to_string(),
+        OptionalReleaseInfo::None{} => String::new(),
     };
 
     // Find and connect to local git.
@@ -551,10 +551,10 @@ fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches
 
     // Fetch all the commits upto the `prev_commit` or return the default (20).
     // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
-    let commit_log = get_commits_from_git(&repo, &prev_commit)?;
+    let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit)?;
     
     // Calculate the diff for each commit in the Vec<GitCommit>.
-    let commits = generate_patch_set(&repo, commit_log.0, commit_log.1, &parsed)?;
+    let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
 
     for chunk in commits.chunks(50) {
         ctx.api.update_release(

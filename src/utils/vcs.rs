@@ -444,6 +444,13 @@ pub fn get_commits_from_git<'a>(
     revwalk.push_head()?;
 
     let default_count = 20;
+    let commit_filter = move |id:Result<git2::Oid, git2::Error>| {
+        let id = id.ok()?;
+
+        let commit = repo.find_commit(id).ok()?;
+
+        Some(commit)
+    };
 
     match git2::Oid::from_str(prev_commit) {
         Ok(prev) => {
@@ -461,13 +468,7 @@ pub fn get_commits_from_git<'a>(
                     }
                     _ => true,
                 })
-                .filter_map(move |id| {
-                    let id = id.ok()?;
-
-                    let commit = repo.find_commit(id).ok()?;
-
-                    Some(commit)
-                })
+                .filter_map(commit_filter)
                 .collect();
             // If there is a previous commit but cannot find it in git history, throw an error.
             if !found {
@@ -482,13 +483,7 @@ pub fn get_commits_from_git<'a>(
             // If there is no previous commit, return the default number of commits
             let mut result: Vec<Commit> = revwalk
                 .take(default_count + 1)
-                .filter_map(move |id| {
-                    let id = id.ok()?;
-
-                    let commit = repo.find_commit(id).ok()?;
-
-                    Some(commit)
-                })
+                .filter_map(commit_filter)
                 .collect();
 
             if result.len() == default_count + 1 {
@@ -925,7 +920,7 @@ fn test_generate_patch_set_base() {
     ---
     - patch_set:
         - path: foo2.js
-          ty: M
+          type: M
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -934,7 +929,7 @@ fn test_generate_patch_set_base() {
       id: "[id]"
     - patch_set:
         - path: foo2.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -943,7 +938,7 @@ fn test_generate_patch_set_base() {
       id: "[id]"
     - patch_set:
         - path: foo.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1006,7 +1001,7 @@ fn test_generate_patch_set_previous_commit() {
     ---
     - patch_set:
         - path: foo2.js
-          ty: M
+          type: M
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1015,7 +1010,7 @@ fn test_generate_patch_set_previous_commit() {
       id: "[id]"
     - patch_set:
         - path: foo4.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1063,7 +1058,7 @@ fn test_generate_patch_default_twenty() {
     ---
     - patch_set:
         - path: foo2.js
-          ty: M
+          type: M
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1072,7 +1067,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo19.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1081,7 +1076,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo18.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1090,7 +1085,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo17.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1099,7 +1094,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo16.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1108,7 +1103,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo15.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1117,7 +1112,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo14.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1126,7 +1121,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo13.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1135,7 +1130,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo12.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1144,7 +1139,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo11.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1153,7 +1148,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo10.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1162,7 +1157,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo9.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1171,7 +1166,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo8.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1180,7 +1175,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo7.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1189,7 +1184,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo6.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1198,7 +1193,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo5.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1207,7 +1202,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo4.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1216,7 +1211,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo3.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1225,7 +1220,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo2.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com
@@ -1234,7 +1229,7 @@ fn test_generate_patch_default_twenty() {
       id: "[id]"
     - patch_set:
         - path: foo1.js
-          ty: A
+          type: A
       repository: example/test-repo
       author_name: John Doe
       author_email: john.doe@example.com

@@ -798,7 +798,7 @@ impl Api {
         );
         let resp = self.get(&path)?;
         if resp.status() == 404 {
-            Ok(OptionalReleaseInfo::None{})
+            Ok(OptionalReleaseInfo::None {})
         } else {
             resp.convert()
         }
@@ -2287,6 +2287,7 @@ pub struct PatchSet {
 pub struct GitCommit {
     pub patch_set: Vec<PatchSet>,
     pub repository: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub author_name: Option<String>,
     pub author_email: Option<String>,
     pub timestamp: DateTime<FixedOffset>,
