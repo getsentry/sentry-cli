@@ -861,26 +861,17 @@ fn test_get_commits_from_git() {
     let repo = git2::Repository::open(dir.path()).expect("Failed");
     let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
 
-    assert_debug_snapshot!(commits.0.iter().map(|c| {
-        (c.author().name().unwrap().to_owned(), c.author().email().unwrap().to_owned(),c.summary())
-    }).collect::<Vec<_>>(), @r###"
-    [
-        (
-            "John Doe",
-            "john.doe@example.com",
-            Some(
-                "\"second commit\"",
-            ),
-        ),
-        (
-            "John Doe",
-            "john.doe@example.com",
-            Some(
-                "\"initial commit\"",
-            ),
-        ),
-    ]
-    "###);
+    assert_debug_snapshot!(commits
+        .0
+        .iter()
+        .map(|c| {
+            (
+                c.author().name().unwrap().to_owned(),
+                c.author().email().unwrap().to_owned(),
+                c.summary(),
+            )
+        })
+        .collect::<Vec<_>>());
 }
 
 #[test]
@@ -917,36 +908,7 @@ fn test_generate_patch_set_base() {
     assert_yaml_snapshot!(patch_set, {
         ".*.id" => "[id]",
         ".*.timestamp" => "[timestamp]"
-    }, @r###"
-    ---
-    - patch_set:
-        - path: foo2.js
-          type: M
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"third commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo2.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"second commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"initial commit\"\n"
-      id: "[id]"
-    "###);
+    });
 }
 
 #[test]
@@ -998,27 +960,7 @@ fn test_generate_patch_set_previous_commit() {
     assert_yaml_snapshot!(patch_set, {
         ".*.id" => "[id]",
         ".*.timestamp" => "[timestamp]"
-    }, @r###"
-    ---
-    - patch_set:
-        - path: foo2.js
-          type: M
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"fifth commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo4.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"fourth commit\"\n"
-      id: "[id]"
-    "###);
+    });
 }
 
 #[test]
@@ -1055,187 +997,5 @@ fn test_generate_patch_default_twenty() {
     assert_yaml_snapshot!(patch_set, {
         ".*.id" => "[id]",
         ".*.timestamp" => "[timestamp]"
-    }, @r###"
-    ---
-    - patch_set:
-        - path: foo2.js
-          type: M
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"final commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo19.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo18.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo17.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo16.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo15.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo14.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo13.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo12.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo11.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo10.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo9.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo8.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo7.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo6.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo5.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo4.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo3.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo2.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    - patch_set:
-        - path: foo1.js
-          type: A
-      repository: example/test-repo
-      author_name: John Doe
-      author_email: john.doe@example.com
-      timestamp: "[timestamp]"
-      message: "\"another commit\"\n"
-      id: "[id]"
-    "###);
+    });
 }
