@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
-use failure::{bail, err_msg, Error, format_err};
+use failure::{bail, err_msg, Error};
 
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
@@ -25,7 +25,7 @@ use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::releases::detect_release_name;
 use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 use crate::utils::system::QuietExit;
-use crate::utils::vcs::{find_heads, get_commits_from_git,  generate_patch_set, parse_git_url, CommitSpec};
+use crate::utils::vcs::{find_heads, get_commits_from_git,  generate_patch_set, get_repo_from_remote, CommitSpec};
 
 struct ReleaseContext<'a> {
     pub api: Arc<Api>,
@@ -122,10 +122,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("set-manual-commits")
             .about("Set commits of a release from local git.")
             .version_arg(1)
-            .arg(Arg::with_name("set-initial")
-                .long("set-initial")
-                .short("i")
-                .value_name("INITIAL")
+            .arg(Arg::with_name("commits-count")
+                .long("commits-count")
+                .short("c")
+                .value_name("COMMITS COUNT")
                 .help("Set the number of commits of the initial release. The default is 20.")))
             
         .subcommand(App::new("delete")
@@ -520,7 +520,8 @@ fn execute_set_commits<'a>(
 fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
-
+    let default_count = matches.value_of("commits-count").unwrap_or_default().parse().unwrap_or(20);
+    // make sure the release exists if projects are given
     if let Ok(projects) = ctx.get_projects(matches) {
         ctx.api.new_release(
             &org,
@@ -542,21 +543,17 @@ fn execute_set_manual_commits<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches
     let repo = git2::Repository::open_from_env()?;
 
     // Parse the git url.
-    let remote = repo.find_remote("origin")?;
-    let url = remote.url();   
-    let parsed = match url {
-        Some(url) => parse_git_url(url),
-        None => return Err(format_err!("Failed to parse remote url!"))
-    };
-
+    let remote = Config::current().get_cached_vcs_remote();
+    let parsed = get_repo_from_remote(&remote);
     // Fetch all the commits upto the `prev_commit` or return the default (20).
     // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
-    let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit)?;
+    let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit, default_count)?;
     
     // Calculate the diff for each commit in the Vec<GitCommit>.
     let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
 
-    for chunk in commits.chunks(50) {
+    let chunk_size = 50;
+    for chunk in commits.chunks(chunk_size) {
         ctx.api.update_release(
             ctx.get_org()?,
             version,

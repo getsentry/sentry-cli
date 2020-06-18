@@ -200,7 +200,7 @@ fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
 
-pub fn parse_git_url(repo: &str) -> String {
+pub fn get_repo_from_remote(repo: &str) -> String {
     let obj = VcsUrl::parse(repo);
     obj.id
 }
@@ -439,12 +439,12 @@ pub fn find_heads(
 pub fn get_commits_from_git<'a>(
     repo: &'a Repository,
     prev_commit: &str,
+    default_count: usize,
 ) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>), Error> {
     let mut revwalk = repo.revwalk()?;
     revwalk.push_head()?;
 
-    let default_count = 20;
-    let commit_filter = move |id:Result<git2::Oid, git2::Error>| {
+    let commit_filter = move |id: Result<git2::Oid, git2::Error>| {
         let id = id.ok()?;
 
         let commit = repo.find_commit(id).ok()?;
@@ -516,7 +516,7 @@ pub fn generate_patch_set(
 
         let tree1 = commit.tree()?;
 
-        let tree2 = if index + 1 < commits.len() {
+        let tree2 = if commits.len() > index + 1 {
             Some(commits[index + 1].tree()?)
         } else {
             match &previous {
@@ -536,6 +536,7 @@ pub fn generate_patch_set(
             };
             git_commit.patch_set.push(patch_set);
 
+            // Returning false from the callback will terminate the iteration and return an error from this function.
             true
         })?;
 
@@ -858,7 +859,7 @@ fn test_get_commits_from_git() {
     );
 
     let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "").expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
 
     assert_debug_snapshot!(commits.0.iter().map(|c| {
         (c.author().name().unwrap().to_owned(), c.author().email().unwrap().to_owned(),c.summary())
@@ -908,7 +909,7 @@ fn test_generate_patch_set_base() {
     );
 
     let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "").expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
     println!("Commits: {}", commits.0.len());
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
@@ -990,7 +991,7 @@ fn test_generate_patch_set_previous_commit() {
         "\"fifth commit\"",
     );
 
-    let commits = get_commits_from_git(&repo, &head.id().to_string()).expect("Failed");
+    let commits = get_commits_from_git(&repo, &head.id().to_string(), 20).expect("Failed");
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
 
@@ -1047,7 +1048,7 @@ fn test_generate_patch_default_twenty() {
         "\"final commit\"",
     );
 
-    let commits = get_commits_from_git(&repo, "").expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
 
