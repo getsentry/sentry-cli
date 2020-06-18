@@ -80,3 +80,7 @@ crossbeam-channel = "0.4.2"
 [profile.release]
 opt-level = 3
 panic = "abort"
+
+[dev-dependencies]
+insta = {version= "0.16.0", features= ["redactions"]}
+tempfile = "3.1.0"
