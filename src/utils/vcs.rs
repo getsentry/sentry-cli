@@ -514,18 +514,14 @@ pub fn generate_patch_set(
             patch_set: vec![],
         };
 
-        let tree1 = commit.tree()?;
-
-        let tree2 = if commits.len() > index + 1 {
+        let old_tree = if commits.len() > index + 1 {
             Some(commits[index + 1].tree()?)
         } else {
-            match &previous {
-                None => None,
-                Some(c) => Some(c.tree()?),
-            }
+            previous.as_ref().map(|c| c.tree()).transpose()?
         };
 
-        let diff = repo.diff_tree_to_tree(tree2.as_ref(), Some(&tree1), None)?;
+        let new_tree = Some(commit.tree()?);
+        let diff = repo.diff_tree_to_tree(old_tree.as_ref(), new_tree.as_ref(), None)?;
 
         diff.print(git2::DiffFormat::NameStatus, |_, _, l| {
             let line = std::str::from_utf8(l.content()).unwrap();
