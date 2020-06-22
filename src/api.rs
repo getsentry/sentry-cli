@@ -798,7 +798,7 @@ impl Api {
         );
         let resp = self.get(&path)?;
         if resp.status() == 404 {
-            Ok(OptionalReleaseInfo::None {})
+            Ok(OptionalReleaseInfo::None(NoneReleaseInfo {}))
         } else {
             resp.convert()
         }
@@ -1852,24 +1852,32 @@ pub struct ReleaseInfo {
     pub url: Option<String>,
     #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
-    #[serde(rename = "dateReleased")]
+    #[serde(default, rename = "dateReleased")]
     pub date_released: Option<DateTime<Utc>>,
-    #[serde(rename = "lastEvent")]
+    #[serde(default, rename = "lastEvent")]
     pub last_event: Option<DateTime<Utc>>,
-    #[serde(rename = "newGroups")]
+    #[serde(default, rename = "newGroups")]
     pub new_groups: u64,
     #[serde(default)]
     pub projects: Vec<ProjectSlugAndName>,
-    #[serde(rename = "lastCommit", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "lastCommit",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub last_commit: Option<LastCommit>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(untagged)]
 pub enum OptionalReleaseInfo {
-    None {},
+    None(NoneReleaseInfo),
     Some(ReleaseInfo),
 }
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NoneReleaseInfo {}
 
 #[derive(Debug, Deserialize)]
 pub struct LastCommit {
