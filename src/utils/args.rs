@@ -3,6 +3,7 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, TimeZone, Utc};
+use clap::AppSettings;
 use failure::{bail, Error};
 use symbolic::common::DebugId;
 use uuid::Uuid;
@@ -143,7 +144,7 @@ impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
     }
 
     fn version_arg(self, index: u64) -> clap::App<'a, 'b> {
-        self.arg(
+        self.setting(AppSettings::AllowLeadingHyphen).arg(
             clap::Arg::with_name("version")
                 .value_name("VERSION")
                 .required(true)
