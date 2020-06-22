@@ -17,7 +17,8 @@ use log::{debug, info, warn};
 use regex::Regex;
 
 use crate::api::{
-    Api, Deploy, FileContents, NewRelease, OptionalReleaseInfo, ProgressBarMode, UpdatedRelease,
+    Api, Deploy, FileContents, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, ProgressBarMode,
+    UpdatedRelease,
 };
 use crate::config::Config;
 use crate::utils::args::{
@@ -104,6 +105,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
+            .arg(Arg::with_name("local")
+                .long("local")
+                .help("Set commits of a release from local git.{n}\
+                        This requires that the command is run from within a git repository.  \
+                        sentry-cli will then automatically find remotely configured \
+                        repositories and discover commits."))
+            .arg(Arg::with_name("initial-depth")
+                .long("initial-depth")
+                .value_name("INITIAL DEPTH")
+                .validator(validate_int)
+                .help("Set the number of commits of the initial release. The default is 20."))
             .arg(Arg::with_name("commits")
                  .long("commit")
                  .short("c")
@@ -123,16 +135,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         the current commit of the repository at the given PATH is \
                         assumed.  To override the revision `@REV` can be appended \
                         which will force the revision to a certain value.")))
-        .subcommand(App::new("set-manual-commits")
-            .about("Set commits of a release from local git.")
-            .version_arg(1)
-            .arg(Arg::with_name("commits-count")
-                .long("commits-count")
-                .short("c")
-                .value_name("COMMITS COUNT")
-                .validator(validate_int)
-                .help("Set the number of commits of the initial release. The default is 20.")))
-
         .subcommand(App::new("delete")
             .about("Delete a release.")
             .version_arg(1))
@@ -428,6 +430,10 @@ fn execute_set_commits<'a>(
     matches: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
+    let default_count = matches
+        .value_of("initial-depth")
+        .unwrap_or("20")
+        .parse::<usize>()?;
     let org = ctx.get_org()?;
     let repos = ctx.api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
@@ -443,21 +449,14 @@ fn execute_set_commits<'a>(
     let heads = if matches.is_present("auto") {
         let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
-            let config = Config::current();
-
-            bail!(
-                "Could not determine any commits to be associated automatically.\n\
-                 Please provide commits explicitly using --commit | -c.\n\
-                 \n\
-                 HINT: Did you add the repo to your organization?\n\
-                 Configure it at {}/settings/{}/repos/",
-                config.get_base_url()?,
-                org
-            );
+            None
+        } else {
+            Some(commits)
         }
-        Some(commits)
     } else if matches.is_present("clear") {
         Some(vec![])
+    } else if matches.is_present("local") {
+        None
     } else {
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
@@ -516,67 +515,44 @@ fn execute_set_commits<'a>(
         }
         ctx.api.set_release_refs(&org, version, heads)?;
     } else {
-        println!("No commits found. Leaving release alone.");
+        println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
+        // Get the commit of the most recent release.
+        let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
+            OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
+            OptionalReleaseInfo::None(NoneReleaseInfo {}) => String::new(),
+        };
+
+        // Find and connect to local git.
+        let repo = git2::Repository::open_from_env()?;
+
+        // Parse the git url.
+        let remote = config.get_cached_vcs_remote();
+        let parsed = get_repo_from_remote(&remote);
+        // Fetch all the commits upto the `prev_commit` or return the default (20).
+        // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
+        let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit, default_count)?;
+
+        // Calculate the diff for each commit in the Vec<GitCommit>.
+        let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
+
+        if commits.is_empty() {
+            bail!("No commits found. Leaving release alone.");
+        }
+
+        let chunk_size = 50;
+        for chunk in commits.chunks(chunk_size) {
+            ctx.api.update_release(
+                ctx.get_org()?,
+                version,
+                &UpdatedRelease {
+                    commits: Some(chunk.to_owned()),
+                    ..Default::default()
+                },
+            )?;
+        }
+
+        println!("Success! Set commits for release {}.", version);
     }
-
-    Ok(())
-}
-
-fn execute_set_manual_commits<'a>(
-    ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
-) -> Result<(), Error> {
-    let version = matches.value_of("version").unwrap();
-    let org = ctx.get_org()?;
-    let default_count = matches
-        .value_of("commits-count")
-        .unwrap_or("20")
-        .parse::<usize>()?;
-
-    // make sure the release exists if projects are given
-    if let Ok(projects) = ctx.get_projects(matches) {
-        ctx.api.new_release(
-            &org,
-            &NewRelease {
-                version: version.into(),
-                projects,
-                ..Default::default()
-            },
-        )?;
-    }
-
-    // Get the commit of the most recent release.
-    let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
-        OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
-        OptionalReleaseInfo::None {} => String::new(),
-    };
-
-    // Find and connect to local git.
-    let repo = git2::Repository::open_from_env()?;
-
-    // Parse the git url.
-    let remote = Config::current().get_cached_vcs_remote();
-    let parsed = get_repo_from_remote(&remote);
-    // Fetch all the commits upto the `prev_commit` or return the default (20).
-    // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
-    let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit, default_count)?;
-
-    // Calculate the diff for each commit in the Vec<GitCommit>.
-    let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
-
-    let chunk_size = 50;
-    for chunk in commits.chunks(chunk_size) {
-        ctx.api.update_release(
-            ctx.get_org()?,
-            version,
-            &UpdatedRelease {
-                commits: Some(chunk.to_owned()),
-                ..Default::default()
-            },
-        )?;
-    }
-
-    println!("Success! Set commits for release {}.", version);
 
     Ok(())
 }
@@ -1115,9 +1091,6 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
     if let Some(sub_matches) = matches.subcommand_matches("set-commits") {
         return execute_set_commits(&ctx, sub_matches);
-    }
-    if let Some(sub_matches) = matches.subcommand_matches("set-manual-commits") {
-        return execute_set_manual_commits(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         return execute_delete(&ctx, sub_matches);
