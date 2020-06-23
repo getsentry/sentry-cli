@@ -57,6 +57,11 @@ walkdir = "2.3.1"
 which = "3.1.1"
 zip = "0.5.5"
 
+[dev-dependencies]
+assert_cmd = "1.0.1"
+predicates = "1.0.4"
+mockito = "0.25.2"
+
 [features]
 default = ["with_crash_reporting"]
 managed = []
