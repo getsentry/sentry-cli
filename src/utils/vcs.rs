@@ -206,7 +206,7 @@ pub fn get_repo_from_remote(repo: &str) -> String {
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>, Error> {
-    let mut found_non_git = false;
+    let mut non_git = false;
     for configured_repo in repos {
         if configured_repo.name != repo {
             continue;
@@ -231,12 +231,12 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>, Erro
             }
             _ => {
                 debug!("  unknown repository {} skipped", configured_repo);
-                found_non_git = true;
+                non_git = true;
             }
         }
     }
 
-    if found_non_git {
+    if non_git {
         Ok(None)
     } else {
         bail!("Could not find matching repository for {}", repo);
@@ -486,7 +486,7 @@ pub fn get_commits_from_git<'a>(
         Err(_) => {
             // If there is no previous commit, return the default number of commits
             println!(
-                "Could not find previous commit. We will create a release with {} commits",
+                "Could not find the previous commit. Creating a release with {} commits.",
                 default_count
             );
             let mut result: Vec<Commit> = revwalk

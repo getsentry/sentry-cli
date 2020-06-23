@@ -100,18 +100,20 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .long("clear")
                  .help("Clear all current commits from the release."))
             .arg(Arg::with_name("auto")
-                 .long("auto")
-                 .help("Enable completely automated commit management.{n}\
+                .long("auto")
+                .help("Enable completely automated commit management.{n}\
                         This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
             .arg(Arg::with_name("local")
+                .conflicts_with_all(&["auto", "clear", "commits", ])
                 .long("local")
                 .help("Set commits of a release from local git.{n}\
                         This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
             .arg(Arg::with_name("initial-depth")
+                .conflicts_with("auto")
                 .long("initial-depth")
                 .value_name("INITIAL DEPTH")
                 .validator(validate_int)
@@ -430,10 +432,7 @@ fn execute_set_commits<'a>(
     matches: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
-    let default_count = matches
-        .value_of("initial-depth")
-        .unwrap_or("20")
-        .parse::<usize>()?;
+
     let org = ctx.get_org()?;
     let repos = ctx.api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
@@ -515,7 +514,14 @@ fn execute_set_commits<'a>(
         }
         ctx.api.set_release_refs(&org, version, heads)?;
     } else {
-        println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
+        let default_count = matches
+            .value_of("initial-depth")
+            .unwrap_or("20")
+            .parse::<usize>()?;
+
+        if matches.is_present("local") {
+            println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
+        }
         // Get the commit of the most recent release.
         let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
             OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
