@@ -313,8 +313,8 @@ impl Config {
                 self.ini
                     .get_from(Some("defaults"), "pipeline")
                     .map(str::to_owned)
-            }).unwrap_or_default()
-        )
+            })
+            .unwrap_or_default())
     }
 
     /// Returns the defaults for org and project.

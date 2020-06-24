@@ -426,7 +426,7 @@ impl Api {
 
         let env = match self.config.get_pipeline_env() {
             Ok(env) => env,
-            Err(_) => String::new()
+            Err(_) => String::new(),
         };
 
         ApiRequest::create(handle, &method, &url, auth, env)
@@ -1413,7 +1413,7 @@ impl ApiRequest {
         method: &Method,
         url: &str,
         auth: Option<&Auth>,
-        pipeline_env: String
+        pipeline_env: String,
     ) -> ApiResult<Self> {
         debug!("request {} {}", method, url);
         debug!("pipeline: {}", pipeline_env);
@@ -1421,7 +1421,10 @@ impl ApiRequest {
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
         headers
-            .append(&format!("User-Agent: sentry-cli/{} {}", VERSION, pipeline_env))
+            .append(&format!(
+                "User-Agent: sentry-cli/{} {}",
+                VERSION, pipeline_env
+            ))
             .ok();
 
         match method {
