@@ -139,6 +139,8 @@ impl VcsUrl {
             static ref HOST_WITH_PORT: Regex = Regex::new(r"(.*):\d+$").unwrap();
             static ref GCB_GIT_PATH_RE: Regex =
                 Regex::new(r"^p/.+/r/github_(.+?)_(.+?)(?:\.git)?$").unwrap();
+            static ref BITBUCKET_SERVER_PATH_RE: Regex =
+                Regex::new(r"projects/(.+)/repos/(.+)/browse").unwrap();
         }
         static GCB_DOMAIN: &str = "source.developers.google.com";
 
@@ -185,6 +187,13 @@ impl VcsUrl {
                     id: format!("{}/{}", &caps[1], &caps[2]),
                 };
             }
+        }
+
+        if let Some(caps) = BITBUCKET_SERVER_PATH_RE.captures(path) {
+            return VcsUrl {
+                provider: host.to_lowercase(),
+                id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+            };
         }
 
         VcsUrl {
@@ -516,6 +525,15 @@ fn test_url_parsing() {
         VcsUrl {
             provider: "bitbucket.org".into(),
             id: "mitsuhiko/flask".into(),
+        }
+    );
+    assert_eq!(
+        VcsUrl::parse(
+            "https://bitbucket.example.com/projects/laurynsentry/repos/helloworld/browse"
+        ),
+        VcsUrl {
+            provider: "bitbucket.example.com".into(),
+            id: "laurynsentry/helloworld".into(),
         }
     );
     assert_eq!(
