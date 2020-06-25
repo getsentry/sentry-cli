@@ -205,8 +205,8 @@ pub fn get_repo_from_remote(repo: &str) -> String {
     obj.id
 }
 
-fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
-    let mut found_non_git = false;
+fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>, Error> {
+    let mut non_git = false;
     for configured_repo in repos {
         if configured_repo.name != repo {
             continue;
@@ -226,18 +226,18 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
                     debug!("  Got reference URL for repo {}: {}", repo, url);
-                    return Ok(url.clone());
+                    return Ok(Some(url.clone()));
                 }
             }
             _ => {
                 debug!("  unknown repository {} skipped", configured_repo);
-                found_non_git = true;
+                non_git = true;
             }
         }
     }
 
-    if found_non_git {
-        bail!("For non git repositories explicit revisions are required");
+    if non_git {
+        Ok(None)
     } else {
         bail!("Could not find matching repository for {}", repo);
     }
@@ -265,34 +265,38 @@ fn find_matching_rev(
         (git2::Repository::open_from_env()?, !disable_discovery)
     };
 
-    let reference_url = find_reference_url(&spec.repo, repos)?;
-    debug!("  Looking for reference URL {}", &reference_url);
+    match find_reference_url(&spec.repo, repos)? {
+        None => Ok(None),
+        Some(reference_url) => {
+            debug!("  Looking for reference URL {}", &reference_url);
 
-    // direct reference in root repository found.  If we are in discovery
-    // mode we want to also check for matching URLs.
-    if_chain! {
-        if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
-        if let Some(url) = remote.url();
-        then {
-            if !discovery || is_matching_url(url, &reference_url) {
-                debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
-                let head = repo.revparse_single(r)?;
-                if let Some(tag) = head.as_tag(){
-                    if let Ok(tag_commit) = tag.target() {
-                        return Ok(Some(log_match!(tag_commit.id().to_string())));
+            // direct reference in root repository found.  If we are in discovery
+            // mode we want to also check for matching URLs.
+            if_chain! {
+                if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
+                if let Some(url) = remote.url();
+                then {
+                    if !discovery || is_matching_url(url, &reference_url) {
+                        debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
+                        let head = repo.revparse_single(r)?;
+                        if let Some(tag) = head.as_tag(){
+                            if let Ok(tag_commit) = tag.target() {
+                                return Ok(Some(log_match!(tag_commit.id().to_string())));
+                            }
+                        }
+                        return Ok(Some(log_match!(head.id().to_string())));
+                    } else {
+                        debug!("  not a match: {} != {}", url, &reference_url);
                     }
                 }
-                return Ok(Some(log_match!(head.id().to_string())));
-            } else {
-                debug!("  not a match: {} != {}", url, &reference_url);
             }
+            if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
+                return Ok(submodule_match);
+            }
+            info!("  -> no matching revision found");
+            Ok(None)
         }
     }
-    if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
-        return Ok(submodule_match);
-    }
-    info!("  -> no matching revision found");
-    Ok(None)
 }
 
 fn find_matching_submodule(
@@ -481,6 +485,10 @@ pub fn get_commits_from_git<'a>(
         }
         Err(_) => {
             // If there is no previous commit, return the default number of commits
+            println!(
+                "Could not find the previous commit. Creating a release with {} commits.",
+                default_count
+            );
             let mut result: Vec<Commit> = revwalk
                 .take(default_count + 1)
                 .filter_map(commit_filter)
