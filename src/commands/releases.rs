@@ -519,7 +519,7 @@ fn execute_set_commits<'a>(
             .unwrap_or("20")
             .parse::<usize>()?;
 
-        if matches.is_present("local") {
+        if matches.is_present("auto") {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
         }
         // Get the commit of the most recent release.
