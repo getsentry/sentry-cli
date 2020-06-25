@@ -306,15 +306,12 @@ impl Config {
     }
 
     /// Return the default pipeline env.
-    pub fn get_pipeline_env(&self) -> Result<String, Error> {
-        Ok(env::var("SENTRY_PIPELINE")
-            .ok()
-            .or_else(|| {
-                self.ini
-                    .get_from(Some("defaults"), "pipeline")
-                    .map(str::to_owned)
-            })
-            .unwrap_or_default())
+    pub fn get_pipeline_env(&self) -> Option<String> {
+        env::var("SENTRY_PIPELINE").ok().or_else(|| {
+            self.ini
+                .get_from(Some("defaults"), "pipeline")
+                .map(str::to_owned)
+        })
     }
 
     /// Returns the defaults for org and project.
