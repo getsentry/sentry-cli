@@ -305,6 +305,15 @@ impl Config {
             .ok_or_else(|| err_msg("A project slug is required"))?)
     }
 
+    /// Return the default pipeline env.
+    pub fn get_pipeline_env(&self) -> Option<String> {
+        env::var("SENTRY_PIPELINE").ok().or_else(|| {
+            self.ini
+                .get_from(Some("defaults"), "pipeline")
+                .map(str::to_owned)
+        })
+    }
+
     /// Returns the defaults for org and project.
     pub fn get_org_and_project_defaults(&self) -> (Option<String>, Option<String>) {
         (

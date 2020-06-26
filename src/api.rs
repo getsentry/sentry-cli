@@ -424,7 +424,9 @@ impl Api {
         // This toggles gzipping, useful for uploading large files
         handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
-        ApiRequest::create(handle, &method, &url, auth)
+        let env = self.config.get_pipeline_env();
+
+        ApiRequest::create(handle, &method, &url, auth, env)
     }
 
     /// Convenience method that performs a `GET` request.
@@ -1428,14 +1430,26 @@ impl ApiRequest {
         method: &Method,
         url: &str,
         auth: Option<&Auth>,
+        pipeline_env: Option<String>,
     ) -> ApiResult<Self> {
         debug!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
-        headers
-            .append(&format!("User-Agent: sentry-cli/{}", VERSION))
-            .ok();
+
+        match pipeline_env {
+            Some(env) => {
+                debug!("pipeline: {}", env);
+                headers
+                    .append(&format!("User-Agent: sentry-cli/{} {}", VERSION, env))
+                    .ok();
+            }
+            None => {
+                headers
+                    .append(&format!("User-Agent: sentry-cli/{}", VERSION))
+                    .ok();
+            }
+        }
 
         match method {
             Method::Get => handle.get(true)?,
