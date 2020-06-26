@@ -1,13 +1,15 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use chrono::{DateTime, FixedOffset, TimeZone};
 use failure::{bail, format_err, Error};
+use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info};
 use regex::Regex;
 
-use crate::api::{Ref, Repo};
+use crate::api::{GitCommit, PatchSet, Ref, Repo};
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
@@ -198,8 +200,13 @@ fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
 
-fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
-    let mut found_non_git = false;
+pub fn get_repo_from_remote(repo: &str) -> String {
+    let obj = VcsUrl::parse(repo);
+    obj.id
+}
+
+fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>, Error> {
+    let mut non_git = false;
     for configured_repo in repos {
         if configured_repo.name != repo {
             continue;
@@ -219,18 +226,18 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<String, Error> {
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
                     debug!("  Got reference URL for repo {}: {}", repo, url);
-                    return Ok(url.clone());
+                    return Ok(Some(url.clone()));
                 }
             }
             _ => {
                 debug!("  unknown repository {} skipped", configured_repo);
-                found_non_git = true;
+                non_git = true;
             }
         }
     }
 
-    if found_non_git {
-        bail!("For non git repositories explicit revisions are required");
+    if non_git {
+        Ok(None)
     } else {
         bail!("Could not find matching repository for {}", repo);
     }
@@ -258,34 +265,38 @@ fn find_matching_rev(
         (git2::Repository::open_from_env()?, !disable_discovery)
     };
 
-    let reference_url = find_reference_url(&spec.repo, repos)?;
-    debug!("  Looking for reference URL {}", &reference_url);
+    match find_reference_url(&spec.repo, repos)? {
+        None => Ok(None),
+        Some(reference_url) => {
+            debug!("  Looking for reference URL {}", &reference_url);
 
-    // direct reference in root repository found.  If we are in discovery
-    // mode we want to also check for matching URLs.
-    if_chain! {
-        if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
-        if let Some(url) = remote.url();
-        then {
-            if !discovery || is_matching_url(url, &reference_url) {
-                debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
-                let head = repo.revparse_single(r)?;
-                if let Some(tag) = head.as_tag(){
-                    if let Ok(tag_commit) = tag.target() {
-                        return Ok(Some(log_match!(tag_commit.id().to_string())));
+            // direct reference in root repository found.  If we are in discovery
+            // mode we want to also check for matching URLs.
+            if_chain! {
+                if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
+                if let Some(url) = remote.url();
+                then {
+                    if !discovery || is_matching_url(url, &reference_url) {
+                        debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
+                        let head = repo.revparse_single(r)?;
+                        if let Some(tag) = head.as_tag(){
+                            if let Ok(tag_commit) = tag.target() {
+                                return Ok(Some(log_match!(tag_commit.id().to_string())));
+                            }
+                        }
+                        return Ok(Some(log_match!(head.id().to_string())));
+                    } else {
+                        debug!("  not a match: {} != {}", url, &reference_url);
                     }
                 }
-                return Ok(Some(log_match!(head.id().to_string())));
-            } else {
-                debug!("  not a match: {} != {}", url, &reference_url);
             }
+            if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
+                return Ok(submodule_match);
+            }
+            info!("  -> no matching revision found");
+            Ok(None)
         }
     }
-    if let Ok(submodule_match) = find_matching_submodule(r, reference_url, repo) {
-        return Ok(submodule_match);
-    }
-    info!("  -> no matching revision found");
-    Ok(None)
 }
 
 fn find_matching_submodule(
@@ -427,8 +438,132 @@ pub fn find_heads(
     Ok(rv)
 }
 
+// Get commits from git history upto previous commit.
+// Returns a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
+pub fn get_commits_from_git<'a>(
+    repo: &'a Repository,
+    prev_commit: &str,
+    default_count: usize,
+) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>), Error> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
+
+    let commit_filter = move |id: Result<git2::Oid, git2::Error>| {
+        let id = id.ok()?;
+
+        let commit = repo.find_commit(id).ok()?;
+
+        Some(commit)
+    };
+
+    match git2::Oid::from_str(prev_commit) {
+        Ok(prev) => {
+            let mut found = false;
+            let mut result: Vec<Commit> = revwalk
+                .take_while(|id| match id {
+                    Ok(id) => {
+                        if found {
+                            return false;
+                        }
+                        if prev == *id {
+                            found = true;
+                        }
+                        true
+                    }
+                    _ => true,
+                })
+                .filter_map(commit_filter)
+                .collect();
+            // If there is a previous commit but cannot find it in git history, throw an error.
+            if !found {
+                return Err(format_err!(
+                    "Couldn’t not find the SHA of the previous release in the git history. Increase your git clone depth.",
+                ));
+            }
+            let prev = result.pop();
+            Ok((result, prev))
+        }
+        Err(_) => {
+            // If there is no previous commit, return the default number of commits
+            println!(
+                "Could not find the previous commit. Creating a release with {} commits.",
+                default_count
+            );
+            let mut result: Vec<Commit> = revwalk
+                .take(default_count + 1)
+                .filter_map(commit_filter)
+                .collect();
+
+            if result.len() == default_count + 1 {
+                let prev = result.pop();
+                Ok((result, prev))
+            } else {
+                Ok((result, None))
+            }
+        }
+    }
+}
+
+pub fn generate_patch_set(
+    repo: &Repository,
+    commits: Vec<Commit>,
+    previous: Option<Commit>,
+    repository: &str,
+) -> Result<Vec<GitCommit>, Error> {
+    let mut result = vec![];
+    for (index, commit) in commits.iter().enumerate() {
+        let mut git_commit = GitCommit {
+            id: commit.id().to_string(),
+            author_name: commit.author().name().map(|s| s.to_owned()),
+            author_email: commit.author().email().map(|s| s.to_owned()),
+            message: commit.message().map(|s| s.to_owned()),
+            repository: repository.to_string(),
+            timestamp: get_commit_time(commit.author().when()),
+            patch_set: vec![],
+        };
+
+        let old_tree = if commits.len() > index + 1 {
+            Some(commits[index + 1].tree()?)
+        } else {
+            previous.as_ref().map(|c| c.tree()).transpose()?
+        };
+
+        let new_tree = Some(commit.tree()?);
+        let diff = repo.diff_tree_to_tree(old_tree.as_ref(), new_tree.as_ref(), None)?;
+
+        diff.print(git2::DiffFormat::NameStatus, |_, _, l| {
+            let line = std::str::from_utf8(l.content()).unwrap();
+            let mut parsed = line.trim_end().splitn(2, '\t');
+            let patch_set = PatchSet {
+                ty: parsed.next().unwrap().to_owned(),
+                path: parsed.next().unwrap().to_owned(),
+            };
+            git_commit.patch_set.push(patch_set);
+
+            // Returning false from the callback will terminate the iteration and return an error from this function.
+            true
+        })?;
+
+        result.push(git_commit)
+    }
+
+    Ok(result)
+}
+
+pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
+    FixedOffset::east(time.offset_minutes() * 60).timestamp(time.seconds(), 0)
+}
+
 #[cfg(test)]
-use crate::api::RepoProvider;
+use {
+    crate::api::RepoProvider,
+    insta::{assert_debug_snapshot, assert_yaml_snapshot},
+    std::fs::File,
+    std::io::Write,
+    std::path::Path,
+    std::process::Command,
+    tempfile::tempdir,
+};
 
 #[test]
 fn test_find_matching_rev_with_lightweight_tag() {
@@ -667,4 +802,204 @@ fn test_url_normalization() {
         "git+https://git@github.com/kamilogorek/picklerick.git",
         "https://github.com/kamilogorek/picklerick"
     ));
+}
+
+#[cfg(test)]
+fn test_initialize(dir: &Path) {
+    let mut initialize = Command::new("git")
+        .arg("init")
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git init`.");
+
+    initialize.wait().expect("Failed to wait on git init.");
+}
+
+#[cfg(test)]
+fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: &str) {
+    let path = dir.join(file_path);
+    let mut file = File::create(path).expect("Failed to execute.");
+    file.write_all(content).expect("Failed to execute.");
+
+    let mut add = Command::new("git")
+        .args(&["add", "."])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git add .`");
+
+    add.wait().expect("Failed to wait on git add.");
+
+    let mut commit = Command::new("git")
+        .args(&[
+            "commit",
+            "-m",
+            commit_message,
+            "--author",
+            "John Doe <john.doe@example.com>",
+        ])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git commit -m {message}`.");
+
+    commit.wait().expect("Failed to wait on git commit.");
+}
+
+#[test]
+fn test_get_commits_from_git() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 2\");",
+        "\"second commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
+
+    assert_debug_snapshot!(commits
+        .0
+        .iter()
+        .map(|c| {
+            (
+                c.author().name().unwrap().to_owned(),
+                c.author().email().unwrap().to_owned(),
+                c.summary(),
+            )
+        })
+        .collect::<Vec<_>>());
+}
+
+#[test]
+fn test_generate_patch_set_base() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 2\");",
+        "\"second commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 3\");",
+        "\"third commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
+    println!("Commits: {}", commits.0.len());
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    });
+}
+
+#[test]
+fn test_generate_patch_set_previous_commit() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 2\");",
+        "\"second commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 3\");",
+        "\"third commit\"",
+    );
+    let head = repo.revparse_single("HEAD").expect("Failed");
+    println!("HEAD: {:?}", head.id());
+
+    git_commit_test(
+        dir.path(),
+        "foo4.js",
+        b"console.log(\"Hello, world! Part 4\");",
+        "\"fourth commit\"",
+    );
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world! Part 5\");",
+        "\"fifth commit\"",
+    );
+
+    let commits = get_commits_from_git(&repo, &head.id().to_string(), 20).expect("Failed");
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    });
+}
+
+#[test]
+fn test_generate_patch_default_twenty() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+    for n in 0..20 {
+        let file = format!("foo{}.js", n);
+        git_commit_test(
+            dir.path(),
+            &file,
+            b"console.log(\"Hello, world! Part 2\");",
+            "\"another commit\"",
+        );
+    }
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world!\");",
+        "\"final commit\"",
+    );
+
+    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    });
 }

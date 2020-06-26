@@ -52,6 +52,9 @@
   },
   "jest": {
     "collectCoverage": true,
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "testPathIgnorePatterns": [
+      "src/utils"
+    ]
   }
 }

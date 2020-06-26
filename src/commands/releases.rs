@@ -7,6 +7,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{bail, err_msg, Error};
+
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
@@ -15,16 +16,21 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
 
-use crate::api::{Api, Deploy, FileContents, NewRelease, ProgressBarMode, UpdatedRelease};
+use crate::api::{
+    Api, Deploy, FileContents, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, ProgressBarMode,
+    UpdatedRelease,
+};
 use crate::config::Config;
 use crate::utils::args::{
-    get_timestamp, validate_project, validate_seconds, validate_timestamp, ArgExt,
+    get_timestamp, validate_int, validate_project, validate_timestamp, ArgExt,
 };
 use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::releases::detect_release_name;
 use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
 use crate::utils::system::QuietExit;
-use crate::utils::vcs::{find_heads, CommitSpec};
+use crate::utils::vcs::{
+    find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,
+};
 
 struct ReleaseContext<'a> {
     pub api: Arc<Api>,
@@ -94,11 +100,24 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .long("clear")
                  .help("Clear all current commits from the release."))
             .arg(Arg::with_name("auto")
-                 .long("auto")
-                 .help("Enable completely automated commit management.{n}\
+                .long("auto")
+                .help("Enable completely automated commit management.{n}\
                         This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
+            .arg(Arg::with_name("local")
+                .conflicts_with_all(&["auto", "clear", "commits", ])
+                .long("local")
+                .help("Set commits of a release from local git.{n}\
+                        This requires that the command is run from within a git repository.  \
+                        sentry-cli will then automatically find remotely configured \
+                        repositories and discover commits."))
+            .arg(Arg::with_name("initial-depth")
+                .conflicts_with("auto")
+                .long("initial-depth")
+                .value_name("INITIAL DEPTH")
+                .validator(validate_int)
+                .help("Set the number of commits of the initial release. The default is 20."))
             .arg(Arg::with_name("commits")
                  .long("commit")
                  .short("c")
@@ -333,7 +352,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      .long("time")
                      .short("t")
                      .value_name("SECONDS")
-                     .validator(validate_seconds)
+                     .validator(validate_int)
                      .help("Optional deployment duration in seconds.{n}\
                             This can be specified alternatively to `--started` and `--finished`.")))
             .subcommand(App::new("list")
@@ -413,6 +432,7 @@ fn execute_set_commits<'a>(
     matches: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
+
     let org = ctx.get_org()?;
     let repos = ctx.api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
@@ -428,21 +448,14 @@ fn execute_set_commits<'a>(
     let heads = if matches.is_present("auto") {
         let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
-            let config = Config::current();
-
-            bail!(
-                "Could not determine any commits to be associated automatically.\n\
-                 Please provide commits explicitly using --commit | -c.\n\
-                 \n\
-                 HINT: Did you add the repo to your organization?\n\
-                 Configure it at {}/settings/{}/repos/",
-                config.get_base_url()?,
-                org
-            );
+            None
+        } else {
+            Some(commits)
         }
-        Some(commits)
     } else if matches.is_present("clear") {
         Some(vec![])
+    } else if matches.is_present("local") {
+        None
     } else {
         if let Some(commits) = matches.values_of("commits") {
             for spec in commits {
@@ -501,7 +514,50 @@ fn execute_set_commits<'a>(
         }
         ctx.api.set_release_refs(&org, version, heads)?;
     } else {
-        println!("No commits found. Leaving release alone.");
+        let default_count = matches
+            .value_of("initial-depth")
+            .unwrap_or("20")
+            .parse::<usize>()?;
+
+        if matches.is_present("auto") {
+            println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
+        }
+        // Get the commit of the most recent release.
+        let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
+            OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
+            OptionalReleaseInfo::None(NoneReleaseInfo {}) => String::new(),
+        };
+
+        // Find and connect to local git.
+        let repo = git2::Repository::open_from_env()?;
+
+        // Parse the git url.
+        let remote = config.get_cached_vcs_remote();
+        let parsed = get_repo_from_remote(&remote);
+        // Fetch all the commits upto the `prev_commit` or return the default (20).
+        // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
+        let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit, default_count)?;
+
+        // Calculate the diff for each commit in the Vec<GitCommit>.
+        let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
+
+        if commits.is_empty() {
+            bail!("No commits found. Leaving release alone.");
+        }
+
+        let chunk_size = 50;
+        for chunk in commits.chunks(chunk_size) {
+            ctx.api.update_release(
+                ctx.get_org()?,
+                version,
+                &UpdatedRelease {
+                    commits: Some(chunk.to_owned()),
+                    ..Default::default()
+                },
+            )?;
+        }
+
+        println!("Success! Set commits for release {}.", version);
     }
 
     Ok(())

@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Duration, FixedOffset, Utc};
 use failure::{Backtrace, Context, Error, Fail, ResultExt};
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
@@ -781,6 +781,26 @@ impl Api {
             let path = format!("/organizations/{}/releases/", PathArg(org));
             self.get(&path)?
                 .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
+        }
+    }
+
+    // Finds the most recent release with commits and returns it.
+    // If it does not exist `None` will be returned.
+    pub fn get_previous_release_with_commits(
+        &self,
+        org: &str,
+        version: &str,
+    ) -> ApiResult<OptionalReleaseInfo> {
+        let path = format!(
+            "/organizations/{}/releases/{}/previous-with-commits/",
+            PathArg(org),
+            PathArg(version)
+        );
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(OptionalReleaseInfo::None(NoneReleaseInfo {}))
+        } else {
+            resp.convert()
         }
     }
 
@@ -1821,6 +1841,8 @@ pub struct UpdatedRelease {
     pub date_released: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refs: Option<Vec<Ref>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commits: Option<Vec<GitCommit>>,
 }
 
 /// Provides all release information from already existing releases
@@ -1830,14 +1852,36 @@ pub struct ReleaseInfo {
     pub url: Option<String>,
     #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
-    #[serde(rename = "dateReleased")]
+    #[serde(default, rename = "dateReleased")]
     pub date_released: Option<DateTime<Utc>>,
-    #[serde(rename = "lastEvent")]
+    #[serde(default, rename = "lastEvent")]
     pub last_event: Option<DateTime<Utc>>,
-    #[serde(rename = "newGroups")]
+    #[serde(default, rename = "newGroups")]
     pub new_groups: u64,
     #[serde(default)]
     pub projects: Vec<ProjectSlugAndName>,
+    #[serde(
+        default,
+        rename = "lastCommit",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub last_commit: Option<LastCommit>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+pub enum OptionalReleaseInfo {
+    None(NoneReleaseInfo),
+    Some(ReleaseInfo),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NoneReleaseInfo {}
+
+#[derive(Debug, Deserialize)]
+pub struct LastCommit {
+    pub id: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -2238,4 +2282,23 @@ pub struct AssembleArtifactsResponse {
     pub state: ChunkedFileState,
     pub missing_chunks: Vec<Digest>,
     pub detail: Option<String>,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct PatchSet {
+    pub path: String,
+    #[serde(rename = "type")]
+    pub ty: String,
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub struct GitCommit {
+    pub patch_set: Vec<PatchSet>,
+    pub repository: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub author_name: Option<String>,
+    pub author_email: Option<String>,
+    pub timestamp: DateTime<FixedOffset>,
+    pub message: Option<String>,
+    pub id: String,
 }

@@ -1,0 +1,20 @@
+---
+source: src/utils/vcs.rs
+expression: "commits.0.iter().map(|c|\n                         {\n                             (c.author().name().unwrap().to_owned(),\n                              c.author().email().unwrap().to_owned(),\n                              c.summary())\n                         }).collect::<Vec<_>>()"
+---
+[
+    (
+        "John Doe",
+        "john.doe@example.com",
+        Some(
+            "\"second commit\"",
+        ),
+    ),
+    (
+        "John Doe",
+        "john.doe@example.com",
+        Some(
+            "\"initial commit\"",
+        ),
+    ),
+]
