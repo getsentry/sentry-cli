@@ -1,20 +1,11 @@
-use mockito::{mock, server_url};
-
 use assert_cmd::Command;
+use mockito::mock;
 use predicates::str::contains;
-use std::collections::HashMap;
+
+mod common;
 
 const ENDPOINT: &str = "/api/0/";
 const VALID_RESPONSE: &str = r#"{"user":{"username":"kamil@sentry.io","id":"1337","name":"Kamil Ogórek","email":"kamil@sentry.io"},"auth":{"scopes":["project:read","project:releases"]}}"#;
-
-fn get_base_env() -> HashMap<String, String> {
-    let mut env = HashMap::new();
-    env.insert(String::from("SENTRY_URL"), server_url());
-    env.insert(String::from("SENTRY_AUTH_TOKEN"), String::from("lolnope"));
-    env.insert(String::from("SENTRY_ORG"), String::from("wat-org"));
-    env.insert(String::from("SENTRY_PROJECT"), String::from("wat-project"));
-    env
-}
 
 #[test]
 fn info_works_when_all_required_env_are_present() {
@@ -26,7 +17,7 @@ fn info_works_when_all_required_env_are_present() {
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
-        .envs(get_base_env())
+        .envs(common::get_base_env())
         .arg("info")
         .assert()
         .success()
@@ -48,7 +39,7 @@ fn info_fails_without_auth_token() {
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
-        .envs(get_base_env())
+        .envs(common::get_base_env())
         .env_remove("SENTRY_AUTH_TOKEN")
         .arg("info")
         .assert()

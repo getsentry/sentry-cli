@@ -1,19 +1,11 @@
-use mockito::{mock, server_url};
+use mockito::mock;
 
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::collections::HashMap;
+
+mod common;
 
 const ENDPOINT: &str = "/api/0/projects/wat-org/wat-project/releases/wat-release/";
-
-fn get_base_env() -> HashMap<String, String> {
-    let mut env = HashMap::new();
-    env.insert(String::from("SENTRY_URL"), server_url());
-    env.insert(String::from("SENTRY_AUTH_TOKEN"), String::from("lolnope"));
-    env.insert(String::from("SENTRY_ORG"), String::from("wat-org"));
-    env.insert(String::from("SENTRY_PROJECT"), String::from("wat-project"));
-    env
-}
 
 #[test]
 fn releases_delete_successfully_deletes() {
@@ -25,7 +17,7 @@ fn releases_delete_successfully_deletes() {
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
-        .envs(get_base_env())
+        .envs(common::get_base_env())
         .arg("releases")
         .arg("delete")
         .arg("wat-release")
@@ -47,7 +39,7 @@ fn releases_delete_allows_for_release_to_start_with_hyphen() {
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
-        .envs(get_base_env())
+        .envs(common::get_base_env())
         .arg("releases")
         .arg("delete")
         .arg("-wat-release")
@@ -66,7 +58,7 @@ fn releases_delete_informs_about_nonexisting_releases() {
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
-        .envs(get_base_env())
+        .envs(common::get_base_env())
         .arg("releases")
         .arg("delete")
         .arg("wat-release")
@@ -89,7 +81,7 @@ fn releases_delete_doesnt_allow_to_delete_active_releases() {
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
-        .envs(get_base_env())
+        .envs(common::get_base_env())
         .arg("releases")
         .arg("delete")
         .arg("wat-release")
