@@ -1,26 +1,22 @@
-use mockito::mock;
-
 use assert_cmd::Command;
+use mockito::mock;
 use predicates::str::contains;
 
 use crate::common;
 
-const ENDPOINT: &str = "/api/0/projects/wat-org/wat-project/releases/wat-release/";
-
 #[test]
 fn successfully_deletes() {
-    let _server = mock("DELETE", ENDPOINT)
-        .with_status(204)
-        .with_header("content-type", "application/json")
-        .with_body("")
-        .create();
+    let _server = mock(
+        "DELETE",
+        "/api/0/projects/wat-org/wat-project/releases/wat-release/",
+    )
+    .with_status(204)
+    .create();
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
         .envs(common::get_base_env())
-        .arg("releases")
-        .arg("delete")
-        .arg("wat-release")
+        .args(vec!["releases", "delete", "wat-release"])
         .assert()
         .success()
         .stdout(contains("Deleted release wat-release!"));
@@ -33,16 +29,12 @@ fn allows_for_release_to_start_with_hyphen() {
         "/api/0/projects/wat-org/wat-project/releases/-wat-release/",
     )
     .with_status(204)
-    .with_header("content-type", "application/json")
-    .with_body("")
     .create();
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
         .envs(common::get_base_env())
-        .arg("releases")
-        .arg("delete")
-        .arg("-wat-release")
+        .args(vec!["releases", "delete", "-wat-release"])
         .assert()
         .success()
         .stdout(contains("Deleted release -wat-release!"));
@@ -50,18 +42,17 @@ fn allows_for_release_to_start_with_hyphen() {
 
 #[test]
 fn informs_about_nonexisting_releases() {
-    let _server = mock("DELETE", ENDPOINT)
-        .with_status(404)
-        .with_header("content-type", "application/json")
-        .with_body("")
-        .create();
+    let _server = mock(
+        "DELETE",
+        "/api/0/projects/wat-org/wat-project/releases/wat-release/",
+    )
+    .with_status(404)
+    .create();
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
         .envs(common::get_base_env())
-        .arg("releases")
-        .arg("delete")
-        .arg("wat-release")
+        .args(vec!["releases", "delete", "wat-release"])
         .assert()
         .success()
         .stdout(contains(
@@ -71,20 +62,19 @@ fn informs_about_nonexisting_releases() {
 
 #[test]
 fn doesnt_allow_to_delete_active_releases() {
-    let _server = mock("DELETE", ENDPOINT)
-        .with_status(400)
-        .with_header("content-type", "application/json")
-        .with_body(
-            r#"{"detail":"This release is referenced by active issues and cannot be removed."}"#,
-        )
-        .create();
+    let _server = mock(
+        "DELETE",
+        "/api/0/projects/wat-org/wat-project/releases/wat-release/",
+    )
+    .with_status(400)
+    .with_header("content-type", "application/json")
+    .with_body(r#"{"detail":"This release is referenced by active issues and cannot be removed."}"#)
+    .create();
 
     Command::cargo_bin("sentry-cli")
         .unwrap()
         .envs(common::get_base_env())
-        .arg("releases")
-        .arg("delete")
-        .arg("wat-release")
+        .args(vec!["releases", "delete", "wat-release"])
         .assert()
         .failure()
         .stderr(contains(

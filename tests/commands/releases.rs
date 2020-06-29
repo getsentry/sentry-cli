@@ -1,6 +1,6 @@
-use mockito::mock;
-
 use assert_cmd::Command;
+use mockito::mock;
+use predicates::prelude::*;
 use predicates::str::contains;
 
 use crate::common;
@@ -13,8 +13,10 @@ fn require_subcommand() {
         .arg("releases")
         .assert()
         .failure()
-        .stderr(contains("Manage releases on Sentry."))
-        .stderr(contains("sentry-cli releases <SUBCOMMAND>"));
+        .stderr(
+            contains("Manage releases on Sentry.")
+                .and(contains("sentry-cli releases <SUBCOMMAND>")),
+        );
 }
 
 #[test]
@@ -28,10 +30,7 @@ fn allow_for_overriding_organization_with_flag_for_subcommands() {
     Command::cargo_bin("sentry-cli")
         .unwrap()
         .envs(common::get_base_env())
-        .arg("releases")
-        .arg("--org")
-        .arg("whynot")
-        .arg("list")
+        .args(vec!["releases", "--org", "whynot", "list"])
         .assert()
         .success();
 }
