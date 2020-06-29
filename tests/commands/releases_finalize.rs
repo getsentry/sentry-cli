@@ -3,13 +3,13 @@ use mockito::{mock, Matcher};
 use assert_cmd::Command;
 use predicates::str::contains;
 
-mod common;
+use crate::common;
 
 const ENDPOINT: &str = "/api/0/projects/wat-org/wat-project/releases/wat-release/";
 const VALID_RESPONSE: &str = r#"{"dateReleased":"2020-06-29T12:16:49.368667Z","newGroups":0,"commitCount":0,"url":null,"data":{},"lastDeploy":null,"deployCount":0,"dateCreated":"2020-06-29T11:36:59.612687Z","lastEvent":null,"version":"wat-release","firstEvent":null,"lastCommit":null,"shortVersion":"wat-release","authors":[],"owner":null,"versionInfo":{"buildHash":null,"version":{"raw":"wat-release"},"description":"wat-release","package":null},"ref":null,"projects":[{"name":"test","platform":"javascript","slug":"test","platforms":["javascript"],"newGroups":0,"id":1861017}]}"#;
 
 #[test]
-fn releases_finalize_release() {
+fn successfully_creates_a_release() {
     let _server = mock("PUT", ENDPOINT)
         .match_body(Matcher::AllOf(vec![
             Matcher::PartialJsonString(r#"{"projects":["wat-project"]}"#.to_string()),
@@ -32,7 +32,7 @@ fn releases_finalize_release() {
 }
 
 #[test]
-fn releases_finalize_allows_for_release_to_start_with_hyphen() {
+fn allows_for_release_to_start_with_hyphen() {
     let _server = mock("PUT", "/api/0/projects/wat-org/wat-project/releases/-wat-release/")
         .match_body(Matcher::AllOf(vec![
             Matcher::PartialJsonString(r#"{"projects":["wat-project"]}"#.to_string()),
@@ -55,7 +55,7 @@ fn releases_finalize_allows_for_release_to_start_with_hyphen() {
 }
 
 #[test]
-fn releases_finalize_release_with_custom_dates() {
+fn release_with_custom_dates() {
     let _server = mock("PUT", ENDPOINT)
         .match_body(
             Matcher::JsonString(

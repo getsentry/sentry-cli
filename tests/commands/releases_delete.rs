@@ -3,12 +3,12 @@ use mockito::mock;
 use assert_cmd::Command;
 use predicates::str::contains;
 
-mod common;
+use crate::common;
 
 const ENDPOINT: &str = "/api/0/projects/wat-org/wat-project/releases/wat-release/";
 
 #[test]
-fn releases_delete_successfully_deletes() {
+fn successfully_deletes() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(204)
         .with_header("content-type", "application/json")
@@ -27,7 +27,7 @@ fn releases_delete_successfully_deletes() {
 }
 
 #[test]
-fn releases_delete_allows_for_release_to_start_with_hyphen() {
+fn allows_for_release_to_start_with_hyphen() {
     let _server = mock(
         "DELETE",
         "/api/0/projects/wat-org/wat-project/releases/-wat-release/",
@@ -49,7 +49,7 @@ fn releases_delete_allows_for_release_to_start_with_hyphen() {
 }
 
 #[test]
-fn releases_delete_informs_about_nonexisting_releases() {
+fn informs_about_nonexisting_releases() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(404)
         .with_header("content-type", "application/json")
@@ -70,7 +70,7 @@ fn releases_delete_informs_about_nonexisting_releases() {
 }
 
 #[test]
-fn releases_delete_doesnt_allow_to_delete_active_releases() {
+fn doesnt_allow_to_delete_active_releases() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(400)
         .with_header("content-type", "application/json")

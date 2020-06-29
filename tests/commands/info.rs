@@ -2,13 +2,13 @@ use assert_cmd::Command;
 use mockito::mock;
 use predicates::str::contains;
 
-mod common;
+use crate::common;
 
 const ENDPOINT: &str = "/api/0/";
 const VALID_RESPONSE: &str = r#"{"user":{"username":"kamil@sentry.io","id":"1337","name":"Kamil Ogórek","email":"kamil@sentry.io"},"auth":{"scopes":["project:read","project:releases"]}}"#;
 
 #[test]
-fn info_works_when_all_required_env_are_present() {
+fn works_when_all_required_env_are_present() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -30,7 +30,7 @@ fn info_works_when_all_required_env_are_present() {
 }
 
 #[test]
-fn info_fails_without_auth_token() {
+fn fails_without_auth_token() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")

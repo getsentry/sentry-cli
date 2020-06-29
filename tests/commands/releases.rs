@@ -3,10 +3,10 @@ use mockito::mock;
 use assert_cmd::Command;
 use predicates::str::contains;
 
-mod common;
+use crate::common;
 
 #[test]
-fn releases_require_subcommand() {
+fn require_subcommand() {
     Command::cargo_bin("sentry-cli")
         .unwrap()
         .envs(common::get_base_env())
@@ -18,7 +18,7 @@ fn releases_require_subcommand() {
 }
 
 #[test]
-fn releases_allow_for_overriding_organization_with_flag_for_subcommands() {
+fn allow_for_overriding_organization_with_flag_for_subcommands() {
     let _server = mock("GET", "/api/0/projects/whynot/wat-project/releases/")
         .with_status(200)
         .with_header("content-type", "application/json")

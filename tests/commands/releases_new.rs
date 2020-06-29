@@ -3,13 +3,13 @@ use mockito::{mock, Matcher};
 use assert_cmd::Command;
 use predicates::str::contains;
 
-mod common;
+use crate::common;
 
 const ENDPOINT: &str = "/api/0/projects/wat-org/wat-project/releases/";
 const VALID_RESPONSE: &str = r#"{"dateReleased":null,"newGroups":0,"commitCount":0,"url":null,"data":{},"lastDeploy":null,"deployCount":0,"dateCreated":"2020-06-29T11:36:59.612687Z","lastEvent":null,"version":"wat-release","firstEvent":null,"lastCommit":null,"shortVersion":"wat","authors":[],"owner":null,"versionInfo":{"buildHash":null,"version":{"raw":"wat-release"},"description":"wat-release","package":null},"ref":null,"projects":[{"name":"test","platform":"javascript","slug":"test","platforms":["javascript"],"newGroups":0,"id":1861017}]}"#;
 
 #[test]
-fn releases_new_creates_release() {
+fn creates_release() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"wat-release","projects":["wat-project"]}"#.to_string(),
@@ -31,7 +31,7 @@ fn releases_new_creates_release() {
 }
 
 #[test]
-fn releases_new_allows_for_release_to_start_with_hyphen() {
+fn allows_for_release_to_start_with_hyphen() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"-wat-release","projects":["wat-project"]}"#.to_string(),
@@ -53,7 +53,7 @@ fn releases_new_allows_for_release_to_start_with_hyphen() {
 }
 
 #[test]
-fn releases_new_creates_release_even_if_one_already_exists() {
+fn creates_release_even_if_one_already_exists() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"wat-release","projects":["wat-project"]}"#.to_string(),
@@ -75,7 +75,7 @@ fn releases_new_creates_release_even_if_one_already_exists() {
 }
 
 #[test]
-fn releases_new_creates_release_with_custom_url() {
+fn creates_release_with_custom_url() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"wat-release","projects":["wat-project"],"url":"https://oh.rly"}"#
@@ -100,7 +100,7 @@ fn releases_new_creates_release_with_custom_url() {
 }
 
 #[test]
-fn releases_new_creates_release_which_is_instantly_finalized() {
+fn creates_release_which_is_instantly_finalized() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::AllOf(vec![
             Matcher::PartialJsonString(
