@@ -17,7 +17,7 @@ fn get_base_env() -> HashMap<String, String> {
 }
 
 #[test]
-fn new_creates_release() {
+fn releases_new_creates_release() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"wat-release","projects":["wat-project"]}"#.to_string(),
@@ -39,7 +39,7 @@ fn new_creates_release() {
 }
 
 #[test]
-fn new_allows_for_release_to_start_with_hyphen() {
+fn releases_new_allows_for_release_to_start_with_hyphen() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"-wat-release","projects":["wat-project"]}"#.to_string(),
@@ -61,7 +61,7 @@ fn new_allows_for_release_to_start_with_hyphen() {
 }
 
 #[test]
-fn new_creates_release_even_if_one_already_exists() {
+fn releases_new_creates_release_even_if_one_already_exists() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"wat-release","projects":["wat-project"]}"#.to_string(),
@@ -83,7 +83,7 @@ fn new_creates_release_even_if_one_already_exists() {
 }
 
 #[test]
-fn new_creates_release_with_custom_url() {
+fn releases_new_creates_release_with_custom_url() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::PartialJsonString(
             r#"{"version":"wat-release","projects":["wat-project"],"url":"https://oh.rly"}"#
@@ -108,7 +108,7 @@ fn new_creates_release_with_custom_url() {
 }
 
 #[test]
-fn new_creates_release_which_is_instantly_finalized() {
+fn releases_new_creates_release_which_is_instantly_finalized() {
     let _server = mock("POST", ENDPOINT)
         .match_body(Matcher::AllOf(vec![
             Matcher::PartialJsonString(

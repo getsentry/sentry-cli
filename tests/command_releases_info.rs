@@ -17,7 +17,7 @@ fn get_base_env() -> HashMap<String, String> {
 }
 
 #[test]
-fn info_shows_release_details() {
+fn releases_info_shows_release_details() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -41,7 +41,7 @@ fn info_shows_release_details() {
 }
 
 #[test]
-fn info_doesnt_print_output_with_quiet_flag() {
+fn releases_info_doesnt_print_output_with_quiet_flag() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -61,7 +61,7 @@ fn info_doesnt_print_output_with_quiet_flag() {
 }
 
 #[test]
-fn info_exits_if_no_release_found() {
+fn releases_info_exits_if_no_release_found() {
     let _server = mock("GET", ENDPOINT)
         .with_status(404)
         .with_header("content-type", "application/json")

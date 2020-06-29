@@ -17,7 +17,7 @@ fn get_base_env() -> HashMap<String, String> {
 }
 
 #[test]
-fn list_displays_releases() {
+fn releases_list_displays_releases() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -43,7 +43,7 @@ fn list_displays_releases() {
 }
 
 #[test]
-fn list_displays_releases_with_projects() {
+fn releases_list_displays_releases_with_projects() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")
@@ -73,7 +73,7 @@ fn list_displays_releases_with_projects() {
 }
 
 #[test]
-fn list_doesnt_fail_with_empty_response() {
+fn releases_list_doesnt_fail_with_empty_response() {
     let _server = mock("GET", ENDPOINT)
         .with_status(200)
         .with_header("content-type", "application/json")

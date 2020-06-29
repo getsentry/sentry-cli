@@ -17,7 +17,7 @@ fn get_base_env() -> HashMap<String, String> {
 }
 
 #[test]
-fn finalize_release() {
+fn releases_finalize_release() {
     let _server = mock("PUT", ENDPOINT)
         .match_body(Matcher::AllOf(vec![
             Matcher::PartialJsonString(r#"{"projects":["wat-project"]}"#.to_string()),
@@ -40,7 +40,7 @@ fn finalize_release() {
 }
 
 #[test]
-fn finalize_allows_for_release_to_start_with_hyphen() {
+fn releases_finalize_allows_for_release_to_start_with_hyphen() {
     let _server = mock("PUT", "/api/0/projects/wat-org/wat-project/releases/-wat-release/")
         .match_body(Matcher::AllOf(vec![
             Matcher::PartialJsonString(r#"{"projects":["wat-project"]}"#.to_string()),
@@ -63,7 +63,7 @@ fn finalize_allows_for_release_to_start_with_hyphen() {
 }
 
 #[test]
-fn finalize_release_with_custom_dates() {
+fn releases_finalize_release_with_custom_dates() {
     let _server = mock("PUT", ENDPOINT)
         .match_body(
             Matcher::JsonString(

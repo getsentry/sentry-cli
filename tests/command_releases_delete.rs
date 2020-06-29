@@ -16,7 +16,7 @@ fn get_base_env() -> HashMap<String, String> {
 }
 
 #[test]
-fn delete_successfully_deletes() {
+fn releases_delete_successfully_deletes() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(204)
         .with_header("content-type", "application/json")
@@ -35,7 +35,7 @@ fn delete_successfully_deletes() {
 }
 
 #[test]
-fn delete_allows_for_release_to_start_with_hyphen() {
+fn releases_delete_allows_for_release_to_start_with_hyphen() {
     let _server = mock(
         "DELETE",
         "/api/0/projects/wat-org/wat-project/releases/-wat-release/",
@@ -57,7 +57,7 @@ fn delete_allows_for_release_to_start_with_hyphen() {
 }
 
 #[test]
-fn delete_informs_about_nonexisting_releases() {
+fn releases_delete_informs_about_nonexisting_releases() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(404)
         .with_header("content-type", "application/json")
@@ -78,7 +78,7 @@ fn delete_informs_about_nonexisting_releases() {
 }
 
 #[test]
-fn delete_doesnt_allow_to_delete_active_releases() {
+fn releases_delete_doesnt_allow_to_delete_active_releases() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(400)
         .with_header("content-type", "application/json")
