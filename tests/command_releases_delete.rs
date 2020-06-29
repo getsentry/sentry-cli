@@ -35,6 +35,28 @@ fn delete_successfully_deletes() {
 }
 
 #[test]
+fn delete_allows_for_release_to_start_with_hyphen() {
+    let _server = mock(
+        "DELETE",
+        "/api/0/projects/wat-org/wat-project/releases/-wat-release/",
+    )
+    .with_status(204)
+    .with_header("content-type", "application/json")
+    .with_body("")
+    .create();
+
+    Command::cargo_bin("sentry-cli")
+        .unwrap()
+        .envs(get_base_env())
+        .arg("releases")
+        .arg("delete")
+        .arg("-wat-release")
+        .assert()
+        .success()
+        .stdout(contains("Deleted release -wat-release!"));
+}
+
+#[test]
 fn delete_informs_about_nonexisting_releases() {
     let _server = mock("DELETE", ENDPOINT)
         .with_status(404)
