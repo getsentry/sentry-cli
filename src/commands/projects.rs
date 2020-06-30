@@ -19,7 +19,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let api = Api::current();
     let org = config.get_org(matches)?;
     let mut projects = api.list_organization_projects(&org)?;
-    projects.sort_by_key(|p| (p.team.name.clone(), p.name.clone()));
+    projects.sort_by_key(|p| {
+        (
+            p.team.as_ref().map_or(String::new(), |t| t.name.clone()),
+            p.name.clone(),
+        )
+    });
 
     let mut table = Table::new();
     table
@@ -30,11 +35,16 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         .add("Name");
 
     for project in &projects {
+        let team_name = &project
+            .team
+            .as_ref()
+            .map_or(String::from("-"), |t| t.name.clone());
+
         table
             .add_row()
             .add(&project.id)
             .add(&project.slug)
-            .add(&project.team.name)
+            .add(team_name)
             .add(&project.name);
     }
 

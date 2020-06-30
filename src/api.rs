@@ -2039,7 +2039,7 @@ pub struct Project {
     pub id: String,
     pub slug: String,
     pub name: String,
-    pub team: Team,
+    pub team: Option<Team>,
 }
 
 #[derive(Debug, Deserialize)]
