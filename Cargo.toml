@@ -59,7 +59,7 @@ zip = "0.5.6"
 
 [dev-dependencies]
 assert_cmd = "1.0.1"
-insta = {version= "0.16.0", features= ["redactions"]}
+insta = { version = "0.16.0", features = ["redactions"] }
 mockito = "0.26.0"
 predicates = "1.0.4"
 tempfile = "3.1.0"
