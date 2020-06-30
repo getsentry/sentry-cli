@@ -783,11 +783,11 @@ fn execute_files_upload<'a>(
         let ignores = matches
             .values_of("ignore")
             .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
-            .unwrap_or_else(|| vec![]);
+            .unwrap_or_else(Vec::new);
         let extensions = matches
             .values_of("extensions")
             .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-            .unwrap_or_else(|| vec![]);
+            .unwrap_or_else(Vec::new);
 
         let sources = ReleaseFileSearch::new(path.to_path_buf())
             .ignore_file(ignore_file)
@@ -951,7 +951,7 @@ fn process_sources_from_paths<'a>(
     let ignores = matches
         .values_of("ignore")
         .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
-        .unwrap_or_else(|| vec![]);
+        .unwrap_or_else(Vec::new);
 
     for path in paths {
         // if we start walking over something that is an actual file then
