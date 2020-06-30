@@ -9,7 +9,9 @@ use sourcemap::ram_bundle::RamBundle;
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
-use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
+use crate::utils::file_search::ReleaseFileSearch;
+use crate::utils::file_upload::UploadContext;
+use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a gradle build step.")
@@ -75,8 +77,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     info!("  sourcemap path: {}", sourcemap_path.display());
 
     let mut processor = SourceMapProcessor::new();
-    processor.add(&bundle_url, &bundle_path)?;
-    processor.add(&sourcemap_url, &sourcemap_path)?;
+    processor.add(
+        &bundle_url,
+        ReleaseFileSearch::collect_file(bundle_path.clone())?,
+    )?;
+    processor.add(
+        &sourcemap_url,
+        ReleaseFileSearch::collect_file(sourcemap_path)?,
+    )?;
 
     if let Ok(ram_bundle) = RamBundle::parse_unbundle_from_path(&bundle_path) {
         debug!("File RAM bundle found, extracting its contents...");

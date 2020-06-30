@@ -12,7 +12,9 @@ use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
 use crate::utils::args::ArgExt;
-use crate::utils::sourcemaps::{SourceMapProcessor, UploadContext};
+use crate::utils::file_search::ReleaseFileSearch;
+use crate::utils::file_upload::UploadContext;
+use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects for AppCenter.")
@@ -143,7 +145,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
                    ext == OsStr::new("bundle");
                 then {
                     let url = format!("~/{}", filename);
-                    processor.add(&url, &entry.path())?;
+                    processor.add(&url, ReleaseFileSearch::collect_file(entry.path())?)?;
                 }
             }
         }

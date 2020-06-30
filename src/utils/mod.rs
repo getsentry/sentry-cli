@@ -9,6 +9,8 @@ pub mod dif;
 pub mod dif_upload;
 pub mod enc;
 pub mod event;
+pub mod file_search;
+pub mod file_upload;
 pub mod formatting;
 pub mod fs;
 pub mod http;
