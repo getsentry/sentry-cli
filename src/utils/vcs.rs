@@ -825,7 +825,7 @@ fn test_url_normalization() {
 #[cfg(test)]
 fn test_initialize(dir: &Path) {
     let mut initialize = Command::new("git")
-        .arg("init")
+        .args(&["init", "--quiet"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git init`.");
@@ -854,6 +854,7 @@ fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: 
             commit_message,
             "--author",
             "John Doe <john.doe@example.com>",
+            "--quiet",
         ])
         .current_dir(dir)
         .spawn()
