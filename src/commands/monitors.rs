@@ -40,6 +40,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         .index(1),
                 )
                 .arg(
+                    Arg::with_name("allow_failure")
+                        .short("f")
+                        .long("allow-failure")
+                        .help("Run provided command even when Sentry reports an error."),
+                )
+                .arg(
                     Arg::with_name("args")
                         .required(true)
                         .multiple(true)
@@ -91,37 +97,49 @@ fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(),
         .unwrap()
         .parse::<Uuid>()
         .context("invalid monitor ID")?;
+    let allow_failure = matches.is_present("allow_failure");
     let args: Vec<_> = matches.values_of("args").unwrap().collect();
 
-    let checkin = ctx.api.create_monitor_checkin(
+    let monitor_checkin = ctx.api.create_monitor_checkin(
         &monitor,
         &CreateMonitorCheckIn {
             status: MonitorStatus::InProgress,
         },
-    )?;
+    );
 
     let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
     let exit_status = p.status()?;
 
-    ctx.api
-        .update_monitor_checkin(
-            &monitor,
-            &checkin.id,
-            &UpdateMonitorCheckIn {
-                status: Some(if exit_status.success() {
-                    MonitorStatus::Ok
-                } else {
-                    MonitorStatus::Error
-                }),
-                duration: Some({
-                    let elapsed = started.elapsed();
-                    elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis())
-                }),
-            },
-        )
-        .ok();
+    match monitor_checkin {
+        Ok(checkin) => {
+            ctx.api
+                .update_monitor_checkin(
+                    &monitor,
+                    &checkin.id,
+                    &UpdateMonitorCheckIn {
+                        status: Some(if exit_status.success() {
+                            MonitorStatus::Ok
+                        } else {
+                            MonitorStatus::Error
+                        }),
+                        duration: Some({
+                            let elapsed = started.elapsed();
+                            elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis())
+                        }),
+                    },
+                )
+                .ok();
+        }
+        Err(e) => {
+            if allow_failure {
+                eprintln!("{}", e);
+            } else {
+                return Err(e.into());
+            }
+        }
+    }
 
     if !exit_status.success() {
         if let Some(code) = exit_status.code() {
