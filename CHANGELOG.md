@@ -2,7 +2,20 @@
 
 ## Unreleased
 
+* "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
+
+## sentry-cli 1.55.0
+
+* feat: Release files batch upload (#715)
+* feat: Add pipeline env variable option and include it in UA string (#774)
+* feat: Upload formatted commit metadata from local git tree to Sentry for a release (#776)
+* feat: Provide flag for allowing failures in monitor command (#780)
+* fix: Do not error when offsetting too far on enumeration (#746)
 * fix: Update base "alpine" image in Dockerfile (#757)
+* fix: Allow for release names with leading hyphen (#770)
+* fix: Handle teamless projects correctly (#773)
+* fix: Parse BitBucket Server integration repo url correctly (#775)
+* ref: Switch from symbolic::proguard to proguard crate (#756)
 
 ## sentry-cli 1.54.0
 
