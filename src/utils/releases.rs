@@ -111,6 +111,13 @@ pub fn detect_release_name() -> Result<String, Error> {
         }
     }
 
+    // try CircleCI: https://circleci.com/docs/2.0/env-vars/
+    if let Ok(release) = env::var("CIRCLE_SHA1") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
     // for now only execute this on macs.  The reason is that this uses
     // xcodebuild which does not exist anywhere but there.
     if_chain! {
