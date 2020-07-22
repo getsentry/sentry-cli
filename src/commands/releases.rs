@@ -470,14 +470,9 @@ fn execute_set_commits<'a>(
     let mut commit_specs = vec![];
     let config = Config::current();
 
-    if repos.is_empty() {
-        bail!(
-            "No repositories are configured in Sentry for \
-             your organization."
-        );
-    }
-
-    let heads = if matches.is_present("auto") {
+    let heads = if repos.is_empty() {
+        None
+    } else if matches.is_present("auto") {
         let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
             None
