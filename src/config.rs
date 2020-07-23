@@ -417,9 +417,9 @@ impl Config {
 fn find_global_config_file() -> Result<PathBuf, Error> {
     dirs::home_dir()
         .ok_or_else(|| err_msg("Could not find home dir"))
-        .and_then(|mut path| {
+        .map(|mut path| {
             path.push(CONFIG_RC_FILE_NAME);
-            Ok(path)
+            path
         })
 }
 
