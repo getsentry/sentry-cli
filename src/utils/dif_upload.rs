@@ -432,8 +432,10 @@ where
     let location = location.as_ref();
     let directory = if location.is_dir() {
         location
+    } else if let Some(parent) = location.parent() {
+        parent
     } else {
-        location.parent().unwrap()
+        Path::new("")
     };
 
     debug!("searching location {}", location.display());
@@ -560,6 +562,13 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
     let mut age_overrides = BTreeMap::new();
     let mut collected = Vec::new();
     for base_path in &options.paths {
+        if base_path == Path::new("") {
+            warn!(
+                "Skipping uploading from an empty path (\"\"). \
+                Maybe you expanded an empty shell variable?"
+            );
+            continue;
+        }
         walk_difs_directory(base_path, options, |mut source, name, buffer| {
             progress.set_message(&name);
 
