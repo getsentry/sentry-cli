@@ -4,6 +4,12 @@
 
 * "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
 
+## sentry-cli 1.55.1
+
+* feat: add support for CicleCI (#784)
+* fix: Default to sending local commits if no repos linked (#791)
+* ref: Make Update Nagger less aggressive (#793)
+
 ## sentry-cli 1.55.0
 
 * feat: Release files batch upload (#715)
