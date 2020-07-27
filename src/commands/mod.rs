@@ -261,17 +261,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
 
 fn run() -> Result<(), Error> {
     prepare_environment();
-    match execute(&env::args().collect::<Vec<String>>()) {
-        Ok(()) => Ok(()),
-        Err(err) => {
-            // if the user hit an error, it might be time to run the update
-            // nagger because maybe they tried to do something only newer
-            // versions support.
-            debug!("error: running update nagger");
-            run_sentrycli_update_nagger();
-            Err(err)
-        }
-    }
+    execute(&env::args().collect::<Vec<String>>())
 }
 
 fn setup() {
@@ -305,7 +295,7 @@ pub fn main() {
     let status_code = match result {
         Ok(()) => 0,
         Err(err) => {
-            if let Some(&QuietExit(code)) = err.downcast_ref() {
+            let code = if let Some(&QuietExit(code)) = err.downcast_ref() {
                 code
             } else {
                 print_error(&err);
@@ -314,7 +304,14 @@ pub fn main() {
                     crate::utils::crashreporting::try_report_to_sentry(&err);
                 }
                 1
-            }
+            };
+
+            // if the user hit an error, it might be time to run the update
+            // nagger because maybe they tried to do something only newer
+            // versions support.
+            run_sentrycli_update_nagger();
+
+            code
         }
     };
 
