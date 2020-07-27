@@ -433,7 +433,7 @@ where
     let directory = if location.is_dir() {
         location
     } else {
-        location.parent().unwrap_or(Path::new(""))
+        location.parent().unwrap_or_else(|| Path::new(""))
     };
 
     debug!("searching location {}", location.display());
