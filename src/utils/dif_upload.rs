@@ -432,10 +432,8 @@ where
     let location = location.as_ref();
     let directory = if location.is_dir() {
         location
-    } else if let Some(parent) = location.parent() {
-        parent
     } else {
-        Path::new("")
+        location.parent().unwrap_or(Path::new(""))
     };
 
     debug!("searching location {}", location.display());
