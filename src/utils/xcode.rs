@@ -278,7 +278,7 @@ impl InfoPlist {
     }
 
     pub fn get_release_name(&self) -> String {
-        format!("{}-{}", self.bundle_id(), self.version())
+        format!("{}@{}", self.bundle_id(), self.version())
     }
 
     pub fn version(&self) -> &str {
