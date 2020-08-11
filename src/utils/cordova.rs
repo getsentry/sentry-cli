@@ -47,10 +47,10 @@ impl CordovaConfig {
     }
 
     pub fn android_release_name(&self) -> String {
-        format!("{}-{}", self.android_package(), self.version())
+        format!("{}@{}", self.android_package(), self.version())
     }
 
     pub fn ios_release_name(&self) -> String {
-        format!("{}-{}", self.ios_bundle_identifier(), self.ios_version())
+        format!("{}@{}", self.ios_bundle_identifier(), self.ios_version())
     }
 }

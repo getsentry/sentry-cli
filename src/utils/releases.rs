@@ -72,7 +72,7 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
             if let Some(app_id_caps) = APP_ID_RE.captures(&contents);
             if let Some(version_caps) = VERSION_NAME_RE.captures(&contents);
             then {
-                return Ok(Some(format!("{}-{}", &app_id_caps[1], &version_caps[1])));
+                return Ok(Some(format!("{}@{}", &app_id_caps[1], &version_caps[1])));
             }
         }
         if !here.pop() {
