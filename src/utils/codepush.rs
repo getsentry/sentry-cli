@@ -104,7 +104,7 @@ pub fn get_react_native_codepush_release(
     bundle_id_override: Option<&str>,
 ) -> Result<String, Error> {
     if let Some(bundle_id) = bundle_id_override {
-        return Ok(format!("{}-codepush:{}", bundle_id, package.label));
+        return Ok(format!("{}+codepush:{}", bundle_id, package.label));
     }
 
     if platform == "ios" {
@@ -118,7 +118,7 @@ pub fn get_react_native_codepush_release(
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                     if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
-                        return Ok(format!("{}-codepush:{}", release_name, package.label));
+                        return Ok(format!("{}+codepush:{}", release_name, package.label));
                     }
                 }
             }
@@ -131,7 +131,7 @@ pub fn get_react_native_codepush_release(
             if android_folder.is_dir();
             then {
                 if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
-                    return Ok(format!("{}-codepush:{}", release_name, package.label));
+                    return Ok(format!("{}+codepush:{}", release_name, package.label));
                 } else {
                     bail!("Could not parse app id from build.gradle");
                 }
