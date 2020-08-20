@@ -31,7 +31,7 @@ jobs:
   - job: sentry_cli_macos
     displayName: "Build: MacOS x86_64"
     pool:
-      vmImage: "macos-10.13"
+      vmImage: "macOS-10.14"
     steps:
       - template: azure-pipelines/prescript-common.yml
       - template: azure-pipelines/install-rust.yml
@@ -68,7 +68,7 @@ jobs:
   - job: check_format
     displayName: "Check: format"
     pool:
-      vmImage: "macos-10.13"
+      vmImage: "macOS-10.14"
     steps:
       - template: azure-pipelines/prescript-common.yml
       - template: azure-pipelines/install-rust.yml
@@ -79,7 +79,7 @@ jobs:
   - job: check_lint
     displayName: "Check: lint"
     pool:
-      vmImage: "macos-10.13"
+      vmImage: "macOS-10.14"
     steps:
       - template: azure-pipelines/prescript-common.yml
       - template: azure-pipelines/install-rust.yml
@@ -90,7 +90,7 @@ jobs:
   - job: check_test_rust
     displayName: "Test: Rust"
     pool:
-      vmImage: "macos-10.13"
+      vmImage: "macOS-10.14"
     steps:
       - template: azure-pipelines/prescript-common.yml
       - template: azure-pipelines/install-rust.yml
