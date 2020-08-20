@@ -4,6 +4,12 @@
 
 * "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
 
+## sentry-cli 1.55.2
+
+* fix: Path handling edgecases for `upload-dif` (#795)
+* fix: Dont limit commits count for release updates (#808)
+* ref: Update Android/iOS releases format (#805)
+
 ## sentry-cli 1.55.1
 
 * feat: add support for CicleCI (#784)
