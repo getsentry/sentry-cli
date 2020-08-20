@@ -572,17 +572,14 @@ fn execute_set_commits<'a>(
             bail!("No commits found. Leaving release alone.");
         }
 
-        let chunk_size = 50;
-        for chunk in commits.chunks(chunk_size) {
-            ctx.api.update_release(
-                ctx.get_org()?,
-                version,
-                &UpdatedRelease {
-                    commits: Some(chunk.to_owned()),
-                    ..Default::default()
-                },
-            )?;
-        }
+        ctx.api.update_release(
+            ctx.get_org()?,
+            version,
+            &UpdatedRelease {
+                commits: Some(commits),
+                ..Default::default()
+            },
+        )?;
 
         println!("Success! Set commits for release {}.", version);
     }
