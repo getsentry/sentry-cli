@@ -37,7 +37,7 @@ function shouldRenderProgressBar() {
 
 function getDownloadUrl(platform, arch) {
   const releasesUrl = `${CDN_URL}/${pkgInfo.version}/sentry-cli`;
-  const archString = arch.indexOf('64') > -1 ? 'x86_64' : 'i686';
+  const archString = arch == "x64" ? 'x86_64' : arch == "x86" ? 'i686' : arch;
   switch (platform) {
     case 'darwin':
       return `${releasesUrl}-Darwin-x86_64`;
