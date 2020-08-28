@@ -2,7 +2,7 @@
 use std::env;
 use std::fs;
 
-use clap::{App, AppSettings, ArgMatches};
+use clap::{App, AppSettings, Arg, ArgMatches};
 use console::style;
 use failure::Error;
 
@@ -16,6 +16,11 @@ fn is_hidden() -> bool {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Uninstall the sentry-cli executable.")
+        .arg(
+            Arg::with_name("confirm")
+                .long("confirm")
+                .help("Skip uninstall confirmation prompt."),
+        )
         .settings(&if is_hidden() {
             vec![AppSettings::Hidden]
         } else {
@@ -23,7 +28,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         })
 }
 
-pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     let exe = env::current_exe()?;
 
     if is_homebrew_install() {
@@ -45,9 +50,11 @@ pub fn execute<'a>(_matches: &ArgMatches<'a>) -> Result<(), Error> {
         return Err(QuietExit(1).into());
     }
 
-    if !prompt_to_continue("Do you really want to uninstall sentry-cli?")? {
-        println!("Aborted!");
-        return Ok(());
+    if !matches.is_present("confirm") {
+        if !prompt_to_continue("Do you really want to uninstall sentry-cli?")? {
+            println!("Aborted!");
+            return Ok(());
+        }
     }
 
     if !is_writable(&exe) {
