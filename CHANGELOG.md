@@ -4,6 +4,12 @@
 
 * "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
 
+## sentry-cli 1.56.0
+
+* feat: Add support for architectures other than x86/x64 when running installation script (#811)
+* feat: Add `--confirm` flag to skip confirmation prompt during uninstall command (#812)
+* misc: Upgrade symbolic to `7.5.0` (#813)
+
 ## sentry-cli 1.55.2
 
 * fix: Path handling edgecases for `upload-dif` (#795)
