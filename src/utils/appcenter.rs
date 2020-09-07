@@ -161,7 +161,7 @@ pub fn get_react_native_appcenter_release(
                 let pi = XcodeProjectInfo::from_path(&entry)?;
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                     if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
-                        let vec: Vec<&str> = release_name.split('-').collect();
+                        let vec: Vec<&str> = release_name.split('@').collect();
                         let bundle_id = if bundle_id_ovrr == "" {
                             vec[0]
                         } else {
@@ -189,7 +189,7 @@ pub fn get_react_native_appcenter_release(
             if android_folder.is_dir();
             then {
                 if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
-                    let vec: Vec<&str> = release_name.split('-').collect();
+                    let vec: Vec<&str> = release_name.split('@').collect();
                     let bundle_id = if bundle_id_ovrr == "" { vec[0] } else { bundle_id_ovrr };
                     let version_name = if version_name_ovrr == "" { vec[1] } else { version_name_ovrr };
                     return Ok(format!("{}@{}+codepush:{}", bundle_id, version_name, package.label));
