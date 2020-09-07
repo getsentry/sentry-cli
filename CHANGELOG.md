@@ -4,6 +4,10 @@
 
 * "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
 
+## sentry-cli 1.56.1
+
+* fix: Use updated release name format during upload process (#818)
+
 ## sentry-cli 1.56.0
 
 * feat: Add support for architectures other than x86/x64 when running installation script (#811)
