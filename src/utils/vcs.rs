@@ -486,7 +486,7 @@ pub fn get_commits_from_git<'a>(
             // If there is a previous commit but cannot find it in git history, throw an error.
             if !found {
                 return Err(format_err!(
-                    "Couldn’t not find the SHA of the previous release in the git history. Increase your git clone depth.",
+                    "Could not find the SHA of the previous release in the git history. Increase your git clone depth.",
                 ));
             }
             let prev = result.pop();
