@@ -10,6 +10,7 @@ use serde_json::Value;
 use username::get_user_name;
 
 use crate::config::Config;
+use crate::utils::args::{get_timestamp, validate_timestamp};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use crate::utils::releases::detect_release_name;
 
@@ -29,6 +30,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .short("l")
                 .help("Optional event severity/log level. [defaults to 'error']"),
         )
+        .arg(Arg::with_name("timestamp")
+                 .long("timestamp")
+                 .validator(validate_timestamp)
+                 .value_name("TIMESTAMP")
+                 .help("Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or RFC3339."))
         .arg(
             Arg::with_name("release")
                 .value_name("RELEASE")
@@ -147,6 +153,10 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         .value_of("level")
         .and_then(|l| l.parse().ok())
         .unwrap_or(Level::Error);
+
+    if let Some(timestamp) = matches.value_of("timestamp") {
+        event.timestamp = get_timestamp(timestamp)?;
+    }
 
     if let Some(release) = matches.value_of("release") {
         event.release = Some(release.to_string().into());
