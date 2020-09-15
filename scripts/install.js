@@ -43,6 +43,7 @@ function getDownloadUrl(platform, arch) {
       archString = 'x86_64';
       break;
     case 'x86':
+    case 'ia32':
       archString = 'i686';
       break;
     default:
