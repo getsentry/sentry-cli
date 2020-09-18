@@ -130,12 +130,34 @@ function getPath() {
  * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
  * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
  * @param {string} [configFile] Relative or absolute path to the configuration file.
+ * @param {Object} [config] More configuration to pass to the CLI
  * @returns {Promise.<string>} A promise that resolves to the standard output.
  */
-function execute(args, live, silent, configFile) {
+function execute(args, live, silent, configFile, config = {}) {
   const env = { ...process.env };
   if (configFile) {
     env.SENTRY_PROPERTIES = configFile;
+  }
+  if (config.url) {
+    env.SENTRY_URL = config.url;
+  }
+  if (config.authToken) {
+    env.SENTRY_AUTH_TOKEN = config.authToken;
+  }
+  if (config.apiKey) {
+    env.SENTRY_API_KEY = config.apiKey;
+  }
+  if (config.dsn) {
+    env.SENTRY_DSN = config.dsn;
+  }
+  if (config.org) {
+    env.SENTRY_ORG = config.org;
+  }
+  if (config.project) {
+    env.SENTRY_PROJECT = config.project;
+  }
+  if (config.vcsRemote) {
+    env.SENTRY_VCS_REMOTE = config.vcsRemote;
   }
   return new Promise((resolve, reject) => {
     if (live === true) {
