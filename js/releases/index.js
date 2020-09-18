@@ -208,7 +208,7 @@ class Releases {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return helper.execute(args, live, this.options.silent, this.configFile);
+    return helper.execute(args, live, this.options.silent, this.configFile, this.options);
   }
 }
 
