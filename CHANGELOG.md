@@ -4,6 +4,11 @@
 
 * "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
 
+## sentry-cli 1.58.0
+
+* feat: Expose environment configuration in javascript (#830)
+* ref: Use better error messages for install script (#833)
+
 ## sentry-cli 1.57.0
 
 * feat: Allow for passing custom timestamp with `send-event` (#826)
