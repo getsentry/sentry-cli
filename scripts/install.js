@@ -122,7 +122,7 @@ function downloadBinary() {
 
   const downloadUrl = getDownloadUrl(platform, arch);
   if (!downloadUrl) {
-    return Promise.reject(new Error(`unsupported target ${platform}-${arch}`));
+    return Promise.reject(new Error(`Unsupported target ${platform}-${arch}`));
   }
 
   const cachedPath = getCachedPath(downloadUrl);
@@ -141,42 +141,54 @@ function downloadBinary() {
       'accept-encoding': 'gzip, deflate, br',
     },
     redirect: 'follow',
-  }).then(response => {
-    if (!response.ok) {
-      throw new Error(`Received ${response.status}: ${response.statusText}`);
-    }
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(
+          `Unable to download sentry-cli binary from ${downloadUrl}.\nServer returned ${response.status}: ${response.statusText}.`
+        );
+      }
 
-    const contentEncoding = response.headers.get('content-encoding');
-    let decompressor;
-    if (/\bgzip\b/.test(contentEncoding)) {
-      decompressor = zlib.createGunzip();
-    } else if (/\bdeflate\b/.test(contentEncoding)) {
-      decompressor = zlib.createInflate();
-    } else if (/\bbr\b/.test(contentEncoding)) {
-      decompressor = zlib.createBrotliDecompress();
-    } else {
-      decompressor = new stream.PassThrough();
-    }
-    const name = downloadUrl.match(/.*\/(.*?)$/)[1];
-    const total = parseInt(response.headers.get('content-length'), 10);
-    const progressBar = createProgressBar(name, total);
-    const tempPath = getTempFile(cachedPath);
-    mkdirp.sync(path.dirname(tempPath));
+      const contentEncoding = response.headers.get('content-encoding');
+      let decompressor;
+      if (/\bgzip\b/.test(contentEncoding)) {
+        decompressor = zlib.createGunzip();
+      } else if (/\bdeflate\b/.test(contentEncoding)) {
+        decompressor = zlib.createInflate();
+      } else if (/\bbr\b/.test(contentEncoding)) {
+        decompressor = zlib.createBrotliDecompress();
+      } else {
+        decompressor = new stream.PassThrough();
+      }
+      const name = downloadUrl.match(/.*\/(.*?)$/)[1];
+      const total = parseInt(response.headers.get('content-length'), 10);
+      const progressBar = createProgressBar(name, total);
+      const tempPath = getTempFile(cachedPath);
+      mkdirp.sync(path.dirname(tempPath));
 
-    return new Promise((resolve, reject) => {
-      response.body
-        .on('error', e => reject(e))
-        .on('data', chunk => shouldRenderProgressBar() && progressBar.tick(chunk.length))
-        .pipe(decompressor)
-        .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
-        .on('error', e => reject(e))
-        .on('close', () => resolve());
-    }).then(() => {
-      fs.copyFileSync(tempPath, cachedPath);
-      fs.copyFileSync(tempPath, outputPath);
-      fs.unlinkSync(tempPath);
+      return new Promise((resolve, reject) => {
+        response.body
+          .on('error', e => reject(e))
+          .on('data', chunk => shouldRenderProgressBar() && progressBar.tick(chunk.length))
+          .pipe(decompressor)
+          .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
+          .on('error', e => reject(e))
+          .on('close', () => resolve());
+      }).then(() => {
+        fs.copyFileSync(tempPath, cachedPath);
+        fs.copyFileSync(tempPath, outputPath);
+        fs.unlinkSync(tempPath);
+      });
+    })
+    .catch(error => {
+      if (error instanceof fetch.FetchError) {
+        throw new Error(
+          `Unable to download sentry-cli binary from ${downloadUrl}.\nError code: ${error.code}`
+        );
+      } else {
+        throw error;
+      }
     });
-  });
 }
 
 function checkVersion() {
