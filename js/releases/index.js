@@ -45,11 +45,20 @@ class Releases {
    * upload artifacts, such as source maps.
    *
    * @param {string} release Unique name of the new release.
+   * @param {object} options A set of options when creating a release.
+   * @param {array} options.projects The list of project slugs for a release.
    * @returns {Promise} A promise that resolves when the release has been created.
    * @memberof SentryReleases
    */
-  new(release) {
-    return this.execute(['releases', 'new', release], null);
+  new(release, options) {
+    const commands = ['releases', 'new', release];
+    if (options && options.projects) {
+      options.projects.forEach(project => {
+        commands.push('-p');
+        commands.push(project);
+      });
+    }
+    return this.execute(commands, null);
   }
 
   /**
