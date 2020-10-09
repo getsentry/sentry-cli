@@ -51,14 +51,8 @@ class Releases {
    * @memberof SentryReleases
    */
   new(release, options) {
-    const commands = ['releases', 'new', release];
-    if (options && options.projects) {
-      options.projects.forEach(project => {
-        commands.push('-p');
-        commands.push(project);
-      });
-    }
-    return this.execute(commands, null);
+    const args = ['releases', 'new', release].concat(helper.getProjectFlagsFromOptions(options));
+    return this.execute(args, null);
   }
 
   /**
@@ -144,6 +138,7 @@ class Releases {
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
    *   urlSuffix: '',             // add a suffix source map urls after stripping them
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
+   *   projects: ['node']        // provide a list of projects
    * });
    *
    * @param {string} release Unique name of the release.
@@ -162,7 +157,9 @@ class Releases {
         newOptions.ignore = DEFAULT_IGNORE;
       }
 
-      const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
+      const args = ['releases']
+        .concat(helper.getProjectFlagsFromOptions(options))
+        .concat(['files', release, 'upload-sourcemaps', sourcemapPath]);
       return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
     });
 

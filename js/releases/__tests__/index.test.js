@@ -1,6 +1,6 @@
 /* eslint-env jest */
 
-const SentryCli = require('../../');
+const SentryCli = require('../..');
 
 describe('SentryCli releases', () => {
   afterEach(() => {
@@ -13,34 +13,84 @@ describe('SentryCli releases', () => {
   });
 
   describe('with mock', () => {
-    let cli, mockExecute;
+    let cli;
+    let mockExecute;
     beforeEach(() => {
       mockExecute = jest.fn(async () => {});
       jest.doMock('../../helper', () => ({
+        ...jest.requireActual('../../helper'),
         execute: mockExecute,
       }));
-      const SentryCli = require('../../');
-      cli = new SentryCli();
+      // eslint-disable-next-line global-require
+      const SentryCliLocal = require('../..');
+      cli = new SentryCliLocal();
     });
-    test('new without projects', async () => {
-      await cli.releases.new('my-version');
-      expect(mockExecute).toHaveBeenCalledWith(
-        ['releases', 'new', 'my-version'],
-        null,
-        false,
-        undefined,
-        { silent: false }
-      );
+    describe('new', () => {
+      test('without projects', async () => {
+        await cli.releases.new('my-version');
+        expect(mockExecute).toHaveBeenCalledWith(
+          ['releases', 'new', 'my-version'],
+          null,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
+      test('with projects', async () => {
+        await cli.releases.new('my-version', { projects: ['proj-a', 'proj-b'] });
+        expect(mockExecute).toHaveBeenCalledWith(
+          ['releases', 'new', 'my-version', '-p', 'proj-a', '-p', 'proj-b'],
+          null,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
     });
-    test('new with projects', async () => {
-      await cli.releases.new('my-version', { projects: ['proj-a', 'proj-b'] });
-      expect(mockExecute).toHaveBeenCalledWith(
-        ['releases', 'new', 'my-version', '-p', 'proj-a', '-p', 'proj-b'],
-        null,
-        false,
-        undefined,
-        { silent: false }
-      );
+    describe('uploadSourceMaps', () => {
+      test('without projects', async () => {
+        await cli.releases.uploadSourceMaps('my-version', { include: ['path'] });
+        expect(mockExecute).toHaveBeenCalledWith(
+          [
+            'releases',
+            'files',
+            'my-version',
+            'upload-sourcemaps',
+            'path',
+            '--ignore',
+            'node_modules',
+          ],
+          true,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
+      test('with projects', async () => {
+        await cli.releases.uploadSourceMaps('my-version', {
+          include: ['path'],
+          projects: ['proj-a', 'proj-b'],
+        });
+        expect(mockExecute).toHaveBeenCalledWith(
+          [
+            'releases',
+            '-p',
+            'proj-a',
+            '-p',
+            'proj-b',
+            'files',
+            'my-version',
+            'upload-sourcemaps',
+            'path',
+            '--ignore',
+            'node_modules',
+          ],
+          true,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
     });
   });
 });

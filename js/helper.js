@@ -180,10 +180,22 @@ function execute(args, live, silent, configFile, config = {}) {
   });
 }
 
+function getProjectFlagsFromOptions(options) {
+  if (options && options.projects) {
+    return options.projects.reduce((projectFlags, project) => {
+      projectFlags.push('-p');
+      projectFlags.push(project);
+      return projectFlags;
+    }, []);
+  }
+  return [];
+}
+
 module.exports = {
   mockBinaryPath,
   serializeOptions,
   prepareCommand,
   getPath,
   execute,
+  getProjectFlagsFromOptions,
 };
