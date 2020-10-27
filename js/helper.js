@@ -180,15 +180,8 @@ function execute(args, live, silent, configFile, config = {}) {
   });
 }
 
-function getProjectFlagsFromOptions(options) {
-  if (options && options.projects) {
-    return options.projects.reduce((projectFlags, project) => {
-      projectFlags.push('-p');
-      projectFlags.push(project);
-      return projectFlags;
-    }, []);
-  }
-  return [];
+function getProjectFlagsFromOptions({ projects = [] } = {}) {
+  return projects.reduce((flags, project) => flags.concat('-p', project), [])
 }
 
 module.exports = {
