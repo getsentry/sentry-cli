@@ -181,7 +181,7 @@ function execute(args, live, silent, configFile, config = {}) {
 }
 
 function getProjectFlagsFromOptions({ projects = [] } = {}) {
-  return projects.reduce((flags, project) => flags.concat('-p', project), [])
+  return projects.reduce((flags, project) => flags.concat('-p', project), []);
 }
 
 module.exports = {

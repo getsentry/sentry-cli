@@ -15,12 +15,15 @@ describe('SentryCli releases', () => {
   describe('with mock', () => {
     let cli;
     let mockExecute;
-    beforeEach(() => {
+    beforeAll(() => {
       mockExecute = jest.fn(async () => {});
       jest.doMock('../../helper', () => ({
         ...jest.requireActual('../../helper'),
         execute: mockExecute,
       }));
+    });
+    beforeEach(() => {
+      mockExecute.mockClear();
       // eslint-disable-next-line global-require
       const SentryCliLocal = require('../..');
       cli = new SentryCliLocal();
