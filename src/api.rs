@@ -156,26 +156,17 @@ pub enum ProgressBarMode {
 impl ProgressBarMode {
     /// Returns if progress bars are generally enabled.
     pub fn active(&self) -> bool {
-        match *self {
-            ProgressBarMode::Disabled => false,
-            _ => true,
-        }
+        !matches!(*self, ProgressBarMode::Disabled)
     }
 
     /// Returns whether a progress bar should be displayed during upload.
     pub fn request(&self) -> bool {
-        match *self {
-            ProgressBarMode::Request | ProgressBarMode::Both => true,
-            _ => false,
-        }
+        matches!(*self, ProgressBarMode::Request | ProgressBarMode::Both)
     }
 
     /// Returns whether a progress bar should be displayed during download.
     pub fn response(&self) -> bool {
-        match *self {
-            ProgressBarMode::Response | ProgressBarMode::Both => true,
-            _ => false,
-        }
+        matches!(*self, ProgressBarMode::Response | ProgressBarMode::Both)
     }
 }
 
