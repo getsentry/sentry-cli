@@ -45,11 +45,14 @@ class Releases {
    * upload artifacts, such as source maps.
    *
    * @param {string} release Unique name of the new release.
+   * @param {object} options A set of options when creating a release.
+   * @param {array} options.projects The list of project slugs for a release.
    * @returns {Promise} A promise that resolves when the release has been created.
    * @memberof SentryReleases
    */
-  new(release) {
-    return this.execute(['releases', 'new', release], null);
+  new(release, options) {
+    const args = ['releases', 'new', release].concat(helper.getProjectFlagsFromOptions(options));
+    return this.execute(args, null);
   }
 
   /**
@@ -135,6 +138,7 @@ class Releases {
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
    *   urlSuffix: '',             // add a suffix source map urls after stripping them
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
+   *   projects: ['node']        // provide a list of projects
    * });
    *
    * @param {string} release Unique name of the release.
@@ -153,7 +157,9 @@ class Releases {
         newOptions.ignore = DEFAULT_IGNORE;
       }
 
-      const args = ['releases', 'files', release, 'upload-sourcemaps', sourcemapPath];
+      const args = ['releases']
+        .concat(helper.getProjectFlagsFromOptions(options))
+        .concat(['files', release, 'upload-sourcemaps', sourcemapPath]);
       return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
     });
 

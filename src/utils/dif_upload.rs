@@ -1141,7 +1141,8 @@ fn poll_dif_assemble(
             .dif
             .as_ref()
             .map(|x| x.object_name.as_str())
-            .unwrap_or("");
+            .unwrap_or("")
+            .to_owned()
     });
 
     let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
