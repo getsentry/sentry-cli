@@ -36,6 +36,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("Do not send environment variables along"),
         )
         .arg(
+            Arg::with_name("cli")
+                .long("cli")
+                .value_name("CMD")
+                .help("Explicitly set/override the sentry-cli command"),
+        )
+        .arg(
             Arg::with_name("send_event")
                 .long("send-event")
                 .requires_all(&["traceback", "log"])
@@ -186,11 +192,17 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
             "___SENTRY_TRACEBACK_FILE___",
             &traceback.display().to_string(),
         )
-        .replace("___SENTRY_LOG_FILE___", &log.display().to_string())
-        .replace(
+        .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
+
+        if matches.is_present("cli") {
+            script = script.replace(
             "___SENTRY_CLI___",
-            &env::current_exe().unwrap().display().to_string(),
-        );
+            matches.value_of("cli").unwrap()
+            );
+        } else {
+            script = script.replace("__SENTRY_CLI__", &env::current_exe().unwrap().display().to_string());
+        }
+
 
     if matches.is_present("no_environ") {
         script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
