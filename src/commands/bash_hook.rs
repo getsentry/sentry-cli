@@ -194,15 +194,14 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
-        if matches.is_present("cli") {
-            script = script.replace(
-            "___SENTRY_CLI___",
-            matches.value_of("cli").unwrap()
-            );
-        } else {
-            script = script.replace("__SENTRY_CLI__", &env::current_exe().unwrap().display().to_string());
-        }
-
+    if matches.is_present("cli") {
+        script = script.replace("___SENTRY_CLI___", matches.value_of("cli").unwrap());
+    } else {
+        script = script.replace(
+            "__SENTRY_CLI__",
+            &env::current_exe().unwrap().display().to_string(),
+        );
+    }
 
     if matches.is_present("no_environ") {
         script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
