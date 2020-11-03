@@ -279,29 +279,25 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                            be disabled."))
                 .arg(Arg::with_name("no_rewrite")
                     .long("no-rewrite")
-                    .help("The opposite of --rewrite. By default sourcemaps are not rewritten.")
+                    .help("Disables rewriting of matching sourcemaps. By default the tool \
+                        will rewrite sources, so that indexed maps are flattened and missing \
+                        sources are inlined if possible.{n}This fundamentally \
+                        changes the upload process to be based on sourcemaps \
+                        and minified files exclusively and comes in handy for \
+                        setups like react-native that generate sourcemaps that \
+                        would otherwise not work for sentry.")
                     .conflicts_with("rewrite"))
-                .arg(Arg::with_name("rewrite")
-                    .long("rewrite")
-                    .help("Enables rewriting of matching sourcemaps \
-                           so that indexed maps are flattened and missing \
-                           sources are inlined if possible.{n}This fundamentally \
-                           changes the upload process to be based on sourcemaps \
-                           and minified files exclusively and comes in handy for \
-                           setups like react-native that generate sourcemaps that \
-                           would otherwise not work for sentry.")
-                    .conflicts_with("no_rewrite"))
                 .arg(Arg::with_name("strip_prefix")
                     .long("strip-prefix")
                     .value_name("PREFIX")
                     .multiple(true)
                     .number_of_values(1)
-                    .help("When used with a `--rewrite` option, strips the given prefix from \
-                           all sources references inside the upload sourcemaps (paths used within \
-                           the sourcemap content, to map minified code to it's original source). \
-                           Only sources that start with the given prefix will be stripped.{n}\
-                           This will not modify the uploaded sources paths. To do that, point the upload \
-                           or upload-sourcemaps command to a more precise directory instead.")
+                    .help("Strips the given prefix from all sources references inside the upload \
+                           sourcemaps (paths used within the sourcemap content, to map minified code \
+                           to it's original source). Only sources that start with the given prefix \
+                           will be stripped.{n}This will not modify the uploaded sources paths. \
+                           To do that, point the upload or upload-sourcemaps command \
+                           to a more precise directory instead.")
                     .conflicts_with("no_rewrite"))
                 .arg(Arg::with_name("strip_common_prefix")
                     .long("strip-common-prefix")
@@ -346,7 +342,18 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("Set the file extensions that are considered for upload. \
                            This overrides the default extensions. To add an extension, all default \
                            extensions must be repeated. Specify once per extension.{n}\
-                           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`"))))
+                           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`"))
+                .arg(Arg::with_name("rewrite")
+                    .long("rewrite")
+                    .help("Enables rewriting of matching sourcemaps \
+                        so that indexed maps are flattened and missing \
+                        sources are inlined if possible.{n}This fundamentally \
+                        changes the upload process to be based on sourcemaps \
+                        and minified files exclusively and comes in handy for \
+                        setups like react-native that generate sourcemaps that \
+                        would otherwise not work for sentry.")
+                    .conflicts_with("no_rewrite")
+                    .hidden(true))))
         .subcommand(App::new("deploys")
             .about("Manage release deployments.")
             .setting(AppSettings::SubcommandRequiredElseHelp)
@@ -978,16 +985,7 @@ fn process_sources_from_paths<'a>(
         }
     }
 
-    // We want to change the default from --no-rewrite to --rewrite, but we need to transition
-    // users to explicitly pass the option first such that we don't break their setup when we do.
-    if !matches.is_present("no_rewrite") && !matches.is_present("rewrite") {
-        warn!(
-            "The default --no-rewrite will disappear. Please specify --rewrite or \
-             --no-rewrite explicitly during sourcemap upload."
-        )
-    }
-
-    if matches.is_present("rewrite") {
+    if !matches.is_present("no_rewrite") {
         let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
     }
