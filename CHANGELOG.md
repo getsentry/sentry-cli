@@ -4,6 +4,12 @@
 
 * "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
 
+## sentry-cli 1.59.0
+
+* feat: Allows the user to specify multiple projects for a release (#842)
+* feat: Add cli arg to override sentry-cli command in bash-hook (#852)
+* ref: Remove --rewrite flag and make it a default (#853)
+
 ## sentry-cli 1.58.0
 
 * feat: Expose environment configuration in javascript (#830)
