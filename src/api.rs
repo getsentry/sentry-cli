@@ -740,16 +740,12 @@ impl Api {
     }
 
     /// Updates a release.
-    pub fn update_release(
-        &self,
-        org: &str,
-        version: &str,
-        release: &UpdatedRelease,
-    ) -> ApiResult<ReleaseInfo> {
+    pub fn update_release(&self, org: &str, release: &UpdatedRelease) -> ApiResult<ReleaseInfo> {
         if_chain! {
             if let Some(ref projects) = release.projects;
             if projects.len() == 1;
             then {
+                let version = release.version.clone().expect("Missing release version");
                 let path = format!("/projects/{}/{}/releases/{}/",
                     PathArg(org),
                     PathArg(&projects[0]),
@@ -757,10 +753,8 @@ impl Api {
                 );
                 self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
             } else {
-                let path = format!("/organizations/{}/releases/{}/",
-                                   PathArg(org),
-                                   PathArg(version));
-                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+                let path = format!("/organizations/{}/releases/", PathArg(org));
+                self.post(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
             }
         }
     }
@@ -1915,9 +1909,18 @@ pub struct Ref {
     pub prev_rev: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ReleaseStatus {
+    Open,
+    Archived,
+}
+
 /// Changes to a release
 #[derive(Debug, Serialize, Default)]
 pub struct UpdatedRelease {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1930,6 +1933,8 @@ pub struct UpdatedRelease {
     pub refs: Option<Vec<Ref>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub commits: Option<Vec<GitCommit>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<ReleaseStatus>,
 }
 
 /// Provides all release information from already existing releases
