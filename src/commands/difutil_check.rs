@@ -63,22 +63,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     println!("  Contained debug identifiers:");
     for variant in dif.variants() {
-        match variant.arch {
-            Some(ref cpu_type) => println!(
-                "    > debug_id: {} ({})",
-                style(variant.debug_id).dim(),
-                style(cpu_type).cyan()
-            ),
-            None => println!("    > debug_id: {}", style(variant.debug_id).dim()),
+        println!("    > Debug ID: {}", style(variant.debug_id).dim());
+        if let Some(code_id) = variant.code_id {
+            println!("      Code ID:  {}", style(code_id).dim());
         }
-        match (variant.code_id, variant.arch) {
-            (Some(ref code_id), Some(ref cpu_type)) => println!(
-                "    > code_id: {} ({})",
-                style(code_id).dim(),
-                style(cpu_type).cyan()
-            ),
-            (Some(ref code_id), None) => println!("    > code_id: {}", style(code_id).dim()),
-            _ => {}
+        if let Some(arch) = variant.arch {
+            println!("      Arch:     {}", style(arch).dim());
         }
     }
 
