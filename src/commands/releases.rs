@@ -15,7 +15,7 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 use crate::api::{
     Api, Deploy, FileContents, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, ProgressBarMode,
-    UpdatedRelease,
+    ReleaseStatus, UpdatedRelease,
 };
 use crate::config::Config;
 use crate::utils::args::{
@@ -138,6 +138,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         which will force the revision to a certain value.")))
         .subcommand(App::new("delete")
             .about("Delete a release.")
+            .version_arg(1))
+        .subcommand(App::new("archive")
+            .about("Archive a release.")
+            .version_arg(1))
+        .subcommand(App::new("restore")
+            .about("Restore a release.")
             .version_arg(1))
         .subcommand(App::new("finalize")
             .about("Mark a release as finalized and released.")
@@ -446,10 +452,11 @@ fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> R
         }
     }
 
+    let version = matches.value_of("version").unwrap();
     let info_rv = ctx.api.update_release(
         ctx.get_org()?,
-        matches.value_of("version").unwrap(),
         &UpdatedRelease {
+            version: Some(version.into()),
             projects: ctx.get_projects(matches).ok(),
             url: matches.value_of("url").map(str::to_owned),
             date_started: get_date(matches.value_of("started"), false)?,
@@ -581,8 +588,9 @@ fn execute_set_commits<'a>(
 
         ctx.api.update_release(
             ctx.get_org()?,
-            version,
             &UpdatedRelease {
+                projects: Some(vec![]),
+                version: Some(version.into()),
                 commits: Some(commits),
                 ..Default::default()
             },
@@ -608,6 +616,36 @@ fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Res
             version
         );
     }
+    Ok(())
+}
+
+fn execute_archive<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+    let version = matches.value_of("version").unwrap();
+    let info_rv = ctx.api.update_release(
+        ctx.get_org()?,
+        &UpdatedRelease {
+            projects: Some(vec![]),
+            version: Some(version.into()),
+            status: Some(ReleaseStatus::Archived),
+            ..Default::default()
+        },
+    )?;
+    println!("Archived release {}.", info_rv.version);
+    Ok(())
+}
+
+fn execute_restore<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+    let version = matches.value_of("version").unwrap();
+    let info_rv = ctx.api.update_release(
+        ctx.get_org()?,
+        &UpdatedRelease {
+            projects: Some(vec![]),
+            version: Some(version.into()),
+            status: Some(ReleaseStatus::Open),
+            ..Default::default()
+        },
+    )?;
+    println!("Restored release {}.", info_rv.version);
     Ok(())
 }
 
@@ -1159,6 +1197,12 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
     }
     if let Some(sub_matches) = matches.subcommand_matches("delete") {
         return execute_delete(&ctx, sub_matches);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("archive") {
+        return execute_archive(&ctx, sub_matches);
+    }
+    if let Some(sub_matches) = matches.subcommand_matches("restore") {
+        return execute_restore(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_list(&ctx, sub_matches);
