@@ -41,6 +41,7 @@ pub struct Config {
     cached_base_url: String,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
+    cached_upload_url: Option<String>,
 }
 
 impl Config {
@@ -59,6 +60,7 @@ impl Config {
             cached_base_url: get_default_url(&ini),
             cached_log_level: get_default_log_level(&ini)?,
             cached_vcs_remote: get_default_vcs_remote(&ini),
+            cached_upload_url: get_default_upload_url(&ini),
             ini,
         })
     }
@@ -412,6 +414,19 @@ impl Config {
             None
         }
     }
+
+    /// Return upload url
+    pub fn get_upload_url(&self) -> Option<String> {
+        self.cached_upload_url.clone()
+    }
+
+    /// Sets the URL
+    pub fn set_upload_url(&mut self, url: &str) {
+        self.cached_upload_url = Some(url.to_owned());
+        self.ini
+            .set_to(Some("defaults"), "upload_url".into(), self.cached_upload_url.clone().unwrap());
+    }
+
 }
 
 fn find_global_config_file() -> Result<PathBuf, Error> {
@@ -524,6 +539,7 @@ impl Clone for Config {
             cached_base_url: self.cached_base_url.clone(),
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
+            cached_upload_url: self.cached_upload_url.clone(),
         }
     }
 }
@@ -549,6 +565,16 @@ fn get_default_url(ini: &Ini) -> String {
         val.to_owned()
     } else {
         DEFAULT_URL.to_owned()
+    }
+}
+
+fn get_default_upload_url(ini: &Ini) -> Option<String> {
+    if let Ok(val) = env::var("SENTRY_UPLOAD_URL") {
+        Some(val)
+    } else if let Some(val) = ini.get_from(Some("defaults"), "upload_url") {
+        Some(val.to_owned())
+    } else {
+        None
     }
 }
 

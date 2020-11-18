@@ -59,6 +59,9 @@ fn get_config_status_json() -> Result<(), Error> {
     rv.config
         .insert("url".into(), Some(config.get_base_url()?.to_string()));
 
+    rv.config
+        .insert("upload_url".into(), Some(config.get_upload_url()).unwrap_or(None));
+
     rv.auth.auth_type = config.get_auth().map(|val| match val {
         Auth::Token(_) => "token".into(),
         Auth::Key(_) => "api_key".into(),
@@ -84,6 +87,11 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
 
     if !matches.is_present("quiet") {
         println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
+
+        if config.get_upload_url().is_some() {
+            println!("Sentry upload URL (chunks): {}", config.get_upload_url().unwrap_or("-".to_string()));
+        }
+
         println!(
             "Default Organization: {}",
             org.unwrap_or_else(|| "-".into())

@@ -39,3 +39,18 @@ fn info_fails_without_auth_token() {
         .assert()
         .failure();
 }
+
+#[test]
+fn info_sets_upload_url_with_args() {
+    Command::cargo_bin("sentry-cli")
+        .unwrap()
+        .envs(common::get_base_env())
+        .arg("--upload-url")
+        .arg("https://sentry.io/test")
+        .arg("info")
+        .assert()
+        .success()
+        .stdout(
+            contains("Sentry upload URL (chunks): https://sentry.io/test")
+        );
+}
