@@ -1112,6 +1112,13 @@ impl Api {
         I: IntoIterator<Item = &'data T>,
         T: AsRef<(Digest, &'data [u8])> + 'data,
     {
+        // If config.upload_url is set, override whatever was set by asking for the options.
+
+        let url = self.config.get_upload_url().unwrap_or_else(|| {
+            // Justs use the url..
+            url.to_string()
+        });
+
         // Curl stores a raw pointer to the stringified checksum internally. We first
         // transform all checksums to string and keep them in scope until the request
         // has completed. The original iterator is not needed anymore after this.
@@ -1130,7 +1137,7 @@ impl Api {
         }
 
         let request = self
-            .request(Method::Post, url)?
+            .request(Method::Post, &url)?
             .with_form_data(form)?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
