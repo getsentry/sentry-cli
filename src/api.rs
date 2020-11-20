@@ -1102,13 +1102,11 @@ impl Api {
     {
         
         // If config.upload_url is set, override whatever was set by asking for the options.
-        let cached_upload_url = self.config.get_upload_url();
 
-        let url = if cached_upload_url.is_some() {
-            Cow::Owned(cached_upload_url.unwrap())
-        } else {
-            Cow::Borrowed(url)
-        };
+        let url = self.config.get_upload_url().unwrap_or_else(|| {
+            // Justs use the url..
+            url.to_string()
+        });
 
         // Curl stores a raw pointer to the stringified checksum internally. We first
         // transform all checksums to string and keep them in scope until the request

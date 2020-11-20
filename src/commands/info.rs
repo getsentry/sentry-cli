@@ -89,7 +89,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
 
         if config.get_upload_url().is_some() {
-            println!("Sentry upload URL (chunks): {}", config.get_upload_url().unwrap_or("-".to_string()));
+            println!("Sentry upload URL (chunks): {}", config.get_upload_url().unwrap_or_else(|| "-".to_string()));
         }
 
         println!(
