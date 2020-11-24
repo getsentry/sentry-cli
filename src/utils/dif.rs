@@ -19,6 +19,7 @@ pub enum DifType {
     SourceBundle,
     Pe,
     Pdb,
+    Wasm,
 }
 
 impl DifType {
@@ -31,6 +32,7 @@ impl DifType {
             DifType::SourceBundle => "sourcebundle",
             DifType::Breakpad => "breakpad",
             DifType::Proguard => "proguard",
+            DifType::Wasm => "wasm",
         }
     }
 }
@@ -53,6 +55,7 @@ impl str::FromStr for DifType {
             "sourcebundle" => Ok(DifType::SourceBundle),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
+            "wasm" => Ok(DifType::Wasm),
             _ => bail!("Invalid debug info file type"),
         }
     }
@@ -189,6 +192,7 @@ impl DifFile<'static> {
                 | FileFormat::Pe
                 | FileFormat::Pdb
                 | FileFormat::Breakpad
+                | FileFormat::Wasm
                 | FileFormat::SourceBundle => return DifFile::from_archive(archive),
                 FileFormat::Unknown => (), // fallthrough
             }
@@ -211,6 +215,7 @@ impl DifFile<'static> {
             Some(DifType::Pe) => DifFile::open_object(path, FileFormat::Pe),
             Some(DifType::Pdb) => DifFile::open_object(path, FileFormat::Pdb),
             Some(DifType::SourceBundle) => DifFile::open_object(path, FileFormat::SourceBundle),
+            Some(DifType::Wasm) => DifFile::open_object(path, FileFormat::Wasm),
             Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
             None => DifFile::try_open(path),
@@ -242,6 +247,7 @@ impl<'a> DifFile<'a> {
                 FileFormat::Elf => DifType::Elf,
                 FileFormat::Pdb => DifType::Pdb,
                 FileFormat::Pe => DifType::Pe,
+                FileFormat::Wasm => DifType::Wasm,
                 FileFormat::SourceBundle => DifType::SourceBundle,
                 FileFormat::Unknown => unreachable!(),
             },
