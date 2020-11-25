@@ -856,7 +856,7 @@ fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: 
     file.write_all(content).expect("Failed to execute.");
 
     let mut add = Command::new("git")
-        .args(&["add", "."])
+        .args(&["add", "-A"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git add .`");
@@ -866,7 +866,7 @@ fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: 
     let mut commit = Command::new("git")
         .args(&[
             "commit",
-            "-m",
+            "-am",
             commit_message,
             "--author",
             "John Doe <john.doe@example.com>",
@@ -883,6 +883,7 @@ fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: 
 fn test_get_commits_from_git() {
     let dir = tempdir().expect("Failed to generate temp dir.");
     test_initialize(dir.path());
+
     git_commit_test(
         dir.path(),
         "foo.js",
@@ -917,6 +918,7 @@ fn test_get_commits_from_git() {
 fn test_generate_patch_set_base() {
     let dir = tempdir().expect("Failed to generate temp dir.");
     test_initialize(dir.path());
+
     git_commit_test(
         dir.path(),
         "foo.js",
@@ -940,7 +942,6 @@ fn test_generate_patch_set_base() {
 
     let repo = git2::Repository::open(dir.path()).expect("Failed");
     let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
-    println!("Commits: {}", commits.0.len());
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
 
@@ -954,7 +955,7 @@ fn test_generate_patch_set_base() {
 fn test_generate_patch_set_previous_commit() {
     let dir = tempdir().expect("Failed to generate temp dir.");
     test_initialize(dir.path());
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
+
     git_commit_test(
         dir.path(),
         "foo.js",
@@ -975,8 +976,9 @@ fn test_generate_patch_set_previous_commit() {
         b"console.log(\"Hello, world! Part 3\");",
         "\"third commit\"",
     );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
     let head = repo.revparse_single("HEAD").expect("Failed");
-    println!("HEAD: {:?}", head.id());
 
     git_commit_test(
         dir.path(),
@@ -1006,13 +1008,14 @@ fn test_generate_patch_set_previous_commit() {
 fn test_generate_patch_default_twenty() {
     let dir = tempdir().expect("Failed to generate temp dir.");
     test_initialize(dir.path());
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
+
     git_commit_test(
         dir.path(),
         "foo.js",
         b"console.log(\"Hello, world!\");",
         "\"initial commit\"",
     );
+
     for n in 0..20 {
         let file = format!("foo{}.js", n);
         git_commit_test(
@@ -1022,6 +1025,7 @@ fn test_generate_patch_default_twenty() {
             "\"another commit\"",
         );
     }
+
     git_commit_test(
         dir.path(),
         "foo2.js",
@@ -1029,6 +1033,7 @@ fn test_generate_patch_default_twenty() {
         "\"final commit\"",
     );
 
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
     let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
