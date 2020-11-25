@@ -5,9 +5,6 @@ on:
     branches:
       - release/**
 
-  # Temporary build on PRs
-  pull_request:
-
 jobs:
   linux:
     strategy:
