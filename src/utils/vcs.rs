@@ -824,13 +824,29 @@ fn test_url_normalization() {
 
 #[cfg(test)]
 fn test_initialize(dir: &Path) {
-    let mut initialize = Command::new("git")
+    Command::new("git")
         .args(&["init", "--quiet"])
         .current_dir(dir)
         .spawn()
-        .expect("Failed to execute `git init`.");
+        .expect("Failed to execute `git init`.")
+        .wait()
+        .expect("Failed to wait on git init.");
 
-    initialize.wait().expect("Failed to wait on git init.");
+    Command::new("git")
+        .args(&["config", "--local", "user.name", "test"])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git config`.")
+        .wait()
+        .expect("Failed to wait on git config.");
+
+    Command::new("git")
+        .args(&["config", "--local", "user.email", "test@example.com"])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git config`.")
+        .wait()
+        .expect("Failed to wait on git config.");
 }
 
 #[cfg(test)]
