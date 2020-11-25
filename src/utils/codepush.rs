@@ -38,10 +38,10 @@ fn get_codepush_error(output: &process::Output) -> Error {
     if let Ok(message) = str::from_utf8(&output.stderr) {
         let stripped = strip_ansi_codes(message);
         err_msg(
-            if stripped.starts_with("[Error]  ") {
-                &stripped[9..]
-            } else if stripped.starts_with("[Error] ") {
-                &stripped[8..]
+            if let Some(rest) = stripped.strip_prefix("[Error]  ") {
+                rest
+            } else if let Some(rest) = stripped.strip_prefix("[Error] ") {
+                rest
             } else {
                 &stripped
             }

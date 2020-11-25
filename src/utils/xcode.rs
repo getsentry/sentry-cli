@@ -145,8 +145,8 @@ impl XcodeProjectInfo {
             .output()?;
         for line_rv in p.stdout.lines() {
             let line = line_rv?;
-            if line.starts_with("    ") {
-                let mut sep = line[4..].splitn(2, " = ");
+            if let Some(suffix) = line.strip_prefix("    ") {
+                let mut sep = suffix.splitn(2, " = ");
                 if_chain! {
                     if let Some(key) = sep.next();
                     if let Some(value) = sep.next();
