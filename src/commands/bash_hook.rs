@@ -91,10 +91,10 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<(), Error
 
             // meta info
             if line.starts_with('@') {
-                if line.starts_with("@command:") {
-                    cmd = line[9..].to_string();
-                } else if line.starts_with("@exit_code:") {
-                    exit_code = line[11..].parse().unwrap_or(exit_code);
+                if let Some(rest) = line.strip_prefix("@command:") {
+                    cmd = rest.to_string();
+                } else if let Some(rest) = line.strip_prefix("@exit_code:") {
+                    exit_code = rest.parse().unwrap_or(exit_code);
                 } else {
                     continue;
                 }

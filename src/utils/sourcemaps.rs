@@ -31,8 +31,8 @@ fn join_url(base_url: &str, url: &str) -> Result<String, Error> {
         match Url::parse(&format!("http://{}", base_url))?.join(url) {
             Ok(url) => {
                 let rv = url.to_string();
-                if rv.starts_with("http://~/") {
-                    Ok(format!("~/{}", &rv[9..]))
+                if let Some(rest) = rv.strip_prefix("http://~/") {
+                    Ok(format!("~/{}", rest))
                 } else {
                     Ok(rv)
                 }
@@ -135,8 +135,8 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
         }
 
         // foo.min.js -> foo.js.map
-        if ext.starts_with("min.") {
-            let new_ext = format!("{}.{}", &ext[4..], map_ext);
+        if let Some(rest) = ext.strip_prefix("min.") {
+            let new_ext = format!("{}.{}", rest, map_ext);
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
                 return Ok(unsplit_url(None, basename, Some(&new_ext)));
             }

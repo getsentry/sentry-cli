@@ -319,12 +319,12 @@ pub fn wrap_call() -> Result<(), Error> {
         while let Some(item) = iter.next() {
             if item == "--sourcemap-output" {
                 sourcemap_path = iter.next().cloned();
-            } else if item.starts_with("--sourcemap-output=") {
-                sourcemap_path = Some(item[19..].to_string());
+            } else if let Some(rest) = item.strip_prefix("--sourcemap-output=") {
+                sourcemap_path = Some(rest.to_string());
             } else if item == "--bundle-output" {
                 bundle_path = iter.next().cloned();
-            } else if item.starts_with("--bundle-output=") {
-                bundle_path = Some(item[16..].to_string());
+            } else if let Some(rest) = item.strip_prefix("--bundle-output=") {
+                bundle_path = Some(rest.to_string());
             }
         }
     }
