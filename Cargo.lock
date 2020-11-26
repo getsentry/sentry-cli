@@ -2342,7 +2342,7 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 [[package]]
 name = "symbolic"
 version = "7.5.0"
-source = "git+https://github.com/getsentry/symbolic#5d007d7c6605df7fa683749ef0f1b9380571fa05"
+source = "git+https://github.com/getsentry/symbolic#075ee512324df66bd5df6f358174244498a85756"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2351,7 +2351,7 @@ dependencies = [
 [[package]]
 name = "symbolic-common"
 version = "7.5.0"
-source = "git+https://github.com/getsentry/symbolic#5d007d7c6605df7fa683749ef0f1b9380571fa05"
+source = "git+https://github.com/getsentry/symbolic#075ee512324df66bd5df6f358174244498a85756"
 dependencies = [
  "debugid",
  "memmap",
@@ -2363,7 +2363,7 @@ dependencies = [
 [[package]]
 name = "symbolic-debuginfo"
 version = "7.5.0"
-source = "git+https://github.com/getsentry/symbolic#5d007d7c6605df7fa683749ef0f1b9380571fa05"
+source = "git+https://github.com/getsentry/symbolic#075ee512324df66bd5df6f358174244498a85756"
 dependencies = [
  "dmsort",
  "fallible-iterator",
