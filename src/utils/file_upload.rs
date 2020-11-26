@@ -330,8 +330,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
 fn url_to_bundle_path(url: &str) -> Result<String, Error> {
     let base = Url::parse("http://~").unwrap();
-    let url = if url.starts_with("~/") {
-        base.join(&url[2..])?
+    let url = if let Some(rest) = url.strip_prefix("~/") {
+        base.join(rest)?
     } else {
         base.join(url)?
     };

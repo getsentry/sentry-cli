@@ -14,8 +14,10 @@ fn require_subcommand() {
         .assert()
         .failure()
         .stderr(
-            contains("Manage releases on Sentry.")
-                .and(contains("sentry-cli releases <SUBCOMMAND>")),
+            contains("Manage releases on Sentry.").and(
+                contains("sentry-cli releases <SUBCOMMAND>")
+                    .or(contains("sentry-cli.exe releases <SUBCOMMAND>")),
+            ),
         );
 }
 

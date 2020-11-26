@@ -73,8 +73,8 @@ pub fn get_appcenter_error(output: &Output) -> Error {
     };
 
     let stripped = strip_ansi_codes(message);
-    let cause = if stripped.starts_with("Error: ") {
-        &stripped[7..]
+    let cause = if let Some(rest) = stripped.strip_prefix("Error: ") {
+        rest
     } else {
         &stripped
     }
