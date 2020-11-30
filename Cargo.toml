@@ -88,3 +88,6 @@ crossbeam-channel = "0.4.2"
 [profile.release]
 opt-level = 3
 panic = "abort"
+
+[patch.crates-io]
+symbolic = { git = "https://github.com/getsentry/symbolic" }
