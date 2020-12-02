@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## sentry-cli 1.60.0
 
-* "Sometimes I’ll start a sentence and I don’t even know where it’s going. I just hope I find it along the way." - Michael Scott
+* feat: Added support for WASM debug info files (#863)
 
 ## sentry-cli 1.59.0
 
