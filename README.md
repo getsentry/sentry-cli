@@ -5,8 +5,7 @@
 
 # Official Sentry Command Line Interface
 
-[![Travis](https://img.shields.io/travis/com/getsentry/sentry-cli.svg)](https://travis-ci.com/getsentry/sentry-cli)
-[![AppVeyor](https://img.shields.io/appveyor/ci/sentry/sentry-cli.svg)](https://ci.appveyor.com/project/sentry/sentry-cli)
+[![Build Status](https://github.com/getsentry/sentry-cli/workflows/CI/badge.svg?branch=master)](https://github.com/getsentry/sentry-cli/actions?query=workflow%3ACI)
 [![GitHub release](https://img.shields.io/github/release/getsentry/sentry-cli.svg)](https://github.com/getsentry/sentry-cli/releases/latest)
 [![npm version](https://img.shields.io/npm/v/@sentry/cli.svg)](https://www.npmjs.com/package/@sentry/cli)
 [![license](https://img.shields.io/github/license/getsentry/sentry-cli.svg)](https://github.com/getsentry/sentry-cli/blob/master/LICENSE)
