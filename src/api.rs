@@ -753,8 +753,13 @@ impl Api {
                 );
                 self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
             } else {
-                let path = format!("/organizations/{}/releases/", PathArg(org));
-                self.post(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+                if let Some(version) = release.version.clone() {
+                    let path = format!("/organizations/{}/releases/{}/", PathArg(org), PathArg(version));
+                    self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+                } else {
+                    let path = format!("/organizations/{}/releases/", PathArg(org));
+                    self.post(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+                }
             }
         }
     }
