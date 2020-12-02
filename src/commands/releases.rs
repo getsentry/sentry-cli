@@ -452,11 +452,10 @@ fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> R
         }
     }
 
-    let version = matches.value_of("version").unwrap();
     let info_rv = ctx.api.update_release(
         ctx.get_org()?,
+        matches.value_of("version").unwrap(),
         &UpdatedRelease {
-            version: Some(version.into()),
             projects: ctx.get_projects(matches).ok(),
             url: matches.value_of("url").map(str::to_owned),
             date_started: get_date(matches.value_of("started"), false)?,
@@ -588,9 +587,8 @@ fn execute_set_commits<'a>(
 
         ctx.api.update_release(
             ctx.get_org()?,
+            version,
             &UpdatedRelease {
-                projects: Some(vec![]),
-                version: Some(version.into()),
                 commits: Some(commits),
                 ..Default::default()
             },
@@ -623,6 +621,7 @@ fn execute_archive<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
     let version = matches.value_of("version").unwrap();
     let info_rv = ctx.api.update_release(
         ctx.get_org()?,
+        version,
         &UpdatedRelease {
             projects: Some(vec![]),
             version: Some(version.into()),
@@ -638,6 +637,7 @@ fn execute_restore<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
     let version = matches.value_of("version").unwrap();
     let info_rv = ctx.api.update_release(
         ctx.get_org()?,
+        version,
         &UpdatedRelease {
             projects: Some(vec![]),
             version: Some(version.into()),
