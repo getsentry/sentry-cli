@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.60.1
+
+* fix: Restore release modification calls to use put request, while preserving restore/archive capability (#870)
+
 ## sentry-cli 1.60.0
 
 * feat: Added support for WASM debug info files (#863)
