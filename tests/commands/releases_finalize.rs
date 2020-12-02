@@ -54,7 +54,7 @@ fn release_with_custom_dates() {
     let _server = mock("PUT", "/api/0/projects/wat-org/wat-project/releases/wat-release/")
         .match_body(
             Matcher::JsonString(
-                r#"{"projects":["wat-project"],"dateStarted":"2015-05-15T00:01:40Z","dateReleased":"2015-05-15T00:00:00Z","version":"wat-release"}"#.to_string(),
+                r#"{"projects":["wat-project"],"dateStarted":"2015-05-15T00:01:40Z","dateReleased":"2015-05-15T00:00:00Z"}"#.to_string(),
             ),
         )
         .with_status(200)
