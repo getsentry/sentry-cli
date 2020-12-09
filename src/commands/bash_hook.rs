@@ -198,7 +198,7 @@ pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
         script = script.replace("___SENTRY_CLI___", matches.value_of("cli").unwrap());
     } else {
         script = script.replace(
-            "__SENTRY_CLI__",
+            "___SENTRY_CLI___",
             &env::current_exe().unwrap().display().to_string(),
         );
     }
