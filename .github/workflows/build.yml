@@ -36,17 +36,25 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [x86_64]  # TODO: Add arm64e when available
+        include:
+          - arch: x86_64
+            target: x86_64-apple-darwin
+            macos-version: "10.15"
+          - arch: arm64
+            target: aarch64-apple-darwin
+            macos-version: "11.0"
 
-    name: macOS  ${{ matrix.arch }}
-    runs-on: macos-10.15
+    name: macOS ${{ matrix.arch }}
+    runs-on: macos-${{ matrix.macos-version }}
 
     steps:
       - uses: actions/checkout@v2
 
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable-${{ matrix.arch }}-apple-darwin
+          # TODO: aarch64 requires beta, revert when 1.49.0 is released
+          toolchain: beta
+          target: ${{ matrix.target }}
           profile: minimal
           override: true
 
@@ -54,15 +62,33 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: build
-          args: --release --locked
+          args: --target=${{ matrix.target }} --release --locked
 
       - name: Rename Binary
-        run: mv target/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
+        run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.sha }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
+
+  macos_universal:
+    needs: macos
+    name: macOS universal
+    runs-on: macos-11.0
+
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: ${{ github.sha }}
+
+      - name: Link universal binary
+        run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: ${{ github.sha }}
+          path: sentry-cli-Darwin-universal
 
   windows:
     strategy:

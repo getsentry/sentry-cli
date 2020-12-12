@@ -10,7 +10,12 @@ fn main() {
 
     let target = env::var("TARGET").unwrap();
     let mut target_bits = target.split('-');
-    let arch = target_bits.next().unwrap();
+
+    let arch = match target_bits.next().unwrap() {
+        "aarch64" => "arm64", // Linux and Darwin convention. Matches `uname -m`
+        arch => arch,
+    };
+
     target_bits.next();
     let platform = target_bits.next().unwrap();
 
