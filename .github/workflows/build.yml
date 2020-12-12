@@ -54,7 +54,8 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           # TODO: aarch64 requires beta, revert when 1.49.0 is released
-          toolchain: beta-${{ matrix.arch }}-apple-darwin
+          toolchain: beta
+          target: ${{ matrix.arch }}-apple-darwin
           profile: minimal
           override: true
 
