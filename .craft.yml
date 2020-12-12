@@ -64,7 +64,7 @@ targets:
 
 requireNames:
   - /^sentry-cli-Darwin-x86_64$/
-  - /^sentry-cli-Darwin-aarch64$/
+  - /^sentry-cli-Darwin-arm64$/
   - /^sentry-cli-Darwin-universal$/
   - /^sentry-cli-Linux-i686$/
   - /^sentry-cli-Linux-x86_64$/
