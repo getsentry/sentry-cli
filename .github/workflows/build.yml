@@ -83,7 +83,7 @@ jobs:
           name: ${{ github.sha }}
 
       - name: Link universal binary
-        run: lipo -create sentry-cli-Darwin-x86_64 sentry-cli-Darwin-aarch64 sentry-cli-Darwin-universal
+        run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-aarch64
 
       - uses: actions/upload-artifact@v2
         with:
