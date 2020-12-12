@@ -5,6 +5,9 @@ on:
     branches:
       - release/**
 
+  # FIXME: Remove before merge
+  pull_request:
+
 jobs:
   linux:
     strategy:
