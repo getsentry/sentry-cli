@@ -2089,7 +2089,7 @@ dependencies = [
 
 [[package]]
 name = "sentry-cli"
-version = "1.60.1"
+version = "1.61.0"
 dependencies = [
  "anylog",
  "app_dirs",
