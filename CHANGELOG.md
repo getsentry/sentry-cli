@@ -1,5 +1,16 @@
 # Changelog
 
+## sentry-cli 1.61.0
+
+* fix: Add missing underscores for template in bash hook (#872)
+* feat: macOS builds for `arm64` and universal binaries (#873)
+
+Sentry-cli will not upgrade to the `arm64` build automatically, if you're currently running on Rosetta 2. To install the `arm64` version:
+
+- Please ensure that your terminal and shell both run natively without emulation. You can check this by running `uname -m` in your terminal.
+- Remove your existing installation of `sentry-cli`.
+- Follow the [Installation Instructions](https://github.com/getsentry/sentry-cli#installation) for a fresh installation.
+
 ## sentry-cli 1.60.1
 
 * fix: Restore release modification calls to use put request, while preserving restore/archive capability (#870)

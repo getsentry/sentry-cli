@@ -1,5 +1,5 @@
 ---
-minVersion: '0.13.2'
+minVersion: '0.14.0'
 github:
   owner: getsentry
   repo: sentry-cli
