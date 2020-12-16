@@ -114,6 +114,10 @@ fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), E
         config.set_base_url(url);
     }
 
+    if let Some(upload_url) = matches.value_of("upload_url") {
+        config.set_upload_url(upload_url);
+    }
+
     if let Some(api_key) = matches.value_of("api_key") {
         config.set_auth(Auth::Key(api_key.to_owned()));
     }
@@ -231,6 +235,12 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
                 .case_insensitive(true)
                 .global(true)
                 .help("Set the log output verbosity."),
+        )
+        .arg(
+            Arg::with_name("upload_url")
+                .value_name("UPLOAD_URL")
+                .long("upload-url")
+                .help("The URL to use for chunk uploads"),
         );
 
     app = add_commands(app);

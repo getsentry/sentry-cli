@@ -39,3 +39,24 @@ fn info_fails_without_auth_token() {
         .assert()
         .failure();
 }
+
+#[test]
+fn info_sets_upload_url_with_args() {
+    let _server = mock("GET", "/api/0/")
+        .with_status(200)
+        .with_header("content-type", "application/json")
+        .with_body(r#"{"user":{"username":"kamil@sentry.io","id":"1337","name":"Kamil Ogórek","email":"kamil@sentry.io"},"auth":{"scopes":["project:read","project:releases"]}}"#)
+        .create();
+
+    Command::cargo_bin("sentry-cli")
+        .unwrap()
+        .envs(common::get_base_env())
+        .arg("--upload-url")
+        .arg("https://sentry.io/test")
+        .arg("info")
+        .assert()
+        .success()
+        .stdout(contains(
+            "Sentry upload URL (chunks): https://sentry.io/test",
+        ));
+}
