@@ -75,7 +75,7 @@ jobs:
   macos_universal:
     needs: macos
     name: macOS universal
-    runs-on: macos-11.0
+    runs-on: macos-latest
 
     steps:
       - uses: actions/download-artifact@v2
