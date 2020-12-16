@@ -938,7 +938,14 @@ impl Api {
     /// Finds the latest release for sentry-cli on GitHub.
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
         let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
-        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), ARCH, EXT);
+
+        // Prefer universal binary on macOS
+        let arch = match PLATFORM {
+            "darwin" => "universal",
+            _ => ARCH,
+        };
+
+        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), arch, EXT);
         info!("Looking for file named: {}", ref_name);
 
         if resp.status() == 200 {

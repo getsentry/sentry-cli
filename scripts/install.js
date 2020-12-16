@@ -51,7 +51,7 @@ function getDownloadUrl(platform, arch) {
   }
   switch (platform) {
     case 'darwin':
-      return `${releasesUrl}-Darwin-x86_64`;
+      return `${releasesUrl}-Darwin-universal`;
     case 'win32':
       return `${releasesUrl}-Windows-${archString}.exe`;
     case 'linux':
