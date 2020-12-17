@@ -32,13 +32,8 @@ targets:
         license "BSD-3-Clause"
 
         if OS.mac?
-          if Hardware::CPU.arm?
-            url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-arm64"
-            sha256 "{{checksums.sentry-cli-Darwin-arm64}}"
-          else
-            url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-x86_64"
-            sha256 "{{checksums.sentry-cli-Darwin-x86_64}}"
-          end
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal"
+          sha256 "{{checksums.sentry-cli-Darwin-universal}}"
         elsif Hardware::CPU.is_64_bit?
           url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-x86_64"
           sha256 "{{checksums.sentry-cli-Linux-x86_64}}"
