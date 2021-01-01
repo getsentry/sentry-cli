@@ -47,7 +47,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("unresolve").about("Bulk unresolve all selected issues."))
 }
 
-fn get_filter_from_matches<'a>(matches: &ArgMatches<'a>) -> Result<IssueFilter, Error> {
+fn get_filter_from_matches(matches: &ArgMatches<'_>) -> Result<IssueFilter, Error> {
     if matches.is_present("all") {
         return Ok(IssueFilter::All);
     }
@@ -85,7 +85,7 @@ fn execute_change(
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let filter = get_filter_from_matches(matches)?;

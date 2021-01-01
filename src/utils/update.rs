@@ -222,7 +222,7 @@ fn update_nagger_impl() -> Result<(), Error> {
 
     if check.is_outdated() {
         info!("Update nagger determined outdated installation");
-        eprintln!("");
+        eprintln!();
         eprintln!(
             "{}",
             style(format!(

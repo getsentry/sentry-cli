@@ -36,7 +36,7 @@ lazy_static! {
 /// Parses a link header into a vector of hash maps.
 ///
 /// The implied `link` tag is stored as `_link`.
-pub fn parse_link_header<'a>(s: &'a str) -> Vec<HashMap<&'a str, &'a str>> {
+pub fn parse_link_header(s: &str) -> Vec<HashMap<&str, &str>> {
     let mut rv = vec![];
     let mut item = HashMap::new();
 

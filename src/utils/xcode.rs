@@ -60,7 +60,7 @@ where
     }
 
     expand_vars(&s, |key| {
-        if key == "" {
+        if key.is_empty() {
             return "".into();
         }
 

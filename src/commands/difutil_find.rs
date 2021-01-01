@@ -279,7 +279,7 @@ fn find_ids(
         }
         remaining.extend(breakpad_found);
         if !remaining.is_empty() {
-            eprintln!("");
+            eprintln!();
             eprintln!("missing debug information files:");
             for id in &remaining {
                 eprintln!("  {} ({})", id, id_hint(&id),);
@@ -290,7 +290,7 @@ fn find_ids(
     Ok(remaining.is_empty())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let mut paths = HashSet::new();
     let mut types = HashSet::new();
     let mut ids = HashSet::new();
