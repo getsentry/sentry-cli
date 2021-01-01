@@ -71,7 +71,7 @@ fn get_config_status_json() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     if matches.is_present("config_status_json") {
         return get_config_status_json();
     }

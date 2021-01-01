@@ -143,45 +143,41 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
-    let mut event = Event::default();
 
-    event.sdk = Some(get_sdk_info());
-
-    event.level = matches
-        .value_of("level")
-        .and_then(|l| l.parse().ok())
-        .unwrap_or(Level::Error);
-
-    if let Some(timestamp) = matches.value_of("timestamp") {
-        event.timestamp = get_timestamp(timestamp)?;
-    }
-
-    if let Some(release) = matches.value_of("release") {
-        event.release = Some(release.to_string().into());
-    } else {
-        event.release = detect_release_name().ok().map(Cow::from);
-    }
-
-    event.dist = matches.value_of("dist").map(|x| x.to_string().into());
-    event.platform = matches
-        .value_of("platform")
-        .unwrap_or("other")
-        .to_string()
-        .into();
-    event.environment = matches
-        .value_of("environment")
-        .map(|x| x.to_string().into());
-
-    if let Some(mut lines) = matches.values_of("message") {
-        event.logentry = Some(LogEntry {
+    let mut event = Event {
+        sdk: Some(get_sdk_info()),
+        level: matches
+            .value_of("level")
+            .and_then(|l| l.parse().ok())
+            .unwrap_or(Level::Error),
+        release: matches
+            .value_of("release")
+            .map(str::to_owned)
+            .or_else(|| detect_release_name().ok())
+            .map(Cow::from),
+        dist: matches.value_of("dist").map(|x| x.to_string().into()),
+        platform: matches
+            .value_of("platform")
+            .unwrap_or("other")
+            .to_string()
+            .into(),
+        environment: matches
+            .value_of("environment")
+            .map(|x| x.to_string().into()),
+        logentry: matches.values_of("message").map(|mut lines| LogEntry {
             message: lines.join("\n"),
             params: matches
                 .values_of("message_args")
                 .map(|args| args.map(|x| x.into()).collect())
                 .unwrap_or_default(),
-        });
+        }),
+        ..Event::default()
+    };
+
+    if let Some(timestamp) = matches.value_of("timestamp") {
+        event.timestamp = get_timestamp(timestamp)?;
     }
 
     for tag in matches.values_of("tags").unwrap_or_default() {

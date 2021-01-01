@@ -1,7 +1,6 @@
 //! Provides sourcemap validation functionality.
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::iter::FromIterator;
 use std::mem;
 use std::path::PathBuf;
 use std::str;
@@ -346,12 +345,12 @@ impl SourceMapProcessor {
         self.flush_pending_sources()?;
 
         debug!("Trying to guess the sourcemap reference");
-        let sourcemaps_references = HashSet::from_iter(
-            self.sources
-                .values()
-                .filter(|x| x.ty == SourceFileType::SourceMap)
-                .map(|x| x.url.to_string()),
-        );
+        let sourcemaps_references = self
+            .sources
+            .values()
+            .filter(|x| x.ty == SourceFileType::SourceMap)
+            .map(|x| x.url.to_string())
+            .collect();
 
         let sourcemap_url =
             match guess_sourcemap_reference(&sourcemaps_references, bundle_source_url) {
@@ -497,13 +496,13 @@ impl SourceMapProcessor {
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<(), Error> {
         self.flush_pending_sources()?;
-        let sourcemaps = HashSet::from_iter(
-            self.sources
-                .iter()
-                .map(|x| x.1)
-                .filter(|x| x.ty == SourceFileType::SourceMap)
-                .map(|x| x.url.to_string()),
-        );
+        let sourcemaps = self
+            .sources
+            .iter()
+            .map(|x| x.1)
+            .filter(|x| x.ty == SourceFileType::SourceMap)
+            .map(|x| x.url.to_string())
+            .collect();
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {

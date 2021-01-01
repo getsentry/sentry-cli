@@ -23,7 +23,7 @@ fn update_config(config: &Config, token: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 

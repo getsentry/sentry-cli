@@ -55,7 +55,7 @@ macro_rules! log_match {
 }
 
 fn parse_rev_range(rng: &str) -> (Option<String>, String) {
-    if rng == "" {
+    if rng.is_empty() {
         return (None, "HEAD".into());
     }
     let mut iter = rng.rsplitn(2, "..");
