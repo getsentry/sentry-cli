@@ -279,7 +279,7 @@ fn find_ids(
         }
         remaining.extend(breakpad_found);
         if !remaining.is_empty() {
-            eprintln!("");
+            eprintln!();
             eprintln!("missing debug information files:");
             for id in &remaining {
                 eprintln!("  {} ({})", id, id_hint(&id),);
