@@ -67,10 +67,7 @@ impl<'de> de::Deserialize<'de> for AppCenterPackage {
 }
 
 pub fn get_appcenter_error(output: &Output) -> Error {
-    let message = match str::from_utf8(&output.stdout) {
-        Ok(message) => message,
-        Err(_) => "Unknown AppCenter error",
-    };
+    let message = str::from_utf8(&output.stdout).unwrap_or("Unknown AppCenter error");
 
     let stripped = strip_ansi_codes(message);
     let cause = if let Some(rest) = stripped.strip_prefix("Error: ") {
@@ -137,11 +134,11 @@ pub fn get_react_native_appcenter_release(
     let version_name_ovrr = version_name_override.unwrap_or("");
     let release_name_ovrr = release_name_override.unwrap_or("");
 
-    if release_name_ovrr != "" {
+    if !release_name_ovrr.is_empty() {
         return Ok(release_name_ovrr.to_string());
     }
 
-    if bundle_id_ovrr != "" && version_name_ovrr != "" {
+    if !bundle_id_ovrr.is_empty() && !version_name_ovrr.is_empty() {
         return Ok(format!(
             "{}@{}+codepush:{}",
             bundle_id_ovrr, version_name_ovrr, package.label
@@ -162,12 +159,12 @@ pub fn get_react_native_appcenter_release(
                 if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                     if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
                         let vec: Vec<&str> = release_name.split('@').collect();
-                        let bundle_id = if bundle_id_ovrr == "" {
+                        let bundle_id = if bundle_id_ovrr.is_empty() {
                             vec[0]
                         } else {
                             bundle_id_ovrr
                         };
-                        let version_name = if version_name_ovrr == "" {
+                        let version_name = if version_name_ovrr.is_empty() {
                             vec[1]
                         } else {
                             version_name_ovrr
@@ -190,8 +187,8 @@ pub fn get_react_native_appcenter_release(
             then {
                 if let Some(release_name) = infer_gradle_release_name(Some(here.join("android")))? {
                     let vec: Vec<&str> = release_name.split('@').collect();
-                    let bundle_id = if bundle_id_ovrr == "" { vec[0] } else { bundle_id_ovrr };
-                    let version_name = if version_name_ovrr == "" { vec[1] } else { version_name_ovrr };
+                    let bundle_id = if bundle_id_ovrr.is_empty() { vec[0] } else { bundle_id_ovrr };
+                    let version_name = if version_name_ovrr.is_empty() { vec[1] } else { version_name_ovrr };
                     return Ok(format!("{}@{}+codepush:{}", bundle_id, version_name, package.label));
                 } else {
                     bail!("Could not parse app id from build.gradle");

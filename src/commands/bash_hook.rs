@@ -63,16 +63,19 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<(), Error> {
     let config = Config::current();
-    let mut event = Event::default();
 
-    event.environment = config.get_environment().map(Into::into);
-    event.release = detect_release_name().ok().map(Into::into);
-    event.sdk = Some(get_sdk_info());
-    event.user = get_user_name().ok().map(|n| User {
-        username: Some(n),
-        ip_address: Some(Default::default()),
-        ..Default::default()
-    });
+    let mut event = Event {
+        environment: config.get_environment().map(Into::into),
+        release: detect_release_name().ok().map(Into::into),
+        sdk: Some(get_sdk_info()),
+        user: get_user_name().ok().map(|n| User {
+            username: Some(n),
+            ip_address: Some(Default::default()),
+            ..Default::default()
+        }),
+        ..Event::default()
+    };
+
     if environ {
         event.extra.insert(
             "environ".into(),
@@ -169,7 +172,7 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<(), Error
     Ok(())
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     if matches.is_present("send_event") {
         return send_event(
             matches.value_of("traceback").unwrap(),

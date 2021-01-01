@@ -2214,6 +2214,16 @@ pub struct Deploy {
     pub finished: Option<DateTime<Utc>>,
 }
 
+impl Deploy {
+    /// Returns the name of this deploy, defaulting to `"unnamed"`.
+    pub fn name(&self) -> &str {
+        match self.name.as_deref() {
+            Some("") | None => "unnamed",
+            Some(name) => name,
+        }
+    }
+}
+
 #[derive(Debug, Deserialize, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
 pub enum ChunkHashAlgorithm {
     #[serde(rename = "sha1")]

@@ -1,7 +1,6 @@
 //! Provides sourcemap validation functionality.
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::iter::FromIterator;
 use std::mem;
 use std::path::PathBuf;
 use std::str;
@@ -187,9 +186,9 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    fn flush_pending_sources(&mut self) -> Result<(), Error> {
+    fn flush_pending_sources(&mut self) {
         if self.pending_sources.is_empty() {
-            return Ok(());
+            return;
         }
 
         let pb = make_progress_bar(self.pending_sources.len() as u64);
@@ -248,8 +247,6 @@ impl SourceMapProcessor {
         }
 
         pb.finish_and_clear();
-
-        Ok(())
     }
 
     pub fn dump_log(&self, title: &str) {
@@ -300,7 +297,7 @@ impl SourceMapProcessor {
 
     /// Validates all sources within.
     pub fn validate_all(&mut self) -> Result<(), Error> {
-        self.flush_pending_sources()?;
+        self.flush_pending_sources();
         let source_urls = self.sources.keys().cloned().collect();
         let sources: Vec<&mut ReleaseFile> = self.sources.values_mut().collect();
         let mut failed = false;
@@ -343,15 +340,15 @@ impl SourceMapProcessor {
         bundle_source_url: &str,
     ) -> Result<(), Error> {
         // We need this to flush all pending sourcemaps
-        self.flush_pending_sources()?;
+        self.flush_pending_sources();
 
         debug!("Trying to guess the sourcemap reference");
-        let sourcemaps_references = HashSet::from_iter(
-            self.sources
-                .values()
-                .filter(|x| x.ty == SourceFileType::SourceMap)
-                .map(|x| x.url.to_string()),
-        );
+        let sourcemaps_references = self
+            .sources
+            .values()
+            .filter(|x| x.ty == SourceFileType::SourceMap)
+            .map(|x| x.url.to_string())
+            .collect();
 
         let sourcemap_url =
             match guess_sourcemap_reference(&sourcemaps_references, bundle_source_url) {
@@ -457,7 +454,7 @@ impl SourceMapProcessor {
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
     pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<(), Error> {
-        self.flush_pending_sources()?;
+        self.flush_pending_sources();
 
         println!("{} Rewriting sources", style(">").dim());
 
@@ -496,14 +493,14 @@ impl SourceMapProcessor {
 
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<(), Error> {
-        self.flush_pending_sources()?;
-        let sourcemaps = HashSet::from_iter(
-            self.sources
-                .iter()
-                .map(|x| x.1)
-                .filter(|x| x.ty == SourceFileType::SourceMap)
-                .map(|x| x.url.to_string()),
-        );
+        self.flush_pending_sources();
+        let sourcemaps = self
+            .sources
+            .iter()
+            .map(|x| x.1)
+            .filter(|x| x.ty == SourceFileType::SourceMap)
+            .map(|x| x.url.to_string())
+            .collect();
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
@@ -529,7 +526,7 @@ impl SourceMapProcessor {
 
     /// Uploads all files
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
-        self.flush_pending_sources()?;
+        self.flush_pending_sources();
         let mut uploader = ReleaseFileUpload::new(context);
         uploader.files(&self.sources);
         uploader.upload()?;

@@ -131,7 +131,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let api = Api::current();
 
     let paths: Vec<_> = match matches.values_of("paths") {

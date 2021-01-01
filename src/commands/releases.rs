@@ -1122,12 +1122,8 @@ fn execute_deploys_new<'a>(
 
     let org = ctx.get_org()?;
     let deploy = ctx.api.create_deploy(org, version, &deploy)?;
-    let mut name = deploy.name.as_deref().unwrap_or("");
-    if name == "" {
-        name = "unnamed";
-    }
 
-    println!("Created new deploy {} for '{}'", name, deploy.env);
+    println!("Created new deploy {} for '{}'", deploy.name(), deploy.env);
 
     Ok(())
 }
@@ -1145,13 +1141,13 @@ fn execute_deploys_list<'a>(
         .add("Finished");
 
     for deploy in ctx.api.list_deploys(ctx.get_org()?, version)? {
-        let mut name = deploy.name.as_deref().unwrap_or("");
-        if name == "" {
-            name = "unnamed";
-        }
-        table.add_row().add(deploy.env).add(name).add(HumanDuration(
-            Utc::now().signed_duration_since(deploy.finished.unwrap()),
-        ));
+        table
+            .add_row()
+            .add(&deploy.env)
+            .add(deploy.name())
+            .add(HumanDuration(
+                Utc::now().signed_duration_since(deploy.finished.unwrap()),
+            ));
     }
 
     if table.is_empty() {
@@ -1174,7 +1170,7 @@ fn execute_deploys<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
     unreachable!();
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     // this one does not need a context or org
     if let Some(_sub_matches) = matches.subcommand_matches("propose-version") {
         return execute_propose_version();

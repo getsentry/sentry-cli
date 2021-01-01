@@ -57,7 +57,7 @@ impl Config {
             process_bound: false,
             cached_auth: get_default_auth(&ini),
             cached_base_url: get_default_url(&ini),
-            cached_log_level: get_default_log_level(&ini)?,
+            cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
         })
@@ -552,20 +552,20 @@ fn get_default_url(ini: &Ini) -> String {
     }
 }
 
-fn get_default_log_level(ini: &Ini) -> Result<log::LevelFilter, Error> {
+fn get_default_log_level(ini: &Ini) -> log::LevelFilter {
     if let Ok(level_str) = env::var("SENTRY_LOG_LEVEL") {
         if let Ok(level) = level_str.parse() {
-            return Ok(level);
+            return level;
         }
     }
 
     if let Some(level_str) = ini.get_from(Some("log"), "level") {
         if let Ok(level) = level_str.parse() {
-            return Ok(level);
+            return level;
         }
     }
 
-    Ok(log::LevelFilter::Warn)
+    log::LevelFilter::Warn
 }
 
 /// Get the default VCS remote.

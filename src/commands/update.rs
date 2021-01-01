@@ -21,7 +21,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     // Disable update check in case of errors
     env::set_var("SENTRY_DISABLE_UPDATE_CHECK", "true");
 

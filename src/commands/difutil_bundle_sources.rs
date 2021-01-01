@@ -66,7 +66,7 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, Error> {
     Ok(canonical_path)
 }
 
-pub fn execute<'a>(matches: &ArgMatches<'a>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let output_path = matches.value_of("output").map(Path::new);
 
     for orig_path in matches.values_of("paths").unwrap() {
