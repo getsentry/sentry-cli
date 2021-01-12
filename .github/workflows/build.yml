@@ -15,12 +15,16 @@ jobs:
         include:
           - arch: i686
             target: i686-unknown-linux-musl
+            container: i686-musl
           - arch: x86_64
             target: x86_64-unknown-linux-musl
+            container: x86_64-musl
           - arch: armv7
             target: armv7-unknown-linux-musleabi
+            container: armv7-musleabi
           - arch: aarch64
             target: aarch64-unknown-linux-musl
+            container: aarch64-musl
 
     name: Linux ${{ matrix.arch }}
     runs-on: ubuntu-latest
@@ -32,7 +36,7 @@ jobs:
         run: scripts/build-in-docker.sh
         env:
           TARGET: ${{ matrix.target }}
-          DOCKER_TAG: ${{ matrix.arch }}-musl
+          DOCKER_TAG: ${{ matrix.container }}
 
       - name: Rename Binary
         run: mv target/*/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
