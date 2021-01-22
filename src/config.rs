@@ -219,8 +219,14 @@ impl Config {
     }
 
     /// Returns the proxy URL if defined.
-    fn get_proxy_url(&self) -> Option<&str> {
-        self.ini.get_from(Some("http"), "proxy_url")
+    pub fn get_proxy_url(&self) -> Option<String> {
+        if env::var_os("proxy_url").is_some() {
+            env::var("proxy_url").ok()
+        } else if let Some(val) = self.ini.get_from(Some("http"), "proxy_url") {
+            Some(val.to_owned())
+        } else {
+            None
+        }
     }
 
     /// Returns the proxy username if defined.

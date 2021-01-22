@@ -404,7 +404,9 @@ impl Api {
             )
         };
 
-        // the proxy url is discovered from the http_proxy envvar.
+        if let Some(proxy_url) = self.config.get_proxy_url() {
+            handle.proxy(&proxy_url)?;
+        }
         if let Some(proxy_username) = self.config.get_proxy_username() {
             handle.proxy_username(proxy_username)?;
         }
