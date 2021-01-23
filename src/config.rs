@@ -111,11 +111,6 @@ impl Config {
         {
             crate::utils::crashreporting::bind_configured_client(Some(self));
         }
-        if env::var("http_proxy").is_err() {
-            if let Some(proxy) = self.get_proxy_url() {
-                env::set_var("http_proxy", proxy);
-            }
-        }
         #[cfg(not(windows))]
         {
             openssl_probe::init_ssl_cert_env_vars();
@@ -220,8 +215,8 @@ impl Config {
 
     /// Returns the proxy URL if defined.
     pub fn get_proxy_url(&self) -> Option<String> {
-        if env::var_os("proxy_url").is_some() {
-            env::var("proxy_url").ok()
+        if env::var_os("http_proxy").is_some() {
+            env::var("http_proxy").ok()
         } else if let Some(val) = self.ini.get_from(Some("http"), "proxy_url") {
             Some(val.to_owned())
         } else {
