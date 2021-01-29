@@ -2327,6 +2327,8 @@ pub struct ChunkUploadOptions {
     pub max_size: u64,
     #[serde(default)]
     pub max_file_size: u64,
+    #[serde(default)]
+    pub max_wait: u64,
     pub hash_algorithm: ChunkHashAlgorithm,
     pub chunk_size: u64,
     pub concurrency: u8,

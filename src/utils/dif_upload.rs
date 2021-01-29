@@ -14,6 +14,7 @@ use std::process::Command;
 use std::slice::{Chunks, Iter};
 use std::str;
 use std::thread;
+use std::time::{Duration, Instant};
 
 use console::style;
 use failure::{bail, err_msg, Error, SyncFailure};
@@ -32,7 +33,7 @@ use crate::api::{
     Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState,
 };
 use crate::config::Config;
-use crate::constants::DEFAULT_MAX_DIF_SIZE;
+use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{
     upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL,
 };
@@ -1087,6 +1088,8 @@ fn poll_dif_assemble(
     progress.set_style(progress_style);
     progress.set_prefix(">");
 
+    let assemble_start = Instant::now();
+
     let request = difs.iter().map(|d| d.to_assemble()).collect();
     let response = loop {
         let response = api.assemble_difs(&options.org, &options.project, &request)?;
@@ -1106,6 +1109,10 @@ fn poll_dif_assemble(
         // that case, we return the potentially partial response from the server. This might
         // still contain a cached error.
         if !options.wait {
+            break response;
+        }
+
+        if assemble_start.elapsed() > options.max_wait {
             break response;
         }
 
@@ -1130,9 +1137,9 @@ fn poll_dif_assemble(
         println!("{} File processing complete:\n", style(">").dim());
     }
 
-    let (mut successes, errors): (Vec<_>, _) = response
+    let (errors, mut successes): (Vec<_>, _) = response
         .into_iter()
-        .partition(|&(_, ref r)| !r.state.is_err());
+        .partition(|&(_, ref r)| r.state.is_err() || options.wait && r.state.is_pending());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
@@ -1201,6 +1208,7 @@ fn poll_dif_assemble(
     let has_errors = !errored.is_empty();
     for (dif, error) in errored {
         let fallback = match error.state {
+            ChunkedFileState::Assembling => Some("The file is still processing and not ready yet"),
             ChunkedFileState::NotFound => Some("The file could not be saved"),
             _ => Some("An unknown error occurred"),
         };
@@ -1415,6 +1423,7 @@ pub struct DifUpload {
     symbol_map: Option<PathBuf>,
     zips_allowed: bool,
     max_file_size: u64,
+    max_wait: Duration,
     pdbs_allowed: bool,
     sources_allowed: bool,
     include_sources: bool,
@@ -1450,6 +1459,7 @@ impl DifUpload {
             symbol_map: None,
             zips_allowed: true,
             max_file_size: DEFAULT_MAX_DIF_SIZE,
+            max_wait: DEFAULT_MAX_WAIT,
             pdbs_allowed: false,
             sources_allowed: false,
             include_sources: false,
@@ -1619,6 +1629,9 @@ impl DifUpload {
         if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;
+            }
+            if chunk_options.max_wait > 0 {
+                self.max_wait = Duration::from_secs(chunk_options.max_wait);
             }
 
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
