@@ -260,7 +260,7 @@ fn upload_files_chunked(
             break response;
         }
 
-        if context.wait && assemble_start.elapsed() > max_wait {
+        if assemble_start.elapsed() > max_wait {
             break response;
         }
 
