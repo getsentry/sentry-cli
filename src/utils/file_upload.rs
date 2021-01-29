@@ -278,7 +278,10 @@ fn upload_files_chunked(
         if context.wait {
             bail!("Failed to process files in {}s", max_wait.as_secs());
         } else {
-            println!("{} File upload complete (processing pending on server)", style(">").dim());
+            println!(
+                "{} File upload complete (processing pending on server)",
+                style(">").dim()
+            );
         }
     } else {
         println!("{} File processing complete", style(">").dim());
