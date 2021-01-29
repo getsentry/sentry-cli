@@ -1,5 +1,7 @@
 //! Provides some useful constants.
 
+use std::time::Duration;
+
 use app_dirs::AppInfo;
 
 pub const APP_INFO: &AppInfo = &AppInfo {
@@ -49,5 +51,7 @@ pub const DEFAULT_MAX_INTERVAL: u64 = 5000;
 pub const DEFAULT_RETRIES: u32 = 5;
 /// Default maximum file size of DIF uploads.
 pub const DEFAULT_MAX_DIF_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2GB
+/// Default maximum time to wait for file assembly.
+pub const DEFAULT_MAX_WAIT: Duration = Duration::from_secs(5 * 60);
 
 include!(concat!(env!("OUT_DIR"), "/constants.gen.rs"));

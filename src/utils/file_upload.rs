@@ -5,6 +5,7 @@ use std::io::BufWriter;
 use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use console::style;
 use failure::{bail, Error};
@@ -16,6 +17,7 @@ use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, Sour
 use url::Url;
 
 use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, FileContents, ProgressBarMode};
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksums, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
@@ -240,6 +242,12 @@ fn upload_files_chunked(
     progress.enable_steady_tick(100);
     progress.set_style(progress_style);
 
+    let assemble_start = Instant::now();
+    let max_wait = match options.max_wait {
+        0 => DEFAULT_MAX_WAIT,
+        secs => Duration::from_secs(secs),
+    };
+
     let api = Api::current();
     let response = loop {
         let response =
@@ -249,6 +257,10 @@ fn upload_files_chunked(
         // that case, we return the potentially partial response from the server. This might
         // still contain a cached error.
         if !context.wait || response.state.is_finished() {
+            break response;
+        }
+
+        if context.wait && assemble_start.elapsed() > max_wait {
             break response;
         }
 
@@ -263,7 +275,11 @@ fn upload_files_chunked(
     progress.finish_and_clear();
 
     if response.state.is_pending() {
-        println!("{} File upload complete", style(">").dim());
+        if context.wait {
+            bail!("Failed to process files in {}s", max_wait.as_secs());
+        } else {
+            println!("{} File upload complete", style(">").dim());
+        }
     } else {
         println!("{} File processing complete", style(">").dim());
     }
