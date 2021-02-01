@@ -1,5 +1,15 @@
 # Changelog
 
+## sentry-cli 1.62.0
+
+* fix: Detect debug information in MIPS binaries (#897)
+* fix: Use `http_proxy` config value in the handler directly (#893)
+* fix: Limit chunk upload waiting to 5 minutes (#896)
+* ref: Prefer universal binaries in homebrew (#879)
+* ref: Prefer universal binaries on macOS (#878)
+* build: macOS arm64 on stable Rust (#884)
+* build: Build universal macOS binary on macos-latest (#877)
+
 ## sentry-cli 1.61.0
 
 * fix: Add missing underscores for template in bash hook (#872)
