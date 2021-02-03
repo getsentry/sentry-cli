@@ -9,6 +9,7 @@ use console::{style, user_attended};
 use failure::{bail, Error, ResultExt};
 use if_chain::if_chain;
 use log::{debug, info};
+use semver::Version;
 use serde::{Deserialize, Serialize};
 
 use crate::api::{Api, SentryCliRelease};
@@ -94,7 +95,7 @@ impl LastUpdateCheck {
             if let Some(ref release_v) = self.last_fetched_version;
             if let Some(ref check_v) = self.last_check_version;
             then {
-                release_v.as_str() != VERSION &&
+                Version::parse(release_v.as_str()) <= Version::parse(VERSION) &&
                 check_v.as_str() == VERSION
             } else {
                 false
