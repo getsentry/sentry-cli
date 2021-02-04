@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eux
 
-DOCKER_IMAGE="getsentry/rust-musl-cross:${DOCKER_TAG}"
+DOCKER_IMAGE="messense/rust-musl-cross:${DOCKER_TAG}"
 BUILD_DIR="/work"
 
 DOCKER_RUN_OPTS="
