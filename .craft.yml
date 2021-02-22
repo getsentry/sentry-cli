@@ -34,6 +34,12 @@ targets:
         if OS.mac?
           url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal"
           sha256 "{{checksums.sentry-cli-Darwin-universal}}"
+        elsif Hardware::CPU.arm? && Hardware::CPU.is_64_bit?
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-aarch64"
+          sha256 "{{checksums.sentry-cli-Linux-aarch64}}"
+        elsif Hardware::CPU.arm?
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-armv7"
+          sha256 "{{checksums.sentry-cli-Linux-armv7}}"
         elsif Hardware::CPU.is_64_bit?
           url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-x86_64"
           sha256 "{{checksums.sentry-cli-Linux-x86_64}}"
@@ -68,5 +74,7 @@ requireNames:
   - /^sentry-cli-Darwin-universal$/
   - /^sentry-cli-Linux-i686$/
   - /^sentry-cli-Linux-x86_64$/
+  - /^sentry-cli-Linux-armv7$/
+  - /^sentry-cli-Linux-aarch64$/
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
