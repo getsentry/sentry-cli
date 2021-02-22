@@ -5,8 +5,6 @@ on:
     branches:
       - release/**
 
-  pull_request: # TODO: Remove this before merge
-
 jobs:
   linux:
     strategy:
