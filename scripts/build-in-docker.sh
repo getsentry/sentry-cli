@@ -4,8 +4,6 @@ set -eux
 DOCKER_IMAGE="getsentry/rust-musl-cross:${DOCKER_TAG}"
 BUILD_DIR="/work"
 
-# TODO: Remove OPENSSL_NO_VENDOR once openssl-src >111.11.0 is released.
-
 DOCKER_RUN_OPTS="
   -w ${BUILD_DIR}
   -v $(pwd):${BUILD_DIR}:ro
