@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.63.0
+
+* build: ARM for Linux (#890)
+* ref: `is_outdated` should not report when release contains version older than latest (#899)
+
 ## sentry-cli 1.62.0
 
 * fix: Detect debug information in MIPS binaries (#897)
