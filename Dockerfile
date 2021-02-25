@@ -1,8 +1,10 @@
 ARG BUILD_ARCH=x86_64
-FROM getsentry/rust-musl-cross:$BUILD_ARCH-musl AS sentry-build
+ARG BUILD_LIBC=musl
+FROM getsentry/rust-musl-cross:$BUILD_ARCH-$BUILD_LIBC AS sentry-build
 
 ARG BUILD_ARCH
-ENV BUILD_TARGET=$BUILD_ARCH-unknown-linux-musl
+ARG BUILD_LIBC
+ENV BUILD_TARGET=$BUILD_ARCH-unknown-linux-$BUILD_LIBC
 WORKDIR /work
 
 # Build only dependencies to speed up subsequent builds

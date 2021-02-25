@@ -103,6 +103,7 @@ fn preexecute_hooks() -> Result<bool, Error> {
         Ok(false)
     }
 
+    #[allow(clippy::unnecessary_wraps)]
     #[cfg(not(target_os = "macos"))]
     fn sentry_react_native_xcode_wrap() -> Result<bool, Error> {
         Ok(false)

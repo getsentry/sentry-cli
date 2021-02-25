@@ -11,13 +11,14 @@ fn main() {
     let target = env::var("TARGET").unwrap();
     let mut target_bits = target.split('-');
 
-    let arch = match target_bits.next().unwrap() {
-        "aarch64" => "arm64", // Linux and Darwin convention. Matches `uname -m`
-        arch => arch,
-    };
-
-    target_bits.next();
+    // https://rust-lang.github.io/rfcs/0131-target-specification.html#detailed-design
+    let mut arch = target_bits.next().unwrap();
+    let _vendor = target_bits.next();
     let platform = target_bits.next().unwrap();
+
+    if platform == "darwin" && arch == "aarch64" {
+        arch = "arm64"; // enforce Darwin naming conventions
+    }
 
     writeln!(f, "/// The platform identifier").ok();
     writeln!(f, "pub const PLATFORM: &str = \"{}\";", platform).ok();
