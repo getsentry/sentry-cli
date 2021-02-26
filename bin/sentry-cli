@@ -12,7 +12,6 @@ const cliPath = cli.getPath();
 if (!fs.existsSync(cliPath)) {
   console.error('error: sentry-cli was not installed by @sentry/cli install script');
   process.exit(-20);
-  return;
 }
 
 const child = childProcess.spawn(cliPath, process.argv.slice(2), {
