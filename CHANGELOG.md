@@ -1,5 +1,11 @@
 # Changelog
 
+## sentry-cli 1.63.1
+
+* fix: Correctly detect hidden Swift symbols (#918)
+* fix: Rename `arm64` as `aarch64` in install script (#917)
+* fix: Verify CLI installation before launching (#916)
+
 ## sentry-cli 1.63.0
 
 * build: ARM for Linux (#890)
