@@ -4,9 +4,17 @@
 'use strict';
 
 const childProcess = require('child_process');
+const fs = require('fs');
 const cli = require('../js');
 
-const child = childProcess.spawn(cli.getPath(), process.argv.slice(2), {
+const cliPath = cli.getPath();
+
+if (!fs.existsSync(cliPath)) {
+  console.error('error: sentry-cli was not installed by @sentry/cli install script');
+  process.exit(-20);
+}
+
+const child = childProcess.spawn(cliPath, process.argv.slice(2), {
   stdio: 'inherit',
 });
 
