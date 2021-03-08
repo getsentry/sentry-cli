@@ -17,6 +17,7 @@ const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
 // NOTE: Can be dropped in favor of `fs.mkdirSync(path, { recursive: true })` once we stop supporting Node 8.x
 const mkdirp = require('mkdirp');
+const npmLog = require('npmlog');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
@@ -130,12 +131,19 @@ function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
+    npmLog.info('sentry-cli', `Using cached binary: ${cachedPath}`);
     fs.copyFileSync(cachedPath, outputPath);
     return Promise.resolve();
   }
 
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
   const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
+
+  npmLog.info('sentry-cli', `Downloading from ${downloadUrl}`);
+
+  if (proxyUrl) {
+    npmLog.info('sentry-cli', `Using proxy URL: ${proxyUrl}`);
+  }
 
   return fetch(downloadUrl, {
     agent,
