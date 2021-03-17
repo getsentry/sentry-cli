@@ -95,7 +95,7 @@ impl LastUpdateCheck {
             if let Some(ref release_v) = self.last_fetched_version;
             if let Some(ref check_v) = self.last_check_version;
             then {
-                Version::parse(release_v.as_str()) <= Version::parse(VERSION) &&
+                Version::parse(release_v.as_str()) < Version::parse(VERSION) &&
                 check_v.as_str() == VERSION
             } else {
                 false
