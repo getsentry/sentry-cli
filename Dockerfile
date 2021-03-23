@@ -23,7 +23,7 @@ RUN cp target/$BUILD_TARGET/release/sentry-cli /usr/local/bin/sentry-cli
 
 FROM alpine:3.12
 WORKDIR /work
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates git
 COPY ./docker-entrypoint.sh /
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
 ENTRYPOINT ["/docker-entrypoint.sh"]
