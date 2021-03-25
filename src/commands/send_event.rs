@@ -28,7 +28,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("LEVEL")
                 .long("level")
                 .short("l")
-                .help("Optional event severity/log level. [defaults to 'error']"),
+                .help("Optional event severity/log level. (debug|info|warning|error|fatal) [defaults to 'error']"),
         )
         .arg(Arg::with_name("timestamp")
                  .long("timestamp")
