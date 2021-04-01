@@ -1,5 +1,12 @@
 # Changelog
 
+## sentry-cli 1.63.2
+
+* feat: List logging levels on CLI output (#926)
+* fix: Update proguard version (#927)
+* fix: Run update nagger only for versions lower than current one (#925)
+* fix: Add some npm logging to aid in troubleshooting (#921)
+
 ## sentry-cli 1.63.1
 
 * fix: Correctly detect hidden Swift symbols (#918)
