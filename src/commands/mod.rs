@@ -235,7 +235,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         );
 
     app = add_commands(app);
-    let matches = app.get_matches_from_safe(&args[..])?;
+    let matches = app.get_matches_from_safe(args)?;
     configure_args(&mut config, &matches)?;
 
     // bind the config to the process and fetch an immutable reference to it

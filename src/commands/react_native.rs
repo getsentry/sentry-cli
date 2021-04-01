@@ -33,7 +33,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) = matches.subcommand_matches(&stringify!($name)[13..]) {
-                return Ok(commands::$name::execute(&sub_matches)?);
+                return commands::$name::execute(&sub_matches);
             }
         }};
     }

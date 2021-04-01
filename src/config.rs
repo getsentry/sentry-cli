@@ -269,7 +269,7 @@ impl Config {
 
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
-        Ok(matches
+        matches
             .value_of("org")
             .map(str::to_owned)
             .or_else(|| env::var("SENTRY_ORG").ok())
@@ -278,7 +278,7 @@ impl Config {
                     .get_from(Some("defaults"), "org")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))?)
+            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))
     }
 
     /// Given a match object from clap, this returns a tuple in the
@@ -296,14 +296,14 @@ impl Config {
 
     /// Return the default value for a project.
     pub fn get_project_default(&self) -> Result<String, Error> {
-        Ok(env::var("SENTRY_PROJECT")
+        env::var("SENTRY_PROJECT")
             .ok()
             .or_else(|| {
                 self.ini
                     .get_from(Some("defaults"), "project")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| err_msg("A project slug is required"))?)
+            .ok_or_else(|| err_msg("A project slug is required"))
     }
 
     /// Return the default pipeline env.

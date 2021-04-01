@@ -368,7 +368,7 @@ fn find_matching_revs(
     let rev = if let Some(rev) = find_matching_rev(
         spec.reference(),
         &spec,
-        &repos[..],
+        repos,
         disable_discovery,
         remote_name.clone(),
     )? {
@@ -378,7 +378,7 @@ fn find_matching_revs(
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(rv) = find_matching_rev(rev, &spec, &repos[..], disable_discovery, remote_name)?
+        if let Some(rv) = find_matching_rev(rev, &spec, repos, disable_discovery, remote_name)?
         {
             Some(rv)
         } else {
@@ -411,7 +411,7 @@ pub fn find_heads(
     if let Some(specs) = specs {
         for spec in &specs {
             let (prev_rev, rev) =
-                find_matching_revs(&spec, &repos[..], specs.len() == 1, remote_name.clone())?;
+                find_matching_revs(&spec, repos, specs.len() == 1, remote_name.clone())?;
             rv.push(Ref {
                 repo: spec.repo.clone(),
                 rev,
@@ -431,7 +431,7 @@ pub fn find_heads(
             if let Some(rev) = find_matching_rev(
                 spec.reference(),
                 &spec,
-                &repos[..],
+                repos,
                 false,
                 remote_name.clone(),
             )? {

@@ -34,7 +34,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             if let Some(sub_matches) =
                 matches.subcommand_matches(&stringify!($name)[8..].replace('_', "-"))
             {
-                return Ok(commands::$name::execute(&sub_matches)?);
+                return commands::$name::execute(&sub_matches);
             }
         }};
     }
