@@ -10,7 +10,7 @@ declare module '@sentry/cli' {
     org?: string;
     project?: string;
     vscRemote?: string;
-    silent: boolean;
+    silent?: boolean;
   }
 
   export interface SentryCliUploadSourceMapsOptions {
@@ -82,6 +82,6 @@ declare module '@sentry/cli' {
 
     public static getVersion(): string
     public static getPath(): string
-    public static execute(args: string[], live: boolean): Promise<string>
+    public execute(args: string[], live: boolean): Promise<string>
   }
 }
