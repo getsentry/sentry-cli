@@ -119,7 +119,10 @@ impl XcodeProjectInfo {
             .arg("-project")
             .arg(path.as_ref().as_os_str())
             .output()?;
-        let mut rv: Output = serde_json::from_slice(&p.stdout)?;
+        let mut rv: Output = serde_json::from_slice(&p.stdout).unwrap_or_else(|_| {
+            let err_msg = format!("Command `xcodebuild -list -json -project {}` failed to produce a valid JSON output.", path.as_ref().display());
+            panic!("{}", err_msg);
+        });
         rv.project.path = path.as_ref().canonicalize()?;
         Ok(rv.project)
     }

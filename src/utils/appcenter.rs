@@ -106,7 +106,10 @@ pub fn get_appcenter_deployment_history(
         })?;
 
     if output.status.success() {
-        Ok(serde_json::from_slice(&output.stdout)?)
+        Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
+            let err_msg = format!("Command `{} codepush deployment history {} --app {} --output json` failed to produce a valid JSON output.", appcenter_bin, deployment, app);
+            panic!("{}", err_msg);
+        }))
     } else {
         Err(get_appcenter_error(&output)
             .context("Failed to load AppCenter deployment history")
