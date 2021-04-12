@@ -238,7 +238,13 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                 md.may_detach()?;
             }
             let mut f = fs::File::open(report_file.path())?;
-            let report: SourceMapReport = serde_json::from_reader(&mut f)?;
+            let report: SourceMapReport = serde_json::from_reader(&mut f).unwrap_or_else(|_| {
+                let err_msg = format!(
+                    "File {} doesn't contain a valid JSON data.",
+                    report_file.path().display()
+                );
+                panic!("{}", err_msg);
+            });
             if report.bundle_path.is_none() || report.sourcemap_path.is_none() {
                 println!("Warning: build produced no sourcemaps.");
                 return Ok(());
