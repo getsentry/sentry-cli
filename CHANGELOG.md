@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.64.0
+
+* feat: Add TypeScript `SentryCli` types (#934)
+* ref: Provide a helpful error messages for xcode/codepush/appcenter binary calls (#937)
+
 ## sentry-cli 1.63.2
 
 * feat: List logging levels on CLI output (#926)
