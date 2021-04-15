@@ -438,7 +438,11 @@ where
     };
 
     debug!("searching location {}", location.display());
-    for entry in WalkDir::new(location).into_iter().filter_map(Result::ok) {
+    for entry in WalkDir::new(location)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
         if !entry.metadata()?.is_file() {
             // Walkdir recurses automatically into folders
             continue;
