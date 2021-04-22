@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.64.1
+
+* fix: Redirect spawned JS process outputs to `/dev/null` instead of filling up pipe buffers (#949)
+* ref: Allow `upload-dif` to follow symlinks to make it inline with `difutil` behavior (#948)
+
 ## sentry-cli 1.64.0
 
 * feat: Add TypeScript `SentryCli` types (#934)
