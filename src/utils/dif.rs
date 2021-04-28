@@ -62,6 +62,8 @@ impl str::FromStr for DifType {
 }
 
 /// Declares which features an object may have to be uploaded.
+// TODO(flub): Consider renaming this to ObjectDifFeatures, since non-object DIFs do not
+// have features.  The doc comment is correct here.
 #[derive(Clone, Copy, Debug)]
 pub struct DifFeatures {
     /// Includes object files with debug information.

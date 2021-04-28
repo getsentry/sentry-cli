@@ -2,8 +2,9 @@
 //! `DifUpload` for more information.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
-use std::fmt;
+use std::fmt::{self, Display};
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
 use std::iter::IntoIterator;
@@ -21,10 +22,10 @@ use failure::{bail, err_msg, Error, SyncFailure};
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1::Digest;
-use symbolic::common::{ByteView, DebugId, SelfCell, Uuid};
-use symbolic::debuginfo::{
-    sourcebundle::SourceBundleWriter, Archive, FileEntry, FileFormat, Object,
-};
+use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
+use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
+use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
+use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use walkdir::WalkDir;
 use which::which;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
@@ -67,6 +68,25 @@ impl<'a> Iterator for DifChunks<'a> {
     }
 }
 
+/// A Debug Information File.
+///
+/// This is primarily used to store inside the [`DifMatch`] so does not contain any
+/// information already present there.  You probably should look whether you can use
+/// [`DifMatch`] instead of this instead.
+enum ParsedDif<'a> {
+    Object(Object<'a>),
+    BcSymbolMap(BcSymbolMap<'a>),
+    PList(UuidMapping),
+}
+
+impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
+    type Ref = ParsedDif<'data>;
+
+    fn as_self(&'slf self) -> &Self::Ref {
+        self
+    }
+}
+
 /// Contains backing data for a `DifMatch`.
 ///
 /// This can be used to store the actual data that a `FatObject` might be
@@ -84,24 +104,67 @@ enum DifBacking {
 /// files used to further process this file, such as dSYM PLists.
 struct DifMatch<'data> {
     _backing: Option<DifBacking>,
-    object: SelfCell<ByteView<'data>, Object<'data>>,
+    dif: SelfCell<ByteView<'data>, ParsedDif<'data>>,
     name: String,
     debug_id: Option<DebugId>,
     attachments: Option<BTreeMap<String, ByteView<'static>>>,
 }
 
 impl<'data> DifMatch<'data> {
-    fn from_temp<S>(temp_file: TempFile, name: S) -> Result<Self, Error>
+    fn from_temp_object<S>(temp_file: TempFile, name: S) -> Result<Self, Error>
     where
         S: Into<String>,
     {
         let buffer = ByteView::open(temp_file.path()).map_err(SyncFailure::new)?;
+        let dif = SelfCell::try_new(buffer, |b| {
+            Object::parse(unsafe { &*b }).map(ParsedDif::Object)
+        })?;
+        let debug_id = match dif.get() {
+            ParsedDif::Object(ref obj) if !obj.debug_id().is_nil() => Some(obj.debug_id()),
+            _ => None,
+        };
 
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
-            object: SelfCell::try_new(buffer, |b| Object::parse(unsafe { &*b }))?,
+            dif,
             name: name.into(),
-            debug_id: None,
+            debug_id,
+            attachments: None,
+        })
+    }
+
+    /// Creates a [`DifMatch`] from a `.bcsymbolmap` file.
+    ///
+    /// The `uuid` is the DebugID of the symbolmap while `name` is the filename of the file.
+    /// Normally the filename should be the `uuid` with `.bcsymbolmap` appended to it.
+    fn from_bcsymbolmap(
+        uuid: DebugId,
+        name: String,
+        data: ByteView<'static>,
+    ) -> Result<Self, Error> {
+        let dif = SelfCell::try_new(data, |buf| {
+            BcSymbolMap::parse(unsafe { &*buf }).map(ParsedDif::BcSymbolMap)
+        })?;
+
+        Ok(Self {
+            _backing: None,
+            dif,
+            name,
+            debug_id: Some(uuid),
+            attachments: None,
+        })
+    }
+
+    fn from_plist(uuid: DebugId, name: String, data: ByteView<'static>) -> Result<Self, Error> {
+        let dif = SelfCell::try_new(data, |buf| {
+            UuidMapping::parse_plist(uuid, unsafe { &*buf }).map(ParsedDif::PList)
+        })?;
+
+        Ok(Self {
+            _backing: None,
+            dif,
+            name,
+            debug_id: Some(uuid),
             attachments: None,
         })
     }
@@ -117,17 +180,34 @@ impl<'data> DifMatch<'data> {
         S: Into<String>,
     {
         let temp_file = TempFile::take(path)?;
-        Self::from_temp(temp_file, name)
+        Self::from_temp_object(temp_file, name)
     }
 
-    /// Returns the parsed `Object` of this DIF.
-    pub fn object(&self) -> &Object<'_> {
-        self.object.get()
+    /// Returns the parsed [`Object`] of this DIF.
+    pub fn object(&self) -> Option<&Object<'data>> {
+        match self.dif.get() {
+            ParsedDif::Object(ref obj) => Some(obj),
+            ParsedDif::BcSymbolMap(_) => None,
+            ParsedDif::PList(_) => None,
+        }
+    }
+
+    pub fn format(&self) -> DifFormat {
+        match self.dif.get() {
+            ParsedDif::Object(ref object) => DifFormat::Object(object.file_format()),
+            ParsedDif::BcSymbolMap(_) => DifFormat::BcSymbolMap,
+            ParsedDif::PList(_) => DifFormat::PList,
+        }
     }
 
     /// Returns the raw binary data of this DIF.
     pub fn data(&self) -> &[u8] {
-        self.object().data()
+        // TODO(flub): Can this not always return self.dif.owner()?
+        match self.dif.get() {
+            ParsedDif::Object(ref obj) => obj.data(),
+            ParsedDif::BcSymbolMap(_) => &self.dif.owner(),
+            ParsedDif::PList(_) => &self.dif.owner(),
+        }
     }
 
     /// Returns the size of of this DIF in bytes.
@@ -169,7 +249,7 @@ impl<'data> DifMatch<'data> {
         }
 
         match self.object() {
-            Object::MachO(ref macho) => macho.requires_symbolmap(),
+            Some(Object::MachO(ref macho)) => macho.requires_symbolmap(),
             _ => false,
         }
     }
@@ -526,28 +606,30 @@ fn find_uuid_plists(
 /// Patch debug identifiers for PDBs where the corresponding PE specifies a different age.
 fn fix_pdb_ages(difs: &mut [DifMatch<'_>], age_overrides: &BTreeMap<Uuid, u32>) {
     for dif in difs {
-        if dif.object().file_format() != FileFormat::Pdb {
-            continue;
+        if let Some(object) = dif.object() {
+            if object.file_format() != FileFormat::Pdb {
+                continue;
+            }
+
+            let debug_id = object.debug_id();
+            let age = match age_overrides.get(&debug_id.uuid()) {
+                Some(age) => *age,
+                None => continue,
+            };
+
+            if age == debug_id.appendix() {
+                continue;
+            }
+
+            log::debug!(
+                "overriding age for {} ({} -> {})",
+                dif.name,
+                debug_id.appendix(),
+                age
+            );
+
+            dif.debug_id = Some(DebugId::from_parts(debug_id.uuid(), age));
         }
-
-        let debug_id = dif.object().debug_id();
-        let age = match age_overrides.get(&debug_id.uuid()) {
-            Some(age) => *age,
-            None => continue,
-        };
-
-        if age == debug_id.appendix() {
-            continue;
-        }
-
-        log::debug!(
-            "overriding age for {} ({} -> {})",
-            dif.name,
-            debug_id.appendix(),
-            age
-        );
-
-        dif.debug_id = Some(DebugId::from_parts(debug_id.uuid(), age));
     }
 }
 
@@ -572,117 +654,25 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             );
             continue;
         }
-        walk_difs_directory(base_path, options, |mut source, name, buffer| {
+        walk_difs_directory(base_path, options, |source, name, buffer| {
+            debug!("trying to process {}", name);
             progress.set_message(&name);
-
-            // Try to parse a potential object file. If this is not possible,
-            // then we're not dealing with an object file, thus silently
-            // skipping it.
-            let format = Archive::peek(&buffer);
-
-            // Override this behavior for PE files. Their debug identifier is
-            // needed in case PDBs should be uploaded to fix an eventual age
-            // mismatch
-            let should_override_age =
-                format == FileFormat::Pe && options.valid_format(FileFormat::Pdb);
-
-            if !should_override_age && !options.valid_format(format) {
-                return Ok(());
-            }
-
-            debug!("trying to parse dif {}", name);
-            let archive = match Archive::parse(&buffer) {
-                Ok(archive) => archive,
-                Err(e) => {
-                    warn!("Skipping invalid debug file {}: {}", name, e);
-                    return Ok(());
-                }
+            let process_result = if Archive::peek(&buffer) != FileFormat::Unknown {
+                collect_object_dif(source, name, buffer, options, &mut age_overrides)
+            } else if BcSymbolMap::test(&buffer) {
+                collect_auxdif(name, buffer, options, AuxDifKind::BcSymbolMap)
+            } else if buffer.starts_with(b"<?xml") {
+                // TODO(flub): might be trying to collect other plists that are not
+                // relevant, make sure to not create suprious output for these.
+                collect_auxdif(name, buffer, options, AuxDifKind::PList)
+            } else {
+                Ok(Vec::new())
             };
+            let ret =
+                process_result.and_then(|mut difmatches| Ok(collected.append(difmatches.as_mut())));
 
-            // Each `FatObject` might contain multiple matching objects, each of
-            // which needs to retain a reference to the original fat file. We
-            // create a shared instance here and clone it into `DifMatche`s
-            // below.
-            for object in archive.objects() {
-                // Silently skip all objects that we cannot process. This can
-                // happen due to invalid object files, which we then just
-                // discard rather than stopping the scan.
-                let object = match object {
-                    Ok(object) => object,
-                    Err(_) => continue,
-                };
-
-                // Objects without debug id will be skipped altogether. While frames
-                // during symbolication might be lacking debug identifiers,
-                // Sentry requires object files to have one during upload.
-                let id = object.debug_id();
-                if id.is_nil() {
-                    continue;
-                }
-
-                // Store a mapping of "age" values for all encountered PE files,
-                // regardless of whether they will be uploaded. This is used later
-                // to fix up PDB files.
-                if should_override_age {
-                    age_overrides.insert(id.uuid(), id.appendix());
-
-                    // Skip if this object was only retained for the PDB override.
-                    if !options.valid_format(format) {
-                        continue;
-                    }
-                }
-
-                // We can only process objects with features, such as a symbol
-                // table or debug information. If this object has no features,
-                // Sentry cannot process it and so we skip the upload. If object
-                // features were specified, this will skip all other objects.
-                if !options.valid_features(&object) {
-                    continue;
-                }
-
-                // Skip this object if we're only looking for certain IDs.
-                if !options.valid_id(id) {
-                    continue;
-                }
-
-                // Skip this entire file if it exceeds the maximum allowed file size.
-                let file_size = object.data().len() as u64;
-                if file_size > options.max_file_size {
-                    warn!(
-                        "Skipping debug file since it exceeds {}: {} ({})",
-                        HumanBytes(options.max_file_size),
-                        name,
-                        HumanBytes(file_size),
-                    );
-                    break;
-                }
-
-                // Invoke logic to retrieve attachments specific to the kind
-                // of object file. These are used for processing. Since only
-                // dSYMs equire processing currently, all other kinds are
-                // skipped.
-                let attachments = match object.file_format() {
-                    FileFormat::MachO => find_uuid_plists(&object, &mut source),
-                    _ => None,
-                };
-
-                // We retain the buffer and the borrowed object in a new SelfCell. This is
-                // incredibly unsafe, but in our case it is fine, since the SelfCell owns the same
-                // buffer that was used to retrieve the object.
-                let cell = unsafe { SelfCell::from_raw(buffer.clone(), transmute(object)) };
-
-                collected.push(DifMatch {
-                    _backing: None,
-                    object: cell,
-                    name: name.clone(),
-                    debug_id: None,
-                    attachments,
-                });
-
-                progress.set_prefix(&collected.len().to_string());
-            }
-
-            Ok(())
+            progress.set_prefix(&collected.len().to_string());
+            ret
         })?;
     }
 
@@ -700,6 +690,171 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
             _ => "files",
         }
     );
+
+    Ok(collected)
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum AuxDifKind {
+    BcSymbolMap,
+    PList,
+}
+
+impl Display for AuxDifKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            AuxDifKind::BcSymbolMap => write!(f, "BCSymbolMap"),
+            AuxDifKind::PList => write!(f, "PList"),
+        }
+    }
+}
+
+/// Collects a possible BCSymbolmap or PList into a [`DifMatch`].
+///
+/// The `name` is the relative path of the file processed, while `buffer` contains the
+/// actual data.
+fn collect_auxdif<'a>(
+    name: String,
+    buffer: ByteView<'static>,
+    options: &DifUpload,
+    kind: AuxDifKind,
+) -> Result<Vec<DifMatch<'a>>, Error> {
+    let file_stem = Path::new(&name)
+        .file_stem()
+        .map(|stem| stem.to_string_lossy())
+        .unwrap_or_default();
+    let uuid: DebugId = match file_stem.parse() {
+        Ok(uuid) => uuid,
+        Err(_) => {
+            if kind == AuxDifKind::BcSymbolMap {
+                // There are loads of plists in a normal XCode Archive that are not valid
+                // UUID mappings.  Warning for all these is pointless.
+                warn!(
+                    "Skipping {kind} with invalid filename: {name}",
+                    kind = kind,
+                    name = name
+                );
+            }
+            return Ok(Vec::new());
+        }
+    };
+    let dif_result = match kind {
+        AuxDifKind::BcSymbolMap => DifMatch::from_bcsymbolmap(uuid, name.clone(), buffer),
+        AuxDifKind::PList => DifMatch::from_plist(uuid, name.clone(), buffer),
+    };
+    let dif = match dif_result {
+        Ok(dif) => dif,
+        Err(err) => {
+            warn!(
+                "Skipping invalid {kind} file {name}: {err}",
+                kind = kind,
+                name = name,
+                err = err
+            );
+            return Ok(Vec::new());
+        }
+    };
+
+    // Skip this file if we don't want to process it.
+    if !options.validate_dif(&dif) {
+        return Ok(Vec::new());
+    }
+
+    Ok(vec![dif])
+}
+
+/// Processes and [`DifSource`] which is expected to be an object file.
+fn collect_object_dif<'a>(
+    mut source: DifSource<'_>,
+    name: String,
+    buffer: ByteView<'static>,
+    options: &DifUpload,
+    age_overrides: &mut BTreeMap<Uuid, u32>,
+) -> Result<Vec<DifMatch<'a>>, Error> {
+    let mut collected = Vec::with_capacity(2);
+
+    // Try to parse a potential object file. If this is not possible,
+    // then we're not dealing with an object file, thus silently
+    // skipping it.
+    let format = Archive::peek(&buffer);
+
+    // Override this behavior for PE files. Their debug identifier is
+    // needed in case PDBs should be uploaded to fix an eventual age
+    // mismatch
+    let should_override_age =
+        format == FileFormat::Pe && options.valid_format(DifFormat::Object(FileFormat::Pdb));
+
+    if !should_override_age && !options.valid_format(DifFormat::Object(format)) {
+        return Ok(collected);
+    }
+
+    debug!("trying to parse dif {}", name);
+    let archive = match Archive::parse(&buffer) {
+        Ok(archive) => archive,
+        Err(e) => {
+            warn!("Skipping invalid debug file {}: {}", name, e);
+            return Ok(collected);
+        }
+    };
+
+    // Each `FatObject` might contain multiple matching objects, each of
+    // which needs to retain a reference to the original fat file. We
+    // create a shared instance here and clone it into `DifMatche`s
+    // below.
+    for object in archive.objects() {
+        // Silently skip all objects that we cannot process. This can
+        // happen due to invalid object files, which we then just
+        // discard rather than stopping the scan.
+        let object = match object {
+            Ok(object) => object,
+            Err(_) => continue,
+        };
+
+        // Objects without debug id will be skipped altogether. While frames
+        // during symbolication might be lacking debug identifiers,
+        // Sentry requires object files to have one during upload.
+        let id = object.debug_id();
+        if id.is_nil() {
+            continue;
+        }
+
+        // Store a mapping of "age" values for all encountered PE files,
+        // regardless of whether they will be uploaded. This is used later
+        // to fix up PDB files.
+        if should_override_age {
+            age_overrides.insert(id.uuid(), id.appendix());
+        }
+
+        // Invoke logic to retrieve attachments specific to the kind
+        // of object file. These are used for processing. Since only
+        // dSYMs equire processing currently, all other kinds are
+        // skipped.
+        let attachments = match object.file_format() {
+            FileFormat::MachO => find_uuid_plists(&object, &mut source),
+            _ => None,
+        };
+
+        // We retain the buffer and the borrowed object in a new SelfCell. This is
+        // incredibly unsafe, but in our case it is fine, since the SelfCell owns the same
+        // buffer that was used to retrieve the object.
+        let cell =
+            unsafe { SelfCell::from_raw(buffer.clone(), ParsedDif::Object(transmute(object))) };
+
+        let dif = DifMatch {
+            _backing: None,
+            dif: cell,
+            name: name.clone(),
+            debug_id: Some(id),
+            attachments,
+        };
+
+        // Skip this file if we don't want to process it.
+        if !options.validate_dif(&dif) {
+            continue;
+        }
+
+        collected.push(dif);
+    }
 
     Ok(collected)
 }
@@ -899,7 +1054,10 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
         progress.inc(1);
         progress.set_message(dif.path());
 
-        let object = dif.object();
+        let object = match dif.object() {
+            Some(object) => object,
+            None => continue,
+        };
         if object.has_sources() {
             // Do not create standalone source bundles if the original object already contains
             // source code. This would just store duplicate information in Sentry.
@@ -918,7 +1076,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
             continue;
         }
 
-        let mut source_bundle = DifMatch::from_temp(temp_file, dif.path())?;
+        let mut source_bundle = DifMatch::from_temp_object(temp_file, dif.path())?;
         source_bundle.debug_id = dif.debug_id;
         source_bundles.push(source_bundle);
     }
@@ -1181,18 +1339,25 @@ fn poll_dif_assemble(
             // If we skip waiting for the server to finish processing, there
             // are pending entries. We only expect results that have been
             // uploaded in the first place, so we can skip everything else.
-            let object = dif.object.get();
-            let kind = match object.kind() {
-                symbolic::debuginfo::ObjectKind::None => String::new(),
-                k => format!(" {:#}", k),
+            let kind = match dif.dif.get() {
+                ParsedDif::Object(ref object) => match object.kind() {
+                    symbolic::debuginfo::ObjectKind::None => String::new(),
+                    k => format!(" {:#}", k),
+                },
+                // TODO(flub): check this output looks fine, maybe just empty string instead
+                ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
+                ParsedDif::PList(_) => String::from("plist"),
             };
 
             println!(
                 "  {:>7} {} ({}; {}{})",
                 style("PENDING").yellow(),
-                style(object.debug_id()).dim(),
+                style(dif.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
                 dif.name,
-                object.arch().name(),
+                dif.object()
+                    .map(|object| object.arch())
+                    .map(|arch| arch.to_string())
+                    .unwrap_or_default(),
                 kind,
             );
         }
@@ -1387,6 +1552,26 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>, Error>
     Ok(uploaded)
 }
 
+/// The format of a Debug Information File (DIF).
+///
+/// Most DIFs are also object files, but we also know of some auxiliary DIF formats.
+#[derive(Clone, Copy, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+pub enum DifFormat {
+    /// An object file of some kind, as per [`symbolic::debuginfo::FileFormat`].
+    ///
+    /// Not all these are fully objects, but they all implement
+    /// [`symbolic::debuginfo::ObjectLike`].
+    Object(FileFormat),
+    /// An Apple BCSymbolMap.
+    BcSymbolMap,
+    /// An Apple PList.
+    ///
+    /// This only considers PLists which contain a
+    /// [`symbolic::debuginfo::macho::UuidMapping`] used to map a `dSYM` UUID back to UUID
+    /// of the original `BCSymbolMap`.
+    PList,
+}
+
 /// Searches, processes and uploads debug information files (DIFs).
 ///
 /// This struct is created with the `DifUpload::new` function. Then, set
@@ -1421,7 +1606,7 @@ pub struct DifUpload {
     project: String,
     paths: Vec<PathBuf>,
     ids: BTreeSet<DebugId>,
-    formats: BTreeSet<FileFormat>,
+    formats: BTreeSet<DifFormat>,
     features: DifFeatures,
     extensions: BTreeSet<OsString>,
     symbol_map: Option<PathBuf>,
@@ -1431,6 +1616,7 @@ pub struct DifUpload {
     pdbs_allowed: bool,
     sources_allowed: bool,
     include_sources: bool,
+    bcsymbolmaps_allowed: bool,
     wait: bool,
 }
 
@@ -1467,6 +1653,7 @@ impl DifUpload {
             pdbs_allowed: false,
             sources_allowed: false,
             include_sources: false,
+            bcsymbolmaps_allowed: false,
             wait: false,
         }
     }
@@ -1521,7 +1708,7 @@ impl DifUpload {
     /// Add an `FileFormat` to filter for.
     ///
     /// By default, all object formats will be included.
-    pub fn filter_format(&mut self, format: FileFormat) -> &mut Self {
+    pub fn filter_format(&mut self, format: DifFormat) -> &mut Self {
         self.formats.insert(format);
         self
     }
@@ -1532,7 +1719,7 @@ impl DifUpload {
     /// will not be changed.
     pub fn filter_formats<I>(&mut self, formats: I) -> &mut Self
     where
-        I: IntoIterator<Item = FileFormat>,
+        I: IntoIterator<Item = DifFormat>,
     {
         self.formats.extend(formats);
         self
@@ -1623,6 +1810,7 @@ impl DifUpload {
     ///
     /// The okay part of the return value is `(files, has_errors)`.  The
     /// latter can be used to indicate a fail state from the upload.
+    // flub: does the uploading
     pub fn upload(&mut self) -> Result<(Vec<DebugInfoFile>, bool), Error> {
         if self.paths.is_empty() {
             println!("{}: No paths were provided.", style("Warning").yellow());
@@ -1640,6 +1828,7 @@ impl DifUpload {
 
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
             self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
+            self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BCSymbolmap);
 
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 self.validate_capabilities();
@@ -1654,7 +1843,10 @@ impl DifUpload {
     /// Validate that the server supports all requested capabilities.
     fn validate_capabilities(&mut self) {
         // Checks whether source bundles are *explicitly* requested on the command line.
-        if (self.formats.contains(&FileFormat::SourceBundle) || self.include_sources)
+        if (self
+            .formats
+            .contains(&DifFormat::Object(FileFormat::SourceBundle))
+            || self.include_sources)
             && !self.sources_allowed
         {
             warn!("Source uploads are not supported by the configured Sentry server");
@@ -1662,11 +1854,20 @@ impl DifUpload {
         }
 
         // Checks whether PDBs or PEs were *explicitly* requested on the command line.
-        if (self.formats.contains(&FileFormat::Pdb) || self.formats.contains(&FileFormat::Pe))
+        if (self.formats.contains(&DifFormat::Object(FileFormat::Pdb))
+            || self.formats.contains(&DifFormat::Object(FileFormat::Pe)))
             && !self.pdbs_allowed
         {
             warn!("PDBs and PEs are not supported by the configured Sentry server");
             // This is validated additionally in .valid_format()
+        }
+
+        // Checks whether BCSymbolMaps and PLists are **explicitly** requested on the command line.
+        if (self.formats.contains(&DifFormat::BcSymbolMap)
+            || self.formats.contains(&DifFormat::PList))
+            && !self.bcsymbolmaps_allowed
+        {
+            warn!("BCSymbolMaps are not supported by the configured Sentry server");
         }
     }
 
@@ -1680,21 +1881,82 @@ impl DifUpload {
         self.extensions.is_empty() || ext.map_or(false, |e| self.extensions.contains(e))
     }
 
-    /// Determines if this `FileFormat` matches the search criteria.
-    fn valid_format(&self, format: FileFormat) -> bool {
+    /// Determines if this [`DifFormat`] matches the search criteria.
+    fn valid_format(&self, format: DifFormat) -> bool {
         match format {
-            FileFormat::Unknown => false,
-            FileFormat::Pdb | FileFormat::Pe if !self.pdbs_allowed => false,
-            FileFormat::SourceBundle if !self.sources_allowed => false,
+            DifFormat::Object(FileFormat::Unknown) => false,
+            DifFormat::Object(FileFormat::Pdb) if !self.pdbs_allowed => false,
+            DifFormat::Object(FileFormat::Pe) if !self.pdbs_allowed => false,
+            DifFormat::Object(FileFormat::SourceBundle) if !self.sources_allowed => false,
+            DifFormat::BcSymbolMap | DifFormat::PList if !self.bcsymbolmaps_allowed => false,
             format => self.formats.is_empty() || self.formats.contains(&format),
         }
     }
 
     /// Determines if the given `Object` matches the features search criteria.
-    fn valid_features(&self, object: &Object<'_>) -> bool {
+    ///
+    /// If this is not an Object DIF then the object features filter does not apply so this
+    /// always returns that it is valid.
+    fn valid_features(&self, dif: &DifMatch) -> bool {
+        let object = match dif.object() {
+            Some(object) => object,
+            None => return true,
+        };
         self.features.symtab && object.has_symbols()
             || self.features.debug && object.has_debug_info()
             || self.features.unwind && object.has_unwind_info()
             || self.features.sources && object.has_sources()
+    }
+
+    /// Checks if a file is too large and logs skip message if so.
+    fn valid_size(&self, name: &str, size: usize) -> bool {
+        let file_size: Result<u64, _> = size.try_into();
+        let too_large = match file_size {
+            Ok(file_size) => file_size > self.max_file_size,
+            Err(_) => true,
+        };
+        if too_large {
+            warn!(
+                "Skipping debug file since it exceeds {}: {} ({})",
+                HumanBytes(self.max_file_size),
+                name,
+                HumanBytes(file_size.unwrap_or(u64::MAX)),
+            );
+        }
+        !too_large
+    }
+
+    /// Validates DIF on whether it should be processed.
+    ///
+    /// This takes all the filters configured in the [`DifUpload`] into account and returns
+    /// whether a file should be skipped or not.  It also takes care of logging such a skip
+    /// if required.
+    fn validate_dif(&self, dif: &DifMatch) -> bool {
+        // Skip if we didn't want this kind of DIF.
+        if !self.valid_format(dif.format()) {
+            debug!("skipping {} because of format", dif.name);
+            return false;
+        }
+
+        // Skip if this DIF does not have features we want.
+        if !self.valid_features(&dif) {
+            debug!("skipping {} because of features", dif.name);
+            return false;
+        }
+
+        // Skip if this DIF if it has no DebugId or we are only looking for certain IDs.
+        let id = dif.debug_id.unwrap_or_default();
+        if id.is_nil() || !self.valid_id(id) {
+            debug!("skipping {} because of debugid", dif.name);
+            return false;
+        }
+
+        // Skip if file exceeds the maximum allowed file size.
+        if !self.valid_size(&dif.name, dif.data().len()) {
+            debug!("skipping {} because of size", dif.name);
+            return false;
+        }
+
+        true
     }
 }
