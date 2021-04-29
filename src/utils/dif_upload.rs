@@ -1944,7 +1944,7 @@ impl DifUpload {
             return false;
         }
 
-        // Skip if this DIF if it has no DebugId or we are only looking for certain IDs.
+        // Skip if this DIF has no DebugId or we are only looking for certain IDs.
         let id = dif.debug_id.unwrap_or_default();
         if id.is_nil() || !self.valid_id(id) {
             debug!("skipping {} because of debugid", dif.name);
