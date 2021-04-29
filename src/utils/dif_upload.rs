@@ -1828,7 +1828,7 @@ impl DifUpload {
 
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
             self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
-            self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BCSymbolmap);
+            self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
 
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 self.validate_capabilities();

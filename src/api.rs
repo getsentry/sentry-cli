@@ -2297,7 +2297,7 @@ pub enum ChunkUploadCapability {
     Sources,
 
     /// Upload of BCSymbolMap and PList auxiliary DIFs
-    BCSymbolmap,
+    BcSymbolmap,
 
     /// Any other unsupported capability (ignored)
     Unknown,
@@ -2313,7 +2313,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "release_files" => ChunkUploadCapability::ReleaseFiles,
             "pdbs" => ChunkUploadCapability::Pdbs,
             "sources" => ChunkUploadCapability::Sources,
-            "bcsymbolmaps" => ChunkUploadCapability::BCSymbolmap,
+            "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
             _ => ChunkUploadCapability::Unknown,
         })
     }
