@@ -1345,7 +1345,6 @@ fn poll_dif_assemble(
                     symbolic::debuginfo::ObjectKind::None => String::new(),
                     k => format!(" {:#}", k),
                 },
-                // TODO(flub): check this output looks fine, maybe just empty string instead
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::PList(_) => String::from("plist"),
             };
@@ -1811,7 +1810,6 @@ impl DifUpload {
     ///
     /// The okay part of the return value is `(files, has_errors)`.  The
     /// latter can be used to indicate a fail state from the upload.
-    // flub: does the uploading
     pub fn upload(&mut self) -> Result<(Vec<DebugInfoFile>, bool), Error> {
         if self.paths.is_empty() {
             println!("{}: No paths were provided.", style("Warning").yellow());
