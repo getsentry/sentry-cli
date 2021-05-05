@@ -202,7 +202,6 @@ impl<'data> DifMatch<'data> {
 
     /// Returns the raw binary data of this DIF.
     pub fn data(&self) -> &[u8] {
-        // TODO(flub): Can this not always return self.dif.owner()?
         match self.dif.get() {
             ParsedDif::Object(ref obj) => obj.data(),
             ParsedDif::BcSymbolMap(_) => &self.dif.owner(),
