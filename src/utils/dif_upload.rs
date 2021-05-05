@@ -38,7 +38,7 @@ use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{
     upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL,
 };
-use crate::utils::dif::DifFeatures;
+use crate::utils::dif::ObjectDifFeatures;
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
@@ -1607,7 +1607,7 @@ pub struct DifUpload {
     paths: Vec<PathBuf>,
     ids: BTreeSet<DebugId>,
     formats: BTreeSet<DifFormat>,
-    features: DifFeatures,
+    features: ObjectDifFeatures,
     extensions: BTreeSet<OsString>,
     symbol_map: Option<PathBuf>,
     zips_allowed: bool,
@@ -1644,7 +1644,7 @@ impl DifUpload {
             paths: Vec::new(),
             ids: BTreeSet::new(),
             formats: BTreeSet::new(),
-            features: DifFeatures::all(),
+            features: ObjectDifFeatures::all(),
             extensions: BTreeSet::new(),
             symbol_map: None,
             zips_allowed: true,
@@ -1728,7 +1728,7 @@ impl DifUpload {
     /// Add an `ObjectFeature` to filter for.
     ///
     /// By default, all object features will be included.
-    pub fn filter_features(&mut self, features: DifFeatures) -> &mut Self {
+    pub fn filter_features(&mut self, features: ObjectDifFeatures) -> &mut Self {
         self.features = features;
         self
     }

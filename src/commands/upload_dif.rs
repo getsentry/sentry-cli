@@ -13,7 +13,7 @@ use symbolic::debuginfo::FileFormat;
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_id, ArgExt};
-use crate::utils::dif::DifFeatures;
+use crate::utils::dif::ObjectDifFeatures;
 use crate::utils::dif_upload::{DifFormat, DifUpload};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
@@ -204,7 +204,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
         // Configure `upload-dsym` behavior (only dSYM files)
         upload
             .filter_format(DifFormat::Object(FileFormat::MachO))
-            .filter_features(DifFeatures {
+            .filter_features(ObjectDifFeatures {
                 debug: true,
                 symtab: false,
                 unwind: false,
@@ -234,7 +234,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
             };
         }
 
-        upload.filter_features(DifFeatures {
+        upload.filter_features(ObjectDifFeatures {
             // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
             // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
             // we also upload all files with a public symbol table.
