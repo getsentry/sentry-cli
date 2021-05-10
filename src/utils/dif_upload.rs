@@ -76,7 +76,7 @@ impl<'a> Iterator for DifChunks<'a> {
 enum ParsedDif<'a> {
     Object(Object<'a>),
     BcSymbolMap(BcSymbolMap<'a>),
-    PList(UuidMapping),
+    UuidMap(UuidMapping),
 }
 
 impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
@@ -157,7 +157,7 @@ impl<'data> DifMatch<'data> {
 
     fn from_plist(uuid: DebugId, name: String, data: ByteView<'static>) -> Result<Self, Error> {
         let dif = SelfCell::try_new(data, |buf| {
-            UuidMapping::parse_plist(uuid, unsafe { &*buf }).map(ParsedDif::PList)
+            UuidMapping::parse_plist(uuid, unsafe { &*buf }).map(ParsedDif::UuidMap)
         })?;
 
         Ok(Self {
@@ -188,7 +188,7 @@ impl<'data> DifMatch<'data> {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => Some(obj),
             ParsedDif::BcSymbolMap(_) => None,
-            ParsedDif::PList(_) => None,
+            ParsedDif::UuidMap(_) => None,
         }
     }
 
@@ -196,7 +196,7 @@ impl<'data> DifMatch<'data> {
         match self.dif.get() {
             ParsedDif::Object(ref object) => DifFormat::Object(object.file_format()),
             ParsedDif::BcSymbolMap(_) => DifFormat::BcSymbolMap,
-            ParsedDif::PList(_) => DifFormat::PList,
+            ParsedDif::UuidMap(_) => DifFormat::PList,
         }
     }
 
@@ -205,7 +205,7 @@ impl<'data> DifMatch<'data> {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => obj.data(),
             ParsedDif::BcSymbolMap(_) => &self.dif.owner(),
-            ParsedDif::PList(_) => &self.dif.owner(),
+            ParsedDif::UuidMap(_) => &self.dif.owner(),
         }
     }
 
@@ -666,7 +666,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                     collected.push(dif);
                 }
             } else if buffer.starts_with(b"<?xml") {
-                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::PList) {
+                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::UuidMap) {
                     collected.push(dif);
                 }
             };
@@ -697,14 +697,14 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 enum AuxDifKind {
     BcSymbolMap,
-    PList,
+    UuidMap,
 }
 
 impl Display for AuxDifKind {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             AuxDifKind::BcSymbolMap => write!(f, "BCSymbolMap"),
-            AuxDifKind::PList => write!(f, "PList"),
+            AuxDifKind::UuidMap => write!(f, "UuidMap"),
         }
     }
 }
@@ -740,7 +740,7 @@ fn collect_auxdif<'a>(
     };
     let dif_result = match kind {
         AuxDifKind::BcSymbolMap => DifMatch::from_bcsymbolmap(uuid, name.clone(), buffer),
-        AuxDifKind::PList => DifMatch::from_plist(uuid, name.clone(), buffer),
+        AuxDifKind::UuidMap => DifMatch::from_plist(uuid, name.clone(), buffer),
     };
     let dif = match dif_result {
         Ok(dif) => dif,
@@ -1345,7 +1345,7 @@ fn poll_dif_assemble(
                     k => format!(" {:#}", k),
                 },
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
-                ParsedDif::PList(_) => String::from("plist"),
+                ParsedDif::UuidMap(_) => String::from("plist"),
             };
 
             println!(
