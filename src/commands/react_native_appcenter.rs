@@ -135,9 +135,8 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
 
     let mut processor = SourceMapProcessor::new();
     for path in matches.values_of("paths").unwrap() {
-        for entry in fs::read_dir(path)? {
+        for entry in (fs::read_dir(path)?).flatten() {
             if_chain! {
-                if let Ok(entry) = entry;
                 if let Some(filename) = entry.file_name().to_str();
                 if let Some(ext) = entry.path().extension();
                 if ext == OsStr::new("jsbundle") ||
