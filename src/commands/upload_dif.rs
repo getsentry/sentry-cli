@@ -13,8 +13,8 @@ use symbolic::debuginfo::FileFormat;
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_id, ArgExt};
-use crate::utils::dif::DifFeatures;
-use crate::utils::dif_upload::DifUpload;
+use crate::utils::dif::ObjectDifFeatures;
+use crate::utils::dif_upload::{DifFormat, DifUpload};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
@@ -39,7 +39,15 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .value_name("TYPE")
                 .multiple(true)
                 .number_of_values(1)
-                .possible_values(&["dsym", "elf", "breakpad", "pdb", "pe", "sourcebundle"])
+                .possible_values(&[
+                    "dsym",
+                    "elf",
+                    "breakpad",
+                    "pdb",
+                    "pe",
+                    "sourcebundle",
+                    "bcsymbolmap",
+                ])
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default, all types are considered.",
@@ -157,6 +165,16 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              can only be displayed if --wait is specified, but this will \
              significantly slow down the upload process.",
         ))
+        .arg(
+            Arg::with_name("upload_symbol_maps")
+                .long("upload-symbol-maps")
+                .help(
+                    "Upload any BCSymbolMap files found to allow Sentry to resolve \
+                     hidden symbols, e.g. when it downloads dSYMs directly from App \
+                     Store Connect or when you upload dSYMs without first resolving \
+                     the hidden symbols using --symbol-maps.",
+                ),
+        )
 }
 
 fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
@@ -185,8 +203,8 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
     if legacy {
         // Configure `upload-dsym` behavior (only dSYM files)
         upload
-            .filter_format(FileFormat::MachO)
-            .filter_features(DifFeatures {
+            .filter_format(DifFormat::Object(FileFormat::MachO))
+            .filter_features(ObjectDifFeatures {
                 debug: true,
                 symtab: false,
                 unwind: false,
@@ -201,18 +219,22 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
     } else {
         // Restrict symbol types, if specified by the user
         for ty in matches.values_of("types").unwrap_or_default() {
-            upload.filter_format(match ty {
-                "dsym" => FileFormat::MachO,
-                "elf" => FileFormat::Elf,
-                "breakpad" => FileFormat::Breakpad,
-                "pdb" => FileFormat::Pdb,
-                "pe" => FileFormat::Pe,
-                "sourcebundle" => FileFormat::SourceBundle,
+            match ty {
+                "dsym" => upload.filter_format(DifFormat::Object(FileFormat::MachO)),
+                "elf" => upload.filter_format(DifFormat::Object(FileFormat::Elf)),
+                "breakpad" => upload.filter_format(DifFormat::Object(FileFormat::Breakpad)),
+                "pdb" => upload.filter_format(DifFormat::Object(FileFormat::Pdb)),
+                "pe" => upload.filter_format(DifFormat::Object(FileFormat::Pe)),
+                "sourcebundle" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
+                "bcsymbolmap" => {
+                    upload.filter_format(DifFormat::BcSymbolMap);
+                    upload.filter_format(DifFormat::PList)
+                }
                 other => bail!("Unsupported type: {}", other),
-            });
+            };
         }
 
-        upload.filter_features(DifFeatures {
+        upload.filter_features(ObjectDifFeatures {
             // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
             // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
             // we also upload all files with a public symbol table.

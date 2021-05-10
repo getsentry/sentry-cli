@@ -1424,9 +1424,9 @@ dependencies = [
 
 [[package]]
 name = "pdb"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b66be5fcea88b52962d3d6fcc5194f1d77666f5aca256926688743a8de1152e4"
+checksum = "13f4d162ecaaa1467de5afbe62d597757b674b51da8bb4e587430c5fdb2af7aa"
 dependencies = [
  "fallible-iterator",
  "scroll 0.10.2",
@@ -2365,9 +2365,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "symbolic"
-version = "8.0.5"
+version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dfab5df108a9a21a1a34b44da7480d0caf0ec00fb8b0a1bf988aa4cf1fa9566b"
+checksum = "c4b052742c32348e5217c9bf28ba2a1a9d4169609ef1055eaea5333ccf7a7614"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2375,9 +2375,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-common"
-version = "8.0.5"
+version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7bf72c81c56cf2b1cba4c43f0ccf74da2354b503efa9fdf38119e955af38a17c"
+checksum = "be7dfa630954f18297ceae1ff2890cb7f5008a0b2d2106b0468dafc45b0b6b12"
 dependencies = [
  "debugid",
  "memmap",
@@ -2388,11 +2388,12 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "8.0.5"
+version = "8.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbd9fc3ce8411bae7a1f9a7ebc8dcc1cda87c0dabe8760214704a1b0d36d7330"
+checksum = "6fec6e5e3c9575f509bafa63e82e98f178d50f886a23c385f27fdcbbc5f29bbf"
 dependencies = [
  "dmsort",
+ "elementtree",
  "fallible-iterator",
  "flate2",
  "gimli",

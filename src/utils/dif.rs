@@ -63,7 +63,7 @@ impl str::FromStr for DifType {
 
 /// Declares which features an object may have to be uploaded.
 #[derive(Clone, Copy, Debug)]
-pub struct DifFeatures {
+pub struct ObjectDifFeatures {
     /// Includes object files with debug information.
     pub debug: bool,
     /// Includes object files with a symbol table.
@@ -74,9 +74,9 @@ pub struct DifFeatures {
     pub sources: bool,
 }
 
-impl DifFeatures {
+impl ObjectDifFeatures {
     pub fn all() -> Self {
-        DifFeatures {
+        ObjectDifFeatures {
             debug: true,
             symtab: true,
             unwind: true,
@@ -85,7 +85,7 @@ impl DifFeatures {
     }
 
     pub fn none() -> Self {
-        DifFeatures {
+        ObjectDifFeatures {
             debug: false,
             symtab: false,
             unwind: false,
@@ -98,13 +98,13 @@ impl DifFeatures {
     }
 }
 
-impl Default for DifFeatures {
+impl Default for ObjectDifFeatures {
     fn default() -> Self {
         Self::all()
     }
 }
 
-impl fmt::Display for DifFeatures {
+impl fmt::Display for ObjectDifFeatures {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut written = false;
 
@@ -297,10 +297,10 @@ impl<'a> DifFile<'a> {
         }
     }
 
-    pub fn features(&self) -> DifFeatures {
+    pub fn features(&self) -> ObjectDifFeatures {
         match self {
             DifFile::Archive(archive) => {
-                let mut features = DifFeatures::none();
+                let mut features = ObjectDifFeatures::none();
                 for object in archive.get().objects().filter_map(Result::ok) {
                     features.symtab = features.symtab || object.has_symbols();
                     features.debug = features.debug || object.has_debug_info();
@@ -309,7 +309,7 @@ impl<'a> DifFile<'a> {
                 }
                 features
             }
-            DifFile::Proguard(..) => DifFeatures::none(),
+            DifFile::Proguard(..) => ObjectDifFeatures::none(),
         }
     }
 
