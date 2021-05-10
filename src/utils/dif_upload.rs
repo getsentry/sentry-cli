@@ -1345,7 +1345,7 @@ fn poll_dif_assemble(
                     k => format!(" {:#}", k),
                 },
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
-                ParsedDif::UuidMap(_) => String::from("plist"),
+                ParsedDif::UuidMap(_) => String::from("uuidmap"),
             };
 
             println!(
