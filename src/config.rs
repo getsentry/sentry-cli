@@ -217,10 +217,10 @@ impl Config {
     pub fn get_proxy_url(&self) -> Option<String> {
         if env::var_os("http_proxy").is_some() {
             env::var("http_proxy").ok()
-        } else if let Some(val) = self.ini.get_from(Some("http"), "proxy_url") {
-            Some(val.to_owned())
         } else {
-            None
+            self.ini
+                .get_from(Some("http"), "proxy_url")
+                .map(|val| val.to_owned())
         }
     }
 
@@ -374,10 +374,10 @@ impl Config {
     pub fn get_environment(&self) -> Option<String> {
         if env::var_os("SENTRY_ENVIRONMENT").is_some() {
             env::var("SENTRY_ENVIRONMENT").ok()
-        } else if let Some(val) = self.ini.get_from(Some("defaults"), "environment") {
-            Some(String::from(val))
         } else {
-            None
+            self.ini
+                .get_from(Some("defaults"), "environment")
+                .map(String::from)
         }
     }
 
@@ -529,6 +529,7 @@ impl Clone for Config {
     }
 }
 
+#[allow(clippy::manual_map)]
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
         Some(Auth::Token(val))

@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.64.2
+
+* ref: Rely on spawn process error for detecting command presence (#958)
+
 ## sentry-cli 1.64.1
 
 * fix: Redirect spawned JS process outputs to `/dev/null` instead of filling up pipe buffers (#949)

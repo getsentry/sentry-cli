@@ -1,36 +1,19 @@
 #!/usr/bin/env node
-/* eslint-disable no-console */
 
 'use strict';
 
 const childProcess = require('child_process');
-const fs = require('fs');
 const cli = require('../js');
 
-const cliPath = cli.getPath();
+const child = childProcess
+  .spawn(cli.getPath(), process.argv.slice(2), {
+    stdio: 'inherit',
+  })
+  .on('error', err => {
+    console.error(err); // eslint-disable-line no-console
+    process.exit(1);
+  })
+  .on('exit', code => process.exit(code));
 
-if (!fs.existsSync(cliPath)) {
-  console.error('error: sentry-cli was not installed by @sentry/cli install script');
-  process.exit(-20);
-}
-
-const child = childProcess.spawn(cliPath, process.argv.slice(2), {
-  stdio: 'inherit',
-});
-
-child.on('error', err => {
-  console.error('error: failed to invoke sentry-cli');
-  console.error(err.stack);
-});
-
-child.on('exit', code => {
-  process.exit(code);
-});
-
-process.on('SIGTERM', () => {
-  child.kill('SIGTERM');
-});
-
-process.on('SIGINT', () => {
-  child.kill('SIGINT');
-});
+process.on('SIGTERM', () => child.kill('SIGTERM'));
+process.on('SIGINT', () => child.kill('SIGINT'));
