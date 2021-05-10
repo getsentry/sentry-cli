@@ -20,9 +20,9 @@ fn displays_releases() {
         .assert()
         .success()
         .stdout(
-            contains("| Released       | Version | New Events | Last Event |")
+            contains("| Released        | Version | New Events | Last Event |")
                 .and(contains(
-                    "| (unreleased)   | ok      | 0          | -          |",
+                    "| (unreleased)    | ok      | 0          | -          |",
                 ))
                 .and(
                     is_match(r#"\| \d+ hours ago \| vue-1   \| 1          \| -          \|"#)
@@ -46,9 +46,9 @@ fn displays_releases_with_projects() {
         .assert()
         .success()
         .stdout(
-            contains("| Released       | Version | Projects | New Events | Last Event |")
+            contains("| Released        | Version | Projects | New Events | Last Event |")
                 .and(contains(
-                    "| (unreleased)   | ok      | test     | 0          | -          |",
+                    "| (unreleased)    | ok      | test     | 0          | -          |",
                 ))
                 .and(
                     is_match(
