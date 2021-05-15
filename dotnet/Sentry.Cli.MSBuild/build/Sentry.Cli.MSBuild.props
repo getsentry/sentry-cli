@@ -1,0 +1,9 @@
+<Project TreatAsLocalProperty="TaskFolder;TaskAssembly">
+  <PropertyGroup>
+    <TaskFolder Condition=" '$(MSBuildRuntimeType)' == 'Core' ">netstandard2.0</TaskFolder>
+    <TaskFolder Condition=" '$(MSBuildRuntimeType)' != 'Core' ">net472</TaskFolder>
+    <TaskAssembly>$(MSBuildThisFileDirectory)..\tasks\$(TaskFolder)\Sentry.Cli.MSBuild.dll</TaskAssembly>
+  </PropertyGroup>
+
+  <UsingTask TaskName="MSBuildTasks.DownloadSentryCli" AssemblyFile="$(TaskAssembly)" />
+</Project>
