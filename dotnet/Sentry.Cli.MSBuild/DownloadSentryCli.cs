@@ -1,27 +1,44 @@
-using System.IO;
-using System.Net.Http;
+using System;
+using System.Runtime.InteropServices;
 using Microsoft.Build.Framework;
 using MSBuildTask = Microsoft.Build.Utilities.Task;
 
 namespace MSBuildTasks
 {
+    /// <summary>
+    /// MSBuilds task to download sentry-cli.
+    /// </summary>
     public class DownloadSentryCli : MSBuildTask
     {
+        public string? CdnUrl { get; set; }
+        public string Version { get; set; } = "latest";
+
+        public string Architectures { get; set; } = "current";
+        public string DestinationPath { get; set; } = "bin";
+
         public override bool Execute()
         {
-            // https://github.com/getsentry/sentry-cli/releases
-            // https://downloads.sentry-cdn.com/sentry-cli/1.64.2/sentry-cli-Darwin-universal
-            var name = "sentry-cli-Darwin-universal";
-            var version = "1.64.2";
-            var url = $"https://downloads.sentry-cdn.com/sentry-cli/{version}/{name}";
-            var client = new HttpClient();
-            var cli = client.GetStreamAsync(url).GetAwaiter().GetResult();
-            var fileStream = new FileStream(name, FileMode.Create);
-            cli.CopyTo(fileStream);
-            cli.Flush();
-            fileStream.Flush();
-            Log.LogMessage(MessageImportance.High, $"Getting {cli}");
+            var archs = Architectures.Split(';');
+            if (string.Equals(archs[0], "Current", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var currentPlatformCliName = Get();
+            }
+            else if (string.Equals(archs[0], "All", StringComparison.InvariantCultureIgnoreCase))
+            {
+
+            }
+            else
+            {
+
+            }
+
+            var sentryCliDownloader = new SentryCliDownloader();
+            sentryCliDownloader.DownloadForCurrentDevice(Version);
+
+            Log.LogMessage(MessageImportance.Normal, "Downloading sentry-cli.");
+            // Log.LogMessage(MessageImportance.High, $"Downloaded sentry-cli from: '{url}'");
             return true;
         }
+
     }
 }

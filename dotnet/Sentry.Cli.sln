@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sentry.Cli.MSBuild", "Sentr
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sentry.Cli", "Sentry.Cli\Sentry.Cli.csproj", "{DF9B1577-A806-4DFA-82C4-997F9F81435D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sentry.Cli.MSBuild.Tests", "Sentry.Cli.MSBuild.Tests\Sentry.Cli.MSBuild.Tests.csproj", "{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,7 +35,6 @@ Global
 		{DF1329BB-B5FD-4F46-96D3-9CC200801474}.Release|x86.ActiveCfg = Release|Any CPU
 		{DF1329BB-B5FD-4F46-96D3-9CC200801474}.Release|x86.Build.0 = Release|Any CPU
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Debug|x64.ActiveCfg = Debug|Any CPU
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Debug|x64.Build.0 = Debug|Any CPU
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Debug|x86.ActiveCfg = Debug|Any CPU
@@ -44,5 +45,17 @@ Global
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Release|x64.Build.0 = Release|Any CPU
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Release|x86.ActiveCfg = Release|Any CPU
 		{DF9B1577-A806-4DFA-82C4-997F9F81435D}.Release|x86.Build.0 = Release|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Debug|x64.Build.0 = Debug|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Debug|x86.Build.0 = Debug|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Release|x64.ActiveCfg = Release|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Release|x64.Build.0 = Release|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Release|x86.ActiveCfg = Release|Any CPU
+		{36FADE1D-91F9-46B5-B9CF-F85C0C5058F4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
