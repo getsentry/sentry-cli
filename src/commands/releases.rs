@@ -104,6 +104,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
+            .arg(Arg::with_name("ignore-missing")
+                        .help("When the flag is set and the previous release commit was not found in the repository, \
+                        will create a release with the default commits count (or the one specified with `--initial-depth`) \
+                        instead of failing the command."))
             .arg(Arg::with_name("local")
                 .conflicts_with_all(&["auto", "clear", "commits", ])
                 .long("local")
@@ -574,9 +578,11 @@ fn execute_set_commits<'a>(
         // Parse the git url.
         let remote = config.get_cached_vcs_remote();
         let parsed = get_repo_from_remote(&remote);
+        let ignore_missing = matches.is_present("ignore-missing");
         // Fetch all the commits upto the `prev_commit` or return the default (20).
         // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
-        let (commit_log, prev_commit) = get_commits_from_git(&repo, &prev_commit, default_count)?;
+        let (commit_log, prev_commit) =
+            get_commits_from_git(&repo, &prev_commit, default_count, ignore_missing)?;
 
         // Calculate the diff for each commit in the Vec<GitCommit>.
         let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
