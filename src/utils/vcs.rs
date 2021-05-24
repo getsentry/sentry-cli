@@ -405,8 +405,6 @@ pub fn find_heads(
 ) -> Result<Vec<Ref>, Error> {
     let mut rv = vec![];
 
-    println!("{:?}", repos);
-
     // if commit specs were explicitly provided find head commits with
     // limited amounts of magic.
     if let Some(specs) = specs {
@@ -452,12 +450,6 @@ pub fn get_commits_from_git<'a>(
     default_count: usize,
     ignore_missing: bool,
 ) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>), Error> {
-    let commit_filter = move |id: Result<git2::Oid, git2::Error>| {
-        let id = id.ok()?;
-        let commit = repo.find_commit(id).ok()?;
-        Some(commit)
-    };
-
     match git2::Oid::from_str(prev_commit) {
         Ok(prev) => {
             let mut found = false;
@@ -476,7 +468,9 @@ pub fn get_commits_from_git<'a>(
                     }
                     _ => true,
                 })
-                .filter_map(commit_filter)
+                .filter_map(move |id: Result<git2::Oid, git2::Error>| {
+                    repo.find_commit(id.ok()?).ok()
+                })
                 .collect();
 
             // If there is a previous commit but cannot find it in git history
@@ -487,21 +481,7 @@ pub fn get_commits_from_git<'a>(
                         "Could not find the SHA of the previous release in the git history. Skipping previous release and creating a new one with {} commits.",
                         default_count
                     );
-
-                    let mut revwalk = repo.revwalk()?;
-                    revwalk.push_head()?;
-
-                    let mut result: Vec<Commit> = revwalk
-                        .take(default_count + 1)
-                        .filter_map(commit_filter)
-                        .collect();
-
-                    if result.len() == default_count + 1 {
-                        let prev = result.pop();
-                        return Ok((result, prev));
-                    } else {
-                        return Ok((result, None));
-                    }
+                    return get_default_commits_from_git(repo, default_count);
                 // Or throw an error and point to the right solution otherwise.
                 } else {
                     return Err(format_err!(
@@ -520,21 +500,27 @@ pub fn get_commits_from_git<'a>(
                 "Could not find the previous commit. Creating a release with {} commits.",
                 default_count
             );
-
-            let mut revwalk = repo.revwalk()?;
-            revwalk.push_head()?;
-            let mut result: Vec<Commit> = revwalk
-                .take(default_count + 1)
-                .filter_map(commit_filter)
-                .collect();
-
-            if result.len() == default_count + 1 {
-                let prev = result.pop();
-                Ok((result, prev))
-            } else {
-                Ok((result, None))
-            }
+            get_default_commits_from_git(repo, default_count)
         }
+    }
+}
+
+pub fn get_default_commits_from_git(
+    repo: &Repository,
+    default_count: usize,
+) -> Result<(Vec<Commit>, Option<Commit>), Error> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
+    let mut result: Vec<Commit> = revwalk
+        .take(default_count + 1)
+        .filter_map(move |id: Result<git2::Oid, git2::Error>| repo.find_commit(id.ok()?).ok())
+        .collect();
+
+    if result.len() == default_count + 1 {
+        let prev = result.pop();
+        Ok((result, prev))
+    } else {
+        Ok((result, None))
     }
 }
 
