@@ -448,21 +448,13 @@ pub fn get_commits_from_git<'a>(
     repo: &'a Repository,
     prev_commit: &str,
     default_count: usize,
+    ignore_missing: bool,
 ) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>), Error> {
-    let mut revwalk = repo.revwalk()?;
-    revwalk.push_head()?;
-
-    let commit_filter = move |id: Result<git2::Oid, git2::Error>| {
-        let id = id.ok()?;
-
-        let commit = repo.find_commit(id).ok()?;
-
-        Some(commit)
-    };
-
     match git2::Oid::from_str(prev_commit) {
         Ok(prev) => {
             let mut found = false;
+            let mut revwalk = repo.revwalk()?;
+            revwalk.push_head()?;
             let mut result: Vec<Commit> = revwalk
                 .take_while(|id| match id {
                     Ok(id) => {
@@ -476,13 +468,28 @@ pub fn get_commits_from_git<'a>(
                     }
                     _ => true,
                 })
-                .filter_map(commit_filter)
+                .filter_map(move |id: Result<git2::Oid, git2::Error>| {
+                    repo.find_commit(id.ok()?).ok()
+                })
                 .collect();
-            // If there is a previous commit but cannot find it in git history, throw an error.
+
+            // If there is a previous commit but cannot find it in git history
             if !found {
-                return Err(format_err!(
-                    "Could not find the SHA of the previous release in the git history. Increase your git clone depth.",
-                ));
+                // Create a new release with default count if `--ignore-missing` is present
+                if ignore_missing {
+                    println!(
+                        "Could not find the SHA of the previous release in the git history. Skipping previous release and creating a new one with {} commits.",
+                        default_count
+                    );
+                    return get_default_commits_from_git(repo, default_count);
+                // Or throw an error and point to the right solution otherwise.
+                } else {
+                    return Err(format_err!(
+                        "Could not find the SHA of the previous release in the git history. If you limit the clone depth, try to increase it. \
+                        Otherwise, it means that the commit we are looking for was amended or squashed and cannot be retrieved. \
+                        Use --ignore-missing flag to skip it and create a new release with the default commits count.",
+                    ));
+                }
             }
             let prev = result.pop();
             Ok((result, prev))
@@ -493,18 +500,27 @@ pub fn get_commits_from_git<'a>(
                 "Could not find the previous commit. Creating a release with {} commits.",
                 default_count
             );
-            let mut result: Vec<Commit> = revwalk
-                .take(default_count + 1)
-                .filter_map(commit_filter)
-                .collect();
-
-            if result.len() == default_count + 1 {
-                let prev = result.pop();
-                Ok((result, prev))
-            } else {
-                Ok((result, None))
-            }
+            get_default_commits_from_git(repo, default_count)
         }
+    }
+}
+
+pub fn get_default_commits_from_git(
+    repo: &Repository,
+    default_count: usize,
+) -> Result<(Vec<Commit>, Option<Commit>), Error> {
+    let mut revwalk = repo.revwalk()?;
+    revwalk.push_head()?;
+    let mut result: Vec<Commit> = revwalk
+        .take(default_count + 1)
+        .filter_map(move |id: Result<git2::Oid, git2::Error>| repo.find_commit(id.ok()?).ok())
+        .collect();
+
+    if result.len() == default_count + 1 {
+        let prev = result.pop();
+        Ok((result, prev))
+    } else {
+        Ok((result, None))
     }
 }
 
@@ -894,7 +910,7 @@ fn test_get_commits_from_git() {
     );
 
     let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
 
     assert_debug_snapshot!(commits
         .0
@@ -936,7 +952,7 @@ fn test_generate_patch_set_base() {
     );
 
     let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
 
@@ -989,7 +1005,7 @@ fn test_generate_patch_set_previous_commit() {
         "\"fifth commit\"",
     );
 
-    let commits = get_commits_from_git(&repo, &head.id().to_string(), 20).expect("Failed");
+    let commits = get_commits_from_git(&repo, &head.id().to_string(), 20, false).expect("Failed");
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
 
@@ -1029,7 +1045,47 @@ fn test_generate_patch_default_twenty() {
     );
 
     let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "", 20).expect("Failed");
+    let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
+    let patch_set =
+        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+    assert_yaml_snapshot!(patch_set, {
+        ".*.id" => "[id]",
+        ".*.timestamp" => "[timestamp]"
+    });
+}
+
+#[test]
+fn test_generate_patch_ignore_missing() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    test_initialize(dir.path());
+
+    git_commit_test(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    for n in 0..5 {
+        let file = format!("foo{}.js", n);
+        git_commit_test(
+            dir.path(),
+            &file,
+            b"console.log(\"Hello, world! Part 2\");",
+            "\"another commit\"",
+        );
+    }
+
+    git_commit_test(
+        dir.path(),
+        "foo2.js",
+        b"console.log(\"Hello, world!\");",
+        "\"final commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+    let commits = get_commits_from_git(&repo, "nonexistinghash", 5, true).expect("Failed");
     let patch_set =
         generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
 

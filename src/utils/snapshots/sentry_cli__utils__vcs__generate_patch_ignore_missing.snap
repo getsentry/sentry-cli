@@ -1,0 +1,49 @@
+---
+source: src/utils/vcs.rs
+expression: patch_set
+---
+- patch_set:
+    - path: foo2.js
+      type: M
+  repository: example/test-repo
+  author_name: John Doe
+  author_email: john.doe@example.com
+  timestamp: "[timestamp]"
+  message: "\"final commit\"\n"
+  id: "[id]"
+- patch_set:
+    - path: foo4.js
+      type: A
+  repository: example/test-repo
+  author_name: John Doe
+  author_email: john.doe@example.com
+  timestamp: "[timestamp]"
+  message: "\"another commit\"\n"
+  id: "[id]"
+- patch_set:
+    - path: foo3.js
+      type: A
+  repository: example/test-repo
+  author_name: John Doe
+  author_email: john.doe@example.com
+  timestamp: "[timestamp]"
+  message: "\"another commit\"\n"
+  id: "[id]"
+- patch_set:
+    - path: foo2.js
+      type: A
+  repository: example/test-repo
+  author_name: John Doe
+  author_email: john.doe@example.com
+  timestamp: "[timestamp]"
+  message: "\"another commit\"\n"
+  id: "[id]"
+- patch_set:
+    - path: foo1.js
+      type: A
+  repository: example/test-repo
+  author_name: John Doe
+  author_email: john.doe@example.com
+  timestamp: "[timestamp]"
+  message: "\"another commit\"\n"
+  id: "[id]"
