@@ -1,5 +1,10 @@
 # Changelog
 
+## sentry-cli 1.65.0
+
+* feat: Allow for ignoring missing commits in set-commit with `--ignore-missing` flag (#963)
+* feat: Support BCSymbolMap uploading (#952)
+
 ## sentry-cli 1.64.2
 
 * ref: Rely on spawn process error for detecting command presence (#958)
