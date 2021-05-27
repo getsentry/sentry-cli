@@ -81,7 +81,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("ref")
                 .long("ref")
                 .value_name("REF")
-                .hidden(true)
                 .hidden(true))
             .arg(Arg::with_name("url")
                 .long("url")
@@ -105,7 +104,8 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
             .arg(Arg::with_name("ignore-missing")
-                        .help("When the flag is set and the previous release commit was not found in the repository, \
+                .long("ignore-missing")
+                .help("When the flag is set and the previous release commit was not found in the repository, \
                         will create a release with the default commits count (or the one specified with `--initial-depth`) \
                         instead of failing the command."))
             .arg(Arg::with_name("local")
