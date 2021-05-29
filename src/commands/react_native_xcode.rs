@@ -274,15 +274,20 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
 
-        let release = api.new_release(
+        let default_release_name = format!(
+            "{}@{}+{}",
+            plist.bundle_id(),
+            plist.version(),
+            plist.build()
+        );
+
+        let release_name = env::var("SENTRY_RELEASE").unwrap_or(default_release_name);
+        
+
+        let default_release = api.new_release(
             &org,
             &NewRelease {
-                version: format!(
-                    "{}@{}+{}",
-                    plist.bundle_id(),
-                    plist.version(),
-                    plist.build()
-                ),
+                version: release_name,
                 projects: vec![project.to_string()],
                 ..Default::default()
             },
@@ -294,7 +299,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                     org: &org,
                     project: Some(&project),
                     release: &release.version,
-                    dist: Some(&plist.build()),
+                    dist: env::var("SENTRY_DIST").unwrap_or(Some(&plist.build())),
                     wait: matches.is_present("wait"),
                 })?;
             }
@@ -304,7 +309,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                         org: &org,
                         project: Some(&project),
                         release: &release.version,
-                        dist: Some(dist),
+                        dist: env::var("SENTRY_DIST").unwrap_or(Some(dist)),
                         wait: matches.is_present("wait"),
                     })?;
                 }
