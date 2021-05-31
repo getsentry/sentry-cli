@@ -282,7 +282,6 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         );
 
         let release_name = env::var("SENTRY_RELEASE").unwrap_or(default_release_name);
-        
 
         let default_release = api.new_release(
             &org,
