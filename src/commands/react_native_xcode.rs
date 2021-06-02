@@ -283,7 +283,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
 
         let release_name = env::var("SENTRY_RELEASE").unwrap_or(default_release_name);
 
-        let default_release = api.new_release(
+        let release = api.new_release(
             &org,
             &NewRelease {
                 version: release_name,
@@ -298,7 +298,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                     org: &org,
                     project: Some(&project),
                     release: &release.version,
-                    dist: env::var("SENTRY_DIST").unwrap_or(Some(&plist.build())),
+                    dist: Some(&env::var("SENTRY_DIST").unwrap_or(plist.build().to_string())),
                     wait: matches.is_present("wait"),
                 })?;
             }
@@ -308,7 +308,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                         org: &org,
                         project: Some(&project),
                         release: &release.version,
-                        dist: env::var("SENTRY_DIST").unwrap_or(Some(dist)),
+                        dist: Some(&env::var("SENTRY_DIST").unwrap_or(dist.to_string())),
                         wait: matches.is_present("wait"),
                     })?;
                 }
