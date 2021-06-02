@@ -14,24 +14,45 @@ targets:
   - name: npm
   - name: brew
     tap: getsentry/tools
-    template: "class SentryCli < Formula\n  desc \"Sentry command-line client for\
-      \ some generic tasks\"\n  homepage \"https://github.com/getsentry/sentry-cli\"\
-      \n  version \"{{version}}\"\n  license \"BSD-3-Clause\"\n\n  if OS.mac?\n  \
-      \  url \"https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal\"\
-      \n    sha256 \"{{checksums.sentry-cli-Darwin-universal}}\"\n  elsif OS.linux?\n\
-      \    if Hardware::CPU.arm?\n      if Hardware::CPU.is_64_bit?\n        url \"\
-      https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-aarch64\"\
-      \n        sha256 \"{{checksums.sentry-cli-Linux-aarch64}}\"\n      else\n  \
-      \      url \"https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-armv7\"\
-      \n        sha256 \"{{checksums.sentry-cli-Linux-armv7}}\"\n      end\n    elseif\
-      \ Hardware::CPU.intel?\n      if Hardware::CPU.is_64_bit?\n        url \"https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-x86_64\"\
-      \n        sha256 \"{{checksums.sentry-cli-Linux-x86_64}}\"\n      else\n   \
-      \     url \"https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-i686\"\
-      \n        sha256 \"{{checksums.sentry-cli-Linux-i686}}\"\n      end\n    else\n\
-      \      raise \"Unsupported architecture\"\n    end\n  else\n      raise \"Unsupported\
-      \ operating system\"\n  end\n\n  def install\n    bin.install Dir[\"sentry-cli-*\"\
-      ].first => \"sentry-cli\"\n  end\n\n  test do\n    assert_match version.to_s,\
-      \ shell_output(\"#{bin}/sentry-cli --version\").chomp\n  end\nend\n"
+        template: >
+          class SentryCli < Formula
+            desc "Sentry command-line client for some generic tasks"
+            homepage "https://github.com/getsentry/sentry-cli"
+            version "{{version}}"
+            license "BSD-3-Clause"
+            if OS.mac?
+              url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal"
+              sha256 "{{checksums.sentry-cli-Darwin-universal}}"
+            elsif OS.linux?
+              if Hardware::CPU.arm?
+                if Hardware::CPU.is_64_bit?
+                  url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-aarch64"
+                  sha256 "{{checksums.sentry-cli-Linux-aarch64}}"
+                else
+                  url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-armv7"
+                  sha256 "{{checksums.sentry-cli-Linux-armv7}}"
+                end
+              elseif Hardware::CPU.intel?
+                if Hardware::CPU.is_64_bit?
+                  url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-x86_64"
+                  sha256 "{{checksums.sentry-cli-Linux-x86_64}}"
+                else
+                  url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-i686"
+                  sha256 "{{checksums.sentry-cli-Linux-i686}}"
+                end
+              else
+                raise "Unsupported architecture"
+              end
+            else
+                raise "Unsupported operating system"
+            end
+            def install
+              bin.install Dir["sentry-cli-*"].first => "sentry-cli"
+            end
+            test do
+              assert_match version.to_s, shell_output("#{bin}/sentry-cli --version").chomp
+            end
+          end
   - name: github
     includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
   - name: registry
