@@ -420,8 +420,9 @@ impl Api {
         handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
         let env = self.config.get_pipeline_env();
+        let custom_header = self.config.get_custom_header();
 
-        ApiRequest::create(handle, &method, &url, auth, env)
+        ApiRequest::create(handle, &method, &url, auth, env, custom_header)
     }
 
     /// Convenience method that performs a `GET` request.
@@ -1519,6 +1520,7 @@ impl ApiRequest {
         url: &str,
         auth: Option<&Auth>,
         pipeline_env: Option<String>,
+        custom_header: Option<String>,
     ) -> ApiResult<Self> {
         debug!("request {} {}", method, url);
 
@@ -1537,6 +1539,10 @@ impl ApiRequest {
                     .append(&format!("User-Agent: sentry-cli/{}", VERSION))
                     .ok();
             }
+        }
+
+        if let Some(custom_header) = custom_header {
+            headers.append(&custom_header).ok();
         }
 
         match method {
