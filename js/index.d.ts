@@ -41,6 +41,7 @@ declare module '@sentry/cli' {
     repo?: string;
     commit?: string;
     previousCommit?: string;
+    ignoreMissing?: boolean;
   }
 
   export interface SentryCliReleases {

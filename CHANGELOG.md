@@ -1,5 +1,9 @@
 # Changelog
 
+## sentry-cli 1.65.1
+
+* fix: Adding `ignoreMissing` field to `SentryCliCommitsOptions` in `SentryCli` types
+
 ## sentry-cli 1.65.0
 
 * feat: Allow for ignoring missing commits in set-commit with `--ignore-missing` flag (#963)
