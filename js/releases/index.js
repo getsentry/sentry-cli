@@ -68,6 +68,9 @@ class Releases {
    * release (in other words, the last commit of the previous release). If omitted,
    * this will default to the last commit of the previous release in Sentry. If there
    * was no previous release, the last 10 commits will be used.
+   * @param {boolean} options.ignoreMissing When the flag is set and the previous release
+   * commit was not found in the repository, will create a release with the default commits
+   * count (or the one specified with `--initial-depth`) instead of failing the command.
    * @returns {Promise} A promise that resolves when the commits have been associated
    * @memberof SentryReleases
    */
@@ -84,6 +87,10 @@ class Releases {
       commitFlags = ['--commit', `${options.repo}@${options.previousCommit}..${options.commit}`];
     } else {
       commitFlags = ['--commit', `${options.repo}@${options.commit}`];
+    }
+
+    if (options.ignoreMissing) {
+      commitFlags.push('--ignore-missing');
     }
 
     return this.execute(['releases', 'set-commits', release].concat(commitFlags));
