@@ -1,15 +1,5 @@
----
-minVersion: '0.14.0'
-github:
-  owner: getsentry
-  repo: sentry-cli
+minVersion: 0.23.1
 changelogPolicy: simple
-
-statusProvider:
-  name: github
-artifactProvider:
-  name: github
-
 targets:
   - name: gcs
     bucket: sentry-sdk-assets
@@ -17,10 +7,10 @@ targets:
     paths:
       - path: /sentry-cli/{{version}}/
         metadata:
-          cacheControl: 'public, max-age=2592000'
+          cacheControl: public, max-age=2592000
       - path: /sentry-cli/latest/
         metadata:
-          cacheControl: 'public, max-age=600'
+          cacheControl: public, max-age=600
   - name: npm
   - name: brew
     tap: getsentry/tools
@@ -30,7 +20,6 @@ targets:
         homepage "https://github.com/getsentry/sentry-cli"
         version "{{version}}"
         license "BSD-3-Clause"
-
         if OS.mac?
           url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal"
           sha256 "{{checksums.sentry-cli-Darwin-universal}}"
@@ -57,11 +46,9 @@ targets:
         else
             raise "Unsupported operating system"
         end
-
         def install
           bin.install Dir["sentry-cli-*"].first => "sentry-cli"
         end
-
         test do
           assert_match version.to_s, shell_output("#{bin}/sentry-cli --version").chomp
         end
@@ -69,15 +56,13 @@ targets:
   - name: github
     includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
   - name: registry
-    type: app
-    urlTemplate: "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}"
-    includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
-    checksums:
-      - algorithm: sha256
-        format: hex
-    config:
-      canonical: "app:sentry-cli"
-
+    apps:
+      app:sentry-cli:
+        urlTemplate: https://downloads.sentry-cdn.com/sentry-cli/{{version}}/{{file}}
+        includeNames: /^sentry-cli-(Darwin|Windows|Linux).*$/i
+        checksums:
+          - algorithm: sha256
+            format: hex
 requireNames:
   - /^sentry-cli-Darwin-x86_64$/
   - /^sentry-cli-Darwin-arm64$/
