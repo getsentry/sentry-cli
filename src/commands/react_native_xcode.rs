@@ -275,7 +275,12 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         processor.add_sourcemap_references()?;
 
         let dist = env::var("SENTRY_DIST").unwrap_or(plist.build().to_string());
-        let release_name = env::var("SENTRY_RELEASE").unwrap_or(format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist));
+        let release_name = env::var("SENTRY_RELEASE").unwrap_or(format!(
+            "{}@{}+{}",
+            plist.bundle_id(),
+            plist.version(),
+            dist
+        ));
 
         let release = api.new_release(
             &org,
