@@ -2,7 +2,14 @@
 
 ## Unreleased
 
-* fix: Add `ignoreMissing` flag for `setCommit` command to JS API (#974)
+"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
+
+## sentry-cli 1.66.0
+
+* feat: Allow to define a custom `release` and `dist` for XCode SourceMaps upload (#967)
+* feat: Support custom request header through `CUSTOM_HEADER` env variable and `http.custom_header` config (#970)
+* fix: Add missing `ignoreMissing` flag for `setCommit` command to JS API (#974)
+* fix: Change ignore-missing to flag with 'long' modifier (#965)
 
 ## sentry-cli 1.65.0
 
