@@ -15,8 +15,11 @@ where
     F: FnOnce() + Send + 'static,
 {
     let (tx, rx) = crossbeam_channel::bounded(100);
-    let signals =
-        signal_hook::iterator::Signals::new(&[signal_hook::SIGTERM, signal_hook::SIGINT]).unwrap();
+    let mut signals = signal_hook::iterator::Signals::new(&[
+        signal_hook::consts::SIGTERM,
+        signal_hook::consts::SIGINT,
+    ])
+    .unwrap();
 
     {
         let tx = tx.clone();
@@ -33,7 +36,7 @@ where
     });
 
     if let Ok(signal) = rx.recv() {
-        if signal == signal_hook::SIGINT {
+        if signal == signal_hook::consts::SIGINT {
             eprintln!("Interrupted!");
         }
     }
