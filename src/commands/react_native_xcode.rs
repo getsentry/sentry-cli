@@ -292,7 +292,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                     org: &org,
                     project: Some(&project),
                     release: &release.version,
-                    dist: Some(&default_dist),
+                    dist: Some(&dist),
                     wait: matches.is_present("wait"),
                 })?;
             }
