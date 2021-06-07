@@ -302,7 +302,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                         org: &org,
                         project: Some(&project),
                         release: &release.version,
-                        dist: Some(&env::var("SENTRY_DIST").unwrap_or(dist.to_string())),
+                        dist: Some(dist),
                         wait: matches.is_present("wait"),
                     })?;
                 }
