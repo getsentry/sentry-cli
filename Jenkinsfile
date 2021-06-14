@@ -13,6 +13,6 @@ node(label: 'linux') {
   def cliVersion = sh(script: "grep -R \"^version\" Cargo.toml | cut -d\" \" -f3 | cut -d'\"' -f2", returnStdout: true).trim()
   def imageTag = "${env.TARGET_DOCKER_REGISTRY}/sentry-cli"
 
-  docker.build(imageTag, "Dockerfile .")
+  docker.build(imageTag, "-f Dockerfile .")
   image.push(cliVersion)
 }
