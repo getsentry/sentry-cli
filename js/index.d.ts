@@ -29,8 +29,8 @@ declare module '@sentry/cli' {
 
   export interface SentryCliNewDeployOptions {
     env: string;
-    started?: number;
-    finished?: number;
+    started?: string;
+    finished?: string;
     time?: number;
     name?: string;
     url?: string;
