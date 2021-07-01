@@ -108,6 +108,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .help("When the flag is set and the previous release commit was not found in the repository, \
                         will create a release with the default commits count (or the one specified with `--initial-depth`) \
                         instead of failing the command."))
+            .arg(Arg::with_name("allow-empty")
+                .long("allow-empty")
+                .help("When the flag is set, command will not fail and just exit silently \
+                        if no new commits for a given release have been found."))
             .arg(Arg::with_name("local")
                 .conflicts_with_all(&["auto", "clear", "commits", ])
                 .long("local")
@@ -588,7 +592,14 @@ fn execute_set_commits<'a>(
         let commits = generate_patch_set(&repo, commit_log, prev_commit, &parsed)?;
 
         if commits.is_empty() {
-            bail!("No commits found. Leaving release alone.");
+            // NOTE: Make it a default behavior on next major release instead?
+            let allow_empty = matches.is_present("allow-empty");
+            if allow_empty {
+                println!("No commits found. Leaving release alone.");
+                return Ok(());
+            } else {
+                bail!("No commits found. Change commits range, initial depth or use --allow-empty to allow empty patch sets.");
+            }
         }
 
         ctx.api.update_release(
