@@ -174,7 +174,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("raw")
                 .short("R")
                 .long("raw")
-                .help("Print raw, space separated list of releases")))
+                .help("Print raw, delimiter separated list of releases"))
+            .arg(Arg::with_name("delimiter")
+                .short("D")
+                .long("delimiter")
+                .takes_value(true)
+                .default_value(" ")
+                .requires("raw")
+                .help("Delimiter for the --raw flag")))
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
@@ -668,7 +675,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
             .iter()
             .map(|release_info| release_info.version.clone())
             .collect::<Vec<_>>()
-            .join(" ");
+            .join(matches.value_of("delimiter").unwrap());
 
         println!("{}", versions);
         return Ok(());
