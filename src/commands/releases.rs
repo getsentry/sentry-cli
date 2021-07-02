@@ -179,7 +179,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .short("D")
                 .long("delimiter")
                 .takes_value(true)
-                .default_value("\n")
                 .requires("raw")
                 .help("Delimiter for the --raw flag")))
         .subcommand(App::new("info")
@@ -675,7 +674,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
             .iter()
             .map(|release_info| release_info.version.clone())
             .collect::<Vec<_>>()
-            .join(matches.value_of("delimiter").unwrap());
+            .join(matches.value_of("delimiter").unwrap_or("\n"));
 
         println!("{}", versions);
         return Ok(());
