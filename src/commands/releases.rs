@@ -593,8 +593,8 @@ fn execute_set_commits<'a>(
 
         if commits.is_empty() {
             // TODO(v2): Make it a default behavior on next major release instead?
-            let allow_empty = matches.is_present("ignore-empty");
-            if allow_empty {
+            let ignore_empty = matches.is_present("ignore-empty");
+            if ignore_empty {
                 println!("No commits found. Leaving release alone.");
                 return Ok(());
             } else {
