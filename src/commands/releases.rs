@@ -170,7 +170,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
             .arg(Arg::with_name("show_projects")
                 .short("P")
                 .long("show-projects")
-                .help("Display the Projects column")))
+                .help("Display the Projects column"))
+            .arg(Arg::with_name("raw")
+                .short("R")
+                .long("raw")
+                .help("Print raw, delimiter separated list of releases. [defaults to new line]"))
+            .arg(Arg::with_name("delimiter")
+                .short("D")
+                .long("delimiter")
+                .takes_value(true)
+                .requires("raw")
+                .help("Delimiter for the --raw flag")))
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
@@ -658,6 +668,18 @@ fn execute_restore<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
 fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let project = ctx.get_project_default().ok();
     let releases = ctx.api.list_releases(ctx.get_org()?, project.as_deref())?;
+
+    if matches.is_present("raw") {
+        let versions = releases
+            .iter()
+            .map(|release_info| release_info.version.clone())
+            .collect::<Vec<_>>()
+            .join(matches.value_of("delimiter").unwrap_or("\n"));
+
+        println!("{}", versions);
+        return Ok(());
+    }
+
     let mut table = Table::new();
     let title_row = table.title_row();
     title_row.add("Released").add("Version");
