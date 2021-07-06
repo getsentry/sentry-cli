@@ -216,6 +216,7 @@ fn upload_files_chunked(
     let progress = ProgressBar::new_spinner();
     progress.enable_steady_tick(100);
     progress.set_style(progress_style);
+    let start = Instant::now();
 
     let view = ByteView::open(archive.path())?;
     let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
@@ -225,7 +226,7 @@ fn upload_files_chunked(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Optimizing", start.elapsed());
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading release files...\
@@ -272,7 +273,7 @@ fn upload_files_chunked(
         bail!("Failed to process uploaded files: {}", message);
     }
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Processing", assemble_start.elapsed());
 
     if response.state.is_pending() {
         if context.wait {
@@ -299,6 +300,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
     let progress = ProgressBar::new(files.len() as u64);
     progress.set_style(progress_style);
     progress.set_prefix(">");
+    let start = Instant::now();
 
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
@@ -329,7 +331,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     bundle.finish()?;
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Bundling", start.elapsed());
+
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),

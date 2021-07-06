@@ -1,7 +1,7 @@
 use console::{style, Term};
-use std::env;
 use std::ops::Deref;
 use std::sync::Arc;
+use std::{env, time::Duration};
 
 use crate::utils::logging;
 
@@ -43,6 +43,15 @@ impl ProgressBar {
 
     pub fn finish_with_message(&self, msg: &str) {
         self.inner.finish_with_message(msg);
+        logging::set_progress_bar(None);
+    }
+
+    pub fn finish_with_duration(&self, op: &str, dur: Duration) {
+        let progress_style = ProgressStyle::default_bar().template("{prefix:.dim} {msg}");
+        let msg = format!("{} completed in {}.{}s", op, dur.as_secs(), dur.as_millis());
+        self.inner.set_style(progress_style);
+        self.inner.set_prefix(">");
+        self.inner.finish_with_message(&msg);
         logging::set_progress_bar(None);
     }
 
