@@ -201,7 +201,7 @@ impl SourceMapProcessor {
             style(self.pending_sources.len()).yellow()
         );
         for (url, mut file) in self.pending_sources.drain() {
-            pb.set_message(&url);
+            pb.set_message(url.to_owned());
             let ty = if sourcemap::is_sourcemap_slice(&file.contents) {
                 SourceFileType::SourceMap
             } else if file
@@ -307,7 +307,7 @@ impl SourceMapProcessor {
         println!("{} Validating sources", style(">").dim());
         let pb = make_progress_bar(sources.len() as u64);
         for source in sources {
-            pb.set_message(&source.url);
+            pb.set_message(source.url.clone());
             match source.ty {
                 SourceFileType::Source | SourceFileType::MinifiedSource => {
                     if let Err(err) = validate_script(source) {
@@ -465,7 +465,7 @@ impl SourceMapProcessor {
         let pb = make_progress_bar(self.sources.len() as u64);
         let start = Instant::now();
         for source in self.sources.values_mut() {
-            pb.set_message(&source.url);
+            pb.set_message(source.url.clone());
             if source.ty != SourceFileType::SourceMap {
                 pb.inc(1);
                 continue;

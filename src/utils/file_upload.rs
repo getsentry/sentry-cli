@@ -316,7 +316,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     for file in files.values() {
         progress.inc(1);
-        progress.set_message(&file.url);
+        progress.set_message(file.url.to_owned());
 
         let mut info = SourceFileInfo::new();
         info.set_ty(file.ty);

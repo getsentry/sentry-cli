@@ -42,7 +42,7 @@ impl ProgressBar {
     }
 
     pub fn finish_with_message(&self, msg: &str) {
-        self.inner.finish_with_message(msg);
+        self.inner.finish_with_message(msg.to_owned());
         logging::set_progress_bar(None);
     }
 
@@ -51,7 +51,7 @@ impl ProgressBar {
         let msg = format!("{} completed in {}.{}s", op, dur.as_secs(), dur.as_millis());
         self.inner.set_style(progress_style);
         self.inner.set_prefix(">");
-        self.inner.finish_with_message(&msg);
+        self.inner.finish_with_message(msg);
         logging::set_progress_bar(None);
     }
 
@@ -85,7 +85,7 @@ impl Deref for ProgressBar {
 
 pub fn make_progress_bar(len: u64) -> ProgressBar {
     let pb = ProgressBar::new(len);
-    pb.set_draw_target(ProgressDrawTarget::to_term(Term::stdout(), None));
+    pb.set_draw_target(ProgressDrawTarget::term(Term::stdout(), None));
     pb.set_style(ProgressStyle::default_bar().template(&format!(
         "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
         style(">").cyan()
