@@ -7,7 +7,6 @@
 
 use std::sync::Arc;
 use std::time::Duration;
-use std::time::Instant;
 
 use failure::Error;
 use log::warn;
@@ -176,7 +175,6 @@ pub fn upload_chunks(
     // `Api::upload_chunks`, the progress bar is created in an Arc.
     let progress = Arc::new(ProgressBar::new(total_bytes));
     progress.set_style(progress_style);
-    let start = Instant::now();
 
     // Select the best available compression mechanism. We assume that every
     // compression algorithm has been implemented for uploading, except `Other`
@@ -226,7 +224,7 @@ pub fn upload_chunks(
             .collect::<Result<(), _>>()
     })?;
 
-    progress.finish_with_duration("Uploading", start.elapsed());
+    progress.finish_with_duration("Uploading");
 
     Ok(())
 }

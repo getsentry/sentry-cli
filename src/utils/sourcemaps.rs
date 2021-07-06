@@ -4,7 +4,6 @@ use std::ffi::OsStr;
 use std::mem;
 use std::path::PathBuf;
 use std::str;
-use std::time::Instant;
 
 use console::style;
 use failure::{bail, Error};
@@ -193,7 +192,6 @@ impl SourceMapProcessor {
         }
 
         let pb = make_progress_bar(self.pending_sources.len() as u64);
-        let start = Instant::now();
 
         println!(
             "{} Analyzing {} sources",
@@ -248,7 +246,7 @@ impl SourceMapProcessor {
             pb.inc(1);
         }
 
-        pb.finish_with_duration("Analyzing", start.elapsed());
+        pb.finish_with_duration("Analyzing");
     }
 
     pub fn dump_log(&self, title: &str) {
@@ -463,7 +461,6 @@ impl SourceMapProcessor {
         self.unpack_indexed_ram_bundles()?;
 
         let pb = make_progress_bar(self.sources.len() as u64);
-        let start = Instant::now();
         for source in self.sources.values_mut() {
             pb.set_message(source.url.clone());
             if source.ty != SourceFileType::SourceMap {
@@ -490,7 +487,7 @@ impl SourceMapProcessor {
             source.contents = new_source;
             pb.inc(1);
         }
-        pb.finish_with_duration("Rewriting", start.elapsed());
+        pb.finish_with_duration("Rewriting");
         Ok(())
     }
 
