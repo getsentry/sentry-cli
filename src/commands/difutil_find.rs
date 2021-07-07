@@ -141,10 +141,10 @@ fn find_ids(
         }
 
         if let Some(p) = dirent.file_name().to_str() {
-            pb.set_message(&p);
+            pb.set_message(p.to_owned());
         }
         pb.tick();
-        pb.set_prefix(&format!("{}", found_files.len()));
+        pb.set_prefix(found_files.len().to_string());
 
         let mut found = vec![];
 

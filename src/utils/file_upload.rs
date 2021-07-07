@@ -225,7 +225,7 @@ fn upload_files_chunked(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Optimizing");
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading release files...\
@@ -272,7 +272,7 @@ fn upload_files_chunked(
         bail!("Failed to process uploaded files: {}", message);
     }
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Processing");
 
     if response.state.is_pending() {
         if context.wait {
@@ -314,7 +314,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     for file in files.values() {
         progress.inc(1);
-        progress.set_message(&file.url);
+        progress.set_message(file.url.to_owned());
 
         let mut info = SourceFileInfo::new();
         info.set_ty(file.ty);
@@ -329,7 +329,6 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     bundle.finish()?;
 
-    progress.finish_and_clear();
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),
@@ -339,6 +338,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
             _ => "files",
         }
     );
+
+    progress.finish_with_duration("Bundling");
 
     Ok(archive)
 }

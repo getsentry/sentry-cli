@@ -224,6 +224,7 @@ pub fn upload_chunks(
             .collect::<Result<(), _>>()
     })?;
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Uploading");
+
     Ok(())
 }
