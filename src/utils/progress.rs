@@ -47,8 +47,9 @@ impl ProgressBar {
     }
 
     pub fn finish_with_duration(&self, op: &str) {
-        let e = self.inner.elapsed();
-        let msg = format!("{} completed in {}.{}s", op, e.as_secs(), e.as_millis());
+        let dur = self.inner.elapsed();
+        // We could use `dur.as_secs_f64()`, but its unnecessarily precise (micros). Millis are enough for our purpose.
+        let msg = format!("{} completed in {}s", op, dur.as_millis() as f64 / 1000.0);
         let progress_style = ProgressStyle::default_bar().template("{prefix:.dim} {msg}");
         self.inner.set_style(progress_style);
         self.inner.set_prefix(">");

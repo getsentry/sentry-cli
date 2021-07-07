@@ -329,8 +329,6 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     bundle.finish()?;
 
-    progress.finish_with_duration("Bundling");
-
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),
@@ -340,6 +338,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
             _ => "files",
         }
     );
+
+    progress.finish_with_duration("Bundling");
 
     Ok(archive)
 }
