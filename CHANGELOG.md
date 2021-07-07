@@ -4,6 +4,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
 
+## sentry-cli 1.67.1
+
+* feat: Print sourcemaps/files operations timings information (#995)
+
 ## sentry-cli 1.67.0
 
 * feat: Add `--ignore-empty` flag to `releases set-commit` command, that will not bail command when no patchset is created (#993)
