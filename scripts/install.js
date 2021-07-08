@@ -94,6 +94,7 @@ function npmCache() {
   const env = process.env;
   return (
     env.npm_config_cache ||
+    env.npm_config_cache_folder ||
     env.npm_config_yarn_offline_mirror ||
     (env.APPDATA ? path.join(env.APPDATA, 'npm-cache') : path.join(os.homedir(), '.npm'))
   );
