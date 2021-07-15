@@ -1,47 +1,159 @@
-/*
-  Typings for @sentry/cli
-*/
+/**
+ * Typings for @sentry/cli
+ */
 declare module '@sentry/cli' {
   export interface SentryCliOptions {
+    /**
+     * Sentry instance
+     */
     url?: string;
+    /**
+     * Authentication token for API, interchangeable with `apiKey`
+     */
     authToken?: string;
+    /**
+     * Authentication token for API, interchangeable with `authToken`
+     */
     apiKey?: string;
+    /**
+     * Sentry DSN
+     */
     dsn?: string;
+    /**
+     * Organization slug
+     */
     org?: string;
+    /**
+     * Project Project slug
+     */
     project?: string;
+    /**
+     * VCS remote name
+     */
     vscRemote?: string;
+    /**
+     * Unique identifier for the distribution, used to further segment your release.
+     * Usually your build number.
+     */
+    dist?: string;
+    /**
+     * If true, all logs are suppressed
+     */
     silent?: boolean;
   }
 
   export interface SentryCliUploadSourceMapsOptions {
+    /**
+   * One or more paths that Sentry CLI should scan recursively for sources.
+   * It will upload all .map files and match associated .js files.
+   */
     include: string | string[];
+    /**
+   * One or more paths to ignore during upload. Overrides entries in ignoreFile file.
+   */
     ignore?: string[];
+    /**
+   * Path to a file containing list of files/directories to ignore.
+   * Can point to .gitignore or anything with same format.
+   */
     ignoreFile?: string | null;
+    /**
+     * Enables rewriting of matching sourcemaps so that indexed maps are flattened
+     * and missing sources are inlined if possible., defaults to `true`.
+     */
     rewrite?: boolean;
+    /**
+     * This prevents the automatic detection of sourcemap references.
+     */
     sourceMapReference?: boolean;
+    /**
+     * When paired with rewrite this will chop-off a prefix from uploaded files.
+     * For instance you can use this to remove a path that is build machine specific.
+     */
     stripPrefix?: string[];
+    /**
+     * When paired with rewrite this will add ~ to the stripPrefix array.
+     */
     stripCommonPrefix?: boolean;
+    /**
+     * This attempts sourcemap validation before upload when rewriting is not enabled.
+     * It will spot a variety of issues with source maps and cancel the upload if any are found.
+     * This is not the default as this can cause false positives.
+     */
     validate?: boolean;
+    /**
+     * This sets an URL prefix at the beginning of all files.
+     * This defaults to `~/` but you might want to set this to the full URL.
+     * This is also useful if your files are stored in a sub folder. eg: url-prefix `~/static/js`.
+     */
     urlPrefix?: string;
+    /**
+     * This sets an URL suffix at the end of all files.
+     * Useful for appending query parameters.
+     */
     urlSuffix?: string;
+    /**
+     * This sets the file extensions to be considered.
+     * By default the following file extensions are processed: js, map, jsbundle and bundle.
+     */
     ext?: string[];
   }
 
   export interface SentryCliNewDeployOptions {
+    /**
+     * Environment for this release. Values that make sense here would be `production` or `staging`
+     */
     env: string;
-    started?: number;
-    finished?: number;
+    /**
+     * Deployment start time in Unix timestamp (in seconds) or ISO 8601 format.
+     */
+    started?: number | string;
+    /**
+     * Deployment finish time in Unix timestamp (in seconds) or ISO 8601 format.
+     */
+    finished?: number | string;
+    /**
+     * Deployment duration (in seconds). Can be used instead of started and finished.
+     */
     time?: number;
+    /**
+     * Human readable name for the deployment
+     */
     name?: string;
+    /**
+     * URL that points to the deployment
+     */
     url?: string;
   }
 
   export interface SentryCliCommitsOptions {
+    /**
+     * Automatically choose the associated commit (uses the current commit). Overrides other setCommit options.
+     */
     auto?: boolean;
+    /**
+     * The full repo name as defined in Sentry. Required if auto option is not true.
+     */
     repo?: string;
+    /**
+     * The current (last) commit in the release. Required if auto option is not true.
+     */
     commit?: string;
+    /**
+     * The commit before the beginning of this release (in other words, the last commit of the previous release).
+     * If omitted, this will default to the last commit of the previous release in Sentry.
+     * If there was no previous release, the last 10 commits will be used.
+     */
     previousCommit?: string;
+    /**
+     * When the flag is set and the previous release commit was not found in the repository, will create a release
+     * with the default commits count(or the one specified with `--initial-depth`) instead of failing the command.
+     */
     ignoreMissing?: boolean;
+    /**
+     * When the flag is set, command will not fail and just exit silently if no new commits for a given release have been found.
+     */
+    ignoreEmpty?: boolean;
   }
 
   export interface SentryCliReleases {
@@ -75,6 +187,13 @@ declare module '@sentry/cli' {
   }
 
   export default class SentryCli {
+    /**
+     * Creates a new instance of SentryCli class
+     *
+     * @param configFile Path to Sentry CLI config properties, as described in https://docs.sentry.io/learn/cli/configuration/#properties-files.
+     * By default, the config file is looked for upwards from the current path and defaults from ~/.sentryclirc are always loaded.
+     * @param options {@link SentryCliOptions}
+     */
     constructor(configFile?: string | null, options?: SentryCliOptions)
 
     public configFile?: string;
