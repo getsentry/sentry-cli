@@ -119,16 +119,20 @@ impl<'data> DifMatch<'data> {
         let dif = SelfCell::try_new(buffer, |b| {
             Object::parse(unsafe { &*b }).map(ParsedDif::Object)
         })?;
-        let debug_id = match dif.get() {
-            ParsedDif::Object(ref obj) if !obj.debug_id().is_nil() => Some(obj.debug_id()),
-            _ => None,
-        };
 
+        // Even though we could supply the debug_id here from the object we do not, the
+        // server will do the same anyway and we actually have control over the version of
+        // the code running there so can fix bugs more reliably.  Additionally supplying
+        // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
+        // present, which is kind of a protocol bug.  Not supplying it means more recent
+        // sentry-cli versions keep working with ancient versions of sentry by not
+        // triggering this protocol bug in most common situations.  See
+        // https://github.com/getsentry/sentry-cli/issues/980
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
             dif,
             name: name.into(),
-            debug_id,
+            debug_id: None,
             attachments: None,
         })
     }
