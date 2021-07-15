@@ -1,0 +1,3 @@
+<Project>
+  <Import Project="..\build\Sentry.Cli.MSBuild.props" />
+</Project>
