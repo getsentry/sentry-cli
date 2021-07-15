@@ -5,30 +5,37 @@ declare module '@sentry/cli' {
   export interface SentryCliOptions {
     /**
      * The URL of the Sentry instance you are connecting to. Defaults to https://sentry.io/.
+     * This value will update `SENTRY_URL env variable.
      */
     url?: string;
     /**
-     * Authentication token for API, interchangeable with `apiKey`
+     * Authentication token for API, interchangeable with `apiKey`.
+     * This value will update `SENTRY_AUTH_TOKEN` env variable.
      */
     authToken?: string;
     /**
-     * Authentication token for API, interchangeable with `authToken`
+     * Authentication token for API, interchangeable with `authToken`.
+     * This value will update `SENTRY_API_KEY` env variable.
      */
     apiKey?: string;
     /**
-     * Sentry DSN
+     * Sentry DSN.
+     * This value will update `SENTRY_DSN` env variable.
      */
     dsn?: string;
     /**
-     * Organization slug
+     * Organization slug.
+     * This value will update `SENTRY_ORG` env variable.
      */
     org?: string;
     /**
-     * Project Project slug
+     * Project Project slug.
+     * This value will update `SENTRY_PROJECT` env variable.
      */
     project?: string;
     /**
-     * Version control system remote name
+     * Version control system remote name.
+     * This value will update `SENTRY_VCS_REMOTE` env variable.
      */
     vscRemote?: string;
     /**
@@ -37,7 +44,7 @@ declare module '@sentry/cli' {
      */
     dist?: string;
     /**
-     * If true, all logs are suppressed
+     * If true, all logs are suppressed.
      */
     silent?: boolean;
   }
@@ -101,7 +108,7 @@ declare module '@sentry/cli' {
 
   export interface SentryCliNewDeployOptions {
     /**
-     * Environment for this release. Values that make sense here would be `production` or `staging`
+     * Environment for this release. Values that make sense here would be `production` or `staging`.
      */
     env: string;
     /**
@@ -117,11 +124,11 @@ declare module '@sentry/cli' {
      */
     time?: number;
     /**
-     * Human readable name for the deployment
+     * Human readable name for the deployment.
      */
     name?: string;
     /**
-     * URL that points to the deployment
+     * URL that points to the deployment.
      */
     url?: string;
   }
@@ -192,6 +199,7 @@ declare module '@sentry/cli' {
      *
      * @param configFile Path to Sentry CLI config properties, as described in https://docs.sentry.io/learn/cli/configuration/#properties-files.
      * By default, the config file is looked for upwards from the current path and defaults from ~/.sentryclirc are always loaded.
+     * This value will update `SENTRY_PROPERTIES` env variable.
      * @param options {@link SentryCliOptions}
      */
     constructor(configFile?: string | null, options?: SentryCliOptions)
