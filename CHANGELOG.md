@@ -4,6 +4,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
 
+## sentry-cli 1.67.2
+
+* fix: Correctly resolve paths with hashes in `url_to_bundle_path` (#1000)
+* ref: Provide JSDocs for TS typings, change `started/finished` to `number|string`, add `ignoreEmpty` to JS API (#999)
+* ref: Add `npm_config_cache_folder` to function of getting cache (#998)
+
 ## sentry-cli 1.67.1
 
 * feat: Print sourcemaps/files operations timings information (#995)
