@@ -71,6 +71,8 @@ class Releases {
    * @param {boolean} options.ignoreMissing When the flag is set and the previous release
    * commit was not found in the repository, will create a release with the default commits
    * count (or the one specified with `--initial-depth`) instead of failing the command.
+   * @param {boolean} options.ignoreEmpty When the flag is set, command will not fail
+   * and just exit silently if no new commits for a given release have been found.
    * @returns {Promise} A promise that resolves when the commits have been associated
    * @memberof SentryReleases
    */
@@ -91,6 +93,10 @@ class Releases {
 
     if (options.ignoreMissing) {
       commitFlags.push('--ignore-missing');
+    }
+
+    if (options.ignoreEmpty) {
+      commitFlags.push('--ignore-empty');
     }
 
     return this.execute(['releases', 'set-commits', release].concat(commitFlags));
