@@ -4,7 +4,7 @@
 declare module '@sentry/cli' {
   export interface SentryCliOptions {
     /**
-     * Sentry instance
+     * The URL of the Sentry instance you are connecting to. Defaults to https://sentry.io/.
      */
     url?: string;
     /**
@@ -28,7 +28,7 @@ declare module '@sentry/cli' {
      */
     project?: string;
     /**
-     * VCS remote name
+     * Version control system remote name
      */
     vscRemote?: string;
     /**
@@ -44,22 +44,22 @@ declare module '@sentry/cli' {
 
   export interface SentryCliUploadSourceMapsOptions {
     /**
-   * One or more paths that Sentry CLI should scan recursively for sources.
-   * It will upload all .map files and match associated .js files.
-   */
+     * One or more paths that Sentry CLI should scan recursively for sources.
+     * It will upload all .map files and match associated .js files.
+     */
     include: string | string[];
     /**
-   * One or more paths to ignore during upload. Overrides entries in ignoreFile file.
-   */
+     * One or more paths to ignore during upload. Overrides entries in ignoreFile file.
+     */
     ignore?: string[];
     /**
-   * Path to a file containing list of files/directories to ignore.
-   * Can point to .gitignore or anything with same format.
-   */
+     * Path to a file containing list of files/directories to ignore.
+     * Can point to .gitignore or anything with same format.
+     */
     ignoreFile?: string | null;
     /**
      * Enables rewriting of matching sourcemaps so that indexed maps are flattened
-     * and missing sources are inlined if possible., defaults to `true`.
+     * and missing sources are inlined if possible. Defaults to `true`.
      */
     rewrite?: boolean;
     /**
@@ -67,18 +67,18 @@ declare module '@sentry/cli' {
      */
     sourceMapReference?: boolean;
     /**
-     * When paired with rewrite this will chop-off a prefix from uploaded files.
+     * When paired with the rewrite option this will remove a prefix from uploaded files.
      * For instance you can use this to remove a path that is build machine specific.
      */
     stripPrefix?: string[];
     /**
-     * When paired with rewrite this will add ~ to the stripPrefix array.
+     * When paired with the rewrite option this will add ~ to the stripPrefix array.
      */
     stripCommonPrefix?: boolean;
     /**
      * This attempts sourcemap validation before upload when rewriting is not enabled.
      * It will spot a variety of issues with source maps and cancel the upload if any are found.
-     * This is not the default as this can cause false positives.
+     * This is not enabled by default as this can cause false positives.
      */
     validate?: boolean;
     /**
