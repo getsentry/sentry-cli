@@ -165,14 +165,17 @@ class Releases {
     }
 
     const uploads = options.include.map(sourcemapPath => {
-      const newOptions = { ...options };
+      const pathOptions = typeof sourcemapPath === 'object' ? { ...sourcemapPath } : {};
+      const uploadPath = typeof sourcemapPath === 'object' ? sourcemapPath.path : sourcemapPath;
+
+      const newOptions = { ...options, ...pathOptions };
       if (!newOptions.ignoreFile && !newOptions.ignore) {
         newOptions.ignore = DEFAULT_IGNORE;
       }
 
       const args = ['releases']
         .concat(helper.getProjectFlagsFromOptions(options))
-        .concat(['files', release, 'upload-sourcemaps', sourcemapPath]);
+        .concat(['files', release, 'upload-sourcemaps', uploadPath]);
       return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
     });
 

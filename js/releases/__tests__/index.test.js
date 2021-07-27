@@ -94,6 +94,73 @@ describe('SentryCli releases', () => {
           { silent: false }
         );
       });
+
+      test('handles multiple include entries', async () => {
+        expect.assertions(3);
+
+        const paths = ['path', 'other-path'];
+        await cli.releases.uploadSourceMaps('my-version', { include: paths });
+
+        expect(mockExecute).toHaveBeenCalledTimes(2);
+        paths.forEach(path =>
+          expect(mockExecute).toHaveBeenCalledWith(
+            [
+              'releases',
+              'files',
+              'my-version',
+              'upload-sourcemaps',
+              path,
+              '--ignore',
+              'node_modules',
+            ],
+            true,
+            false,
+            undefined,
+            { silent: false }
+          )
+        );
+      });
+
+      test('handles object-type include entries', async () => {
+        expect.assertions(3);
+
+        const paths = [{ path: 'some-path', ignore: ['not-me'] }, 'other-path'];
+        await cli.releases.uploadSourceMaps('my-version', { include: paths });
+
+        expect(mockExecute).toHaveBeenCalledTimes(2);
+
+        expect(mockExecute).toHaveBeenCalledWith(
+          [
+            'releases',
+            'files',
+            'my-version',
+            'upload-sourcemaps',
+            'some-path',
+            '--ignore',
+            'not-me', // note how this has been overridden
+          ],
+          true,
+          false,
+          undefined,
+          { silent: false }
+        );
+
+        expect(mockExecute).toHaveBeenCalledWith(
+          [
+            'releases',
+            'files',
+            'my-version',
+            'upload-sourcemaps',
+            'other-path',
+            '--ignore',
+            'node_modules',
+          ],
+          true,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
     });
   });
 });

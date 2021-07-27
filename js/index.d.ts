@@ -54,7 +54,7 @@ declare module '@sentry/cli' {
      * One or more paths that Sentry CLI should scan recursively for sources.
      * It will upload all .map files and match associated .js files.
      */
-    include: string | string[];
+    include: string | string[] | Array<Omit<SentryCliUploadSourceMapsOptions, 'include'> & { path: string }>;
     /**
      * One or more paths to ignore during upload. Overrides entries in ignoreFile file.
      */
