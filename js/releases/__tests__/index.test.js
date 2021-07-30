@@ -124,7 +124,7 @@ describe('SentryCli releases', () => {
       test('handles object-type include entries', async () => {
         expect.assertions(3);
 
-        const paths = [{ path: 'some-path', ignore: ['not-me'] }, 'other-path'];
+        const paths = [{ paths: ['some-path'], ignore: ['not-me'] }, 'other-path'];
         await cli.releases.uploadSourceMaps('my-version', { include: paths });
 
         expect(mockExecute).toHaveBeenCalledTimes(2);

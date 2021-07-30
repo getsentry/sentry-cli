@@ -49,12 +49,19 @@ declare module '@sentry/cli' {
     silent?: boolean;
   }
 
+  /**
+   * Custom upload-sourcemaps options for a particular `include` path. In this
+   * case `paths` takes the place of `include` in the options so as to make it
+   * clear that this is not recursive.
+   */
+  export type SourceMapsPathDescriptor = Omit<SentryCliUploadSourceMapsOptions, 'include'> & { paths: string[] }
+
   export interface SentryCliUploadSourceMapsOptions {
     /**
      * One or more paths that Sentry CLI should scan recursively for sources.
      * It will upload all .map files and match associated .js files.
      */
-    include: string | string[] | Array<Omit<SentryCliUploadSourceMapsOptions, 'include'> & { path: string }>;
+    include: Array<string | SourceMapsPathDescriptor>;
     /**
      * One or more paths to ignore during upload. Overrides entries in ignoreFile file.
      */
