@@ -4,6 +4,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
 
+## sentry-cli 1.68.0
+
+* feat: Add ability for `include` in JS sourcemap upload options to be an object (#1001)
+
 ## sentry-cli 1.67.2
 
 * fix: Correctly resolve paths with hashes in `url_to_bundle_path` (#1000)
