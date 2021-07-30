@@ -129,7 +129,7 @@ impl ReleaseFileSearch {
         if !&self.ignores.is_empty() {
             let mut override_builder = OverrideBuilder::new(&self.path);
             for ignore in &self.ignores {
-                override_builder.add(&ignore)?;
+                override_builder.add(ignore)?;
             }
             builder.overrides(override_builder.build()?);
         }

@@ -59,7 +59,7 @@ where
         static ref SEP_RE: Regex = Regex::new(r"[\s/]+").unwrap();
     }
 
-    expand_vars(&s, |key| {
+    expand_vars(s, |key| {
         if key.is_empty() {
             return "".into();
         }
@@ -174,7 +174,7 @@ impl XcodeProjectInfo {
         let name = name.to_lowercase();
         for cfg in &self.configurations {
             if cfg.to_lowercase() == name {
-                return Some(&cfg);
+                return Some(cfg);
             }
         }
         None
@@ -258,10 +258,10 @@ impl InfoPlist {
         };
 
         // expand xcodevars here
-        rv.name = expand_xcodevars(&rv.name, &vars);
-        rv.bundle_id = expand_xcodevars(&rv.bundle_id, &vars);
-        rv.version = expand_xcodevars(&rv.version, &vars);
-        rv.build = expand_xcodevars(&rv.build, &vars);
+        rv.name = expand_xcodevars(&rv.name, vars);
+        rv.bundle_id = expand_xcodevars(&rv.bundle_id, vars);
+        rv.version = expand_xcodevars(&rv.version, vars);
+        rv.build = expand_xcodevars(&rv.build, vars);
 
         Ok(rv)
     }

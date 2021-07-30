@@ -50,11 +50,11 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         return Err(QuietExit(1).into());
     }
 
-    if !matches.is_present("confirm") {
-        if !prompt_to_continue("Do you really want to uninstall sentry-cli?")? {
-            println!("Aborted!");
-            return Ok(());
-        }
+    if !matches.is_present("confirm")
+        && !prompt_to_continue("Do you really want to uninstall sentry-cli?")?
+    {
+        println!("Aborted!");
+        return Ok(());
     }
 
     if !is_writable(&exe) {

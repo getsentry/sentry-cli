@@ -896,7 +896,7 @@ fn execute_files_upload<'a>(
         let ctx = &UploadContext {
             org,
             project: project.as_deref(),
-            release: &version,
+            release: version,
             dist,
             wait: matches.is_present("wait"),
         };
@@ -916,9 +916,9 @@ fn execute_files_upload<'a>(
         if let Some(artifact) = ctx.api.upload_release_file(
             org,
             project.as_deref(),
-            &version,
+            version,
             &FileContents::FromPath(path),
-            &name,
+            name,
             dist,
             Some(&headers[..]),
             ProgressBarMode::Request,
@@ -1096,7 +1096,7 @@ fn execute_files_upload_sourcemaps<'a>(
 
     // make sure the release exists
     let release = ctx.api.new_release(
-        &org,
+        org,
         &NewRelease {
             version: version.into(),
             projects: ctx.get_projects(matches)?,

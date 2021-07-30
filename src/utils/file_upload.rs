@@ -173,13 +173,8 @@ fn upload_files_parallel(
                 if let Some(old_id) =
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
-                    api.delete_release_file(
-                        context.org,
-                        context.project,
-                        &context.release,
-                        &old_id,
-                    )
-                    .ok();
+                    api.delete_release_file(context.org, context.project, context.release, old_id)
+                        .ok();
                 }
 
                 api.upload_release_file(
