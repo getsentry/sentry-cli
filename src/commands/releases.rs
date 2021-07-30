@@ -540,7 +540,7 @@ fn execute_set_commits<'a>(
     // make sure the release exists if projects are given
     if let Ok(projects) = ctx.get_projects(matches) {
         ctx.api.new_release(
-            &org,
+            org,
             &NewRelease {
                 version: version.into(),
                 projects,
@@ -570,7 +570,7 @@ fn execute_set_commits<'a>(
             }
             table.print();
         }
-        ctx.api.set_release_refs(&org, version, heads)?;
+        ctx.api.set_release_refs(org, version, heads)?;
     } else {
         let default_count = matches
             .value_of("initial-depth")
@@ -739,7 +739,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let project = ctx.get_project_default().ok();
-    let release = ctx.api.get_release(org, project.as_deref(), &version)?;
+    let release = ctx.api.get_release(org, project.as_deref(), version)?;
 
     // quiet mode just exists
     if matches.is_present("quiet") {
