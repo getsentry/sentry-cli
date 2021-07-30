@@ -451,7 +451,7 @@ impl Api {
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, &url)?
+        self.request(Method::Get, url)?
             .follow_location(true)?
             .send_into(dst)
     }
@@ -459,7 +459,7 @@ impl Api {
     /// Convenience method that downloads a file into the given file object
     /// and show a progress bar
     pub fn download_with_progress(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, &url)?
+        self.request(Method::Get, url)?
             .follow_location(true)?
             .progress_bar_mode(ProgressBarMode::Response)?
             .send_into(dst)
@@ -470,7 +470,7 @@ impl Api {
     pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
         let started = Utc::now();
         loop {
-            match self.request(Method::Get, &url)?.send() {
+            match self.request(Method::Get, url)?.send() {
                 Ok(_) => return Ok(true),
                 Err(err) => {
                     if err.kind() != ApiErrorKind::RequestFailed {
@@ -1304,7 +1304,7 @@ impl Api {
         checkin: &CreateMonitorCheckIn,
     ) -> ApiResult<MonitorCheckIn> {
         let path = &format!("/monitors/{}/checkins/", PathArg(monitor),);
-        let resp = self.post(&path, checkin)?;
+        let resp = self.post(path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
@@ -1323,7 +1323,7 @@ impl Api {
             PathArg(monitor),
             PathArg(checkin_id),
         );
-        let resp = self.put(&path, checkin)?;
+        let resp = self.put(path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
@@ -1557,7 +1557,7 @@ impl ApiRequest {
             Method::Delete => handle.custom_request("DELETE")?,
         }
 
-        handle.url(&url)?;
+        handle.url(url)?;
 
         let request = ApiRequest {
             handle,

@@ -160,23 +160,58 @@ class Releases {
    * @memberof SentryReleases
    */
   uploadSourceMaps(release, options) {
-    if (!options || !options.include) {
-      throw new Error('options.include must be a vaild path(s)');
+    if (!options || !options.include || !Array.isArray(options.include)) {
+      throw new Error(
+        '`options.include` must be a vaild array of paths and/or path descriptor objects.'
+      );
     }
 
-    const uploads = options.include.map(sourcemapPath => {
-      const newOptions = { ...options };
+    // Each entry in the `include` array will map to an array of promises, which
+    // will in turn contain one promise per literal path value. Thus `uploads`
+    // will be an array of Promise arrays, which we'll flatten later.
+    const uploads = options.include.map(includeEntry => {
+      let pathOptions;
+      let uploadPaths;
+
+      if (typeof includeEntry === 'object') {
+        pathOptions = includeEntry;
+        uploadPaths = includeEntry.paths;
+
+        if (!Array.isArray(uploadPaths)) {
+          throw new Error(
+            `Path descriptor objects in \`options.include\` must contain a \`paths\` array. Got ${includeEntry}.`
+          );
+        }
+      }
+      // `includeEntry` should be a string, which we can wrap in an array to
+      // match the `paths` property in the descriptor object type
+      else {
+        pathOptions = {};
+        uploadPaths = [includeEntry];
+      }
+
+      const newOptions = { ...options, ...pathOptions };
       if (!newOptions.ignoreFile && !newOptions.ignore) {
         newOptions.ignore = DEFAULT_IGNORE;
       }
 
+      // args which apply to the entire `include` entry (everything besides the path)
       const args = ['releases']
         .concat(helper.getProjectFlagsFromOptions(options))
-        .concat(['files', release, 'upload-sourcemaps', sourcemapPath]);
-      return this.execute(helper.prepareCommand(args, SOURCEMAPS_SCHEMA, newOptions), true);
+        .concat(['files', release, 'upload-sourcemaps']);
+
+      return uploadPaths.map(path =>
+        // `execute()` is async and thus we're returning a promise here
+        this.execute(helper.prepareCommand([...args, path], SOURCEMAPS_SCHEMA, newOptions), true)
+      );
     });
 
-    return Promise.all(uploads);
+    // `uploads` is an array of Promise arrays, which needs to be flattened
+    // before being passed to `Promise.all()`. (`Array.flat()` doesn't exist in
+    // Node < 11; this polyfill takes advantage of the fact that `concat()` is
+    // willing to accept an arbitrary number of items to add to and/or iterables
+    // to unpack into the given array.)
+    return Promise.all([].concat(...uploads));
   }
 
   /**

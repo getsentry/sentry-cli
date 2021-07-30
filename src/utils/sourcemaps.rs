@@ -145,7 +145,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
         let mut parts: Vec<_> = ext.split('.').collect();
         if parts.len() > 1 {
             let parts_len = parts.len();
-            parts[parts_len - 1] = &map_ext;
+            parts[parts_len - 1] = map_ext;
             let new_ext = parts.join(".");
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
                 return Ok(unsplit_url(None, basename, Some(&new_ext)));
@@ -389,12 +389,12 @@ impl SourceMapProcessor {
         self.sources.remove(&sourcemap_url);
 
         let ram_bundle_iter =
-            sourcemap::ram_bundle::split_ram_bundle(&ram_bundle, &sourcemap_index).unwrap();
+            sourcemap::ram_bundle::split_ram_bundle(ram_bundle, &sourcemap_index).unwrap();
         for result in ram_bundle_iter {
             let (name, sourceview, sourcemap) = result?;
 
             debug!("Inserting source for {}", name);
-            let source_url = join_url(&bundle_source_url, &name)?;
+            let source_url = join_url(bundle_source_url, &name)?;
             self.sources.insert(
                 source_url.clone(),
                 ReleaseFile {

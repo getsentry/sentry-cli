@@ -110,7 +110,7 @@ pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<'_, str> {
 
 /// Helper that renders an error to stderr.
 pub fn print_error(err: &Error) {
-    if let Some(ref clap_err) = err.downcast_ref::<clap::Error>() {
+    if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
         clap_err.exit();
     }
 

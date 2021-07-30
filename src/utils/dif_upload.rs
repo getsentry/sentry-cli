@@ -204,8 +204,8 @@ impl<'data> DifMatch<'data> {
     pub fn data(&self) -> &[u8] {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => obj.data(),
-            ParsedDif::BcSymbolMap(_) => &self.dif.owner(),
-            ParsedDif::UuidMap(_) => &self.dif.owner(),
+            ParsedDif::BcSymbolMap(_) => self.dif.owner(),
+            ParsedDif::UuidMap(_) => self.dif.owner(),
         }
     }
 
@@ -896,7 +896,7 @@ fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<Di
     // Copy the UUID plists
     for (name, view) in dif.attachments().unwrap() {
         let mut plist = File::create(temp_dir.path().join(name))?;
-        plist.write_all(&view)?;
+        plist.write_all(view)?;
         plist.sync_data()?;
     }
 
@@ -1498,7 +1498,7 @@ fn upload_in_batches(
             style(">").dim(),
             style(batch.len()).yellow()
         );
-        let archive = create_batch_archive(&batch)?;
+        let archive = create_batch_archive(batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
         dsyms.extend(api.upload_dif_archive(&options.org, &options.project, archive.path())?);
@@ -1937,7 +1937,7 @@ impl DifUpload {
         }
 
         // Skip if this DIF does not have features we want.
-        if !self.valid_features(&dif) {
+        if !self.valid_features(dif) {
             debug!("skipping {} because of features", dif.name);
             return false;
         }
