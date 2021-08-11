@@ -173,7 +173,6 @@ function downloadBinary() {
         decompressor = new stream.PassThrough();
       }
       const name = downloadUrl.match(/.*\/(.*?)$/)[1];
-      console.log(response.headers);
       const total = parseInt(response.headers.get('content-length'), 10);
       const progressBar = createProgressBar(name, total);
       const tempPath = getTempFile(cachedPath);
