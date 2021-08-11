@@ -173,6 +173,7 @@ function downloadBinary() {
         decompressor = new stream.PassThrough();
       }
       const name = downloadUrl.match(/.*\/(.*?)$/)[1];
+      console.log(response.headers);
       const total = parseInt(response.headers.get('content-length'), 10);
       const progressBar = createProgressBar(name, total);
       const tempPath = getTempFile(cachedPath);
@@ -181,7 +182,13 @@ function downloadBinary() {
       return new Promise((resolve, reject) => {
         response.body
           .on('error', e => reject(e))
-          .on('data', chunk => shouldRenderProgressBar() && progressBar.tick(chunk.length))
+          .on('data', chunk => {
+            try {
+              shouldRenderProgressBar() && progressBar.tick(chunk.length);
+            } catch {
+              // progress bar was unable to render
+            }
+          })
           .pipe(decompressor)
           .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
           .on('error', e => reject(e))
