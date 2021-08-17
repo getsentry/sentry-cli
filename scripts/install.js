@@ -83,6 +83,14 @@ function getDownloadUrl(platform, arch) {
 }
 
 function createProgressBar(name, total) {
+  const incorrectTotal = typeof total !== 'number' || Number.isNaN(total);
+
+  if (incorrectTotal || !shouldRenderProgressBar()) {
+    return {
+      tick: () => {},
+    };
+  }
+
   const logStream = getLogStream('stdout');
 
   if (logStream.isTTY) {
@@ -199,7 +207,7 @@ function downloadBinary() {
       return new Promise((resolve, reject) => {
         response.body
           .on('error', e => reject(e))
-          .on('data', chunk => shouldRenderProgressBar() && progressBar.tick(chunk.length))
+          .on('data', chunk => progressBar.tick(chunk.length))
           .pipe(decompressor)
           .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
           .on('error', e => reject(e))
