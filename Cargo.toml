@@ -50,7 +50,7 @@ serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = { version = "5.0.0", features = ["ram_bundle"] }
-symbolic = { version = "8.1.0", features = ["debuginfo-serde"] }
+symbolic = { version = "8.3.0", features = ["debuginfo-serde"] }
 url = "2.1.1"
 username = "0.2.0"
 uuid = { version = "0.8.1", features = ["v4", "serde"] }
