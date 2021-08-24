@@ -208,8 +208,8 @@ impl<'data> DifMatch<'data> {
     pub fn data(&self) -> &[u8] {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => obj.data(),
-            ParsedDif::BcSymbolMap(_) => &self.dif.owner(),
-            ParsedDif::UuidMap(_) => &self.dif.owner(),
+            ParsedDif::BcSymbolMap(_) => self.dif.owner(),
+            ParsedDif::UuidMap(_) => self.dif.owner(),
         }
     }
 
@@ -659,7 +659,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
         }
         walk_difs_directory(base_path, options, |source, name, buffer| {
             debug!("trying to process {}", name);
-            progress.set_message(&name);
+            progress.set_message(name.to_owned());
 
             if Archive::peek(&buffer) != FileFormat::Unknown {
                 let mut difs =
@@ -675,7 +675,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 }
             };
 
-            progress.set_prefix(&collected.len().to_string());
+            progress.set_prefix(collected.len().to_string());
             Ok(())
         })?;
     }
@@ -900,7 +900,7 @@ fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<Di
     // Copy the UUID plists
     for (name, view) in dif.attachments().unwrap() {
         let mut plist = File::create(temp_dir.path().join(name))?;
-        plist.write_all(&view)?;
+        plist.write_all(view)?;
         plist.sync_data()?;
     }
 
@@ -945,7 +945,7 @@ where
     let mut calculated = Vec::new();
     for item in items {
         progress.inc(1);
-        progress.set_message(item.path());
+        progress.set_message(item.path().to_owned());
         calculated.push(func(item)?);
     }
 
@@ -1005,7 +1005,7 @@ fn process_symbol_maps<'a>(
 
     for dif in with_hidden {
         progress.inc(1);
-        progress.set_message(dif.path());
+        progress.set_message(dif.path().to_owned());
         without_hidden.push(resolve_hidden_symbols(dif, symbol_map)?);
     }
 
@@ -1056,7 +1056,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
 
     for dif in difs {
         progress.inc(1);
-        progress.set_message(dif.path());
+        progress.set_message(dif.path().to_owned());
 
         let object = match dif.object() {
             Some(object) => object,
@@ -1502,7 +1502,7 @@ fn upload_in_batches(
             style(">").dim(),
             style(batch.len()).yellow()
         );
-        let archive = create_batch_archive(&batch)?;
+        let archive = create_batch_archive(batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
         dsyms.extend(api.upload_dif_archive(&options.org, &options.project, archive.path())?);
@@ -1941,7 +1941,7 @@ impl DifUpload {
         }
 
         // Skip if this DIF does not have features we want.
-        if !self.valid_features(&dif) {
+        if !self.valid_features(dif) {
             debug!("skipping {} because of features", dif.name);
             return false;
         }

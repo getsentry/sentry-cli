@@ -129,7 +129,7 @@ impl ReleaseFileSearch {
         if !&self.ignores.is_empty() {
             let mut override_builder = OverrideBuilder::new(&self.path);
             for ignore in &self.ignores {
-                override_builder.add(&ignore)?;
+                override_builder.add(ignore)?;
             }
             builder.overrides(override_builder.build()?);
         }
@@ -139,7 +139,7 @@ impl ReleaseFileSearch {
             if file.file_type().map_or(false, |t| t.is_dir()) {
                 continue;
             }
-            progress.set_message(&format!("{}", file.path().display()));
+            progress.set_message(format!("{}", file.path().display()));
 
             info!(
                 "found: {} ({} bytes)",
@@ -158,7 +158,7 @@ impl ReleaseFileSearch {
             };
             collected.push(file_match);
 
-            progress.set_prefix(&collected.len().to_string());
+            progress.set_prefix(collected.len().to_string());
         }
 
         progress.finish_and_clear();

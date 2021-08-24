@@ -173,13 +173,8 @@ fn upload_files_parallel(
                 if let Some(old_id) =
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
-                    api.delete_release_file(
-                        context.org,
-                        context.project,
-                        &context.release,
-                        &old_id,
-                    )
-                    .ok();
+                    api.delete_release_file(context.org, context.project, context.release, old_id)
+                        .ok();
                 }
 
                 api.upload_release_file(
@@ -225,7 +220,7 @@ fn upload_files_chunked(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Optimizing");
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading release files...\
@@ -272,7 +267,7 @@ fn upload_files_chunked(
         bail!("Failed to process uploaded files: {}", message);
     }
 
-    progress.finish_and_clear();
+    progress.finish_with_duration("Processing");
 
     if response.state.is_pending() {
         if context.wait {
@@ -314,7 +309,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     for file in files.values() {
         progress.inc(1);
-        progress.set_message(&file.url);
+        progress.set_message(file.url.to_owned());
 
         let mut info = SourceFileInfo::new();
         info.set_ty(file.ty);
@@ -329,7 +324,6 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     bundle.finish()?;
 
-    progress.finish_and_clear();
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),
@@ -339,6 +333,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
             _ => "files",
         }
     );
+
+    progress.finish_with_duration("Bundling");
 
     Ok(archive)
 }
@@ -351,9 +347,12 @@ fn url_to_bundle_path(url: &str) -> Result<String, Error> {
         base.join(url)?
     };
 
-    let mut path = url.path();
+    let mut path = url.path().to_string();
+    if let Some(fragment) = url.fragment() {
+        path = format!("{}#{}", path, fragment);
+    }
     if path.starts_with('/') {
-        path = &path[1..];
+        path.remove(0);
     }
 
     Ok(match url.host_str() {
@@ -361,4 +360,29 @@ fn url_to_bundle_path(url: &str) -> Result<String, Error> {
         Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
         None => format!("{}/_/{}", url.scheme(), path),
     })
+}
+
+#[test]
+fn test_url_to_bundle_path() {
+    assert_eq!(url_to_bundle_path("~/bar").unwrap(), "_/_/bar");
+    assert_eq!(url_to_bundle_path("~/foo/bar").unwrap(), "_/_/foo/bar");
+    assert_eq!(
+        url_to_bundle_path("~/dist/js/bundle.js.map").unwrap(),
+        "_/_/dist/js/bundle.js.map"
+    );
+    assert_eq!(
+        url_to_bundle_path("~/babel.config.js").unwrap(),
+        "_/_/babel.config.js"
+    );
+
+    assert_eq!(url_to_bundle_path("~/#/bar").unwrap(), "_/_/#/bar");
+    assert_eq!(url_to_bundle_path("~/foo/#/bar").unwrap(), "_/_/foo/#/bar");
+    assert_eq!(
+        url_to_bundle_path("~/dist/#js/bundle.js.map").unwrap(),
+        "_/_/dist/#js/bundle.js.map"
+    );
+    assert_eq!(
+        url_to_bundle_path("~/#foo/babel.config.js").unwrap(),
+        "_/_/#foo/babel.config.js"
+    );
 }

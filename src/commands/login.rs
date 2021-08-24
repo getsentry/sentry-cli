@@ -33,7 +33,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     println!();
     println!(
         "Sentry server: {}",
-        Url::parse(&config.get_base_url()?)?
+        Url::parse(config.get_base_url()?)?
             .host_str()
             .unwrap_or("<unknown>")
     );

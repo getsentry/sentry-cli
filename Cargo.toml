@@ -2,7 +2,7 @@
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 name = "sentry-cli"
-version = "1.66.0"
+version = "1.68.0"
 edition = "2018"
 
 [dependencies]
@@ -26,7 +26,7 @@ git2 = { version = "0.13.6", default-features = false }
 glob = "0.3.0"
 if_chain = "1.0.0"
 ignore = "0.4.16"
-indicatif = "0.14.0"
+indicatif = "0.16.2"
 itertools = "0.10.0"
 java-properties = "1.2.0"
 lazy_static = "1.4.0"
@@ -50,7 +50,7 @@ serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = { version = "5.0.0", features = ["ram_bundle"] }
-symbolic = { version = "8.1.0", features = ["debuginfo-serde"] }
+symbolic = { version = "8.3.0", features = ["debuginfo-serde"] }
 url = "2.1.1"
 username = "0.2.0"
 uuid = { version = "0.8.1", features = ["v4", "serde"] }
@@ -62,7 +62,7 @@ zip = "0.5.6"
 assert_cmd = "1.0.1"
 insta = { version = "1.7.1", features = ["redactions"] }
 mockito = "0.30.0"
-predicates = "1.0.4"
+predicates = "2.0.0"
 tempfile = "3.1.0"
 
 [features]

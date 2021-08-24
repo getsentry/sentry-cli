@@ -28,6 +28,22 @@ const CDN_URL =
   process.env.SENTRYCLI_CDNURL ||
   'https://downloads.sentry-cdn.com/sentry-cli';
 
+function getLogStream(defaultStream) {
+  const logStream = process.env.SENTRYCLI_LOG_STREAM || defaultStream;
+
+  if (logStream === 'stdout') {
+    return process.stdout;
+  }
+
+  if (logStream === 'stderr') {
+    return process.stderr;
+  }
+
+  throw new Error(
+    `Incorrect SENTRYCLI_LOG_STREAM env variable. Possible values: 'stdout' | 'stderr'`
+  );
+}
+
 function shouldRenderProgressBar() {
   const silentFlag = process.argv.some(v => v === '--silent');
   const silentConfig = process.env.npm_config_loglevel === 'silent';
@@ -67,7 +83,17 @@ function getDownloadUrl(platform, arch) {
 }
 
 function createProgressBar(name, total) {
-  if (process.stdout.isTTY) {
+  const incorrectTotal = typeof total !== 'number' || Number.isNaN(total);
+
+  if (incorrectTotal || !shouldRenderProgressBar()) {
+    return {
+      tick: () => {},
+    };
+  }
+
+  const logStream = getLogStream('stdout');
+
+  if (logStream.isTTY) {
     return new ProgressBar(`fetching ${name} :bar :percent :etas`, {
       complete: '█',
       incomplete: '░',
@@ -84,7 +110,7 @@ function createProgressBar(name, total) {
       const next = Math.round((current / total) * 100);
       if (next > pct) {
         pct = next;
-        process.stdout.write(`fetching ${name} ${pct}%\n`);
+        logStream.write(`fetching ${name} ${pct}%\n`);
       }
     },
   };
@@ -94,6 +120,7 @@ function npmCache() {
   const env = process.env;
   return (
     env.npm_config_cache ||
+    env.npm_config_cache_folder ||
     env.npm_config_yarn_offline_mirror ||
     (env.APPDATA ? path.join(env.APPDATA, 'npm-cache') : path.join(os.homedir(), '.npm'))
   );
@@ -180,7 +207,7 @@ function downloadBinary() {
       return new Promise((resolve, reject) => {
         response.body
           .on('error', e => reject(e))
-          .on('data', chunk => shouldRenderProgressBar() && progressBar.tick(chunk.length))
+          .on('data', chunk => progressBar.tick(chunk.length))
           .pipe(decompressor)
           .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
           .on('error', e => reject(e))
@@ -226,6 +253,8 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   server.listen(8999);
   process.on('exit', () => server.close());
 }
+
+npmLog.stream = getLogStream('stderr');
 
 downloadBinary()
   .then(() => checkVersion())

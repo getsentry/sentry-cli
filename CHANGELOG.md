@@ -4,6 +4,25 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
 
+## sentry-cli 1.68.0
+
+* feat: Add ability for `include` in JS sourcemap upload options to be an object (#1001)
+
+## sentry-cli 1.67.2
+
+* fix: Correctly resolve paths with hashes in `url_to_bundle_path` (#1000)
+* ref: Provide JSDocs for TS typings, change `started/finished` to `number|string`, add `ignoreEmpty` to JS API (#999)
+* ref: Add `npm_config_cache_folder` to function of getting cache (#998)
+
+## sentry-cli 1.67.1
+
+* feat: Print sourcemaps/files operations timings information (#995)
+
+## sentry-cli 1.67.0
+
+* feat: Add `--ignore-empty` flag to `releases set-commit` command, that will not bail command when no patchset is created (#993)
+* feat: Add `--raw` and `--delimiter` flags to `releases list` command (#994)
+
 ## sentry-cli 1.66.0
 
 * feat: Allow to define a custom `release` and `dist` for XCode SourceMaps upload (#967)

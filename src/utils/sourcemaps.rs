@@ -145,7 +145,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
         let mut parts: Vec<_> = ext.split('.').collect();
         if parts.len() > 1 {
             let parts_len = parts.len();
-            parts[parts_len - 1] = &map_ext;
+            parts[parts_len - 1] = map_ext;
             let new_ext = parts.join(".");
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
                 return Ok(unsplit_url(None, basename, Some(&new_ext)));
@@ -199,7 +199,7 @@ impl SourceMapProcessor {
             style(self.pending_sources.len()).yellow()
         );
         for (url, mut file) in self.pending_sources.drain() {
-            pb.set_message(&url);
+            pb.set_message(url.to_owned());
             let ty = if sourcemap::is_sourcemap_slice(&file.contents) {
                 SourceFileType::SourceMap
             } else if file
@@ -246,7 +246,7 @@ impl SourceMapProcessor {
             pb.inc(1);
         }
 
-        pb.finish_and_clear();
+        pb.finish_with_duration("Analyzing");
     }
 
     pub fn dump_log(&self, title: &str) {
@@ -305,7 +305,7 @@ impl SourceMapProcessor {
         println!("{} Validating sources", style(">").dim());
         let pb = make_progress_bar(sources.len() as u64);
         for source in sources {
-            pb.set_message(&source.url);
+            pb.set_message(source.url.clone());
             match source.ty {
                 SourceFileType::Source | SourceFileType::MinifiedSource => {
                     if let Err(err) = validate_script(source) {
@@ -389,12 +389,12 @@ impl SourceMapProcessor {
         self.sources.remove(&sourcemap_url);
 
         let ram_bundle_iter =
-            sourcemap::ram_bundle::split_ram_bundle(&ram_bundle, &sourcemap_index).unwrap();
+            sourcemap::ram_bundle::split_ram_bundle(ram_bundle, &sourcemap_index).unwrap();
         for result in ram_bundle_iter {
             let (name, sourceview, sourcemap) = result?;
 
             debug!("Inserting source for {}", name);
-            let source_url = join_url(&bundle_source_url, &name)?;
+            let source_url = join_url(bundle_source_url, &name)?;
             self.sources.insert(
                 source_url.clone(),
                 ReleaseFile {
@@ -462,7 +462,7 @@ impl SourceMapProcessor {
 
         let pb = make_progress_bar(self.sources.len() as u64);
         for source in self.sources.values_mut() {
-            pb.set_message(&source.url);
+            pb.set_message(source.url.clone());
             if source.ty != SourceFileType::SourceMap {
                 pb.inc(1);
                 continue;
@@ -487,7 +487,7 @@ impl SourceMapProcessor {
             source.contents = new_source;
             pb.inc(1);
         }
-        pb.finish_and_clear();
+        pb.finish_with_duration("Rewriting");
         Ok(())
     }
 

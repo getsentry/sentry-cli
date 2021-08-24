@@ -95,13 +95,13 @@ fn test_parse_link_header() {
 
 #[test]
 fn test_is_absolute_url() {
-    assert_eq!(is_absolute_url("https://sentry.io"), true);
-    assert_eq!(is_absolute_url("http://sentry.io"), true);
-    assert_eq!(is_absolute_url("https://sentry.io/path"), true);
-    assert_eq!(is_absolute_url("http://sentry.io/path"), true);
-    assert_eq!(is_absolute_url("http://sentry.io/path?query=foo"), true);
-    assert_eq!(is_absolute_url("https://sentry.io/path?query=foo"), true);
+    assert!(is_absolute_url("https://sentry.io"));
+    assert!(is_absolute_url("http://sentry.io"));
+    assert!(is_absolute_url("https://sentry.io/path"));
+    assert!(is_absolute_url("http://sentry.io/path"));
+    assert!(is_absolute_url("http://sentry.io/path?query=foo"));
+    assert!(is_absolute_url("https://sentry.io/path?query=foo"));
 
-    assert_eq!(is_absolute_url("/path"), false);
-    assert_eq!(is_absolute_url("/path?query=foo"), false);
+    assert!(!is_absolute_url("/path"));
+    assert!(!is_absolute_url("/path?query=foo"));
 }

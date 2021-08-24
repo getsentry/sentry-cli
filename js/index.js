@@ -12,11 +12,12 @@ const Releases = require('./releases');
  *
  * @example
  * const cli = new SentryCli();
- * console.log(cli.getVersion());
+ * console.log(SentryCli.getVersion());
  *
  * @example
  * const cli = new SentryCli('path/to/custom/sentry.properties');
- * console.log(cli.getVersion());
+ * const release = await cli.releases.proposeVersion());
+ * console.log(release);
  */
 class SentryCli {
   /**
