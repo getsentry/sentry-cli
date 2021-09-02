@@ -195,6 +195,8 @@ fn upload_files_parallel(
 
     pb.finish_and_clear();
 
+    print_upload_context_details(context);
+
     Ok(())
 }
 
@@ -282,6 +284,8 @@ fn upload_files_chunked(
         println!("{} File processing complete", style(">").dim());
     }
 
+    print_upload_context_details(context);
+
     Ok(())
 }
 
@@ -360,6 +364,29 @@ fn url_to_bundle_path(url: &str) -> Result<String, Error> {
         Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
         None => format!("{}/_/{}", url.scheme(), path),
     })
+}
+
+fn print_upload_context_details(context: &UploadContext) {
+    println!(
+        "{} {}",
+        style("> Organization:").dim(),
+        style(context.org).yellow()
+    );
+    println!(
+        "{} {}",
+        style("> Project:").dim(),
+        style(context.project.unwrap_or("None")).yellow()
+    );
+    println!(
+        "{} {}",
+        style("> Release:").dim(),
+        style(context.release).yellow()
+    );
+    println!(
+        "{} {}",
+        style("> Dist:").dim(),
+        style(context.dist.unwrap_or("None")).yellow()
+    );
 }
 
 #[test]
