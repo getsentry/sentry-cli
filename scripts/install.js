@@ -66,6 +66,9 @@ function getDownloadUrl(platform, arch) {
     case 'arm64':
       archString = 'aarch64';
       break;
+    case 'arm':
+      archString = 'armv7';
+      break;
     default:
       archString = arch;
   }
