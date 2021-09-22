@@ -21,7 +21,7 @@ RUN touch src/main.rs && cargo build --target=$BUILD_TARGET --release --features
 # Copy the compiled binary to a target-independent location so it can be picked up later
 RUN cp target/$BUILD_TARGET/release/sentry-cli /usr/local/bin/sentry-cli
 
-FROM alpine:3.12
+FROM alpine:3.14.2
 WORKDIR /work
 RUN apk add --no-cache ca-certificates curl
 COPY ./docker-entrypoint.sh /
