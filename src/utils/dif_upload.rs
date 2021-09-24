@@ -453,7 +453,10 @@ fn try_open_zip<P>(path: P) -> Result<Option<ZipFileArchive>, Error>
 where
     P: AsRef<Path>,
 {
-    if path.as_ref().extension() != Some("zip".as_ref()) {
+    let ext = path.as_ref().extension();
+    if ext != Some("zip".as_ref()
+        // Also look into Android Archives for native symbols
+        || ext != Some("aar".as_ref()) {
         return Ok(None);
     }
 
