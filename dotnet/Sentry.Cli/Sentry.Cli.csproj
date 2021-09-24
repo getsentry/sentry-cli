@@ -9,6 +9,6 @@
     <PackageReference Include="Sentry.Cli.MSBuild" Version="0.0.1-*" PrivateAssets="All" />
   </ItemGroup>
   <Target Name="Download" BeforeTargets="Build">
-    <DownloadSentryCli Version="1.64.2" />
+    <DownloadSentryCli Version="$(Version)" Platforms="All" />
   </Target>
 </Project>
