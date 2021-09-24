@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
+* feat: `dif_upload` searches within .aar files as .zip (#1031)
 
 ## sentry-cli 1.68.0
 

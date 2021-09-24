@@ -454,9 +454,9 @@ where
     P: AsRef<Path>,
 {
     let ext = path.as_ref().extension();
-    if ext != Some("zip".as_ref()
+    if ext != Some("zip".as_ref())
         // Also look into Android Archives for native symbols
-        || ext != Some("aar".as_ref()) {
+        && ext != Some("aar".as_ref()) {
         return Ok(None);
     }
 
