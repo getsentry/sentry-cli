@@ -1,10 +1,8 @@
 # Changelog
 
-"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
-
 ## Unreleased
 
-* feat: `dif_upload` searches within .aar files as .zip (#1031)
+"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
 
 ## sentry-cli 1.68.0
 
