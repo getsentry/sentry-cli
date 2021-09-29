@@ -1,8 +1,16 @@
 # Changelog
 
+"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
+
 ## Unreleased
 
-"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
+* feat: Print upload context details (#1016)
+* feat: Allow for changing log stream through `SENTRYCLI_LOG_STREAM` variable (#1010)
+* fix: Set archString to `armv7` when`arch="arm"` (#1024)
+* fix: Dont render progress bar when content length is missing (#1011)
+* fix: Do not supply `debug_id` for object files (#981)
+* ref: Update `symbolic` to `8.3.1` (#1033)
+* ref: Hide `upload-symbol-maps` flag for `upload-dif` command (#1017)
 
 ## sentry-cli 1.68.0
 

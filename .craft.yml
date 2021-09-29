@@ -1,5 +1,5 @@
 minVersion: 0.23.1
-changelogPolicy: simple
+changelogPolicy: auto
 targets:
   - name: gcs
     bucket: sentry-sdk-assets
