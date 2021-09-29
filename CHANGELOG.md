@@ -2,7 +2,7 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
 
-## Unreleased
+## 1.69.0
 
 * feat: Print upload context details (#1016)
 * feat: Allow for changing log stream through `SENTRYCLI_LOG_STREAM` variable (#1010)
