@@ -2,7 +2,7 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
-## Unreleased
+## 1.69.1
 
 * misc: Re-release of `1.69.0` due to malformed artifacts
 
