@@ -1,6 +1,10 @@
 # Changelog
 
-"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott 
+"You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
+
+## Unreleased
+
+* misc: Re-release of `1.69.0` due to malformed artifacts
 
 ## 1.69.0
 
