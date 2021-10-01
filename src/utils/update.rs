@@ -190,7 +190,11 @@ pub fn assert_updatable() -> Result<(), Error> {
         return Err(QuietExit(1).into());
     } else if is_npm_install() {
         println!("This installation of sentry-cli is managed through npm/yarn");
-        println!("Please use npm/yarn to update sentry-cli");
+        println!("Please use npm/yarn to update sentry-cli, using one of the following commands:");
+        println!("  yarn upgrade @sentry/cli");
+        println!("  yarn global upgrade @sentry/cli");
+        println!("  npm update @sentry/cli");
+        println!("  npm update -g @sentry/cli");
         return Err(QuietExit(1).into());
     }
     Ok(())

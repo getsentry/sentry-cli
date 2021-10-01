@@ -40,7 +40,13 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     }
     if is_npm_install() {
         println!("This installation of sentry-cli is managed through npm/yarn");
-        println!("Please use npm/yarn to uninstall sentry-cli");
+        println!(
+            "Please use npm/yarn to uninstall sentry-cli, using one of the following commands:"
+        );
+        println!("  yarn remove @sentry/cli");
+        println!("  yarn global remove @sentry/cli");
+        println!("  npm uninstall @sentry/cli");
+        println!("  npm uninstall --global @sentry/cli");
         return Err(QuietExit(1).into());
     }
     if cfg!(windows) {
