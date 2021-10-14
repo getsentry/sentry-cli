@@ -140,6 +140,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .long("no-reprocessing")
                 .help("Do not trigger reprocessing after uploading."),
         )
+        .arg(Arg::with_name("no_upload").long("no-upload").help(
+            "Disable the actual upload.{n}This runs all steps for the \
+             processing but does not trigger the upload (this also \
+             automatically disables reprocessing.  This is useful if you \
+             just want to verify the setup or skip the upload in tests.",
+        ))
         .arg(
             Arg::with_name("force_foreground")
                 .long("force-foreground")
@@ -275,6 +281,11 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
         Some(path) => Some(InfoPlist::from_path(path)?),
         None => InfoPlist::discover_from_env()?,
     };
+
+    if matches.is_present("no_upload") {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(());
+    }
 
     MayDetach::wrap("Debug symbol upload", |handle| {
         // Optionally detach if run from Xcode
