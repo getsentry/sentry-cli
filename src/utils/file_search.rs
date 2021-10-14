@@ -109,7 +109,11 @@ impl ReleaseFileSearch {
         let mut collected = Vec::new();
 
         let mut builder = WalkBuilder::new(&self.path);
-        builder.git_exclude(false).git_ignore(false).ignore(false);
+        builder
+            .follow_links(true)
+            .git_exclude(false)
+            .git_ignore(false)
+            .ignore(false);
 
         if !&self.extensions.is_empty() {
             let mut types_builder = TypesBuilder::new();
