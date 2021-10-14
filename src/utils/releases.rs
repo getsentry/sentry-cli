@@ -90,15 +90,15 @@ pub fn detect_release_name() -> Result<String, Error> {
         return Ok(release);
     }
 
-    // try Heroku #1: https://docs.sentry.io/workflow/integrations/legacy-integrations/heroku/#configure-releases
-    if let Ok(release) = env::var("HEROKU_SLUG_COMMIT") {
+    // try Heroku #1 https://devcenter.heroku.com/changelog-items/630
+    if let Ok(release) = env::var("SOURCE_VERSION") {
         if !release.is_empty() {
             return Ok(release);
         }
     }
 
-    // try Heroku #2 https://devcenter.heroku.com/changelog-items/630
-    if let Ok(release) = env::var("SOURCE_VERSION") {
+    // try Heroku #2: https://docs.sentry.io/product/integrations/deployment/heroku/#configure-releases
+    if let Ok(release) = env::var("HEROKU_SLUG_COMMIT") {
         if !release.is_empty() {
             return Ok(release);
         }
