@@ -27,6 +27,7 @@ macro_rules! each_subcommand {
         $mac!(upload_dsym);
         $mac!(upload_proguard);
         $mac!(releases);
+        $mac!(events);
         $mac!(issues);
         $mac!(repos);
         $mac!(projects);
@@ -53,12 +54,13 @@ macro_rules! each_subcommand {
 
 // commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &[&str] = &[
-    "releases", "issues", "repos", "projects", "monitors", "info", "login", "difutil",
+    "releases", "events", "issues", "repos", "projects", "monitors", "info", "login", "difutil",
 ];
 
 // it would be great if this could be a macro expansion as well
 // but rust bug #37663 breaks location information then.
 pub mod bash_hook;
+pub mod events;
 pub mod info;
 pub mod issues;
 pub mod login;
