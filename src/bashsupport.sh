@@ -1,7 +1,9 @@
 _SENTRY_TRACEBACK_FILE="___SENTRY_TRACEBACK_FILE___"
 _SENTRY_LOG_FILE="___SENTRY_LOG_FILE___"
 
-trap _sentry_exit_trap EXIT
+if [ "$SENTRY_CLI_NO_EXIT_TRAP" != 1 ]; then
+  trap _sentry_exit_trap EXIT
+fi
 trap _sentry_err_trap ERR
 
 _sentry_shown_traceback=0
