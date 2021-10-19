@@ -7,6 +7,7 @@ use std::sync::Arc;
 use chrono::{DateTime, Duration, Utc};
 use clap::{App, AppSettings, Arg, ArgMatches};
 use failure::{bail, err_msg, Error};
+use glob::{glob_with, MatchOptions};
 use indicatif::HumanBytes;
 use lazy_static::lazy_static;
 use log::{debug, warn};
@@ -1029,12 +1030,15 @@ fn process_sources_from_paths<'a>(
         .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
         .unwrap_or_else(Vec::new);
 
-    for path in paths {
+    let opts = MatchOptions::new();
+    let collected_paths = paths.flat_map(|path| glob_with(path, opts).unwrap().flatten());
+
+    for path in collected_paths {
         // if we start walking over something that is an actual file then
         // the directory iterator yields that path and terminates.  We
         // handle that case here specifically to figure out what the path is
         // we should strip off.
-        let path = Path::new(path);
+        let path = path.as_path();
         let (base_path, check_ignore) = if path.is_file() {
             (path.parent().unwrap(), false)
         } else {
