@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.70.0
+
+feat: Add `no-upload` flag for `upload-dif` command (#1044)
+feat: Add support for glob patterns in `upload-sourcemaps` command (#1048)
+feat: Allow to load dotenv from non-standard path through `SENTRY_DOTENV_PATH` (#1046)
+fix: Follow symlinks when traversing during sourcemaps upload (#1043)
+ref: Use `SOURCE_VERSION` first prior to `HEROKU_SLUG_COMMIT` in Heroku (#1045)
+
 ## 1.69.1
 
 * misc: Re-release of `1.69.0` due to malformed artifacts
