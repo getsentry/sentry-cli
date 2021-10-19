@@ -185,6 +185,10 @@ pub fn load_dotenv() {
         .map(|x| x.as_str() == "1")
         .unwrap_or(true)
     {
-        dotenv::dotenv().ok();
+        if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
+            dotenv::from_path(path).ok();
+        } else {
+            dotenv::dotenv().ok();
+        }
     }
 }
