@@ -37,7 +37,7 @@ declare module '@sentry/cli' {
      * Version control system remote name.
      * This value will update `SENTRY_VCS_REMOTE` env variable.
      */
-    vscRemote?: string;
+    vcsRemote?: string;
     /**
      * Unique identifier for the distribution, used to further segment your release.
      * Usually your build number.
