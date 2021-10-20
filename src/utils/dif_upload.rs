@@ -659,7 +659,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
         }
         walk_difs_directory(base_path, options, |source, name, buffer| {
             debug!("trying to process {}", name);
-            progress.set_message(name.to_owned());
+            progress.set_message(&name);
 
             if Archive::peek(&buffer) != FileFormat::Unknown {
                 let mut difs =
@@ -675,7 +675,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>, Error> {
                 }
             };
 
-            progress.set_prefix(collected.len().to_string());
+            progress.set_prefix(&collected.len().to_string());
             Ok(())
         })?;
     }
@@ -945,7 +945,7 @@ where
     let mut calculated = Vec::new();
     for item in items {
         progress.inc(1);
-        progress.set_message(item.path().to_owned());
+        progress.set_message(item.path());
         calculated.push(func(item)?);
     }
 
@@ -1005,7 +1005,7 @@ fn process_symbol_maps<'a>(
 
     for dif in with_hidden {
         progress.inc(1);
-        progress.set_message(dif.path().to_owned());
+        progress.set_message(dif.path());
         without_hidden.push(resolve_hidden_symbols(dif, symbol_map)?);
     }
 
@@ -1056,7 +1056,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>,
 
     for dif in difs {
         progress.inc(1);
-        progress.set_message(dif.path().to_owned());
+        progress.set_message(dif.path());
 
         let object = match dif.object() {
             Some(object) => object,

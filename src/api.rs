@@ -669,7 +669,7 @@ impl Api {
         let pb = make_progress_bar(sources.len() as u64);
 
         for (url, path) in sources {
-            pb.set_message(path.to_str().unwrap().to_owned());
+            pb.set_message(path.to_str().unwrap());
 
             let upload_result = self.upload_release_file(
                 org,
