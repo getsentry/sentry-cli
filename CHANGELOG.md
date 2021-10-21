@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.70.1
+
+feat: Add `SENTRY_CLI_NO_EXIT_TRAP` flag to control EXIT trap in `bash-hook` command (#1050)
+fix: Remove warning about relative urls for chunk uploads (#1054)
+fix: Typo in `vscRemote` TS type (#1052)
+fix: Use internal timer for ProgressBar duration (#1055)
+ref: Update dockerfile alpine image (#1057)
+
 ## 1.70.0
 
 feat: Add `no-upload` flag for `upload-dif` command (#1044)
