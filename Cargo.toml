@@ -26,7 +26,7 @@ git2 = { version = "0.13.6", default-features = false }
 glob = "0.3.0"
 if_chain = "1.0.0"
 ignore = "0.4.16"
-indicatif = "0.16.2"
+indicatif = "0.14.0"
 itertools = "0.10.0"
 java-properties = "1.2.0"
 lazy_static = "1.4.0"

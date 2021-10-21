@@ -304,7 +304,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
             let progress = ProgressBar::new_spinner();
             progress.enable_steady_tick(100);
             progress.set_style(progress_style);
-            progress.set_message(info_plist.to_string());
+            progress.set_message(&info_plist.to_string());
 
             let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
             let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
