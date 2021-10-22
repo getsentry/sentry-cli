@@ -4,19 +4,19 @@
 
 ## 1.70.1
 
-feat: Add `SENTRY_CLI_NO_EXIT_TRAP` flag to control EXIT trap in `bash-hook` command (#1050)
-fix: Remove warning about relative urls for chunk uploads (#1054)
-fix: Typo in `vscRemote` TS type (#1052)
-fix: Use internal timer for ProgressBar duration (#1055)
-ref: Update dockerfile alpine image (#1057)
+* feat: Add `SENTRY_CLI_NO_EXIT_TRAP` flag to control EXIT trap in `bash-hook` command (#1050)
+* fix: Remove warning about relative urls for chunk uploads (#1054)
+* fix: Typo in `vscRemote` TS type (#1052)
+* fix: Use internal timer for ProgressBar duration (#1055)
+* ref: Update dockerfile alpine image (#1057)
 
 ## 1.70.0
 
-feat: Add `no-upload` flag for `upload-dif` command (#1044)
-feat: Add support for glob patterns in `upload-sourcemaps` command (#1048)
-feat: Allow to load dotenv from non-standard path through `SENTRY_DOTENV_PATH` (#1046)
-fix: Follow symlinks when traversing during sourcemaps upload (#1043)
-ref: Use `SOURCE_VERSION` first prior to `HEROKU_SLUG_COMMIT` in Heroku (#1045)
+* feat: Add `no-upload` flag for `upload-dif` command (#1044)
+* feat: Add support for glob patterns in `upload-sourcemaps` command (#1048)
+* feat: Allow to load dotenv from non-standard path through `SENTRY_DOTENV_PATH` (#1046)
+* fix: Follow symlinks when traversing during sourcemaps upload (#1043)
+* ref: Use `SOURCE_VERSION` first prior to `HEROKU_SLUG_COMMIT` in Heroku (#1045)
 
 ## 1.69.1
 
