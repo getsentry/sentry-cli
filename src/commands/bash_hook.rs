@@ -10,7 +10,7 @@ use clap::{App, Arg, ArgMatches};
 use failure::Error;
 use lazy_static::lazy_static;
 use regex::Regex;
-use sentry_types::protocol::latest::{Event, Exception, Frame, Stacktrace, User, Value};
+use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
 use username::get_user_name;
 use uuid::Uuid;
 

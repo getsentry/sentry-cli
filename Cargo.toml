@@ -46,7 +46,6 @@ runas = "0.2.1"
 rust-ini = "0.17.0"
 semver = "1.0.3"
 sentry = { version = "0.23.0", default-features = false, features = ["curl"] }
-sentry-types = "0.23.0"
 serde = { version = "1.0.114", features = ["derive"] }
 serde_json = "1.0.56"
 sha1 = { version = "0.6.0", features = ["serde"] }

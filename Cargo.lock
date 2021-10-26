@@ -1939,7 +1939,6 @@ dependencies = [
  "rust-ini",
  "semver 1.0.4",
  "sentry",
- "sentry-types",
  "serde",
  "serde_json",
  "sha1",

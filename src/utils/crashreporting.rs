@@ -5,7 +5,6 @@ use std::time::Duration;
 use failure::Error;
 use log::Log;
 use sentry::{release_name, Client, ClientOptions, Hub};
-use sentry_types::Dsn;
 
 use crate::config::Config;
 use crate::constants::USER_AGENT;
@@ -16,7 +15,7 @@ pub fn setup(_log: Box<dyn Log>) {
 
 pub fn bind_configured_client(cfg: Option<&Config>) {
     Hub::with(|hub| {
-        let dsn: Option<Dsn> = cfg.and_then(Config::internal_sentry_dsn);
+        let dsn = cfg.and_then(Config::internal_sentry_dsn);
         let client = match dsn {
             Some(dsn) => Client::from_config((
                 dsn,
@@ -33,10 +32,11 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
     });
 }
 
-pub fn try_report_to_sentry(_err: &Error) {
-    // TODO: Migrate from `failure` to `anyhow` crate and use `anyhow` feature for crash reporting once we decide to bring it back.
-    // capture_error(err);
-    // flush_events();
+pub fn try_report_to_sentry(err: Error) {
+    // TODO: Migrate from `failure` to `anyhow` crate, as `sentry` dropped support for `failure` in version 0.22
+    // and use sentry::integrations::anyhow to capture more details about the error.
+    Hub::with_active(|hub| hub.capture_error(&err.compat()));
+    flush_events();
 }
 
 pub fn flush_events() {
