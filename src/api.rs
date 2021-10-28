@@ -1823,7 +1823,7 @@ impl ApiResponse {
     pub fn pagination(&self) -> Pagination {
         self.get_header("link")
             .and_then(|x| x.parse().ok())
-            .unwrap_or_else(Default::default)
+            .unwrap_or_default()
     }
 
     /// Returns true if the response is JSON.
