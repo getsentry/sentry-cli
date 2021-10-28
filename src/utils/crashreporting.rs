@@ -4,21 +4,19 @@ use std::time::Duration;
 
 use failure::Error;
 use log::Log;
-use sentry::integrations;
 use sentry::{release_name, Client, ClientOptions, Hub};
+use sentry_types::Dsn;
 
 use crate::config::Config;
 use crate::constants::USER_AGENT;
 
-pub fn setup(log: Box<dyn Log>) {
-    integrations::log::init(Some(log), Default::default());
-    integrations::panic::register_panic_handler();
+pub fn setup(_log: Box<dyn Log>) {
     bind_configured_client(None);
 }
 
 pub fn bind_configured_client(cfg: Option<&Config>) {
     Hub::with(|hub| {
-        let dsn = cfg.and_then(Config::internal_sentry_dsn);
+        let dsn: Option<Dsn> = cfg.and_then(Config::internal_sentry_dsn);
         let client = match dsn {
             Some(dsn) => Client::from_config((
                 dsn,
@@ -35,9 +33,10 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
     });
 }
 
-pub fn try_report_to_sentry(err: &Error) {
-    integrations::failure::capture_error(err);
-    flush_events();
+pub fn try_report_to_sentry(_err: &Error) {
+    // TODO: Migrate from `failure` to `anyhow` crate and use `anyhow` feature for crash reporting once we decide to bring it back.
+    // capture_error(err);
+    // flush_events();
 }
 
 pub fn flush_events() {

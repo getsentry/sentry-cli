@@ -5,7 +5,7 @@ use std::env;
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
 use itertools::Itertools;
-use sentry::protocol::{Event, Level, LogEntry, User};
+use sentry_types::protocol::latest::{Event, Level, LogEntry, User};
 use serde_json::Value;
 use username::get_user_name;
 
