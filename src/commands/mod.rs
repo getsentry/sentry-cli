@@ -302,7 +302,7 @@ pub fn main() {
                 print_error(&err);
                 #[cfg(feature = "with_crash_reporting")]
                 {
-                    crate::utils::crashreporting::try_report_to_sentry(&err);
+                    crate::utils::crashreporting::try_report_to_sentry(err);
                 }
                 1
             };

@@ -4,15 +4,12 @@ use std::time::Duration;
 
 use failure::Error;
 use log::Log;
-use sentry::integrations;
 use sentry::{release_name, Client, ClientOptions, Hub};
 
 use crate::config::Config;
 use crate::constants::USER_AGENT;
 
-pub fn setup(log: Box<dyn Log>) {
-    integrations::log::init(Some(log), Default::default());
-    integrations::panic::register_panic_handler();
+pub fn setup(_log: Box<dyn Log>) {
     bind_configured_client(None);
 }
 
@@ -35,8 +32,10 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
     });
 }
 
-pub fn try_report_to_sentry(err: &Error) {
-    integrations::failure::capture_error(err);
+pub fn try_report_to_sentry(err: Error) {
+    // TODO: Migrate from `failure` to `anyhow` crate, as `sentry` dropped support for `failure` in version 0.22
+    // and use sentry::integrations::anyhow to capture more details about the error.
+    Hub::with_active(|hub| hub.capture_error(&err.compat()));
     flush_events();
 }
 

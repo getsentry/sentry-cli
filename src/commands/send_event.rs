@@ -1,11 +1,17 @@
 //! Implements a command for sending events to Sentry.
 use std::borrow::Cow;
 use std::env;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::PathBuf;
 
 use clap::{App, Arg, ArgMatches};
 use failure::{err_msg, Error};
+use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
+use log::warn;
 use sentry::protocol::{Event, Level, LogEntry, User};
+use sentry::types::{Dsn, Uuid};
 use serde_json::Value;
 use username::get_user_name;
 
@@ -22,6 +28,13 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              Sentry. Due to network errors, rate limits or sampling the event is not guaranteed to \
              actually arrive. Check debug output for transmission errors by passing --log-level=\
              debug or setting `SENTRY_LOG_LEVEL=debug`.",
+        )
+        .arg(
+            Arg::with_name("path")
+                .value_name("PATH")
+                .index(1)
+                .required(false)
+                .help("The path or glob to the file(s) in JSON format to send as event(s). When provided, all other arguments are ignored."),
         )
         .arg(
             Arg::with_name("level")
@@ -143,8 +156,36 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
+fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
+    with_sentry_client(dsn, |c| c.capture_event(event, None))
+}
+
 pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
+    let dsn = config.get_dsn()?;
+
+    if let Some(path) = matches.value_of("path") {
+        let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
+            .unwrap()
+            .flatten()
+            .collect();
+
+        if collected_paths.is_empty() {
+            warn!("Did not match any .json files for pattern: {}", path);
+            return Ok(());
+        }
+
+        for path in collected_paths {
+            let p = path.as_path();
+            let file = File::open(p)?;
+            let reader = BufReader::new(file);
+            let event: Event = serde_json::from_reader(reader)?;
+            let id = send_raw_event(event, dsn.clone());
+            println!("Event from file {} dispatched: {}", p.display(), id);
+        }
+
+        return Ok(());
+    }
 
     let mut event = Event {
         sdk: Some(get_sdk_info()),
@@ -240,8 +281,8 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         attach_logfile(&mut event, logfile, matches.is_present("with_categories"))?;
     }
 
-    let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
-    println!("{}", id);
+    let id = send_raw_event(event, dsn);
+    println!("Event dispatched: {}", id);
 
     Ok(())
 }

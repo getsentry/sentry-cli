@@ -11,7 +11,7 @@ use failure::{bail, err_msg, Error, ResultExt};
 use ini::Ini;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use sentry::internals::Dsn;
+use sentry::types::Dsn;
 
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
 use crate::utils::http::is_absolute_url;
