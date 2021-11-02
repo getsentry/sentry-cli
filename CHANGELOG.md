@@ -2,6 +2,11 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.71.0
+
+* feat: Add optional positional argument to `send-event` that allows to specify a path to JSON serialized events (#1058)
+* fix: Handle `SENTRY_CLI_NO_EXIT_TRAP` unbound variable (#1059)
+
 ## 1.70.1
 
 * feat: Add `SENTRY_CLI_NO_EXIT_TRAP` flag to control EXIT trap in `bash-hook` command (#1050)
