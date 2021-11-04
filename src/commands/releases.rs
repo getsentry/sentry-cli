@@ -19,9 +19,7 @@ use crate::api::{
     ReleaseStatus, UpdatedRelease,
 };
 use crate::config::Config;
-use crate::utils::args::{
-    get_timestamp, validate_int, validate_project, validate_timestamp, ArgExt,
-};
+use crate::utils::args::{get_timestamp, validate_int, validate_timestamp, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
 use crate::utils::formatting::{HumanDuration, Table};
@@ -67,13 +65,7 @@ impl<'a> ReleaseContext<'a> {
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage releases on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_arg()
-        .arg(Arg::with_name("project")
-            .hidden(true)
-            .value_name("PROJECT")
-            .long("project")
-            .short("p")
-            .validator(validate_project))
+        .org_project_args()
         .subcommand(App::new("new")
             .about("Create a new release.")
             .version_arg(1)
