@@ -259,6 +259,11 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
 
 npmLog.stream = getLogStream('stderr');
 
+if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
+  npmLog.info('sentry-cli', `Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
+  process.exit(0);
+}
+
 downloadBinary()
   .then(() => checkVersion())
   .then(() => process.exit(0))
