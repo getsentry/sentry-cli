@@ -110,7 +110,10 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     "Optional path to BCSymbolMap files which are used to \
                      resolve hidden symbols in dSYM files downloaded from \
                      iTunes Connect.  This requires the dsymutil tool to be \
-                     available.",
+                     available.  This should not be used when using the App \
+                     Store Connect integration, the .bcsymbolmap files needed \
+                     for the integration are uploaded without this option if \
+                     they are found in the PATH searched for symbol files.",
                 ),
         )
         .arg(
