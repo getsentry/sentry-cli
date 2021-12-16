@@ -1,5 +1,6 @@
 /* eslint-env jest */
 
+const os = require('os');
 const path = require('path');
 
 const helper = require('../helper');
@@ -21,6 +22,11 @@ describe('SentryCli helper', () => {
   test('call sentry-cli with wrong command', () => {
     expect.assertions(1);
     return helper.execute(['fail']).catch(e => expect(e.message).toMatch('Command failed:'));
+  });
+
+  test('getPath returns platform-appropriate path', () => {
+    const pattern = os.platform() === 'win32' ? /sentry-cli.exe$/ : /sentry-cli$/;
+    expect(helper.getPath()).toMatch(pattern);
   });
 
   describe('`prepare` command', () => {
