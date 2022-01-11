@@ -47,6 +47,11 @@ declare module '@sentry/cli' {
      * If true, all logs are suppressed.
      */
     silent?: boolean;
+    /**
+     * A header added to every outgoing network request.
+     * This value will update `CUSTOM_HEADER` env variable.
+     */
+    customHeader?: string;
   }
 
   /**

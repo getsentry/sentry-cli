@@ -159,6 +159,9 @@ function execute(args, live, silent, configFile, config = {}) {
   if (config.vcsRemote) {
     env.SENTRY_VCS_REMOTE = config.vcsRemote;
   }
+  if (config.customHeader) {
+    env.CUSTOM_HEADER = config.customHeader;
+  }
   return new Promise((resolve, reject) => {
     if (live === true) {
       const output = silent ? 'ignore' : 'inherit'
