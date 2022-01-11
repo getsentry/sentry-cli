@@ -74,7 +74,7 @@ impl<'a> Iterator for DifChunks<'a> {
 /// information already present there.  You probably should look whether you can use
 /// [`DifMatch`] instead of this instead.
 enum ParsedDif<'a> {
-    Object(Object<'a>),
+    Object(Box<Object<'a>>),
     BcSymbolMap(BcSymbolMap<'a>),
     UuidMap(UuidMapping),
 }
@@ -117,7 +117,7 @@ impl<'data> DifMatch<'data> {
     {
         let buffer = ByteView::open(temp_file.path()).map_err(SyncFailure::new)?;
         let dif = SelfCell::try_new(buffer, |b| {
-            Object::parse(unsafe { &*b }).map(ParsedDif::Object)
+            Object::parse(unsafe { &*b }).map(|object| ParsedDif::Object(Box::new(object)))
         })?;
 
         // Even though we could supply the debug_id here from the object we do not, the
@@ -841,8 +841,12 @@ fn collect_object_dif<'a>(
         // We retain the buffer and the borrowed object in a new SelfCell. This is
         // incredibly unsafe, but in our case it is fine, since the SelfCell owns the same
         // buffer that was used to retrieve the object.
-        let cell =
-            unsafe { SelfCell::from_raw(buffer.clone(), ParsedDif::Object(transmute(object))) };
+        let cell = unsafe {
+            SelfCell::from_raw(
+                buffer.clone(),
+                ParsedDif::Object(Box::new(transmute(object))),
+            )
+        };
 
         let dif = DifMatch {
             _backing: None,
