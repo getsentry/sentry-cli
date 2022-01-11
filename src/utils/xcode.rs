@@ -38,9 +38,7 @@ pub struct InfoPlist {
 #[derive(Deserialize, Debug)]
 pub struct XcodeProjectInfo {
     targets: Vec<String>,
-    schemes: Vec<String>,
     configurations: Vec<String>,
-    name: String,
     #[serde(default = "PathBuf::new")]
     path: PathBuf,
 }
