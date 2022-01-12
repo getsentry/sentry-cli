@@ -89,7 +89,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .arg(Arg::with_name("no_upload").long("no-upload").help(
             "Disable the actual upload.{n}This runs all steps for the \
              processing but does not trigger the upload (this also \
-             automatically disables reprocessing.  This is useful if you \
+             automatically disables reprocessing).  This is useful if you \
              just want to verify the mapping files and write the \
              proguard UUIDs into a properties file.",
         ))
