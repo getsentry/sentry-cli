@@ -13,6 +13,8 @@ use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use sentry::types::Dsn;
 
+use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
+use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
 use crate::utils::http::is_absolute_url;
 use crate::utils::logging::set_max_level;
@@ -350,12 +352,19 @@ impl Config {
     }
 
     /// Returns the maximum DIF upload size
-    pub fn get_max_dif_archive_size(&self) -> Result<u64, Error> {
-        Ok(self
-            .ini
+    pub fn get_max_dif_archive_size(&self) -> u64 {
+        self.ini
             .get_from(Some("dsym"), "max_upload_size")
             .and_then(|x| x.parse().ok())
-            .unwrap_or(35 * 1024 * 1024))
+            .unwrap_or(DEFAULT_MAX_DIF_UPLOAD_SIZE)
+    }
+
+    /// Returns the maximum file size of a single file inside DIF bundle
+    pub fn get_max_dif_item_size(&self) -> u64 {
+        self.ini
+            .get_from(Some("dsym"), "max_item_size")
+            .and_then(|x| x.parse().ok())
+            .unwrap_or(DEFAULT_MAX_DIF_ITEM_SIZE)
     }
 
     pub fn get_max_retry_count(&self) -> Result<u32, Error> {
