@@ -184,11 +184,11 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let path = env::temp_dir();
     let log = path.join(&format!(
         ".sentry-{}.out",
-        Uuid::new_v4().to_hyphenated_ref().to_string()
+        Uuid::new_v4().to_hyphenated_ref()
     ));
     let traceback = path.join(&format!(
         ".sentry-{}.traceback",
-        Uuid::new_v4().to_hyphenated_ref().to_string()
+        Uuid::new_v4().to_hyphenated_ref()
     ));
     let mut script = BASH_SCRIPT
         .replace(
