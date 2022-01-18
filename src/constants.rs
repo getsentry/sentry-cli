@@ -51,6 +51,10 @@ pub const DEFAULT_MAX_INTERVAL: u64 = 5000;
 pub const DEFAULT_RETRIES: u32 = 5;
 /// Default maximum file size of DIF uploads.
 pub const DEFAULT_MAX_DIF_SIZE: u64 = 2 * 1024 * 1024 * 1024; // 2GB
+/// Default maximum file size of a single file inside DIF bundle.
+pub const DEFAULT_MAX_DIF_ITEM_SIZE: u64 = 1024 * 1024; // 1MB
+/// Default maximum DIF upload size.
+pub const DEFAULT_MAX_DIF_UPLOAD_SIZE: u64 = 35 * 1024 * 1024; // 35MB
 /// Default maximum time to wait for file assembly.
 pub const DEFAULT_MAX_WAIT: Duration = Duration::from_secs(5 * 60);
 

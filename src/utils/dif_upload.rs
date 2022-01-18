@@ -1029,12 +1029,14 @@ fn process_symbol_maps<'a>(
 
 /// Default filter function to skip over bad sources we do not want to include.
 pub fn filter_bad_sources(entry: &FileEntry) -> bool {
+    let max_size = Config::current().get_max_dif_item_size();
+
     if entry.name_str().ends_with(".pch") {
         // always ignore pch files
         false
     } else if let Ok(meta) = fs::metadata(&entry.abs_path_str()) {
-        // ignore files larger than 1MB
-        meta.len() < 1_000_000
+        // ignore files larger than limit (defaults to 1MB)
+        meta.len() < max_size
     } else {
         // if a file metadata could not be read it will be skipped later.
         true
@@ -1495,7 +1497,7 @@ fn upload_in_batches(
     options: &DifUpload,
 ) -> Result<Vec<DebugInfoFile>, Error> {
     let api = Api::current();
-    let max_size = Config::current().get_max_dif_archive_size()?;
+    let max_size = Config::current().get_max_dif_archive_size();
     let mut dsyms = Vec::new();
 
     for (i, (batch, _)) in objects.batches(max_size, MAX_CHUNKS).enumerate() {
