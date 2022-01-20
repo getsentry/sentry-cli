@@ -353,16 +353,22 @@ impl Config {
 
     /// Returns the maximum DIF upload size
     pub fn get_max_dif_archive_size(&self) -> u64 {
+        let key = "max_upload_size";
+
         self.ini
-            .get_from(Some("dsym"), "max_upload_size")
+            .get_from(Some("dif"), key)
+            .or_else(|| self.ini.get_from(Some("dsym"), key))
             .and_then(|x| x.parse().ok())
             .unwrap_or(DEFAULT_MAX_DIF_UPLOAD_SIZE)
     }
 
     /// Returns the maximum file size of a single file inside DIF bundle
     pub fn get_max_dif_item_size(&self) -> u64 {
+        let key = "max_item_size";
+
         self.ini
-            .get_from(Some("dsym"), "max_item_size")
+            .get_from(Some("dif"), key)
+            .or_else(|| self.ini.get_from(Some("dsym"), key))
             .and_then(|x| x.parse().ok())
             .unwrap_or(DEFAULT_MAX_DIF_ITEM_SIZE)
     }
