@@ -9,8 +9,9 @@ use sentry::{release_name, Client, ClientOptions, Hub};
 use crate::config::Config;
 use crate::constants::USER_AGENT;
 
-pub fn setup(_log: Box<dyn Log>) {
+pub fn setup(log: Box<dyn Log>) {
     bind_configured_client(None);
+    log::set_boxed_logger(log).unwrap();
 }
 
 pub fn bind_configured_client(cfg: Option<&Config>) {

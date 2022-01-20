@@ -14,7 +14,7 @@ brotli2 = "0.3.2"
 chardet = "0.2.4"
 chrono = { version = "0.4.11", features = ["serde"] }
 clap = { version = "2.33.1", default-features = false, features = ["suggestions", "wrap_help"] }
-console = "0.14.1"
+console = "0.15.0"
 curl = { version = "0.4.38", features = ["static-curl", "static-ssl"] }
 dirs = "3.0.2"
 dotenv = "0.15.0"
