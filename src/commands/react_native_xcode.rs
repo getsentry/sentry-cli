@@ -113,7 +113,6 @@ fn find_node() -> String {
 pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let api = Api::current();
     let should_wrap = matches.is_present("force")
         || match env::var("CONFIGURATION") {
             Ok(config) => !&config.contains("Debug"),
@@ -183,6 +182,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             if !matches.is_present("force_foreground") {
                 md.may_detach()?;
             }
+            let api = Api::current();
             let url = url.trim_end_matches('/');
             bundle_file = TempFile::create()?;
             bundle_path = bundle_file.path().to_path_buf();
@@ -282,6 +282,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             dist
         ));
 
+        let api = Api::current();
         let release = api.new_release(
             &org,
             &NewRelease {
