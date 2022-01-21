@@ -283,8 +283,7 @@ fn setup() {
     }
     #[cfg(not(feature = "with_crash_reporting"))]
     {
-        static LOGGER: Logger = Logger;
-        log::set_logger(&Logger);
+        log::set_logger(&Logger).unwrap();
     }
 }
 

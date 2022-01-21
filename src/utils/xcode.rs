@@ -427,6 +427,12 @@ pub fn launched_from_xcode() -> bool {
     false
 }
 
+/// Returns true if we were invoked from xcode
+#[cfg(not(target_os = "macos"))]
+pub fn launched_from_xcode() -> bool {
+    false
+}
+
 /// Shows a dialog in xcode and blocks.  The dialog will have a title and a
 /// message as well as the buttons "Show details" and "Ignore".  Returns
 /// `true` if the `show details` button has been pressed.

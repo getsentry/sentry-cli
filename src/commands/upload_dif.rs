@@ -190,7 +190,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
-    let api = Api::current();
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -298,6 +297,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
 
         // Execute the upload
         let (uploaded, has_processing_errors) = upload.upload()?;
+        let api = Api::current();
 
         // Associate the dSYMs with the Info.plist data, if available
         if let Some(ref info_plist) = info_plist {

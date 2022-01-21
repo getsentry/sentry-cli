@@ -8,12 +8,20 @@ use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
+#[cfg(not(windows))]
+use crate::utils::xcode::launched_from_xcode;
 
 #[cfg(not(windows))]
 pub fn run_or_interrupt<F>(f: F)
 where
     F: FnOnce() + Send + 'static,
 {
+    // See: https://github.com/getsentry/sentry-cli/pull/1104
+    if launched_from_xcode() {
+        f();
+        return;
+    }
+
     let (tx, rx) = crossbeam_channel::bounded(100);
     let mut signals = signal_hook::iterator::Signals::new(&[
         signal_hook::consts::SIGTERM,
