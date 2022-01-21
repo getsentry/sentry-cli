@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.72.0
+
+* feat: Add `CUSTOM_HEADER` support to JS wrapper (#1077)
+* feat: Add `SENTRYCLI_SKIP_DOWNLOAD` flag for preventing download (#1074)
+* feat: Allow for configuring max item size for dif bundles (#1099)
+* fix: Prevent daemonize mode from crashing upload process (#1104)
+* fix: Restore logger initialization (#1102)
+* ref: Box `ParseDif::Object` value to prevent large enum variant (#1094)
+* ref: Rename ini group from `dsym` to `dif` with a fallback (#1103)
+* ref: Show `project` flag for releases command (#1065)
+
 ## 1.71.0
 
 * feat: Add optional positional argument to `send-event` that allows to specify a path to JSON serialized events (#1058)
