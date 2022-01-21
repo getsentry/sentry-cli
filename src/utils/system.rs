@@ -8,6 +8,7 @@ use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
+#[cfg(not(windows))]
 use crate::utils::xcode::launched_from_xcode;
 
 #[cfg(not(windows))]
