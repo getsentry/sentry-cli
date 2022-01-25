@@ -86,6 +86,12 @@ declare module '@sentry/cli' {
      */
     sourceMapReference?: boolean;
     /**
+     * Enables adding sourcemaps references to non-minified sources.
+     * This is useful for compile-to-JS languages/frameworks,
+     * that does not perform minification, but still produce source-maps.
+     */
+    processNonminified?: boolean;
+    /**
      * When paired with the rewrite option this will remove a prefix from uploaded files.
      * For instance you can use this to remove a path that is build machine specific.
      */

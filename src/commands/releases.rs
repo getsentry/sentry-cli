@@ -287,6 +287,12 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .arg(Arg::with_name("wait")
                     .long("wait")
                     .help("Wait for the server to fully process uploaded files."))
+                .arg(Arg::with_name("process_nonminified")
+                    .long("process-nonminified")
+                    .help("Enables adding sourcemaps references to non-minified sources.{n}\
+                           This is useful for compile-to-JS languages/frameworks, \
+                           that does not perform minification, but still produce source-maps.")
+                    .conflicts_with("no_sourcemap_reference"))
                 .arg(Arg::with_name("no_sourcemap_reference")
                     .long("no-sourcemap-reference")
                     .help("Disable emitting of automatic sourcemap references.{n}\
@@ -1080,6 +1086,10 @@ fn execute_files_upload_sourcemaps<'a>(
     version: &str,
 ) -> Result<(), Error> {
     let mut processor = SourceMapProcessor::new();
+
+    if matches.is_present("process_nonminified") {
+        processor.process_nonminified(true);
+    }
 
     if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;

@@ -20,6 +20,10 @@ module.exports = {
     invertedParam: '--no-sourcemap-reference',
     type: 'boolean',
   },
+  processNonminified: {
+    param: '--process-nonminified',
+    type: 'boolean',
+  },
   stripPrefix: {
     param: '--strip-prefix',
     type: 'array',

@@ -161,6 +161,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
+    process_nonminified: bool,
     sources: ReleaseFiles,
 }
 
@@ -176,8 +177,19 @@ impl SourceMapProcessor {
     pub fn new() -> SourceMapProcessor {
         SourceMapProcessor {
             pending_sources: HashSet::new(),
+            process_nonminified: false,
             sources: HashMap::new(),
         }
+    }
+
+    /// Set whether we should add sourcemap references to non-minified sources.
+    /// This is useful for compile-to-JS languages/frameworks, that does not perform minification,
+    /// but still produce sourcemaps.
+    ///
+    /// Defaults to `false`.
+    pub fn process_nonminified(&mut self, allow: bool) -> &mut Self {
+        self.process_nonminified = allow;
+        self
     }
 
     /// Adds a new file for processing.
@@ -504,9 +516,13 @@ impl SourceMapProcessor {
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
-            if source.ty != SourceFileType::MinifiedSource {
+            let should_process = source.ty == SourceFileType::MinifiedSource
+                || (self.process_nonminified && source.ty == SourceFileType::Source);
+
+            if !should_process {
                 continue;
             }
+
             // we silently ignore when we can't find a sourcemap. Maybe we should
             // log this.
             match guess_sourcemap_reference(&sourcemaps, &source.url) {
