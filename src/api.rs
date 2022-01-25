@@ -568,6 +568,37 @@ impl Api {
         }
     }
 
+    /// Deletes all release files.  Returns `true` if files were
+    /// deleted or `false` otherwise.
+    pub fn delete_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<bool> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/files/source-maps/?name={}",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
+        } else {
+            format!(
+                "/organizations/{}/files/source-maps/?name={}",
+                PathArg(org),
+                PathArg(version)
+            )
+        };
+
+        let resp = self.delete(&path)?;
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.into_result().map(|_| true)
+        }
+    }
+
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
     // TODO: Simplify this function interface
