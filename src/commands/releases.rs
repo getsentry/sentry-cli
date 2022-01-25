@@ -289,9 +289,9 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("Wait for the server to fully process uploaded files."))
                 .arg(Arg::with_name("process_nonminified")
                     .long("process-nonminified")
-                    .help("Enables adding sourcemaps references to non-minified sources.{n}\
+                    .help("Enables adding sourcemap references to non-minified sources.{n}\
                            This is useful for compile-to-JS languages/frameworks, \
-                           that does not perform minification, but still produce source-maps.")
+                           that do not perform minification, but still produce source-maps.")
                     .conflicts_with("no_sourcemap_reference"))
                 .arg(Arg::with_name("no_sourcemap_reference")
                     .long("no-sourcemap-reference")

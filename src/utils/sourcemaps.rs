@@ -183,7 +183,7 @@ impl SourceMapProcessor {
     }
 
     /// Set whether we should add sourcemap references to non-minified sources.
-    /// This is useful for compile-to-JS languages/frameworks, that does not perform minification,
+    /// This is useful for compile-to-JS languages/frameworks, that do not perform minification,
     /// but still produce sourcemaps.
     ///
     /// Defaults to `false`.
