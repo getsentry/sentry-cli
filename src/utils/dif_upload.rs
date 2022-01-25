@@ -122,12 +122,7 @@ impl<'data> DifMatch<'data> {
 
         // Even though we could supply the debug_id here from the object we do not, the
         // server will do the same anyway and we actually have control over the version of
-        // the code running there so can fix bugs more reliably.  Additionally supplying
-        // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
-        // present, which is kind of a protocol bug.  Not supplying it means more recent
-        // sentry-cli versions keep working with ancient versions of sentry by not
-        // triggering this protocol bug in most common situations.  See
-        // https://github.com/getsentry/sentry-cli/issues/980
+        // the code running there so can fix bugs more reliably.
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
             dif,
@@ -335,12 +330,18 @@ impl<'data> ChunkedDifMatch<'data> {
     }
 
     /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
-    pub fn to_assemble(&self) -> (Digest, ChunkedDifRequest<'_>) {
+    // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
+    // present, which is kind of a protocol bug.  Not supplying it means more recent
+    // sentry-cli versions keep working with ancient versions of sentry by not
+    // triggering this protocol bug in most common situations.
+    // See: https://github.com/getsentry/sentry-cli/issues/980
+    // See: https://github.com/getsentry/sentry-cli/issues/1056
+    pub fn to_assemble(&self, with_debug_id: bool) -> (Digest, ChunkedDifRequest<'_>) {
         (
             self.checksum(),
             ChunkedDifRequest {
                 name: self.file_name(),
-                debug_id: self.debug_id,
+                debug_id: if with_debug_id { self.debug_id } else { None },
                 chunks: &self.chunks,
             },
         )
@@ -1116,7 +1117,10 @@ fn try_assemble_difs<'data, 'm>(
     options: &DifUpload,
 ) -> Result<MissingDifsInfo<'data, 'm>, Error> {
     let api = Api::current();
-    let request = difs.iter().map(ChunkedDifMatch::to_assemble).collect();
+    let request = difs
+        .iter()
+        .map(|d| d.to_assemble(options.pdbs_allowed))
+        .collect();
     let response = api.assemble_difs(&options.org, &options.project, &request)?;
 
     // We map all DIFs by their checksum, so we can access them faster when
@@ -1262,7 +1266,10 @@ fn poll_dif_assemble(
 
     let assemble_start = Instant::now();
 
-    let request = difs.iter().map(|d| d.to_assemble()).collect();
+    let request = difs
+        .iter()
+        .map(|d| d.to_assemble(options.pdbs_allowed))
+        .collect();
     let response = loop {
         let response = api.assemble_difs(&options.org, &options.project, &request)?;
 
