@@ -2,6 +2,11 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.72.1
+
+* fix: Dont include `debug_id` during assemble when not PDBs are not supported (#1110)
+* ref: Remove all release files instantaneously with `--all` flag (#1108)
+
 ## 1.72.0
 
 * feat: Add `CUSTOM_HEADER` support to JS wrapper (#1077)
