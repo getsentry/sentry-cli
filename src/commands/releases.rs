@@ -801,17 +801,28 @@ fn execute_files_delete<'a>(
     matches: &ArgMatches<'a>,
     release: &str,
 ) -> Result<(), Error> {
+    let org = ctx.get_org()?;
+    let project = ctx.get_project_default().ok();
+
+    if matches.is_present("all") {
+        if ctx
+            .api
+            .delete_release_files(org, project.as_deref(), release)?
+        {
+            println!("All files deleted.");
+        }
+        return Ok(());
+    }
+
     let files: HashSet<String> = match matches.values_of("names") {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
-    let org = ctx.get_org()?;
-    let project = ctx.get_project_default().ok();
     for file in ctx
         .api
         .list_release_files(org, project.as_deref(), release)?
     {
-        if !(matches.is_present("all") || files.contains(&file.name)) {
+        if !files.contains(&file.name) {
             continue;
         }
         if ctx
