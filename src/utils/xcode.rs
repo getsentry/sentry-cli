@@ -190,6 +190,8 @@ impl InfoPlist {
                 let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
                 Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+            } else if let Ok(default_plist) = InfoPlist::from_xcode_env() {
+                Ok(Some(default_plist))
             } else {
                 Ok(None)
             }
@@ -262,6 +264,16 @@ impl InfoPlist {
         rv.build = expand_xcodevars(&rv.build, vars);
 
         Ok(rv)
+    }
+
+    /// Loads an info plist from current environment based on default env variables settings in Xcode
+    pub fn from_xcode_env() -> Result<InfoPlist, Error> {
+        Ok(InfoPlist {
+            name: env::var("PRODUCT_NAME")?,
+            bundle_id: env::var("PRODUCT_BUNDLE_IDENTIFIER")?,
+            version: env::var("MARKETING_VERSION")?,
+            build: env::var("CURRENT_PROJECT_VERSION")?,
+        })
     }
 
     /// Loads an info plist file from a path and does not process it.
