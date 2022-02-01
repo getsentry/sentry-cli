@@ -50,7 +50,7 @@ class Releases {
    * @returns {Promise} A promise that resolves when the release has been created.
    * @memberof SentryReleases
    */
-  new(release, options) {
+  async new(release, options) {
     const args = ['releases', 'new', release].concat(helper.getProjectFlagsFromOptions(options));
     return this.execute(args, null);
   }
@@ -76,7 +76,7 @@ class Releases {
    * @returns {Promise} A promise that resolves when the commits have been associated
    * @memberof SentryReleases
    */
-  setCommits(release, options) {
+  async setCommits(release, options) {
     if (!options || (!options.auto && (!options.repo || !options.commit))) {
       throw new Error('options.auto, or options.repo and options.commit must be specified');
     }
@@ -110,7 +110,7 @@ class Releases {
    * @returns {Promise} A promise that resolves when the release has been finalized.
    * @memberof SentryReleases
    */
-  finalize(release) {
+  async finalize(release) {
     return this.execute(['releases', 'finalize', release], null);
   }
 
@@ -121,10 +121,9 @@ class Releases {
    * @returns {Promise.<string>} A promise that resolves to the version string.
    * @memberof SentryReleases
    */
-  proposeVersion() {
-    return this.execute(['releases', 'propose-version'], null).then(
-      version => version && version.trim()
-    );
+  async proposeVersion() {
+    const version = await this.execute(['releases', 'propose-version'], null);
+    return version.trim();
   }
 
   /**
@@ -159,7 +158,7 @@ class Releases {
    * @returns {Promise} A promise that resolves when the upload has completed successfully.
    * @memberof SentryReleases
    */
-  uploadSourceMaps(release, options) {
+  async uploadSourceMaps(release, options) {
     if (!options || !options.include || !Array.isArray(options.include)) {
       throw new Error(
         '`options.include` must be a vaild array of paths and/or path descriptor objects.'
@@ -169,7 +168,7 @@ class Releases {
     // Each entry in the `include` array will map to an array of promises, which
     // will in turn contain one promise per literal path value. Thus `uploads`
     // will be an array of Promise arrays, which we'll flatten later.
-    const uploads = options.include.map(includeEntry => {
+    const uploads = options.include.map((includeEntry) => {
       let pathOptions;
       let uploadPaths;
 
@@ -200,7 +199,7 @@ class Releases {
         .concat(helper.getProjectFlagsFromOptions(options))
         .concat(['files', release, 'upload-sourcemaps']);
 
-      return uploadPaths.map(path =>
+      return uploadPaths.map((path) =>
         // `execute()` is async and thus we're returning a promise here
         this.execute(helper.prepareCommand([...args, path], SOURCEMAPS_SCHEMA, newOptions), true)
       );
@@ -221,7 +220,7 @@ class Releases {
    * @returns {Promise} A promise that resolves when the list comes back from the server.
    * @memberof SentryReleases
    */
-  listDeploys(release) {
+  async listDeploys(release) {
     return this.execute(['releases', 'deploys', release, 'list'], null);
   }
 
@@ -247,7 +246,7 @@ class Releases {
    * @returns {Promise} A promise that resolves when the deploy has been created.
    * @memberof SentryReleases
    */
-  newDeploy(release, options) {
+  async newDeploy(release, options) {
     if (!options || !options.env) {
       throw new Error('options.env must be a vaild name');
     }
@@ -261,7 +260,7 @@ class Releases {
    * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
-  execute(args, live) {
+  async execute(args, live) {
     return helper.execute(args, live, this.options.silent, this.configFile, this.options);
   }
 }

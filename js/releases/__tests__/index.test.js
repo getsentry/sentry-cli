@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const SentryCli = require('../..');
 
 describe('SentryCli releases', () => {
@@ -16,7 +14,7 @@ describe('SentryCli releases', () => {
     let cli;
     let mockExecute;
     beforeAll(() => {
-      mockExecute = jest.fn(async () => {});
+      mockExecute = jest.fn(async () => { });
       jest.doMock('../../helper', () => ({
         ...jest.requireActual('../../helper'),
         execute: mockExecute,
