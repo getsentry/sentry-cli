@@ -1,9 +1,16 @@
 {
-  "extends": ["airbnb-base", "prettier"],
-  "rules": {
-    "class-methods-use-this": "off",
-    "prefer-destructuring": "off",
-    "strict": "off",
-    "no-plusplus": "off"
-  }
+  "extends": ["eslint:recommended", "prettier"],
+  "env": {
+    "es6": true,
+    "node": true
+  },
+  "parserOptions": {
+    "ecmaVersion": "latest"
+  },
+  "overrides": [{
+    "env": {
+      "jest": true
+    },
+    "files": ["*.test.js"]
+  }]
 }

@@ -3,17 +3,17 @@
 'use strict';
 
 const childProcess = require('child_process');
-const cli = require('../js');
+const SentryCli = require('../js');
 
 const child = childProcess
-  .spawn(cli.getPath(), process.argv.slice(2), {
+  .spawn(SentryCli.getPath(), process.argv.slice(2), {
     stdio: 'inherit',
   })
-  .on('error', err => {
+  .on('error', (err) => {
     console.error(err); // eslint-disable-line no-console
     process.exit(1);
   })
-  .on('exit', code => process.exit(code));
+  .on('exit', (code) => process.exit(code));
 
 process.on('SIGTERM', () => child.kill('SIGTERM'));
 process.on('SIGINT', () => child.kill('SIGINT'));
