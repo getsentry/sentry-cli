@@ -150,7 +150,7 @@ pub fn get_react_native_appcenter_release(
 
     if platform == "ios" {
         if !cfg!(target_os = "macos") {
-            bail!("AppCenter codepush releases for iOS require macOS if no bundle ID is specified");
+            bail!("AppCenter codepush releases for iOS require macOS if no bundle ID and version name are specified");
         }
 
         let mut opts = MatchOptions::new();
