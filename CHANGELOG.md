@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.72.2
+
+* feat: Use default xcode values for plist struct (#1111)
+* ref: Update log message when bundle ID is missing (#1113)
+* deps: Update symbolic to 8.6.0 (#1117)
+
 ## 1.72.1
 
 * fix: Dont include `debug_id` during assemble when not PDBs are not supported (#1110)
