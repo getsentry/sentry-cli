@@ -5,8 +5,8 @@
 ## 1.72.2
 
 * feat: Use default xcode values for plist struct (#1111)
+* fix: Fixes a panic when inspecting debug files larger than 4GB (#1117)
 * ref: Update log message when bundle ID is missing (#1113)
-* deps: Update symbolic to 8.6.0 (#1117)
 
 ## 1.72.1
 
