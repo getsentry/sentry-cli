@@ -150,6 +150,45 @@ function getTempFile(cached) {
     .slice(2)}.tmp`;
 }
 
+function validateChecksum(tempPath, name) {
+  let storedHash;
+  try {
+    const checksums = fs.readFileSync(path.join(__dirname, '../checksums.txt'), 'utf8');
+    const entries = checksums.split('\n');
+    for (let i = 0; i < entries.length; i++) {
+      const [key, value] = entries[i].split('=');
+      if (key === name) {
+        storedHash = value;
+        break;
+      }
+    }
+  } catch (e) {
+    npmLog.info(
+      'Checksums are generated when the package is published to npm. They are not available directly in the source repository. Skipping validation.'
+    );
+    return;
+  }
+
+  if (!storedHash) {
+    npmLog.info(`Checksum for ${name} not found, skipping validation.`);
+    return;
+  }
+
+  const currentHash = crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(tempPath))
+    .digest('hex');
+
+  if (storedHash !== currentHash) {
+    fs.unlinkSync(tempPath);
+    throw new Error(
+      `Checksum validation for ${name} failed.\nExpected: ${storedHash}\nReceived: ${currentHash}`
+    );
+  } else {
+    npmLog.info('Checksum validation passed.');
+  }
+}
+
 function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
@@ -217,6 +256,9 @@ function downloadBinary() {
           .on('error', e => reject(e))
           .on('close', () => resolve());
       }).then(() => {
+        if (process.env.SENTRYCLI_SKIP_CHECKSUM_VALIDATION !== '1') {
+          validateChecksum(tempPath, name);
+        }
         fs.copyFileSync(tempPath, cachedPath);
         fs.copyFileSync(tempPath, outputPath);
         fs.unlinkSync(tempPath);
