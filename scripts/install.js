@@ -254,7 +254,7 @@ function downloadBinary() {
           .on('error', e => reject(e))
           .on('close', () => resolve());
       }).then(() => {
-        if (process.env.SENTRYCLI_CHECKSUM_VALIDATION !== '1') {
+        if (process.env.SENTRYCLI_SKIP_CHECKSUM_VALIDATION !== '1') {
           validateChecksum(tempPath, name);
         }
         fs.copyFileSync(tempPath, cachedPath);
