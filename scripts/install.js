@@ -163,7 +163,7 @@ function validateChecksum(tempPath, name) {
       }
     }
   } catch (e) {
-    npmLog.info('Checksums are only available for npm published package. Skipping validation.');
+    npmLog.info('Checksums are generated when the package is published to npm. They are not available directly in the source repository. Skipping validation.');
     return;
   }
 
