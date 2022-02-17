@@ -8,6 +8,7 @@
 !bin
 !js
 !scripts/install.js
+!checksums.txt
 
 # ignore JS tests
 __mocks__

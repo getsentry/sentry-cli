@@ -3,6 +3,7 @@
   "rules": {
     "class-methods-use-this": "off",
     "prefer-destructuring": "off",
-    "strict": "off"
+    "strict": "off",
+    "no-plusplus": "off"
   }
 }
