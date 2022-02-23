@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+* fix: Detect unwind and debug information in files linked with `gold` (#1124)
+
 ## 1.72.2
 
 * feat: Use default xcode values for plist struct (#1111)
