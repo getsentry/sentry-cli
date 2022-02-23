@@ -4,7 +4,11 @@
 
 ## Unreleased
 
+## 1.73.0
+
+* feat: Add checksum validation for installed binaries (set `SENTRYCLI_SKIP_CHECKSUM_VALIDATION` to opt-out) (#1123)
 * fix: Detect unwind and debug information in files linked with `gold` (#1124)
+* ref: Silence progress bar in CI environments by default (#1122)
 
 ## 1.72.2
 
