@@ -10,6 +10,7 @@ use std::process;
 use failure::{Error, ResultExt};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
+use log::warn;
 use regex::Regex;
 use serde::Deserialize;
 
@@ -83,7 +84,10 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error
         if let Some(filename) = filename_os.to_str();
         if filename.ends_with(".xcodeproj");
         then {
-            return Ok(Some(XcodeProjectInfo::from_path(path)?));
+            return match XcodeProjectInfo::from_path(path) {
+                Ok(info) => Ok(Some(info)),
+                _ => Ok(None),
+            };
         }
     }
 
@@ -97,7 +101,10 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error
     }
 
     if projects.len() == 1 {
-        Ok(Some(XcodeProjectInfo::from_path(&projects[0])?))
+        return match XcodeProjectInfo::from_path(&projects[0]) {
+            Ok(info) => Ok(Some(info)),
+            _ => Ok(None),
+        };
     } else {
         Ok(None)
     }
@@ -115,12 +122,17 @@ impl XcodeProjectInfo {
             .arg("-project")
             .arg(path.as_ref().as_os_str())
             .output()?;
-        let mut rv: Output = serde_json::from_slice(&p.stdout).unwrap_or_else(|_| {
-            let err_msg = format!("Command `xcodebuild -list -json -project {}` failed to produce a valid JSON output.", path.as_ref().display());
-            panic!("{}", err_msg);
-        });
-        rv.project.path = path.as_ref().canonicalize()?;
-        Ok(rv.project)
+
+        match serde_json::from_slice::<Output>(&p.stdout) {
+            Ok(mut rv) => {
+                rv.project.path = path.as_ref().canonicalize()?;
+                Ok(rv.project)
+            }
+            Err(e) => {
+                warn!("Command `xcodebuild -list -json -project {}` failed to produce a valid JSON output. Your .xcodeproj might be malformed.", path.as_ref().display());
+                Err(e.into())
+            }
+        }
     }
 
     pub fn base_path(&self) -> &Path {
