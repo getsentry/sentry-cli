@@ -101,10 +101,10 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error
     }
 
     if projects.len() == 1 {
-        return match XcodeProjectInfo::from_path(&projects[0]) {
+        match XcodeProjectInfo::from_path(&projects[0]) {
             Ok(info) => Ok(Some(info)),
             _ => Ok(None),
-        };
+        }
     } else {
         Ok(None)
     }
@@ -129,7 +129,7 @@ impl XcodeProjectInfo {
                 Ok(rv.project)
             }
             Err(e) => {
-                warn!("Command `xcodebuild -list -json -project {}` failed to produce a valid JSON output. Your .xcodeproj might be malformed.", path.as_ref().display());
+                warn!("Your .xcodeproj might be malformed. Command `xcodebuild -list -json -project {}` failed to produce a valid JSON output.", path.as_ref().display());
                 Err(e.into())
             }
         }
