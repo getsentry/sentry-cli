@@ -205,12 +205,11 @@ fn update_nagger_impl() -> Result<(), Error> {
         .with_context(|_| "Could not get cache folder")?;
     path.push("updatecheck");
 
-    let mut check: LastUpdateCheck;
-    if let Ok(f) = fs::File::open(&path) {
-        check = serde_json::from_reader(io::BufReader::new(f))?;
+    let mut check: LastUpdateCheck = if let Ok(f) = fs::File::open(&path) {
+        serde_json::from_reader(io::BufReader::new(f))?
     } else {
-        check = Default::default();
-    }
+        Default::default()
+    };
 
     if check.should_run_check() {
         info!("Running update nagger update check");
