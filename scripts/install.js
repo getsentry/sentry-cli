@@ -18,6 +18,7 @@ const Proxy = require('proxy-from-env');
 // NOTE: Can be dropped in favor of `fs.mkdirSync(path, { recursive: true })` once we stop supporting Node 8.x
 const mkdirp = require('mkdirp');
 const npmLog = require('npmlog');
+const which = require('which');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
@@ -193,6 +194,20 @@ function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
   const outputPath = helper.getPath();
+
+  if (process.env.SENTRYCLI_USE_LOCAL === '1') {
+    try {
+      const binPath = which.sync('sentry-cli');
+      npmLog.info('sentry-cli', `Using local binary: ${binPath}`);
+      fs.copyFileSync(binPath, outputPath);
+      return Promise.resolve();
+    } catch (e) {
+      throw new Error(
+        'Configured installation of local binary, but it was not found.' +
+          'Make sure that `sentry-cli` executable is available in your $PATH or disable SENTRYCLI_USE_LOCAL env variable.'
+      );
+    }
+  }
 
   const downloadUrl = getDownloadUrl(platform, arch);
   if (!downloadUrl) {
