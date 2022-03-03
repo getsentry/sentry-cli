@@ -48,7 +48,8 @@ function getLogStream(defaultStream) {
 function shouldRenderProgressBar() {
   const silentFlag = process.argv.some(v => v === '--silent');
   const silentConfig = process.env.npm_config_loglevel === 'silent';
-  const silentEnv = process.env.SENTRY_NO_PROGRESS_BAR;
+  // Leave `SENTRY_NO_PROGRESS_BAR` for backwards compatibility
+  const silentEnv = process.env.SENTRYCLI_NO_PROGRESS_BAR || process.env.SENTRY_NO_PROGRESS_BAR;
   const ciEnv = process.env.CI === 'true';
   // If any of possible options is set, skip rendering of progress bar
   return !(silentFlag || silentConfig || silentEnv || ciEnv);
