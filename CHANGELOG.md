@@ -2,7 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
-## Unreleased
+## 1.73.1
+
+### Various fixes & improvements
+
+- feat: Allow for using local binary through SENTRYCLI_USE_LOCAL env (#1129) by @kamilogorek
+- ref: Dont panic on malformed xcodeproj directories (#1127) by @kamilogorek
 
 ## 1.73.0
 
