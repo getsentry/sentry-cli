@@ -24,7 +24,6 @@ to learn more about them.";
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dif);
-        $mac!(upload_dsym);
         $mac!(upload_proguard);
         $mac!(releases);
         $mac!(issues);
@@ -69,7 +68,6 @@ pub mod uninstall;
 #[cfg(not(feature = "managed"))]
 pub mod update;
 pub mod upload_dif;
-pub mod upload_dsym;
 pub mod upload_proguard;
 
 pub mod react_native;
