@@ -1,6 +1,5 @@
 //! Implements a command for uploading dSYM files.
 use std::collections::BTreeSet;
-use std::env;
 use std::str::{self, FromStr};
 
 use clap::{App, Arg, ArgMatches};
@@ -190,7 +189,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         )
 }
 
-fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -212,55 +211,37 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
         .allow_zips(!matches.is_present("no_zips"))
         .filter_ids(ids);
 
-    if legacy {
-        // Configure `upload-dsym` behavior (only dSYM files)
-        upload
-            .filter_format(DifFormat::Object(FileFormat::MachO))
-            .filter_features(ObjectDifFeatures {
-                debug: true,
-                symtab: false,
-                unwind: false,
-                sources: false,
-            });
-
-        if !matches.is_present("paths") {
-            if let Some(dsym_path) = env::var_os("DWARF_DSYM_FOLDER_PATH") {
-                upload.search_path(dsym_path);
+    // Restrict symbol types, if specified by the user
+    for ty in matches.values_of("types").unwrap_or_default() {
+        match ty {
+            "dsym" => upload.filter_format(DifFormat::Object(FileFormat::MachO)),
+            "elf" => upload.filter_format(DifFormat::Object(FileFormat::Elf)),
+            "breakpad" => upload.filter_format(DifFormat::Object(FileFormat::Breakpad)),
+            "pdb" => upload.filter_format(DifFormat::Object(FileFormat::Pdb)),
+            "pe" => upload.filter_format(DifFormat::Object(FileFormat::Pe)),
+            "sourcebundle" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
+            "bcsymbolmap" => {
+                upload.filter_format(DifFormat::BcSymbolMap);
+                upload.filter_format(DifFormat::PList)
             }
-        }
-    } else {
-        // Restrict symbol types, if specified by the user
-        for ty in matches.values_of("types").unwrap_or_default() {
-            match ty {
-                "dsym" => upload.filter_format(DifFormat::Object(FileFormat::MachO)),
-                "elf" => upload.filter_format(DifFormat::Object(FileFormat::Elf)),
-                "breakpad" => upload.filter_format(DifFormat::Object(FileFormat::Breakpad)),
-                "pdb" => upload.filter_format(DifFormat::Object(FileFormat::Pdb)),
-                "pe" => upload.filter_format(DifFormat::Object(FileFormat::Pe)),
-                "sourcebundle" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
-                "bcsymbolmap" => {
-                    upload.filter_format(DifFormat::BcSymbolMap);
-                    upload.filter_format(DifFormat::PList)
-                }
-                other => bail!("Unsupported type: {}", other),
-            };
-        }
-
-        upload.filter_features(ObjectDifFeatures {
-            // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
-            // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
-            // we also upload all files with a public symbol table.
-            debug: !matches.is_present("no_debug"),
-            symtab: !matches.is_present("no_debug"),
-            // Allow executables and dynamic/shared libraries, but not object files.
-            // They are guaranteed to contain unwind info, for instance `eh_frame`,
-            // and may optionally contain debugging information such as DWARF.
-            unwind: !matches.is_present("no_unwind"),
-            sources: !matches.is_present("no_sources"),
-        });
-
-        upload.include_sources(matches.is_present("include_sources"));
+            other => bail!("Unsupported type: {}", other),
+        };
     }
+
+    upload.filter_features(ObjectDifFeatures {
+        // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
+        // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
+        // we also upload all files with a public symbol table.
+        debug: !matches.is_present("no_debug"),
+        symtab: !matches.is_present("no_debug"),
+        // Allow executables and dynamic/shared libraries, but not object files.
+        // They are guaranteed to contain unwind info, for instance `eh_frame`,
+        // and may optionally contain debugging information such as DWARF.
+        unwind: !matches.is_present("no_unwind"),
+        sources: !matches.is_present("no_sources"),
+    });
+
+    upload.include_sources(matches.is_present("include_sources"));
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.value_of("symbol_maps") {
@@ -368,12 +349,4 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
 
         Ok(())
     })
-}
-
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
-    execute_internal(matches, false)
-}
-
-pub fn execute_legacy(matches: &ArgMatches<'_>) -> Result<(), Error> {
-    execute_internal(matches, true)
 }
