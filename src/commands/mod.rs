@@ -40,7 +40,6 @@ macro_rules! each_subcommand {
         $mac!(send_event);
         $mac!(react_native);
         $mac!(difutil);
-        $mac!(bash_hook);
 
         // these here exist for legacy reasons only.  They were moved
         // to subcommands of the react-native command.  Note that
@@ -58,7 +57,7 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
 
 // it would be great if this could be a macro expansion as well
 // but rust bug #37663 breaks location information then.
-pub mod bash_hook;
+// FIXME: #37663 has been merged.
 pub mod info;
 pub mod issues;
 pub mod login;
