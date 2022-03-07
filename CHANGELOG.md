@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.73.2
+
+### Various fixes & improvements
+
+- install: Rename SENTRY_NO_PROGRESS_BAR flag to SENTRYCLI_NO_PROGRESS_BAR (#1132) by @kamilogorek
+
 ## 1.73.1
 
 ### Various fixes & improvements
