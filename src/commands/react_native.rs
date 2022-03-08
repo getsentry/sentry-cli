@@ -7,7 +7,6 @@ macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(react_native_gradle);
         $mac!(react_native_appcenter);
-        $mac!(react_native_codepush);
         #[cfg(target_os = "macos")]
         $mac!(react_native_xcode);
     };
