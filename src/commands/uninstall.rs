@@ -2,7 +2,7 @@
 use std::env;
 use std::fs;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use failure::Error;
 
@@ -10,25 +10,21 @@ use crate::utils::fs::is_writable;
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 use crate::utils::ui::prompt_to_continue;
 
-fn is_hidden() -> bool {
-    cfg!(windows) || is_homebrew_install() || is_npm_install()
+pub fn make_app(app: Command) -> Command {
+    let app = app.about("Uninstall the sentry-cli executable.").arg(
+        Arg::new("confirm")
+            .long("confirm")
+            .help("Skip uninstall confirmation prompt."),
+    );
+
+    if cfg!(windows) || is_homebrew_install() || is_npm_install() {
+        app.hide(true)
+    } else {
+        app
+    }
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Uninstall the sentry-cli executable.")
-        .arg(
-            Arg::with_name("confirm")
-                .long("confirm")
-                .help("Skip uninstall confirmation prompt."),
-        )
-        .settings(&if is_hidden() {
-            vec![AppSettings::Hidden]
-        } else {
-            vec![]
-        })
-}
-
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let exe = env::current_exe()?;
 
     if is_homebrew_install() {

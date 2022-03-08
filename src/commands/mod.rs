@@ -4,7 +4,7 @@ use std::env;
 use std::fmt;
 use std::process;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use failure::{bail, Error};
 use log::{debug, info};
 
@@ -89,14 +89,13 @@ fn preexecute_hooks() -> Result<bool, Error> {
         Ok(false)
     }
 
-    #[allow(clippy::unnecessary_wraps)]
     #[cfg(not(target_os = "macos"))]
     fn sentry_react_native_xcode_wrap() -> Result<bool, Error> {
         Ok(false)
     }
 }
 
-fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), Error> {
+fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<(), Error> {
     if let Some(url) = matches.value_of("url") {
         config.set_base_url(url);
     }
@@ -123,10 +122,44 @@ fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), E
     Ok(())
 }
 
-fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
+fn app() -> Command<'static> {
+    Command::new("sentry-cli")
+        .version(VERSION)
+        .about(ABOUT)
+        .max_term_width(100)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
+        .arg(Arg::new("url").value_name("URL").long("url").help(
+            "Fully qualified URL to the Sentry server.{n}\
+             [defaults to https://sentry.io/]",
+        ))
+        .arg(
+            Arg::new("auth_token")
+                .value_name("AUTH_TOKEN")
+                .long("auth-token")
+                .help("Use the given Sentry auth token."),
+        )
+        .arg(
+            Arg::new("api_key")
+                .value_name("API_KEY")
+                .long("api-key")
+                .help("The given Sentry API key."),
+        )
+        .arg(
+            Arg::new("log_level")
+                .value_name("LOG_LEVEL")
+                .long("log-level")
+                .possible_values(&["trace", "debug", "info", "warn", "error"])
+                .ignore_case(true)
+                .global(true)
+                .help("Set the log output verbosity."),
+        )
+}
+
+fn add_commands(mut app: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            let cmd = $name::make_app(App::new(stringify!($name).replace("_", "-").as_str()));
+            let cmd = $name::make_app(Command::new(stringify!($name).replace("_", "-").as_str()));
             app = app.subcommand(cmd);
         }};
     }
@@ -135,8 +168,7 @@ fn add_commands<'a, 'b>(mut app: App<'a, 'b>) -> App<'a, 'b> {
     app
 }
 
-#[allow(clippy::cognitive_complexity)]
-fn run_command(matches: &ArgMatches<'_>) -> Result<(), Error> {
+fn run_command(matches: &ArgMatches) -> Result<(), Error> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
@@ -179,43 +211,9 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
         return Ok(());
     }
 
-    let mut app = App::new("sentry-cli")
-        .help_message("Print this help message.")
-        .version(VERSION)
-        .version_message("Print version information.")
-        .about(ABOUT)
-        .max_term_width(100)
-        .setting(AppSettings::VersionlessSubcommands)
-        .setting(AppSettings::SubcommandRequiredElseHelp)
-        .global_setting(AppSettings::UnifiedHelpMessage)
-        .arg(Arg::with_name("url").value_name("URL").long("url").help(
-            "Fully qualified URL to the Sentry server.{n}\
-             [defaults to https://sentry.io/]",
-        ))
-        .arg(
-            Arg::with_name("auth_token")
-                .value_name("AUTH_TOKEN")
-                .long("auth-token")
-                .help("Use the given Sentry auth token."),
-        )
-        .arg(
-            Arg::with_name("api_key")
-                .value_name("API_KEY")
-                .long("api-key")
-                .help("The given Sentry API key."),
-        )
-        .arg(
-            Arg::with_name("log_level")
-                .value_name("LOG_LEVEL")
-                .long("log-level")
-                .possible_values(&["trace", "debug", "info", "warn", "error"])
-                .case_insensitive(true)
-                .global(true)
-                .help("Set the log output verbosity."),
-        );
-
+    let mut app = app();
     app = add_commands(app);
-    let matches = app.get_matches_from_safe(args)?;
+    let matches = app.try_get_matches_from(args)?;
     configure_args(&mut config, &matches)?;
 
     // bind the config to the process and fetch an immutable reference to it
@@ -300,4 +298,9 @@ pub fn main() {
     // on windows.
     Api::dispose_pool();
     process::exit(status_code);
+}
+
+#[test]
+fn verify_app() {
+    app().debug_assert();
 }

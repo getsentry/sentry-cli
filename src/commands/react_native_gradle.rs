@@ -1,7 +1,7 @@
 use std::env;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use failure::Error;
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
@@ -13,48 +13,48 @@ use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Upload react-native projects in a gradle build step.")
         .org_arg()
         .project_arg(false)
         .arg(
-            Arg::with_name("sourcemap")
+            Arg::new("sourcemap")
                 .long("sourcemap")
                 .value_name("PATH")
                 .required(true)
                 .help("The path to a sourcemap that should be uploaded."),
         )
         .arg(
-            Arg::with_name("bundle")
+            Arg::new("bundle")
                 .long("bundle")
                 .value_name("PATH")
                 .required(true)
                 .help("The path to a bundle that should be uploaded."),
         )
         .arg(
-            Arg::with_name("release")
+            Arg::new("release")
                 .long("release")
                 .value_name("RELEASE")
                 .required(true)
                 .help("The name of the release to publish."),
         )
         .arg(
-            Arg::with_name("dist")
+            Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
                 .required(true)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
-            Arg::with_name("wait")
+            Arg::new("wait")
                 .long("wait")
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();

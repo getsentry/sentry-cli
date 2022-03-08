@@ -2,7 +2,7 @@
 use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use failure::{bail, err_msg, Error};
 use log::info;
@@ -20,24 +20,24 @@ use crate::utils::xcode::{InfoPlist, MayDetach};
 
 static DERIVED_DATA: &str = "Library/Developer/Xcode/DerivedData";
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Upload debugging information files.")
         .org_arg()
         .project_arg(false)
         .arg(
-            Arg::with_name("paths")
+            Arg::new("paths")
                 .value_name("PATH")
                 .help("A path to search recursively for symbol files.")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .index(1),
         )
         .arg(
-            Arg::with_name("types")
+            Arg::new("types")
                 .long("type")
-                .short("t")
+                .short('t')
                 .value_name("TYPE")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .possible_values(&[
                     "dsym",
@@ -54,7 +54,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("no_unwind")
+            Arg::new("no_unwind")
                 .long("no-unwind")
                 .alias("no-bin")
                 .help(
@@ -67,7 +67,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("no_debug")
+            Arg::new("no_debug")
                 .long("no-debug")
                 .help(
                     "Do not scan for debugging information. This will \
@@ -78,7 +78,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .conflicts_with("no_unwind"),
         )
         .arg(
-            Arg::with_name("no_sources")
+            Arg::new("no_sources")
                 .long("no-sources")
                 .help(
                     "Do not scan for source information. This will \
@@ -89,21 +89,21 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 .conflicts_with("no_sources"),
         )
         .arg(
-            Arg::with_name("ids")
+            Arg::new("ids")
                 .value_name("ID")
                 .long("id")
                 .help("Search for specific debug identifiers.")
                 .validator(validate_id)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1),
         )
         .arg(
-            Arg::with_name("require_all")
+            Arg::new("require_all")
                 .long("require-all")
                 .help("Errors if not all identifiers specified with --id could be found."),
         )
         .arg(
-            Arg::with_name("symbol_maps")
+            Arg::new("symbol_maps")
                 .long("symbol-maps")
                 .value_name("PATH")
                 .help(
@@ -117,17 +117,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("derived_data")
+            Arg::new("derived_data")
                 .long("derived-data")
                 .help("Search for debug symbols in Xcode's derived data."),
         )
         .arg(
-            Arg::with_name("no_zips")
+            Arg::new("no_zips")
                 .long("no-zips")
                 .help("Do not search in ZIP files."),
         )
         .arg(
-            Arg::with_name("info_plist")
+            Arg::new("info_plist")
                 .long("info-plist")
                 .value_name("PATH")
                 .help(
@@ -139,44 +139,36 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("no_reprocessing")
+            Arg::new("no_reprocessing")
                 .long("no-reprocessing")
                 .help("Do not trigger reprocessing after uploading."),
         )
-        .arg(Arg::with_name("no_upload").long("no-upload").help(
+        .arg(Arg::new("no_upload").long("no-upload").help(
             "Disable the actual upload.{n}This runs all steps for the \
              processing but does not trigger the upload (this also \
              automatically disables reprocessing).  This is useful if you \
              just want to verify the setup or skip the upload in tests.",
         ))
-        .arg(
-            Arg::with_name("force_foreground")
-                .long("force-foreground")
-                .help(
-                    "Wait for the process to finish.{n}\
+        .arg(Arg::new("force_foreground").long("force-foreground").help(
+            "Wait for the process to finish.{n}\
                      By default, the upload process will detach and continue in the \
                      background when triggered from Xcode.  When an error happens, \
                      a dialog is shown.  If this parameter is passed Xcode will wait \
                      for the process to finish before the build finishes and output \
                      will be shown in the Xcode build output.",
-                ),
-        )
-        .arg(
-            Arg::with_name("include_sources")
-                .long("include-sources")
-                .help(
-                    "Include sources from the local file system and upload \
+        ))
+        .arg(Arg::new("include_sources").long("include-sources").help(
+            "Include sources from the local file system and upload \
                      them as source bundles.",
-                ),
-        )
-        .arg(Arg::with_name("wait").long("wait").help(
+        ))
+        .arg(Arg::new("wait").long("wait").help(
             "Wait for the server to fully process uploaded files. Errors \
              can only be displayed if --wait is specified, but this will \
              significantly slow down the upload process.",
         ))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 

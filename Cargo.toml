@@ -7,18 +7,17 @@ edition = "2018"
 
 [dependencies]
 anylog = "0.6.1"
-app_dirs = "1.2.1"
-backoff = "0.3.0"
+backoff = "0.4.0"
 backtrace = "0.3.63"
 brotli2 = "0.3.2"
 chardet = "0.2.4"
 chrono = { version = "0.4.19", features = ["serde"] }
-clap = { version = "2.33.1", default-features = false, features = ["suggestions", "wrap_help"] }
+clap = { version = "3.1.2", default-features = false, features = ["std", "suggestions", "wrap_help"] }
 console = "0.15.0"
 curl = { version = "0.4.42", features = ["static-curl", "static-ssl"] }
-dirs = "3.0.2"
+dirs = "4.0.0"
 dotenv = "0.15.0"
-elementtree = "0.5.0"
+elementtree = "0.7.0"
 encoding = "0.2.33"
 failure = { version = "0.1.8", features = ["derive"] }
 flate2 = { version = "1.0.22", default-features = false, features = ["rust_backend"] }
@@ -34,8 +33,8 @@ lazy_static = "1.4.0"
 libc = "0.2.115"
 log = { version = "0.4.14", features = ["std"] }
 might-be-minified = "0.3.0"
-open = "1.4.0"
-parking_lot = "0.11.2"
+open = "2.1.1"
+parking_lot = "0.12.0"
 percent-encoding = "2.1.0"
 plist = "1.3.1"
 prettytable-rs = "0.8.0"
@@ -44,20 +43,20 @@ r2d2 = "0.8.9"
 rayon = "1.5.1"
 regex = "1.5.4"
 runas = "0.2.1"
-rust-ini = "0.17.0"
+rust-ini = "0.18.0"
 semver = "1.0.4"
-sentry = { version = "0.23.0", default-features = false, features = ["curl"] }
+sentry = { version = "0.25.0", default-features = false, features = ["curl"] }
 serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.78"
-sha1 = { version = "0.6.0", features = ["serde"] }
-sourcemap = { version = "5.0.0", features = ["ram_bundle"] }
+sha1_smol = { version = "1.0.0", features = ["serde"] }
+sourcemap = { version = "6.0.1", features = ["ram_bundle"] }
 symbolic = { version = "8.7.0", features = ["debuginfo-serde"] }
 url = "2.2.2"
 username = "0.2.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
 walkdir = "2.3.2"
 which = "4.2.4"
-zip = "0.5.13"
+zip = "0.6.0"
 
 [dev-dependencies]
 insta = { version = "1.12.0", features = ["redactions"] }

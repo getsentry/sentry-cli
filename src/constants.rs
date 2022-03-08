@@ -2,12 +2,8 @@
 
 use std::time::Duration;
 
-use app_dirs::AppInfo;
-
-pub const APP_INFO: &AppInfo = &AppInfo {
-    name: "sentrycli",
-    author: "Sentry",
-};
+/// Application name
+pub const APP_NAME: &str = "sentrycli";
 
 /// The default API URL
 pub const DEFAULT_URL: &str = "https://sentry.io/";

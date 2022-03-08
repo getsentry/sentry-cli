@@ -1,5 +1,5 @@
 //! Implements a command for managing repos.
-use clap::{App, AppSettings, ArgMatches};
+use clap::{ArgMatches, Command};
 use failure::Error;
 
 use crate::api::Api;
@@ -7,14 +7,15 @@ use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Manage repositories on Sentry.")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .org_arg()
-        .subcommand(App::new("list").about("List all repositories in your organization."))
+        .subcommand(Command::new("list").about("List all repositories in your organization."))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let api = Api::current();
 
     let config = Config::current();

@@ -270,7 +270,7 @@ impl Config {
     }
 
     /// Given a match object from clap, this returns the org from it.
-    pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
+    pub fn get_org(&self, matches: &ArgMatches) -> Result<String, Error> {
         matches
             .value_of("org")
             .map(str::to_owned)
@@ -286,7 +286,7 @@ impl Config {
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
-    pub fn get_org_and_project(&self, matches: &ArgMatches<'_>) -> Result<(String, String), Error> {
+    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String), Error> {
         let org = self.get_org(matches)?;
         let project = if let Some(project) = matches.value_of("project") {
             project.to_owned()

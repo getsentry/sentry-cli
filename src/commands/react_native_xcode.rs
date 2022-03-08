@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::process;
 
 use chrono::Duration;
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use failure::{bail, Error};
 use if_chain::if_chain;
 use log::info;
@@ -27,22 +27,22 @@ struct SourceMapReport {
     sourcemap_path: Option<PathBuf>,
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Upload react-native projects in a Xcode build step.")
         .org_arg()
         .project_arg(false)
-        .arg(Arg::with_name("force").long("force").short("f").help(
+        .arg(Arg::new("force").long("force").short('f').help(
             "Force the script to run, even in debug configuration.{n}This rarely \
              does what you want because the default build script does not actually \
              produce any information that the sentry build tool could pick up on.",
         ))
-        .arg(Arg::with_name("allow_fetch").long("allow-fetch").help(
+        .arg(Arg::new("allow_fetch").long("allow-fetch").help(
             "Enable sourcemap fetching from the packager.{n}If this is enabled \
              the react native packager needs to run and sourcemaps are downloade \
              from it if the simulator platform is detected.",
         ))
         .arg(
-            Arg::with_name("fetch_from")
+            Arg::new("fetch_from")
                 .long("fetch-from")
                 .value_name("URL")
                 .help(
@@ -51,20 +51,16 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                      packager runs by default.",
                 ),
         )
-        .arg(
-            Arg::with_name("force_foreground")
-                .long("force-foreground")
-                .help(
-                    "Wait for the process to finish.{n}\
+        .arg(Arg::new("force_foreground").long("force-foreground").help(
+            "Wait for the process to finish.{n}\
                      By default part of the build process will when triggered from Xcode \
                      detach and continue in the background.  When an error happens, \
                      a dialog is shown.  If this parameter is passed, Xcode will wait \
                      for the process to finish before the build finishes and output \
                      will be shown in the Xcode build output.",
-                ),
-        )
+        ))
         .arg(
-            Arg::with_name("build_script")
+            Arg::new("build_script")
                 .value_name("BUILD_SCRIPT")
                 .index(1)
                 .help(
@@ -74,22 +70,22 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("dist")
+            Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
-            Arg::with_name("args")
+            Arg::new("args")
                 .value_name("ARGS")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .last(true)
                 .help("Optional arguments to pass to the build script."),
         )
         .arg(
-            Arg::with_name("wait")
+            Arg::new("wait")
                 .long("wait")
                 .help("Wait for the server to fully process uploaded files."),
         )
@@ -104,7 +100,7 @@ fn find_node() -> String {
     "node".into()
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let should_wrap = matches.is_present("force")

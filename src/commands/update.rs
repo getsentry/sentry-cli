@@ -1,27 +1,27 @@
 //! Implements a command for updating `sentry-cli`
 use std::env;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use failure::{bail, Error};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Update the sentry-cli executable.")
-        .settings(&if !can_update_sentrycli() {
-            vec![AppSettings::Hidden]
-        } else {
-            vec![]
-        })
-        .arg(
-            Arg::with_name("force")
-                .long("force")
-                .short("f")
-                .help("Force the update even if the latest version is already installed."),
-        )
+pub fn make_app(app: Command) -> Command {
+    let app = app.about("Update the sentry-cli executable.").arg(
+        Arg::new("force")
+            .long("force")
+            .short('f')
+            .help("Force the update even if the latest version is already installed."),
+    );
+
+    if can_update_sentrycli() {
+        app.hide(true)
+    } else {
+        app
+    }
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     // Disable update check in case of errors
     env::set_var("SENTRY_DISABLE_UPDATE_CHECK", "true");
 

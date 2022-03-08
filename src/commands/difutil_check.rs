@@ -1,19 +1,19 @@
 use std::io;
 use std::path::Path;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use failure::Error;
 
 use crate::utils::dif::DifFile;
 use crate::utils::system::QuietExit;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Check the debug info file at a given path.")
         .arg(
-            Arg::with_name("type")
+            Arg::new("type")
                 .long("type")
-                .short("t")
+                .short('t')
                 .value_name("TYPE")
                 .possible_values(&["dsym", "elf", "proguard", "breakpad"])
                 .help(
@@ -22,19 +22,19 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("json")
+            Arg::new("json")
                 .long("json")
                 .help("Format outputs as JSON."),
         )
         .arg(
-            Arg::with_name("path")
+            Arg::new("path")
                 .index(1)
                 .required(true)
                 .help("The path to the debug info file."),
         )
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let path = Path::new(matches.value_of("path").unwrap());
 
     // which types should we consider?

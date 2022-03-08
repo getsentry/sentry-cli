@@ -4,7 +4,7 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use failure::Error;
 use if_chain::if_chain;
@@ -31,14 +31,14 @@ struct DifMatch {
     pub path: PathBuf,
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Locate debug information files for given debug identifiers.")
         .arg(
-            Arg::with_name("types")
+            Arg::new("types")
                 .long("type")
-                .short("t")
+                .short('t')
                 .value_name("TYPE")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .possible_values(&[
                     "dsym",
@@ -55,35 +55,35 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("no_well_known")
+            Arg::new("no_well_known")
                 .long("no-well-known")
                 .help("Do not look for debug symbols in well known locations."),
         )
         .arg(
-            Arg::with_name("no_cwd")
+            Arg::new("no_cwd")
                 .long("no-cwd")
                 .help("Do not look for debug symbols in the current working directory."),
         )
         .arg(
-            Arg::with_name("paths")
+            Arg::new("paths")
                 .long("path")
-                .short("p")
-                .multiple(true)
+                .short('p')
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .help("Add a path to search recursively for debug info files."),
         )
         .arg(
-            Arg::with_name("json")
+            Arg::new("json")
                 .long("json")
                 .help("Format outputs as JSON."),
         )
         .arg(
-            Arg::with_name("ids")
+            Arg::new("ids")
                 .index(1)
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
                 .validator(validate_id)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1),
         )
 }
@@ -319,7 +319,7 @@ fn extract_remaining_ids(
         .collect()
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let mut paths = HashSet::new();
     let mut types = HashSet::new();
     let mut ids = HashSet::new();
