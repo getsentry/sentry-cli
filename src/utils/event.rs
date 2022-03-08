@@ -48,7 +48,7 @@ pub fn attach_logfile(
         };
 
         event.breadcrumbs.values.push(Breadcrumb {
-            timestamp: rec.utc_timestamp().unwrap_or(fallback_timestamp),
+            timestamp: rec.utc_timestamp().unwrap_or(fallback_timestamp).into(),
             message: Some(message.to_string()),
             category: Some(component.to_string()),
             ..Default::default()

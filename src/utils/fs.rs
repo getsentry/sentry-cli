@@ -5,7 +5,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use failure::{bail, Error};
-use sha1::{Digest, Sha1};
+use sha1_smol::{Digest, Sha1};
 use uuid::Uuid;
 
 pub trait SeekRead: Seek + Read {}

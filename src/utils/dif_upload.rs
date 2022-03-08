@@ -21,7 +21,7 @@ use console::style;
 use failure::{bail, err_msg, Error, SyncFailure};
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
-use sha1::Digest;
+use sha1_smol::Digest;
 use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;

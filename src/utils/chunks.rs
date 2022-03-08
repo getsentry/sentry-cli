@@ -12,7 +12,7 @@ use failure::Error;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use sha1::Digest;
+use sha1_smol::Digest;
 
 use crate::api::{Api, ChunkUploadOptions, ProgressBarMode};
 use crate::utils::progress::{ProgressBar, ProgressStyle};

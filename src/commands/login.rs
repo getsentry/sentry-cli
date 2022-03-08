@@ -1,5 +1,5 @@
 //! Implements a command for signing in.
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use failure::Error;
 use url::Url;
 
@@ -7,10 +7,10 @@ use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::utils::ui::{prompt, prompt_to_continue};
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Authenticate with the Sentry server.").arg(
-        Arg::with_name("global")
-            .short("g")
+        Arg::new("global")
+            .short('g')
             .long("global")
             .help("Store authentication token globally rather than locally."),
     )
@@ -23,7 +23,7 @@ fn update_config(config: &Config, token: &str) -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 

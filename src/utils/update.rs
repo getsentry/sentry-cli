@@ -6,7 +6,7 @@ use std::path::Path;
 
 use chrono::{DateTime, Duration, Utc};
 use console::{style, user_attended};
-use failure::{bail, Error, ResultExt};
+use failure::{bail, err_msg, Error};
 use if_chain::if_chain;
 use log::{debug, info};
 use semver::Version;
@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
-use crate::constants::{APP_INFO, VERSION};
+use crate::constants::{APP_NAME, VERSION};
 use crate::utils::fs::{is_writable, set_executable_mode};
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 
@@ -201,8 +201,10 @@ pub fn assert_updatable() -> Result<(), Error> {
 }
 
 fn update_nagger_impl() -> Result<(), Error> {
-    let mut path = app_dirs::app_root(app_dirs::AppDataType::UserCache, APP_INFO)
-        .with_context(|_| "Could not get cache folder")?;
+    let mut path = dirs::cache_dir().ok_or_else(|| err_msg("Could not get cache folder"))?;
+
+    path.push(APP_NAME);
+    fs::create_dir_all(path.clone())?;
     path.push("updatecheck");
 
     let mut check: LastUpdateCheck = if let Ok(f) = fs::File::open(&path) {

@@ -29,7 +29,7 @@ use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
-use sha1::Digest;
+use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
 
@@ -379,7 +379,6 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    #[allow(clippy::needless_pass_by_value)]
     pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         let mut handle = self.pool.get().unwrap();
         handle.reset();

@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 use std::io;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use failure::Error;
 use serde::Serialize;
 
@@ -24,14 +24,14 @@ pub struct ConfigStatus {
     have_dsn: bool,
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Print information about the Sentry server.")
-        .arg(Arg::with_name("quiet").short("q").long("quiet").help(
+        .arg(Arg::new("quiet").short('q').long("quiet").help(
             "Do not output anything, just report a status \
              code for correct config.",
         ))
         .arg(
-            Arg::with_name("config_status_json")
+            Arg::new("config_status_json")
                 .long("config-status-json")
                 .help(
                     "Return the status of the config that sentry-cli loads \
@@ -71,7 +71,7 @@ fn get_config_status_json() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     if matches.is_present("config_status_json") {
         return get_config_status_json();
     }

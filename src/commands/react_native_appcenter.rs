@@ -2,7 +2,7 @@ use std::env;
 use std::ffi::OsStr;
 use std::fs;
 
-use clap::{App, Arg, ArgMatches};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use failure::Error;
 use if_chain::if_chain;
@@ -16,18 +16,18 @@ use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn make_app(app: Command) -> Command {
     app.about("Upload react-native projects for AppCenter.")
         .org_arg()
         .project_arg(false)
         .arg(
-            Arg::with_name("deployment")
+            Arg::new("deployment")
                 .long("deployment")
                 .value_name("DEPLOYMENT")
                 .help("The name of the deployment. [Production, Staging]"),
         )
         .arg(
-            Arg::with_name("bundle_id")
+            Arg::new("bundle_id")
                 .value_name("BUNDLE_ID")
                 .long("bundle-id")
                 .help(
@@ -39,61 +39,61 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                 ),
         )
         .arg(
-            Arg::with_name("version_name")
+            Arg::new("version_name")
                 .value_name("VERSION_NAME")
                 .long("version-name")
                 .help("Override version name in release name"),
         )
         .arg(
-            Arg::with_name("dist")
+            Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple(true)
+                .multiple_occurrences(true)
                 .number_of_values(1)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
-            Arg::with_name("print_release_name")
+            Arg::new("print_release_name")
                 .long("print-release-name")
                 .help("Print the release name instead."),
         )
         .arg(
-            Arg::with_name("release_name")
+            Arg::new("release_name")
                 .value_name("RELEASE_NAME")
                 .long("release-name")
                 .conflicts_with_all(&["bundle_id", "version_name"])
                 .help("Override the entire release-name"),
         )
         .arg(
-            Arg::with_name("app_name")
+            Arg::new("app_name")
                 .value_name("APP_NAME")
                 .index(1)
                 .required(true)
                 .help("The name of the AppCenter application."),
         )
         .arg(
-            Arg::with_name("platform")
+            Arg::new("platform")
                 .value_name("PLATFORM")
                 .index(2)
                 .required(true)
                 .help("The name of the app platform. [ios, android]"),
         )
         .arg(
-            Arg::with_name("paths")
+            Arg::new("paths")
                 .value_name("PATH")
                 .index(3)
                 .required(true)
-                .multiple(true)
+                .multiple_occurrences(true)
                 .help("A list of folders with assets that should be processed."),
         )
         .arg(
-            Arg::with_name("wait")
+            Arg::new("wait")
                 .long("wait")
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
