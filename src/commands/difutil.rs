@@ -8,7 +8,6 @@ macro_rules! each_subcommand {
         $mac!(difutil_bundle_sources);
         $mac!(difutil_find);
         $mac!(difutil_check);
-        $mac!(difutil_id);
     };
 }
 
