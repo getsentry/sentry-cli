@@ -70,11 +70,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("new")
             .about("Create a new release.")
             .version_arg(1)
-            // this is deprecated and no longer does anything
-            .arg(Arg::with_name("ref")
-                .long("ref")
-                .value_name("REF")
-                .hidden(true))
             .arg(Arg::with_name("url")
                 .long("url")
                 .value_name("URL")
@@ -161,9 +156,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                  .help("Set the release time. [defaults to the current time]")))
         .subcommand(App::new("list")
             .about("List the most recent releases.")
-            .arg(Arg::with_name("no_abbrev")
-                .long("no-abbrev")
-                .hidden(true))
             .arg(Arg::with_name("show_projects")
                 .short("P")
                 .long("show-projects")
@@ -353,11 +345,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .conflicts_with("paths")
                     .requires_all(&["bundle"])
                     .help("Path to the bundle sourcemap"))
-                // legacy parameter
-                .arg(Arg::with_name("verbose")
-                    .long("verbose")
-                    .short("v")
-                    .hidden(true))
                 .arg(Arg::with_name("extensions")
                     .long("ext")
                     .short("x")
@@ -367,18 +354,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                     .help("Set the file extensions that are considered for upload. \
                            This overrides the default extensions. To add an extension, all default \
                            extensions must be repeated. Specify once per extension.{n}\
-                           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`"))
-                .arg(Arg::with_name("rewrite")
-                    .long("rewrite")
-                    .help("Enables rewriting of matching sourcemaps \
-                        so that indexed maps are flattened and missing \
-                        sources are inlined if possible.{n}This fundamentally \
-                        changes the upload process to be based on sourcemaps \
-                        and minified files exclusively and comes in handy for \
-                        setups like react-native that generate sourcemaps that \
-                        would otherwise not work for sentry.")
-                    .conflicts_with("no_rewrite")
-                    .hidden(true))))
+                           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`"))))
         .subcommand(App::new("deploys")
             .about("Manage release deployments.")
             .setting(AppSettings::SubcommandRequiredElseHelp)
