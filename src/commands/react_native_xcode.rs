@@ -31,13 +31,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a Xcode build step.")
         .org_arg()
         .project_arg(false)
-        // legacy parameter
-        .arg(
-            Arg::with_name("verbose")
-                .long("verbose")
-                .short("v")
-                .hidden(true),
-        )
         .arg(Arg::with_name("force").long("force").short("f").help(
             "Force the script to run, even in debug configuration.{n}This rarely \
              does what you want because the default build script does not actually \

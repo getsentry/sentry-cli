@@ -174,19 +174,6 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
              can only be displayed if --wait is specified, but this will \
              significantly slow down the upload process.",
         ))
-        .arg(
-            Arg::with_name("upload_symbol_maps")
-                .long("upload-symbol-maps")
-                .help(
-                    "Upload any BCSymbolMap files found to allow Sentry to resolve \
-                     hidden symbols, e.g. when it downloads dSYMs directly from App \
-                     Store Connect or when you upload dSYMs without first resolving \
-                     the hidden symbols using --symbol-maps.",
-                )
-                // NOTE(kamil): Hidden until we make it usable. We cannot remove it as it's already included in sentry-fastlane-plugin.
-                // See: https://github.com/getsentry/sentry-cli/issues/1009#issuecomment-911516666
-                .hidden(true),
-        )
 }
 
 pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
