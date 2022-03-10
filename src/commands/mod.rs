@@ -14,12 +14,15 @@ use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::system::{print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 
-const ABOUT: &str = "
-Command line utility for Sentry.
+// Nested sub-commands
+pub mod react_native_appcenter;
+pub mod react_native_gradle;
+#[cfg(target_os = "macos")]
+pub mod react_native_xcode;
 
-This tool helps you manage remote resources on a Sentry server like
-sourcemaps, debug symbols or releases.  Use `--help` on the subcommands
-to learn more about them.";
+pub mod difutil_bundle_sources;
+pub mod difutil_check;
+pub mod difutil_find;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -41,38 +44,25 @@ macro_rules! each_subcommand {
     };
 }
 
-// commands we want to run the update nagger on
+macro_rules! import_subcommand {
+    ($name:ident) => {
+        pub mod $name;
+    };
+}
+
+each_subcommand!(import_subcommand);
+
+const ABOUT: &str = "
+Command line utility for Sentry.
+
+This tool helps you manage remote resources on a Sentry server like
+sourcemaps, debug symbols or releases.  Use `--help` on the subcommands
+to learn more about them.";
+
+// Commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &[&str] = &[
     "releases", "issues", "repos", "projects", "info", "login", "difutil",
 ];
-
-// it would be great if this could be a macro expansion as well
-// but rust bug #37663 breaks location information then.
-// FIXME: #37663 has been merged.
-pub mod info;
-pub mod issues;
-pub mod login;
-pub mod projects;
-pub mod releases;
-pub mod repos;
-pub mod send_event;
-#[cfg(not(feature = "managed"))]
-pub mod uninstall;
-#[cfg(not(feature = "managed"))]
-pub mod update;
-pub mod upload_dif;
-pub mod upload_proguard;
-
-pub mod react_native;
-pub mod react_native_appcenter;
-pub mod react_native_gradle;
-#[cfg(target_os = "macos")]
-pub mod react_native_xcode;
-
-pub mod difutil;
-pub mod difutil_bundle_sources;
-pub mod difutil_check;
-pub mod difutil_find;
 
 fn preexecute_hooks() -> Result<bool, Error> {
     return sentry_react_native_xcode_wrap();
