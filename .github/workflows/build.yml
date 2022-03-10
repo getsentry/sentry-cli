@@ -51,10 +51,10 @@ jobs:
         include:
           - arch: x86_64
             target: x86_64-apple-darwin
-            macos-version: "10.15"
+            macos-version: '10.15'
           - arch: arm64
             target: aarch64-apple-darwin
-            macos-version: "11.0"
+            macos-version: '11.0'
 
     name: macOS ${{ matrix.arch }}
     runs-on: macos-${{ matrix.macos-version }}
@@ -141,10 +141,10 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - name: Use Node.js 8.x
+      - name: Use Node.js 16.x
         uses: actions/setup-node@v1
         with:
-          node-version: 8.x
+          node-version: 16.x
 
       - name: Download compiled binaries
         uses: actions/download-artifact@v2
