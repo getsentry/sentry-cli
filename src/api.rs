@@ -899,6 +899,36 @@ impl Api {
         }
     }
 
+    /// Looks up a release commits and returns it.  If it does not exist `None`
+    /// will be returned.
+    pub fn get_release_commits(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<Option<Vec<ReleaseCommit>>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/commits/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/commits/",
+                PathArg(org),
+                PathArg(version)
+            )
+        };
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
     // Finds the most recent release with commits and returns it.
     // If it does not exist `None` will be returned.
     pub fn get_previous_release_with_commits(
@@ -2015,7 +2045,7 @@ pub struct ReleaseInfo {
         rename = "lastCommit",
         skip_serializing_if = "Option::is_none"
     )]
-    pub last_commit: Option<LastCommit>,
+    pub last_commit: Option<ReleaseCommit>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -2030,7 +2060,7 @@ pub enum OptionalReleaseInfo {
 pub struct NoneReleaseInfo {}
 
 #[derive(Debug, Deserialize)]
-pub struct LastCommit {
+pub struct ReleaseCommit {
     pub id: String,
 }
 
