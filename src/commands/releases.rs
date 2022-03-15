@@ -96,6 +96,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
                         This requires that the command is run from within a git repository.  \
                         sentry-cli will then automatically find remotely configured \
                         repositories and discover commits."))
+            .arg(Arg::with_name("env")
+                .long("env")
+                .short("e")
+                .value_name("ENV")
+                .help("Chooses which release environment should be used to query for previously set release commits."))
             .arg(Arg::with_name("ignore-missing")
                 .long("ignore-missing")
                 .help("When the flag is set and the previous release commit was not found in the repository, \
@@ -488,8 +493,8 @@ fn execute_set_commits<'a>(
     matches: &ArgMatches<'a>,
 ) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
-
     let org = ctx.get_org()?;
+    let env = matches.value_of("env");
     let repos = ctx.api.list_organization_repos(org)?;
     let mut commit_specs = vec![];
     let config = Config::current();
@@ -573,8 +578,12 @@ fn execute_set_commits<'a>(
         if matches.is_present("auto") {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
         }
-        // Get the commit of the most recent release.
-        let prev_commit = match ctx.api.get_previous_release_with_commits(org, version)? {
+
+        // Get the commit of the most recent release of given environment.
+        let prev_commit = match ctx
+            .api
+            .get_previous_release_with_commits(org, version, env)?
+        {
             OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
             OptionalReleaseInfo::None(NoneReleaseInfo {}) => String::new(),
         };

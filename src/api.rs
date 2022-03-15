@@ -905,12 +905,23 @@ impl Api {
         &self,
         org: &str,
         version: &str,
+        env: Option<&str>,
     ) -> ApiResult<OptionalReleaseInfo> {
-        let path = format!(
-            "/organizations/{}/releases/{}/previous-with-commits/",
-            PathArg(org),
-            PathArg(version)
-        );
+        let path = if let Some(env) = env {
+            format!(
+                "/organizations/{}/releases/{}/previous-with-commits/?env={}",
+                PathArg(org),
+                PathArg(version),
+                PathArg(env)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/previous-with-commits/",
+                PathArg(org),
+                PathArg(version)
+            )
+        };
+
         let resp = self.get(&path)?;
         if resp.status() == 404 {
             Ok(OptionalReleaseInfo::None(NoneReleaseInfo {}))
