@@ -15,7 +15,9 @@ USAGE:
 OPTIONS:
         --api-key <API_KEY>          The given Sentry API key.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
-    -h, --help                       Print this help message.
+    -h, --help                       Print help information
+        --header <KEY:VALUE>         Custom headers that should be attached to all requests in
+                                     key:value format.
         --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
                                      info, warn, error]
         --url <URL>                  Fully qualified URL to the Sentry server.
