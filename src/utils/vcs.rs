@@ -587,10 +587,22 @@ use {
 
 #[test]
 fn test_find_matching_rev_with_lightweight_tag() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    git_initialize_repo(dir.path());
+
+    git_create_commit(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    let hash = git_create_tag(dir.path(), "1.9.2", false);
+
     let reference = GitReference::Symbolic("1.9.2");
     let spec = CommitSpec {
         repo: String::from("getsentry/sentry-cli"),
-        path: None,
+        path: Some(dir.path().to_path_buf()),
         rev: String::from("1.9.2"),
         prev_rev: Some(String::from("1.9.1")),
     };
@@ -608,18 +620,27 @@ fn test_find_matching_rev_with_lightweight_tag() {
     }];
 
     let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false, None);
-    assert_eq!(
-        res_with_lightweight_tag.unwrap(),
-        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
-    );
+    assert_eq!(res_with_lightweight_tag.unwrap(), Some(hash));
 }
 
 #[test]
 fn test_find_matching_rev_with_annotated_tag() {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+    git_initialize_repo(dir.path());
+
+    git_create_commit(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    let hash = git_create_tag(dir.path(), "1.9.2-hw", true);
+
     let reference = GitReference::Symbolic("1.9.2-hw");
     let spec = CommitSpec {
         repo: String::from("getsentry/sentry-cli"),
-        path: None,
+        path: Some(dir.path().to_path_buf()),
         rev: String::from("1.9.2-hw"),
         prev_rev: Some(String::from("1.9.1")),
     };
@@ -637,10 +658,7 @@ fn test_find_matching_rev_with_annotated_tag() {
     }];
 
     let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false, None);
-    assert_eq!(
-        res_with_annotated_tag.unwrap(),
-        Some(String::from("5bf28a6e4cbf54ff5bfb5a8dfb8dbc6387e53942"))
-    );
+    assert_eq!(res_with_annotated_tag.unwrap(), Some(hash));
 }
 
 #[test]
@@ -834,7 +852,7 @@ fn test_url_normalization() {
 }
 
 #[cfg(test)]
-fn test_initialize(dir: &Path) {
+fn git_initialize_repo(dir: &Path) {
     Command::new("git")
         .args(&["init", "--quiet"])
         .current_dir(dir)
@@ -858,10 +876,23 @@ fn test_initialize(dir: &Path) {
         .expect("Failed to execute `git config`.")
         .wait()
         .expect("Failed to wait on git config.");
+
+    Command::new("git")
+        .args(&[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/getsentry/sentry-cli",
+        ])
+        .current_dir(dir)
+        .spawn()
+        .expect("Failed to execute `git remote add`.")
+        .wait()
+        .expect("Failed to wait on git remote add.");
 }
 
 #[cfg(test)]
-fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: &str) {
+fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message: &str) {
     let path = dir.join(file_path);
     let mut file = File::create(path).expect("Failed to execute.");
     file.write_all(content).expect("Failed to execute.");
@@ -890,19 +921,48 @@ fn git_commit_test(dir: &Path, file_path: &str, content: &[u8], commit_message: 
     commit.wait().expect("Failed to wait on git commit.");
 }
 
+#[cfg(test)]
+fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
+    let mut tag_cmd = vec!["tag", tag_name];
+
+    if annotated {
+        tag_cmd.push("-a");
+        tag_cmd.push("-m");
+        tag_cmd.push("imannotatedtag");
+    }
+
+    let mut tag = Command::new("git")
+        .args(tag_cmd)
+        .current_dir(dir)
+        .spawn()
+        .unwrap_or_else(|_| panic!("Failed to execute `git tag {}`", tag_name));
+
+    tag.wait().expect("Failed to wait on git tag.");
+
+    let hash = Command::new("git")
+        .args(&["rev-list", "-n", "1", tag_name])
+        .current_dir(dir)
+        .output()
+        .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {}`.", tag_name));
+
+    String::from_utf8(hash.stdout)
+        .map(|s| s.trim().to_string())
+        .expect("Invalid utf-8")
+}
+
 #[test]
 fn test_get_commits_from_git() {
     let dir = tempdir().expect("Failed to generate temp dir.");
-    test_initialize(dir.path());
+    git_initialize_repo(dir.path());
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo.js",
         b"console.log(\"Hello, world!\");",
         "\"initial commit\"",
     );
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world! Part 2\");",
@@ -928,23 +988,23 @@ fn test_get_commits_from_git() {
 #[test]
 fn test_generate_patch_set_base() {
     let dir = tempdir().expect("Failed to generate temp dir.");
-    test_initialize(dir.path());
+    git_initialize_repo(dir.path());
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo.js",
         b"console.log(\"Hello, world!\");",
         "\"initial commit\"",
     );
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world! Part 2\");",
         "\"second commit\"",
     );
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world! Part 3\");",
@@ -965,23 +1025,23 @@ fn test_generate_patch_set_base() {
 #[test]
 fn test_generate_patch_set_previous_commit() {
     let dir = tempdir().expect("Failed to generate temp dir.");
-    test_initialize(dir.path());
+    git_initialize_repo(dir.path());
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo.js",
         b"console.log(\"Hello, world!\");",
         "\"initial commit\"",
     );
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world! Part 2\");",
         "\"second commit\"",
     );
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world! Part 3\");",
@@ -991,14 +1051,14 @@ fn test_generate_patch_set_previous_commit() {
     let repo = git2::Repository::open(dir.path()).expect("Failed");
     let head = repo.revparse_single("HEAD").expect("Failed");
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo4.js",
         b"console.log(\"Hello, world! Part 4\");",
         "\"fourth commit\"",
     );
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world! Part 5\");",
@@ -1018,9 +1078,9 @@ fn test_generate_patch_set_previous_commit() {
 #[test]
 fn test_generate_patch_default_twenty() {
     let dir = tempdir().expect("Failed to generate temp dir.");
-    test_initialize(dir.path());
+    git_initialize_repo(dir.path());
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo.js",
         b"console.log(\"Hello, world!\");",
@@ -1029,7 +1089,7 @@ fn test_generate_patch_default_twenty() {
 
     for n in 0..20 {
         let file = format!("foo{}.js", n);
-        git_commit_test(
+        git_create_commit(
             dir.path(),
             &file,
             b"console.log(\"Hello, world! Part 2\");",
@@ -1037,7 +1097,7 @@ fn test_generate_patch_default_twenty() {
         );
     }
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world!\");",
@@ -1058,9 +1118,9 @@ fn test_generate_patch_default_twenty() {
 #[test]
 fn test_generate_patch_ignore_missing() {
     let dir = tempdir().expect("Failed to generate temp dir.");
-    test_initialize(dir.path());
+    git_initialize_repo(dir.path());
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo.js",
         b"console.log(\"Hello, world!\");",
@@ -1069,7 +1129,7 @@ fn test_generate_patch_ignore_missing() {
 
     for n in 0..5 {
         let file = format!("foo{}.js", n);
-        git_commit_test(
+        git_create_commit(
             dir.path(),
             &file,
             b"console.log(\"Hello, world! Part 2\");",
@@ -1077,7 +1137,7 @@ fn test_generate_patch_ignore_missing() {
         );
     }
 
-    git_commit_test(
+    git_create_commit(
         dir.path(),
         "foo2.js",
         b"console.log(\"Hello, world!\");",

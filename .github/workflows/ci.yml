@@ -52,10 +52,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-        with:
-          # FIXME: Some VCS tests are parsing the history of the repository itself.
-          # Because of that, we need an access to all previous commits. Should't be like that.
-          fetch-depth: 0
 
       - uses: actions-rs/toolchain@v1
         with:
