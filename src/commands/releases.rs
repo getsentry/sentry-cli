@@ -215,8 +215,8 @@ pub fn make_app(app: Command) -> Command {
                 .arg(Arg::new("wait")
                     .long("wait")
                     .help("Wait for the server to fully process uploaded files."))
-                .arg(Arg::new("headers")
-                    .long("header")
+                .arg(Arg::new("file-headers")
+                    .long("file-header")
                     .short('H')
                     .value_name("KEY VALUE")
                     .multiple_occurrences(true)
@@ -872,7 +872,7 @@ fn execute_files_upload(
 ) -> Result<(), Error> {
     let dist = matches.value_of("dist");
     let mut headers = vec![];
-    if let Some(header_list) = matches.values_of("headers") {
+    if let Some(header_list) = matches.values_of("file-headers") {
         for header in header_list {
             if !header.contains(':') {
                 bail!("Invalid header. Needs to be in key:value format");
