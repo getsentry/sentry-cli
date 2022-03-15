@@ -41,6 +41,7 @@ pub struct Config {
     ini: Ini,
     cached_auth: Option<Auth>,
     cached_base_url: String,
+    cached_headers: Option<Vec<String>>,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
 }
@@ -59,6 +60,7 @@ impl Config {
             process_bound: false,
             cached_auth: get_default_auth(&ini),
             cached_base_url: get_default_url(&ini),
+            cached_headers: get_default_headers(&ini),
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
@@ -182,6 +184,16 @@ impl Config {
         self.cached_base_url = url.to_owned();
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+    }
+
+    /// Sets headers that should be attached to all requests
+    pub fn set_headers(&mut self, headers: Vec<String>) {
+        self.cached_headers = Some(headers);
+    }
+
+    /// Get headers that should be attached to all requests
+    pub fn get_headers(&self) -> Option<Vec<String>> {
+        self.cached_headers.clone()
     }
 
     /// Returns the API URL for a path
@@ -313,15 +325,6 @@ impl Config {
         env::var("SENTRY_PIPELINE").ok().or_else(|| {
             self.ini
                 .get_from(Some("defaults"), "pipeline")
-                .map(str::to_owned)
-        })
-    }
-
-    /// Return the custom header added to all requests.
-    pub fn get_custom_header(&self) -> Option<String> {
-        env::var("CUSTOM_HEADER").ok().or_else(|| {
-            self.ini
-                .get_from(Some("defaults"), "custom_header")
                 .map(str::to_owned)
         })
     }
@@ -547,6 +550,7 @@ impl Clone for Config {
             ini: self.ini.clone(),
             cached_auth: self.cached_auth.clone(),
             cached_base_url: self.cached_base_url.clone(),
+            cached_headers: self.cached_headers.clone(),
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
         }
@@ -575,6 +579,15 @@ fn get_default_url(ini: &Ini) -> String {
         val.to_owned()
     } else {
         DEFAULT_URL.to_owned()
+    }
+}
+
+fn get_default_headers(ini: &Ini) -> Option<Vec<String>> {
+    if let Ok(val) = env::var("CUSTOM_HEADER") {
+        Some(vec![val])
+    } else {
+        ini.get_from(Some("defaults"), "custom_header")
+            .map(|val| vec![val.to_owned()])
     }
 }
 

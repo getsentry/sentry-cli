@@ -115,6 +115,11 @@ fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), E
         config.set_base_url(url);
     }
 
+    if let Some(headers) = matches.values_of("headers") {
+        let headers = headers.map(|h| h.to_owned()).collect();
+        config.set_headers(headers);
+    }
+
     if let Some(api_key) = matches.value_of("api_key") {
         config.set_auth(Auth::Key(api_key.to_owned()));
     }
@@ -212,6 +217,17 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
             "Fully qualified URL to the Sentry server.{n}\
              [defaults to https://sentry.io/]",
         ))
+        .arg(
+            Arg::with_name("headers")
+                .long("header")
+                .short("h")
+                .value_name("HEADERS")
+                .multiple(true)
+                .number_of_values(1)
+                .help(
+                    "Custom headers that should be attached to all requests in key:value format.",
+                ),
+        )
         .arg(
             Arg::with_name("auth_token")
                 .value_name("AUTH_TOKEN")
