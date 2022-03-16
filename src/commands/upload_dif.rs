@@ -23,7 +23,7 @@ static DERIVED_DATA: &str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload debugging information files.")
-        .org_project_args()
+        .org_project_args(true)
         .arg(
             Arg::with_name("paths")
                 .value_name("PATH")

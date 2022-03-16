@@ -28,7 +28,7 @@ struct MappingRef {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload ProGuard mapping files to a project.")
-        .org_project_args()
+        .org_project_args(true)
         .arg(
             Arg::with_name("paths")
                 .value_name("PATH")

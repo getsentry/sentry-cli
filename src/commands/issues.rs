@@ -10,7 +10,7 @@ use crate::utils::args::ArgExt;
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage issues in Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_project_args()
+        .org_project_args(true)
         .arg(
             Arg::with_name("status")
                 .long("status")

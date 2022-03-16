@@ -97,34 +97,36 @@ pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>, Error> {
 }
 
 pub trait ArgExt: Sized {
-    fn org_arg(self) -> Self;
-    fn project_arg(self) -> Self;
+    fn org_arg(self, global: bool) -> Self;
+    fn project_arg(self, global: bool) -> Self;
     fn projects_arg(self) -> Self;
-    fn org_project_args(self) -> Self {
-        self.org_arg().project_arg()
+    fn org_project_args(self, global: bool) -> Self {
+        self.org_arg(global).project_arg(global)
     }
     fn version_arg(self, index: u64) -> Self;
 }
 
 impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
-    fn org_arg(self) -> clap::App<'a, 'b> {
+    fn org_arg(self, global: bool) -> clap::App<'a, 'b> {
         self.arg(
             clap::Arg::with_name("org")
                 .value_name("ORG")
                 .long("org")
                 .short("o")
                 .validator(validate_org)
+                .global(global)
                 .help("The organization slug"),
         )
     }
 
-    fn project_arg(self) -> clap::App<'a, 'b> {
+    fn project_arg(self, global: bool) -> clap::App<'a, 'b> {
         self.arg(
             clap::Arg::with_name("project")
                 .value_name("PROJECT")
                 .long("project")
                 .short("p")
                 .validator(validate_project)
+                .global(global)
                 .help("The project slug"),
         )
     }
@@ -139,7 +141,7 @@ impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
                 .number_of_values(1)
                 .required(false)
                 .validator(validate_project)
-                .help("The project slug.  This can be supplied multiple times."),
+                .help("The project slug. This can be supplied multiple times."),
         )
     }
 

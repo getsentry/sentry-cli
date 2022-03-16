@@ -65,7 +65,7 @@ impl<'a> ReleaseContext<'a> {
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage releases on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_project_args()
+        .org_project_args(true)
         .subcommand(App::new("new")
             .about("Create a new release.")
             .version_arg(1)

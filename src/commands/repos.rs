@@ -10,7 +10,7 @@ use crate::utils::formatting::Table;
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage repositories on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_arg()
+        .org_arg(true)
         .subcommand(App::new("list").about("List all repositories in your organization."))
 }
 

@@ -8,7 +8,7 @@ use crate::utils::args::{validate_uuid, ArgExt};
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("DEPRECATED: Upload Mac debug symbols to a project.")
         .setting(AppSettings::Hidden)
-        .org_project_args()
+        .org_project_args(true)
         .arg(
             Arg::with_name("paths")
                 .value_name("PATH")

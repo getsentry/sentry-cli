@@ -28,7 +28,7 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage monitors on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .setting(AppSettings::Hidden)
-        .org_arg()
+        .org_arg(true)
         .subcommand(App::new("list").about("List all monitors for an organization."))
         .subcommand(
             App::new("run")
