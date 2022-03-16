@@ -29,7 +29,8 @@ struct SourceMapReport {
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a Xcode build step.")
-        .org_project_args()
+        .org_arg()
+        .project_arg(false)
         // legacy parameter
         .arg(
             Arg::with_name("verbose")
