@@ -95,10 +95,6 @@ class Releases {
       commitFlags.push('--ignore-missing');
     }
 
-    if (options.ignoreEmpty) {
-      commitFlags.push('--ignore-empty');
-    }
-
     return this.execute(['releases', 'set-commits', release].concat(commitFlags));
   }
 
