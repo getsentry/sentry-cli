@@ -319,11 +319,9 @@ impl Config {
 
     /// Return the custom header added to all requests.
     pub fn get_custom_header(&self) -> Option<String> {
-        env::var("CUSTOM_HEADER").ok().or_else(|| {
-            self.ini
-                .get_from(Some("defaults"), "custom_header")
-                .map(str::to_owned)
-        })
+        env::var("SENTRY_HEADER")
+            .ok()
+            .or_else(|| self.ini.get_from(Some("http"), "header").map(str::to_owned))
     }
 
     /// Returns the defaults for org and project.
