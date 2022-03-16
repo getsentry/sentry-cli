@@ -11,8 +11,8 @@ use if_chain::if_chain;
 use proguard::ProguardMapping;
 use serde::Serialize;
 use symbolic::common::{ByteView, DebugId};
-use uuid::Version as UuidVersion;
-use walkdir::WalkDir;
+use uuid::{Uuid, Version as UuidVersion};
+use walkdir::{DirEntry, WalkDir};
 
 use crate::utils::args::validate_id;
 use crate::utils::dif::{DifFile, DifType};
@@ -101,8 +101,6 @@ fn id_hint(id: &DebugId) -> &'static str {
     }
 }
 
-// TODO: Reduce complexity of this function
-#[allow(clippy::cognitive_complexity)]
 fn find_ids(
     paths: &HashSet<PathBuf>,
     types: &HashSet<DifType>,
@@ -146,110 +144,20 @@ fn find_ids(
         pb.tick();
         pb.set_prefix(&format!("{}", found_files.len()));
 
-        let mut found = vec![];
-
-        // specifically look for proguard files.  We only look for UUID5s
-        // and only if the file is a text file.
-        if_chain! {
-            if !proguard_uuids.is_empty();
-            if types.contains(&DifType::Proguard);
-            if dirent.path().extension() == Some(OsStr::new("txt"));
-            if let Ok(md) = dirent.metadata();
-            if md.len() < MAX_MAPPING_FILE;
-            if let Ok(byteview) = ByteView::open(dirent.path());
-            let mapping = ProguardMapping::new(&byteview);
-            if mapping.is_valid();
-            if proguard_uuids.contains(&mapping.uuid());
-            then {
-                found.push((mapping.uuid().into(), DifType::Proguard));
-            }
-        }
-
-        // look for dsyms
-        if_chain! {
-            if types.contains(&DifType::Dsym);
-            // we regularly match on .class files but the will never be
-            // dsyms, so we can quickly skip them here
-            if dirent.path().extension() != Some(OsStr::new("class"));
-            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Dsym));
-            then {
-                for id in dif.ids() {
-                    if remaining.contains(&id) {
-                        found.push((id, DifType::Dsym));
-                    }
-                }
-            }
-        }
-
-        // look for elfs
-        if_chain! {
-            if types.contains(&DifType::Elf);
-            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Elf));
-            then {
-                for id in dif.ids() {
-                    if remaining.contains(&id) {
-                        found.push((id, DifType::Elf));
-                    }
-                }
-            }
-        }
-
-        // look for PEs
-        if_chain! {
-            if types.contains(&DifType::Pe);
-            if dirent.path().extension() == Some(OsStr::new("exe")) ||
-            dirent.path().extension() == Some(OsStr::new("dll"));
-            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pe));
-            then {
-                for id in dif.ids() {
-                    if remaining.contains(&id) {
-                        found.push((id, DifType::Pe));
-                    }
-                }
-            }
-        }
-
-        // look for PDBs
-        if_chain! {
-            if types.contains(&DifType::Pdb);
-            if dirent.path().extension() == Some(OsStr::new("pdb"));
-            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pdb));
-            then {
-                for id in dif.ids() {
-                    if remaining.contains(&id) {
-                        found.push((id, DifType::Pdb));
-                    }
-                }
-            }
-        }
-
-        // look for breakpad files
-        if_chain! {
-            if types.contains(&DifType::Breakpad);
-            if dirent.path().extension() == Some(OsStr::new("sym"));
-            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Breakpad));
-            then {
-                for id in dif.ids() {
-                    if remaining.contains(&id) {
-                        found.push((id, DifType::Breakpad));
-                    }
-                }
-            }
-        }
-
-        // look for source bundles
-        if_chain! {
-            if types.contains(&DifType::SourceBundle);
-            if dirent.path().extension() == Some(OsStr::new("zip"));
-            if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::SourceBundle));
-            then {
-                for id in dif.ids() {
-                    if remaining.contains(&id) {
-                        found.push((id, DifType::SourceBundle));
-                    }
-                }
-            }
-        }
+        let found: Vec<_> = types
+            .iter()
+            .filter_map(|t| match t {
+                DifType::Dsym => find_ids_for_dsym(&dirent, &remaining),
+                DifType::Elf => find_ids_for_elf(&dirent, &remaining),
+                DifType::Pe => find_ids_for_pe(&dirent, &remaining),
+                DifType::Pdb => find_ids_for_pdb(&dirent, &remaining),
+                DifType::SourceBundle => find_ids_for_sourcebundle(&dirent, &remaining),
+                DifType::Breakpad => find_ids_for_breakpad(&dirent, &remaining),
+                DifType::Proguard => find_ids_for_proguard(&dirent, &proguard_uuids),
+                DifType::Wasm => None,
+            })
+            .flatten()
+            .collect();
 
         for (id, ty) in found {
             let path = dirent.path().to_path_buf();
@@ -288,6 +196,127 @@ fn find_ids(
     }
 
     Ok(remaining.is_empty())
+}
+
+fn find_ids_for_proguard(
+    dirent: &DirEntry,
+    proguard_uuids: &HashSet<Uuid>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if !proguard_uuids.is_empty();
+        if dirent.path().extension() == Some(OsStr::new("txt"));
+        if let Ok(md) = dirent.metadata();
+        if md.len() < MAX_MAPPING_FILE;
+        if let Ok(byteview) = ByteView::open(dirent.path());
+        let mapping = ProguardMapping::new(&byteview);
+        if mapping.is_valid();
+        if proguard_uuids.contains(&mapping.uuid());
+        then {
+            return Some(vec![(mapping.uuid().into(), DifType::Proguard)]);
+        }
+    }
+    None
+}
+
+fn find_ids_for_dsym(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        // we regularly match on .class files but the will never be
+        // dsyms, so we can quickly skip them here
+        if dirent.path().extension() != Some(OsStr::new("class"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Dsym));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Dsym))
+        }
+    }
+    None
+}
+
+fn find_ids_for_elf(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Elf));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Elf))
+        }
+    }
+    None
+}
+
+fn find_ids_for_pe(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if dirent.path().extension() == Some(OsStr::new("exe")) ||
+        dirent.path().extension() == Some(OsStr::new("dll"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pe));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Pe))
+        }
+    }
+    None
+}
+
+fn find_ids_for_pdb(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if dirent.path().extension() == Some(OsStr::new("pdb"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pdb));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Pdb))
+        }
+    }
+    None
+}
+
+fn find_ids_for_sourcebundle(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if dirent.path().extension() == Some(OsStr::new("zip"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::SourceBundle));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::SourceBundle))
+        }
+    }
+    None
+}
+
+fn find_ids_for_breakpad(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if dirent.path().extension() == Some(OsStr::new("sym"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Breakpad));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Breakpad))
+        }
+    }
+    None
+}
+
+fn extract_remaining_ids(
+    ids: &[DebugId],
+    remaining: &HashSet<DebugId>,
+    t: DifType,
+) -> Vec<(DebugId, DifType)> {
+    ids.iter()
+        .filter_map(|id| {
+            if remaining.contains(id) {
+                return Some((id.to_owned(), t));
+            }
+            None
+        })
+        .collect()
 }
 
 pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
