@@ -30,7 +30,6 @@ pub fn make_app(app: Command) -> Command {
         .arg(
             Arg::new("id")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .short('i')
                 .long("id")
                 .help("Select the issue with the given ID."),

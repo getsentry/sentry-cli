@@ -80,7 +80,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("message")
                 .short('m')
                 .multiple_occurrences(true)
-                .number_of_values(1)
+
                 .help("The event message."),
         )
         .arg(
@@ -89,7 +89,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("message-arg")
                 .short('a')
                 .multiple_occurrences(true)
-                .number_of_values(1)
+
                 .help("Arguments for the event message."),
         )
         .arg(
@@ -105,7 +105,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("tag")
                 .short('t')
                 .multiple_occurrences(true)
-                .number_of_values(1)
+
                 .help("Add a tag (key:value) to the event."),
         )
         .arg(
@@ -114,7 +114,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("extra")
                 .short('e')
                 .multiple_occurrences(true)
-                .number_of_values(1)
+
                 .help("Add extra information (key:value) to the event."),
         )
         .arg(
@@ -123,7 +123,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("user")
                 .short('u')
                 .multiple_occurrences(true)
-                .number_of_values(1)
+
                 .help(
                     "Add user information (key:value) to the event. \
                      [eg: id:42, username:foo]",
@@ -135,7 +135,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("fingerprint")
                 .short('f')
                 .multiple_occurrences(true)
-                .number_of_values(1)
+
                 .help("Change the fingerprint of the event."),
         )
         .arg(

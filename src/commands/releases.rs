@@ -115,7 +115,7 @@ pub fn make_app(app: Command) -> Command {
                  .short('c')
                  .value_name("SPEC")
                  .multiple_occurrences(true)
-                 .number_of_values(1)
+
                  .help("Defines a single commit for a repo as \
                         identified by the repo name in the remote Sentry config. \
                         If no commit has been specified sentry-cli will attempt \
@@ -220,7 +220,6 @@ pub fn make_app(app: Command) -> Command {
                     .short('H')
                     .value_name("KEY VALUE")
                     .multiple_occurrences(true)
-                    .number_of_values(1)
                     .help("Store a header with this file."))
                 .arg(Arg::new("path")
                     .value_name("PATH")
@@ -257,7 +256,6 @@ pub fn make_app(app: Command) -> Command {
                     .short('x')
                     .value_name("EXT")
                     .multiple_occurrences(true)
-                    .number_of_values(1)
                     .help("Set the file extensions that are considered for upload. \
                            This overrides the default extensions. To add an extension, all default \
                            extensions must be repeated. Specify once per extension.")))
@@ -309,7 +307,6 @@ pub fn make_app(app: Command) -> Command {
                     .long("strip-prefix")
                     .value_name("PREFIX")
                     .multiple_occurrences(true)
-                    .number_of_values(1)
                     .help("Strips the given prefix from all sources references inside the upload \
                            sourcemaps (paths used within the sourcemap content, to map minified code \
                            to it's original source). Only sources that start with the given prefix \
@@ -351,7 +348,6 @@ pub fn make_app(app: Command) -> Command {
                     .short('x')
                     .value_name("EXT")
                     .multiple_occurrences(true)
-                    .number_of_values(1)
                     .help("Set the file extensions that are considered for upload. \
                            This overrides the default extensions. To add an extension, all default \
                            extensions must be repeated. Specify once per extension.{n}\

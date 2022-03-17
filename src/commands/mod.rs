@@ -133,7 +133,6 @@ fn app() -> Command<'static> {
                 .long("header")
                 .value_name("KEY:VALUE")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .help(
                     "Custom headers that should be attached to all requests in key:value format.",
                 ),

@@ -49,7 +49,6 @@ pub fn make_app(app: Command) -> Command {
                 .long("dist")
                 .value_name("DISTRIBUTION")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(

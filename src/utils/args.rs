@@ -122,7 +122,6 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
                 .validator(validate_project)
                 .global(true)
                 .multiple_occurrences(multiple)
-                .number_of_values(1)
                 .help("The project slug."),
         )
     }
