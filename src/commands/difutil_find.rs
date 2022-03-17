@@ -39,7 +39,6 @@ pub fn make_app(app: Command) -> Command {
                 .short('t')
                 .value_name("TYPE")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .possible_values(&[
                     "dsym",
                     "elf",
@@ -69,7 +68,6 @@ pub fn make_app(app: Command) -> Command {
                 .long("path")
                 .short('p')
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .help("Add a path to search recursively for debug info files."),
         )
         .arg(
@@ -83,8 +81,7 @@ pub fn make_app(app: Command) -> Command {
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
                 .validator(validate_id)
-                .multiple_occurrences(true)
-                .number_of_values(1),
+                .multiple_occurrences(true),
         )
 }
 

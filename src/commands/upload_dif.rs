@@ -29,7 +29,6 @@ pub fn make_app(app: Command) -> Command {
                 .value_name("PATH")
                 .help("A path to search recursively for symbol files.")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .index(1),
         )
         .arg(
@@ -38,7 +37,6 @@ pub fn make_app(app: Command) -> Command {
                 .short('t')
                 .value_name("TYPE")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .possible_values(&[
                     "dsym",
                     "elf",
@@ -94,8 +92,7 @@ pub fn make_app(app: Command) -> Command {
                 .long("id")
                 .help("Search for specific debug identifiers.")
                 .validator(validate_id)
-                .multiple_occurrences(true)
-                .number_of_values(1),
+                .multiple_occurrences(true),
         )
         .arg(
             Arg::new("require_all")

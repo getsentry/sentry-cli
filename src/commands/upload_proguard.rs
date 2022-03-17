@@ -35,7 +35,6 @@ pub fn make_app(app: Command) -> Command {
                 .value_name("PATH")
                 .help("The path to the mapping files.")
                 .multiple_occurrences(true)
-                .number_of_values(1)
                 .index(1),
         )
         .arg(
