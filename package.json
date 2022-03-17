@@ -24,7 +24,7 @@
     "sentry-cli": "bin/sentry-cli"
   },
   "scripts": {
-    "install": "node scripts/install.js",
+    "install": "./scripts/install.js",
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",
