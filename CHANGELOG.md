@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.74.0
+
+### Various fixes & improvements
+
+- ref: Dont run install script using node binary (#1151) by @kamilogorek
+- feat: Add show-projects and show-commits flags to 'releases info' command (#1144) by @kamilogorek
+- ref: Rework find_id function of difutil find (#1149) by @kamilogorek
+- ref: Rework find_matching_rev tests to not use our real repo history (#1147) by @kamilogorek
+- deps: Update git2 crate to 0.14.1 to support custom git extensions (#1140) by @kamilogorek
+- ci: Change stale GitHub workflow to run once a day (#1141) by @kamilogorek
+
 ## 1.73.2
 
 ### Various fixes & improvements
