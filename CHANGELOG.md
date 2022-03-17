@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.74.2
+
+### Various fixes & improvements
+
+- revert: ref: Dont run install script using node binary #1151 (#1155) by @kamilogorek
+- ref: Make org and project flags position independent (#1153) by @kamilogorek
+
 ## 1.74.0
 
 ### Various fixes & improvements
