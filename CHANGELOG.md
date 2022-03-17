@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.74.1
+
+### Various fixes & improvements
+
+- ref: Make org and project flags position independent (#1153) by @kamilogorek
+
 ## 1.74.0
 
 ### Various fixes & improvements
