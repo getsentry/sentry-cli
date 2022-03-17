@@ -181,6 +181,14 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(App::new("info")
             .about("Print information about a release.")
             .version_arg(1)
+            .arg(Arg::with_name("show_projects")
+                .short("P")
+                .long("show-projects")
+                .help("Display the Projects column"))
+            .arg(Arg::with_name("show_commits")
+                .short("C")
+                .long("show-commits")
+                .help("Display the Commits column"))
             .arg(Arg::with_name("quiet")
                 .short("q")
                 .long("quiet")
@@ -744,14 +752,65 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
 
     if let Some(release) = release {
         let mut tbl = Table::new();
-        tbl.add_row().add("Version").add(&release.version);
-        tbl.add_row().add("Date created").add(&release.date_created);
-        if let Some(last_event) = release.last_event {
-            tbl.add_row().add("Last event").add(last_event);
+        let title_row = tbl.title_row().add("Version").add("Date created");
+
+        if release.last_event.is_some() {
+            title_row.add("Last event");
         }
+
+        if matches.is_present("show_projects") {
+            title_row.add("Projects");
+        }
+
+        if matches.is_present("show_commits") {
+            title_row.add("Commits");
+        }
+
+        let data_row = tbl
+            .add_row()
+            .add(&release.version)
+            .add(&release.date_created);
+
+        if let Some(last_event) = release.last_event {
+            data_row.add(last_event);
+        }
+
+        if matches.is_present("show_projects") {
+            let project_slugs = release
+                .projects
+                .into_iter()
+                .map(|p| p.slug)
+                .collect::<Vec<_>>();
+            if !project_slugs.is_empty() {
+                data_row.add(project_slugs.join("\n"));
+            } else {
+                data_row.add("-");
+            }
+        }
+
+        if matches.is_present("show_commits") {
+            if let Ok(Some(commits)) = ctx
+                .api
+                .get_release_commits(org, project.as_deref(), version)
+            {
+                if !commits.is_empty() {
+                    data_row.add(
+                        commits
+                            .into_iter()
+                            .map(|c| c.id)
+                            .collect::<Vec<String>>()
+                            .join("\n"),
+                    );
+                } else {
+                    data_row.add("-");
+                }
+            } else {
+                data_row.add("-");
+            }
+        }
+
         tbl.print();
     } else {
-        println!("No such release");
         return Err(QuietExit(1).into());
     }
     Ok(())
