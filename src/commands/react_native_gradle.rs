@@ -15,7 +15,8 @@ use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Upload react-native projects in a gradle build step.")
-        .org_project_args()
+        .org_arg()
+        .project_arg(false)
         .arg(
             Arg::with_name("sourcemap")
                 .long("sourcemap")

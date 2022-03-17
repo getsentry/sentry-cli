@@ -37,21 +37,21 @@ struct ReleaseContext<'a> {
 }
 
 impl<'a> ReleaseContext<'a> {
-    pub fn get_org(&'a self) -> Result<&str, Error> {
+    pub fn get_org(&self) -> Result<&str, Error> {
         Ok(&self.org)
     }
 
-    pub fn get_project_default(&'a self) -> Result<String, Error> {
-        if let Some(proj) = self.project_default {
-            Ok(proj.to_string())
-        } else {
-            let config = Config::current();
-            Ok(config.get_project_default()?)
-        }
+    // We specifically want only a single occurence of the project,
+    // as some subcommands allow for passing multiple `--project` flags,
+    // where the rest of rely on a single value only.
+    // We can access it by indexing, as `get_projects` will always return
+    // at least single value or error out.
+    pub fn get_project(&self, matches: &ArgMatches) -> Result<String, Error> {
+        self.get_projects(matches).map(|p| p[0].clone())
     }
 
     pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>, Error> {
-        if let Some(projects) = matches.values_of("projects") {
+        if let Some(projects) = matches.values_of("project") {
             Ok(projects.map(str::to_owned).collect())
         } else if let Some(project) = self.project_default {
             Ok(vec![project.to_string()])
@@ -65,11 +65,11 @@ impl<'a> ReleaseContext<'a> {
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("Manage releases on Sentry.")
         .setting(AppSettings::SubcommandRequiredElseHelp)
-        .org_project_args()
+        .org_arg()
+        .project_arg(true)
         .subcommand(App::new("new")
             .about("Create a new release.")
             .version_arg(1)
-            .projects_arg()
             // this is deprecated and no longer does anything
             .arg(Arg::with_name("ref")
                 .long("ref")
@@ -630,7 +630,7 @@ fn execute_set_commits<'a>(
 
 fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
     if ctx
         .api
         .delete_release(ctx.get_org()?, project.as_deref(), version)?
@@ -678,7 +678,7 @@ fn execute_restore<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
 }
 
 fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
     let releases = ctx.api.list_releases(ctx.get_org()?, project.as_deref())?;
 
     if matches.is_present("raw") {
@@ -739,7 +739,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
 fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
     let release = ctx.api.get_release(org, project.as_deref(), version)?;
 
     // quiet mode just exists
@@ -818,7 +818,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
 
 fn execute_files_list<'a>(
     ctx: &ReleaseContext<'_>,
-    _matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'a>,
     release: &str,
 ) -> Result<(), Error> {
     let mut table = Table::new();
@@ -830,7 +830,7 @@ fn execute_files_list<'a>(
         .add("Size");
 
     let org = ctx.get_org()?;
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
     for artifact in ctx
         .api
         .list_release_files(org, project.as_deref(), release)?
@@ -861,7 +861,7 @@ fn execute_files_delete<'a>(
     release: &str,
 ) -> Result<(), Error> {
     let org = ctx.get_org()?;
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
 
     if matches.is_present("all") {
         if ctx
@@ -913,7 +913,7 @@ fn execute_files_upload<'a>(
         }
     };
     let org = ctx.get_org()?;
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
     let path = Path::new(matches.value_of("path").unwrap());
 
     // Batch files upload
@@ -1158,7 +1158,7 @@ fn execute_files_upload_sourcemaps<'a>(
     }
 
     let org = ctx.get_org()?;
-    let project = ctx.get_project_default().ok();
+    let project = ctx.get_project(matches).ok();
 
     // make sure the release exists
     let release = ctx.api.new_release(

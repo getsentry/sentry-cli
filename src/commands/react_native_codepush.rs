@@ -19,7 +19,8 @@ use crate::utils::sourcemaps::SourceMapProcessor;
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.about("DEPRECATED: Upload react-native projects for CodePush.")
         .setting(AppSettings::Hidden)
-        .org_project_args()
+        .org_arg()
+        .project_arg(false)
         .arg(
             Arg::with_name("deployment")
                 .long("deployment")
