@@ -7,6 +7,11 @@
 ### Various fixes & improvements
 
 - revert: ref: Dont run install script using node binary #1151 (#1155) by @kamilogorek
+
+## 1.74.1
+
+### Various fixes & improvements
+
 - ref: Make org and project flags position independent (#1153) by @kamilogorek
 
 ## 1.74.0
