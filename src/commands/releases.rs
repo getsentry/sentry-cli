@@ -744,7 +744,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     let project = ctx.get_project(matches).ok();
     let release = ctx.api.get_release(org, project.as_deref(), version)?;
 
-    // quiet mode just exists
+    // quiet mode just exits
     if matches.is_present("quiet") {
         if release.is_none() {
             return Err(QuietExit(1).into());

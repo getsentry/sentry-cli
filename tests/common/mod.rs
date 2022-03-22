@@ -1,11 +1,59 @@
-use mockito::server_url;
-use std::collections::HashMap;
+use mockito::{mock, server_url, Matcher, Mock};
+use trycmd::TestCases;
 
-pub fn get_base_env() -> HashMap<String, String> {
-    let mut env = HashMap::new();
-    env.insert(String::from("SENTRY_URL"), server_url());
-    env.insert(String::from("SENTRY_AUTH_TOKEN"), String::from("lolnope"));
-    env.insert(String::from("SENTRY_ORG"), String::from("wat-org"));
-    env.insert(String::from("SENTRY_PROJECT"), String::from("wat-project"));
-    env
+pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6}Z"#;
+
+pub fn create_testcase() -> TestCases {
+    let test_case = TestCases::new();
+    test_case
+        .env("SENTRY_URL", server_url())
+        .env("SENTRY_AUTH_TOKEN", "lolnope")
+        .env("SENTRY_ORG", "wat-org")
+        .env("SENTRY_PROJECT", "wat-project");
+    test_case
+}
+pub struct EndpointOptions {
+    pub method: String,
+    pub endpoint: String,
+    pub status: usize,
+    pub response_file: Option<String>,
+    pub matcher: Option<Matcher>,
+}
+
+impl EndpointOptions {
+    pub fn new(method: &str, endpoint: &str, status: usize) -> Self {
+        EndpointOptions {
+            method: method.to_owned(),
+            endpoint: endpoint.to_owned(),
+            status,
+            response_file: None,
+            matcher: None,
+        }
+    }
+
+    pub fn with_response_file(mut self, path: &str) -> Self {
+        self.response_file = Some(path.to_owned());
+        self
+    }
+
+    pub fn with_matcher(mut self, matcher: Matcher) -> Self {
+        self.matcher = Some(matcher);
+        self
+    }
+}
+
+pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
+    let mut mock = mock(opts.method.as_str(), opts.endpoint.as_str())
+        .with_status(opts.status)
+        .with_header("content-type", "application/json");
+
+    if let Some(response_file) = opts.response_file {
+        mock = mock.with_body_from_file(response_file);
+    }
+
+    if let Some(matcher) = opts.matcher {
+        mock = mock.match_body(matcher);
+    }
+
+    mock.create()
 }

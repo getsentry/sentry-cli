@@ -1,0 +1,88 @@
+[
+  {
+    "dateReleased": null,
+    "newGroups": 1337,
+    "commitCount": 0,
+    "url": null,
+    "data": {},
+    "lastDeploy": null,
+    "deployCount": 0,
+    "dateCreated": "2020-06-29T11:36:59.612687Z",
+    "lastEvent": null,
+    "version": "sentry@test",
+    "firstEvent": null,
+    "lastCommit": null,
+    "shortVersion": "wat-release",
+    "authors": [],
+    "owner": null,
+    "versionInfo": {
+      "buildHash": null,
+      "version": {
+        "raw": "wat-release"
+      },
+      "description": "wat-release",
+      "package": null
+    },
+    "ref": null,
+    "projects": [
+      {
+        "name": "test-1",
+        "platform": "javascript",
+        "slug": "test-1",
+        "platforms": [
+          "javascript"
+        ],
+        "newGroups": 0,
+        "id": 1861017
+      },
+      {
+        "name": "test-2",
+        "platform": "javascript",
+        "slug": "test-2",
+        "platforms": [
+          "javascript"
+        ],
+        "newGroups": 0,
+        "id": 1861017
+      }
+    ]
+  },
+  {
+    "dateReleased": null,
+    "newGroups": 42,
+    "commitCount": 0,
+    "url": null,
+    "data": {},
+    "lastDeploy": null,
+    "deployCount": 0,
+    "dateCreated": "2020-06-29T11:36:59.612687Z",
+    "lastEvent": null,
+    "version": "sentry@dev",
+    "firstEvent": null,
+    "lastCommit": null,
+    "shortVersion": "wat-release",
+    "authors": [],
+    "owner": null,
+    "versionInfo": {
+      "buildHash": null,
+      "version": {
+        "raw": "wat-release"
+      },
+      "description": "wat-release",
+      "package": null
+    },
+    "ref": null,
+    "projects": [
+      {
+        "name": "test",
+        "platform": "javascript",
+        "slug": "test",
+        "platforms": [
+          "javascript"
+        ],
+        "newGroups": 0,
+        "id": 1861017
+      }
+    ]
+  }
+]

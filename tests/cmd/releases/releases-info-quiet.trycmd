@@ -1,0 +1,5 @@
+```
+$ sentry-cli releases info wat-release --quiet
+? success
+
+```

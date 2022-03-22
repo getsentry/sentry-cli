@@ -1,0 +1,15 @@
+```
+$ sentry-cli info
+? success
+Sentry Server: [SERVER]
+Default Organization: wat-org
+Default Project: wat-project
+
+Authentication Info:
+  Method: Auth Token
+  User: kamil@sentry.io
+  Scopes:
+    - project:read
+    - project:releases
+
+```
