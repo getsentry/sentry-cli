@@ -60,9 +60,8 @@ which = "4.2.4"
 zip = "0.5.13"
 
 [dev-dependencies]
-assert_cmd = "1.0.1"
 insta = { version = "1.12.0", features = ["redactions"] }
-mockito = "0.30.0"
+mockito = "0.31.0"
 predicates = "2.1.1"
 tempfile = "3.3.0"
 trycmd = "0.13.2"
