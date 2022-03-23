@@ -1,0 +1,14 @@
+{
+  "user": {
+    "username": "kamil@sentry.io",
+    "id": "1337",
+    "name": "Kamil Ogórek",
+    "email": "kamil@sentry.io"
+  },
+  "auth": {
+    "scopes": [
+      "project:read",
+      "project:releases"
+    ]
+  }
+}

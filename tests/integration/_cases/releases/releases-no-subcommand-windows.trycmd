@@ -1,0 +1,31 @@
+```
+$ sentry-cli releases
+? failed
+sentry-cli[EXE]-releases 
+Manage releases on Sentry.
+
+USAGE:
+    sentry-cli[EXE] releases <SUBCOMMAND>
+
+OPTIONS:
+    -h, --help                     Prints help information
+        --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug,
+                                   info, warn, error]
+    -o, --org <ORG>                The organization slug
+    -p, --project <PROJECT>...     The project slug.
+
+SUBCOMMANDS:
+    archive            Archive a release.
+    delete             Delete a release.
+    deploys            Manage release deployments.
+    files              Manage release artifacts.
+    finalize           Mark a release as finalized and released.
+    help               Prints this message or the help of the given subcommand(s)
+    info               Print information about a release.
+    list               List the most recent releases.
+    new                Create a new release.
+    propose-version    Propose a version name for a new release.
+    restore            Restore a release.
+    set-commits        Set commits of a release.
+
+```

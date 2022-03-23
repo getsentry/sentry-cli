@@ -1,0 +1,8 @@
+```
+$ sentry-cli info
+? failed
+Sentry Server: https://sentry.io
+Default Organization: -
+Default Project: -
+
+```

@@ -1,0 +1,12 @@
+```
+$ sentry-cli releases list --show-projects
+? success
++--------------+-------------+----------+------------+------------+
+| Released     | Version     | Projects | New Events | Last Event |
++--------------+-------------+----------+------------+------------+
+| (unreleased) | sentry@test | test-1   | 1337       | -          |
+|              |             | test-2   |            |            |
+| (unreleased) | sentry@dev  | test     | 42         | -          |
++--------------+-------------+----------+------------+------------+
+
+```

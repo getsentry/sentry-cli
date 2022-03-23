@@ -1,0 +1,41 @@
+```
+$ sentry-cli help
+? success
+sentry-cli [VERSION]
+
+Command line utility for Sentry.
+
+This tool helps you manage remote resources on a Sentry server like
+sourcemaps, debug symbols or releases.  Use `--help` on the subcommands
+to learn more about them.
+
+USAGE:
+    sentry-cli[EXE] <SUBCOMMAND>
+
+OPTIONS:
+        --api-key <API_KEY>          The given Sentry API key.
+        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
+    -h, --help                       Print this help message.
+        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
+                                     info, warn, error]
+        --url <URL>                  Fully qualified URL to the Sentry server.
+                                     [defaults to https://sentry.io/]
+    -V, --version                    Print version information.
+
+SUBCOMMANDS:
+    bash-hook          Prints out a bash script that does error handling.
+    difutil            Locate or analyze debug information files.
+    help               Prints this message or the help of the given subcommand(s)
+    info               Print information about the Sentry server.
+    issues             Manage issues in Sentry.
+    login              Authenticate with the Sentry server.
+    projects           Manage projects on Sentry.
+    react-native       Upload build artifacts for react-native projects.
+    releases           Manage releases on Sentry.
+    repos              Manage repositories on Sentry.
+    send-event         Send a manual event to Sentry.
+    update             Update the sentry-cli executable.
+    upload-dif         Upload debugging information files.
+    upload-proguard    Upload ProGuard mapping files to a project.
+
+```

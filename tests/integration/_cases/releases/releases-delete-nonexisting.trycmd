@@ -1,0 +1,6 @@
+```
+$ sentry-cli releases delete whoops
+? success
+Did nothing. Release with this version (whoops) does not exist.
+
+```

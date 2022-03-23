@@ -1,0 +1,6 @@
+```
+$ sentry-cli releases list --raw --delimiter " "
+? success
+sentry@test sentry@dev
+
+```

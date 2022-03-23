@@ -1,2 +1,0 @@
-mod commands;
-mod common;
