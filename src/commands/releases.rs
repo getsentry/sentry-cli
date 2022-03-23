@@ -445,10 +445,11 @@ fn path_as_url(path: &Path) -> String {
 }
 
 fn execute_new<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
-    let info_rv = ctx.api.new_release(
+    let version = matches.value_of("version").unwrap();
+    ctx.api.new_release(
         ctx.get_org()?,
         &NewRelease {
-            version: matches.value_of("version").unwrap().to_owned(),
+            version: version.to_owned(),
             projects: ctx.get_projects(matches)?,
             url: matches.value_of("url").map(str::to_owned),
             date_started: Some(Utc::now()),
@@ -459,7 +460,7 @@ fn execute_new<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result
             },
         },
     )?;
-    println!("Created release {}.", info_rv.version);
+    println!("Created release {}.", version);
     Ok(())
 }
 
@@ -471,9 +472,10 @@ fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> R
         }
     }
 
-    let info_rv = ctx.api.update_release(
+    let version = matches.value_of("version").unwrap();
+    ctx.api.update_release(
         ctx.get_org()?,
-        matches.value_of("version").unwrap(),
+        version,
         &UpdatedRelease {
             projects: ctx.get_projects(matches).ok(),
             url: matches.value_of("url").map(str::to_owned),
@@ -482,7 +484,7 @@ fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> R
             ..Default::default()
         },
     )?;
-    println!("Finalized release {}.", info_rv.version);
+    println!("Finalized release {}.", version);
     Ok(())
 }
 
