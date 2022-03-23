@@ -1,4 +1,4 @@
-use crate::common::{create_testcase, mock_endpoint, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
 fn successfully_deletes() {
@@ -7,19 +7,17 @@ fn successfully_deletes() {
         "/api/0/projects/wat-org/wat-project/releases/wat-release/",
         204,
     ));
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-delete.trycmd");
+    register_test("releases/releases-delete.trycmd");
 }
 
 #[test]
 fn allows_for_release_to_start_with_hyphen() {
     let _server = mock_endpoint(EndpointOptions::new(
         "DELETE",
-        "/api/0/projects/wat-org/wat-project/releases/-wat-release/",
+        "/api/0/projects/wat-org/wat-project/releases/-hyphenated-release/",
         204,
     ));
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-delete-hyphen.trycmd");
+    register_test("releases/releases-delete-hyphen.trycmd");
 }
 
 #[test]
@@ -29,8 +27,7 @@ fn informs_about_nonexisting_releases() {
         "/api/0/projects/wat-org/wat-project/releases/whoops/",
         404,
     ));
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-delete-nonexisting.trycmd");
+    register_test("releases/releases-delete-nonexisting.trycmd");
 }
 
 #[test]
@@ -41,8 +38,7 @@ fn doesnt_allow_to_delete_active_releases() {
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             400,
         )
-        .with_response_file("tests/responses/releases/delete-active-release.json"),
+        .with_response_file("releases/delete-active-release.json"),
     );
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-delete-active.trycmd");
+    register_test("releases/releases-delete-active.trycmd");
 }

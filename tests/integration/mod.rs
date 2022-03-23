@@ -1,15 +1,20 @@
+mod help;
+mod info;
+mod releases;
+
 use mockito::{mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
 pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6}Z"#;
 
-pub fn create_testcase() -> TestCases {
+pub fn register_test(path: &str) -> TestCases {
     let test_case = TestCases::new();
     test_case
         .env("SENTRY_URL", server_url())
         .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")
-        .env("SENTRY_PROJECT", "wat-project");
+        .env("SENTRY_PROJECT", "wat-project")
+        .case(format!("tests/integration/_cases/{}", path));
     test_case
 }
 pub struct EndpointOptions {
@@ -32,7 +37,7 @@ impl EndpointOptions {
     }
 
     pub fn with_response_file(mut self, path: &str) -> Self {
-        self.response_file = Some(path.to_owned());
+        self.response_file = Some(format!("tests/integration/_api/{}", path));
         self
     }
 

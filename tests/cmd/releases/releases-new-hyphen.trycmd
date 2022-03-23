@@ -1,6 +1,0 @@
-```
-$ sentry-cli releases new -wat-release
-? success
-Created release wat-release.
-
-```

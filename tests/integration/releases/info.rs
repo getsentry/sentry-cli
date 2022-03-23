@@ -1,4 +1,4 @@
-use crate::common::{create_testcase, mock_endpoint, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
 fn shows_release_details() {
@@ -8,10 +8,9 @@ fn shows_release_details() {
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             200,
         )
-        .with_response_file("tests/responses/releases/get-release.json"),
+        .with_response_file("releases/get-release.json"),
     );
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-info.trycmd");
+    register_test("releases/releases-info.trycmd");
 }
 
 #[test]
@@ -22,7 +21,7 @@ fn shows_release_details_with_projects_and_commits() {
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             200,
         )
-        .with_response_file("tests/responses/releases/get-release.json"),
+        .with_response_file("releases/get-release.json"),
     );
     let _commits = mock_endpoint(
         EndpointOptions::new(
@@ -30,10 +29,9 @@ fn shows_release_details_with_projects_and_commits() {
             "/api/0/projects/wat-org/wat-project/releases/wat-release/commits/",
             200,
         )
-        .with_response_file("tests/responses/releases/get-release-commits.json"),
+        .with_response_file("releases/get-release-commits.json"),
     );
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-info-with-commits-projects.trycmd");
+    register_test("releases/releases-info-with-commits-projects.trycmd");
 }
 
 #[test]
@@ -44,10 +42,9 @@ fn doesnt_print_output_with_quiet_flag() {
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             200,
         )
-        .with_response_file("tests/responses/releases/get-release.json"),
+        .with_response_file("releases/get-release.json"),
     );
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-info-quiet.trycmd");
+    register_test("releases/releases-info-quiet.trycmd");
 }
 
 #[test]
@@ -57,6 +54,5 @@ fn exits_if_no_release_found() {
         "/api/0/projects/wat-org/wat-project/releases/wat-release/",
         404,
     ));
-    let t = create_testcase();
-    t.case("tests/cmd/releases/releases-info-not-found.trycmd");
+    register_test("releases/releases-info-not-found.trycmd");
 }

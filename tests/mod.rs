@@ -1,2 +1,1 @@
-mod commands;
-mod common;
+mod integration;

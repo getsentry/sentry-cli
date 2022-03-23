@@ -1,0 +1,6 @@
+```
+$ sentry-cli releases delete -hyphenated-release
+? success
+Deleted release -hyphenated-release!
+
+```
