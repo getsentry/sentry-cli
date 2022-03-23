@@ -15,5 +15,5 @@ fn command_info_basic() {
         EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
     );
     let t = register_test("info/info-basic.trycmd");
-    t.extend_vars([("[SERVER]", server_url())]).unwrap();
+    t.insert_var("[SERVER]", server_url()).unwrap();
 }

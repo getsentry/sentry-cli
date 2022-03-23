@@ -9,7 +9,7 @@ fn creates_release() {
         EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 201)
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::PartialJson(json!({
-                "version":"new-release",
+                "version": "new-release",
                 "projects": ["wat-project"],
             }))),
     );
@@ -22,7 +22,7 @@ fn allows_for_release_to_start_with_hyphen() {
         EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 201)
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::PartialJson(json!({
-                "version":"-hyphenated-release",
+                "version": "-hyphenated-release",
                 "projects": ["wat-project"],
             }))),
     );
@@ -35,7 +35,7 @@ fn creates_release_even_if_one_already_exists() {
         EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::PartialJson(json!({
-                "version":"wat-release",
+                "version": "wat-release",
                 "projects": ["wat-project"],
             }))),
     );
@@ -48,9 +48,9 @@ fn creates_release_with_custom_url() {
         EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::PartialJson(json!({
-                "version":"wat-release",
+                "version": "wat-release",
                 "projects": ["wat-project"],
-                "url":"https://oh.rly"
+                "url": "https://oh.rly"
             }))),
     );
     register_test("releases/releases-new-url.trycmd");
@@ -63,7 +63,7 @@ fn creates_release_which_is_instantly_finalized() {
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::AllOf(vec![
                 Matcher::PartialJson(json!({
-                    "version":"wat-release",
+                    "version": "wat-release",
                     "projects": ["wat-project"],
                 })),
                 Matcher::Regex(format!(r#""dateReleased":"{}""#, UTC_DATE_FORMAT)),
