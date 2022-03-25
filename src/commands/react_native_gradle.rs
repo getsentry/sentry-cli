@@ -1,8 +1,8 @@
 use std::env;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
-use failure::Error;
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
@@ -53,7 +53,7 @@ pub fn make_app(app: Command) -> Command {
         )
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();

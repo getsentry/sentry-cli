@@ -1,5 +1,5 @@
+use anyhow::Result;
 use clap::{ArgMatches, Command};
-use failure::Error;
 
 use crate::commands;
 
@@ -28,7 +28,7 @@ pub fn make_app(mut app: Command) -> Command {
     app
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =

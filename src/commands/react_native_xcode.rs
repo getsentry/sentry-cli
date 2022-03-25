@@ -4,9 +4,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::process;
 
+use anyhow::{bail, Result};
 use chrono::Duration;
 use clap::{Arg, ArgMatches, Command};
-use failure::{bail, Error};
 use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -99,7 +99,7 @@ fn find_node() -> String {
     "node".into()
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let should_wrap = matches.is_present("force")
@@ -228,11 +228,11 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
             }
             let mut f = fs::File::open(report_file.path())?;
             let report: SourceMapReport = serde_json::from_reader(&mut f).unwrap_or_else(|_| {
-                let err_msg = format!(
+                let format_err = format!(
                     "File {} doesn't contain a valid JSON data.",
                     report_file.path().display()
                 );
-                panic!("{}", err_msg);
+                panic!("{}", format_err);
             });
             if report.bundle_path.is_none() || report.sourcemap_path.is_none() {
                 println!("Warning: build produced no sourcemaps.");
@@ -308,7 +308,7 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     })
 }
 
-pub fn wrap_call() -> Result<(), Error> {
+pub fn wrap_call() -> Result<()> {
     let mut args: Vec<_> = env::args().skip(1).collect();
     let mut bundle_path = None;
     let mut sourcemap_path = None;

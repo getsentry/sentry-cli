@@ -5,8 +5,8 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
+use anyhow::{format_err, Result};
 use clap::{Arg, ArgMatches, Command};
-use failure::{err_msg, Error};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
 use log::warn;
@@ -160,7 +160,7 @@ fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
     with_sentry_client(dsn, |c| c.capture_event(event, None))
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
 
@@ -223,8 +223,10 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
 
     for tag in matches.values_of("tags").unwrap_or_default() {
         let mut split = tag.splitn(2, ':');
-        let key = split.next().ok_or_else(|| err_msg("missing tag key"))?;
-        let value = split.next().ok_or_else(|| err_msg("missing tag value"))?;
+        let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
     }
 
@@ -237,8 +239,12 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
 
     for pair in matches.values_of("extra").unwrap_or_default() {
         let mut split = pair.splitn(2, ':');
-        let key = split.next().ok_or_else(|| err_msg("missing extra key"))?;
-        let value = split.next().ok_or_else(|| err_msg("missing extra value"))?;
+        let key = split
+            .next()
+            .ok_or_else(|| format_err!("missing extra key"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing extra value"))?;
         event.extra.insert(key.into(), Value::String(value.into()));
     }
 
@@ -246,8 +252,12 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
         let mut user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
-            let key = split.next().ok_or_else(|| err_msg("missing user key"))?;
-            let value = split.next().ok_or_else(|| err_msg("missing user value"))?;
+            let key = split
+                .next()
+                .ok_or_else(|| format_err!("missing user key"))?;
+            let value = split
+                .next()
+                .ok_or_else(|| format_err!("missing user value"))?;
 
             match key {
                 "id" => user.id = Some(value.into()),

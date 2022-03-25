@@ -2,9 +2,9 @@
 use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 
+use anyhow::{bail, format_err, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::{bail, err_msg, Error};
 use log::info;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::FileFormat;
@@ -165,7 +165,7 @@ pub fn make_app(app: Command) -> Command {
         ))
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -223,7 +223,7 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     if let Some(symbol_map) = matches.value_of("symbol_maps") {
         upload
             .symbol_map(symbol_map)
-            .map_err(|_| err_msg("--symbol-maps requires Apple dsymutil to be available."))?;
+            .map_err(|_| format_err!("--symbol-maps requires Apple dsymutil to be available."))?;
     }
 
     // Add a path to XCode's DerivedData, if configured

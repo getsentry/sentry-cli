@@ -1,6 +1,6 @@
 //! Implements a command for signing in.
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
-use failure::Error;
 use url::Url;
 
 use crate::api::Api;
@@ -16,14 +16,14 @@ pub fn make_app(app: Command) -> Command {
     )
 }
 
-fn update_config(config: &Config, token: &str) -> Result<(), Error> {
+fn update_config(config: &Config, token: &str) -> Result<()> {
     let mut new_cfg = config.clone();
     new_cfg.set_auth(Auth::Token(token.to_string()));
     new_cfg.save()?;
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 

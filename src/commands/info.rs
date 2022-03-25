@@ -2,8 +2,8 @@
 use std::collections::HashMap;
 use std::io;
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
-use failure::Error;
 use serde::Serialize;
 
 use crate::api::Api;
@@ -49,7 +49,7 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
     }
 }
 
-fn get_config_status_json() -> Result<(), Error> {
+fn get_config_status_json() -> Result<()> {
     let config = Config::current();
     let mut rv = ConfigStatus::default();
 
@@ -71,7 +71,7 @@ fn get_config_status_json() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     if matches.is_present("config_status_json") {
         return get_config_status_json();
     }

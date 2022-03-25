@@ -6,8 +6,8 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
-use failure::{bail, err_msg, Error, ResultExt};
 use ini::Ini;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
@@ -48,13 +48,13 @@ pub struct Config {
 
 impl Config {
     /// Loads the CLI config from the default location and returns it.
-    pub fn from_cli_config() -> Result<Config, Error> {
+    pub fn from_cli_config() -> Result<Config> {
         let (filename, ini) = load_cli_config()?;
         Config::from_file(filename, ini)
     }
 
     /// Creates Config based on provided config file.
-    pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config, Error> {
+    pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         Ok(Config {
             filename,
             process_bound: false,
@@ -90,16 +90,13 @@ impl Config {
     }
 
     /// Return the global config reference.
-    pub fn global() -> Result<Config, Error> {
+    pub fn global() -> Result<Config> {
         let (global_filename, global_config) = load_global_config_file()?;
         Config::from_file(global_filename, global_config)
     }
 
     /// Makes a copy of the config in a closure and boxes it.
-    pub fn make_copy<F: FnOnce(&mut Config) -> Result<(), Error>>(
-        &self,
-        cb: F,
-    ) -> Result<Arc<Config>, Error> {
+    pub fn make_copy<F: FnOnce(&mut Config) -> Result<()>>(&self, cb: F) -> Result<Arc<Config>> {
         let mut new_config = self.clone();
         cb(&mut new_config)?;
         Ok(Arc::new(new_config))
@@ -127,7 +124,7 @@ impl Config {
     }
 
     /// Write the current config state back into the file.
-    pub fn save(&self) -> Result<(), Error> {
+    pub fn save(&self) -> Result<()> {
         let mut options = OpenOptions::new();
         options.write(true).truncate(true).create(true);
 
@@ -168,7 +165,7 @@ impl Config {
     }
 
     /// Returns the base url (without trailing slashes)
-    pub fn get_base_url(&self) -> Result<&str, Error> {
+    pub fn get_base_url(&self) -> Result<&str> {
         let base = self.cached_base_url.trim_end_matches('/');
         if !is_absolute_url(base) {
             bail!("bad sentry url: unknown scheme ({})", base);
@@ -197,7 +194,7 @@ impl Config {
     }
 
     /// Returns the API URL for a path
-    pub fn get_api_endpoint(&self, path: &str) -> Result<String, Error> {
+    pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
         let base = self.get_base_url()?;
         Ok(format!("{}/api/0/{}", base, path.trim_start_matches('/')))
     }
@@ -282,7 +279,7 @@ impl Config {
     }
 
     /// Given a match object from clap, this returns the org from it.
-    pub fn get_org(&self, matches: &ArgMatches) -> Result<String, Error> {
+    pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
         matches
             .value_of("org")
             .map(str::to_owned)
@@ -292,13 +289,13 @@ impl Config {
                     .get_from(Some("defaults"), "org")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))
+            .ok_or_else(|| format_err!("An organization slug is required (provide with --org)"))
     }
 
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
-    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String), Error> {
+    pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
         let org = self.get_org(matches)?;
         let project = if let Some(project) = matches.value_of("project") {
             project.to_owned()
@@ -309,7 +306,7 @@ impl Config {
     }
 
     /// Return the default value for a project.
-    pub fn get_project_default(&self) -> Result<String, Error> {
+    pub fn get_project_default(&self) -> Result<String> {
         env::var("SENTRY_PROJECT")
             .ok()
             .or_else(|| {
@@ -317,7 +314,7 @@ impl Config {
                     .get_from(Some("defaults"), "project")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| err_msg("A project slug is required"))
+            .ok_or_else(|| format_err!("A project slug is required"))
     }
 
     /// Return the default pipeline env.
@@ -346,7 +343,7 @@ impl Config {
     }
 
     /// Returns true if notifications should be displayed
-    pub fn show_notifications(&self) -> Result<bool, Error> {
+    pub fn show_notifications(&self) -> Result<bool> {
         Ok(self
             .ini
             .get_from(Some("ui"), "show_notifications")
@@ -376,7 +373,7 @@ impl Config {
             .unwrap_or(DEFAULT_MAX_DIF_ITEM_SIZE)
     }
 
-    pub fn get_max_retry_count(&self) -> Result<u32, Error> {
+    pub fn get_max_retry_count(&self) -> Result<u32> {
         if env::var_os("SENTRY_HTTP_MAX_RETRIES").is_some() {
             Ok(env::var("SENTRY_HTTP_MAX_RETRIES")?.parse()?)
         } else if let Some(val) = self.ini.get_from(Some("http"), "max_retries") {
@@ -387,7 +384,7 @@ impl Config {
     }
 
     /// Return the DSN
-    pub fn get_dsn(&self) -> Result<Dsn, Error> {
+    pub fn get_dsn(&self) -> Result<Dsn> {
         if let Ok(val) = env::var("SENTRY_DSN") {
             Ok(val.parse()?)
         } else if let Some(val) = self.ini.get_from(Some("auth"), "dsn") {
@@ -442,9 +439,9 @@ impl Config {
     }
 }
 
-fn find_global_config_file() -> Result<PathBuf, Error> {
+fn find_global_config_file() -> Result<PathBuf> {
     dirs::home_dir()
-        .ok_or_else(|| err_msg("Could not find home dir"))
+        .ok_or_else(|| format_err!("Could not find home dir"))
         .map(|mut path| {
             path.push(CONFIG_RC_FILE_NAME);
             path
@@ -468,7 +465,7 @@ fn find_project_config_file() -> Option<PathBuf> {
     })
 }
 
-fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
+fn load_global_config_file() -> Result<(PathBuf, Ini)> {
     let filename = find_global_config_file()?;
     match fs::File::open(&filename) {
         Ok(mut file) => match Ini::read_from(&mut file) {
@@ -480,18 +477,17 @@ fn load_global_config_file() -> Result<(PathBuf, Ini), Error> {
                 Ok((filename, Ini::new()))
             } else {
                 Err(Error::from(err)
-                    .context("Failed to load .sentryclirc file from the home folder.")
-                    .into())
+                    .context("Failed to load .sentryclirc file from the home folder."))
             }
         }
     }
 }
 
-fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
+fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let (global_filename, mut rv) = load_global_config_file()?;
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let mut f = fs::File::open(&project_config_path).with_context(|_| {
+        let mut f = fs::File::open(&project_config_path).with_context(|| {
             format!(
                 "Failed to load {} file from project path ({})",
                 CONFIG_RC_FILE_NAME,
@@ -528,12 +524,10 @@ fn load_cli_config() -> Result<(PathBuf, Ini), Error> {
             }
             Err(err) => {
                 if err.kind() != io::ErrorKind::NotFound {
-                    return Err(Error::from(err)
-                        .context(format!(
-                            "Failed to load file referenced by SENTRY_PROPERTIES ({})",
-                            &prop_path
-                        ))
-                        .into());
+                    return Err(Error::from(err).context(format!(
+                        "Failed to load file referenced by SENTRY_PROPERTIES ({})",
+                        &prop_path
+                    )));
                 }
             }
         }

@@ -2,8 +2,9 @@ use std::borrow::Cow;
 use std::sync::Arc;
 use std::time::Duration;
 
-use failure::Error;
+use anyhow::Error;
 use log::Log;
+use sentry::integrations::anyhow::AnyhowHubExt;
 use sentry::{release_name, Client, ClientOptions, Hub};
 
 use crate::config::Config;
@@ -34,9 +35,7 @@ pub fn bind_configured_client(cfg: Option<&Config>) {
 }
 
 pub fn try_report_to_sentry(err: Error) {
-    // TODO: Migrate from `failure` to `anyhow` crate, as `sentry` dropped support for `failure` in version 0.22
-    // and use sentry::integrations::anyhow to capture more details about the error.
-    Hub::with_active(|hub| hub.capture_error(&err.compat()));
+    Hub::with_active(|hub| hub.capture_anyhow(&err));
     flush_events();
 }
 

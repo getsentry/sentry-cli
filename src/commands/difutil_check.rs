@@ -1,9 +1,9 @@
 use std::io;
 use std::path::Path;
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::Error;
 
 use crate::utils::dif::DifFile;
 use crate::utils::system::QuietExit;
@@ -34,7 +34,7 @@ pub fn make_app(app: Command) -> Command {
         )
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path = Path::new(matches.value_of("path").unwrap());
 
     // which types should we consider?

@@ -5,8 +5,8 @@ use std::mem;
 use std::path::PathBuf;
 use std::str;
 
+use anyhow::{bail, Error, Result};
 use console::style;
-use failure::{bail, Error};
 use log::{debug, info, warn};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
@@ -24,7 +24,7 @@ fn is_likely_minified_js(code: &[u8]) -> bool {
     }
 }
 
-fn join_url(base_url: &str, url: &str) -> Result<String, Error> {
+fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
         match Url::parse(&format!("http://{}", base_url))?.join(url) {
             Ok(url) => {
@@ -35,7 +35,7 @@ fn join_url(base_url: &str, url: &str) -> Result<String, Error> {
                     Ok(rv)
                 }
             }
-            Err(x) => Err(Error::from(x).context("could not join URL").into()),
+            Err(x) => Err(Error::from(x).context("could not join URL")),
         }
     } else {
         Ok(Url::parse(base_url)?.join(url)?.to_string())
@@ -94,7 +94,7 @@ pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, 
     None
 }
 
-fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String, Error> {
+fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String> {
     // if there is only one sourcemap in total we just assume that's the one.
     // We just need to make sure that we fix up the reference if we need to
     // (eg: ~/ -> /).
@@ -168,7 +168,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds a new file for processing.
-    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<(), Error> {
+    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<()> {
         self.pending_sources.insert((url.to_string(), file));
         Ok(())
     }
@@ -278,7 +278,7 @@ impl SourceMapProcessor {
     }
 
     /// Validates all sources within.
-    pub fn validate_all(&mut self) -> Result<(), Error> {
+    pub fn validate_all(&mut self) -> Result<()> {
         self.flush_pending_sources();
         let source_urls = self.sources.keys().cloned().collect();
         let sources: Vec<&mut ReleaseFile> = self.sources.values_mut().collect();
@@ -320,7 +320,7 @@ impl SourceMapProcessor {
         &mut self,
         ram_bundle: &sourcemap::ram_bundle::RamBundle,
         bundle_source_url: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         // We need this to flush all pending sourcemaps
         self.flush_pending_sources();
 
@@ -410,7 +410,7 @@ impl SourceMapProcessor {
     }
 
     /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
-    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<(), Error> {
+    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<()> {
         let mut ram_bundles = Vec::new();
 
         // Drain RAM bundles from self.sources
@@ -435,7 +435,7 @@ impl SourceMapProcessor {
     /// Automatically rewrite all source maps.
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
-    pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<(), Error> {
+    pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
         self.flush_pending_sources();
 
         println!("{} Rewriting sources", style(">").dim());
@@ -474,7 +474,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds sourcemap references to all minified files
-    pub fn add_sourcemap_references(&mut self) -> Result<(), Error> {
+    pub fn add_sourcemap_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
         let sourcemaps = self
             .sources
@@ -507,7 +507,7 @@ impl SourceMapProcessor {
     }
 
     /// Uploads all files
-    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
         self.flush_pending_sources();
         let mut uploader = ReleaseFileUpload::new(context);
         uploader.files(&self.sources);
@@ -517,7 +517,7 @@ impl SourceMapProcessor {
     }
 }
 
-fn validate_script(source: &mut ReleaseFile) -> Result<(), Error> {
+fn validate_script(source: &mut ReleaseFile) -> Result<()> {
     if let Some(sm_ref) = get_sourcemap_ref(source) {
         if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
             source.warn("encountered a legacy reference".into());
@@ -547,10 +547,7 @@ fn validate_regular(
     }
 }
 
-fn validate_sourcemap(
-    source_urls: &HashSet<String>,
-    source: &mut ReleaseFile,
-) -> Result<(), Error> {
+fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut ReleaseFile) -> Result<()> {
     match sourcemap::decode_slice(&source.contents)? {
         sourcemap::DecodedMap::Hermes(smh) => validate_regular(source_urls, source, &smh),
         sourcemap::DecodedMap::Regular(sm) => validate_regular(source_urls, source, &sm),

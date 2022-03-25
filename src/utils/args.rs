@@ -1,8 +1,8 @@
 use std::str::FromStr;
 
+use anyhow::{bail, Result};
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Command;
-use failure::{bail, Error};
 use symbolic::common::DebugId;
 use uuid::Uuid;
 
@@ -82,7 +82,7 @@ pub fn validate_id(s: &str) -> Result<(), String> {
     }
 }
 
-pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>, Error> {
+pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
     if let Ok(int) = value.parse::<i64>() {
         Ok(Utc.timestamp(int, 0))
     } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {

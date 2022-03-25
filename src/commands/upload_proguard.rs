@@ -3,9 +3,9 @@ use std::fs;
 use std::io;
 use std::path::PathBuf;
 
+use anyhow::{bail, Error, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::{bail, Error, SyncFailure};
 use log::{debug, info};
 use proguard::ProguardMapping;
 use symbolic::common::ByteView;
@@ -131,7 +131,7 @@ pub fn make_app(app: Command) -> Command {
         )
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
     let paths: Vec<_> = match matches.values_of("paths") {
@@ -164,7 +164,7 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
     for path in &paths {
         match fs::metadata(path) {
             Ok(md) => {
-                let byteview = ByteView::open(path).map_err(SyncFailure::new)?;
+                let byteview = ByteView::open(path).map_err(Error::new)?;
                 let mapping = ProguardMapping::new(&byteview);
                 if !mapping.has_line_info() {
                     eprintln!(
@@ -193,9 +193,9 @@ pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
                 );
             }
             Err(err) => {
-                return Err(Error::from(err)
-                    .context(format!("failed to open proguard mapping '{}'", path))
-                    .into());
+                return Err(
+                    Error::from(err).context(format!("failed to open proguard mapping '{}'", path))
+                );
             }
         }
     }

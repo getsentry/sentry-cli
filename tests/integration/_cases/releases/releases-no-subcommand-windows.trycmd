@@ -5,7 +5,7 @@ sentry-cli[EXE]-releases
 Manage releases on Sentry.
 
 USAGE:
-    sentry-cli[EXE] releases <SUBCOMMAND>
+    sentry-cli[EXE] releases [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
     -h, --help                     Print help information

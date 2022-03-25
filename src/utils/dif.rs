@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::Path;
 use std::str;
 
-use failure::{bail, Error, SyncFailure};
+use anyhow::{bail, Error, Result};
 use proguard::ProguardMapping;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
@@ -46,7 +46,7 @@ impl fmt::Display for DifType {
 impl str::FromStr for DifType {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<DifType, Error> {
+    fn from_str(s: &str) -> Result<DifType> {
         match s {
             "dsym" => Ok(DifType::Dsym),
             "elf" => Ok(DifType::Elf),
@@ -156,8 +156,8 @@ pub enum DifFile<'a> {
 }
 
 impl DifFile<'static> {
-    fn open_proguard<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
-        let data = ByteView::open(path).map_err(SyncFailure::new)?;
+    fn open_proguard<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let data = ByteView::open(path).map_err(Error::new)?;
         let pg = SelfCell::new(data, |d| SelfProguard(ProguardMapping::new(unsafe { &*d })));
 
         if pg.get().is_valid() {
@@ -167,8 +167,8 @@ impl DifFile<'static> {
         }
     }
 
-    fn open_object<P: AsRef<Path>>(path: P, format: FileFormat) -> Result<Self, Error> {
-        let data = ByteView::open(path).map_err(SyncFailure::new)?;
+    fn open_object<P: AsRef<Path>>(path: P, format: FileFormat) -> Result<Self> {
+        let data = ByteView::open(path).map_err(Error::new)?;
         let archive = SelfCell::try_new(data, |d| Archive::parse(unsafe { &*d }))?;
 
         if archive.get().file_format() != format {
@@ -178,10 +178,10 @@ impl DifFile<'static> {
         DifFile::from_archive(archive)
     }
 
-    fn try_open<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    fn try_open<P: AsRef<Path>>(path: P) -> Result<Self> {
         // Try to open the file and map it into memory first. This will
         // return an error if the file does not exist.
-        let data = ByteView::open(&path).map_err(SyncFailure::new)?;
+        let data = ByteView::open(&path).map_err(Error::new)?;
 
         // First try to open a (fat) object file. We only support a couple of
         // sub types, so for unsupported files we throw an error.
@@ -208,7 +208,7 @@ impl DifFile<'static> {
         bail!("Unsupported file");
     }
 
-    pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<Self, Error> {
+    pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<Self> {
         match ty {
             Some(DifType::Dsym) => DifFile::open_object(path, FileFormat::MachO),
             Some(DifType::Elf) => DifFile::open_object(path, FileFormat::Elf),
@@ -231,7 +231,7 @@ pub struct DifVariant {
 }
 
 impl<'a> DifFile<'a> {
-    fn from_archive(archive: SelfCell<ByteView<'a>, Archive<'a>>) -> Result<Self, Error> {
+    fn from_archive(archive: SelfCell<ByteView<'a>, Archive<'a>>) -> Result<Self> {
         if archive.get().object_count() < 1 {
             bail!("Object file is empty");
         }
@@ -370,11 +370,11 @@ impl Serialize for DifFile<'_> {
 pub trait DebuggingInformation {
     /// Checks whether this object contains hidden symbols generated during an
     /// iTunes Connect build. This only applies to MachO files.
-    fn has_hidden_symbols(&self) -> Result<bool, Error>;
+    fn has_hidden_symbols(&self) -> Result<bool>;
 }
 
 impl DebuggingInformation for DifFile<'_> {
-    fn has_hidden_symbols(&self) -> Result<bool, Error> {
+    fn has_hidden_symbols(&self) -> Result<bool> {
         match self {
             DifFile::Archive(archive) => archive.get().has_hidden_symbols(),
             _ => Ok(false),
@@ -383,7 +383,7 @@ impl DebuggingInformation for DifFile<'_> {
 }
 
 impl DebuggingInformation for Archive<'_> {
-    fn has_hidden_symbols(&self) -> Result<bool, Error> {
+    fn has_hidden_symbols(&self) -> Result<bool> {
         // Hidden symbols can only ever occur in Apple's dSYM
         if self.file_format() != FileFormat::MachO {
             return Ok(false);

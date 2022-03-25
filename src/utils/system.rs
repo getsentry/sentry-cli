@@ -2,8 +2,8 @@ use std::borrow::Cow;
 use std::env;
 use std::process;
 
+use anyhow::{Error, Result};
 use console::style;
-use failure::{Error, Fail};
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
@@ -71,7 +71,7 @@ pub fn propagate_exit_status(status: process::ExitStatus) {
 }
 
 #[cfg(not(windows))]
-fn is_homebrew_install_result() -> Result<bool, Error> {
+fn is_homebrew_install_result() -> Result<bool> {
     let mut exe = env::current_exe()?.canonicalize()?;
     exe.pop();
     exe.set_file_name("INSTALL_RECEIPT.json");
@@ -79,11 +79,11 @@ fn is_homebrew_install_result() -> Result<bool, Error> {
 }
 
 #[cfg(windows)]
-fn is_homebrew_install_result() -> Result<bool, Error> {
+fn is_homebrew_install_result() -> Result<bool> {
     Ok(false)
 }
 
-fn is_npm_install_result() -> Result<bool, Error> {
+fn is_npm_install_result() -> Result<bool> {
     let mut exe = env::current_exe()?.canonicalize()?;
     exe.set_file_name("package.json");
     Ok(exe.is_file())
@@ -121,13 +121,7 @@ pub fn print_error(err: &Error) {
     if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
         clap_err.exit();
     }
-
-    for (idx, cause) in err.iter_chain().enumerate() {
-        match idx {
-            0 => eprintln!("{} {}", style("error:").red(), cause),
-            _ => eprintln!("  {} {}", style("caused by:").dim(), cause),
-        }
-    }
+    eprintln!("{:?}", err);
 
     if Config::current().get_log_level() < log::LevelFilter::Info {
         eprintln!();
@@ -136,12 +130,6 @@ pub fn print_error(err: &Error) {
             "{}",
             style("Please attach the full debug log to all bug reports.").dim()
         );
-    }
-
-    if env::var("RUST_BACKTRACE") == Ok("1".into()) {
-        eprintln!();
-        let backtrace = format!("{:?}", err.backtrace());
-        eprintln!("{}", style(&backtrace).dim());
     }
 }
 
@@ -183,8 +171,8 @@ pub fn init_backtrace() {
 }
 
 /// Indicates that sentry-cli should quit without printing anything.
-#[derive(Fail, Debug)]
-#[fail(display = "sentry-cli exit with {}", _0)]
+#[derive(thiserror::Error, Debug)]
+#[error("sentry-cli exit with {0}")]
 pub struct QuietExit(pub i32);
 
 /// Loads a .env file

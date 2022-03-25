@@ -4,8 +4,8 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
+use anyhow::{format_err, Result};
 use elementtree::Element;
-use failure::{err_msg, Error};
 use itertools::Itertools;
 use uuid::Uuid;
 
@@ -16,7 +16,7 @@ pub struct AndroidManifest {
 const ANDROID_NS: &str = "http://schemas.android.com/apk/res/android";
 
 impl AndroidManifest {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<AndroidManifest, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<AndroidManifest> {
         let f = fs::File::open(path.as_ref())?;
         let root = Element::from_reader(f)?;
         Ok(AndroidManifest { root })
@@ -73,10 +73,7 @@ impl fmt::Debug for AndroidManifest {
     }
 }
 
-pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(
-    p: P,
-    uuids: &[Uuid],
-) -> Result<(), Error> {
+pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(p: P, uuids: &[Uuid]) -> Result<()> {
     let mut props = match fs::File::open(p.as_ref()) {
         Ok(f) => java_properties::read(f).unwrap_or_else(|_| HashMap::new()),
         Err(err) => {
@@ -98,6 +95,6 @@ pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(
     }
     let mut f = fs::File::create(p.as_ref())?;
     java_properties::write(&mut f, &props)
-        .map_err(|_| err_msg("Could not persist proguard UUID in properties file"))?;
+        .map_err(|_| format_err!("Could not persist proguard UUID in properties file"))?;
     Ok(())
 }

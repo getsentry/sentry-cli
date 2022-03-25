@@ -1,6 +1,6 @@
 //! Implements a command for issue management.
+use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches, Command};
-use failure::{Error, ResultExt};
 use log::info;
 
 use crate::api::{Api, IssueChanges, IssueFilter};
@@ -48,7 +48,7 @@ pub fn make_app(app: Command) -> Command {
         .subcommand(Command::new("unresolve").about("Bulk unresolve all selected issues."))
 }
 
-fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter, Error> {
+fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter> {
     if matches.is_present("all") {
         return Ok(IssueFilter::All);
     }
@@ -74,7 +74,7 @@ fn execute_change(
     project: &str,
     filter: &IssueFilter,
     changes: &IssueChanges,
-) -> Result<(), Error> {
+) -> Result<()> {
     if Api::current().bulk_update_issue(org, project, filter, changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
@@ -86,7 +86,7 @@ fn execute_change(
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let filter = get_filter_from_matches(matches)?;

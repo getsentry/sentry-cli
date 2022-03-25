@@ -5,8 +5,8 @@ use std::path::Path;
 use std::process::{Command, Output};
 use std::str;
 
+use anyhow::{bail, format_err, Error, Result};
 use console::strip_ansi_codes;
-use failure::{bail, err_msg, Error};
 use glob::{glob_with, MatchOptions};
 // use serde::de::{Deserialize, Deserializer, Error as DeError};
 use if_chain::if_chain;
@@ -77,13 +77,13 @@ pub fn get_appcenter_error(output: &Output) -> Error {
     }
     .to_string();
 
-    err_msg(cause)
+    format_err!(cause)
 }
 
 pub fn get_appcenter_deployment_history(
     app: &str,
     deployment: &str,
-) -> Result<Vec<AppCenterPackage>, Error> {
+) -> Result<Vec<AppCenterPackage>> {
     let appcenter_bin = if Path::new(APPCENTER_NPM_PATH).exists() {
         APPCENTER_NPM_PATH
     } else {
@@ -101,23 +101,21 @@ pub fn get_appcenter_deployment_history(
         .arg("json")
         .output()
         .map_err(|e| match e.kind() {
-            io::ErrorKind::NotFound => APPCENTER_NOT_FOUND.into(),
+            io::ErrorKind::NotFound => Error::msg(APPCENTER_NOT_FOUND),
             _ => Error::from(e).context("Failed to run AppCenter CLI"),
         })?;
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
-            let err_msg = format!("Command `{} codepush deployment history {} --app {} --output json` failed to produce a valid JSON output.", appcenter_bin, deployment, app);
-            panic!("{}", err_msg);
+            let format_err = format!("Command `{} codepush deployment history {} --app {} --output json` failed to produce a valid JSON output.", appcenter_bin, deployment, app);
+            panic!("{}", format_err);
         }))
     } else {
-        Err(get_appcenter_error(&output)
-            .context("Failed to load AppCenter deployment history")
-            .into())
+        Err(get_appcenter_error(&output).context("Failed to load AppCenter deployment history"))
     }
 }
 
-pub fn get_appcenter_package(app: &str, deployment: &str) -> Result<AppCenterPackage, Error> {
+pub fn get_appcenter_package(app: &str, deployment: &str) -> Result<AppCenterPackage> {
     let history = get_appcenter_deployment_history(app, deployment)?;
     if let Some(latest) = history.into_iter().last() {
         Ok(latest)
@@ -132,7 +130,7 @@ pub fn get_react_native_appcenter_release(
     bundle_id_override: Option<&str>,
     version_name_override: Option<&str>,
     release_name_override: Option<&str>,
-) -> Result<String, Error> {
+) -> Result<String> {
     let bundle_id_ovrr = bundle_id_override.unwrap_or("");
     let version_name_ovrr = version_name_override.unwrap_or("");
     let release_name_ovrr = release_name_override.unwrap_or("");

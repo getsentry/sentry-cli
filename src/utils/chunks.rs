@@ -8,7 +8,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use failure::Error;
+use anyhow::Result;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -161,7 +161,7 @@ pub fn upload_chunks(
     chunks: &[Chunk<'_>],
     chunk_options: &ChunkUploadOptions,
     progress_style: ProgressStyle,
-) -> Result<(), Error> {
+) -> Result<()> {
     let total_bytes: u64 = chunks
         .iter()
         .map(|&Chunk((_, data))| data.len() as u64)

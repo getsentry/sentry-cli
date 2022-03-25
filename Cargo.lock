@@ -60,6 +60,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.56"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4361135be9122e0870de935d7c439aef945b9f9ddd4199a553b5270b49c82a27"
+dependencies = [
+ "backtrace",
+]
+
+[[package]]
 name = "anylog"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -733,19 +742,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d32e9bd16cc02eae7db7ef620b392808b89f6a5e16bb3497d159c6b92a0f4f86"
 dependencies = [
  "backtrace",
- "failure_derive",
-]
-
-[[package]]
-name = "failure_derive"
-version = "0.1.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
- "synstructure",
 ]
 
 [[package]]
@@ -2027,6 +2023,30 @@ checksum = "f2d23af89cf3e40dffb53f974e9a21653353b3e21cf51633aa58006f2a0caf8a"
 dependencies = [
  "curl",
  "httpdate",
+ "sentry-anyhow",
+ "sentry-core",
+]
+
+[[package]]
+name = "sentry-anyhow"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de88cf0967eb3d7247071a7e6753b06c0939d509f9db44607ec00aa4b4aefd04"
+dependencies = [
+ "anyhow",
+ "sentry-backtrace",
+ "sentry-core",
+]
+
+[[package]]
+name = "sentry-backtrace"
+version = "0.25.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8158a446429420acdf6a4f75192ee8929da16a0c41c89a1c34b2e0f1eaebcc02"
+dependencies = [
+ "backtrace",
+ "lazy_static",
+ "regex",
  "sentry-core",
 ]
 
@@ -2034,6 +2054,7 @@ dependencies = [
 name = "sentry-cli"
 version = "1.74.3"
 dependencies = [
+ "anyhow",
  "anylog",
  "backoff",
  "backtrace",
@@ -2048,7 +2069,6 @@ dependencies = [
  "dotenv",
  "elementtree",
  "encoding",
- "failure",
  "flate2",
  "git2",
  "glob",
@@ -2087,6 +2107,7 @@ dependencies = [
  "sourcemap",
  "symbolic",
  "tempfile",
+ "thiserror",
  "trycmd",
  "unix-daemonize",
  "url",
@@ -2423,18 +2444,6 @@ checksum = "ea297be220d52398dcc07ce15a209fce436d361735ac1db700cab3b6cdfb9f54"
 dependencies = [
  "proc-macro2",
  "quote",
- "unicode-xid",
-]
-
-[[package]]
-name = "synstructure"
-version = "0.12.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f36bdaa60a83aca3921b5259d5400cbf5e90fc51931376a9bd4a0eb79aa7210f"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
  "unicode-xid",
 ]
 
