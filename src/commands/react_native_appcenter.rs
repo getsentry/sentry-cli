@@ -2,9 +2,9 @@ use std::env;
 use std::ffi::OsStr;
 use std::fs;
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::Error;
 use if_chain::if_chain;
 use log::info;
 
@@ -92,7 +92,7 @@ pub fn make_app(app: Command) -> Command {
         )
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();

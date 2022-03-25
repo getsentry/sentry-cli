@@ -4,9 +4,9 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::Error;
 use if_chain::if_chain;
 use proguard::ProguardMapping;
 use serde::Serialize;
@@ -103,7 +103,7 @@ fn find_ids(
     types: &HashSet<DifType>,
     ids: &HashSet<DebugId>,
     as_json: bool,
-) -> Result<bool, Error> {
+) -> Result<bool> {
     let mut remaining = ids.clone();
     let mut breakpad_found = HashSet::new();
     let mut proguard_uuids: HashSet<_> = ids
@@ -316,7 +316,7 @@ fn extract_remaining_ids(
         .collect()
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut paths = HashSet::new();
     let mut types = HashSet::new();
     let mut ids = HashSet::new();

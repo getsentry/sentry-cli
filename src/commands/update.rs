@@ -1,8 +1,8 @@
 //! Implements a command for updating `sentry-cli`
 use std::env;
 
+use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
-use failure::{bail, Error};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
 
@@ -21,7 +21,7 @@ pub fn make_app(app: Command) -> Command {
     }
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Disable update check in case of errors
     env::set_var("SENTRY_DISABLE_UPDATE_CHECK", "true");
 

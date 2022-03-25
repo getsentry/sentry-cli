@@ -1,6 +1,6 @@
 //! Implements a command for managing repos.
+use anyhow::Result;
 use clap::{ArgMatches, Command};
-use failure::Error;
 
 use crate::api::Api;
 use crate::config::Config;
@@ -15,7 +15,7 @@ pub fn make_app(app: Command) -> Command {
         .subcommand(Command::new("list").about("List all repositories in your organization."))
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
     let config = Config::current();

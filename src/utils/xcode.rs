@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use failure::{Error, ResultExt};
+use anyhow::{Context, Result};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::warn;
@@ -78,7 +78,7 @@ where
     .into_owned()
 }
 
-fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error> {
+fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
     if_chain! {
         if let Some(filename_os) = path.file_name();
         if let Some(filename) = filename_os.to_str();
@@ -111,7 +111,7 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>, Error
 }
 
 impl XcodeProjectInfo {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<XcodeProjectInfo, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<XcodeProjectInfo> {
         #[derive(Deserialize)]
         struct Output {
             project: XcodeProjectInfo,
@@ -143,7 +143,7 @@ impl XcodeProjectInfo {
         &self,
         target: &str,
         configuration: &str,
-    ) -> Result<HashMap<String, String>, Error> {
+    ) -> Result<HashMap<String, String>> {
         let mut rv = HashMap::new();
         let p = process::Command::new("xcodebuild")
             .arg("-showBuildSettings")
@@ -193,7 +193,7 @@ impl XcodeProjectInfo {
 
 impl InfoPlist {
     /// Loads a processed plist file.
-    pub fn discover_from_env() -> Result<Option<InfoPlist>, Error> {
+    pub fn discover_from_env() -> Result<Option<InfoPlist>> {
         // if we are loaded directly from xcode we can trust the os environment
         // and pass those variables to the processor.
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
@@ -225,7 +225,7 @@ impl InfoPlist {
     }
 
     /// Lodas an info plist from a given project info
-    pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>, Error> {
+    pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>> {
         if_chain! {
             if let Some(config) = pi.get_configuration("release")
                 .or_else(|| pi.get_configuration("debug"));
@@ -247,7 +247,7 @@ impl InfoPlist {
     pub fn load_and_process<P: AsRef<Path>>(
         path: P,
         vars: &HashMap<String, String>,
-    ) -> Result<InfoPlist, Error> {
+    ) -> Result<InfoPlist> {
         // do we want to preprocess the plist file?
         let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
             let mut c = process::Command::new("cc");
@@ -279,7 +279,7 @@ impl InfoPlist {
     }
 
     /// Loads an info plist from current environment based on default env variables settings in Xcode
-    pub fn from_xcode_env() -> Result<InfoPlist, Error> {
+    pub fn from_xcode_env() -> Result<InfoPlist> {
         Ok(InfoPlist {
             name: env::var("PRODUCT_NAME")?,
             bundle_id: env::var("PRODUCT_BUNDLE_IDENTIFIER")?,
@@ -289,15 +289,15 @@ impl InfoPlist {
     }
 
     /// Loads an info plist file from a path and does not process it.
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist, Error> {
+    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<InfoPlist> {
         let mut f = fs::File::open(path.as_ref()).context("Could not open Info.plist file")?;
         InfoPlist::from_reader(&mut f)
     }
 
     /// Loads an info plist file from a reader.
-    pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist, Error> {
+    pub fn from_reader<R: SeekRead>(rdr: R) -> Result<InfoPlist> {
         let rdr = BufReader::new(rdr);
-        Ok(plist::from_reader(rdr).context("Could not parse Info.plist file")?)
+        plist::from_reader(rdr).context("Could not parse Info.plist file")
     }
 
     pub fn get_release_name(&self) -> String {
@@ -347,7 +347,7 @@ impl<'a> MayDetach<'a> {
     /// and continues execution in the background.  From this moment on output
     /// is captured and the user is notified with notifications.
     #[cfg(target_os = "macos")]
-    pub fn may_detach(&mut self) -> Result<bool, Error> {
+    pub fn may_detach(&mut self) -> Result<bool> {
         if !launched_from_xcode() {
             return Ok(false);
         }
@@ -367,17 +367,17 @@ impl<'a> MayDetach<'a> {
 
     /// For non mac platforms this just never detaches.
     #[cfg(not(target_os = "macos"))]
-    pub fn may_detach(&mut self) -> Result<bool, Error> {
+    pub fn may_detach(&mut self) -> Result<bool> {
         Ok(false)
     }
 
     /// Wraps the execution of a code block.  Does not detach until someone
     /// calls into `may_detach`.
     #[cfg(target_os = "macos")]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach<'_>) -> Result<T, Error>>(
+    pub fn wrap<T, F: FnOnce(&mut MayDetach<'_>) -> Result<T>>(
         task_name: &'a str,
         f: F,
-    ) -> Result<T, Error> {
+    ) -> Result<T> {
         use std::time::Duration;
 
         let mut md = MayDetach::new(task_name);
@@ -401,15 +401,12 @@ impl<'a> MayDetach<'a> {
 
     /// Dummy wrap call that never detaches for non mac platforms.
     #[cfg(not(target_os = "macos"))]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T, Error>>(
-        task_name: &'a str,
-        f: F,
-    ) -> Result<T, Error> {
+    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(task_name: &'a str, f: F) -> Result<T> {
         f(&mut MayDetach::new(task_name))
     }
 
     #[cfg(target_os = "macos")]
-    fn show_critical_info(&self) -> Result<bool, Error> {
+    fn show_critical_info(&self) -> Result<bool> {
         show_critical_info(
             &format!("{} failed", self.task_name),
             "The Sentry build step failed while running in the background. \
@@ -420,7 +417,7 @@ impl<'a> MayDetach<'a> {
     }
 
     #[cfg(target_os = "macos")]
-    fn show_done(&self) -> Result<(), Error> {
+    fn show_done(&self) -> Result<()> {
         if self.is_detached() {
             show_notification("Sentry", &format!("{} finished", self.task_name))?;
         }
@@ -461,7 +458,7 @@ pub fn launched_from_xcode() -> bool {
 /// message as well as the buttons "Show details" and "Ignore".  Returns
 /// `true` if the `show details` button has been pressed.
 #[cfg(target_os = "macos")]
-pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
+pub fn show_critical_info(title: &str, message: &str) -> Result<bool> {
     use serde::Serialize;
 
     lazy_static! {
@@ -499,7 +496,7 @@ pub fn show_critical_info(title: &str, message: &str) -> Result<bool, Error> {
 
 /// Shows a notification in xcode
 #[cfg(target_os = "macos")]
-pub fn show_notification(title: &str, message: &str) -> Result<(), Error> {
+pub fn show_notification(title: &str, message: &str) -> Result<()> {
     use crate::config::Config;
     use serde::Serialize;
 

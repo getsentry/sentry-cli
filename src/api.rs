@@ -19,7 +19,6 @@ use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
 use console::style;
-use failure::{Backtrace, Context, Error, Fail, ResultExt};
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
@@ -175,7 +174,7 @@ pub struct Api {
     pool: r2d2::Pool<CurlConnectionManager>,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub struct SentryError {
     status: u32,
     detail: Option<String>,
@@ -210,53 +209,42 @@ impl fmt::Display for SentryError {
     }
 }
 
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("project was renamed to '{0}'\n\nPlease use this slug in your .sentryclirc or sentry.properties or for the --project parameter")]
+pub struct ProjectRenamedError(String);
+
 /// Represents API errors.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, thiserror::Error)]
 pub enum ApiErrorKind {
-    #[fail(display = "could not serialize value as JSON")]
+    #[error("could not serialize value as JSON")]
     CannotSerializeAsJson,
-    #[fail(display = "could not parse JSON response")]
+    #[error("could not parse JSON response")]
     BadJson,
-    #[fail(display = "not a JSON response")]
+    #[error("not a JSON response")]
     NotJson,
-    #[fail(display = "request failed because API URL was incorrectly formatted")]
+    #[error("request failed because API URL was incorrectly formatted")]
     BadApiUrl,
-    #[fail(display = "organization not found")]
+    #[error("organization not found")]
     OrganizationNotFound,
-    #[fail(display = "resource not found")]
+    #[error("resource not found")]
     ResourceNotFound,
-    #[fail(display = "project not found")]
+    #[error("project not found")]
     ProjectNotFound,
-    #[fail(display = "release not found")]
+    #[error("release not found")]
     ReleaseNotFound,
-    #[fail(display = "chunk upload endpoint not supported by sentry server")]
+    #[error("chunk upload endpoint not supported by sentry server")]
     ChunkUploadNotSupported,
-    #[fail(display = "API request failed")]
+    #[error("API request failed")]
     RequestFailed,
-    #[fail(display = "could not compress data")]
+    #[error("could not compress data")]
     CompressionFailed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub struct ApiError {
-    inner: Context<ApiErrorKind>,
-}
-
-#[derive(Clone, Debug, Fail)]
-#[fail(
-    display = "project was renamed to '{}'\n\nPlease use this slug in your .sentryclirc or sentry.properties or for the --project parameter",
-    _0
-)]
-pub struct ProjectRenamedError(String);
-
-impl Fail for ApiError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.inner.cause()
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.inner.backtrace()
-    }
+    inner: ApiErrorKind,
+    #[source]
+    source: Option<anyhow::Error>,
 }
 
 impl fmt::Display for ApiError {
@@ -266,34 +254,41 @@ impl fmt::Display for ApiError {
 }
 
 impl ApiError {
+    pub fn with_source<E: Into<anyhow::Error>>(kind: ApiErrorKind, source: E) -> ApiError {
+        ApiError {
+            inner: kind,
+            source: Some(source.into()),
+        }
+    }
+
     pub fn kind(&self) -> ApiErrorKind {
-        *self.inner.get_context()
+        self.inner
+    }
+
+    fn set_source<E: Into<anyhow::Error>>(mut self, source: E) -> ApiError {
+        self.source = Some(source.into());
+        self
     }
 }
 
 impl From<ApiErrorKind> for ApiError {
     fn from(kind: ApiErrorKind) -> ApiError {
         ApiError {
-            inner: Context::new(kind),
+            inner: kind,
+            source: None,
         }
-    }
-}
-
-impl From<Context<ApiErrorKind>> for ApiError {
-    fn from(inner: Context<ApiErrorKind>) -> ApiError {
-        ApiError { inner }
     }
 }
 
 impl From<curl::Error> for ApiError {
     fn from(err: curl::Error) -> ApiError {
-        Error::from(err).context(ApiErrorKind::RequestFailed).into()
+        ApiError::from(ApiErrorKind::RequestFailed).set_source(err)
     }
 }
 
 impl From<curl::FormError> for ApiError {
     fn from(err: curl::FormError) -> ApiError {
-        Error::from(err).context(ApiErrorKind::RequestFailed).into()
+        ApiError::from(ApiErrorKind::RequestFailed).set_source(err)
     }
 }
 
@@ -396,7 +391,7 @@ impl Api {
             (
                 Cow::Owned(match self.config.get_api_endpoint(url) {
                     Ok(rv) => rv,
-                    Err(err) => return Err(err.context(ApiErrorKind::BadApiUrl).into()),
+                    Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
                 }),
                 self.config.get_auth(),
             )
@@ -680,7 +675,7 @@ impl Api {
         sources: HashSet<(String, PathBuf)>,
         dist: Option<&str>,
         headers: Option<&[(String, String)]>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ApiError> {
         if sources.is_empty() {
             return Ok(());
         }
@@ -1193,8 +1188,8 @@ impl Api {
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
             let name = compression.field_name();
-            let buffer =
-                Api::compress(data, compression).context(ApiErrorKind::CompressionFailed)?;
+            let buffer = Api::compress(data, compression)
+                .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
             form.part(name).buffer(&checksum, buffer).add()?
         }
 
@@ -1604,7 +1599,7 @@ impl ApiRequest {
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<Self> {
         let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)
-            .context(ApiErrorKind::CannotSerializeAsJson)?;
+            .map_err(|err| ApiError::with_source(ApiErrorKind::CannotSerializeAsJson, err))?;
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
@@ -1726,32 +1721,35 @@ impl ApiResponse {
             return Ok(self);
         }
         if let Ok(err) = self.deserialize::<ErrorInfo>() {
-            Err(SentryError {
-                status: self.status(),
-                detail: Some(match err {
-                    ErrorInfo::Detail(val) => val,
-                    ErrorInfo::Error(val) => val,
-                }),
-                extra: None,
-            }
-            .context(ApiErrorKind::RequestFailed)
-            .into())
+            Err(ApiError::with_source(
+                ApiErrorKind::RequestFailed,
+                SentryError {
+                    status: self.status(),
+                    detail: Some(match err {
+                        ErrorInfo::Detail(val) => val,
+                        ErrorInfo::Error(val) => val,
+                    }),
+                    extra: None,
+                },
+            ))
         } else if let Ok(value) = self.deserialize::<serde_json::Value>() {
-            Err(SentryError {
-                status: self.status(),
-                detail: Some("request failure".into()),
-                extra: Some(value),
-            }
-            .context(ApiErrorKind::RequestFailed)
-            .into())
+            Err(ApiError::with_source(
+                ApiErrorKind::RequestFailed,
+                SentryError {
+                    status: self.status(),
+                    detail: Some("request failure".into()),
+                    extra: Some(value),
+                },
+            ))
         } else {
-            Err(SentryError {
-                status: self.status(),
-                detail: None,
-                extra: None,
-            }
-            .context(ApiErrorKind::RequestFailed)
-            .into())
+            Err(ApiError::with_source(
+                ApiErrorKind::RequestFailed,
+                SentryError {
+                    status: self.status(),
+                    detail: None,
+                    extra: None,
+                },
+            ))
         }
     }
 
@@ -1760,11 +1758,11 @@ impl ApiResponse {
         if !self.is_json() {
             return Err(ApiErrorKind::NotJson.into());
         }
-        Ok(serde_json::from_reader(match self.body {
+        serde_json::from_reader(match self.body {
             Some(ref body) => body,
             None => &b""[..],
         })
-        .context(ApiErrorKind::BadJson)?)
+        .map_err(|err| ApiError::with_source(ApiErrorKind::BadJson, err))
     }
 
     /// Like `deserialize` but consumes the response and will convert
@@ -1788,9 +1786,10 @@ impl ApiResponse {
                 }
 
                 match self.convert::<ErrorInfo>() {
-                    Ok(info) => Err(ProjectRenamedError(info.detail.slug)
-                        .context(res_err)
-                        .into()),
+                    Ok(info) => Err(ApiError::with_source(
+                        res_err,
+                        ProjectRenamedError(info.detail.slug),
+                    )),
                     Err(_) => Err(res_err.into()),
                 }
             }

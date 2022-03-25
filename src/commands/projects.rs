@@ -1,6 +1,6 @@
 //! Implements a command for managing projects.
+use anyhow::Result;
 use clap::{ArgMatches, Command};
-use failure::Error;
 
 use crate::api::Api;
 use crate::config::Config;
@@ -15,7 +15,7 @@ pub fn make_app(app: Command) -> Command {
         .subcommand(Command::new("list").about("List all projects for an organization."))
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
     let org = config.get_org(matches)?;

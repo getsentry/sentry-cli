@@ -2,15 +2,15 @@ use std::fs;
 use std::io::BufReader;
 use std::path::Path;
 
+use anyhow::Result;
 use elementtree::{Element, QName};
-use failure::Error;
 
 pub struct CordovaConfig {
     root: Element,
 }
 
 impl CordovaConfig {
-    pub fn load<P: AsRef<Path>>(p: P) -> Result<Option<CordovaConfig>, Error> {
+    pub fn load<P: AsRef<Path>>(p: P) -> Result<Option<CordovaConfig>> {
         let f = fs::File::open(p)?;
         let root = Element::from_reader(BufReader::new(f))?;
         if root.tag() != &QName::from("{http://www.w3.org/ns/widgets}widget") {

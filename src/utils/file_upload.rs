@@ -7,8 +7,8 @@ use std::str;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use anyhow::{bail, Result};
 use console::style;
-use failure::{bail, Error};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -94,7 +94,7 @@ impl<'a> ReleaseFileUpload<'a> {
         self
     }
 
-    pub fn upload(&self) -> Result<(), Error> {
+    pub fn upload(&self) -> Result<()> {
         let api = Api::current();
 
         let chunk_options = api.get_chunk_upload_options(self.context.org)?;
@@ -123,7 +123,7 @@ fn upload_files_parallel(
     context: &UploadContext,
     files: &ReleaseFiles,
     num_threads: usize,
-) -> Result<(), Error> {
+) -> Result<()> {
     let api = Api::current();
 
     // get a list of release files first so we know the file IDs of
@@ -161,7 +161,7 @@ fn upload_files_parallel(
         files
             .into_par_iter()
             .enumerate()
-            .map(|(index, (_, file))| -> Result<(), Error> {
+            .map(|(index, (_, file))| -> Result<()> {
                 let api = Api::current();
                 let mode = ProgressBarMode::Shared((
                     pb.clone(),
@@ -204,7 +204,7 @@ fn upload_files_chunked(
     context: &UploadContext,
     files: &ReleaseFiles,
     options: &ChunkUploadOptions,
-) -> Result<(), Error> {
+) -> Result<()> {
     let archive = build_artifact_bundle(context, files)?;
 
     let progress_style =
@@ -289,7 +289,7 @@ fn upload_files_chunked(
     Ok(())
 }
 
-fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Result<TempFile, Error> {
+fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
@@ -343,7 +343,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
     Ok(archive)
 }
 
-fn url_to_bundle_path(url: &str) -> Result<String, Error> {
+fn url_to_bundle_path(url: &str) -> Result<String> {
     let base = Url::parse("http://~").unwrap();
     let url = if let Some(rest) = url.strip_prefix("~/") {
         base.join(rest)?

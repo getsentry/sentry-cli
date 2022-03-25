@@ -2,9 +2,9 @@
 use std::env;
 use std::fs;
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::Error;
 
 use crate::utils::fs::is_writable;
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
@@ -24,7 +24,7 @@ pub fn make_app(app: Command) -> Command {
     }
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let exe = env::current_exe()?;
 
     if is_homebrew_install() {

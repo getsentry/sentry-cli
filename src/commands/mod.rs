@@ -4,8 +4,8 @@ use std::env;
 use std::fmt;
 use std::process;
 
+use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
-use failure::{bail, Error};
 use log::{debug, info};
 
 use crate::api::Api;
@@ -64,11 +64,11 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "releases", "issues", "repos", "projects", "info", "login", "difutil",
 ];
 
-fn preexecute_hooks() -> Result<bool, Error> {
+fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();
 
     #[cfg(target_os = "macos")]
-    fn sentry_react_native_xcode_wrap() -> Result<bool, Error> {
+    fn sentry_react_native_xcode_wrap() -> Result<bool> {
         if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
             env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
             if &val == "1" {
@@ -80,12 +80,12 @@ fn preexecute_hooks() -> Result<bool, Error> {
     }
 
     #[cfg(not(target_os = "macos"))]
-    fn sentry_react_native_xcode_wrap() -> Result<bool, Error> {
+    fn sentry_react_native_xcode_wrap() -> Result<bool> {
         Ok(false)
     }
 }
 
-fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<(), Error> {
+fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     if let Some(url) = matches.value_of("url") {
         config.set_base_url(url);
     }
@@ -172,7 +172,7 @@ fn add_commands(mut app: Command) -> Command {
     app
 }
 
-fn run_command(matches: &ArgMatches) -> Result<(), Error> {
+fn run_command(matches: &ArgMatches) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             let cmd = stringify!($name).replace("_", "-");
@@ -206,7 +206,7 @@ impl<'a> fmt::Display for DebugArgs<'a> {
 
 /// Given an argument vector and a `Config` this executes the
 /// command line and returns the result.
-pub fn execute(args: &[String]) -> Result<(), Error> {
+pub fn execute(args: &[String]) -> Result<()> {
     let mut config = Config::from_cli_config()?;
 
     // special case for the xcode integration for react native.  For more
@@ -242,7 +242,7 @@ pub fn execute(args: &[String]) -> Result<(), Error> {
     run_command(&matches)
 }
 
-fn run() -> Result<(), Error> {
+fn run() -> Result<()> {
     prepare_environment();
     execute(&env::args().collect::<Vec<String>>())
 }

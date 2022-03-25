@@ -3,8 +3,8 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use console::style;
-use failure::Error;
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
@@ -85,7 +85,7 @@ impl ReleaseFileSearch {
         self
     }
 
-    pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch, Error> {
+    pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch> {
         let mut f = fs::File::open(path.clone())?;
         let mut contents = Vec::new();
         f.read_to_end(&mut contents)?;
@@ -96,7 +96,7 @@ impl ReleaseFileSearch {
         })
     }
 
-    pub fn collect_files(&self) -> Result<Vec<ReleaseFileMatch>, Error> {
+    pub fn collect_files(&self) -> Result<Vec<ReleaseFileMatch>> {
         let progress_style = ProgressStyle::default_spinner().template(
             "{spinner} Searching for release files...\
         \n  found {prefix:.yellow} {msg:.dim}",

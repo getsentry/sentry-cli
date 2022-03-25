@@ -3,8 +3,8 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::time::Duration;
 
+use anyhow::{Context, Result};
 use chrono::Utc;
-use failure::{Error, ResultExt};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
@@ -18,11 +18,7 @@ lazy_static! {
 }
 
 /// Attaches all logs from a logfile as breadcrumbs to the given event.
-pub fn attach_logfile(
-    event: &mut Event<'_>,
-    logfile: &str,
-    with_component: bool,
-) -> Result<(), Error> {
+pub fn attach_logfile(event: &mut Event<'_>, logfile: &str, with_component: bool) -> Result<()> {
     let f = fs::File::open(logfile).context("Could not open logfile")?;
 
     // sentry currently requires timestamps for breadcrumbs at all times.

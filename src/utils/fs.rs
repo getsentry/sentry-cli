@@ -4,7 +4,7 @@ use std::io;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
-use failure::{bail, Error};
+use anyhow::{bail, Result};
 use sha1_smol::{Digest, Sha1};
 use uuid::Uuid;
 
@@ -104,7 +104,7 @@ pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
 
 /// Set the mode of a path to 755 if we're on a Unix machine, otherwise
 /// don't do anything with the given path.
-pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<(), Error> {
+pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<()> {
     #[cfg(not(windows))]
     fn exec<P: AsRef<Path>>(path: P) -> io::Result<()> {
         use std::os::unix::fs::PermissionsExt;
@@ -123,7 +123,7 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<(), Error> {
 }
 
 /// Returns the SHA1 hash of the given input.
-pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest, Error> {
+pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
     let mut sha = Sha1::new();
     let mut buf = [0u8; 16384];
     let mut rdr = io::BufReader::new(rdr);
@@ -139,7 +139,7 @@ pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest, Error> {
 
 /// Returns the SHA1 hash for the entire input, as well as each chunk of it. The
 /// `chunk_size` must be a power of two.
-pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<Digest>), Error> {
+pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<Digest>)> {
     if !chunk_size.is_power_of_two() {
         bail!("Chunk size must be a power of two");
     }

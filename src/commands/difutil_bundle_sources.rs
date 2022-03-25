@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
-use failure::Error;
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 
@@ -50,7 +50,7 @@ fn get_sane_parent(path: &Path) -> &Path {
     parent
 }
 
-fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, Error> {
+fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
     let mut canonical_path = Path::new(path.as_ref()).canonicalize()?;
 
     if is_dsym(&canonical_path) {
@@ -66,7 +66,7 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf, Error> {
     Ok(canonical_path)
 }
 
-pub fn execute(matches: &ArgMatches) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let output_path = matches.value_of("output").map(Path::new);
 
     for orig_path in matches.values_of("paths").unwrap() {
