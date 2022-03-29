@@ -162,11 +162,6 @@ pub fn init_backtrace() {
             }
             None => eprintln!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
         }
-
-        #[cfg(feature = "with_client_implementation")]
-        {
-            crate::utils::crashreporting::flush_events();
-        }
     }));
 }
 

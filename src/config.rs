@@ -108,10 +108,7 @@ impl Config {
             return;
         }
         set_max_level(self.get_log_level());
-        #[cfg(feature = "with_crash_reporting")]
-        {
-            crate::utils::crashreporting::bind_configured_client(Some(self));
-        }
+
         #[cfg(not(windows))]
         {
             openssl_probe::init_ssl_cert_env_vars();
@@ -418,23 +415,6 @@ impl Config {
             val == "true"
         } else {
             false
-        }
-    }
-
-    /// Does this installation want errors to sentry?
-    pub fn internal_sentry_dsn(&self) -> Option<Dsn> {
-        if !self
-            .ini
-            .get_from(Some("crash_reporting"), "enabled")
-            .map(|x| x == "1" || x == "true")
-            .unwrap_or(false)
-        {
-            return None;
-        }
-        if let Some(val) = self.ini.get_from(Some("crash_reporting"), "sentry_dsn") {
-            val.parse().ok()
-        } else {
-            None
         }
     }
 }

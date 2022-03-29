@@ -256,17 +256,7 @@ fn setup() {
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
     log::set_max_level(log::LevelFilter::Debug);
-
-    // if we work with crash reporting we initialize the sentry system.  This
-    // also configures the logger.
-    #[cfg(feature = "with_crash_reporting")]
-    {
-        crate::utils::crashreporting::setup(Box::new(Logger));
-    }
-    #[cfg(not(feature = "with_crash_reporting"))]
-    {
-        log::set_logger(&Logger).unwrap();
-    }
+    log::set_logger(&Logger).unwrap();
 }
 
 /// Executes the command line application and exits the process.
@@ -281,10 +271,6 @@ pub fn main() {
                 code
             } else {
                 print_error(&err);
-                #[cfg(feature = "with_crash_reporting")]
-                {
-                    crate::utils::crashreporting::try_report_to_sentry(err);
-                }
                 1
             };
 
