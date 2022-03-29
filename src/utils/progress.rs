@@ -1,4 +1,3 @@
-use console::{style, Term};
 use std::env;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -63,12 +62,6 @@ impl ProgressBar {
         self.inner.finish_and_clear();
         logging::set_progress_bar(None);
     }
-
-    pub fn set_draw_target(&self, target: ProgressDrawTarget) {
-        if is_progress_bar_visible() {
-            self.inner.set_draw_target(target);
-        }
-    }
 }
 
 impl From<indicatif::ProgressBar> for ProgressBar {
@@ -88,14 +81,4 @@ impl Deref for ProgressBar {
     fn deref(&self) -> &Self::Target {
         &self.inner
     }
-}
-
-pub fn make_progress_bar(len: u64) -> ProgressBar {
-    let pb = ProgressBar::new(len);
-    pb.set_draw_target(ProgressDrawTarget::to_term(Term::stdout(), None));
-    pb.set_style(ProgressStyle::default_bar().template(&format!(
-        "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
-        style(">").cyan()
-    )));
-    pb
 }

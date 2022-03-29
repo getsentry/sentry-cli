@@ -16,7 +16,7 @@ use walkdir::{DirEntry, WalkDir};
 
 use crate::utils::args::validate_id;
 use crate::utils::dif::{DifFile, DifType};
-use crate::utils::progress::{ProgressBar, ProgressDrawTarget, ProgressStyle};
+use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 
 // text files larger than 32 megabytes are not considered to be
@@ -120,7 +120,6 @@ fn find_ids(
 
     let mut found_files = vec![];
     let pb = ProgressBar::new_spinner();
-    pb.set_draw_target(ProgressDrawTarget::stdout());
     pb.set_style(
         ProgressStyle::default_spinner()
             .tick_chars("/|\\- ")

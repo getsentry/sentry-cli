@@ -210,9 +210,9 @@ fn upload_files_chunked(
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
 
-    let progress = ProgressBar::new_spinner();
-    progress.enable_steady_tick(100);
-    progress.set_style(progress_style);
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
 
     let view = ByteView::open(archive.path())?;
     let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
@@ -222,7 +222,7 @@ fn upload_files_chunked(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    progress.finish_with_duration("Optimizing");
+    pb.finish_with_duration("Optimizing");
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading release files...\
@@ -235,9 +235,9 @@ fn upload_files_chunked(
 
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
-    let progress = ProgressBar::new_spinner();
-    progress.enable_steady_tick(100);
-    progress.set_style(progress_style);
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
 
     let assemble_start = Instant::now();
     let max_wait = match options.max_wait {
@@ -269,7 +269,7 @@ fn upload_files_chunked(
         bail!("Failed to process uploaded files: {}", message);
     }
 
-    progress.finish_with_duration("Processing");
+    pb.finish_with_duration("Processing");
 
     if response.state.is_pending() {
         if context.wait {
@@ -295,9 +295,9 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
        \n{wide_bar}  {pos}/{len}",
     );
 
-    let progress = ProgressBar::new(files.len() as u64);
-    progress.set_style(progress_style);
-    progress.set_prefix(">");
+    let pb = ProgressBar::new(files.len() as u64);
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
 
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
@@ -312,8 +312,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
     }
 
     for file in files.values() {
-        progress.inc(1);
-        progress.set_message(&file.url);
+        pb.inc(1);
+        pb.set_message(&file.url);
 
         let mut info = SourceFileInfo::new();
         info.set_ty(file.ty);
@@ -338,7 +338,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
         }
     );
 
-    progress.finish_with_duration("Bundling");
+    pb.finish_with_duration("Bundling");
 
     Ok(archive)
 }
