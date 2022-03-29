@@ -21,6 +21,7 @@ use chrono::{DateTime, Duration, FixedOffset, Utc};
 use console::style;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
+use indicatif::ProgressStyle;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::{Mutex, RwLock};
@@ -36,7 +37,7 @@ use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::{self, is_absolute_url, parse_link_header};
-use crate::utils::progress::{make_progress_bar, ProgressBar};
+use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
@@ -690,7 +691,11 @@ impl Api {
             style(version).cyan()
         );
 
-        let pb = make_progress_bar(sources.len() as u64);
+        let pb = ProgressBar::new(sources.len() as u64);
+        pb.set_style(ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        )));
 
         for (url, path) in sources {
             pb.set_message(path.to_str().unwrap());

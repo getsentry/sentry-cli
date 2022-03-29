@@ -7,6 +7,7 @@ use std::str;
 
 use anyhow::{bail, Error, Result};
 use console::style;
+use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
@@ -14,7 +15,7 @@ use url::Url;
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, ReleaseFiles, UploadContext};
-use crate::utils::progress::make_progress_bar;
+use crate::utils::progress::ProgressBar;
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
     if let Ok(code_str) = decode_unknown_string(code) {
@@ -178,7 +179,12 @@ impl SourceMapProcessor {
             return;
         }
 
-        let pb = make_progress_bar(self.pending_sources.len() as u64);
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(self.pending_sources.len() as u64);
+        pb.set_style(progress_style);
 
         println!(
             "{} Analyzing {} sources",
@@ -285,7 +291,14 @@ impl SourceMapProcessor {
         let mut failed = false;
 
         println!("{} Validating sources", style(">").dim());
-        let pb = make_progress_bar(sources.len() as u64);
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(sources.len() as u64);
+        pb.set_style(progress_style);
+
         for source in sources {
             pb.set_message(&source.url);
             match source.ty {
@@ -442,7 +455,13 @@ impl SourceMapProcessor {
 
         self.unpack_indexed_ram_bundles()?;
 
-        let pb = make_progress_bar(self.sources.len() as u64);
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(self.sources.len() as u64);
+        pb.set_style(progress_style);
+
         for source in self.sources.values_mut() {
             pb.set_message(&source.url);
             if source.ty != SourceFileType::SourceMap {

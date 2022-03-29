@@ -102,9 +102,9 @@ impl ReleaseFileSearch {
         \n  found {prefix:.yellow} {msg:.dim}",
         );
 
-        let progress = ProgressBar::new_spinner();
-        progress.enable_steady_tick(100);
-        progress.set_style(progress_style);
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(100);
+        pb.set_style(progress_style);
 
         let mut collected = Vec::new();
 
@@ -143,7 +143,7 @@ impl ReleaseFileSearch {
             if file.file_type().map_or(false, |t| t.is_dir()) {
                 continue;
             }
-            progress.set_message(&format!("{}", file.path().display()));
+            pb.set_message(&format!("{}", file.path().display()));
 
             info!(
                 "found: {} ({} bytes)",
@@ -162,10 +162,10 @@ impl ReleaseFileSearch {
             };
             collected.push(file_match);
 
-            progress.set_prefix(&collected.len().to_string());
+            pb.set_prefix(&collected.len().to_string());
         }
 
-        progress.finish_and_clear();
+        pb.finish_and_clear();
         println!(
             "{} Found {} release {}",
             style(">").dim(),

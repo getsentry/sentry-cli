@@ -640,9 +640,9 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
          \n  found {prefix:.yellow} {msg:.dim}",
     );
 
-    let progress = ProgressBar::new_spinner();
-    progress.enable_steady_tick(100);
-    progress.set_style(progress_style);
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
 
     let mut age_overrides = BTreeMap::new();
     let mut collected = Vec::new();
@@ -656,7 +656,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
         }
         walk_difs_directory(base_path, options, |source, name, buffer| {
             debug!("trying to process {}", name);
-            progress.set_message(&name);
+            pb.set_message(&name);
 
             if Archive::peek(&buffer) != FileFormat::Unknown {
                 let mut difs =
@@ -672,7 +672,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 }
             };
 
-            progress.set_prefix(&collected.len().to_string());
+            pb.set_prefix(&collected.len().to_string());
             Ok(())
         })?;
     }
@@ -681,7 +681,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
         fix_pdb_ages(&mut collected, &age_overrides);
     }
 
-    progress.finish_and_clear();
+    pb.finish_and_clear();
     println!(
         "{} Found {} debug information {}",
         style(">").dim(),
@@ -939,18 +939,18 @@ where
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let progress = ProgressBar::new(items.len() as u64);
-    progress.set_style(progress_style);
-    progress.set_prefix(">");
+    let pb = ProgressBar::new(items.len() as u64);
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
 
     let mut calculated = Vec::new();
     for item in items {
-        progress.inc(1);
-        progress.set_message(item.path());
+        pb.inc(1);
+        pb.set_message(item.path());
         calculated.push(func(item)?);
     }
 
-    progress.finish_and_clear();
+    pb.finish_and_clear();
     println!(
         "{} Prepared debug information {} for upload",
         style(">").dim(),
@@ -1000,17 +1000,17 @@ fn process_symbol_maps<'a>(
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let progress = ProgressBar::new(len as u64);
-    progress.set_style(progress_style);
-    progress.set_prefix(">");
+    let pb = ProgressBar::new(len as u64);
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
 
     for dif in with_hidden {
-        progress.inc(1);
-        progress.set_message(dif.path());
+        pb.inc(1);
+        pb.set_message(dif.path());
         without_hidden.push(resolve_hidden_symbols(dif, symbol_map)?);
     }
 
-    progress.finish_and_clear();
+    pb.finish_and_clear();
     println!(
         "{} Resolved BCSymbolMaps for {} debug information {}",
         style(">").dim(),
@@ -1053,13 +1053,13 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>>
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let progress = ProgressBar::new(difs.len() as u64);
-    progress.set_style(progress_style);
-    progress.set_prefix(">");
+    let pb = ProgressBar::new(difs.len() as u64);
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
 
     for dif in difs {
-        progress.inc(1);
-        progress.set_message(dif.path());
+        pb.inc(1);
+        pb.set_message(dif.path());
 
         let object = match dif.object() {
             Some(object) => object,
@@ -1089,7 +1089,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>>
     }
 
     let len = source_bundles.len();
-    progress.finish_and_clear();
+    pb.finish_and_clear();
     println!(
         "{} Resolved source code for {} debug information {}",
         style(">").dim(),
@@ -1256,9 +1256,9 @@ fn poll_dif_assemble(
     );
 
     let api = Api::current();
-    let progress = ProgressBar::new(difs.len() as u64);
-    progress.set_style(progress_style);
-    progress.set_prefix(">");
+    let pb = ProgressBar::new(difs.len() as u64);
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
 
     let assemble_start = Instant::now();
 
@@ -1296,7 +1296,7 @@ fn poll_dif_assemble(
             .filter(|&(_, r)| r.state.is_pending())
             .count();
 
-        progress.set_position((difs.len() - pending) as u64);
+        pb.set_position((difs.len() - pending) as u64);
 
         if pending == 0 {
             break response;
@@ -1305,7 +1305,7 @@ fn poll_dif_assemble(
         thread::sleep(ASSEMBLE_POLL_INTERVAL);
     };
 
-    progress.finish_and_clear();
+    pb.finish_and_clear();
     if response.values().any(|r| r.state.is_pending()) {
         println!("{} File upload complete:\n", style(">").dim());
     } else {

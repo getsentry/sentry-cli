@@ -262,14 +262,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let progress_style = ProgressStyle::default_spinner()
                 .template("{spinner} Associating dSYMs with {msg}...");
 
-            let progress = ProgressBar::new_spinner();
-            progress.enable_steady_tick(100);
-            progress.set_style(progress_style);
-            progress.set_message(&info_plist.to_string());
+            let pb = ProgressBar::new_spinner();
+            pb.enable_steady_tick(100);
+            pb.set_style(progress_style);
+            pb.set_message(&info_plist.to_string());
 
             let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
             let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
-            progress.finish_and_clear();
+            pb.finish_and_clear();
 
             if let Some(association) = response {
                 if association.associated_dsyms.is_empty() {

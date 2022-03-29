@@ -171,8 +171,8 @@ pub fn upload_chunks(
     // multiple requests to simulate one continuous upload to the user. Since we
     // have to embed the progress bar into a ProgressBarMode and move it into
     // `Api::upload_chunks`, the progress bar is created in an Arc.
-    let progress = Arc::new(ProgressBar::new(total_bytes));
-    progress.set_style(progress_style);
+    let pb = Arc::new(ProgressBar::new(total_bytes));
+    pb.set_style(progress_style);
 
     // Select the best available compression mechanism. We assume that every
     // compression algorithm has been implemented for uploading, except `Other`
@@ -211,13 +211,13 @@ pub fn upload_chunks(
             .into_par_iter()
             .enumerate()
             .map(|(index, (batch, size))| {
-                let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
+                let mode = ProgressBarMode::Shared((pb.clone(), size, index, bytes.clone()));
                 Api::current().upload_chunks(&chunk_options.url, batch, mode, compression)
             })
             .collect::<Result<(), _>>()
     })?;
 
-    progress.finish_with_duration("Uploading");
+    pb.finish_with_duration("Uploading");
 
     Ok(())
 }
