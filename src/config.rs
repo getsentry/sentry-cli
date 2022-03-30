@@ -10,6 +10,7 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
 use ini::Ini;
 use lazy_static::lazy_static;
+use log::set_max_level;
 use parking_lot::Mutex;
 use sentry::types::Dsn;
 
@@ -17,7 +18,6 @@ use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
 use crate::utils::http::is_absolute_url;
-use crate::utils::logging::set_max_level;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]

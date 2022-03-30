@@ -1,27 +1,14 @@
-use std::io;
-use std::io::Write;
-use std::mem;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 use chrono::Local;
 use console::{style, Color};
 use indicatif::ProgressBar;
 use lazy_static::lazy_static;
+use log::max_level;
 use parking_lot::RwLock;
 
 lazy_static! {
     static ref PROGRESS_BAR: RwLock<Option<Weak<ProgressBar>>> = RwLock::new(None);
-    static ref MAX_LEVEL: AtomicUsize =
-        AtomicUsize::new(unsafe { mem::transmute(log::LevelFilter::Warn) });
-}
-
-pub fn max_level() -> log::LevelFilter {
-    unsafe { mem::transmute(MAX_LEVEL.load(Ordering::Relaxed)) }
-}
-
-pub fn set_max_level(level: log::LevelFilter) {
-    MAX_LEVEL.store(unsafe { mem::transmute(level) }, Ordering::Relaxed);
 }
 
 /// A simple logger
@@ -79,7 +66,7 @@ impl log::Log for Logger {
         if let Some(pb) = get_progress_bar() {
             pb.println(msg);
         } else {
-            writeln!(io::stderr(), "{}", msg).ok();
+            eprintln!("{}", msg);
         }
     }
 

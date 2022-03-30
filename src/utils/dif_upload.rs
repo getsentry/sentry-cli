@@ -621,7 +621,7 @@ fn fix_pdb_ages(difs: &mut [DifMatch<'_>], age_overrides: &BTreeMap<Uuid, u32>) 
                 continue;
             }
 
-            log::debug!(
+            debug!(
                 "overriding age for {} ({} -> {})",
                 dif.name,
                 debug_id.appendix(),

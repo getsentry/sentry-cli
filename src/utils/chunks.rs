@@ -9,6 +9,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
+use log::info;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -185,7 +186,7 @@ pub fn upload_chunks(
         .cloned()
         .unwrap_or_default();
 
-    log::info!("using '{}' compression for chunk upload", compression);
+    info!("using '{}' compression for chunk upload", compression);
 
     // The upload is executed in parallel batches. Each batch aggregates objects
     // until it exceeds the maximum size configured in ChunkUploadOptions. We
