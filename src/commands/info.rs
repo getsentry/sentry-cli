@@ -8,6 +8,7 @@ use serde::Serialize;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
+use crate::utils::logging::quiet_mode;
 use crate::utils::system::QuietExit;
 
 #[derive(Serialize, Default)]
@@ -25,20 +26,15 @@ pub struct ConfigStatus {
 }
 
 pub fn make_app(app: Command) -> Command {
-    app.about("Print information about the Sentry server.")
-        .arg(Arg::new("quiet").short('q').long("quiet").help(
-            "Do not output anything, just report a status \
-             code for correct config.",
-        ))
-        .arg(
-            Arg::new("config_status_json")
-                .long("config-status-json")
-                .help(
-                    "Return the status of the config that sentry-cli loads \
+    app.about("Print information about the Sentry server.").arg(
+        Arg::new("config_status_json")
+            .long("config-status-json")
+            .help(
+                "Return the status of the config that sentry-cli loads \
                      as JSON dump. This can be used by external tools to aid \
                      the user towards configuration.",
-                ),
-        )
+            ),
+    )
 }
 
 fn describe_auth(auth: Option<&Auth>) -> &str {
@@ -82,7 +78,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let errors =
         project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
 
-    if !matches.is_present("quiet") {
+    if !quiet_mode() {
         println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
         println!(
             "Default Organization: {}",

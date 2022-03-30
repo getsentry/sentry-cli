@@ -1,4 +1,7 @@
-use std::sync::{Arc, Weak};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Weak,
+};
 
 use chrono::Local;
 use console::{style, Color};
@@ -7,11 +10,57 @@ use lazy_static::lazy_static;
 use log::max_level;
 use parking_lot::RwLock;
 
+// Quiet mode decides whether to print something based on `--quiet` flag.
+lazy_static! {
+    static ref QUIET_MODE: AtomicBool = AtomicBool::new(false);
+}
+
+pub fn quiet_mode() -> bool {
+    QUIET_MODE.load(Ordering::Relaxed)
+}
+
+pub fn set_quiet_mode(yes: bool) {
+    QUIET_MODE.store(yes, Ordering::Relaxed);
+}
+
+// NOTE: Remove `allow`s after first use.
+#[allow(unused_macros)]
+macro_rules! quiet_println {
+    ($($tt:tt)*) => {{
+        if !crate::utils::logging::quiet_mode() {
+            println!($($tt)*);
+        }
+    }};
+}
+#[allow(unused_imports)]
+pub(crate) use quiet_println;
+
+// NOTE: Remove `allow`s after first use.
+#[allow(unused_macros)]
+macro_rules! quiet_eprintln {
+    ($($tt:tt)*) => {{
+        if !crate::utils::logging::quiet_mode() {
+            eprintln!($($tt)*);
+        }
+    }};
+}
+#[allow(unused_imports)]
+pub(crate) use quiet_eprintln;
+
+// Globally shared ProgressBar instance.
 lazy_static! {
     static ref PROGRESS_BAR: RwLock<Option<Weak<ProgressBar>>> = RwLock::new(None);
 }
 
-/// A simple logger
+pub fn set_progress_bar(pb: Option<Weak<ProgressBar>>) {
+    *PROGRESS_BAR.write() = pb;
+}
+
+fn progress_bar() -> Option<Arc<ProgressBar>> {
+    PROGRESS_BAR.read().as_ref()?.upgrade()
+}
+
+/// A simple logger.
 pub struct Logger;
 
 impl Logger {
@@ -63,7 +112,7 @@ impl log::Log for Logger {
             return;
         }
 
-        if let Some(pb) = get_progress_bar() {
+        if let Some(pb) = progress_bar() {
             pb.println(msg);
         } else {
             eprintln!("{}", msg);
@@ -84,12 +133,4 @@ fn should_skip_log(record: &log::Record) -> bool {
     }
 
     false
-}
-
-pub fn set_progress_bar(pb: Option<Weak<ProgressBar>>) {
-    *PROGRESS_BAR.write() = pb;
-}
-
-fn get_progress_bar() -> Option<Arc<ProgressBar>> {
-    PROGRESS_BAR.read().as_ref()?.upgrade()
 }

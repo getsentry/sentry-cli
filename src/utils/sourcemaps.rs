@@ -15,6 +15,7 @@ use url::Url;
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, ReleaseFiles, UploadContext};
+use crate::utils::logging::quiet_mode;
 use crate::utils::progress::ProgressBar;
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
@@ -243,6 +244,10 @@ impl SourceMapProcessor {
     }
 
     pub fn dump_log(&self, title: &str) {
+        if quiet_mode() {
+            return;
+        }
+
         let mut sources: Vec<_> = self.sources.values().collect();
         sources.sort_by_key(|&source| (source.ty, source.url.clone()));
 
