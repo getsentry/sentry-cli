@@ -822,9 +822,9 @@ dependencies = [
 
 [[package]]
 name = "git2"
-version = "0.14.1"
+version = "0.14.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6e7d3b96ec1fcaa8431cf04a4f1ef5caafe58d5cf7bcc31f09c1626adddb0ffe"
+checksum = "3826a6e0e2215d7a41c2bfc7c9244123969273f3476b939a226aac0ab56e9e3c"
 dependencies = [
  "bitflags",
  "libc",
@@ -1096,9 +1096,9 @@ checksum = "0a8d982fa7a96a000f6ec4cfe966de9703eccde29750df2bb8949da91b0e818d"
 
 [[package]]
 name = "libgit2-sys"
-version = "0.13.1+1.4.2"
+version = "0.13.2+1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43e598aa7a4faedf1ea1b4608f582b06f0f40211eec551b7ef36019ae3f62def"
+checksum = "3a42de9a51a5c12e00fc0e4ca6bc2ea43582fc6418488e8f615e905d886f258b"
 dependencies = [
  "cc",
  "libc",
@@ -2314,9 +2314,9 @@ checksum = "8ea5119cdb4c55b55d432abb513a0429384878c15dde60cc77b1c99de1a95a6a"
 
 [[package]]
 name = "symbolic"
-version = "8.6.1"
+version = "8.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9454739e3e4c88a799270421f28cbfe79b30856f888f177d645e78d3ce8934c1"
+checksum = "3fb7f79d0216069be1326a604e8cc483c3c2c08bf8ac6061db40e9f4a2319d91"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2324,9 +2324,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-common"
-version = "8.6.1"
+version = "8.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "52ca6f4079d985e79702d1cce708bdd03ac570e220bcf87105d86f5a8ebb26be"
+checksum = "ac6aac7b803adc9ee75344af7681969f76d4b38e4723c6eaacf3b28f5f1d87ff"
 dependencies = [
  "debugid",
  "memmap2",
@@ -2337,9 +2337,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "8.6.1"
+version = "8.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16c4acfee451976063a48a61c8f41446b94b7e6a5353fe0093e0300baff66909"
+checksum = "dbe641a3f6504c5b729c0f3b84819616d77f8207a84e836930a3df11f36bd0f1"
 dependencies = [
  "bitvec",
  "dmsort",
@@ -2709,9 +2709,9 @@ checksum = "1a143597ca7c7793eff794def352d41792a93c481eb1042423ff7ff72ba2c31f"
 
 [[package]]
 name = "wasmparser"
-version = "0.82.0"
+version = "0.83.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0559cc0f1779240d6f894933498877ea94f693d84f3ee39c9a9932c6c312bd70"
+checksum = "718ed7c55c2add6548cca3ddd6383d738cd73b892df400e96b9aa876f0141d7a"
 
 [[package]]
 name = "which"
