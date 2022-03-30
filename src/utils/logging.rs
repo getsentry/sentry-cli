@@ -28,7 +28,7 @@ pub fn set_max_level(level: log::LevelFilter) {
 pub struct Logger;
 
 impl Logger {
-    fn get_actual_level(&self, metadata: &log::Metadata<'_>) -> log::Level {
+    fn get_actual_level(&self, metadata: &log::Metadata) -> log::Level {
         let mut level = metadata.level();
         if level == log::Level::Debug
             && (metadata.target() == "tokio_reactor"
@@ -41,11 +41,11 @@ impl Logger {
 }
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
+    fn enabled(&self, metadata: &log::Metadata) -> bool {
         self.get_actual_level(metadata) <= max_level()
     }
 
-    fn log(&self, record: &log::Record<'_>) {
+    fn log(&self, record: &log::Record) {
         if !self.enabled(record.metadata()) {
             return;
         }
@@ -72,6 +72,10 @@ impl log::Log for Logger {
             .dim(),
         );
 
+        if should_skip_log(record) {
+            return;
+        }
+
         if let Some(pb) = get_progress_bar() {
             pb.println(msg);
         } else {
@@ -80,6 +84,19 @@ impl log::Log for Logger {
     }
 
     fn flush(&self) {}
+}
+
+fn should_skip_log(record: &log::Record) -> bool {
+    let level = record.metadata().level();
+    let target = record.target();
+
+    // We want to filter everything that is non-error from `goblin` crate,
+    // as `symbolicator` is responsible for making sure all warnings are handled correctly.
+    if target.starts_with("goblin") && level != log::LevelFilter::Error {
+        return true;
+    }
+
+    false
 }
 
 pub fn set_progress_bar(pb: Option<Weak<ProgressBar>>) {
