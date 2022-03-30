@@ -22,7 +22,7 @@ elementtree = "0.5.0"
 encoding = "0.2.33"
 failure = { version = "0.1.8", features = ["derive"] }
 flate2 = { version = "1.0.22", default-features = false, features = ["rust_backend"] }
-git2 = { version = "0.14.1", default-features = false }
+git2 = { version = "0.14.2", default-features = false }
 glob = "0.3.0"
 if_chain = "1.0.2"
 ignore = "0.4.18"
@@ -51,7 +51,7 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.78"
 sha1 = { version = "0.6.0", features = ["serde"] }
 sourcemap = { version = "5.0.0", features = ["ram_bundle"] }
-symbolic = { version = "8.6.1", features = ["debuginfo-serde"] }
+symbolic = { version = "8.7.0", features = ["debuginfo-serde"] }
 url = "2.2.2"
 username = "0.2.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
