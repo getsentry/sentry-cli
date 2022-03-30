@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.74.3
+
+### Various fixes & improvements
+
+- deps: Update symbolic and git-rs crates (#1170) by @kamilogorek
+- ref: Filter non-error goblin logs (#1169) by @kamilogorek
+- ref: Use provided version in release log messages (#1162) by @kamilogorek
+
 ## 1.74.2
 
 ### Various fixes & improvements
