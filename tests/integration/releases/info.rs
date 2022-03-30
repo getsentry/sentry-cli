@@ -48,6 +48,29 @@ fn doesnt_print_output_with_quiet_flag() {
 }
 
 #[test]
+fn doesnt_print_output_with_silent_flag() {
+    let _server = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/releases/wat-release/",
+            200,
+        )
+        .with_response_file("releases/get-release.json"),
+    );
+    register_test("releases/releases-info-silent.trycmd");
+}
+
+#[test]
+fn preserve_valid_exit_code_with_quiet_flag() {
+    let _server = mock_endpoint(EndpointOptions::new(
+        "GET",
+        "/api/0/projects/wat-org/wat-project/releases/unknown-release/",
+        404,
+    ));
+    register_test("releases/releases-info-quiet-failed.trycmd");
+}
+
+#[test]
 fn exits_if_no_release_found() {
     let _server = mock_endpoint(EndpointOptions::new(
         "GET",

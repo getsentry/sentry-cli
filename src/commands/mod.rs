@@ -10,6 +10,7 @@ use log::{debug, info, set_logger, set_max_level, LevelFilter};
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
+use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
@@ -126,7 +127,7 @@ fn app() -> Command<'static> {
         .arg_required_else_help(true)
         .arg(Arg::new("url").value_name("URL").long("url").help(
             "Fully qualified URL to the Sentry server.{n}\
-             [defaults to https://sentry.io/]",
+             [default: https://sentry.io/]",
         ))
         .arg(
             Arg::new("headers")
@@ -134,7 +135,7 @@ fn app() -> Command<'static> {
                 .value_name("KEY:VALUE")
                 .multiple_occurrences(true)
                 .help(
-                    "Custom headers that should be attached to all requests in key:value format.",
+                    "Custom headers that should be attached to all requests{n}in key:value format.",
                 ),
         )
         .arg(
@@ -157,6 +158,13 @@ fn app() -> Command<'static> {
                 .ignore_case(true)
                 .global(true)
                 .help("Set the log output verbosity."),
+        )
+        .arg(
+            Arg::new("quiet")
+                .long("quiet")
+                .visible_alias("silent")
+                .global(true)
+                .help("Do not print any output while preserving correct exit code."),
         )
 }
 
@@ -202,6 +210,7 @@ pub fn execute() -> Result<()> {
     app = add_commands(app);
     let matches = app.get_matches();
     configure_args(&mut config, &matches)?;
+    set_quiet_mode(matches.is_present("quiet"));
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();

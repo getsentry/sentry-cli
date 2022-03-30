@@ -23,6 +23,7 @@ use crate::utils::args::{get_timestamp, validate_int, validate_timestamp, ArgExt
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
 use crate::utils::formatting::{HumanDuration, Table};
+use crate::utils::logging::quiet_mode;
 use crate::utils::releases::detect_release_name;
 use crate::utils::sourcemaps::SourceMapProcessor;
 use crate::utils::system::QuietExit;
@@ -181,13 +182,7 @@ pub fn make_app(app: Command) -> Command {
             .arg(Arg::new("show_commits")
                 .short('C')
                 .long("show-commits")
-                .help("Display the Commits column"))
-            .arg(Arg::new("quiet")
-                .short('q')
-                .long("quiet")
-                .help("Do not print any output.{n}If this is passed the command can be \
-                       used to determine if a release already exists.  The exit status \
-                       will be 0 if the release exists or 1 otherwise.")))
+                .help("Display the Commits column")))
         .subcommand(Command::new("files")
             .about("Manage release artifacts.")
             .subcommand_required(true)
@@ -709,8 +704,7 @@ fn execute_info(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
     let project = ctx.get_project(matches).ok();
     let release = ctx.api.get_release(org, project.as_deref(), version)?;
 
-    // quiet mode just exits
-    if matches.is_present("quiet") {
+    if quiet_mode() {
         if release.is_none() {
             return Err(QuietExit(1).into());
         }

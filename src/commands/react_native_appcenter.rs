@@ -134,6 +134,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     let mut processor = SourceMapProcessor::new();
+
     for path in matches.values_of("paths").unwrap() {
         for entry in (fs::read_dir(path)?).flatten() {
             if_chain! {
