@@ -1,17 +1,17 @@
 //! This module implements the root command of the CLI tool.
 
 use std::env;
-use std::fmt;
 use std::process;
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
-use log::{debug, info};
+use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
-use crate::utils::system::{print_error, QuietExit};
+use crate::utils::logging::Logger;
+use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 
 // Nested sub-commands
@@ -190,34 +190,17 @@ fn run_command(matches: &ArgMatches) -> Result<()> {
     unreachable!();
 }
 
-struct DebugArgs<'a>(Vec<&'a str>);
-
-impl<'a> fmt::Display for DebugArgs<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for (idx, arg) in self.0.iter().enumerate() {
-            if idx > 0 {
-                write!(f, " ")?;
-            }
-            write!(f, "{:?}", arg)?;
-        }
-        Ok(())
-    }
-}
-
-/// Given an argument vector and a `Config` this executes the
-/// command line and returns the result.
-pub fn execute(args: &[String]) -> Result<()> {
-    let mut config = Config::from_cli_config()?;
-
+pub fn execute() -> Result<()> {
     // special case for the xcode integration for react native.  For more
     // information see commands/react_native_xcode.rs
     if preexecute_hooks()? {
         return Ok(());
     }
 
+    let mut config = Config::from_cli_config()?;
     let mut app = app();
     app = add_commands(app);
-    let matches = app.try_get_matches_from(args)?;
+    let matches = app.get_matches();
     configure_args(&mut config, &matches)?;
 
     // bind the config to the process and fetch an immutable reference to it
@@ -236,34 +219,30 @@ pub fn execute(args: &[String]) -> Result<()> {
 
     info!(
         "sentry-cli was invoked with the following command line: {}",
-        DebugArgs(args.iter().map(String::as_str).collect())
+        env::args()
+            .map(|a| format!("\"{}\"", a))
+            .collect::<Vec<String>>()
+            .join(" ")
     );
 
     run_command(&matches)
 }
 
-fn run() -> Result<()> {
-    execute(&env::args().collect::<Vec<String>>())
-}
-
 fn setup() {
-    use crate::utils::logging::Logger;
-
-    crate::utils::system::init_backtrace();
-    crate::utils::system::load_dotenv();
+    init_backtrace();
+    load_dotenv();
 
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
-    log::set_max_level(log::LevelFilter::Debug);
-    log::set_logger(&Logger).unwrap();
+    set_max_level(LevelFilter::Debug);
+    set_logger(&Logger).unwrap();
 }
 
 /// Executes the command line application and exits the process.
 pub fn main() {
     setup();
-    let result = run();
 
-    let status_code = match result {
+    let exit_code = match execute() {
         Ok(()) => 0,
         Err(err) => {
             let code = if let Some(&QuietExit(code)) = err.downcast_ref() {
@@ -286,7 +265,7 @@ pub fn main() {
     // a chance to collect.  Not doing so has shown to cause hung threads
     // on windows.
     Api::dispose_pool();
-    process::exit(status_code);
+    process::exit(exit_code);
 }
 
 #[test]
