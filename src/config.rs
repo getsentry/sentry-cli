@@ -26,10 +26,6 @@ pub enum Auth {
     Token(String),
 }
 
-pub fn prepare_environment() {
-    dotenv::dotenv().ok();
-}
-
 lazy_static! {
     static ref CONFIG: Mutex<Option<Arc<Config>>> = Mutex::new(None);
 }
