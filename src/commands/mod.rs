@@ -9,7 +9,7 @@ use clap::{Arg, ArgMatches, Command};
 use log::{debug, info};
 
 use crate::api::Api;
-use crate::config::{prepare_environment, Auth, Config};
+use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::system::{print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
@@ -243,7 +243,6 @@ pub fn execute(args: &[String]) -> Result<()> {
 }
 
 fn run() -> Result<()> {
-    prepare_environment();
     execute(&env::args().collect::<Vec<String>>())
 }
 
