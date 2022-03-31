@@ -142,6 +142,7 @@ fn app() -> Command<'static> {
             Arg::new("auth_token")
                 .value_name("AUTH_TOKEN")
                 .long("auth-token")
+                .global(true)
                 .help("Use the given Sentry auth token."),
         )
         .arg(
