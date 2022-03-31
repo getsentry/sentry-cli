@@ -9,13 +9,13 @@ edition = "2018"
 anylog = "0.6.1"
 anyhow = { version = "1.0.56", features = ["backtrace"] }
 backoff = "0.4.0"
-backtrace = "0.3.63"
+backtrace = "0.3.64"
 brotli2 = "0.3.2"
 chardet = "0.2.4"
 chrono = { version = "0.4.19", features = ["serde"] }
-clap = { version = "3.1.2", default-features = false, features = ["std", "suggestions", "wrap_help"] }
+clap = { version = "3.1.6", default-features = false, features = ["std", "suggestions", "wrap_help"] }
 console = "0.15.0"
-curl = { version = "0.4.42", features = ["static-curl", "static-ssl"] }
+curl = { version = "0.4.43", features = ["static-curl", "static-ssl"] }
 dirs = "4.0.0"
 dotenv = "0.15.0"
 elementtree = "0.7.0"
@@ -28,10 +28,10 @@ ignore = "0.4.18"
 # Do not update due to https://github.com/console-rs/indicatif/issues/317 and https://github.com/getsentry/sentry-cli/pull/1055
 indicatif = "0.14.0"
 itertools = "0.10.3"
-java-properties = "1.4.0"
+java-properties = "1.4.1"
 lazy_static = "1.4.0"
-libc = "0.2.115"
-log = { version = "0.4.14", features = ["std"] }
+libc = "0.2.121"
+log = { version = "0.4.16", features = ["std"] }
 might-be-minified = "0.3.0"
 open = "2.1.1"
 parking_lot = "0.12.0"
@@ -41,13 +41,13 @@ prettytable-rs = "0.8.0"
 proguard = { version = "4.1.1", features = ["uuid"] }
 r2d2 = "0.8.9"
 rayon = "1.5.1"
-regex = "1.5.4"
+regex = "1.5.5"
 runas = "0.2.1"
 rust-ini = "0.18.0"
-semver = "1.0.4"
+semver = "1.0.7"
 sentry = { version = "0.25.0", default-features = false, features = ["anyhow", "curl"] }
 serde = { version = "1.0.136", features = ["derive"] }
-serde_json = "1.0.78"
+serde_json = "1.0.79"
 sha1_smol = { version = "1.0.0", features = ["serde"] }
 sourcemap = { version = "6.0.1", features = ["ram_bundle"] }
 symbolic = { version = "8.7.0", features = ["debuginfo-serde"] }
@@ -56,15 +56,15 @@ url = "2.2.2"
 username = "0.2.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
 walkdir = "2.3.2"
-which = "4.2.4"
+which = "4.2.5"
 zip = "0.6.0"
 
 [dev-dependencies]
-insta = { version = "1.12.0", features = ["redactions"] }
+insta = { version = "1.14.0", features = ["redactions"] }
 mockito = "0.31.0"
 predicates = "2.1.1"
 tempfile = "3.3.0"
-trycmd = "0.13.2"
+trycmd = "0.13.3"
 
 [features]
 default = []
@@ -85,7 +85,7 @@ unix-daemonize = "0.1.2"
 [target."cfg(unix)".dependencies]
 openssl-probe = "0.1.5"
 signal-hook = "0.3.13"
-crossbeam-channel = "0.5.2"
+crossbeam-channel = "0.5.4"
 
 [profile.release]
 opt-level = 3
