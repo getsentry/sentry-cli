@@ -7,8 +7,9 @@ use crate::api::{Api, IssueChanges, IssueFilter};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Manage issues in Sentry.")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Manage issues in Sentry.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()

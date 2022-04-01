@@ -10,17 +10,17 @@ use crate::utils::fs::is_writable;
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 use crate::utils::ui::prompt_to_continue;
 
-pub fn make_app(app: Command) -> Command {
-    let app = app.about("Uninstall the sentry-cli executable.").arg(
+pub fn make_command(command: Command) -> Command {
+    let command = command.about("Uninstall the sentry-cli executable.").arg(
         Arg::new("confirm")
             .long("confirm")
             .help("Skip uninstall confirmation prompt."),
     );
 
     if cfg!(windows) || is_homebrew_install() || is_npm_install() {
-        app.hide(true)
+        command.hide(true)
     } else {
-        app
+        command
     }
 }
 

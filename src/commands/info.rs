@@ -25,16 +25,18 @@ pub struct ConfigStatus {
     have_dsn: bool,
 }
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Print information about the Sentry server.").arg(
-        Arg::new("config_status_json")
-            .long("config-status-json")
-            .help(
-                "Return the status of the config that sentry-cli loads \
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Print information about the Sentry server.")
+        .arg(
+            Arg::new("config_status_json")
+                .long("config-status-json")
+                .help(
+                    "Return the status of the config that sentry-cli loads \
                      as JSON dump. This can be used by external tools to aid \
                      the user towards configuration.",
-            ),
-    )
+                ),
+        )
 }
 
 fn describe_auth(auth: Option<&Auth>) -> &str {

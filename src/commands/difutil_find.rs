@@ -31,8 +31,9 @@ struct DifMatch {
     pub path: PathBuf,
 }
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Locate debug information files for given debug identifiers.")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Locate debug information files for given debug identifiers.")
         .arg(
             Arg::new("types")
                 .long("type")

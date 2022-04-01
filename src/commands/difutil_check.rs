@@ -8,8 +8,9 @@ use console::style;
 use crate::utils::dif::DifFile;
 use crate::utils::system::QuietExit;
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Check the debug info file at a given path.")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Check the debug info file at a given path.")
         .arg(
             Arg::new("type")
                 .long("type")

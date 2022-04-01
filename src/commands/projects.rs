@@ -7,8 +7,9 @@ use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Manage projects on Sentry.")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Manage projects on Sentry.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()

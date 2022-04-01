@@ -20,8 +20,8 @@ use crate::utils::xcode::{InfoPlist, MayDetach};
 
 static DERIVED_DATA: &str = "Library/Developer/Xcode/DerivedData";
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Upload debugging information files.")
+pub fn make_command(command: Command) -> Command {
+    command.about("Upload debugging information files.")
         .org_arg()
         .project_arg(false)
         .arg(

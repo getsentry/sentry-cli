@@ -6,8 +6,8 @@ use clap::{Arg, ArgMatches, Command};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
 
-pub fn make_app(app: Command) -> Command {
-    let app = app.about("Update the sentry-cli executable.").arg(
+pub fn make_command(command: Command) -> Command {
+    let command = command.about("Update the sentry-cli executable.").arg(
         Arg::new("force")
             .long("force")
             .short('f')
@@ -15,9 +15,9 @@ pub fn make_app(app: Command) -> Command {
     );
 
     if can_update_sentrycli() {
-        app.hide(true)
+        command.hide(true)
     } else {
-        app
+        command
     }
 }
 
