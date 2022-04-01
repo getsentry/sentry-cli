@@ -27,8 +27,9 @@ struct SourceMapReport {
     sourcemap_path: Option<PathBuf>,
 }
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Upload react-native projects in a Xcode build step.")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Upload react-native projects in a Xcode build step.")
         .org_arg()
         .project_arg(false)
         .arg(Arg::new("force").long("force").short('f').help(

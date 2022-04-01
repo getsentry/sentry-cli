@@ -26,8 +26,8 @@ struct MappingRef {
     pub uuid: Uuid,
 }
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Upload ProGuard mapping files to a project.")
+pub fn make_command(command: Command) -> Command {
+    command.about("Upload ProGuard mapping files to a project.")
         .org_arg()
         .project_arg(false)
         .arg(

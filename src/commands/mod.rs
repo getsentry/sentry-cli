@@ -172,7 +172,8 @@ fn app() -> Command<'static> {
 fn add_commands(mut app: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            let cmd = $name::make_app(Command::new(stringify!($name).replace("_", "-").as_str()));
+            let cmd =
+                $name::make_command(Command::new(stringify!($name).replace("_", "-").as_str()));
             app = app.subcommand(cmd);
         }};
     }

@@ -63,8 +63,8 @@ impl<'a> ReleaseContext<'a> {
     }
 }
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Manage releases on Sentry.")
+pub fn make_command(command: Command) -> Command {
+    command.about("Manage releases on Sentry.")
 .subcommand_required(true)
 .arg_required_else_help(true)
         .org_arg()

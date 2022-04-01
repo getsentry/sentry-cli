@@ -7,8 +7,8 @@ use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::utils::ui::{prompt, prompt_to_continue};
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Authenticate with the Sentry server.").arg(
+pub fn make_command(command: Command) -> Command {
+    command.about("Authenticate with the Sentry server.").arg(
         Arg::new("global")
             .short('g')
             .long("global")

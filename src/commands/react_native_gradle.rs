@@ -13,8 +13,9 @@ use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Upload react-native projects in a gradle build step.")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Upload react-native projects in a gradle build step.")
         .org_arg()
         .project_arg(false)
         .arg(

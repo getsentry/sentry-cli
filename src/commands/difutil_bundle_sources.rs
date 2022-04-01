@@ -9,8 +9,9 @@ use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 use crate::utils::dif::DifFile;
 use crate::utils::dif_upload::filter_bad_sources;
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Create a source bundle for a given debug information file")
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Create a source bundle for a given debug information file")
         .arg(
             Arg::new("paths")
                 .index(1)

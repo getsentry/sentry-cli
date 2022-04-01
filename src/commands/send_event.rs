@@ -20,8 +20,8 @@ use crate::utils::args::{get_timestamp, validate_timestamp};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use crate::utils::releases::detect_release_name;
 
-pub fn make_app(app: Command) -> Command {
-    app.about("Send a manual event to Sentry.")
+pub fn make_command(command: Command) -> Command {
+    command.about("Send a manual event to Sentry.")
         .long_about(
             "Send a manual event to Sentry.{n}{n}\
              This command will validate input parameters and attempt to send an event to \
