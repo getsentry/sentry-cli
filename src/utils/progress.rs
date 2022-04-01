@@ -17,9 +17,9 @@ pub struct ProgressBar {
 }
 
 impl ProgressBar {
-    pub fn new(len: u64) -> Self {
+    pub fn new(len: usize) -> Self {
         if is_progress_bar_visible() {
-            indicatif::ProgressBar::new(len).into()
+            indicatif::ProgressBar::new(len as u64).into()
         } else {
             Self::hidden()
         }
