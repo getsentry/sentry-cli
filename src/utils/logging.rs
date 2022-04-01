@@ -15,19 +15,19 @@ lazy_static! {
     static ref QUIET_MODE: AtomicBool = AtomicBool::new(false);
 }
 
-pub fn quiet_mode() -> bool {
+pub fn is_quiet_mode() -> bool {
     QUIET_MODE.load(Ordering::Relaxed)
 }
 
-pub fn set_quiet_mode(yes: bool) {
-    QUIET_MODE.store(yes, Ordering::Relaxed);
+pub fn set_quiet_mode(is_quiet: bool) {
+    QUIET_MODE.store(is_quiet, Ordering::Relaxed);
 }
 
 // NOTE: Remove `allow`s after first use.
 #[allow(unused_macros)]
 macro_rules! quiet_println {
     ($($tt:tt)*) => {{
-        if !crate::utils::logging::quiet_mode() {
+        if !crate::utils::logging::is_quiet_mode() {
             println!($($tt)*);
         }
     }};
@@ -39,7 +39,7 @@ pub(crate) use quiet_println;
 #[allow(unused_macros)]
 macro_rules! quiet_eprintln {
     ($($tt:tt)*) => {{
-        if !crate::utils::logging::quiet_mode() {
+        if !crate::utils::logging::is_quiet_mode() {
             eprintln!($($tt)*);
         }
     }};
@@ -56,7 +56,7 @@ pub fn set_progress_bar(pb: Option<Weak<ProgressBar>>) {
     *PROGRESS_BAR.write() = pb;
 }
 
-fn progress_bar() -> Option<Arc<ProgressBar>> {
+fn get_progress_bar() -> Option<Arc<ProgressBar>> {
     PROGRESS_BAR.read().as_ref()?.upgrade()
 }
 
@@ -112,7 +112,7 @@ impl log::Log for Logger {
             return;
         }
 
-        if let Some(pb) = progress_bar() {
+        if let Some(pb) = get_progress_bar() {
             pb.println(msg);
         } else {
             eprintln!("{}", msg);
