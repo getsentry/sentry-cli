@@ -2,6 +2,35 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.0-beta.0
+
+Breaking changes are denotated with _(breaking)_ tag, and appropriate required changes are provided for each entry.
+
+- feat: Allow for specifying global `--header` argument, which supports multiple occurences, to configure outgoing requests
+- feat: Implement global `--quiet`/`--silent` flags to allow silencing `stdout` output (note that this is currently only implemented for commands where it makes sense (`info`, `releases info`, `releases upload-sourcemaps`))
+- ref: Make `--auth-token` a global argument
+- ref: Make `ignore-empty` for `releases set-commits` a default behavior and remove `--ignore-empty` flag (remove `--ignore-empty` usage) _(breaking)_
+- ref: Make all `ProgressBar` instances and logs always write to `stderr`
+- ref: Migrate error handling from `failure` to `anyhow` crate
+- ref: Remove `bash-hook` command (use `1.x` if you still need the functionality; it will eventually be ported as a separate repository - https://github.com/getsentry/sentry-cli-bash-hook) _(breaking)_
+- ref: Remove `crash_reporting` related code and `with_crash_reporting` crate feature (no required changes) _(breaking)_
+- ref: Remove `difutil id` subcommand (use `difutil check` instead) _(breaking)_
+- ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_
+- ref: Remove `react-native codepush` subcommand (use `react-native appcenter` instead) _(breaking)_
+- ref: Remove `react-native-gradle` and `react-native-xcode` commands (use `react-native gradle` and `react-native xcode` instead) _(breaking)_
+- ref: Remove `SENTRY_NO_PROGRESS_BAR` env var in favor of `SENTRYCLI_NO_PROGRESS_BAR` (rename env variable) _(breaking)_
+- ref: Remove `upload-dsym` command (use `upload-dif` instead) _(breaking)_
+- ref: Remove deprecated and hidden flags from commands (remove listed flags usage) _(breaking)_
+  - `react-native xcode --verbose`
+  - `releases new --ref`
+  - `releases list --no-abbrev`
+  - `releases upload-sourcemaps --verbose`
+  - `releases upload-sourcemaps --rewrite` (it's a default behavior now)
+  - `upload-dif --upload-symbol-maps`
+- ref: Rename `--header` argument of `releases files upload` command to `--file-header` (rename flag) _(breaking)_
+- ref: Rename `CUSTOM_HEADER` to `SENTRY_HEADER` and `defaults.custom_header` to `http.header` (rename env variable or update config file) _(breaking)_
+- ref: Update minimal required `node` version to `v12` (update node version) _(breaking)_
+
 ## 1.74.3
 
 ### Various fixes & improvements
