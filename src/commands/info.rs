@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
-use crate::utils::logging::quiet_mode;
+use crate::utils::logging::is_quiet_mode;
 use crate::utils::system::QuietExit;
 
 #[derive(Serialize, Default)]
@@ -80,7 +80,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let errors =
         project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
 
-    if !quiet_mode() {
+    if !is_quiet_mode() {
         println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
         println!(
             "Default Organization: {}",

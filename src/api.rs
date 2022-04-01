@@ -211,7 +211,7 @@ impl fmt::Display for SentryError {
 }
 
 #[derive(Clone, Debug, thiserror::Error)]
-#[error("project was renamed to '{0}'\n\nPlease use this slug in your .sentryclirc or sentry.properties or for the --project parameter")]
+#[error("project was renamed to '{0}'\nPlease use this slug in your .sentryclirc file, sentry.properties file or in the CLI --project parameter")]
 pub struct ProjectRenamedError(String);
 
 /// Represents API errors.

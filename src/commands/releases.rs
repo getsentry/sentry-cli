@@ -23,7 +23,7 @@ use crate::utils::args::{get_timestamp, validate_int, validate_timestamp, ArgExt
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
 use crate::utils::formatting::{HumanDuration, Table};
-use crate::utils::logging::quiet_mode;
+use crate::utils::logging::is_quiet_mode;
 use crate::utils::releases::detect_release_name;
 use crate::utils::sourcemaps::SourceMapProcessor;
 use crate::utils::system::QuietExit;
@@ -704,7 +704,7 @@ fn execute_info(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
     let project = ctx.get_project(matches).ok();
     let release = ctx.api.get_release(org, project.as_deref(), version)?;
 
-    if quiet_mode() {
+    if is_quiet_mode() {
         if release.is_none() {
             return Err(QuietExit(1).into());
         }
