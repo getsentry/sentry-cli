@@ -184,7 +184,7 @@ impl SourceMapProcessor {
             "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
             style(">").cyan()
         ));
-        let pb = ProgressBar::new(self.pending_sources.len() as u64);
+        let pb = ProgressBar::new(self.pending_sources.len());
         pb.set_style(progress_style);
 
         println!(
@@ -301,7 +301,7 @@ impl SourceMapProcessor {
             "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
             style(">").cyan()
         ));
-        let pb = ProgressBar::new(sources.len() as u64);
+        let pb = ProgressBar::new(sources.len());
         pb.set_style(progress_style);
 
         for source in sources {
@@ -464,7 +464,7 @@ impl SourceMapProcessor {
             "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
             style(">").cyan()
         ));
-        let pb = ProgressBar::new(self.sources.len() as u64);
+        let pb = ProgressBar::new(self.sources.len());
         pb.set_style(progress_style);
 
         for source in self.sources.values_mut() {

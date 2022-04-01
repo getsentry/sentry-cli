@@ -71,7 +71,7 @@ where
 
 /// Creates a progress bar for byte stuff
 pub fn make_byte_progress_bar(length: u64) -> ProgressBar {
-    let pb = ProgressBar::new(length);
+    let pb = ProgressBar::new(length as usize);
     pb.set_style(
         ProgressStyle::default_bar().template("{wide_bar}  {bytes}/{total_bytes} ({eta})"),
     );

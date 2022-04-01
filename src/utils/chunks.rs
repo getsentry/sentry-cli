@@ -163,10 +163,7 @@ pub fn upload_chunks(
     chunk_options: &ChunkUploadOptions,
     progress_style: ProgressStyle,
 ) -> Result<()> {
-    let total_bytes: u64 = chunks
-        .iter()
-        .map(|&Chunk((_, data))| data.len() as u64)
-        .sum();
+    let total_bytes = chunks.iter().map(|&Chunk((_, data))| data.len()).sum();
 
     // Chunks are uploaded in batches, but the progress bar is shared between
     // multiple requests to simulate one continuous upload to the user. Since we

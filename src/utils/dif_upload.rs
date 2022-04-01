@@ -939,7 +939,7 @@ where
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(items.len() as u64);
+    let pb = ProgressBar::new(items.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
@@ -1000,7 +1000,7 @@ fn process_symbol_maps<'a>(
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(len as u64);
+    let pb = ProgressBar::new(len);
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
@@ -1053,7 +1053,7 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>>
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(difs.len() as u64);
+    let pb = ProgressBar::new(difs.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
@@ -1256,7 +1256,7 @@ fn poll_dif_assemble(
     );
 
     let api = Api::current();
-    let pb = ProgressBar::new(difs.len() as u64);
+    let pb = ProgressBar::new(difs.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 

@@ -691,7 +691,7 @@ impl Api {
             style(version).cyan()
         );
 
-        let pb = ProgressBar::new(sources.len() as u64);
+        let pb = ProgressBar::new(sources.len());
         pb.set_style(ProgressStyle::default_bar().template(&format!(
             "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
             style(">").cyan()

@@ -148,7 +148,7 @@ fn upload_files_parallel(
         if files.len() == 1 { "" } else { "s" }
     ));
 
-    let total_bytes = files.values().map(|file| file.contents.len() as u64).sum();
+    let total_bytes = files.values().map(|file| file.contents.len()).sum();
     let files = files.iter().collect::<Vec<_>>();
 
     let pb = Arc::new(ProgressBar::new(total_bytes));
@@ -295,7 +295,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
        \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(files.len() as u64);
+    let pb = ProgressBar::new(files.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
