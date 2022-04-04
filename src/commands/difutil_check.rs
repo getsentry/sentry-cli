@@ -13,6 +13,11 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Check the debug info file at a given path.")
         .arg(
+            Arg::new("path")
+                .required(true)
+                .help("The path to the debug info file."),
+        )
+        .arg(
             Arg::new("type")
                 .long("type")
                 .short('t')
@@ -27,12 +32,6 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("json")
                 .long("json")
                 .help("Format outputs as JSON."),
-        )
-        .arg(
-            Arg::new("path")
-                .index(1)
-                .required(true)
-                .help("The path to the debug info file."),
         )
 }
 

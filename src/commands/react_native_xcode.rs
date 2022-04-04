@@ -60,16 +60,11 @@ pub fn make_command(command: Command) -> Command {
                      for the process to finish before the build finishes and output \
                      will be shown in the Xcode build output.",
         ))
-        .arg(
-            Arg::new("build_script")
-                .value_name("BUILD_SCRIPT")
-                .index(1)
-                .help(
-                    "Optional path to the build script.{n}\
+        .arg(Arg::new("build_script").value_name("BUILD_SCRIPT").help(
+            "Optional path to the build script.{n}\
                      This is the path to the `react-native-xcode.sh` script you want \
                      to use.  By default the bundled build script is used.",
-                ),
-        )
+        ))
         .arg(
             Arg::new("dist")
                 .long("dist")
@@ -82,7 +77,6 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("ARGS")
                 .takes_value(true)
                 .multiple_values(true)
-                .index(2)
                 .last(true)
                 .help("Optional arguments to pass to the build script."),
         )

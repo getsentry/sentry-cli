@@ -14,7 +14,6 @@ pub fn make_command(command: Command) -> Command {
         .about("Create a source bundle for a given debug information file")
         .arg(
             Arg::new("paths")
-                .index(1)
                 .required(true)
                 .multiple_occurrences(true)
                 .help("The path to the input debug info files."),

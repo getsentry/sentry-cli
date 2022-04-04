@@ -32,7 +32,6 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("path")
                 .value_name("PATH")
-                .index(1)
                 .required(false)
                 .help("The path or glob to the file(s) in JSON format to send as event(s). When provided, all other arguments are ignored."),
         )

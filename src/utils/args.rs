@@ -97,7 +97,7 @@ pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
 pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
     fn project_arg(self, multiple: bool) -> Self;
-    fn version_arg(self, index: usize) -> Self;
+    fn version_arg(self) -> Self;
 }
 
 impl<'a: 'b, 'b> ArgExt for Command<'a> {
@@ -126,12 +126,11 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn version_arg(self, index: usize) -> Command<'a> {
+    fn version_arg(self) -> Command<'a> {
         self.arg(
             clap::Arg::new("version")
                 .value_name("VERSION")
                 .required(true)
-                .index(index)
                 .allow_hyphen_values(true)
                 .validator(validate_version)
                 .help("The version of the release"),

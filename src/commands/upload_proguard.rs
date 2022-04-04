@@ -27,15 +27,15 @@ struct MappingRef {
 }
 
 pub fn make_command(command: Command) -> Command {
-    command.about("Upload ProGuard mapping files to a project.")
+    command
+        .about("Upload ProGuard mapping files to a project.")
         .org_arg()
         .project_arg(false)
         .arg(
             Arg::new("paths")
                 .value_name("PATH")
                 .help("The path to the mapping files.")
-                .multiple_occurrences(true)
-                .index(1),
+                .multiple_occurrences(true),
         )
         .arg(
             Arg::new("version")

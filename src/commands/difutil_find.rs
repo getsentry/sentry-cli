@@ -35,6 +35,13 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Locate debug information files for given debug identifiers.")
         .arg(
+            Arg::new("ids")
+                .value_name("ID")
+                .help("The debug identifiers of the files to search for.")
+                .validator(validate_id)
+                .multiple_occurrences(true),
+        )
+        .arg(
             Arg::new("types")
                 .long("type")
                 .short('t')
@@ -75,14 +82,6 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("json")
                 .long("json")
                 .help("Format outputs as JSON."),
-        )
-        .arg(
-            Arg::new("ids")
-                .index(1)
-                .value_name("ID")
-                .help("The debug identifiers of the files to search for.")
-                .validator(validate_id)
-                .multiple_occurrences(true),
         )
 }
 

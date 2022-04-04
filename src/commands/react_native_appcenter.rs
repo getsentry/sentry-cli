@@ -67,21 +67,18 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("app_name")
                 .value_name("APP_NAME")
-                .index(1)
                 .required(true)
                 .help("The name of the AppCenter application."),
         )
         .arg(
             Arg::new("platform")
                 .value_name("PLATFORM")
-                .index(2)
                 .required(true)
                 .help("The name of the app platform. [ios, android]"),
         )
         .arg(
             Arg::new("paths")
                 .value_name("PATH")
-                .index(3)
                 .required(true)
                 .multiple_occurrences(true)
                 .help("A list of folders with assets that should be processed."),
