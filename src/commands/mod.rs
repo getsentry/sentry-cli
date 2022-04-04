@@ -165,7 +165,7 @@ fn app() -> Command<'static> {
                 .long("quiet")
                 .visible_alias("silent")
                 .global(true)
-                .help("Do not print any output while preserving correct exit code."),
+                .help("Do not print any output while preserving correct exit code. This flag is currently implemented only for selected subcommands."),
         )
 }
 

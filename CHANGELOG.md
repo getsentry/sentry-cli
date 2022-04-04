@@ -7,7 +7,9 @@
 Breaking changes are denotated with _(breaking)_ tag, and appropriate required changes are provided for each entry.
 
 - feat: Allow for specifying global `--header` argument, which supports multiple occurences, to configure outgoing requests
-- feat: Implement global `--quiet`/`--silent` flags to allow silencing `stdout` output (note that this is currently only implemented for commands where it makes sense (`info`, `releases info`, `releases upload-sourcemaps`))
+- feat: Implement global `--quiet`/`--silent` flags to allow silencing `stdout` output (This flag is currently implemented only for selected subcommands)
+- feat: Implement `--quiet` flag for `releases upload-sourcemaps` command
+- feat: Implement `--quiet` flag for `difutil check` command
 - ref: Make `--auth-token` a global argument
 - ref: Make `ignore-empty` for `releases set-commits` a default behavior and remove `--ignore-empty` flag (remove `--ignore-empty` usage) _(breaking)_
 - ref: Make all `ProgressBar` instances and logs always write to `stderr`
