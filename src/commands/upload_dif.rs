@@ -29,8 +29,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .help("A path to search recursively for symbol files.")
-                .multiple_occurrences(true)
-                .index(1),
+                .multiple_occurrences(true),
         )
         .arg(
             Arg::new("types")
