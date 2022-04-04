@@ -80,33 +80,39 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let errors =
         project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
 
-    if !is_quiet_mode() {
-        println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
-        println!(
-            "Default Organization: {}",
-            org.unwrap_or_else(|| "-".into())
-        );
-        println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
+    if is_quiet_mode() {
+        return if errors {
+            Err(QuietExit(1).into())
+        } else {
+            Ok(())
+        };
+    }
 
-        if config.get_auth().is_some() {
-            println!();
-            println!("Authentication Info:");
-            println!("  Method: {}", describe_auth(config.get_auth()));
-            match info_rv {
-                Ok(info) => {
-                    if let Some(ref user) = info.user {
-                        println!("  User: {}", user.email);
-                    }
-                    if let Some(ref auth) = info.auth {
-                        println!("  Scopes:");
-                        for scope in &auth.scopes {
-                            println!("    - {}", scope);
-                        }
+    println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
+    println!(
+        "Default Organization: {}",
+        org.unwrap_or_else(|| "-".into())
+    );
+    println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
+
+    if config.get_auth().is_some() {
+        println!();
+        println!("Authentication Info:");
+        println!("  Method: {}", describe_auth(config.get_auth()));
+        match info_rv {
+            Ok(info) => {
+                if let Some(ref user) = info.user {
+                    println!("  User: {}", user.email);
+                }
+                if let Some(ref auth) = info.auth {
+                    println!("  Scopes:");
+                    for scope in &auth.scopes {
+                        println!("    - {}", scope);
                     }
                 }
-                Err(err) => {
-                    println!("  (failure on authentication: {})", err);
-                }
+            }
+            Err(err) => {
+                println!("  (failure on authentication: {})", err);
             }
         }
     }
