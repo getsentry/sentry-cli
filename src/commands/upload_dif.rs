@@ -21,7 +21,8 @@ use crate::utils::xcode::{InfoPlist, MayDetach};
 static DERIVED_DATA: &str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_command(command: Command) -> Command {
-    command.about("Upload debugging information files.")
+    command
+        .about("Upload debugging information files.")
         .org_arg()
         .project_arg(false)
         .arg(
@@ -75,17 +76,12 @@ pub fn make_command(command: Command) -> Command {
                 )
                 .conflicts_with("no_unwind"),
         )
-        .arg(
-            Arg::new("no_sources")
-                .long("no-sources")
-                .help(
-                    "Do not scan for source information. This will \
+        .arg(Arg::new("no_sources").long("no-sources").help(
+            "Do not scan for source information. This will \
                      usually exclude source bundle files. They might \
                      still be uploaded, if they contain additional \
                      processable information (see other flags).",
-                )
-                .conflicts_with("no_sources"),
-        )
+        ))
         .arg(
             Arg::new("ids")
                 .value_name("ID")
