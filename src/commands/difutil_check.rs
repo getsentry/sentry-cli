@@ -6,6 +6,7 @@ use clap::{Arg, ArgMatches, Command};
 use console::style;
 
 use crate::utils::dif::DifFile;
+use crate::utils::logging::is_quiet_mode;
 use crate::utils::system::QuietExit;
 
 pub fn make_command(command: Command) -> Command {
@@ -45,6 +46,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if matches.is_present("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &dif)?;
         println!();
+    }
+
+    if matches.is_present("json") || is_quiet_mode() {
         return if dif.is_usable() {
             Ok(())
         } else {

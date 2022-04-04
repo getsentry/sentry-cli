@@ -21,7 +21,8 @@ OPTIONS:
         --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
                                      info, warn, error]
         --quiet                      Do not print any output while preserving correct exit code.
-                                     [aliases: silent]
+                                     This flag is currently implemented only for selected
+                                     subcommands. [aliases: silent]
         --url <URL>                  Fully qualified URL to the Sentry server.
                                      [default: https://sentry.io/]
     -V, --version                    Print version information
