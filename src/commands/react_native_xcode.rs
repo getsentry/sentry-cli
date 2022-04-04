@@ -80,7 +80,9 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("args")
                 .value_name("ARGS")
-                .multiple_occurrences(true)
+                .takes_value(true)
+                .multiple_values(true)
+                .index(2)
                 .last(true)
                 .help("Optional arguments to pass to the build script."),
         )
