@@ -121,7 +121,11 @@ pub fn print_error(err: &Error) {
     if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
         clap_err.exit();
     }
-    eprintln!("{:?}", err);
+
+    eprintln!("{} {}", style("error:").red(), err);
+    err.chain()
+        .skip(1)
+        .for_each(|cause| eprintln!("  {} {}", style("caused by:").dim(), cause));
 
     if Config::current().get_log_level() < log::LevelFilter::Info {
         eprintln!();
