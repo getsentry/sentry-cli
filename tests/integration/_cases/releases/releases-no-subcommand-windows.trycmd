@@ -15,7 +15,8 @@ OPTIONS:
     -o, --org <ORG>                  The organization slug
     -p, --project <PROJECT>          The project slug.
         --quiet                      Do not print any output while preserving correct exit code.
-                                     [aliases: silent]
+                                     This flag is currently implemented only for selected
+                                     subcommands. [aliases: silent]
 
 SUBCOMMANDS:
     archive            Archive a release.
