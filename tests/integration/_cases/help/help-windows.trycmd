@@ -28,7 +28,7 @@ OPTIONS:
     -V, --version                    Print version information
 
 SUBCOMMANDS:
-    difutil            Locate or analyze debug information files.
+    debug-files        Locate, analyze or upload debug information files. [aliases: difutil]
     help               Print this message or the help of the given subcommand(s)
     info               Print information about the Sentry server.
     issues             Manage issues in Sentry.

@@ -21,9 +21,9 @@ pub mod react_native_gradle;
 #[cfg(target_os = "macos")]
 pub mod react_native_xcode;
 
-pub mod difutil_bundle_sources;
-pub mod difutil_check;
-pub mod difutil_find;
+pub mod debug_files_bundle_sources;
+pub mod debug_files_check;
+pub mod debug_files_find;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -41,7 +41,7 @@ macro_rules! each_subcommand {
         $mac!(login);
         $mac!(send_event);
         $mac!(react_native);
-        $mac!(difutil);
+        $mac!(debug_files);
     };
 }
 
