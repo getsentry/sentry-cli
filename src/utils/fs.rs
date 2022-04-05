@@ -156,3 +156,13 @@ pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<D
 
     Ok((total_sha.digest(), chunks))
 }
+
+#[cfg(windows)]
+pub fn path_as_url(path: &Path) -> String {
+    path.display().to_string().replace("\\", "/")
+}
+
+#[cfg(not(windows))]
+pub fn path_as_url(path: &Path) -> String {
+    path.display().to_string()
+}

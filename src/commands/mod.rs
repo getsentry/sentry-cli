@@ -28,11 +28,16 @@ pub mod debug_files_upload;
 
 pub mod sourcemaps_upload;
 
+pub mod files_delete;
+pub mod files_list;
+pub mod files_upload;
+
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload_dif);
         $mac!(upload_proguard);
         $mac!(releases);
+        $mac!(files);
         $mac!(sourcemaps);
         $mac!(issues);
         $mac!(repos);
@@ -75,6 +80,7 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "debug-files",
     "difutil",
     "sourcemaps",
+    "files",
 ];
 
 fn preexecute_hooks() -> Result<bool> {

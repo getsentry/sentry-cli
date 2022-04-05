@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
@@ -9,20 +9,14 @@ use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
+use crate::utils::fs::path_as_url;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
     command
         .about("Upload sourcemaps for a release.")
-        // This hidden flag allows the `execute` to be reused in the old
-        // `releases files <VERSION> upload-sourcemaps` command.
-        // We need to define it, as clap would otherwise panic with unknown argument.
-        .arg(
-            Arg::new("version")
-                .value_name("VERSION")
-                .long("version")
-                .hide(true),
-        )
+        // Backwards compatibility with `releases files <VERSION>` commands.
+        .arg(Arg::new("version").long("version").hide(true))
         .arg(
             Arg::new("paths")
                 .value_name("PATHS")
@@ -153,19 +147,6 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-fn get_url_prefix_from_args(matches: &ArgMatches) -> &str {
-    let mut rv = matches.value_of("url_prefix").unwrap_or("~");
-    // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
-    if rv.ends_with('/') {
-        rv = &rv[..rv.len() - 1];
-    }
-    rv
-}
-
-fn get_url_suffix_from_args(matches: &ArgMatches) -> &str {
-    matches.value_of("url_suffix").unwrap_or("")
-}
-
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
     let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
         Some(paths) => paths.collect(),
@@ -177,22 +158,16 @@ fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
     prefixes
 }
 
-#[cfg(windows)]
-fn path_as_url(path: &Path) -> String {
-    path.display().to_string().replace("\\", "/")
-}
-
-#[cfg(not(windows))]
-fn path_as_url(path: &Path) -> String {
-    path.display().to_string()
-}
-
 fn process_sources_from_bundle(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let url_prefix = get_url_prefix_from_args(matches);
-    let url_suffix = get_url_suffix_from_args(matches);
+    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
+    let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+    // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
+    if url_prefix.ends_with('/') {
+        url_prefix = &url_prefix[..url_prefix.len() - 1];
+    }
 
     let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
     let bundle_url = format!(
@@ -287,8 +262,12 @@ fn process_sources_from_paths(
 
         let sources = search.collect_files()?;
 
-        let url_prefix = get_url_prefix_from_args(matches);
-        let url_suffix = get_url_suffix_from_args(matches);
+        let url_suffix = matches.value_of("url_suffix").unwrap_or("");
+        let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+        // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
+        if url_prefix.ends_with('/') {
+            url_prefix = &url_prefix[..url_prefix.len() - 1];
+        }
 
         for source in sources {
             let local_path = source.path.strip_prefix(base_path).unwrap();
@@ -315,13 +294,7 @@ fn process_sources_from_paths(
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-    // This assignment allows the `execute` to be reused in the old
-    // `releases files <VERSION> upload-sourcemaps` command.
-    let version = if let Some(version) = matches.value_of("version") {
-        version.to_string()
-    } else {
-        config.get_release(matches)?
-    };
+    let version = config.get_release_with_legacy_fallback(matches)?;
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();

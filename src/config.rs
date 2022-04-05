@@ -294,6 +294,15 @@ impl Config {
             .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
     }
 
+    // Backwards compatibility with `releases files <VERSION>` commands.
+    pub fn get_release_with_legacy_fallback(&self, matches: &ArgMatches) -> Result<String> {
+        if let Some(version) = matches.value_of("version") {
+            Ok(version.to_string())
+        } else {
+            self.get_release(matches)
+        }
+    }
+
     /// Given a match object from clap, this returns the project from it.
     pub fn get_project(&self, matches: &ArgMatches) -> Result<String> {
         self.get_projects(matches).map(|p| p[0].clone())
