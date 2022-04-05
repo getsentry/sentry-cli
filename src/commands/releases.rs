@@ -1,16 +1,14 @@
 //! Implements a command for managing releases.
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::{bail, format_err, Result};
 use chrono::{DateTime, Duration, Utc};
 use clap::{Arg, ArgMatches, Command};
-use glob::{glob_with, MatchOptions};
 use indicatif::HumanBytes;
 use lazy_static::lazy_static;
-use log::{debug, warn};
 use regex::Regex;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
@@ -25,7 +23,6 @@ use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
 use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::releases::detect_release_name;
-use crate::utils::sourcemaps::SourceMapProcessor;
 use crate::utils::system::QuietExit;
 use crate::utils::vcs::{
     find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,
@@ -251,98 +248,7 @@ pub fn make_command(command: Command) -> Command {
                     .help("Set the file extensions that are considered for upload. \
                            This overrides the default extensions. To add an extension, all default \
                            extensions must be repeated. Specify once per extension.")))
-            .subcommand(Command::new("upload-sourcemaps")
-                .about("Upload sourcemaps for a release.")
-                .arg(Arg::new("paths")
-                    .value_name("PATHS")
-                    .required_unless_present_any(&["bundle", "bundle_sourcemap"])
-                    .multiple_occurrences(true)
-                    .help("The files to upload."))
-                .arg(Arg::new("url_prefix")
-                    .short('u')
-                    .long("url-prefix")
-                    .value_name("PREFIX")
-                    .help("The URL prefix to prepend to all filenames."))
-                .arg(Arg::new("url_suffix")
-                    .long("url-suffix")
-                    .value_name("SUFFIX")
-                    .help("The URL suffix to append to all filenames."))
-                .arg(Arg::new("dist")
-                    .long("dist")
-                    .short('d')
-                    .value_name("DISTRIBUTION")
-                    .help("Optional distribution identifier for the sourcemaps."))
-                .arg(Arg::new("validate")
-                    .long("validate")
-                    .help("Enable basic sourcemap validation."))
-                .arg(Arg::new("wait")
-                    .long("wait")
-                    .help("Wait for the server to fully process uploaded files."))
-                .arg(Arg::new("no_sourcemap_reference")
-                    .long("no-sourcemap-reference")
-                    .help("Disable emitting of automatic sourcemap references.{n}\
-                           By default the tool will store a 'Sourcemap' header with \
-                           minified files so that sourcemaps are located automatically \
-                           if the tool can detect a link. If this causes issues it can \
-                           be disabled."))
-                .arg(Arg::new("no_rewrite")
-                    .long("no-rewrite")
-                    .help("Disables rewriting of matching sourcemaps. By default the tool \
-                        will rewrite sources, so that indexed maps are flattened and missing \
-                        sources are inlined if possible.{n}This fundamentally \
-                        changes the upload process to be based on sourcemaps \
-                        and minified files exclusively and comes in handy for \
-                        setups like react-native that generate sourcemaps that \
-                        would otherwise not work for sentry."))
-                .arg(Arg::new("strip_prefix")
-                    .long("strip-prefix")
-                    .value_name("PREFIX")
-                    .multiple_occurrences(true)
-                    .help("Strips the given prefix from all sources references inside the upload \
-                           sourcemaps (paths used within the sourcemap content, to map minified code \
-                           to it's original source). Only sources that start with the given prefix \
-                           will be stripped.{n}This will not modify the uploaded sources paths. \
-                           To do that, point the upload or upload-sourcemaps command \
-                           to a more precise directory instead.")
-                    .conflicts_with("no_rewrite"))
-                .arg(Arg::new("strip_common_prefix")
-                    .long("strip-common-prefix")
-                    .help("Similar to --strip-prefix but strips the most common \
-                           prefix on all sources references.")
-                    .conflicts_with("no_rewrite"))
-                .arg(Arg::new("ignore")
-                    .long("ignore")
-                    .short('i')
-                    .value_name("IGNORE")
-                    .multiple_occurrences(true)
-                    .help("Ignores all files and folders matching the given glob"))
-                .arg(Arg::new("ignore_file")
-                    .long("ignore-file")
-                    .short('I')
-                    .value_name("IGNORE_FILE")
-                    .help("Ignore all files and folders specified in the given \
-                           ignore file, e.g. .gitignore."))
-                .arg(Arg::new("bundle")
-                    .long("bundle")
-                    .value_name("BUNDLE")
-                    .conflicts_with("paths")
-                    .requires_all(&["bundle_sourcemap"])
-                    .help("Path to the application bundle (indexed, file, or regular)"))
-                .arg(Arg::new("bundle_sourcemap")
-                    .long("bundle-sourcemap")
-                    .value_name("BUNDLE_SOURCEMAP")
-                    .conflicts_with("paths")
-                    .requires_all(&["bundle"])
-                    .help("Path to the bundle sourcemap"))
-                .arg(Arg::new("extensions")
-                    .long("ext")
-                    .short('x')
-                    .value_name("EXT")
-                    .multiple_occurrences(true)
-                    .help("Set the file extensions that are considered for upload. \
-                           This overrides the default extensions. To add an extension, all default \
-                           extensions must be repeated. Specify once per extension.{n}\
-                           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`"))))
+            .subcommand(crate::commands::sourcemaps_upload::make_command(Command::new("upload-sourcemaps")).hide(true)))
         .subcommand(Command::new("deploys")
             .about("Manage release deployments.")
             .subcommand_required(true)
@@ -960,178 +866,8 @@ fn get_url_suffix_from_args(matches: &ArgMatches) -> &str {
     matches.value_of("url_suffix").unwrap_or("")
 }
 
-fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
-    let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
-        Some(paths) => paths.collect(),
-        None => vec![],
-    };
-    if matches.is_present("strip_common_prefix") {
-        prefixes.push("~");
-    }
-    prefixes
-}
-
-fn process_sources_from_bundle(
-    matches: &ArgMatches,
-    processor: &mut SourceMapProcessor,
-) -> Result<()> {
-    let url_prefix = get_url_prefix_from_args(matches);
-    let url_suffix = get_url_suffix_from_args(matches);
-
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
-    let bundle_url = format!(
-        "{}/{}{}",
-        url_prefix,
-        bundle_path.file_name().unwrap().to_string_lossy(),
-        url_suffix
-    );
-
-    let sourcemap_path = PathBuf::from(matches.value_of("bundle_sourcemap").unwrap());
-    let sourcemap_url = format!(
-        "{}/{}{}",
-        url_prefix,
-        sourcemap_path.file_name().unwrap().to_string_lossy(),
-        url_suffix
-    );
-
-    debug!("Bundle path: {}", bundle_path.display());
-    debug!("Sourcemap path: {}", sourcemap_path.display());
-
-    processor.add(
-        &bundle_url,
-        ReleaseFileSearch::collect_file(bundle_path.clone())?,
-    )?;
-    processor.add(
-        &sourcemap_url,
-        ReleaseFileSearch::collect_file(sourcemap_path)?,
-    )?;
-
-    if let Ok(ram_bundle) = sourcemap::ram_bundle::RamBundle::parse_unbundle_from_path(&bundle_path)
-    {
-        debug!("File RAM bundle found, extracting its contents...");
-        // For file ("unbundle") RAM bundles we need to explicitly unpack it, otherwise we cannot detect it
-        // reliably inside "processor.rewrite()"
-        processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
-    } else if sourcemap::ram_bundle::RamBundle::parse_indexed_from_path(&bundle_path).is_ok() {
-        debug!("Indexed RAM bundle found");
-    } else {
-        warn!("Regular bundle found");
-    }
-
-    let mut prefixes = get_prefixes_from_args(matches);
-    if !prefixes.contains(&"~") {
-        prefixes.push("~");
-    }
-    debug!("Prefixes: {:?}", prefixes);
-
-    processor.rewrite(&prefixes)?;
-    processor.add_sourcemap_references()?;
-
-    Ok(())
-}
-
-fn process_sources_from_paths(
-    matches: &ArgMatches,
-    processor: &mut SourceMapProcessor,
-) -> Result<()> {
-    let paths = matches.values_of("paths").unwrap();
-    let ignore_file = matches.value_of("ignore_file").unwrap_or("");
-    let extensions = matches
-        .values_of("extensions")
-        .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-        .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
-    let ignores = matches
-        .values_of("ignore")
-        .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
-        .unwrap_or_else(Vec::new);
-
-    let opts = MatchOptions::new();
-    let collected_paths = paths.flat_map(|path| glob_with(path, opts).unwrap().flatten());
-
-    for path in collected_paths {
-        // if we start walking over something that is an actual file then
-        // the directory iterator yields that path and terminates.  We
-        // handle that case here specifically to figure out what the path is
-        // we should strip off.
-        let path = path.as_path();
-        let (base_path, check_ignore) = if path.is_file() {
-            (path.parent().unwrap(), false)
-        } else {
-            (path, true)
-        };
-
-        let mut search = ReleaseFileSearch::new(path.to_path_buf());
-
-        if check_ignore {
-            search
-                .ignore_file(ignore_file)
-                .ignores(ignores.clone())
-                .extensions(extensions.clone());
-        }
-
-        let sources = search.collect_files()?;
-
-        let url_prefix = get_url_prefix_from_args(matches);
-        let url_suffix = get_url_suffix_from_args(matches);
-
-        for source in sources {
-            let local_path = source.path.strip_prefix(base_path).unwrap();
-            let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
-            processor.add(&url, source)?;
-        }
-    }
-
-    if !matches.is_present("no_rewrite") {
-        let prefixes = get_prefixes_from_args(matches);
-        processor.rewrite(&prefixes)?;
-    }
-
-    if !matches.is_present("no_sourcemap_reference") {
-        processor.add_sourcemap_references()?;
-    }
-
-    if matches.is_present("validate") {
-        processor.validate_all()?;
-    }
-
-    Ok(())
-}
-
-fn execute_files_upload_sourcemaps(
-    ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches,
-    version: &str,
-) -> Result<()> {
-    let mut processor = SourceMapProcessor::new();
-
-    if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
-        process_sources_from_bundle(matches, &mut processor)?;
-    } else {
-        process_sources_from_paths(matches, &mut processor)?;
-    }
-
-    let org = ctx.get_org()?;
-    let project = ctx.get_project(matches).ok();
-
-    // make sure the release exists
-    let release = ctx.api.new_release(
-        org,
-        &NewRelease {
-            version: version.into(),
-            projects: ctx.get_projects(matches)?,
-            ..Default::default()
-        },
-    )?;
-
-    processor.upload(&UploadContext {
-        org,
-        project: project.as_deref(),
-        release: &release.version,
-        dist: matches.value_of("dist"),
-        wait: matches.is_present("wait"),
-    })?;
-
-    Ok(())
+fn execute_files_upload_sourcemaps(matches: &ArgMatches) -> Result<()> {
+    crate::commands::sourcemaps_upload::execute(matches)
 }
 
 fn execute_files(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
@@ -1146,7 +882,7 @@ fn execute_files(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
         return execute_files_upload(ctx, sub_matches, release);
     }
     if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
-        return execute_files_upload_sourcemaps(ctx, sub_matches, release);
+        return execute_files_upload_sourcemaps(sub_matches);
     }
     unreachable!();
 }

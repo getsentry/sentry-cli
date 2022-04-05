@@ -285,16 +285,35 @@ impl Config {
             .ok_or_else(|| format_err!("An organization slug is required (provide with --org)"))
     }
 
+    /// Given a match object from clap, this returns the release from it.
+    pub fn get_release(&self, matches: &ArgMatches) -> Result<String> {
+        matches
+            .value_of("release")
+            .map(str::to_owned)
+            .or_else(|| env::var("SENTRY_RELEASE").ok())
+            .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
+    }
+
+    /// Given a match object from clap, this returns the project from it.
+    pub fn get_project(&self, matches: &ArgMatches) -> Result<String> {
+        self.get_projects(matches).map(|p| p[0].clone())
+    }
+
+    /// Given a match object from clap, this returns the projects from it.
+    pub fn get_projects(&self, matches: &ArgMatches) -> Result<Vec<String>> {
+        if let Some(projects) = matches.values_of("project") {
+            Ok(projects.map(str::to_owned).collect())
+        } else {
+            Ok(vec![self.get_project_default()?])
+        }
+    }
+
     /// Given a match object from clap, this returns a tuple in the
     /// form `(org, project)` which can either come from the match
     /// object or some defaults (envvar, ini etc.).
     pub fn get_org_and_project(&self, matches: &ArgMatches) -> Result<(String, String)> {
         let org = self.get_org(matches)?;
-        let project = if let Some(project) = matches.value_of("project") {
-            project.to_owned()
-        } else {
-            self.get_project_default()?
-        };
+        let project = self.get_project(matches)?;
         Ok((org, project))
     }
 

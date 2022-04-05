@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{bail, Result};
 use chrono::{DateTime, TimeZone, Utc};
-use clap::Command;
+use clap::{Arg, Command};
 use symbolic::common::DebugId;
 use uuid::Uuid;
 
@@ -29,7 +29,7 @@ pub fn validate_project(v: &str) -> Result<(), String> {
     }
 }
 
-fn validate_version(v: &str) -> Result<(), String> {
+fn validate_release(v: &str) -> Result<(), String> {
     if v.trim() != v {
         Err(
             "Invalid release version. Releases must not contain leading or trailing spaces."
@@ -97,13 +97,14 @@ pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
 pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
     fn project_arg(self, multiple: bool) -> Self;
+    fn release_arg(self) -> Self;
     fn version_arg(self) -> Self;
 }
 
 impl<'a: 'b, 'b> ArgExt for Command<'a> {
     fn org_arg(self) -> Command<'a> {
         self.arg(
-            clap::Arg::new("org")
+            Arg::new("org")
                 .value_name("ORG")
                 .long("org")
                 .short('o')
@@ -115,7 +116,7 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
 
     fn project_arg(self, multiple: bool) -> Command<'a> {
         self.arg(
-            clap::Arg::new("project")
+            Arg::new("project")
                 .value_name("PROJECT")
                 .long("project")
                 .short('p')
@@ -126,13 +127,26 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
+    fn release_arg(self) -> Command<'a> {
+        self.arg(
+            Arg::new("release")
+                .value_name("RELEASE")
+                .long("release")
+                .short('r')
+                .global(true)
+                .allow_hyphen_values(true)
+                .validator(validate_release)
+                .help("The release slug."),
+        )
+    }
+
     fn version_arg(self) -> Command<'a> {
         self.arg(
-            clap::Arg::new("version")
+            Arg::new("version")
                 .value_name("VERSION")
                 .required(true)
                 .allow_hyphen_values(true)
-                .validator(validate_version)
+                .validator(validate_release)
                 .help("The version of the release"),
         )
     }
