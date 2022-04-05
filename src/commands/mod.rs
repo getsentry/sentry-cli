@@ -24,6 +24,7 @@ pub mod react_native_xcode;
 pub mod debug_files_bundle_sources;
 pub mod debug_files_check;
 pub mod debug_files_find;
+pub mod debug_files_upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -62,7 +63,13 @@ to learn more about them.";
 
 // Commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &[&str] = &[
-    "releases", "issues", "repos", "projects", "info", "login", "difutil",
+    "releases",
+    "issues",
+    "repos",
+    "projects",
+    "info",
+    "login",
+    "debug-files",
 ];
 
 fn preexecute_hooks() -> Result<bool> {
