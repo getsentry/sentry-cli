@@ -38,6 +38,7 @@ SUBCOMMANDS:
     releases           Manage releases on Sentry.
     repos              Manage repositories on Sentry.
     send-event         Send a manual event to Sentry.
+    sourcemaps         Manage sourcemaps for Sentry releases.
     upload-proguard    Upload ProGuard mapping files to a project.
 
 ```
