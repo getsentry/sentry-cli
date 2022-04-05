@@ -1,25 +1,16 @@
-//! Implements a command for managing releases.
-use std::collections::HashSet;
-use std::ffi::OsStr;
-use std::path::Path;
 use std::sync::Arc;
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, Result};
 use chrono::{DateTime, Duration, Utc};
 use clap::{Arg, ArgMatches, Command};
-use indicatif::HumanBytes;
 use lazy_static::lazy_static;
 use regex::Regex;
-use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 use crate::api::{
-    Api, Deploy, FileContents, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, ProgressBarMode,
-    ReleaseStatus, UpdatedRelease,
+    Api, Deploy, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, ReleaseStatus, UpdatedRelease,
 };
 use crate::config::Config;
 use crate::utils::args::{get_timestamp, validate_int, validate_timestamp, ArgExt};
-use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
 use crate::utils::formatting::{HumanDuration, Table};
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::releases::detect_release_name;
@@ -62,10 +53,12 @@ impl<'a> ReleaseContext<'a> {
 
 pub fn make_command(command: Command) -> Command {
     command.about("Manage releases on Sentry.")
-.subcommand_required(true)
-.arg_required_else_help(true)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .org_arg()
         .project_arg(true)
+        // Backwards compatibility with `releases files <VERSION>` commands.
+        .subcommand(crate::commands::files::make_command(Command::new("files")).version_arg().hide(true))
         .subcommand(Command::new("new")
             .about("Create a new release.")
             .version_arg()
@@ -180,75 +173,6 @@ pub fn make_command(command: Command) -> Command {
                 .short('C')
                 .long("show-commits")
                 .help("Display the Commits column")))
-        .subcommand(Command::new("files")
-            .about("Manage release artifacts.")
-            .subcommand_required(true)
-            .arg_required_else_help(true)
-            .version_arg()
-            .subcommand(Command::new("list").about("List all release files."))
-            .subcommand(Command::new("delete")
-                .about("Delete a release file.")
-                .arg(Arg::new("names")
-                    .value_name("NAMES")
-                    .multiple_occurrences(true)
-                    .help("Filenames to delete.")))
-                .arg(Arg::new("all")
-                    .short('A')
-                    .long("all")
-                    .help("Delete all files."))
-            .subcommand(Command::new("upload")
-            .arg(Arg::new("path")
-                .value_name("PATH")
-                .required(true)
-                .help("The path to the file or directory to upload."))
-            .arg(Arg::new("name")
-                .value_name("NAME")
-                .help("The name of the file on the server."))
-                .about("Upload files for a release.")
-                .arg(Arg::new("dist")
-                    .long("dist")
-                    .short('d')
-                    .value_name("DISTRIBUTION")
-                    .help("Optional distribution identifier for this file."))
-                .arg(Arg::new("wait")
-                    .long("wait")
-                    .help("Wait for the server to fully process uploaded files."))
-                .arg(Arg::new("file-headers")
-                    .long("file-header")
-                    .short('H')
-                    .value_name("KEY VALUE")
-                    .multiple_occurrences(true)
-                    .help("Store a header with this file."))
-                .arg(Arg::new("url_prefix")
-                    .short('u')
-                    .long("url-prefix")
-                    .value_name("PREFIX")
-                    .help("The URL prefix to prepend to all filenames."))
-                .arg(Arg::new("url_suffix")
-                    .long("url-suffix")
-                    .value_name("SUFFIX")
-                    .help("The URL suffix to append to all filenames."))
-                .arg(Arg::new("ignore")
-                    .long("ignore")
-                    .short('i')
-                    .value_name("IGNORE")
-                    .multiple_occurrences(true)
-                    .help("Ignores all files and folders matching the given glob"))
-                .arg(Arg::new("ignore_file")
-                    .long("ignore-file")
-                    .short('I')
-                    .value_name("IGNORE_FILE")
-                    .help("Ignore all files and folders specified in the given \
-                           ignore file, e.g. .gitignore."))
-                .arg(Arg::new("extensions")
-                    .long("ext")
-                    .short('x')
-                    .value_name("EXT")
-                    .multiple_occurrences(true)
-                    .help("Set the file extensions that are considered for upload. \
-                           This overrides the default extensions. To add an extension, all default \
-                           extensions must be repeated. Specify once per extension.")))
-            .subcommand(crate::commands::sourcemaps_upload::make_command(Command::new("upload-sourcemaps")).hide(true)))
         .subcommand(Command::new("deploys")
             .about("Manage release deployments.")
             .subcommand_required(true)
@@ -303,16 +227,6 @@ fn strip_sha(sha: &str) -> &str {
     } else {
         sha
     }
-}
-
-#[cfg(windows)]
-fn path_as_url(path: &Path) -> String {
-    path.display().to_string().replace("\\", "/")
-}
-
-#[cfg(not(windows))]
-fn path_as_url(path: &Path) -> String {
-    path.display().to_string()
 }
 
 fn execute_new(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
@@ -679,214 +593,6 @@ fn execute_info(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn execute_files_list(ctx: &ReleaseContext<'_>, matches: &ArgMatches, release: &str) -> Result<()> {
-    let mut table = Table::new();
-    table
-        .title_row()
-        .add("Name")
-        .add("Distribution")
-        .add("Source Map")
-        .add("Size");
-
-    let org = ctx.get_org()?;
-    let project = ctx.get_project(matches).ok();
-    for artifact in ctx
-        .api
-        .list_release_files(org, project.as_deref(), release)?
-    {
-        let row = table.add_row();
-        row.add(&artifact.name);
-        if let Some(ref dist) = artifact.dist {
-            row.add(dist);
-        } else {
-            row.add("");
-        }
-        if let Some(sm_ref) = artifact.get_sourcemap_reference() {
-            row.add(sm_ref);
-        } else {
-            row.add("");
-        }
-        row.add(HumanBytes(artifact.size));
-    }
-
-    table.print();
-
-    Ok(())
-}
-
-fn execute_files_delete(
-    ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches,
-    release: &str,
-) -> Result<()> {
-    let org = ctx.get_org()?;
-    let project = ctx.get_project(matches).ok();
-
-    if matches.is_present("all") {
-        if ctx
-            .api
-            .delete_release_files(org, project.as_deref(), release)?
-        {
-            println!("All files deleted.");
-        }
-        return Ok(());
-    }
-
-    let files: HashSet<String> = match matches.values_of("names") {
-        Some(paths) => paths.map(|x| x.into()).collect(),
-        None => HashSet::new(),
-    };
-    for file in ctx
-        .api
-        .list_release_files(org, project.as_deref(), release)?
-    {
-        if !files.contains(&file.name) {
-            continue;
-        }
-        if ctx
-            .api
-            .delete_release_file(org, project.as_deref(), release, &file.id)?
-        {
-            println!("D {}", file.name);
-        }
-    }
-    Ok(())
-}
-
-fn execute_files_upload(
-    ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches,
-    version: &str,
-) -> Result<()> {
-    let dist = matches.value_of("dist");
-    let mut headers = vec![];
-    if let Some(header_list) = matches.values_of("file-headers") {
-        for header in header_list {
-            if !header.contains(':') {
-                bail!("Invalid header. Needs to be in key:value format");
-            }
-            let mut iter = header.splitn(2, ':');
-            let key = iter.next().unwrap();
-            let value = iter.next().unwrap();
-            headers.push((key.trim().to_string(), value.trim().to_string()));
-        }
-    };
-    let org = ctx.get_org()?;
-    let project = ctx.get_project(matches).ok();
-    let path = Path::new(matches.value_of("path").unwrap());
-
-    // Batch files upload
-    if path.is_dir() {
-        let ignore_file = matches.value_of("ignore_file").unwrap_or("");
-        let ignores = matches
-            .values_of("ignore")
-            .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
-            .unwrap_or_else(Vec::new);
-        let extensions = matches
-            .values_of("extensions")
-            .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-            .unwrap_or_else(Vec::new);
-
-        let sources = ReleaseFileSearch::new(path.to_path_buf())
-            .ignore_file(ignore_file)
-            .ignores(ignores)
-            .extensions(extensions)
-            .collect_files()?;
-
-        let url_prefix = get_url_prefix_from_args(matches);
-        let url_suffix = get_url_suffix_from_args(matches);
-        let files = sources
-            .iter()
-            .map(|source| {
-                let local_path = source.path.strip_prefix(&source.base_path).unwrap();
-                let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
-
-                (
-                    url.to_string(),
-                    ReleaseFile {
-                        url,
-                        path: source.path.clone(),
-                        contents: source.contents.clone(),
-                        ty: SourceFileType::Source,
-                        headers: headers.clone(),
-                        messages: vec![],
-                    },
-                )
-            })
-            .collect();
-
-        let ctx = &UploadContext {
-            org,
-            project: project.as_deref(),
-            release: version,
-            dist,
-            wait: matches.is_present("wait"),
-        };
-
-        ReleaseFileUpload::new(ctx).files(&files).upload()
-    }
-    // Single file upload
-    else {
-        let name = match matches.value_of("name") {
-            Some(name) => name,
-            None => Path::new(path)
-                .file_name()
-                .and_then(OsStr::to_str)
-                .ok_or_else(|| format_err!("No filename provided."))?,
-        };
-
-        if let Some(artifact) = ctx.api.upload_release_file(
-            org,
-            project.as_deref(),
-            version,
-            &FileContents::FromPath(path),
-            name,
-            dist,
-            Some(&headers[..]),
-            ProgressBarMode::Request,
-        )? {
-            println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
-        } else {
-            bail!("File already present!");
-        }
-        Ok(())
-    }
-}
-
-fn get_url_prefix_from_args(matches: &ArgMatches) -> &str {
-    let mut rv = matches.value_of("url_prefix").unwrap_or("~");
-    // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
-    if rv.ends_with('/') {
-        rv = &rv[..rv.len() - 1];
-    }
-    rv
-}
-
-fn get_url_suffix_from_args(matches: &ArgMatches) -> &str {
-    matches.value_of("url_suffix").unwrap_or("")
-}
-
-fn execute_files_upload_sourcemaps(matches: &ArgMatches) -> Result<()> {
-    crate::commands::sourcemaps_upload::execute(matches)
-}
-
-fn execute_files(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<()> {
-    let release = matches.value_of("version").unwrap();
-    if let Some(sub_matches) = matches.subcommand_matches("list") {
-        return execute_files_list(ctx, sub_matches, release);
-    }
-    if let Some(sub_matches) = matches.subcommand_matches("delete") {
-        return execute_files_delete(ctx, sub_matches, release);
-    }
-    if let Some(sub_matches) = matches.subcommand_matches("upload") {
-        return execute_files_upload(ctx, sub_matches, release);
-    }
-    if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
-        return execute_files_upload_sourcemaps(sub_matches);
-    }
-    unreachable!();
-}
-
 fn execute_deploys_new(
     ctx: &ReleaseContext<'_>,
     matches: &ArgMatches,
@@ -1001,7 +707,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return execute_info(&ctx, sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("files") {
-        return execute_files(&ctx, sub_matches);
+        return crate::commands::files::execute(sub_matches);
     }
     if let Some(sub_matches) = matches.subcommand_matches("deploys") {
         return execute_deploys(&ctx, sub_matches);
