@@ -8,6 +8,7 @@ macro_rules! each_subcommand {
         $mac!(debug_files_bundle_sources);
         $mac!(debug_files_find);
         $mac!(debug_files_check);
+        $mac!(debug_files_upload);
     };
 }
 
@@ -24,7 +25,8 @@ pub fn make_command(mut command: Command) -> Command {
         .about("Locate, analyze or upload debug information files.")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .visible_alias("difutil");
+        .visible_alias("dif")
+        .alias("difutil");
     each_subcommand!(add_subcommand);
     command
 }
