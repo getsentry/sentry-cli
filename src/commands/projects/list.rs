@@ -1,19 +1,12 @@
-//! Implements a command for managing projects.
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
-use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
 
 pub fn make_command(command: Command) -> Command {
-    command
-        .about("Manage projects on Sentry.")
-        .subcommand_required(true)
-        .arg_required_else_help(true)
-        .org_arg()
-        .subcommand(Command::new("list").about("List all projects for an organization."))
+    command.about("List all projects for an organization.")
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

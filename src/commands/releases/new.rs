@@ -1,0 +1,48 @@
+use anyhow::Result;
+use chrono::Utc;
+use clap::{Arg, ArgMatches, Command};
+
+use crate::api::{Api, NewRelease};
+use crate::config::Config;
+use crate::utils::args::ArgExt;
+
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Create a new release.")
+        .version_arg()
+        .arg(
+            Arg::new("url")
+                .long("url")
+                .value_name("URL")
+                .help("Optional URL to the release for information purposes."),
+        )
+        .arg(
+            Arg::new("finalize")
+                .long("finalize")
+                .help("Immediately finalize the release. (sets it to released)"),
+        )
+}
+
+pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
+    let api = Api::current();
+    let version = matches.value_of("version").unwrap();
+
+    api.new_release(
+        &config.get_org(matches)?,
+        &NewRelease {
+            version: version.to_owned(),
+            projects: config.get_projects(matches)?,
+            url: matches.value_of("url").map(str::to_owned),
+            date_started: Some(Utc::now()),
+            date_released: if matches.is_present("finalize") {
+                Some(Utc::now())
+            } else {
+                None
+            },
+        },
+    )?;
+
+    println!("Created release {}.", version);
+    Ok(())
+}

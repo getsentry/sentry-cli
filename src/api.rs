@@ -15,9 +15,11 @@ use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
+use clap::ArgMatches;
 use console::style;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
@@ -2121,6 +2123,27 @@ impl IssueFilter {
             }
         }
         Some(rv.join("&"))
+    }
+
+    pub fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter> {
+        if matches.is_present("all") {
+            return Ok(IssueFilter::All);
+        }
+        if let Some(status) = matches.value_of("status") {
+            return Ok(IssueFilter::Status(status.into()));
+        }
+        let mut ids = vec![];
+        if let Some(values) = matches.values_of("id") {
+            for value in values {
+                ids.push(value.parse::<u64>().context("Invalid issue ID")?);
+            }
+        }
+
+        if ids.is_empty() {
+            Ok(IssueFilter::Empty)
+        } else {
+            Ok(IssueFilter::ExplicitIds(ids))
+        }
     }
 }
 

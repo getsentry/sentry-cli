@@ -1,23 +1,26 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
-use crate::commands;
+pub mod bundle_sources;
+pub mod check;
+pub mod find;
+pub mod upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
-        $mac!(debug_files_bundle_sources);
-        $mac!(debug_files_find);
-        $mac!(debug_files_check);
-        $mac!(debug_files_upload);
+        $mac!(bundle_sources);
+        $mac!(find);
+        $mac!(check);
+        $mac!(upload);
     };
 }
 
 pub fn make_command(mut command: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            command = command.subcommand(commands::$name::make_command(Command::new(
-                stringify!($name)[12..].replace('_', "-"),
-            )));
+            command = command.subcommand(crate::commands::debug_files::$name::make_command(
+                Command::new(stringify!($name).replace('_', "-")),
+            ));
         }};
     }
 
@@ -35,9 +38,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =
-                matches.subcommand_matches(&stringify!($name)[12..].replace('_', "-"))
+                matches.subcommand_matches(&stringify!($name).replace('_', "-"))
             {
-                return commands::$name::execute(&sub_matches);
+                return crate::commands::debug_files::$name::execute(&sub_matches);
             }
         }};
     }

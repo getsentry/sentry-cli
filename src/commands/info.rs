@@ -1,4 +1,3 @@
-//! Implements a command for showing infos from Sentry.
 use std::collections::HashMap;
 use std::io;
 

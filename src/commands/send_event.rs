@@ -1,4 +1,3 @@
-//! Implements a command for sending events to Sentry.
 use std::borrow::Cow;
 use std::env;
 use std::fs::File;
@@ -79,7 +78,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("message")
                 .short('m')
                 .multiple_occurrences(true)
-
                 .help("The event message."),
         )
         .arg(
@@ -88,7 +86,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("message-arg")
                 .short('a')
                 .multiple_occurrences(true)
-
                 .help("Arguments for the event message."),
         )
         .arg(
@@ -104,7 +101,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("tag")
                 .short('t')
                 .multiple_occurrences(true)
-
                 .help("Add a tag (key:value) to the event."),
         )
         .arg(
@@ -113,7 +109,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("extra")
                 .short('e')
                 .multiple_occurrences(true)
-
                 .help("Add extra information (key:value) to the event."),
         )
         .arg(
@@ -122,7 +117,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("user")
                 .short('u')
                 .multiple_occurrences(true)
-
                 .help(
                     "Add user information (key:value) to the event. \
                      [eg: id:42, username:foo]",
@@ -134,7 +128,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("fingerprint")
                 .short('f')
                 .multiple_occurrences(true)
-
                 .help("Change the fingerprint of the event."),
         )
         .arg(

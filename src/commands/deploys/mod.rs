@@ -1,25 +1,29 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
-use crate::{commands, utils::args::ArgExt};
+use crate::utils::args::ArgExt;
+
+pub mod list;
+pub mod new;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
-        $mac!(sourcemaps_upload);
+        $mac!(list);
+        $mac!(new);
     };
 }
 
 pub fn make_command(mut command: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            command = command.subcommand(commands::$name::make_command(Command::new(
-                stringify!($name)[11..].replace('_', "-"),
-            )));
+            command = command.subcommand(crate::commands::deploys::$name::make_command(
+                Command::new(stringify!($name).replace('_', "-")),
+            ));
         }};
     }
 
     command = command
-        .about("Manage sourcemaps for Sentry releases.")
+        .about("Manage deployments for Sentry releases.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()
@@ -33,9 +37,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =
-                matches.subcommand_matches(&stringify!($name)[11..].replace('_', "-"))
+                matches.subcommand_matches(&stringify!($name).replace('_', "-"))
             {
-                return commands::$name::execute(&sub_matches);
+                return crate::commands::deploys::$name::execute(&sub_matches);
             }
         }};
     }

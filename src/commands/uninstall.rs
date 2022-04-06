@@ -1,4 +1,3 @@
-//! Implements a command for uninstalling `sentry-cli`
 use std::env;
 use std::fs;
 
