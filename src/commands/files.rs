@@ -48,7 +48,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     each_subcommand!(execute_subcommand);
 
-    // To preserve backwards compatibility
+    // To preserve backward compatibility
     if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
         return crate::commands::sourcemaps_upload::execute(sub_matches);
     }

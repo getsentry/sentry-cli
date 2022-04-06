@@ -14,7 +14,7 @@ use crate::utils::fs::path_as_url;
 pub fn make_command(command: Command) -> Command {
     command
         .about("Upload files for a release.")
-        // Backwards compatibility with `releases files <VERSION>` commands.
+        // Backward compatibility with `releases files <VERSION>` commands.
         .arg(Arg::new("version").long("version").hide(true))
         .arg(
             Arg::new("path")
