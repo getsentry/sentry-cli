@@ -34,23 +34,23 @@ pub mod files_upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
-        $mac!(upload_dif);
-        $mac!(upload_proguard);
-        $mac!(releases);
+        $mac!(debug_files);
+        $mac!(deploys);
         $mac!(files);
-        $mac!(sourcemaps);
+        $mac!(info);
         $mac!(issues);
-        $mac!(repos);
+        $mac!(login);
         $mac!(projects);
-        #[cfg(not(feature = "managed"))]
-        $mac!(update);
+        $mac!(react_native);
+        $mac!(releases);
+        $mac!(repos);
+        $mac!(send_event);
+        $mac!(sourcemaps);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);
-        $mac!(info);
-        $mac!(login);
-        $mac!(send_event);
-        $mac!(react_native);
-        $mac!(debug_files);
+        #[cfg(not(feature = "managed"))]
+        $mac!(update);
+        $mac!(upload_proguard);
     };
 }
 
@@ -71,16 +71,16 @@ to learn more about them.";
 
 // Commands we want to run the update nagger on
 const UPDATE_NAGGER_CMDS: &[&str] = &[
-    "releases",
-    "issues",
-    "repos",
-    "projects",
-    "info",
-    "login",
     "debug-files",
-    "difutil",
-    "sourcemaps",
+    "deploys",
     "files",
+    "info",
+    "issues",
+    "login",
+    "projects",
+    "releases",
+    "repos",
+    "sourcemaps",
 ];
 
 fn preexecute_hooks() -> Result<bool> {

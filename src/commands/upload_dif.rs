@@ -1,4 +1,4 @@
-// upload-dif is a backwards compatible, hidden alias for `debug-files upload`.
+// upload-dif is a backward compatible, hidden alias for `debug-files upload`.
 
 use anyhow::Result;
 use clap::{ArgMatches, Command};

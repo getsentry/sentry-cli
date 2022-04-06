@@ -15,7 +15,7 @@ use crate::utils::sourcemaps::SourceMapProcessor;
 pub fn make_command(command: Command) -> Command {
     command
         .about("Upload sourcemaps for a release.")
-        // Backwards compatibility with `releases files <VERSION>` commands.
+        // Backward compatibility with `releases files <VERSION>` commands.
         .arg(Arg::new("version").long("version").hide(true))
         .arg(
             Arg::new("paths")

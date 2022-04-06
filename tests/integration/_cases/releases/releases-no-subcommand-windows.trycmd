@@ -21,8 +21,6 @@ OPTIONS:
 SUBCOMMANDS:
     archive            Archive a release.
     delete             Delete a release.
-    deploys            Manage release deployments.
-    files              Manage release artifacts.
     finalize           Mark a release as finalized and released.
     help               Print this message or the help of the given subcommand(s)
     info               Print information about a release.
