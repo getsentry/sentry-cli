@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{ArgMatches, Command};
 
 use crate::utils::args::ArgExt;
 
