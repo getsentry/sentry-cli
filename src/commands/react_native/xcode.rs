@@ -1,4 +1,3 @@
-//! Implements a command for uploading react-native projects.
 use std::env;
 use std::fs;
 use std::path::PathBuf;

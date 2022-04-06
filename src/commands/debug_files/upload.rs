@@ -1,4 +1,3 @@
-//! Implements a command for uploading dSYM files.
 use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 

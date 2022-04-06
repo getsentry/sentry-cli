@@ -1,4 +1,3 @@
-//! Implements a command for signing in.
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use url::Url;

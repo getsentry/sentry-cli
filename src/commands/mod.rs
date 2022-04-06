@@ -15,23 +15,6 @@ use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 
-// Nested sub-commands
-pub mod react_native_appcenter;
-pub mod react_native_gradle;
-#[cfg(target_os = "macos")]
-pub mod react_native_xcode;
-
-pub mod debug_files_bundle_sources;
-pub mod debug_files_check;
-pub mod debug_files_find;
-pub mod debug_files_upload;
-
-pub mod sourcemaps_upload;
-
-pub mod files_delete;
-pub mod files_list;
-pub mod files_upload;
-
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(debug_files);
@@ -91,7 +74,7 @@ fn preexecute_hooks() -> Result<bool> {
         if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
             env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
             if &val == "1" {
-                react_native_xcode::wrap_call()?;
+                crate::commands::react_native::xcode::wrap_call()?;
                 return Ok(true);
             }
         }

@@ -3,20 +3,24 @@ use clap::{ArgMatches, Command};
 
 use crate::utils::args::ArgExt;
 
+pub mod delete;
+pub mod list;
+pub mod upload;
+
 macro_rules! each_subcommand {
     ($mac:ident) => {
-        $mac!(files_delete);
-        $mac!(files_list);
-        $mac!(files_upload);
+        $mac!(delete);
+        $mac!(list);
+        $mac!(upload);
     };
 }
 
 pub fn make_command(mut command: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            command = command.subcommand(crate::commands::$name::make_command(Command::new(
-                stringify!($name)[6..].replace('_', "-"),
-            )));
+            command = command.subcommand(crate::commands::files::$name::make_command(
+                Command::new(stringify!($name).replace('_', "-")),
+            ));
         }};
     }
 
@@ -27,8 +31,9 @@ pub fn make_command(mut command: Command) -> Command {
         .org_arg()
         .project_arg(true)
         .release_arg()
+        // Backward compatibility with `releases files <VERSION> upload-sourcemaps` commands.
         .subcommand(
-            crate::commands::sourcemaps_upload::make_command(Command::new("upload-sourcemaps"))
+            crate::commands::sourcemaps::upload::make_command(Command::new("upload-sourcemaps"))
                 .hide(true),
         );
 
@@ -40,9 +45,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =
-                matches.subcommand_matches(&stringify!($name)[6..].replace('_', "-"))
+                matches.subcommand_matches(&stringify!($name).replace('_', "-"))
             {
-                return crate::commands::$name::execute(&sub_matches);
+                return crate::commands::files::$name::execute(&sub_matches);
             }
         }};
     }
@@ -50,7 +55,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // To preserve backward compatibility
     if let Some(sub_matches) = matches.subcommand_matches("upload-sourcemaps") {
-        return crate::commands::sourcemaps_upload::execute(sub_matches);
+        return crate::commands::sourcemaps::upload::execute(sub_matches);
     }
 
     unreachable!();

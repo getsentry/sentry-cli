@@ -1,4 +1,3 @@
-//! Implements a command for updating `sentry-cli`
 use std::env;
 
 use anyhow::{bail, Result};
