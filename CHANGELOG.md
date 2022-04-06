@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.0-beta.1
+
+All introduced changes are backward compatible through hidden aliases, so there are no breaking changes in this beta release.
+
+- feat: Change `difutil` command into `debug-files` with `dif/difutil` aliases
+- feat: Extract `releases deploys` subcommand to a separate `deploys` command
+- feat: Extract `releases files` subcommand to a separate `files` command
+- feat: Extract `releases upload-sourcemaps` to a separate `sourcemaps` command
+- feat: Integrate `upload-dif` with `debug-files upload` command
+- ref: Remove `ReleaseContext` in favor of being explicit
+
 ## 2.0.0-beta.0
 
 Breaking changes are denotated with _(breaking)_ tag, and appropriate required changes are provided for each entry.
