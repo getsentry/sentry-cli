@@ -1,6 +1,11 @@
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
+fn command_upload_proguard_help() {
+    let _t = register_test("upload_proguard/upload_proguard-help.trycmd");
+}
+
+#[test]
 fn command_upload_proguard() {
     let _dsyms = mock_endpoint(
         EndpointOptions::new(
