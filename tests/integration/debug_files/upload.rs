@@ -1,6 +1,11 @@
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
+fn command_debug_files_help() {
+    let _t = register_test("debug_files/debug_files-help.trycmd");
+}
+
+#[test]
 fn command_debug_files() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)

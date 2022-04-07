@@ -1,0 +1,85 @@
+```
+$ sentry-cli send-event --help
+? success
+sentry-cli[..]-send-event 
+Send a manual event to Sentry.{n}{n}This command will validate input parameters and attempt to send
+an event to Sentry. Due to network errors, rate limits or sampling the event is not guaranteed to
+actually arrive. Check debug output for transmission errors by passing --log-level=debug or setting
+`SENTRY_LOG_LEVEL=debug`.
+
+USAGE:
+    sentry-cli[..] send-event [OPTIONS] [PATH]
+
+ARGS:
+    <PATH>
+            The path or glob to the file(s) in JSON format to send as event(s). When provided, all
+            other arguments are ignored.
+
+OPTIONS:
+    -a, --message-arg <MESSAGE_ARG>
+            Arguments for the event message.
+
+        --auth-token <AUTH_TOKEN>
+            Use the given Sentry auth token.
+
+    -d, --dist <DISTRIBUTION>
+            Set the distribution.
+
+    -e, --extra <KEY:VALUE>
+            Add extra information (key:value) to the event.
+
+    -E, --env <ENVIRONMENT>
+            Send with a specific environment.
+
+    -f, --fingerprint <FINGERPRINT>
+            Change the fingerprint of the event.
+
+    -h, --help
+            Print help information
+
+    -l, --level <LEVEL>
+            Optional event severity/log level. (debug|info|warning|error|fatal) [defaults to
+            'error']
+
+        --log-level <LOG_LEVEL>
+            Set the log output verbosity.
+            
+            [possible values: trace, debug, info, warn, error]
+
+        --logfile <PATH>
+            Send a logfile as breadcrumbs with the event (last 100 records)
+
+    -m, --message <MESSAGE>
+            The event message.
+
+        --no-environ
+            Do not send environment variables along
+
+    -p, --platform <PLATFORM>
+            Override the default 'other' platform specifier.
+
+        --quiet
+            Do not print any output while preserving correct exit code. This flag is currently
+            implemented only for selected subcommands.
+            
+            [aliases: silent]
+
+    -r, --release <RELEASE>
+            Optional identifier of the release.
+
+    -t, --tag <KEY:VALUE>
+            Add a tag (key:value) to the event.
+
+        --timestamp <TIMESTAMP>
+            Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or
+            RFC3339.
+
+    -u, --user <KEY:VALUE>
+            Add user information (key:value) to the event. [eg: id:42, username:foo]
+
+        --with-categories
+            When logfile is provided, this flag will try to assign correct level to extracted log
+            breadcrumbs. It uses standard log format of "category: message". eg. "INFO: Something
+            broke" will be parsed as a breadcrumb "{"level": "info", "message": "Something broke"}"
+
+```

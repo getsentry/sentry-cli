@@ -1,11 +1,11 @@
 ```
-$ sentry-cli releases
-? failed
-sentry-cli[EXE]-releases 
+$ sentry-cli releases --help
+? success
+sentry-cli[..]-releases 
 Manage releases on Sentry.
 
 USAGE:
-    sentry-cli[EXE] releases [OPTIONS] <SUBCOMMAND>
+    sentry-cli[..] releases [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

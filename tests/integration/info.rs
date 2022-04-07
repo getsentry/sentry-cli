@@ -4,6 +4,11 @@ use trycmd::TestCases;
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
+fn command_info_help() {
+    let _t = register_test("info/info-help.trycmd");
+}
+
+#[test]
 fn command_info_no_token() {
     // Special case where we don't want any env variables set, so we don't use `register_task` helper.
     TestCases::new().case("tests/integration/_cases/info/info-no-token.trycmd");

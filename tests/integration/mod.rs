@@ -13,6 +13,7 @@ use mockito::{mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
 pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z"#;
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn register_test(path: &str) -> TestCases {
     let test_case = TestCases::new();
@@ -25,6 +26,7 @@ pub fn register_test(path: &str) -> TestCases {
         .env("SENTRY_PROJECT", "wat-project")
         .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
         .case(format!("tests/integration/_cases/{}", path));
+    test_case.insert_var("[VERSION]", VERSION).unwrap();
     test_case
 }
 pub struct EndpointOptions {
