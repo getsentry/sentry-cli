@@ -1,5 +1,6 @@
 mod help;
 mod info;
+mod login;
 mod releases;
 
 use mockito::{mock, server_url, Matcher, Mock};
@@ -10,6 +11,7 @@ pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}
 pub fn register_test(path: &str) -> TestCases {
     let test_case = TestCases::new();
     test_case
+        .env("TEST", "1")
         .env("SENTRY_URL", server_url())
         .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")
