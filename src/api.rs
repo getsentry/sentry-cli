@@ -7,13 +7,13 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::{env, fmt};
 
 use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
@@ -34,6 +34,7 @@ use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
+use url::Url;
 
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
@@ -323,6 +324,7 @@ impl fmt::Display for Method {
 /// Represents an API request.  This can be customized before
 /// sending but only sent once.
 pub struct ApiRequest {
+    url: String,
     handle: r2d2::PooledConnection<CurlConnectionManager>,
     headers: curl::easy::List,
     is_authenticated: bool,
@@ -335,6 +337,7 @@ pub struct ApiRequest {
 /// Represents an API response.
 #[derive(Clone, Debug)]
 pub struct ApiResponse {
+    url: String,
     status: u32,
     headers: Vec<String>,
     body: Option<Vec<u8>>,
@@ -1562,6 +1565,7 @@ impl ApiRequest {
         handle.url(url)?;
 
         let request = ApiRequest {
+            url: url.to_owned(),
             handle,
             headers,
             is_authenticated: false,
@@ -1660,10 +1664,12 @@ impl ApiRequest {
         let headers = self.get_headers();
         self.handle.http_headers(headers)?;
         let body = self.body.as_deref();
+        let url = self.url.clone();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
         debug!("response status: {}", status);
         Ok(ApiResponse {
+            url,
             status,
             headers,
             body: None,
@@ -1722,7 +1728,13 @@ impl ApiResponse {
     /// non okay response codes into errors.
     pub fn into_result(self) -> ApiResult<Self> {
         if let Some(ref body) = self.body {
-            debug!("body: {}", String::from_utf8_lossy(body));
+            let body = String::from_utf8_lossy(body);
+            debug!("body: {}", body);
+
+            // Internal helper for making it easier to write integration tests.
+            if let Ok(dir) = env::var("SENTRY_DUMP") {
+                dump_response(dir, &self.url, body.into_owned());
+            }
         }
         if self.ok() {
             return Ok(self);
@@ -1862,6 +1874,26 @@ fn log_headers(is_response: bool, data: &[u8]) {
             debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }
     }
+}
+
+fn dump_response(mut dir: String, url: &str, body: String) {
+    if dir.starts_with('~') {
+        dir = format!(
+            "{}{}",
+            dirs::home_dir().unwrap().display(),
+            dir.trim_start_matches('~')
+        );
+    }
+    let filename = Url::parse(url)
+        .unwrap()
+        .path()
+        .trim_matches('/')
+        .replace('/', "__");
+    create_dir_all(&dir).unwrap();
+    let filepath = format!("{}/{}.json", &dir, filename);
+    let mut file = File::create(&filepath).unwrap();
+    file.write_all(&body.into_bytes()).unwrap();
+    debug!("Response dumped to: {}", &filepath);
 }
 
 #[derive(Debug, Deserialize)]
