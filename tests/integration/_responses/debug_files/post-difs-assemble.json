@@ -1,0 +1,29 @@
+{
+  "4111bebacb6ccdd7e52784a16ca1b75f9c1d54b8": {
+    "state": "ok",
+    "detail": null,
+    "missingChunks": [],
+    "dif": {
+      "id": "203166440",
+      "uuid": "307a5402-9480-8ec2-25f1-a4adc744a991",
+      "debugId": "307a5402-9480-8ec2-25f1-a4adc744a991",
+      "codeId": "02547a308094c28e25f1a4adc744a9917194db0a",
+      "cpuName": "arm",
+      "objectName": "elf-Linux-ARMv7-ls",
+      "symbolType": "elf",
+      "headers": {
+        "Content-Type": "application/x-elf-binary"
+      },
+      "size": 90808,
+      "sha1": "4111bebacb6ccdd7e52784a16ca1b75f9c1d54b8",
+      "dateCreated": "2022-04-07T13:43:22.784568Z",
+      "data": {
+        "type": "exe",
+        "features": [
+          "symtab",
+          "unwind"
+        ]
+      }
+    }
+  }
+}

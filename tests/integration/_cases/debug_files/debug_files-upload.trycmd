@@ -1,0 +1,8 @@
+```
+$ sentry-cli debug-files upload tests/integration/_fixtures/elf-Linux-ARMv7-ls
+? success
+> Found 1 debug information file
+> Prepared debug information file for upload
+> Nothing to upload, all files are on the server
+
+```

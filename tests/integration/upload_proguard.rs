@@ -22,12 +22,12 @@ fn command_upload_proguard() {
 }
 
 #[test]
-fn command_upload_proguard_upload() {
+fn command_upload_proguard_no_upload() {
     let _t = register_test("upload_proguard/upload_proguard-no-upload.trycmd");
 }
 
 #[test]
-fn command_upload_proguard_reprocessing() {
+fn command_upload_proguard_no_reprocessing() {
     let _dsyms = mock_endpoint(
         EndpointOptions::new(
             "POST",

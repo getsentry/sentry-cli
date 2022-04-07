@@ -1,0 +1,6 @@
+```
+$ sentry-cli debug-files upload tests/integration/_fixtures/elf-Linux-ARMv7-ls --no-upload
+? success
+> skipping upload.
+
+```

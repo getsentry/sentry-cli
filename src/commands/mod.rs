@@ -33,6 +33,7 @@ macro_rules! each_subcommand {
         $mac!(uninstall);
         #[cfg(not(feature = "managed"))]
         $mac!(update);
+        $mac!(upload_dif);
         $mac!(upload_proguard);
     };
 }
