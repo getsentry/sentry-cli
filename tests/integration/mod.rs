@@ -2,6 +2,7 @@ mod help;
 mod info;
 mod login;
 mod releases;
+mod uninstall;
 
 use mockito::{mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
