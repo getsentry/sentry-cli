@@ -1,0 +1,19 @@
+{
+  "url": "organizations/kamil-test/chunk-upload/",
+  "chunkSize": 8388608,
+  "chunksPerRequest": 64,
+  "maxFileSize": 2147483648,
+  "maxRequestSize": 33554432,
+  "concurrency": 8,
+  "hashAlgorithm": "sha1",
+  "compression": [
+    "gzip"
+  ],
+  "accept": [
+    "debug_files",
+    "release_files",
+    "pdbs",
+    "sources",
+    "bcsymbolmaps"
+  ]
+}

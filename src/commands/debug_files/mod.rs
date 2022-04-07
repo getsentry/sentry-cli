@@ -9,8 +9,8 @@ pub mod upload;
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bundle_sources);
-        $mac!(find);
         $mac!(check);
+        $mac!(find);
         $mac!(upload);
     };
 }

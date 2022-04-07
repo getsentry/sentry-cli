@@ -1,3 +1,4 @@
+mod debug_files;
 mod help;
 mod info;
 mod login;
@@ -5,6 +6,7 @@ mod releases;
 mod send_event;
 mod uninstall;
 mod update;
+mod upload_dif;
 mod upload_proguard;
 
 use mockito::{mock, server_url, Matcher, Mock};
