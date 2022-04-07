@@ -34,6 +34,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     println!("Latest release is {}", update.latest_version());
+
+    // It's not currently possible to easily mock I/O with `trycmd`,
+    // but verifying that `execute` is not panicking, is good enough for now.
+    if env::var("TEST").is_ok() {
+        return Ok(());
+    }
+
     if update.is_latest_version() {
         if matches.is_present("force") {
             println!("Forcing update");
