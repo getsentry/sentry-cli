@@ -1,3 +1,5 @@
+use std::env;
+
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use url::Url;
@@ -36,6 +38,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .host_str()
             .unwrap_or("<unknown>")
     );
+
+    // It's not currently possible to easily mock I/O with `trycmd`,
+    // but verifying that `execute` is not panicking, is good enough for now.
+    if env::var("TEST").is_ok() {
+        return Ok(());
+    }
 
     if prompt_to_continue("Open browser now?")? && open::that(&token_url).is_err() {
         println!("Cannot open browser. Please manually go to {}", &token_url);
