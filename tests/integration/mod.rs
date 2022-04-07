@@ -2,6 +2,7 @@ mod help;
 mod info;
 mod login;
 mod releases;
+mod send_event;
 mod uninstall;
 mod update;
 
@@ -14,10 +15,12 @@ pub fn register_test(path: &str) -> TestCases {
     let test_case = TestCases::new();
     test_case
         .env("TEST", "1")
+        .env("SENTRY_DUMP", "dump")
         .env("SENTRY_URL", server_url())
         .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
+        .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
         .case(format!("tests/integration/_cases/{}", path));
     test_case
 }

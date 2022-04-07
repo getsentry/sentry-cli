@@ -8,7 +8,7 @@ use anyhow::{format_err, Result};
 use clap::{Arg, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
-use log::warn;
+use log::{debug, warn};
 use sentry::protocol::{Event, Level, LogEntry, User};
 use sentry::types::{Dsn, Uuid};
 use serde_json::Value;
@@ -149,6 +149,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
+    debug!("{:?}", event);
     with_sentry_client(dsn, |c| c.capture_event(event, None))
 }
 

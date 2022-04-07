@@ -1,0 +1,8 @@
+{
+  "event_id": "7c2cd07e-4c0b-4748-94db-d6b7fc632dab",
+  "level": "debug",
+  "release": "my-release",
+  "dist": "my-dist",
+  "environment": "production",
+  "message": "hello there"
+}
