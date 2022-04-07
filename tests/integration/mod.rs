@@ -47,7 +47,7 @@ impl EndpointOptions {
     }
 
     pub fn with_response_file(mut self, path: &str) -> Self {
-        self.response_file = Some(format!("tests/integration/_api/{}", path));
+        self.response_file = Some(format!("tests/integration/_responses/{}", path));
         self
     }
 
