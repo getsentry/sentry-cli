@@ -21,6 +21,7 @@ pub struct EndpointOptions {
     pub method: String,
     pub endpoint: String,
     pub status: usize,
+    pub response_body: Option<String>,
     pub response_file: Option<String>,
     pub matcher: Option<Matcher>,
 }
@@ -31,9 +32,18 @@ impl EndpointOptions {
             method: method.to_owned(),
             endpoint: endpoint.to_owned(),
             status,
+            response_body: None,
             response_file: None,
             matcher: None,
         }
+    }
+
+    pub fn with_response_body<T>(mut self, body: T) -> Self
+    where
+        T: Into<String>,
+    {
+        self.response_body = Some(body.into());
+        self
     }
 
     pub fn with_response_file(mut self, path: &str) -> Self {
@@ -51,6 +61,10 @@ pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
     let mut mock = mock(opts.method.as_str(), opts.endpoint.as_str())
         .with_status(opts.status)
         .with_header("content-type", "application/json");
+
+    if let Some(response_body) = opts.response_body {
+        mock = mock.with_body(response_body);
+    }
 
     if let Some(response_file) = opts.response_file {
         mock = mock.with_body_from_file(response_file);
