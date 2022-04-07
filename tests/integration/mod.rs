@@ -5,6 +5,7 @@ mod releases;
 mod send_event;
 mod uninstall;
 mod update;
+mod upload_proguard;
 
 use mockito::{mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
