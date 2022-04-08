@@ -1,12 +1,12 @@
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
-fn command_debug_files_help() {
-    let _t = register_test("debug_files/debug_files-help.trycmd");
+fn command_debug_files_upload_help() {
+    register_test("debug_files/debug_files-upload-help.trycmd");
 }
 
 #[test]
-fn command_debug_files() {
+fn command_debug_files_upload() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
@@ -31,7 +31,7 @@ fn command_debug_files() {
 }
 
 #[test]
-fn command_debug_files_no_upload() {
+fn command_debug_files_upload_no_upload() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
@@ -48,7 +48,7 @@ fn command_debug_files_no_upload() {
 }
 
 #[test]
-fn command_debug_files_no_reprocessing() {
+fn command_debug_files_upload_no_reprocessing() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
