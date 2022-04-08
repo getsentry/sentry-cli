@@ -18,7 +18,7 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 
-static DERIVED_DATA: &str = "Library/Developer/Xcode/DerivedData";
+static DERIVED_DATA_FOLDER: &str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -223,7 +223,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // Add a path to XCode's DerivedData, if configured
     if matches.is_present("derived_data") {
-        let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA));
+        let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA_FOLDER));
         if let Some(path) = derived_data {
             if path.is_dir() {
                 upload.search_path(path);
