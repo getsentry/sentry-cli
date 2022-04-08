@@ -106,9 +106,13 @@ fn execute_deploys_new(matches: &ArgMatches) -> Result<()> {
     }
 
     let org = config.get_org(matches)?;
-    let deploy = api.create_deploy(&org, &version, &deploy)?;
+    let created_deploy = api.create_deploy(&org, &version, &deploy)?;
 
-    println!("Created new deploy {} for '{}'", deploy.name(), deploy.env);
+    println!(
+        "Created new deploy {} for '{}'",
+        created_deploy.name(),
+        created_deploy.env
+    );
 
     Ok(())
 }
