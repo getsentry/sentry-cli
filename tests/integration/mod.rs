@@ -1,4 +1,5 @@
 mod debug_files;
+mod deploys;
 mod help;
 mod info;
 mod login;

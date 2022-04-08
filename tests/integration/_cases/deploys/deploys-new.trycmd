@@ -1,0 +1,6 @@
+```
+$ sentry-cli deploys new --release wat-release --name custom-deploy --env production
+? success
+Created new deploy custom-deploy for 'production'
+
+```

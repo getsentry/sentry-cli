@@ -1,0 +1,26 @@
+[
+  {
+    "id": "22257445",
+    "environment": "foo",
+    "dateStarted": null,
+    "dateFinished": "2022-04-06T10:33:59.184396Z",
+    "name": "foo-deploy",
+    "url": null
+  },
+  {
+    "id": "22257440",
+    "environment": "bar",
+    "dateStarted": null,
+    "dateFinished": "2022-04-06T10:33:52.582018Z",
+    "name": "bar-deploy",
+    "url": null
+  },
+  {
+    "id": "22257402",
+    "environment": "baz",
+    "dateStarted": null,
+    "dateFinished": "2022-04-06T10:32:41.727170Z",
+    "name": null,
+    "url": null
+  }
+]
