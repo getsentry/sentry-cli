@@ -5,7 +5,7 @@ use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
 fn command_info_help() {
-    let _t = register_test("info/info-help.trycmd");
+    register_test("info/info-help.trycmd");
 }
 
 #[test]

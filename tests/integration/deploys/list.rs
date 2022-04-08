@@ -10,5 +10,5 @@ fn command_deploys_list() {
         )
         .with_response_file("deploys/get-deploys.json"),
     );
-    let _t = register_test("deploys/deploys-list.trycmd");
+    register_test("deploys/deploys-list.trycmd");
 }

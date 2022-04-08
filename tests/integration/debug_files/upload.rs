@@ -27,7 +27,7 @@ fn command_debug_files_upload() {
         )
         .with_response_body("[]"),
     );
-    let _t = register_test("debug_files/debug_files-upload.trycmd");
+    register_test("debug_files/debug_files-upload.trycmd");
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn command_debug_files_upload_no_upload() {
         )
         .with_response_file("debug_files/post-difs-assemble.json"),
     );
-    let _t = register_test("debug_files/debug_files-upload-no-upload.trycmd");
+    register_test("debug_files/debug_files-upload-no-upload.trycmd");
 }
 
 #[test]
@@ -61,5 +61,5 @@ fn command_debug_files_upload_no_reprocessing() {
         )
         .with_response_file("debug_files/post-difs-assemble.json"),
     );
-    let _t = register_test("debug_files/debug_files-upload-no-reprocessing.trycmd");
+    register_test("debug_files/debug_files-upload-no-reprocessing.trycmd");
 }
