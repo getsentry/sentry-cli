@@ -1,0 +1,12 @@
+```
+$ sentry-cli deploys list --release wat-release
+? success
++-------------+------------+----------[..]+
+| Environment | Name       | Finished [..]|
++-------------+------------+----------[..]+
+| foo         | foo-deploy | [..] |
+| bar         | bar-deploy | [..] |
+| baz         | unnamed    | [..] |
++-------------+------------+----------[..]+
+
+```
