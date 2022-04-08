@@ -37,8 +37,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let events = api.list_organization_project_events(&org, &project)?;
 
     let mut table = Table::new();
-    let row = table.add_row();
-    row.add("Event ID").add("Date").add("Title");
+    let row = table.title_row().add("Event ID").add("Date").add("Title");
 
     if matches.is_present("user") {
         row.add("User");
