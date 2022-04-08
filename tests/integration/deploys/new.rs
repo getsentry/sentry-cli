@@ -17,5 +17,5 @@ fn command_deploys_new() {
             "name": "custom-deploy",
         }))),
     );
-    let _t = register_test("deploys/deploys-new.trycmd");
+    register_test("deploys/deploys-new.trycmd");
 }

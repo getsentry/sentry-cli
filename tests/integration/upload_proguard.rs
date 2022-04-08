@@ -2,7 +2,7 @@ use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
 #[test]
 fn command_upload_proguard_help() {
-    let _t = register_test("upload_proguard/upload_proguard-help.trycmd");
+    register_test("upload_proguard/upload_proguard-help.trycmd");
 }
 
 #[test]
@@ -23,12 +23,12 @@ fn command_upload_proguard() {
         )
         .with_response_body("[]"),
     );
-    let _t = register_test("upload_proguard/upload_proguard.trycmd");
+    register_test("upload_proguard/upload_proguard.trycmd");
 }
 
 #[test]
 fn command_upload_proguard_no_upload() {
-    let _t = register_test("upload_proguard/upload_proguard-no-upload.trycmd");
+    register_test("upload_proguard/upload_proguard-no-upload.trycmd");
 }
 
 #[test]
@@ -41,5 +41,5 @@ fn command_upload_proguard_no_reprocessing() {
         )
         .with_response_body("[]"),
     );
-    let _t = register_test("upload_proguard/upload_proguard-no-reprocessing.trycmd");
+    register_test("upload_proguard/upload_proguard-no-reprocessing.trycmd");
 }
