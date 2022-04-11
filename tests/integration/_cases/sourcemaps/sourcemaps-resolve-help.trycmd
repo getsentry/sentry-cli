@@ -1,0 +1,27 @@
+```
+$ sentry-cli sourcemaps resolve --help
+? success
+sentry-cli[..]-sourcemaps-resolve 
+Resolve sourcemap for a given line/column position.
+
+USAGE:
+    sentry-cli[..] sourcemaps resolve [OPTIONS] [PATH]
+
+ARGS:
+    <PATH>    The sourcemap to resolve.
+
+OPTIONS:
+        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
+    -c, --column <COLUMN>            Column number for minified source.
+    -h, --help                       Print help information
+    -l, --line <LINE>                Line number for minified source.
+        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
+                                     info, warn, error]
+    -o, --org <ORG>                  The organization slug
+    -p, --project <PROJECT>          The project slug.
+        --quiet                      Do not print any output while preserving correct exit code.
+                                     This flag is currently implemented only for selected
+                                     subcommands. [aliases: silent]
+    -r, --release <RELEASE>          The release slug.
+
+```

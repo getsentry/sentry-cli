@@ -5,6 +5,7 @@ mod info;
 mod login;
 mod releases;
 mod send_event;
+mod sourcemaps;
 mod uninstall;
 mod update;
 mod upload_dif;
