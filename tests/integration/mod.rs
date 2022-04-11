@@ -19,8 +19,8 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn register_test(path: &str) -> TestCases {
     let test_case = TestCases::new();
     test_case
-        .env("TEST", "1")
-        .env("SENTRY_DUMP", "dump")
+        .env("SENTRY_INTEGRATION_TEST", "1")
+        .env("SENTRY_DUMP_RESPONSES", "dump") // reused default directory of `trycmd` output dumps
         .env("SENTRY_URL", server_url())
         .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")

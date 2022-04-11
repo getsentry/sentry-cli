@@ -6,5 +6,6 @@ If you do not yet have a token ready we can bring up a browser for you
 to create a token now.
 
 Sentry server: 127.0.0.1
+Running in integration tests mode. Skipping execution.
 
 ```

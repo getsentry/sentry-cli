@@ -1732,8 +1732,12 @@ impl ApiResponse {
             debug!("body: {}", body);
 
             // Internal helper for making it easier to write integration tests.
-            if let Ok(dir) = env::var("SENTRY_DUMP") {
-                dump_response(dir, &self.url, body.into_owned());
+            // Should not be used publicly, as it may be removed without prior warning.
+            // Accepts a relative or absolute path to the directory where responses should be stored.
+            if let Ok(dir) = env::var("SENTRY_DUMP_RESPONSES") {
+                if let Err(err) = dump_response(dir, &self.url, body.into_owned()) {
+                    debug!("Could not dump a response: {}", err);
+                };
             }
         }
         if self.ok() {
@@ -1876,24 +1880,21 @@ fn log_headers(is_response: bool, data: &[u8]) {
     }
 }
 
-fn dump_response(mut dir: String, url: &str, body: String) {
+fn dump_response(mut dir: String, url: &str, body: String) -> Result<()> {
     if dir.starts_with('~') {
         dir = format!(
             "{}{}",
-            dirs::home_dir().unwrap().display(),
+            dirs::home_dir().unwrap_or_default().display(),
             dir.trim_start_matches('~')
         );
     }
-    let filename = Url::parse(url)
-        .unwrap()
-        .path()
-        .trim_matches('/')
-        .replace('/', "__");
-    create_dir_all(&dir).unwrap();
+    let filename = Url::parse(url)?.path().trim_matches('/').replace('/', "__");
+    create_dir_all(&dir)?;
     let filepath = format!("{}/{}.json", &dir, filename);
-    let mut file = File::create(&filepath).unwrap();
-    file.write_all(&body.into_bytes()).unwrap();
+    let mut file = File::create(&filepath)?;
+    file.write_all(&body.into_bytes())?;
     debug!("Response dumped to: {}", &filepath);
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]

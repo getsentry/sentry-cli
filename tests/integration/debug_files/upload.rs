@@ -1,7 +1,8 @@
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
 
-// NOTE: I have no idea why this is timing out on Windows.
+// I have no idea why this is timing out on Windows.
 // I verified it manually, and this command works just fine. — Kamil
+// TODO: Fix windows timeout.
 #[cfg(not(windows))]
 #[test]
 fn command_debug_files_upload_help() {
