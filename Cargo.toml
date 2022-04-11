@@ -57,7 +57,7 @@ username = "0.2.0"
 uuid = { version = "0.8.2", features = ["v4", "serde"] }
 walkdir = "2.3.2"
 which = "4.2.5"
-zip = "0.6.0"
+zip = "0.6.2"
 
 [dev-dependencies]
 insta = { version = "1.14.0", features = ["redactions"] }
