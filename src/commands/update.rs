@@ -37,7 +37,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // It's not currently possible to easily mock I/O with `trycmd`,
     // but verifying that `execute` is not panicking, is good enough for now.
-    if env::var("TEST").is_ok() {
+    if env::var("SENTRY_INTEGRATION_TEST").is_ok() {
+        println!("Running in integration tests mode. Skipping execution.");
         return Ok(());
     }
 

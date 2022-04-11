@@ -1,6 +1,6 @@
 ```
 $ sentry-cli uninstall
 ? success
-Aborted!
+Running in integration tests mode. Skipping execution.
 
 ```
