@@ -12,8 +12,9 @@ lookup line: 0, column: 39:
   minified column: 39
   source code:
     function foo(msg) {
-    bar(msg);
+      bar(msg);
     }
     
+    function bar(msg) {
 
 ```
