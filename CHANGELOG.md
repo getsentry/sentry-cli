@@ -8,7 +8,7 @@ This is the first, long-overdue major release in over 5 years of sentry-cli's li
 Some APIs were removed, some reworked, some newly added.
 
 Most of introduced API changes are backward compatible through hidden aliases, so there is no immediate need for users developing 3rd party tools to make all the changes immediatelly.
-We do however encourage everyone to do it sooner or later, as deprecated things may be removed in the next major releases.
+We do however encourage everyone to do it sooner or later, as deprecated items will be removed in the next major releases.
 
 Breaking changes are denotated with _(breaking)_ tag, and appropriate required changes are provided for each entry.
 
