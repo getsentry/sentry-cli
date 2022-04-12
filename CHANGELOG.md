@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.1
+
+### Various fixes & improvements
+
+- fix: Allow hyphenated release names with any flags position (#1187) by @kamilogorek
+
 ## 2.0.0
 
 This is the first, long-overdue major release in over 5 years of sentry-cli's life.
