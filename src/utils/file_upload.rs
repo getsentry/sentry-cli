@@ -7,8 +7,8 @@ use std::str;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use anyhow::{bail, Result};
 use console::style;
-use failure::{bail, Error};
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -94,7 +94,7 @@ impl<'a> ReleaseFileUpload<'a> {
         self
     }
 
-    pub fn upload(&self) -> Result<(), Error> {
+    pub fn upload(&self) -> Result<()> {
         let api = Api::current();
 
         let chunk_options = api.get_chunk_upload_options(self.context.org)?;
@@ -123,7 +123,7 @@ fn upload_files_parallel(
     context: &UploadContext,
     files: &ReleaseFiles,
     num_threads: usize,
-) -> Result<(), Error> {
+) -> Result<()> {
     let api = Api::current();
 
     // get a list of release files first so we know the file IDs of
@@ -148,7 +148,7 @@ fn upload_files_parallel(
         if files.len() == 1 { "" } else { "s" }
     ));
 
-    let total_bytes = files.values().map(|file| file.contents.len() as u64).sum();
+    let total_bytes = files.values().map(|file| file.contents.len()).sum();
     let files = files.iter().collect::<Vec<_>>();
 
     let pb = Arc::new(ProgressBar::new(total_bytes));
@@ -161,7 +161,7 @@ fn upload_files_parallel(
         files
             .into_par_iter()
             .enumerate()
-            .map(|(index, (_, file))| -> Result<(), Error> {
+            .map(|(index, (_, file))| -> Result<()> {
                 let api = Api::current();
                 let mode = ProgressBarMode::Shared((
                     pb.clone(),
@@ -204,15 +204,15 @@ fn upload_files_chunked(
     context: &UploadContext,
     files: &ReleaseFiles,
     options: &ChunkUploadOptions,
-) -> Result<(), Error> {
+) -> Result<()> {
     let archive = build_artifact_bundle(context, files)?;
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
 
-    let progress = ProgressBar::new_spinner();
-    progress.enable_steady_tick(100);
-    progress.set_style(progress_style);
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
 
     let view = ByteView::open(archive.path())?;
     let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
@@ -222,7 +222,7 @@ fn upload_files_chunked(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    progress.finish_with_duration("Optimizing");
+    pb.finish_with_duration("Optimizing");
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading release files...\
@@ -235,9 +235,9 @@ fn upload_files_chunked(
 
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
-    let progress = ProgressBar::new_spinner();
-    progress.enable_steady_tick(100);
-    progress.set_style(progress_style);
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
 
     let assemble_start = Instant::now();
     let max_wait = match options.max_wait {
@@ -269,7 +269,7 @@ fn upload_files_chunked(
         bail!("Failed to process uploaded files: {}", message);
     }
 
-    progress.finish_with_duration("Processing");
+    pb.finish_with_duration("Processing");
 
     if response.state.is_pending() {
         if context.wait {
@@ -289,15 +289,15 @@ fn upload_files_chunked(
     Ok(())
 }
 
-fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Result<TempFile, Error> {
+fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
     );
 
-    let progress = ProgressBar::new(files.len() as u64);
-    progress.set_style(progress_style);
-    progress.set_prefix(">");
+    let pb = ProgressBar::new(files.len());
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
 
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
@@ -312,8 +312,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
     }
 
     for file in files.values() {
-        progress.inc(1);
-        progress.set_message(&file.url);
+        pb.inc(1);
+        pb.set_message(&file.url);
 
         let mut info = SourceFileInfo::new();
         info.set_ty(file.ty);
@@ -338,12 +338,12 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
         }
     );
 
-    progress.finish_with_duration("Bundling");
+    pb.finish_with_duration("Bundling");
 
     Ok(archive)
 }
 
-fn url_to_bundle_path(url: &str) -> Result<String, Error> {
+fn url_to_bundle_path(url: &str) -> Result<String> {
     let base = Url::parse("http://~").unwrap();
     let url = if let Some(rest) = url.strip_prefix("~/") {
         base.join(rest)?

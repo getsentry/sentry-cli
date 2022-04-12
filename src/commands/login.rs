@@ -1,29 +1,30 @@
-//! Implements a command for signing in.
-use clap::{App, Arg, ArgMatches};
-use failure::Error;
+use std::env;
+
+use anyhow::Result;
+use clap::{Arg, ArgMatches, Command};
 use url::Url;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::utils::ui::{prompt, prompt_to_continue};
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Authenticate with the Sentry server.").arg(
-        Arg::with_name("global")
-            .short("g")
+pub fn make_command(command: Command) -> Command {
+    command.about("Authenticate with the Sentry server.").arg(
+        Arg::new("global")
+            .short('g')
             .long("global")
             .help("Store authentication token globally rather than locally."),
     )
 }
 
-fn update_config(config: &Config, token: &str) -> Result<(), Error> {
+fn update_config(config: &Config, token: &str) -> Result<()> {
     let mut new_cfg = config.clone();
     new_cfg.set_auth(Auth::Token(token.to_string()));
     new_cfg.save()?;
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
 
@@ -37,6 +38,13 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             .host_str()
             .unwrap_or("<unknown>")
     );
+
+    // It's not currently possible to easily mock I/O with `trycmd`,
+    // but verifying that `execute` is not panicking, is good enough for now.
+    if env::var("SENTRY_INTEGRATION_TEST").is_ok() {
+        println!("Running in integration tests mode. Skipping execution.");
+        return Ok(());
+    }
 
     if prompt_to_continue("Open browser now?")? && open::that(&token_url).is_err() {
         println!("Cannot open browser. Please manually go to {}", &token_url);

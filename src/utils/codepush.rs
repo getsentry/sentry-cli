@@ -4,8 +4,8 @@ use std::path::Path;
 use std::process;
 use std::str;
 
+use anyhow::{bail, format_err, Error, Result};
 use console::strip_ansi_codes;
-use failure::{bail, err_msg, Error};
 use glob::{glob_with, MatchOptions};
 use if_chain::if_chain;
 use serde::Deserialize;
@@ -37,22 +37,20 @@ pub struct CodePushDeployment {
 fn get_codepush_error(output: &process::Output) -> Error {
     if let Ok(message) = str::from_utf8(&output.stderr) {
         let stripped = strip_ansi_codes(message);
-        err_msg(
-            if let Some(rest) = stripped.strip_prefix("[Error]  ") {
-                rest
-            } else if let Some(rest) = stripped.strip_prefix("[Error] ") {
-                rest
-            } else {
-                &stripped
-            }
-            .to_string(),
-        )
+        format_err!(if let Some(rest) = stripped.strip_prefix("[Error]  ") {
+            rest
+        } else if let Some(rest) = stripped.strip_prefix("[Error] ") {
+            rest
+        } else {
+            &stripped
+        }
+        .to_string(),)
     } else {
-        err_msg("Unknown Error")
+        format_err!("Unknown Error")
     }
 }
 
-pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>, Error> {
+pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
     let codepush_bin = if Path::new(CODEPUSH_NPM_PATH).exists() {
         CODEPUSH_NPM_PATH
     } else {
@@ -68,7 +66,7 @@ pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>, Er
         .output()
         .map_err(|e| {
             if e.kind() == io::ErrorKind::NotFound {
-                "Codepush not found. Is it installed and configured on the PATH?".into()
+                Error::msg("Codepush not found. Is it installed and configured on the PATH?")
             } else {
                 Error::from(e).context("Failed to run codepush")
             }
@@ -76,17 +74,15 @@ pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>, Er
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
-            let err_msg = format!("Command `{} deployment ls {} --format json` failed to produce a valid JSON output.", codepush_bin, app);
-            panic!("{}", err_msg);
+            let format_err = format!("Command `{} deployment ls {} --format json` failed to produce a valid JSON output.", codepush_bin, app);
+            panic!("{}", format_err);
         }))
     } else {
-        Err(get_codepush_error(&output)
-            .context("Failed to get codepush deployments")
-            .into())
+        Err(get_codepush_error(&output).context("Failed to get codepush deployments"))
     }
 }
 
-pub fn get_codepush_package(app: &str, deployment: &str) -> Result<CodePushPackage, Error> {
+pub fn get_codepush_package(app: &str, deployment: &str) -> Result<CodePushPackage> {
     let deployments = get_codepush_deployments(app)?;
     for dep in deployments {
         if_chain! {
@@ -105,7 +101,7 @@ pub fn get_react_native_codepush_release(
     package: &CodePushPackage,
     platform: &str,
     bundle_id_override: Option<&str>,
-) -> Result<String, Error> {
+) -> Result<String> {
     if let Some(bundle_id) = bundle_id_override {
         return Ok(format!("{}+codepush:{}", bundle_id, package.label));
     }

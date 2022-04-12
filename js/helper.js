@@ -133,7 +133,7 @@ function getPath() {
  * @param {Object} [config] More configuration to pass to the CLI
  * @returns {Promise.<string>} A promise that resolves to the standard output.
  */
-function execute(args, live, silent, configFile, config = {}) {
+async function execute(args, live, silent, configFile, config = {}) {
   const env = { ...process.env };
   if (configFile) {
     env.SENTRY_PROPERTIES = configFile;

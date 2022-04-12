@@ -22,7 +22,7 @@ fn displays_releases_with_projects() {
 fn doesnt_fail_with_empty_response() {
     let _server = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
-            .with_response_file("empty.json"),
+            .with_response_body("[]"),
     );
     register_test("releases/releases-list-empty.trycmd");
 }

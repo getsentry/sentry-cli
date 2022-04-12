@@ -7,21 +7,23 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt;
-use std::fs::File;
+use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::{env, fmt};
 
+use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
+use clap::ArgMatches;
 use console::style;
-use failure::{Backtrace, Context, Error, Fail, ResultExt};
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
+use indicatif::ProgressStyle;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::{Mutex, RwLock};
@@ -29,16 +31,16 @@ use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
-use sha1::Digest;
+use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
-use uuid::Uuid;
+use url::Url;
 
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
 use crate::utils::http::{self, is_absolute_url, parse_link_header};
-use crate::utils::progress::{make_progress_bar, ProgressBar};
+use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
@@ -176,7 +178,7 @@ pub struct Api {
     pool: r2d2::Pool<CurlConnectionManager>,
 }
 
-#[derive(Debug, Fail)]
+#[derive(Debug, thiserror::Error)]
 pub struct SentryError {
     status: u32,
     detail: Option<String>,
@@ -211,53 +213,42 @@ impl fmt::Display for SentryError {
     }
 }
 
+#[derive(Clone, Debug, thiserror::Error)]
+#[error("project was renamed to '{0}'\nPlease use this slug in your .sentryclirc file, sentry.properties file or in the CLI --project parameter")]
+pub struct ProjectRenamedError(String);
+
 /// Represents API errors.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, Fail)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, thiserror::Error)]
 pub enum ApiErrorKind {
-    #[fail(display = "could not serialize value as JSON")]
+    #[error("could not serialize value as JSON")]
     CannotSerializeAsJson,
-    #[fail(display = "could not parse JSON response")]
+    #[error("could not parse JSON response")]
     BadJson,
-    #[fail(display = "not a JSON response")]
+    #[error("not a JSON response")]
     NotJson,
-    #[fail(display = "request failed because API URL was incorrectly formatted")]
+    #[error("request failed because API URL was incorrectly formatted")]
     BadApiUrl,
-    #[fail(display = "organization not found")]
+    #[error("organization not found")]
     OrganizationNotFound,
-    #[fail(display = "resource not found")]
+    #[error("resource not found")]
     ResourceNotFound,
-    #[fail(display = "project not found")]
+    #[error("project not found")]
     ProjectNotFound,
-    #[fail(display = "release not found")]
+    #[error("release not found")]
     ReleaseNotFound,
-    #[fail(display = "chunk upload endpoint not supported by sentry server")]
+    #[error("chunk upload endpoint not supported by sentry server")]
     ChunkUploadNotSupported,
-    #[fail(display = "API request failed")]
+    #[error("API request failed")]
     RequestFailed,
-    #[fail(display = "could not compress data")]
+    #[error("could not compress data")]
     CompressionFailed,
 }
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub struct ApiError {
-    inner: Context<ApiErrorKind>,
-}
-
-#[derive(Clone, Debug, Fail)]
-#[fail(
-    display = "project was renamed to '{}'\n\nPlease use this slug in your .sentryclirc or sentry.properties or for the --project parameter",
-    _0
-)]
-pub struct ProjectRenamedError(String);
-
-impl Fail for ApiError {
-    fn cause(&self) -> Option<&dyn Fail> {
-        self.inner.cause()
-    }
-
-    fn backtrace(&self) -> Option<&Backtrace> {
-        self.inner.backtrace()
-    }
+    inner: ApiErrorKind,
+    #[source]
+    source: Option<anyhow::Error>,
 }
 
 impl fmt::Display for ApiError {
@@ -267,34 +258,41 @@ impl fmt::Display for ApiError {
 }
 
 impl ApiError {
+    pub fn with_source<E: Into<anyhow::Error>>(kind: ApiErrorKind, source: E) -> ApiError {
+        ApiError {
+            inner: kind,
+            source: Some(source.into()),
+        }
+    }
+
     pub fn kind(&self) -> ApiErrorKind {
-        *self.inner.get_context()
+        self.inner
+    }
+
+    fn set_source<E: Into<anyhow::Error>>(mut self, source: E) -> ApiError {
+        self.source = Some(source.into());
+        self
     }
 }
 
 impl From<ApiErrorKind> for ApiError {
     fn from(kind: ApiErrorKind) -> ApiError {
         ApiError {
-            inner: Context::new(kind),
+            inner: kind,
+            source: None,
         }
-    }
-}
-
-impl From<Context<ApiErrorKind>> for ApiError {
-    fn from(inner: Context<ApiErrorKind>) -> ApiError {
-        ApiError { inner }
     }
 }
 
 impl From<curl::Error> for ApiError {
     fn from(err: curl::Error) -> ApiError {
-        Error::from(err).context(ApiErrorKind::RequestFailed).into()
+        ApiError::from(ApiErrorKind::RequestFailed).set_source(err)
     }
 }
 
 impl From<curl::FormError> for ApiError {
     fn from(err: curl::FormError) -> ApiError {
-        Error::from(err).context(ApiErrorKind::RequestFailed).into()
+        ApiError::from(ApiErrorKind::RequestFailed).set_source(err)
     }
 }
 
@@ -326,6 +324,7 @@ impl fmt::Display for Method {
 /// Represents an API request.  This can be customized before
 /// sending but only sent once.
 pub struct ApiRequest {
+    url: String,
     handle: r2d2::PooledConnection<CurlConnectionManager>,
     headers: curl::easy::List,
     is_authenticated: bool,
@@ -338,6 +337,7 @@ pub struct ApiRequest {
 /// Represents an API response.
 #[derive(Clone, Debug)]
 pub struct ApiResponse {
+    url: String,
     status: u32,
     headers: Vec<String>,
     body: Option<Vec<u8>>,
@@ -380,7 +380,6 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    #[allow(clippy::needless_pass_by_value)]
     pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         let mut handle = self.pool.get().unwrap();
         handle.reset();
@@ -398,7 +397,7 @@ impl Api {
             (
                 Cow::Owned(match self.config.get_api_endpoint(url) {
                     Ok(rv) => rv,
-                    Err(err) => return Err(err.context(ApiErrorKind::BadApiUrl).into()),
+                    Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
                 }),
                 self.config.get_auth(),
             )
@@ -420,9 +419,9 @@ impl Api {
         handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
         let env = self.config.get_pipeline_env();
-        let custom_header = self.config.get_custom_header();
+        let headers = self.config.get_headers();
 
-        ApiRequest::create(handle, &method, &url, auth, env, custom_header)
+        ApiRequest::create(handle, &method, &url, auth, env, headers)
     }
 
     /// Convenience method that performs a `GET` request.
@@ -682,7 +681,7 @@ impl Api {
         sources: HashSet<(String, PathBuf)>,
         dist: Option<&str>,
         headers: Option<&[(String, String)]>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), ApiError> {
         if sources.is_empty() {
             return Ok(());
         }
@@ -697,7 +696,11 @@ impl Api {
             style(version).cyan()
         );
 
-        let pb = make_progress_bar(sources.len() as u64);
+        let pb = ProgressBar::new(sources.len());
+        pb.set_style(ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        )));
 
         for (url, path) in sources {
             pb.set_message(path.to_str().unwrap());
@@ -1195,8 +1198,8 @@ impl Api {
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
             let name = compression.field_name();
-            let buffer =
-                Api::compress(data, compression).context(ApiErrorKind::CompressionFailed)?;
+            let buffer = Api::compress(data, compression)
+                .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
             form.part(name).buffer(&checksum, buffer).add()?
         }
 
@@ -1328,67 +1331,6 @@ impl Api {
         } else {
             resp.into_result().map(|_| true)
         }
-    }
-
-    /// List all monitors associated with an organization
-    pub fn list_organization_monitors(&self, org: &str) -> ApiResult<Vec<Monitor>> {
-        let mut rv = vec![];
-        let mut cursor = "".to_string();
-        loop {
-            let resp = self.get(&format!(
-                "/organizations/{}/monitors/?cursor={}",
-                PathArg(org),
-                QueryArg(&cursor)
-            ))?;
-            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
-                if rv.is_empty() {
-                    return Err(ApiErrorKind::ResourceNotFound.into());
-                } else {
-                    break;
-                }
-            }
-            let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Monitor>>()?.into_iter());
-            if let Some(next) = pagination.into_next_cursor() {
-                cursor = next;
-            } else {
-                break;
-            }
-        }
-        Ok(rv)
-    }
-
-    /// Create a new checkin for a monitor
-    pub fn create_monitor_checkin(
-        &self,
-        monitor: &Uuid,
-        checkin: &CreateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
-        let path = &format!("/monitors/{}/checkins/", PathArg(monitor),);
-        let resp = self.post(path, checkin)?;
-        if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-        resp.convert()
-    }
-
-    /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(
-        &self,
-        monitor: &Uuid,
-        checkin_id: &Uuid,
-        checkin: &UpdateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
-        let path = &format!(
-            "/monitors/{}/checkins/{}/",
-            PathArg(monitor),
-            PathArg(checkin_id),
-        );
-        let resp = self.put(path, checkin)?;
-        if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-        resp.convert()
     }
 
     /// List all projects associated with an organization
@@ -1581,12 +1523,18 @@ impl ApiRequest {
         url: &str,
         auth: Option<&Auth>,
         pipeline_env: Option<String>,
-        custom_header: Option<String>,
+        global_headers: Option<Vec<String>>,
     ) -> ApiResult<Self> {
         debug!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
+
+        if let Some(global_headers) = global_headers {
+            for header in global_headers {
+                headers.append(&header).ok();
+            }
+        }
 
         match pipeline_env {
             Some(env) => {
@@ -1600,10 +1548,6 @@ impl ApiRequest {
                     .append(&format!("User-Agent: sentry-cli/{}", VERSION))
                     .ok();
             }
-        }
-
-        if let Some(custom_header) = custom_header {
-            headers.append(&custom_header).ok();
         }
 
         match method {
@@ -1621,6 +1565,7 @@ impl ApiRequest {
         handle.url(url)?;
 
         let request = ApiRequest {
+            url: url.to_owned(),
             handle,
             headers,
             is_authenticated: false,
@@ -1665,7 +1610,7 @@ impl ApiRequest {
     pub fn with_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<Self> {
         let mut body_bytes: Vec<u8> = vec![];
         serde_json::to_writer(&mut body_bytes, &body)
-            .context(ApiErrorKind::CannotSerializeAsJson)?;
+            .map_err(|err| ApiError::with_source(ApiErrorKind::CannotSerializeAsJson, err))?;
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
@@ -1719,10 +1664,12 @@ impl ApiRequest {
         let headers = self.get_headers();
         self.handle.http_headers(headers)?;
         let body = self.body.as_deref();
+        let url = self.url.clone();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
         debug!("response status: {}", status);
         Ok(ApiResponse {
+            url,
             status,
             headers,
             body: None,
@@ -1781,38 +1728,51 @@ impl ApiResponse {
     /// non okay response codes into errors.
     pub fn into_result(self) -> ApiResult<Self> {
         if let Some(ref body) = self.body {
-            debug!("body: {}", String::from_utf8_lossy(body));
+            let body = String::from_utf8_lossy(body);
+            debug!("body: {}", body);
+
+            // Internal helper for making it easier to write integration tests.
+            // Should not be used publicly, as it may be removed without prior warning.
+            // Accepts a relative or absolute path to the directory where responses should be stored.
+            if let Ok(dir) = env::var("SENTRY_DUMP_RESPONSES") {
+                if let Err(err) = dump_response(dir, &self.url, body.into_owned()) {
+                    debug!("Could not dump a response: {}", err);
+                };
+            }
         }
         if self.ok() {
             return Ok(self);
         }
         if let Ok(err) = self.deserialize::<ErrorInfo>() {
-            Err(SentryError {
-                status: self.status(),
-                detail: Some(match err {
-                    ErrorInfo::Detail(val) => val,
-                    ErrorInfo::Error(val) => val,
-                }),
-                extra: None,
-            }
-            .context(ApiErrorKind::RequestFailed)
-            .into())
+            Err(ApiError::with_source(
+                ApiErrorKind::RequestFailed,
+                SentryError {
+                    status: self.status(),
+                    detail: Some(match err {
+                        ErrorInfo::Detail(val) => val,
+                        ErrorInfo::Error(val) => val,
+                    }),
+                    extra: None,
+                },
+            ))
         } else if let Ok(value) = self.deserialize::<serde_json::Value>() {
-            Err(SentryError {
-                status: self.status(),
-                detail: Some("request failure".into()),
-                extra: Some(value),
-            }
-            .context(ApiErrorKind::RequestFailed)
-            .into())
+            Err(ApiError::with_source(
+                ApiErrorKind::RequestFailed,
+                SentryError {
+                    status: self.status(),
+                    detail: Some("request failure".into()),
+                    extra: Some(value),
+                },
+            ))
         } else {
-            Err(SentryError {
-                status: self.status(),
-                detail: None,
-                extra: None,
-            }
-            .context(ApiErrorKind::RequestFailed)
-            .into())
+            Err(ApiError::with_source(
+                ApiErrorKind::RequestFailed,
+                SentryError {
+                    status: self.status(),
+                    detail: None,
+                    extra: None,
+                },
+            ))
         }
     }
 
@@ -1821,11 +1781,11 @@ impl ApiResponse {
         if !self.is_json() {
             return Err(ApiErrorKind::NotJson.into());
         }
-        Ok(serde_json::from_reader(match self.body {
+        serde_json::from_reader(match self.body {
             Some(ref body) => body,
             None => &b""[..],
         })
-        .context(ApiErrorKind::BadJson)?)
+        .map_err(|err| ApiError::with_source(ApiErrorKind::BadJson, err))
     }
 
     /// Like `deserialize` but consumes the response and will convert
@@ -1849,9 +1809,10 @@ impl ApiResponse {
                 }
 
                 match self.convert::<ErrorInfo>() {
-                    Ok(info) => Err(ProjectRenamedError(info.detail.slug)
-                        .context(res_err)
-                        .into()),
+                    Ok(info) => Err(ApiError::with_source(
+                        res_err,
+                        ProjectRenamedError(info.detail.slug),
+                    )),
                     Err(_) => Err(res_err.into()),
                 }
             }
@@ -1917,6 +1878,23 @@ fn log_headers(is_response: bool, data: &[u8]) {
             debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }
     }
+}
+
+fn dump_response(mut dir: String, url: &str, body: String) -> Result<()> {
+    if dir.starts_with('~') {
+        dir = format!(
+            "{}{}",
+            dirs::home_dir().unwrap_or_default().display(),
+            dir.trim_start_matches('~')
+        );
+    }
+    let filename = Url::parse(url)?.path().trim_matches('/').replace('/', "__");
+    create_dir_all(&dir)?;
+    let filepath = format!("{}/{}.json", &dir, filename);
+    let mut file = File::create(&filepath)?;
+    file.write_all(&body.into_bytes())?;
+    debug!("Response dumped to: {}", &filepath);
+    Ok(())
 }
 
 #[derive(Debug, Deserialize)]
@@ -2179,6 +2157,27 @@ impl IssueFilter {
         }
         Some(rv.join("&"))
     }
+
+    pub fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter> {
+        if matches.is_present("all") {
+            return Ok(IssueFilter::All);
+        }
+        if let Some(status) = matches.value_of("status") {
+            return Ok(IssueFilter::Status(status.into()));
+        }
+        let mut ids = vec![];
+        if let Some(values) = matches.values_of("id") {
+            for value in values {
+                ids.push(value.parse::<u64>().context("Invalid issue ID")?);
+            }
+        }
+
+        if ids.is_empty() {
+            Ok(IssueFilter::Empty)
+        } else {
+            Ok(IssueFilter::ExplicitIds(ids))
+        }
+    }
 }
 
 #[derive(Deserialize)]
@@ -2206,42 +2205,6 @@ pub struct Project {
     pub slug: String,
     pub name: String,
     pub team: Option<Team>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Monitor {
-    pub id: String,
-    pub name: String,
-    pub status: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum MonitorStatus {
-    Unknown,
-    Ok,
-    InProgress,
-    Error,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct MonitorCheckIn {
-    pub id: Uuid,
-    pub status: MonitorStatus,
-    pub duration: Option<u64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct CreateMonitorCheckIn {
-    pub status: MonitorStatus,
-}
-
-#[derive(Debug, Serialize, Default)]
-pub struct UpdateMonitorCheckIn {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<MonitorStatus>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<u64>,
 }
 
 #[derive(Deserialize, Debug)]

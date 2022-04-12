@@ -1,30 +1,66 @@
-use std::io;
-use std::io::Write;
-use std::mem;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Arc, Weak};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Weak,
+};
 
 use chrono::Local;
 use console::{style, Color};
 use indicatif::ProgressBar;
 use lazy_static::lazy_static;
+use log::max_level;
 use parking_lot::RwLock;
 
+// Quiet mode decides whether to print something based on `--quiet` flag.
+lazy_static! {
+    static ref QUIET_MODE: AtomicBool = AtomicBool::new(false);
+}
+
+pub fn is_quiet_mode() -> bool {
+    QUIET_MODE.load(Ordering::Relaxed)
+}
+
+pub fn set_quiet_mode(is_quiet: bool) {
+    QUIET_MODE.store(is_quiet, Ordering::Relaxed);
+}
+
+// NOTE: Remove `allow`s after first use.
+#[allow(unused_macros)]
+macro_rules! quiet_println {
+    ($($tt:tt)*) => {{
+        if !crate::utils::logging::is_quiet_mode() {
+            println!($($tt)*);
+        }
+    }};
+}
+#[allow(unused_imports)]
+pub(crate) use quiet_println;
+
+// NOTE: Remove `allow`s after first use.
+#[allow(unused_macros)]
+macro_rules! quiet_eprintln {
+    ($($tt:tt)*) => {{
+        if !crate::utils::logging::is_quiet_mode() {
+            eprintln!($($tt)*);
+        }
+    }};
+}
+#[allow(unused_imports)]
+pub(crate) use quiet_eprintln;
+
+// Globally shared ProgressBar instance.
 lazy_static! {
     static ref PROGRESS_BAR: RwLock<Option<Weak<ProgressBar>>> = RwLock::new(None);
-    static ref MAX_LEVEL: AtomicUsize =
-        AtomicUsize::new(unsafe { mem::transmute(log::LevelFilter::Warn) });
 }
 
-pub fn max_level() -> log::LevelFilter {
-    unsafe { mem::transmute(MAX_LEVEL.load(Ordering::Relaxed)) }
+pub fn set_progress_bar(pb: Option<Weak<ProgressBar>>) {
+    *PROGRESS_BAR.write() = pb;
 }
 
-pub fn set_max_level(level: log::LevelFilter) {
-    MAX_LEVEL.store(unsafe { mem::transmute(level) }, Ordering::Relaxed);
+fn get_progress_bar() -> Option<Arc<ProgressBar>> {
+    PROGRESS_BAR.read().as_ref()?.upgrade()
 }
 
-/// A simple logger
+/// A simple logger.
 pub struct Logger;
 
 impl Logger {
@@ -79,7 +115,7 @@ impl log::Log for Logger {
         if let Some(pb) = get_progress_bar() {
             pb.println(msg);
         } else {
-            writeln!(io::stderr(), "{}", msg).ok();
+            eprintln!("{}", msg);
         }
     }
 
@@ -97,12 +133,4 @@ fn should_skip_log(record: &log::Record) -> bool {
     }
 
     false
-}
-
-pub fn set_progress_bar(pb: Option<Weak<ProgressBar>>) {
-    *PROGRESS_BAR.write() = pb;
-}
-
-fn get_progress_bar() -> Option<Arc<ProgressBar>> {
-    PROGRESS_BAR.read().as_ref()?.upgrade()
 }

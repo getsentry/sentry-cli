@@ -1,8 +1,8 @@
 use std::fmt;
 use std::path::PathBuf;
 
+use anyhow::{bail, format_err, Error, Result};
 use chrono::{DateTime, FixedOffset, TimeZone};
-use failure::{bail, format_err, Error};
 use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
@@ -64,7 +64,7 @@ fn parse_rev_range(rng: &str) -> (Option<String>, String) {
 }
 
 impl CommitSpec {
-    pub fn parse(s: &str) -> Result<CommitSpec, Error> {
+    pub fn parse(s: &str) -> Result<CommitSpec> {
         lazy_static! {
             static ref SPEC_RE: Regex = Regex::new(r"^([^@#]+)(?:#([^@]+))?(?:@(.+))?$").unwrap();
         }
@@ -214,7 +214,7 @@ pub fn get_repo_from_remote(repo: &str) -> String {
     obj.id
 }
 
-fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>, Error> {
+fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
         if configured_repo.name != repo {
@@ -258,7 +258,7 @@ fn find_matching_rev(
     repos: &[Repo],
     disable_discovery: bool,
     remote_name: Option<String>,
-) -> Result<Option<String>, Error> {
+) -> Result<Option<String>> {
     info!("Resolving {} ({})", &reference, spec);
 
     let r = match reference {
@@ -312,7 +312,7 @@ fn find_matching_submodule(
     r: &str,
     reference_url: String,
     repo: git2::Repository,
-) -> Result<Option<String>, Error> {
+) -> Result<Option<String>> {
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
@@ -353,7 +353,7 @@ fn find_matching_revs(
     repos: &[Repo],
     disable_discovery: bool,
     remote_name: Option<String>,
-) -> Result<(Option<String>, String), Error> {
+) -> Result<(Option<String>, String)> {
     fn error(r: GitReference<'_>, repo: &str) -> Error {
         format_err!(
             "Could not find commit '{}' for '{}'. If you do not have local \
@@ -390,7 +390,7 @@ fn find_matching_revs(
     Ok((prev_rev, rev))
 }
 
-pub fn find_head() -> Result<String, Error> {
+pub fn find_head() -> Result<String> {
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
     Ok(head.id().to_string())
@@ -402,7 +402,7 @@ pub fn find_heads(
     specs: Option<Vec<CommitSpec>>,
     repos: &[Repo],
     remote_name: Option<String>,
-) -> Result<Vec<Ref>, Error> {
+) -> Result<Vec<Ref>> {
     let mut rv = vec![];
 
     // if commit specs were explicitly provided find head commits with
@@ -449,7 +449,7 @@ pub fn get_commits_from_git<'a>(
     prev_commit: &str,
     default_count: usize,
     ignore_missing: bool,
-) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>), Error> {
+) -> Result<(Vec<Commit<'a>>, Option<Commit<'a>>)> {
     match git2::Oid::from_str(prev_commit) {
         Ok(prev) => {
             let mut found = false;
@@ -508,7 +508,7 @@ pub fn get_commits_from_git<'a>(
 pub fn get_default_commits_from_git(
     repo: &Repository,
     default_count: usize,
-) -> Result<(Vec<Commit>, Option<Commit>), Error> {
+) -> Result<(Vec<Commit>, Option<Commit>)> {
     let mut revwalk = repo.revwalk()?;
     revwalk.push_head()?;
     let mut result: Vec<Commit> = revwalk
@@ -529,7 +529,7 @@ pub fn generate_patch_set(
     commits: Vec<Commit>,
     previous: Option<Commit>,
     repository: &str,
-) -> Result<Vec<GitCommit>, Error> {
+) -> Result<Vec<GitCommit>> {
     let mut result = vec![];
     for (index, commit) in commits.iter().enumerate() {
         let mut git_commit = GitCommit {

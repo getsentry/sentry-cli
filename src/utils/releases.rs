@@ -4,7 +4,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use failure::{bail, Error};
+use anyhow::{bail, Result};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -13,7 +13,7 @@ use crate::utils::cordova::CordovaConfig;
 use crate::utils::vcs;
 use crate::utils::xcode::InfoPlist;
 
-pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
+pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
     let here = path.unwrap_or(env::current_dir()?);
     let platform = match here.file_name().and_then(OsStr::to_str) {
         Some("android") => "android",
@@ -42,7 +42,7 @@ pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>,
     }
 }
 
-pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>, Error> {
+pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>> {
     // if we are executed from within xcode, then we can use the environment
     // based discovery to get a release name without any interpolation.
     if let Some(plist) = plist.or(InfoPlist::discover_from_env()?) {
@@ -52,7 +52,7 @@ pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>
     Ok(None)
 }
 
-pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>, Error> {
+pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>> {
     lazy_static! {
         static ref APP_ID_RE: Regex = Regex::new(r#"applicationId\s+["']([^"']*)["']"#).unwrap();
         static ref VERSION_NAME_RE: Regex =
@@ -84,7 +84,7 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
 }
 
 /// Detects the release name for the current working directory.
-pub fn detect_release_name() -> Result<String, Error> {
+pub fn detect_release_name() -> Result<String> {
     // cordova release detection first.
     if let Some(release) = get_cordova_release_name(None)? {
         return Ok(release);

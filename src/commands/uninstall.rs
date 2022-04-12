@@ -1,34 +1,29 @@
-//! Implements a command for uninstalling `sentry-cli`
 use std::env;
 use std::fs;
 
-use clap::{App, AppSettings, Arg, ArgMatches};
+use anyhow::Result;
+use clap::{Arg, ArgMatches, Command};
 use console::style;
-use failure::Error;
 
 use crate::utils::fs::is_writable;
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 use crate::utils::ui::prompt_to_continue;
 
-fn is_hidden() -> bool {
-    cfg!(windows) || is_homebrew_install() || is_npm_install()
+pub fn make_command(command: Command) -> Command {
+    let command = command.about("Uninstall the sentry-cli executable.").arg(
+        Arg::new("confirm")
+            .long("confirm")
+            .help("Skip uninstall confirmation prompt."),
+    );
+
+    if cfg!(windows) || is_homebrew_install() || is_npm_install() {
+        command.hide(true)
+    } else {
+        command
+    }
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Uninstall the sentry-cli executable.")
-        .arg(
-            Arg::with_name("confirm")
-                .long("confirm")
-                .help("Skip uninstall confirmation prompt."),
-        )
-        .settings(&if is_hidden() {
-            vec![AppSettings::Hidden]
-        } else {
-            vec![]
-        })
-}
-
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let exe = env::current_exe()?;
 
     if is_homebrew_install() {
@@ -54,6 +49,13 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         println!();
         println!("Delete this file yourself: {}", exe.display());
         return Err(QuietExit(1).into());
+    }
+
+    // It's not currently possible to easily mock I/O with `trycmd`,
+    // but verifying that `execute` is not panicking, is good enough for now.
+    if env::var("SENTRY_INTEGRATION_TEST").is_ok() {
+        println!("Running in integration tests mode. Skipping execution.");
+        return Ok(());
     }
 
     if !matches.is_present("confirm")

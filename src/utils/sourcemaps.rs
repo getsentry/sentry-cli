@@ -5,9 +5,9 @@ use std::mem;
 use std::path::PathBuf;
 use std::str;
 
+use anyhow::{bail, Error, Result};
 use console::style;
-use failure::{bail, Error};
-use if_chain::if_chain;
+use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
@@ -15,7 +15,8 @@ use url::Url;
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, ReleaseFiles, UploadContext};
-use crate::utils::progress::make_progress_bar;
+use crate::utils::logging::is_quiet_mode;
+use crate::utils::progress::ProgressBar;
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
     if let Ok(code_str) = decode_unknown_string(code) {
@@ -25,7 +26,7 @@ fn is_likely_minified_js(code: &[u8]) -> bool {
     }
 }
 
-fn join_url(base_url: &str, url: &str) -> Result<String, Error> {
+fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
         match Url::parse(&format!("http://{}", base_url))?.join(url) {
             Ok(url) => {
@@ -36,7 +37,7 @@ fn join_url(base_url: &str, url: &str) -> Result<String, Error> {
                     Ok(rv)
                 }
             }
-            Err(x) => Err(Error::from(x).context("could not join URL").into()),
+            Err(x) => Err(Error::from(x).context("could not join URL")),
         }
     } else {
         Ok(Url::parse(base_url)?.join(url)?.to_string())
@@ -70,29 +71,17 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     rv
 }
 
-pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> sourcemap::SourceMapRef {
-    if let Some(sm_ref) =
-        get_sourcemap_reference_from_headers(file.headers.iter().map(|&(ref k, ref v)| (k, v)))
-    {
-        sourcemap::SourceMapRef::Ref(sm_ref.to_string())
-    } else {
-        sourcemap::SourceMapRef::Missing
-    }
+pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+    get_sourcemap_reference_from_headers(file.headers.iter().map(|&(ref k, ref v)| (k, v)))
+        .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
-pub fn get_sourcemap_ref_from_contents(file: &ReleaseFile) -> sourcemap::SourceMapRef {
-    sourcemap::locate_sourcemap_reference_slice(&file.contents)
-        .unwrap_or(sourcemap::SourceMapRef::Missing)
+pub fn get_sourcemap_ref_from_contents(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+    sourcemap::locate_sourcemap_reference_slice(&file.contents).unwrap_or(None)
 }
 
-pub fn get_sourcemap_ref(file: &ReleaseFile) -> sourcemap::SourceMapRef {
-    match get_sourcemap_ref_from_headers(file) {
-        sourcemap::SourceMapRef::Missing => {}
-        other => {
-            return other;
-        }
-    }
-    get_sourcemap_ref_from_contents(file)
+pub fn get_sourcemap_ref(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+    get_sourcemap_ref_from_headers(file).or_else(|| get_sourcemap_ref_from_contents(file))
 }
 
 pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, &'a String)>>(
@@ -107,7 +96,7 @@ pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, 
     None
 }
 
-fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String, Error> {
+fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String> {
     // if there is only one sourcemap in total we just assume that's the one.
     // We just need to make sure that we fix up the reference if we need to
     // (eg: ~/ -> /).
@@ -181,7 +170,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds a new file for processing.
-    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<(), Error> {
+    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<()> {
         self.pending_sources.insert((url.to_string(), file));
         Ok(())
     }
@@ -191,7 +180,12 @@ impl SourceMapProcessor {
             return;
         }
 
-        let pb = make_progress_bar(self.pending_sources.len() as u64);
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(self.pending_sources.len());
+        pb.set_style(progress_style);
 
         println!(
             "{} Analyzing {} sources",
@@ -250,6 +244,10 @@ impl SourceMapProcessor {
     }
 
     pub fn dump_log(&self, title: &str) {
+        if is_quiet_mode() {
+            return;
+        }
+
         let mut sources: Vec<_> = self.sources.values().collect();
         sources.sort_by_key(|&source| (source.ty, source.url.clone()));
 
@@ -274,16 +272,11 @@ impl SourceMapProcessor {
             }
 
             if source.ty == SourceFileType::MinifiedSource {
-                let sm_ref = get_sourcemap_ref(source);
-                if_chain! {
-                    if sm_ref != sourcemap::SourceMapRef::Missing;
-                    if let Some(url) = sm_ref.get_url();
-                    then {
-                        println!("    {} (sourcemap at {})",
-                                 &source.url, style(url).cyan());
-                    } else {
-                        println!("    {} (no sourcemap ref)", &source.url);
-                    }
+                if let Some(sm_ref) = get_sourcemap_ref(source) {
+                    let url = sm_ref.get_url();
+                    println!("    {} (sourcemap at {})", &source.url, style(url).cyan());
+                } else {
+                    println!("    {} (no sourcemap ref)", &source.url);
                 }
             } else {
                 println!("    {}", &source.url);
@@ -296,14 +289,21 @@ impl SourceMapProcessor {
     }
 
     /// Validates all sources within.
-    pub fn validate_all(&mut self) -> Result<(), Error> {
+    pub fn validate_all(&mut self) -> Result<()> {
         self.flush_pending_sources();
         let source_urls = self.sources.keys().cloned().collect();
         let sources: Vec<&mut ReleaseFile> = self.sources.values_mut().collect();
         let mut failed = false;
 
         println!("{} Validating sources", style(">").dim());
-        let pb = make_progress_bar(sources.len() as u64);
+
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(sources.len());
+        pb.set_style(progress_style);
+
         for source in sources {
             pb.set_message(&source.url);
             match source.ty {
@@ -338,7 +338,7 @@ impl SourceMapProcessor {
         &mut self,
         ram_bundle: &sourcemap::ram_bundle::RamBundle,
         bundle_source_url: &str,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         // We need this to flush all pending sourcemaps
         self.flush_pending_sources();
 
@@ -428,7 +428,7 @@ impl SourceMapProcessor {
     }
 
     /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
-    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<(), Error> {
+    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<()> {
         let mut ram_bundles = Vec::new();
 
         // Drain RAM bundles from self.sources
@@ -453,14 +453,20 @@ impl SourceMapProcessor {
     /// Automatically rewrite all source maps.
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
-    pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<(), Error> {
+    pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
         self.flush_pending_sources();
 
         println!("{} Rewriting sources", style(">").dim());
 
         self.unpack_indexed_ram_bundles()?;
 
-        let pb = make_progress_bar(self.sources.len() as u64);
+        let progress_style = ProgressStyle::default_bar().template(&format!(
+            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
+            style(">").cyan()
+        ));
+        let pb = ProgressBar::new(self.sources.len());
+        pb.set_style(progress_style);
+
         for source in self.sources.values_mut() {
             pb.set_message(&source.url);
             if source.ty != SourceFileType::SourceMap {
@@ -492,7 +498,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds sourcemap references to all minified files
-    pub fn add_sourcemap_references(&mut self) -> Result<(), Error> {
+    pub fn add_sourcemap_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
         let sourcemaps = self
             .sources
@@ -525,7 +531,7 @@ impl SourceMapProcessor {
     }
 
     /// Uploads all files
-    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<(), Error> {
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
         self.flush_pending_sources();
         let mut uploader = ReleaseFileUpload::new(context);
         uploader.files(&self.sources);
@@ -535,17 +541,18 @@ impl SourceMapProcessor {
     }
 }
 
-fn validate_script(source: &mut ReleaseFile) -> Result<(), Error> {
-    let sm_ref = get_sourcemap_ref(source);
-    if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
-        source.warn("encountered a legacy reference".into());
-    }
-    if let Some(url) = sm_ref.get_url() {
+fn validate_script(source: &mut ReleaseFile) -> Result<()> {
+    if let Some(sm_ref) = get_sourcemap_ref(source) {
+        if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
+            source.warn("encountered a legacy reference".into());
+        }
+        let url = sm_ref.get_url();
         let full_url = join_url(&source.url, url)?;
         info!("found sourcemap for {} at {}", &source.url, full_url);
     } else if source.ty == SourceFileType::MinifiedSource {
         source.error("missing sourcemap!".into());
     }
+
     Ok(())
 }
 
@@ -564,10 +571,7 @@ fn validate_regular(
     }
 }
 
-fn validate_sourcemap(
-    source_urls: &HashSet<String>,
-    source: &mut ReleaseFile,
-) -> Result<(), Error> {
+fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut ReleaseFile) -> Result<()> {
     match sourcemap::decode_slice(&source.contents)? {
         sourcemap::DecodedMap::Hermes(smh) => validate_regular(source_urls, source, &smh),
         sourcemap::DecodedMap::Regular(sm) => validate_regular(source_urls, source, &sm),

@@ -1,0 +1,21 @@
+```
+$ sentry-cli update --help
+? success
+sentry-cli[..]-update 
+Update the sentry-cli executable.
+
+USAGE:
+    sentry-cli[..] update [OPTIONS]
+
+OPTIONS:
+        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
+    -f, --force                      Force the update even if the latest version is already
+                                     installed.
+    -h, --help                       Print help information
+        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
+                                     info, warn, error]
+        --quiet                      Do not print any output while preserving correct exit code.
+                                     This flag is currently implemented only for selected
+                                     subcommands. [aliases: silent]
+
+```

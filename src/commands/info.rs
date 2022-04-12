@@ -1,13 +1,13 @@
-//! Implements a command for showing infos from Sentry.
 use std::collections::HashMap;
 use std::io;
 
-use clap::{App, Arg, ArgMatches};
-use failure::Error;
+use anyhow::Result;
+use clap::{Arg, ArgMatches, Command};
 use serde::Serialize;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
+use crate::utils::logging::is_quiet_mode;
 use crate::utils::system::QuietExit;
 
 #[derive(Serialize, Default)]
@@ -24,14 +24,11 @@ pub struct ConfigStatus {
     have_dsn: bool,
 }
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Print information about the Sentry server.")
-        .arg(Arg::with_name("quiet").short("q").long("quiet").help(
-            "Do not output anything, just report a status \
-             code for correct config.",
-        ))
+pub fn make_command(command: Command) -> Command {
+    command
+        .about("Print information about the Sentry server.")
         .arg(
-            Arg::with_name("config_status_json")
+            Arg::new("config_status_json")
                 .long("config-status-json")
                 .help(
                     "Return the status of the config that sentry-cli loads \
@@ -49,7 +46,7 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
     }
 }
 
-fn get_config_status_json() -> Result<(), Error> {
+fn get_config_status_json() -> Result<()> {
     let config = Config::current();
     let mut rv = ConfigStatus::default();
 
@@ -71,7 +68,7 @@ fn get_config_status_json() -> Result<(), Error> {
     Ok(())
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     if matches.is_present("config_status_json") {
         return get_config_status_json();
     }
@@ -82,33 +79,39 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let errors =
         project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
 
-    if !matches.is_present("quiet") {
-        println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
-        println!(
-            "Default Organization: {}",
-            org.unwrap_or_else(|| "-".into())
-        );
-        println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
+    if is_quiet_mode() {
+        return if errors {
+            Err(QuietExit(1).into())
+        } else {
+            Ok(())
+        };
+    }
 
-        if config.get_auth().is_some() {
-            println!();
-            println!("Authentication Info:");
-            println!("  Method: {}", describe_auth(config.get_auth()));
-            match info_rv {
-                Ok(info) => {
-                    if let Some(ref user) = info.user {
-                        println!("  User: {}", user.email);
-                    }
-                    if let Some(ref auth) = info.auth {
-                        println!("  Scopes:");
-                        for scope in &auth.scopes {
-                            println!("    - {}", scope);
-                        }
+    println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
+    println!(
+        "Default Organization: {}",
+        org.unwrap_or_else(|| "-".into())
+    );
+    println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
+
+    if config.get_auth().is_some() {
+        println!();
+        println!("Authentication Info:");
+        println!("  Method: {}", describe_auth(config.get_auth()));
+        match info_rv {
+            Ok(info) => {
+                if let Some(ref user) = info.user {
+                    println!("  User: {}", user.email);
+                }
+                if let Some(ref auth) = info.auth {
+                    println!("  Scopes:");
+                    for scope in &auth.scopes {
+                        println!("    - {}", scope);
                     }
                 }
-                Err(err) => {
-                    println!("  (failure on authentication: {})", err);
-                }
+            }
+            Err(err) => {
+                println!("  (failure on authentication: {})", err);
             }
         }
     }

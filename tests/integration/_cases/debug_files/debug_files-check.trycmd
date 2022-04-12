@@ -1,0 +1,14 @@
+```
+$ sentry-cli debug-files check tests/integration/_fixtures/elf-Linux-ARMv7-ls
+? success
+Debug Info File Check
+  Type: elf executable
+  Contained debug identifiers:
+    > Debug ID: 307a5402-9480-8ec2-25f1-a4adc744a991
+      Code ID:  02547a308094c28e25f1a4adc744a9917194db0a
+      Arch:     arm
+  Contained debug information:
+    > symtab, unwind
+  Usable: yes
+
+```

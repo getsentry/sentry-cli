@@ -1,0 +1,20 @@
+```
+$ sentry-cli sourcemaps resolve tests/integration/_fixtures/bundle.min.js.map -l 1 -c 40
+? success
+source map path: "tests/integration/_fixtures/bundle.min.js.map"
+source map type: regular
+lookup line: 0, column: 39:
+  name: "bar"
+  source file: "webpack://webpack-plugin/./src/app.js"
+  source line: 1
+  source column: 2
+  minified line: 0
+  minified column: 39
+  source code:
+    function foo(msg) {
+      bar(msg);
+    }
+    
+    function bar(msg) {
+
+```

@@ -1,14 +1,12 @@
-#![allow(clippy::needless_pass_by_value)]
-
 use std::str::FromStr;
 
+use anyhow::{bail, Result};
 use chrono::{DateTime, TimeZone, Utc};
-use clap::AppSettings;
-use failure::{bail, Error};
+use clap::{Arg, Command};
 use symbolic::common::DebugId;
 use uuid::Uuid;
 
-fn validate_org(v: String) -> Result<(), String> {
+fn validate_org(v: &str) -> Result<(), String> {
     if v.contains('/') || v == "." || v == ".." || v.contains(' ') {
         Err("Invalid value for organization. Use the URL slug and not the name!".to_string())
     } else {
@@ -16,7 +14,7 @@ fn validate_org(v: String) -> Result<(), String> {
     }
 }
 
-pub fn validate_project(v: String) -> Result<(), String> {
+pub fn validate_project(v: &str) -> Result<(), String> {
     if v.contains('/')
         || v == "."
         || v == ".."
@@ -31,7 +29,7 @@ pub fn validate_project(v: String) -> Result<(), String> {
     }
 }
 
-fn validate_version(v: String) -> Result<(), String> {
+fn validate_release(v: &str) -> Result<(), String> {
     if v.trim() != v {
         Err(
             "Invalid release version. Releases must not contain leading or trailing spaces."
@@ -52,7 +50,7 @@ fn validate_version(v: String) -> Result<(), String> {
     }
 }
 
-pub fn validate_int(v: String) -> Result<(), String> {
+pub fn validate_int(v: &str) -> Result<(), String> {
     if v.parse::<i64>().is_ok() {
         Ok(())
     } else {
@@ -60,31 +58,31 @@ pub fn validate_int(v: String) -> Result<(), String> {
     }
 }
 
-pub fn validate_timestamp(v: String) -> Result<(), String> {
-    if let Err(err) = get_timestamp(&v) {
+pub fn validate_timestamp(v: &str) -> Result<(), String> {
+    if let Err(err) = get_timestamp(v) {
         Err(err.to_string())
     } else {
         Ok(())
     }
 }
 
-pub fn validate_uuid(s: String) -> Result<(), String> {
-    if Uuid::parse_str(&s).is_err() {
+pub fn validate_uuid(s: &str) -> Result<(), String> {
+    if Uuid::parse_str(s).is_err() {
         Err("Invalid UUID.".to_string())
     } else {
         Ok(())
     }
 }
 
-pub fn validate_id(s: String) -> Result<(), String> {
-    if DebugId::from_str(&s).is_err() {
+pub fn validate_id(s: &str) -> Result<(), String> {
+    if DebugId::from_str(s).is_err() {
         Err("Invalid ID.".to_string())
     } else {
         Ok(())
     }
 }
 
-pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>, Error> {
+pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
     if let Ok(int) = value.parse::<i64>() {
         Ok(Utc.timestamp(int, 0))
     } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
@@ -99,43 +97,56 @@ pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>, Error> {
 pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
     fn project_arg(self, multiple: bool) -> Self;
-    fn version_arg(self, index: u64) -> Self;
+    fn release_arg(self) -> Self;
+    fn version_arg(self) -> Self;
 }
 
-impl<'a: 'b, 'b> ArgExt for clap::App<'a, 'b> {
-    fn org_arg(self) -> clap::App<'a, 'b> {
+impl<'a: 'b, 'b> ArgExt for Command<'a> {
+    fn org_arg(self) -> Command<'a> {
         self.arg(
-            clap::Arg::with_name("org")
+            Arg::new("org")
                 .value_name("ORG")
                 .long("org")
-                .short("o")
+                .short('o')
                 .validator(validate_org)
                 .global(true)
                 .help("The organization slug"),
         )
     }
 
-    fn project_arg(self, multiple: bool) -> clap::App<'a, 'b> {
+    fn project_arg(self, multiple: bool) -> Command<'a> {
         self.arg(
-            clap::Arg::with_name("project")
+            Arg::new("project")
                 .value_name("PROJECT")
                 .long("project")
-                .short("p")
+                .short('p')
                 .validator(validate_project)
                 .global(true)
-                .multiple(multiple)
-                .number_of_values(1)
+                .multiple_occurrences(multiple)
                 .help("The project slug."),
         )
     }
 
-    fn version_arg(self, index: u64) -> clap::App<'a, 'b> {
-        self.setting(AppSettings::AllowLeadingHyphen).arg(
-            clap::Arg::with_name("version")
+    fn release_arg(self) -> Command<'a> {
+        self.arg(
+            Arg::new("release")
+                .value_name("RELEASE")
+                .long("release")
+                .short('r')
+                .global(true)
+                .allow_hyphen_values(true)
+                .validator(validate_release)
+                .help("The release slug."),
+        )
+    }
+
+    fn version_arg(self) -> Command<'a> {
+        self.arg(
+            Arg::new("version")
                 .value_name("VERSION")
                 .required(true)
-                .index(index)
-                .validator(validate_version)
+                .allow_hyphen_values(true)
+                .validator(validate_release)
                 .help("The version of the release"),
         )
     }

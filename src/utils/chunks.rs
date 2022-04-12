@@ -8,11 +8,12 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use failure::Error;
+use anyhow::Result;
+use log::info;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use sha1::Digest;
+use sha1_smol::Digest;
 
 use crate::api::{Api, ChunkUploadOptions, ProgressBarMode};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
@@ -161,18 +162,15 @@ pub fn upload_chunks(
     chunks: &[Chunk<'_>],
     chunk_options: &ChunkUploadOptions,
     progress_style: ProgressStyle,
-) -> Result<(), Error> {
-    let total_bytes: u64 = chunks
-        .iter()
-        .map(|&Chunk((_, data))| data.len() as u64)
-        .sum();
+) -> Result<()> {
+    let total_bytes = chunks.iter().map(|&Chunk((_, data))| data.len()).sum();
 
     // Chunks are uploaded in batches, but the progress bar is shared between
     // multiple requests to simulate one continuous upload to the user. Since we
     // have to embed the progress bar into a ProgressBarMode and move it into
     // `Api::upload_chunks`, the progress bar is created in an Arc.
-    let progress = Arc::new(ProgressBar::new(total_bytes));
-    progress.set_style(progress_style);
+    let pb = Arc::new(ProgressBar::new(total_bytes));
+    pb.set_style(progress_style);
 
     // Select the best available compression mechanism. We assume that every
     // compression algorithm has been implemented for uploading, except `Other`
@@ -185,7 +183,7 @@ pub fn upload_chunks(
         .cloned()
         .unwrap_or_default();
 
-    log::info!("using '{}' compression for chunk upload", compression);
+    info!("using '{}' compression for chunk upload", compression);
 
     // The upload is executed in parallel batches. Each batch aggregates objects
     // until it exceeds the maximum size configured in ChunkUploadOptions. We
@@ -211,13 +209,13 @@ pub fn upload_chunks(
             .into_par_iter()
             .enumerate()
             .map(|(index, (batch, size))| {
-                let mode = ProgressBarMode::Shared((progress.clone(), size, index, bytes.clone()));
+                let mode = ProgressBarMode::Shared((pb.clone(), size, index, bytes.clone()));
                 Api::current().upload_chunks(&chunk_options.url, batch, mode, compression)
             })
             .collect::<Result<(), _>>()
     })?;
 
-    progress.finish_with_duration("Uploading");
+    pb.finish_with_duration("Uploading");
 
     Ok(())
 }

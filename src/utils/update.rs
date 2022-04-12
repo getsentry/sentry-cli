@@ -4,9 +4,9 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
+use anyhow::{bail, format_err, Result};
 use chrono::{DateTime, Duration, Utc};
 use console::{style, user_attended};
-use failure::{bail, Error, ResultExt};
 use if_chain::if_chain;
 use log::{debug, info};
 use semver::Version;
@@ -14,12 +14,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
-use crate::constants::{APP_INFO, VERSION};
+use crate::constants::{APP_NAME, VERSION};
 use crate::utils::fs::{is_writable, set_executable_mode};
 use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
 
 #[cfg(windows)]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     // so on windows you can rename a running executable but you cannot delete it.
     // we move the old executable to a temporary location (this most likely only
     // works if they are on the same FS) and then put the new in place.  This
@@ -51,7 +51,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), E
 }
 
 #[cfg(not(windows))]
-fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), Error> {
+fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
         runas::Command::new("mv")
@@ -133,7 +133,7 @@ impl SentryCliUpdateInfo {
         }
     }
 
-    pub fn download_url(&self) -> Result<&str, Error> {
+    pub fn download_url(&self) -> Result<&str> {
         if let Some(ref rel) = self.latest_release {
             Ok(rel.download_url.as_str())
         } else {
@@ -141,7 +141,7 @@ impl SentryCliUpdateInfo {
         }
     }
 
-    pub fn download(&self) -> Result<(), Error> {
+    pub fn download(&self) -> Result<()> {
         let exe = env::current_exe()?;
         let elevate = !is_writable(&exe);
         info!("expecting elevation for update: {}", elevate);
@@ -166,7 +166,7 @@ impl SentryCliUpdateInfo {
     }
 }
 
-pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo, Error> {
+pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
     let api = Api::current();
     Ok(SentryCliUpdateInfo {
         latest_release: if let Ok(release) = api.get_latest_sentrycli_release() {
@@ -181,7 +181,7 @@ pub fn can_update_sentrycli() -> bool {
     !is_homebrew_install() && !is_npm_install()
 }
 
-pub fn assert_updatable() -> Result<(), Error> {
+pub fn assert_updatable() -> Result<()> {
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");
         println!("Please use homebrew to update sentry-cli:");
@@ -200,9 +200,11 @@ pub fn assert_updatable() -> Result<(), Error> {
     Ok(())
 }
 
-fn update_nagger_impl() -> Result<(), Error> {
-    let mut path = app_dirs::app_root(app_dirs::AppDataType::UserCache, APP_INFO)
-        .with_context(|_| "Could not get cache folder")?;
+fn update_nagger_impl() -> Result<()> {
+    let mut path = dirs::cache_dir().ok_or_else(|| format_err!("Could not get cache folder"))?;
+
+    path.push(APP_NAME);
+    fs::create_dir_all(path.clone())?;
     path.push("updatecheck");
 
     let mut check: LastUpdateCheck = if let Ok(f) = fs::File::open(&path) {

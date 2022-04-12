@@ -3,8 +3,8 @@ use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
 
+use anyhow::Result;
 use console::style;
-use failure::Error;
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
@@ -85,7 +85,7 @@ impl ReleaseFileSearch {
         self
     }
 
-    pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch, Error> {
+    pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch> {
         let mut f = fs::File::open(path.clone())?;
         let mut contents = Vec::new();
         f.read_to_end(&mut contents)?;
@@ -96,15 +96,15 @@ impl ReleaseFileSearch {
         })
     }
 
-    pub fn collect_files(&self) -> Result<Vec<ReleaseFileMatch>, Error> {
+    pub fn collect_files(&self) -> Result<Vec<ReleaseFileMatch>> {
         let progress_style = ProgressStyle::default_spinner().template(
             "{spinner} Searching for release files...\
         \n  found {prefix:.yellow} {msg:.dim}",
         );
 
-        let progress = ProgressBar::new_spinner();
-        progress.enable_steady_tick(100);
-        progress.set_style(progress_style);
+        let pb = ProgressBar::new_spinner();
+        pb.enable_steady_tick(100);
+        pb.set_style(progress_style);
 
         let mut collected = Vec::new();
 
@@ -143,7 +143,7 @@ impl ReleaseFileSearch {
             if file.file_type().map_or(false, |t| t.is_dir()) {
                 continue;
             }
-            progress.set_message(&format!("{}", file.path().display()));
+            pb.set_message(&format!("{}", file.path().display()));
 
             info!(
                 "found: {} ({} bytes)",
@@ -162,10 +162,10 @@ impl ReleaseFileSearch {
             };
             collected.push(file_match);
 
-            progress.set_prefix(&collected.len().to_string());
+            pb.set_prefix(&collected.len().to_string());
         }
 
-        progress.finish_and_clear();
+        pb.finish_and_clear();
         println!(
             "{} Found {} release {}",
             style(">").dim(),

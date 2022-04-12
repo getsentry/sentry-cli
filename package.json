@@ -1,27 +1,33 @@
 {
   "name": "@sentry/cli",
-  "version": "1.74.3",
+  "version": "2.0.0",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
+  "repository": "git://github.com/getsentry/sentry-cli.git",
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
+  "author": "Sentry",
   "license": "BSD-3-Clause",
-  "keywords": [
-    "sentry",
-    "sentry-cli",
-    "cli"
-  ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/getsentry/sentry-cli"
-  },
-  "bugs": {
-    "url": "https://github.com/getsentry/sentry-cli/issues"
-  },
   "engines": {
-    "node": ">= 8"
+    "node": ">= 12"
   },
   "main": "js/index.js",
+  "types": "js/index.d.ts",
   "bin": {
     "sentry-cli": "bin/sentry-cli"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^5.0.0",
+    "node-fetch": "^3.2.3",
+    "npmlog": "^6.0.1",
+    "progress": "^2.0.3",
+    "proxy-from-env": "^1.1.0",
+    "which": "^2.0.2"
+  },
+  "devDependencies": {
+    "eslint": "^8.13.0",
+    "eslint-config-prettier": "^8.5.0",
+    "jest": "^27.5.1",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.6.2"
   },
   "scripts": {
     "install": "node ./scripts/install.js",
@@ -34,29 +40,11 @@
     "test:eslint": "eslint bin/* scripts/**/*.js js/**/*.js",
     "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js"
   },
-  "dependencies": {
-    "https-proxy-agent": "^5.0.0",
-    "mkdirp": "^0.5.5",
-    "node-fetch": "^2.6.7",
-    "npmlog": "^4.1.2",
-    "progress": "^2.0.3",
-    "proxy-from-env": "^1.1.0",
-    "which": "^2.0.2"
-  },
-  "devDependencies": {
-    "eslint": "^6.8.0",
-    "eslint-config-airbnb-base": "^14.1.0",
-    "eslint-config-prettier": "^6.10.1",
-    "eslint-plugin-import": "^2.20.2",
-    "jest": "^25.3.0",
-    "npm-run-all": "^4.1.5",
-    "prettier": "^1.19.1"
-  },
   "jest": {
     "collectCoverage": true,
     "testEnvironment": "node",
     "testPathIgnorePatterns": [
-      "src/utils"
+      "<rootDir>/src"
     ]
   }
 }

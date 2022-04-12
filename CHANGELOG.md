@@ -2,6 +2,59 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.0
+
+This is the first, long-overdue major release in over 5 years of sentry-cli's life.
+Some APIs were removed, some reworked, some newly added.
+
+Most of introduced API changes are backward compatible through hidden aliases, so there is no immediate need for users developing 3rd party tools to make all the changes immediatelly.
+We do however encourage everyone to do it sooner or later, as deprecated items will be removed in the next major releases.
+
+Breaking changes are denotated with _(breaking)_ tag, and appropriate required changes are provided for each entry.
+
+### New APIs
+
+- feat: Add `debug-files` command, which is a joined functionality of `difutil` and `upload-dif` commands.
+- feat: Add `deploys` command, which was extracted from `releases deploys` subcommand.
+- feat: Add `files` command, which was extracted from `releases files` subcommand.
+- feat: Add `sourcemaps upload` command, which was extracted from `releases files upload-sourcemaps` subcommand.
+- feat: Add `sourcemaps resolve` command.
+- feat: Allow for specifying global `--header` argument, which supports multiple occurences, to configure outgoing requests
+- feat: Implement global `--quiet`/`--silent` flags to allow silencing `stdout` output (This flag is currently implemented only for selected subcommands)
+
+### Removed APIs
+
+- ref: Remove `difutil id` subcommand (use `debug-files check` instead) _(breaking)_
+- ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_
+- ref: Remove `react-native codepush` subcommand (use `react-native appcenter` instead) _(breaking)_
+- ref: Remove `react-native-gradle` and `react-native-xcode` commands (use `react-native gradle` and `react-native xcode` instead) _(breaking)_
+- ref: Remove `upload-dsym` command (use `debug-files upload` instead) _(breaking)_
+- ref: Remove deprecated and hidden flags from commands (remove listed flags usage) _(breaking)_
+  - `react-native xcode --verbose`
+  - `releases new --ref`
+  - `releases list --no-abbrev`
+  - `releases upload-sourcemaps --verbose`
+  - `releases upload-sourcemaps --rewrite` (it's a default behavior now)
+  - `upload-dif --upload-symbol-maps`
+- ref: Remove `bash-hook` command (use `1.x` if you still need the functionality; it will eventually be ported as a separate repository - https://github.com/getsentry/sentry-cli-bash-hook) _(breaking)_
+- ref: Remove `crash_reporting` related code and `with_crash_reporting` crate feature (no required changes) _(breaking)_
+- ref: Remove `SENTRY_NO_PROGRESS_BAR` env var in favor of `SENTRYCLI_NO_PROGRESS_BAR` (rename env variable) _(breaking)_
+
+### Breaking Changes
+
+- ref: Update minimal required `node` version to `v12` (update node version) _(breaking)_
+- ref: Rename `--header` argument of `releases files upload` command to `--file-header` (rename flag) _(breaking)_
+- ref: Rename `CUSTOM_HEADER` to `SENTRY_HEADER` and `defaults.custom_header` to `http.header` (rename env variable or update config file) _(breaking)_
+- ref: Make `ignore-empty` for `releases set-commits` a default behavior and remove `--ignore-empty` flag (remove `--ignore-empty` usage) _(breaking)_
+
+### Various fixes & improvements
+
+- feat: Implement `--quiet` flag for `releases upload-sourcemaps` command
+- feat: Implement `--quiet` flag for `difutil check` command
+- ref: Make `--auth-token` a global argument
+- ref: Make all `ProgressBar` instances and logs always write to `stderr`
+- ref: Migrate error handling from `failure` to `anyhow` crate
+
 ## 1.74.3
 
 ### Various fixes & improvements

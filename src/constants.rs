@@ -2,12 +2,8 @@
 
 use std::time::Duration;
 
-use app_dirs::AppInfo;
-
-pub const APP_INFO: &AppInfo = &AppInfo {
-    name: "sentrycli",
-    author: "Sentry",
-};
+/// Application name
+pub const APP_NAME: &str = "sentrycli";
 
 /// The default API URL
 pub const DEFAULT_URL: &str = "https://sentry.io/";
@@ -29,15 +25,6 @@ pub const EXT: &str = ".exe";
 /// The file extension of the binary (.exe or empty string)
 #[cfg(not(windows))]
 pub const EXT: &str = "";
-
-/// The DSN to emit sentry events to.
-/*
-#[cfg(feature = "with_crash_reporting")]
-lazy_static! {
-    pub static ref INTERNAL_SENTRY_DSN: sentry::Dsn =
-        "https://4b5ba00d320841efbb18a330cf539f4a@sentry.io/1192882".parse().unwrap();
-}
-*/
 
 /// Backoff multiplier (1.5 which is 50% increase per backoff).
 pub const DEFAULT_MULTIPLIER: f64 = 1.5;

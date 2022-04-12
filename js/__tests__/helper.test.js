@@ -1,5 +1,3 @@
-/* eslint-env jest */
-
 const os = require('os');
 const path = require('path');
 
@@ -16,12 +14,12 @@ describe('SentryCli helper', () => {
     expect.assertions(1);
     return helper
       .execute(['--version'])
-      .then(version => expect(version.trim()).toBe('sentry-cli DEV'));
+      .then((version) => expect(version.trim()).toBe('sentry-cli DEV'));
   });
 
   test('call sentry-cli with wrong command', () => {
     expect.assertions(1);
-    return helper.execute(['fail']).catch(e => expect(e.message).toMatch('Command failed:'));
+    return helper.execute(['fail']).catch((e) => expect(e.message).toMatch('Command failed:'));
   });
 
   test('getPath returns platform-appropriate path', () => {

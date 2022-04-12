@@ -1,15 +1,14 @@
-//! Implements a command for sending events to Sentry.
 use std::borrow::Cow;
 use std::env;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use clap::{App, Arg, ArgMatches};
-use failure::{err_msg, Error};
+use anyhow::{format_err, Result};
+use clap::{Arg, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
-use log::warn;
+use log::{debug, warn};
 use sentry::protocol::{Event, Level, LogEntry, User};
 use sentry::types::{Dsn, Uuid};
 use serde_json::Value;
@@ -20,132 +19,125 @@ use crate::utils::args::{get_timestamp, validate_timestamp};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use crate::utils::releases::detect_release_name;
 
-pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
-    app.about("Send a manual event to Sentry.")
+pub fn make_command(command: Command) -> Command {
+    command.about("Send a manual event to Sentry.")
         .long_about(
             "Send a manual event to Sentry.{n}{n}\
-             NOTE: This command will validate input parameters and attempt to send an event to \
+             This command will validate input parameters and attempt to send an event to \
              Sentry. Due to network errors, rate limits or sampling the event is not guaranteed to \
              actually arrive. Check debug output for transmission errors by passing --log-level=\
              debug or setting `SENTRY_LOG_LEVEL=debug`.",
         )
         .arg(
-            Arg::with_name("path")
+            Arg::new("path")
                 .value_name("PATH")
-                .index(1)
                 .required(false)
                 .help("The path or glob to the file(s) in JSON format to send as event(s). When provided, all other arguments are ignored."),
         )
         .arg(
-            Arg::with_name("level")
+            Arg::new("level")
                 .value_name("LEVEL")
                 .long("level")
-                .short("l")
+                .short('l')
                 .help("Optional event severity/log level. (debug|info|warning|error|fatal) [defaults to 'error']"),
         )
-        .arg(Arg::with_name("timestamp")
+        .arg(Arg::new("timestamp")
                  .long("timestamp")
                  .validator(validate_timestamp)
                  .value_name("TIMESTAMP")
                  .help("Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or RFC3339."))
         .arg(
-            Arg::with_name("release")
+            Arg::new("release")
                 .value_name("RELEASE")
                 .long("release")
-                .short("r")
+                .short('r')
                 .help("Optional identifier of the release."),
         )
         .arg(
-            Arg::with_name("dist")
+            Arg::new("dist")
                 .value_name("DISTRIBUTION")
                 .long("dist")
-                .short("d")
+                .short('d')
                 .help("Set the distribution."),
         )
         .arg(
-            Arg::with_name("environment")
+            Arg::new("environment")
                 .value_name("ENVIRONMENT")
                 .long("env")
-                .short("E")
+                .short('E')
                 .help("Send with a specific environment."),
         )
         .arg(
-            Arg::with_name("no_environ")
+            Arg::new("no_environ")
                 .long("no-environ")
                 .help("Do not send environment variables along"),
         )
         .arg(
-            Arg::with_name("message")
+            Arg::new("message")
                 .value_name("MESSAGE")
                 .long("message")
-                .short("m")
-                .multiple(true)
-                .number_of_values(1)
+                .short('m')
+                .multiple_occurrences(true)
                 .help("The event message."),
         )
         .arg(
-            Arg::with_name("message_args")
+            Arg::new("message_args")
                 .value_name("MESSAGE_ARG")
                 .long("message-arg")
-                .short("a")
-                .multiple(true)
-                .number_of_values(1)
+                .short('a')
+                .multiple_occurrences(true)
                 .help("Arguments for the event message."),
         )
         .arg(
-            Arg::with_name("platform")
+            Arg::new("platform")
                 .value_name("PLATFORM")
                 .long("platform")
-                .short("p")
+                .short('p')
                 .help("Override the default 'other' platform specifier."),
         )
         .arg(
-            Arg::with_name("tags")
+            Arg::new("tags")
                 .value_name("KEY:VALUE")
                 .long("tag")
-                .short("t")
-                .multiple(true)
-                .number_of_values(1)
+                .short('t')
+                .multiple_occurrences(true)
                 .help("Add a tag (key:value) to the event."),
         )
         .arg(
-            Arg::with_name("extra")
+            Arg::new("extra")
                 .value_name("KEY:VALUE")
                 .long("extra")
-                .short("e")
-                .multiple(true)
-                .number_of_values(1)
+                .short('e')
+                .multiple_occurrences(true)
                 .help("Add extra information (key:value) to the event."),
         )
         .arg(
-            Arg::with_name("user_data")
+            Arg::new("user_data")
                 .value_name("KEY:VALUE")
                 .long("user")
-                .short("u")
-                .multiple(true)
-                .number_of_values(1)
+                .short('u')
+                .multiple_occurrences(true)
                 .help(
                     "Add user information (key:value) to the event. \
                      [eg: id:42, username:foo]",
                 ),
         )
         .arg(
-            Arg::with_name("fingerprint")
+            Arg::new("fingerprint")
                 .value_name("FINGERPRINT")
                 .long("fingerprint")
-                .short("f")
-                .multiple(true)
-                .number_of_values(1)
+                .short('f')
+                .multiple_occurrences(true)
                 .help("Change the fingerprint of the event."),
         )
         .arg(
-            Arg::with_name("logfile")
+            Arg::new("logfile")
                 .value_name("PATH")
                 .long("logfile")
                 .help("Send a logfile as breadcrumbs with the event (last 100 records)"),
         )
         .arg(
-            Arg::with_name("with_categories")
+            Arg::new("with_categories")
                 .long("with-categories")
                 .help("Parses off a leading category for breadcrumbs from the logfile")
                 .long_help(
@@ -157,10 +149,11 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 }
 
 fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
+    debug!("{:?}", event);
     with_sentry_client(dsn, |c| c.capture_event(event, None))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
+pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
 
@@ -218,13 +211,15 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     };
 
     if let Some(timestamp) = matches.value_of("timestamp") {
-        event.timestamp = get_timestamp(timestamp)?;
+        event.timestamp = get_timestamp(timestamp).map(|t| t.into())?;
     }
 
     for tag in matches.values_of("tags").unwrap_or_default() {
         let mut split = tag.splitn(2, ':');
-        let key = split.next().ok_or_else(|| err_msg("missing tag key"))?;
-        let value = split.next().ok_or_else(|| err_msg("missing tag value"))?;
+        let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
     }
 
@@ -237,8 +232,12 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
 
     for pair in matches.values_of("extra").unwrap_or_default() {
         let mut split = pair.splitn(2, ':');
-        let key = split.next().ok_or_else(|| err_msg("missing extra key"))?;
-        let value = split.next().ok_or_else(|| err_msg("missing extra value"))?;
+        let key = split
+            .next()
+            .ok_or_else(|| format_err!("missing extra key"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing extra value"))?;
         event.extra.insert(key.into(), Value::String(value.into()));
     }
 
@@ -246,8 +245,12 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         let mut user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
-            let key = split.next().ok_or_else(|| err_msg("missing user key"))?;
-            let value = split.next().ok_or_else(|| err_msg("missing user value"))?;
+            let key = split
+                .next()
+                .ok_or_else(|| format_err!("missing user key"))?;
+            let value = split
+                .next()
+                .ok_or_else(|| format_err!("missing user value"))?;
 
             match key {
                 "id" => user.id = Some(value.into()),
