@@ -6,7 +6,10 @@ use crate::config::Config;
 use crate::utils::args::ArgExt;
 
 pub fn make_command(command: Command) -> Command {
-    command.about("Archive a release.").version_arg()
+    command
+        .about("Archive a release.")
+        .allow_hyphen_values(true)
+        .version_arg()
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

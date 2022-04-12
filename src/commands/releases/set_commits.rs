@@ -14,6 +14,7 @@ use crate::utils::vcs::{
 pub fn make_command(command: Command) -> Command {
     command
         .about("Set commits of a release.")
+        .allow_hyphen_values(true)
         .version_arg()
         .arg(Arg::new("clear")
             .long("clear")

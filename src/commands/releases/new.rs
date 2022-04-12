@@ -9,6 +9,7 @@ use crate::utils::args::ArgExt;
 pub fn make_command(command: Command) -> Command {
     command
         .about("Create a new release.")
+        .allow_hyphen_values(true)
         .version_arg()
         .arg(
             Arg::new("url")
