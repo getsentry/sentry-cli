@@ -5,7 +5,6 @@ on:
     branches:
       - master
       - 1.x
-      - 2.x
       - release/**
 
   pull_request:
@@ -90,6 +89,6 @@ jobs:
 
       - run: npm install
         env:
-          SENTRYCLI_LOCAL_CDNURL: "http://localhost:8999/"
+          SENTRYCLI_LOCAL_CDNURL: 'http://localhost:8999/'
 
       - run: npm test

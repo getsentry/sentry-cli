@@ -145,7 +145,6 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
             Arg::new("version")
                 .value_name("VERSION")
                 .required(true)
-                .allow_hyphen_values(true)
                 .validator(validate_release)
                 .help("The version of the release"),
         )
