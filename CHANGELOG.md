@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.2
+
+### Various fixes & improvements
+
+- fix: Remove fetch.FetchError usage in favor of catch-all clause (#1193) by @kamilogorek
+- ref: Restore and hide legacy aliases from 1.x for backward compatibility (#1192) by @kamilogorek
+
 ## 2.0.1
 
 ### Various fixes & improvements
