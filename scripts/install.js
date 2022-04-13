@@ -230,13 +230,9 @@ async function downloadBinary() {
       redirect: 'follow',
     });
   } catch (error) {
-    if (error instanceof fetch.FetchError) {
-      throw new Error(
-        `Unable to download sentry-cli binary from ${downloadUrl}.\nError code: ${error.code}`
-      );
-    } else {
-      throw error;
-    }
+    throw new Error(
+      `Unable to download sentry-cli binary from ${downloadUrl}.\nError message: ${error.message}\nError code: ${error.code}`
+    );
   }
 
   if (!response.ok) {
