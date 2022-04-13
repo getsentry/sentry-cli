@@ -61,6 +61,9 @@ pub fn make_command(command: Command) -> Command {
                     the current commit of the repository at the given PATH is \
                     assumed.  To override the revision `@REV` can be appended \
                     which will force the revision to a certain value."))
+        // Legacy flag that has no effect, left hidden for backward compatibility
+        .arg(Arg::new("ignore-empty")
+            .long("ignore-empty").hide(true))
 }
 
 fn strip_sha(sha: &str) -> &str {

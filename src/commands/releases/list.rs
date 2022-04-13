@@ -29,6 +29,8 @@ pub fn make_command(command: Command) -> Command {
                 .requires("raw")
                 .help("Delimiter for the --raw flag"),
         )
+        // Legacy flag that has no effect, left hidden for backward compatibility
+        .arg(Arg::new("no_abbrev").long("no-abbrev").hide(true))
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

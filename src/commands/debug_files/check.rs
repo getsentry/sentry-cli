@@ -12,6 +12,10 @@ use crate::utils::system::QuietExit;
 pub fn make_command(command: Command) -> Command {
     command
         .about("Check the debug info file at a given path.")
+        // Legacy name, left hidden for backward compatibility
+        .alias("id")
+        // Legacy name, left hidden for backward compatibility
+        .alias("uuid")
         .arg(
             Arg::new("path")
                 .required(true)

@@ -34,6 +34,7 @@ macro_rules! each_subcommand {
         #[cfg(not(feature = "managed"))]
         $mac!(update);
         $mac!(upload_dif);
+        $mac!(upload_dsym);
         $mac!(upload_proguard);
     };
 }

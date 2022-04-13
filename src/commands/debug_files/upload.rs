@@ -157,6 +157,12 @@ pub fn make_command(command: Command) -> Command {
             can only be displayed if --wait is specified, but this will \
             significantly slow down the upload process.",
         ))
+        // Legacy flag that has no effect, left hidden for backward compatibility
+        .arg(
+            Arg::new("upload_symbol_maps")
+                .long("upload-symbol-maps")
+                .hide(true),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

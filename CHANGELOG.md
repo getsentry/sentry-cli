@@ -30,28 +30,22 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 
 ### Removed APIs
 
-- ref: Remove `difutil id` subcommand (use `debug-files check` instead) _(breaking)_
 - ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_
 - ref: Remove `react-native codepush` subcommand (use `react-native appcenter` instead) _(breaking)_
 - ref: Remove `react-native-gradle` and `react-native-xcode` commands (use `react-native gradle` and `react-native xcode` instead) _(breaking)_
-- ref: Remove `upload-dsym` command (use `debug-files upload` instead) _(breaking)_
-- ref: Remove deprecated and hidden flags from commands (remove listed flags usage) _(breaking)_
-  - `react-native xcode --verbose`
-  - `releases new --ref`
-  - `releases list --no-abbrev`
-  - `releases upload-sourcemaps --verbose`
-  - `releases upload-sourcemaps --rewrite` (it's a default behavior now)
-  - `upload-dif --upload-symbol-maps`
 - ref: Remove `bash-hook` command (use `1.x` if you still need the functionality; it will eventually be ported as a separate repository - https://github.com/getsentry/sentry-cli-bash-hook) _(breaking)_
 - ref: Remove `crash_reporting` related code and `with_crash_reporting` crate feature (no required changes) _(breaking)_
 - ref: Remove `SENTRY_NO_PROGRESS_BAR` env var in favor of `SENTRYCLI_NO_PROGRESS_BAR` (rename env variable) _(breaking)_
+- ref: Hide `difutil id` subcommand (use `debug-files check` instead)
+- ref: Hide `upload-dsym` command (use `debug-files upload` instead)
+- ref: Make `releases upload-sourcemaps --rewrite` a default behavior now
 
 ### Breaking Changes
 
 - ref: Update minimal required `node` version to `v12` (update node version) _(breaking)_
 - ref: Rename `--header` argument of `releases files upload` command to `--file-header` (rename flag) _(breaking)_
 - ref: Rename `CUSTOM_HEADER` to `SENTRY_HEADER` and `defaults.custom_header` to `http.header` (rename env variable or update config file) _(breaking)_
-- ref: Make `ignore-empty` for `releases set-commits` a default behavior and remove `--ignore-empty` flag (remove `--ignore-empty` usage) _(breaking)_
+- ref: Make `ignore-empty` for `releases set-commits` a default behavior and hide `--ignore-empty` flag (remove `--ignore-empty` usage) _(breaking)_
 
 ### Various fixes & improvements
 
