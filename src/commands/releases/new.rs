@@ -22,6 +22,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("finalize")
                 .help("Immediately finalize the release. (sets it to released)"),
         )
+        // Legacy flag that has no effect, left hidden for backward compatibility
+        .arg(Arg::new("ref").long("ref").hide(true))
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

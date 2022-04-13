@@ -145,6 +145,10 @@ pub fn make_command(command: Command) -> Command {
                     Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`",
                 ),
         )
+        // Legacy flag that has no effect, left hidden for backward compatibility
+        .arg(Arg::new("rewrite").long("rewrite").hide(true))
+        // Legacy flag that has no effect, left hidden for backward compatibility
+        .arg(Arg::new("verbose").long("verbose").short('v').hide(true))
 }
 
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
