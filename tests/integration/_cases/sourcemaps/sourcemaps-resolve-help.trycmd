@@ -14,6 +14,8 @@ OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
     -c, --column <COLUMN>            Column number for minified source.
     -h, --help                       Print help information
+        --header <KEY:VALUE>         Custom headers that should be attached to all requests
+                                     in key:value format.
     -l, --line <LINE>                Line number for minified source.
         --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
                                      info, warn, error]
