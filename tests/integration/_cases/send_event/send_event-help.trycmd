@@ -37,6 +37,10 @@ OPTIONS:
     -h, --help
             Print help information
 
+        --header <KEY:VALUE>
+            Custom headers that should be attached to all requests
+            in key:value format.
+
     -l, --level <LEVEL>
             Optional event severity/log level. (debug|info|warning|error|fatal) [defaults to
             'error']

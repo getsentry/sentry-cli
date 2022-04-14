@@ -20,6 +20,8 @@ OPTIONS:
                                      for the process to finish before the build finishes and output
                                      will be shown in the Xcode build output.
     -h, --help                       Print help information
+        --header <KEY:VALUE>         Custom headers that should be attached to all requests
+                                     in key:value format.
         --id <ID>                    Search for specific debug identifiers.
         --include-sources            Include sources from the local file system and upload them as
                                      source bundles.

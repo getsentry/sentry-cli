@@ -137,6 +137,7 @@ fn app() -> Command<'static> {
                 .long("header")
                 .value_name("KEY:VALUE")
                 .multiple_occurrences(true)
+                .global(true)
                 .help(
                     "Custom headers that should be attached to all requests{n}in key:value format.",
                 ),
