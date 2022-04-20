@@ -17,6 +17,7 @@ use crate::utils::update::run_sentrycli_update_nagger;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
+        $mac!(bash_hook);
         $mac!(debug_files);
         $mac!(deploys);
         $mac!(files);
