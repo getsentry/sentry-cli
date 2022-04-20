@@ -1,11 +1,11 @@
 ```
 $ sentry-cli upload-dsym --help
 ? success
-sentry-cli[..]-upload-dsym 
+sentry-cli[EXE]-upload-dsym 
 Upload debugging information files.
 
 USAGE:
-    sentry-cli[..] upload-dsym [OPTIONS] [PATH]...
+    sentry-cli[EXE] upload-dsym [OPTIONS] [PATH]...
 
 ARGS:
     <PATH>...    A path to search recursively for symbol files.

@@ -1,11 +1,11 @@
 ```
 $ sentry-cli debug-files
 ? failed
-sentry-cli[..]-debug-files 
+sentry-cli[EXE]-debug-files 
 Locate, analyze or upload debug information files.
 
 USAGE:
-    sentry-cli[..] debug-files [OPTIONS] <SUBCOMMAND>
+    sentry-cli[EXE] debug-files [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

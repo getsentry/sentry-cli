@@ -1,11 +1,11 @@
 ```
 $ sentry-cli upload-proguard --help
 ? success
-sentry-cli[..]-upload-proguard 
+sentry-cli[EXE]-upload-proguard 
 Upload ProGuard mapping files to a project.
 
 USAGE:
-    sentry-cli[..] upload-proguard [OPTIONS] [PATH]...
+    sentry-cli[EXE] upload-proguard [OPTIONS] [PATH]...
 
 ARGS:
     <PATH>...    The path to the mapping files.

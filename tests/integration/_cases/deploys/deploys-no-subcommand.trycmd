@@ -1,11 +1,11 @@
 ```
 $ sentry-cli deploys
 ? failed
-sentry-cli[..]-deploys 
+sentry-cli[EXE]-deploys 
 Manage deployments for Sentry releases.
 
 USAGE:
-    sentry-cli[..] deploys [OPTIONS] <SUBCOMMAND>
+    sentry-cli[EXE] deploys [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

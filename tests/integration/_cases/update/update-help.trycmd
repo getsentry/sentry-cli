@@ -1,11 +1,11 @@
 ```
 $ sentry-cli update --help
 ? success
-sentry-cli[..]-update 
+sentry-cli[EXE]-update 
 Update the sentry-cli executable.
 
 USAGE:
-    sentry-cli[..] update [OPTIONS]
+    sentry-cli[EXE] update [OPTIONS]
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

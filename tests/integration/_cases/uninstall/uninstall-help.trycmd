@@ -1,11 +1,11 @@
 ```
 $ sentry-cli uninstall --help
 ? success
-sentry-cli[..]-uninstall 
+sentry-cli[EXE]-uninstall 
 Uninstall the sentry-cli executable.
 
 USAGE:
-    sentry-cli[..] uninstall [OPTIONS]
+    sentry-cli[EXE] uninstall [OPTIONS]
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

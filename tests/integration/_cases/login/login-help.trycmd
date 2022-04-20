@@ -1,11 +1,11 @@
 ```
 $ sentry-cli login --help
 ? success
-sentry-cli[..]-login 
+sentry-cli[EXE]-login 
 Authenticate with the Sentry server.
 
 USAGE:
-    sentry-cli[..] login [OPTIONS]
+    sentry-cli[EXE] login [OPTIONS]
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

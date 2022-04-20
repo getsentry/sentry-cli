@@ -1,11 +1,11 @@
 ```
 $ sentry-cli info --help
 ? success
-sentry-cli[..]-info 
+sentry-cli[EXE]-info 
 Print information about the Sentry server.
 
 USAGE:
-    sentry-cli[..] info [OPTIONS]
+    sentry-cli[EXE] info [OPTIONS]
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
