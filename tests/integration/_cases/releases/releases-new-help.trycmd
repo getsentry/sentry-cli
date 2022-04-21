@@ -1,7 +1,7 @@
 ```
-$ sentry-cli[..] releases new -h
+$ sentry-cli[EXE] releases new -h
 ? success
-sentry-cli[..]-releases-new 
+sentry-cli[EXE]-releases-new 
 Create a new release.
 
 USAGE:

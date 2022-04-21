@@ -1,11 +1,11 @@
 ```
 $ sentry-cli sourcemaps resolve --help
 ? success
-sentry-cli[..]-sourcemaps-resolve 
+sentry-cli[EXE]-sourcemaps-resolve 
 Resolve sourcemap for a given line/column position.
 
 USAGE:
-    sentry-cli[..] sourcemaps resolve [OPTIONS] [PATH]
+    sentry-cli[EXE] sourcemaps resolve [OPTIONS] [PATH]
 
 ARGS:
     <PATH>    The sourcemap to resolve.

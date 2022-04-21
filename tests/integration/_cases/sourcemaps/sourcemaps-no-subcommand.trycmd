@@ -1,11 +1,11 @@
 ```
 $ sentry-cli sourcemaps
 ? failed
-sentry-cli[..]-sourcemaps 
+sentry-cli[EXE]-sourcemaps 
 Manage sourcemaps for Sentry releases.
 
 USAGE:
-    sentry-cli[..] sourcemaps [OPTIONS] <SUBCOMMAND>
+    sentry-cli[EXE] sourcemaps [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.

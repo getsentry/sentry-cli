@@ -1,11 +1,11 @@
 ```
 $ sentry-cli debug-files upload --help
 ? success
-sentry-cli[..]-debug-files-upload 
+sentry-cli[EXE]-debug-files-upload 
 Upload debugging information files.
 
 USAGE:
-    sentry-cli[..] debug-files upload [OPTIONS] [PATH]...
+    sentry-cli[EXE] debug-files upload [OPTIONS] [PATH]...
 
 ARGS:
     <PATH>...    A path to search recursively for symbol files.

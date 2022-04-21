@@ -1,11 +1,11 @@
 ```
 $ sentry-cli upload-dif --help
 ? success
-sentry-cli[..]-upload-dif 
+sentry-cli[EXE]-upload-dif 
 Upload debugging information files.
 
 USAGE:
-    sentry-cli[..] upload-dif [OPTIONS] [PATH]...
+    sentry-cli[EXE] upload-dif [OPTIONS] [PATH]...
 
 ARGS:
     <PATH>...    A path to search recursively for symbol files.
