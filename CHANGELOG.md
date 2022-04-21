@@ -2,11 +2,19 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.3
+
+### Various fixes & improvements
+
+- ref: Make `--header` a global flag so its position independent (#1194)
+- ref: Restore `monitors` as hidden command w. integration tests (#1196)
+- ref: Restore `bash-hook` as hidden command w. integration tests (#1197)
+
 ## 2.0.2
 
 ### Various fixes & improvements
 
-- fix: Remove fetch.FetchError usage in favor of catch-all clause (#1193) by @kamilogorek
+- fix: Remove `fetch.FetchError` usage in favor of catch-all clause (#1193) by @kamilogorek
 - ref: Restore and hide legacy aliases from 1.x for backward compatibility (#1192) by @kamilogorek
 
 ## 2.0.1
@@ -37,15 +45,17 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 
 ### Removed APIs
 
-- ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_
 - ref: Remove `react-native codepush` subcommand (use `react-native appcenter` instead) _(breaking)_
 - ref: Remove `react-native-gradle` and `react-native-xcode` commands (use `react-native gradle` and `react-native xcode` instead) _(breaking)_
-- ref: Remove `bash-hook` command (use `1.x` if you still need the functionality; it will eventually be ported as a separate repository - https://github.com/getsentry/sentry-cli-bash-hook) _(breaking)_
 - ref: Remove `crash_reporting` related code and `with_crash_reporting` crate feature (no required changes) _(breaking)_
 - ref: Remove `SENTRY_NO_PROGRESS_BAR` env var in favor of `SENTRYCLI_NO_PROGRESS_BAR` (rename env variable) _(breaking)_
 - ref: Hide `difutil id` subcommand (use `debug-files check` instead)
 - ref: Hide `upload-dsym` command (use `debug-files upload` instead)
 - ref: Make `releases upload-sourcemaps --rewrite` a default behavior now
+- ~ref: Remove `upload-dsym` command (use `debug-files upload` instead) _(breaking)_~ _restored in 2.0.2 as hidden alias_
+- ~ref: Remove `difutil id` subcommand (use `debug-files check` instead) _(breaking)_~ _restored in 2.0.2 as hidden alias_
+- ~ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_~ - _restored in 2.0.3 as hidden command_
+- ~ref: Remove `bash-hook` command (use `1.x` if you still need the functionality) _(breaking)_~ - _restored in 2.0.3 as hidden command_
 
 ### Breaking Changes
 
