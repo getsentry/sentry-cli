@@ -1,3 +1,4 @@
+mod bash_hook;
 mod debug_files;
 mod deploys;
 mod help;
