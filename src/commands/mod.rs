@@ -24,6 +24,7 @@ macro_rules! each_subcommand {
         $mac!(info);
         $mac!(issues);
         $mac!(login);
+        $mac!(monitors);
         $mac!(projects);
         $mac!(react_native);
         $mac!(releases);
