@@ -1,0 +1,14 @@
+```
+$ sentry-cli debug-files check tests/integration/_fixtures/wasm-debug-symbols.wasm
+? success
+Debug Info File Check
+  Type: wasm library
+  Contained debug identifiers:
+    > Debug ID: 67ac9b57-d3ab-40df-9a88-7f0e8fb7babb
+      Code ID:  67ac9b57d3ab40df9a887f0e8fb7babb
+      Arch:     wasm32
+  Contained debug information:
+    > symtab, debug
+  Usable: yes
+
+```
