@@ -11,7 +11,7 @@ const zlib = require('zlib');
 const stream = require('stream');
 const process = require('process');
 
-const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
+const fetch = require('node-fetch');
 const HttpsProxyAgent = require('https-proxy-agent');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
@@ -230,17 +230,19 @@ async function downloadBinary() {
       redirect: 'follow',
     });
   } catch (error) {
-    throw new Error(
-      `Unable to download sentry-cli binary from ${downloadUrl}.\nError message: ${error.message}\nError code: ${error.code}`
-    );
+    let errorMsg = `Unable to download sentry-cli binary from ${downloadUrl}.\nError message: ${error.message}`;
+    if (error.code) {
+      errorMsg += `\nError code: ${error.code}`;
+    }
+    throw new Error(errorMsg);
   }
 
   if (!response.ok) {
-    throw new Error(
-      `Unable to download sentry-cli binary from ${downloadUrl}.\nServer returned ${
-        response.status
-      }${response.statusText ? `: ${response.statusText}` : ''}.`
-    );
+    let errorMsg = `Unable to download sentry-cli binary from ${downloadUrl}.\nServer returned: ${response.status}`;
+    if (response.statusText) {
+      errorMsg += ` - ${response.statusText}`;
+    }
+    throw new Error(errorMsg);
   }
 
   const contentEncoding = response.headers.get('content-encoding');
