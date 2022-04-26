@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.0.4
+
+### Various fixes & improvements
+
+- ref: Prevent @vercel/nft and similar tools from including binary file in their bundles (#1207) by @kamilogorek
+- ref: Use node-fetch@v2 for the simplicity sake (#1206) by @kamilogorek
+
 ## 2.0.3
 
 ### Various fixes & improvements
