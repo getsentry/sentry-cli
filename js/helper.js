@@ -1,19 +1,22 @@
 'use strict';
 
 const childProcess = require('child_process');
-const os = require('os');
-const path = require('path');
 
 /**
  * Absolute path to the sentry-cli binary (platform dependent).
  * @type {string}
  */
-// istanbul ignore next
-let binaryPath = path.resolve(
-  __dirname,
-
-  os.platform() === 'win32' ? '..\\sentry-cli.exe' : '../sentry-cli'
+let binaryPath = eval(
+  "require('path').resolve(__dirname, require('os').platform() === 'win32' ? '..\\sentry-cli.exe' : '../sentry-cli')"
 );
+
+/**
+ * NOTE: `eval` usage is a workaround for @vercel/nft detecting the binary itself as the hard dependency
+ *       and effectively always including it in the bundle, which is not what we want.
+ * ref: https://github.com/getsentry/sentry-javascript/issues/3865
+ * ref: https://github.com/vercel/nft/issues/203
+ */
+
 /**
  * Overrides the default binary path with a mock value, useful for testing.
  *
