@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.74.4
+
+### Various fixes & improvements
+
+- ci: Add merge target (f9a2db38) by @kamilogorek
+- ref: Prevent @vercel/nft and similar tools from including binary file in their bundles (#1207) by @kamilogorek
+
 ## 1.74.3
 
 ### Various fixes & improvements
