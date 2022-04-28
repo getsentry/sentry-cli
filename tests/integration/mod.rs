@@ -5,6 +5,7 @@ mod help;
 mod info;
 mod login;
 mod monitors;
+mod organizations;
 mod projects;
 mod releases;
 mod send_event;

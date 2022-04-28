@@ -25,6 +25,7 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(login);
         $mac!(monitors);
+        $mac!(organizations);
         $mac!(projects);
         $mac!(react_native);
         $mac!(releases);
@@ -64,6 +65,7 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "info",
     "issues",
     "login",
+    "organizations",
     "projects",
     "releases",
     "repos",
