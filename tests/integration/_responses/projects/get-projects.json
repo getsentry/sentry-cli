@@ -1,0 +1,289 @@
+[
+  {
+    "team": {
+      "id": "404260",
+      "slug": "kamil-test",
+      "name": "kamil-test"
+    },
+    "teams": [
+      {
+        "id": "404260",
+        "slug": "kamil-test",
+        "name": "kamil-test"
+      }
+    ],
+    "id": "5780392",
+    "name": "setcommits",
+    "slug": "setcommits",
+    "isBookmarked": false,
+    "isMember": true,
+    "hasAccess": true,
+    "dateCreated": "2021-05-24T12:26:06.829571Z",
+    "environments": [
+      "bar",
+      "ok"
+    ],
+    "eventProcessing": {
+      "symbolicationDegraded": false
+    },
+    "features": [
+      "alert-filters",
+      "custom-inbound-filters",
+      "discard-groups",
+      "issue-alerts-targeting",
+      "minidump",
+      "performance-suspect-spans-ingestion",
+      "race-free-group-creation",
+      "similarity-indexing",
+      "similarity-view",
+      "releases"
+    ],
+    "firstEvent": null,
+    "firstTransactionEvent": false,
+    "hasSessions": false,
+    "platform": "javascript",
+    "platforms": [],
+    "latestRelease": {
+      "version": "foo"
+    },
+    "hasUserReports": false,
+    "latestDeploys": null
+  },
+  {
+    "team": {
+      "id": "404260",
+      "slug": "kamil-test",
+      "name": "kamil-test"
+    },
+    "teams": [
+      {
+        "id": "404260",
+        "slug": "kamil-test",
+        "name": "kamil-test"
+      }
+    ],
+    "id": "6330649",
+    "name": "show-n-tell",
+    "slug": "show-n-tell",
+    "isBookmarked": false,
+    "isMember": true,
+    "hasAccess": true,
+    "dateCreated": "2022-04-14T08:48:13.715549Z",
+    "environments": [
+      "prod",
+      "dev",
+      "production"
+    ],
+    "eventProcessing": {
+      "symbolicationDegraded": false
+    },
+    "features": [
+      "alert-filters",
+      "custom-inbound-filters",
+      "discard-groups",
+      "issue-alerts-targeting",
+      "minidump",
+      "performance-suspect-spans-ingestion",
+      "race-free-group-creation",
+      "similarity-indexing",
+      "similarity-view",
+      "releases"
+    ],
+    "firstEvent": null,
+    "firstTransactionEvent": false,
+    "hasSessions": false,
+    "platform": "javascript",
+    "platforms": [],
+    "latestRelease": {
+      "version": "my-custom-release"
+    },
+    "hasUserReports": false,
+    "latestDeploys": {
+      "production": {
+        "version": "release-one",
+        "dateFinished": "2022-04-14T08:50:01.826907Z"
+      },
+      "dev": {
+        "version": "release-one",
+        "dateFinished": "2022-04-14T08:50:24.687705Z"
+      },
+      "prod": {
+        "version": "release-two",
+        "dateFinished": "2022-04-14T09:33:16.457687Z"
+      }
+    }
+  },
+  {
+    "team": {
+      "id": "404260",
+      "slug": "kamil-test",
+      "name": "kamil-test"
+    },
+    "teams": [
+      {
+        "id": "404260",
+        "slug": "kamil-test",
+        "name": "kamil-test"
+      }
+    ],
+    "id": "5334254",
+    "name": "test-1",
+    "slug": "test-1",
+    "isBookmarked": false,
+    "isMember": true,
+    "hasAccess": true,
+    "dateCreated": "2020-07-13T10:55:05.882530Z",
+    "environments": [
+      "testing",
+      "local",
+      "development",
+      "debug",
+      "bar",
+      "ok",
+      "dev",
+      "release",
+      "production"
+    ],
+    "eventProcessing": {
+      "symbolicationDegraded": false
+    },
+    "features": [
+      "alert-filters",
+      "custom-inbound-filters",
+      "discard-groups",
+      "issue-alerts-targeting",
+      "minidump",
+      "performance-suspect-spans-ingestion",
+      "race-free-group-creation",
+      "similarity-indexing",
+      "similarity-view",
+      "releases"
+    ],
+    "firstEvent": "2020-07-17T12:51:20.549315Z",
+    "firstTransactionEvent": true,
+    "hasSessions": true,
+    "platform": "javascript",
+    "platforms": [
+      "cocoa",
+      "javascript",
+      "native"
+    ],
+    "latestRelease": {
+      "version": "9ae6b52d4897e3a753b36d9621ac152082fc04e8"
+    },
+    "hasUserReports": false,
+    "latestDeploys": {
+      "production": {
+        "version": "foo",
+        "dateFinished": "2022-04-08T11:15:56.070493Z"
+      },
+      "dev": {
+        "version": "foo",
+        "dateFinished": "2022-04-06T10:32:22.005702Z"
+      },
+      "bar": {
+        "version": "foo",
+        "dateFinished": "2022-04-06T10:33:59.184396Z"
+      }
+    }
+  },
+  {
+    "team": {
+      "id": "404260",
+      "slug": "kamil-test",
+      "name": "kamil-test"
+    },
+    "teams": [
+      {
+        "id": "404260",
+        "slug": "kamil-test",
+        "name": "kamil-test"
+      }
+    ],
+    "id": "5334255",
+    "name": "test-2",
+    "slug": "test-23",
+    "isBookmarked": false,
+    "isMember": true,
+    "hasAccess": true,
+    "dateCreated": "2020-07-13T10:55:16.299399Z",
+    "environments": [
+      "bar",
+      "ok"
+    ],
+    "eventProcessing": {
+      "symbolicationDegraded": false
+    },
+    "features": [
+      "alert-filters",
+      "custom-inbound-filters",
+      "discard-groups",
+      "issue-alerts-targeting",
+      "minidump",
+      "performance-suspect-spans-ingestion",
+      "race-free-group-creation",
+      "similarity-indexing",
+      "similarity-view",
+      "releases"
+    ],
+    "firstEvent": null,
+    "firstTransactionEvent": false,
+    "hasSessions": false,
+    "platform": "javascript",
+    "platforms": [],
+    "latestRelease": {
+      "version": "hello"
+    },
+    "hasUserReports": false,
+    "latestDeploys": null
+  },
+  {
+    "team": {
+      "id": "404260",
+      "slug": "kamil-test",
+      "name": "kamil-test"
+    },
+    "teams": [
+      {
+        "id": "404260",
+        "slug": "kamil-test",
+        "name": "kamil-test"
+      }
+    ],
+    "id": "5860887",
+    "name": "Vue",
+    "slug": "vue",
+    "isBookmarked": false,
+    "isMember": true,
+    "hasAccess": true,
+    "dateCreated": "2021-07-12T12:45:38.705398Z",
+    "environments": [
+      "production"
+    ],
+    "eventProcessing": {
+      "symbolicationDegraded": false
+    },
+    "features": [
+      "alert-filters",
+      "custom-inbound-filters",
+      "discard-groups",
+      "issue-alerts-targeting",
+      "minidump",
+      "performance-suspect-spans-ingestion",
+      "race-free-group-creation",
+      "similarity-indexing",
+      "similarity-view",
+      "releases"
+    ],
+    "firstEvent": "2021-07-13T09:28:40.208000Z",
+    "firstTransactionEvent": true,
+    "hasSessions": false,
+    "platform": "javascript-vue",
+    "platforms": [],
+    "latestRelease": {
+      "version": "-foo"
+    },
+    "hasUserReports": false,
+    "latestDeploys": null
+  }
+]
