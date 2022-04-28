@@ -5,6 +5,7 @@ mod help;
 mod info;
 mod login;
 mod monitors;
+mod projects;
 mod releases;
 mod send_event;
 mod sourcemaps;

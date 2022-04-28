@@ -1,0 +1,14 @@
+```
+$ sentry-cli projects list
+? success
++---------+-------------+------------+-------------+
+| ID      | Slug        | Team       | Name        |
++---------+-------------+------------+-------------+
+| 5860887 | vue         | kamil-test | Vue         |
+| 5780392 | setcommits  | kamil-test | setcommits  |
+| 6330649 | show-n-tell | kamil-test | show-n-tell |
+| 5334254 | test-1      | kamil-test | test-1      |
+| 5334255 | test-23     | kamil-test | test-2      |
++---------+-------------+------------+-------------+
+
+```
