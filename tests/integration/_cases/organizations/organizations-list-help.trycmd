@@ -1,0 +1,21 @@
+```
+$ sentry-cli organizations list --help
+? success
+sentry-cli[EXE]-organizations-list 
+List all organizations available to the authenticated token.
+
+USAGE:
+    sentry-cli[EXE] organizations list [OPTIONS]
+
+OPTIONS:
+        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
+    -h, --help                       Print help information
+        --header <KEY:VALUE>         Custom headers that should be attached to all requests
+                                     in key:value format.
+        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
+                                     info, warn, error]
+        --quiet                      Do not print any output while preserving correct exit code.
+                                     This flag is currently implemented only for selected
+                                     subcommands. [aliases: silent]
+
+```

@@ -35,6 +35,7 @@ SUBCOMMANDS:
     info               Print information about the Sentry server.
     issues             Manage issues in Sentry.
     login              Authenticate with the Sentry server.
+    organizations      Manage organizations on Sentry.
     projects           Manage projects on Sentry.
     react-native       Upload build artifacts for react-native projects.
     releases           Manage releases on Sentry.

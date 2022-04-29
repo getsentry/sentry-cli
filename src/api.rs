@@ -1334,6 +1334,30 @@ impl Api {
         }
     }
 
+    /// List all organizations associated with the authenticated token
+    pub fn list_organizations(&self) -> ApiResult<Vec<Organization>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let resp = self.get(&format!("/organizations/?cursor={}", QueryArg(&cursor)))?;
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::ResourceNotFound.into());
+                } else {
+                    break;
+                }
+            }
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Organization>>()?.into_iter());
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
+    }
+
     /// List all monitors associated with an organization
     pub fn list_organization_monitors(&self, org: &str) -> ApiResult<Vec<Monitor>> {
         let mut rv = vec![];
@@ -2246,6 +2270,22 @@ impl IssueFilter {
 pub struct AssociateDsymsResponse {
     #[serde(rename = "associatedDsymFiles")]
     pub associated_dsyms: Vec<DebugInfoFile>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct Organization {
+    pub id: String,
+    pub slug: String,
+    pub name: String,
+    #[serde(rename = "dateCreated")]
+    pub date_created: DateTime<Utc>,
+    #[serde(rename = "isEarlyAdopter")]
+    pub is_early_adopter: bool,
+    #[serde(rename = "require2FA")]
+    pub require_2fa: bool,
+    #[serde(rename = "requireEmailVerification")]
+    pub require_email_verification: bool,
+    pub features: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
