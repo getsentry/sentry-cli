@@ -22,6 +22,7 @@ OPTIONS:
     -r, --release <RELEASE>          The release slug.
 
 SUBCOMMANDS:
+    explain    Explain why sourcemaps are not working for a given event.
     help       Print this message or the help of the given subcommand(s)
     resolve    Resolve sourcemap for a given line/column position.
     upload     Upload sourcemaps for a release.

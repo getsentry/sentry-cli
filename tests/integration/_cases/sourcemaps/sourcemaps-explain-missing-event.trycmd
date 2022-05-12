@@ -1,0 +1,7 @@
+```
+$ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
+? failed
+✖ Could not retrieve event 43a57a55cd5a4207ac520c03e1dee1b4
+ℹ Make sure that event ID you used is valid.
+
+```

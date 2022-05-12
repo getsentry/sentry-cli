@@ -1,0 +1,36 @@
+{
+  "version": 3,
+  "file": "bundle.min.js",
+  "sources": [
+    "webpack://webpack-plugin/webpack/bootstrap",
+    "webpack://webpack-plugin/webpack/runtime/global",
+    "webpack://webpack-plugin/./node_modules/@sentry/webpack-plugin/src/sentry-webpack.module.js",
+    "webpack://webpack-plugin/./src/app.js"
+  ],
+  "sourcesContent": [
+    "// The require scope\nvar __webpack_require__ = {};\n\n",
+    "__webpack_require__.g = (function() {\n\tif (typeof globalThis === 'object') return globalThis;\n\ttry {\n\t\treturn this || new Function('return this')();\n\t} catch (e) {\n\t\tif (typeof window === 'object') return window;\n\t}\n})();",
+    "const _global = (typeof window !== 'undefined' ? window : typeof global !== 'undefined' ? global : typeof self !== 'undefined' ? self : {}); _global.SENTRY_RELEASE={id:\"ytho-test\"};",
+    "Sentry.init({\n  dsn: 'https://5b0e5845265a472ba9c269bbfa0c8388@o333688.ingest.sentry.io/5334254',\n  release: 'ytho-test'\n})\n\nfunction foo(msg) {\n  bar(msg);\n}\n\nfunction bar(msg) {\n  throw new Error(msg);\n}\n\nfoo(\"whoops\");\n"
+  ],
+  "names": [
+    "__webpack_require__",
+    "g",
+    "globalThis",
+    "this",
+    "Function",
+    "e",
+    "window",
+    "self",
+    "SENTRY_RELEASE",
+    "id",
+    "Sentry",
+    "init",
+    "dsn",
+    "release",
+    "msg",
+    "Error",
+    "bar"
+  ],
+  "mappings": "MACA,IAAIA,EAAsB,GCD1BA,EAAoBC,EAAI,WACvB,GAA0B,iBAAfC,WAAyB,OAAOA,WAC3C,IACC,OAAOC,MAAQ,IAAIC,SAAS,cAAb,GACd,MAAOC,GACR,GAAsB,iBAAXC,OAAqB,OAAOA,QALjB,ICAW,oBAAXA,OAAyBA,YAA2B,IAAX,EAAAL,EAAyB,EAAAA,EAAyB,oBAATM,KAAuBA,KAAO,IAAaC,eAAe,CAACC,GAAG,aCAxKC,OAAOC,KAAK,CACVC,IAAK,4EACLC,QAAS,cAOX,SAAaC,GACX,MAAM,IAAIC,MAGR,UAPFC,I"
+}

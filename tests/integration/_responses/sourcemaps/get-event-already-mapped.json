@@ -1,0 +1,118 @@
+{
+  "event_id": "43a57a55cd5a4207ac520c03e1dee1b4",
+  "project": 5334254,
+  "release": "ytho-test",
+  "dist": null,
+  "exception": {
+    "values": [
+      {
+        "type": "Error",
+        "value": "whoops",
+        "stacktrace": {
+          "frames": [
+            {
+              "module": "dist/bundle.min.js",
+              "abs_path": "http://localhost:5000/dist/bundle.min.js.map",
+              "lineno": 7,
+              "colno": 3,
+              "context_line": "",
+              "in_app": true,
+              "data": {
+                "sourcemap": "http://localhost:5000/dist/bundle.min.js.map"
+              }
+            },
+            {
+              "module": "src/app",
+              "filename": "./src/app.js",
+              "abs_path": "webpack://webpack-plugin/./src/app.js",
+              "lineno": 7,
+              "colno": 3,
+              "pre_context": [
+                "  dsn: 'https://5b0e5845265a472ba9c269bbfa0c8388@o333688.ingest.sentry.io/5334254',",
+                "  release: 'ytho-test'",
+                "})",
+                "",
+                "function foo(msg) {"
+              ],
+              "context_line": "  bar(msg);",
+              "post_context": [
+                "}",
+                "",
+                "function bar(msg) {",
+                "  throw new Error(msg);",
+                "}"
+              ],
+              "in_app": true,
+              "data": {
+                "sourcemap": "http://localhost:5000/dist/bundle.min.js.map"
+              }
+            },
+            {
+              "function": "bar",
+              "module": "src/app",
+              "filename": "./src/app.js",
+              "abs_path": "webpack://webpack-plugin/./src/app.js",
+              "lineno": 11,
+              "colno": 9,
+              "pre_context": [
+                "function foo(msg) {",
+                "  bar(msg);",
+                "}",
+                "",
+                "function bar(msg) {"
+              ],
+              "context_line": "  throw new Error(msg);",
+              "post_context": [
+                "}",
+                "",
+                "foo(\"whoops\");",
+                ""
+              ],
+              "in_app": true,
+              "data": {
+                "sourcemap": "http://localhost:5000/dist/bundle.min.js.map"
+              }
+            }
+          ]
+        },
+        "raw_stacktrace": {
+          "frames": [
+            {
+              "filename": "/dist/bundle.min.js",
+              "abs_path": "http://localhost:5000/dist/bundle.min.js",
+              "lineno": 1,
+              "colno": 456,
+              "context_line": "{snip} tps://5b0e5845265a472ba9c269bbfa0c8388@o333688.ingest.sentry.io/5334254\",release:\"ytho-test\"}),function(t){throw new Error(\"whoops\")}()})();",
+              "post_context": [
+                "//# sourceMappingURL=bundle.min.js.map"
+              ],
+              "in_app": true
+            },
+            {
+              "filename": "/dist/bundle.min.js",
+              "abs_path": "http://localhost:5000/dist/bundle.min.js",
+              "lineno": 1,
+              "colno": 452,
+              "context_line": "{snip} tps://5b0e5845265a472ba9c269bbfa0c8388@o333688.ingest.sentry.io/5334254\",release:\"ytho-test\"}),function(t){throw new Error(\"whoops\")}()})();",
+              "post_context": [
+                "//# sourceMappingURL=bundle.min.js.map"
+              ],
+              "in_app": true
+            },
+            {
+              "filename": "/dist/bundle.min.js",
+              "abs_path": "http://localhost:5000/dist/bundle.min.js",
+              "lineno": 1,
+              "colno": 432,
+              "context_line": "{snip} tps://5b0e5845265a472ba9c269bbfa0c8388@o333688.ingest.sentry.io/5334254\",release:\"ytho-test\"}),function(t){throw new Error(\"whoops\")}()})();",
+              "post_context": [
+                "//# sourceMappingURL=bundle.min.js.map"
+              ],
+              "in_app": true
+            }
+          ]
+        }
+      }
+    ]
+  }
+}
