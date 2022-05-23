@@ -529,20 +529,22 @@ where
         }
 
         let path = entry.path();
-        match try_open_zip(path) {
-            Ok(Some(zip)) => {
-                debug!("searching zip archive {}", path.display());
-                walk_difs_zip(zip, options, &mut func)?;
-                debug!("finished zip archive {}", path.display());
-                continue;
-            }
-            Err(e) => {
-                debug!("skipping zip archive {}", path.display());
-                debug!("error: {}", e);
-                continue;
-            }
-            Ok(None) => {
-                // this is not a zip archive
+        if options.zips_allowed {
+            match try_open_zip(path) {
+                Ok(Some(zip)) => {
+                    debug!("searching zip archive {}", path.display());
+                    walk_difs_zip(zip, options, &mut func)?;
+                    debug!("finished zip archive {}", path.display());
+                    continue;
+                }
+                Err(e) => {
+                    debug!("skipping zip archive {}", path.display());
+                    debug!("error: {}", e);
+                    continue;
+                }
+                Ok(None) => {
+                    // this is not a zip archive
+                }
             }
         }
 
