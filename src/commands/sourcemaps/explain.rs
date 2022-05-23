@@ -113,6 +113,20 @@ fn fetch_release_artifacts(org: &str, project: &str, release: &str) -> Result<Ve
     })?
 }
 
+/*
+ * Try to find an artifact which matches the path part of the url extracted from the stacktrace frame,
+ * prefixed with the default `~/`, which is a "glob-like" pattern for matchin any hostname.
+ *
+ * We only need the `pathname` portion of the url, so if it's absolute, just extract it.
+ * If it's relative however, parse any random url (example.com) and join it with our relative url,
+ * as Rust cannot handle parsing of relative urls.
+ *
+ * http://localhost:5000/dist/bundle.min.js => ~/dist/bundle.min.js
+ * /dist/bundle.js.map => ~/dist/bundle.js.map
+ * okboomer => error (invalid relative path, no extension)
+ *
+ * It should be more generic than using the defaults, but should be sufficient for our current usecase.
+ */
 fn find_matching_artifact(artifacts: &[Artifact], abs_path: &str) -> Result<Artifact> {
     let abs_path = match Url::parse(abs_path) {
         Ok(path) => Ok(path),
