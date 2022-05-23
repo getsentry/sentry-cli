@@ -60,7 +60,7 @@ where
     println!("{}", style(format!("✖ {}", msg)).red());
 }
 
-fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEvent<'static>> {
+fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEvent> {
     match Api::current().get_event(org, Some(project), event_id)? {
         Some(event) => {
             success(format!("Fetched data for event: {}", event_id));
