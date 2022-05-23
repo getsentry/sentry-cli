@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::{format_err, Result};
 use clap::{Arg, ArgMatches, Command};
-use sourcemap::{DecodedMap, Token};
+use sourcemap::{DecodedMap, SourceView, Token};
 
 use crate::utils::args::validate_int;
 
@@ -57,6 +57,28 @@ fn count_whitespace_prefix(test: &str) -> i32 {
     result
 }
 
+pub fn print_source(token: &Token<'_>, view: &SourceView) {
+    let mut lines: Vec<&str> = vec![];
+    for offset in &[-3, -2, -1, 0, 1, 2, 3] {
+        let line = token.get_src_line() as isize + offset;
+        if line < 0 {
+            continue;
+        }
+        if let Some(line) = view.get_line(line as u32) {
+            lines.push(line);
+        }
+    }
+    let lowest_indent = lines
+        .iter()
+        .map(|l| count_whitespace_prefix(l))
+        .min()
+        .unwrap_or(0);
+
+    for line in lines {
+        println!("    {}", &line[(lowest_indent as usize)..]);
+    }
+}
+
 fn print_token(token: &Token<'_>) {
     if let Some(name) = token.get_name() {
         println!("  name: {:?}", name);
@@ -73,26 +95,8 @@ fn print_token(token: &Token<'_>) {
     println!("  minified line: {}", token.get_dst_line());
     println!("  minified column: {}", token.get_dst_col());
     if let Some(view) = token.get_source_view() {
-        let mut lines: Vec<&str> = vec![];
-        for offset in &[-3, -2, -1, 0, 1, 2, 3] {
-            let line = token.get_src_line() as isize + offset;
-            if line < 0 {
-                continue;
-            }
-            if let Some(line) = view.get_line(line as u32) {
-                lines.push(line);
-            }
-        }
-        let lowest_indent = lines
-            .iter()
-            .map(|l| count_whitespace_prefix(l))
-            .min()
-            .unwrap_or(0);
-
         println!("  source code:");
-        for line in lines {
-            println!("    {}", &line[(lowest_indent as usize)..]);
-        }
+        print_source(token, view);
     } else if token.get_source_view().is_none() {
         println!("  cannot find source");
     } else {

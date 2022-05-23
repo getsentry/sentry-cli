@@ -1,0 +1,12 @@
+```
+$ sentry-cli sourcemaps explain
+? failed
+error: The following required arguments were not provided:
+    <EVENT_ID>
+
+USAGE:
+    sentry-cli[EXE] sourcemaps explain [OPTIONS] <EVENT_ID>
+
+For more information try --help
+
+```

@@ -1,0 +1,15 @@
+{
+  "event_id": "43a57a55cd5a4207ac520c03e1dee1b4",
+  "project": 5334254,
+  "release": "ytho-test",
+  "dist": "bar",
+  "exception": {
+    "values": [
+      {
+        "type": "Error",
+        "value": "whoops",
+        "stacktrace": null
+      }
+    ]
+  }
+}

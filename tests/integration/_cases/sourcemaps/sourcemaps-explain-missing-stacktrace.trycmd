@@ -1,0 +1,9 @@
+```
+$ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
+? failed
+✔ Fetched data for event: 43a57a55cd5a4207ac520c03e1dee1b4
+✔ Event has release name: ytho-test
+✔ Event has a valid exception present
+✖ Event exception has no stacktrace available
+
+```

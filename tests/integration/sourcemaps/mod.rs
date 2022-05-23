@@ -1,5 +1,6 @@
 use crate::integration::register_test;
 
+mod explain;
 mod resolve;
 
 #[test]

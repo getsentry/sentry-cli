@@ -1,14 +1,19 @@
 ```
-$ sentry-cli sourcemaps --help
+$ sentry-cli sourcemaps explain --help
 ? success
-sentry-cli[EXE]-sourcemaps 
-Manage sourcemaps for Sentry releases.
+sentry-cli[EXE]-sourcemaps-explain 
+Explain why sourcemaps are not working for a given event.
 
 USAGE:
-    sentry-cli[EXE] sourcemaps [OPTIONS] <SUBCOMMAND>
+    sentry-cli[EXE] sourcemaps explain [OPTIONS] <EVENT_ID>
+
+ARGS:
+    <EVENT_ID>    ID of an event to be explained.
 
 OPTIONS:
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
+    -f, --force                      Force full validation flow, even when event is already source
+                                     mapped.
     -h, --help                       Print help information
         --header <KEY:VALUE>         Custom headers that should be attached to all requests
                                      in key:value format.
@@ -20,11 +25,5 @@ OPTIONS:
                                      This flag is currently implemented only for selected
                                      subcommands. [aliases: silent]
     -r, --release <RELEASE>          The release slug.
-
-SUBCOMMANDS:
-    explain    Explain why sourcemaps are not working for a given event.
-    help       Print this message or the help of the given subcommand(s)
-    resolve    Resolve sourcemap for a given line/column position.
-    upload     Upload sourcemaps for a release.
 
 ```

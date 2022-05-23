@@ -1,0 +1,22 @@
+[
+  {
+    "id": "6796495645",
+    "name": "~/random.min.js",
+    "dist": null,
+    "headers": {
+      "Sourcemap": "random.min.js.map"
+    },
+    "size": 497,
+    "sha1": "2fb719956748ab7ec5ae9bcb47606733f5589b72",
+    "dateCreated": "2022-05-12T11:08:01.520199Z"
+  },
+  {
+    "id": "6796495646",
+    "name": "~/random.min.js.map",
+    "dist": null,
+    "headers": {},
+    "size": 1522,
+    "sha1": "f818059cbf617a8fae9b4e46d08f6c0246bb1624",
+    "dateCreated": "2022-05-12T11:08:01.496220Z"
+  }
+]

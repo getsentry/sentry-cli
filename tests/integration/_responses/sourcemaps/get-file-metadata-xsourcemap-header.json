@@ -1,0 +1,11 @@
+{
+  "id": "6796498726",
+  "name": "~/bundle.min.js",
+  "dist": null,
+  "headers": {
+    "X-SourceMap": "bundle.min.js.map"
+  },
+  "size": 497,
+  "sha1": "2fb719956748ab7ec5ae9bcb47606733f5589b72",
+  "dateCreated": "2022-05-12T11:09:24.235491Z"
+}

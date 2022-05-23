@@ -29,6 +29,7 @@ use log::{debug, info, warn};
 use parking_lot::{Mutex, RwLock};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
+use sentry::protocol::{Exception, Values};
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
@@ -532,6 +533,73 @@ impl Api {
             }
         }
         Ok(rv)
+    }
+
+    /// Get a single release file and store it inside provided descriptor.
+    pub fn get_release_file(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        file_id: &str,
+        file_desc: &mut File,
+    ) -> Result<(), ApiError> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/{}/?download=1",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/{}/?download=1",
+                PathArg(org),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        };
+
+        let resp = self.download(&path, file_desc)?;
+        if resp.status() == 404 {
+            resp.convert_rnf(ApiErrorKind::ResourceNotFound)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Get a single release file metadata.
+    pub fn get_release_file_metadata(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        file_id: &str,
+    ) -> ApiResult<Option<Artifact>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        };
+
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
     }
 
     /// Deletes a single release file.  Returns `true` if the file was
@@ -1472,6 +1540,37 @@ impl Api {
         }
         Ok(rv)
     }
+
+    /// Looks up an event, which was already processed by Sentry and returns it.
+    /// If it does not exist `None` will be returned.
+    pub fn get_event(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        event_id: &str,
+    ) -> ApiResult<Option<ProcessedEvent>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/events/{}/json/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(event_id)
+            )
+        } else {
+            format!(
+                "/organizations/{}/events/{}/json/",
+                PathArg(org),
+                PathArg(event_id)
+            )
+        };
+
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
 }
 
 fn send_req<W: Write>(
@@ -2011,7 +2110,7 @@ pub struct AuthInfo {
 }
 
 /// A release artifact
-#[derive(Deserialize, Debug)]
+#[derive(Clone, Deserialize, Debug)]
 pub struct Artifact {
     pub id: String,
     pub sha1: String,
@@ -2598,4 +2697,17 @@ pub struct GitCommit {
     pub timestamp: DateTime<FixedOffset>,
     pub message: Option<String>,
     pub id: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProcessedEvent {
+    pub event_id: Uuid,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub project: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub release: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dist: Option<String>,
+    #[serde(default, skip_serializing_if = "Values::is_empty")]
+    pub exception: Values<Exception>,
 }

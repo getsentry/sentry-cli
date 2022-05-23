@@ -1,0 +1,13 @@
+```
+$ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
+? failed
+✔ Fetched data for event: 43a57a55cd5a4207ac520c03e1dee1b4
+✔ Event has release name: ytho-test
+✔ Event has a valid exception present
+✔ Event has a valid stacktrace present
+✔ Artifact ~/dist/bundle.min.js found.
+✖ Release artifact distrubition mismatch. Event: bar, Artifact: [none]
+ℹ Configure 'dist' option in the SDK to match the one used during artifacts upload.
+  https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifact-distribution-value-matches-value-configured-in-your-sdk
+
+```
