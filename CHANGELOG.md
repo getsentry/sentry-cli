@@ -2,6 +2,75 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.1.0
+
+### Source Maps Upload Check "y-tho" (ongoing)
+
+*Problem statement:*
+
+Uploading source maps is a common source of frustration. Source maps are also one of the great value adds to our in product experience. We want to automate supporting customers with frequent issues.
+
+https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/
+
+*Outcome: *
+
+Developers will be provided with a tool to help them discover any issues they may have when uploading source maps
+
+Sentry support will have a tool and docs to suggest to customers to hopefully first discover issues, and second at least know what their problem is NOT.
+
+*Key measurements:*
+
+* qualitative: Is this useful for customers and support
+* quantitative: Can we try to influence the number of Zendesk tickets
+* quantitative: Can we influence the resolution time of source maps related Zendesk tickets
+
+Can we find a way to track in zendesk the number of times the sentry-cli “y-tho“ functionality was useful
+
+*Additional*
+
+This is something users would run locally so I do not think we can track usage exactly what was not covered in y-tho
+
+* Verify your source maps are built correctly
+* Verify your source maps work locally
+* Verify your source files are not too large
+  * this is a fuzzy requirement today in sentry
+* Verify artifacts are not gzipped
+* Verify workers are sharing the same volume as web (if running self-hosted Sentry via Docker)
+* Should spit out an easily readable and easily copy and paste - to put into ZenDesk or elsewhere for support colleagues
+
+*Possible second milestone:*  
+
+https://github.com/getsentry/rust-sourcemap/tree/master/cli
+
+* In sentry error incorrect source map location 
+* this helps when producing sourcemaps locally then line and column 
+* this verify that it resolves locally 
+  * if yes then it is a problem in between on sentry server side or upload 
+  * 1st Verifies what you upload to sentry is exactly what you upload to sentry 
+  * 2nd step from “y-tho” ensure previous steps are not for waste 
+* What is being automated?
+  * on release page you have your files (release artificats)
+    * download
+    * manually check the line number matches the error 
+    * if correct then data is correct 
+    * then you know an error with cli and not with the source maps that were uploaded 
+
+
+
+By: @kamilogorek (#1235)
+
+### Various fixes & improvements
+
+- ref: Change comment format for find_matching_artifact (#1243) by @kamilogorek
+- ref: Log correct AppCenter error message (#1243) by @kamilogorek
+- fix: Respect no-zips option for debug files upload (#1239) by @saf-e
+- chore: fix recommended VS Code extension name (#1240) by @vaind
+- ref: Rename VERSION to SENTRY_CLI_VERSION in install readme (#1227) by @kamilogorek
+- feat: Add organizations list command (#1213) by @kamilogorek
+- docs(cli): Sync get-cli readme with our docs; add version specifier (#1225) by @kamilogorek
+- test: Add integration tests for projects command (#1212) by @kamilogorek
+- fix: replace git.io links with redirect targets (#1209) by @asottile-sentry
+
 ## 2.0.4
 
 ### Various fixes & improvements
