@@ -8,9 +8,9 @@ use std::str;
 use anyhow::{bail, format_err, Error, Result};
 use console::strip_ansi_codes;
 use glob::{glob_with, MatchOptions};
-// use serde::de::{Deserialize, Deserializer, Error as DeError};
 use if_chain::if_chain;
 use serde::de;
+use serde::Deserialize;
 
 use crate::utils::releases::{get_xcode_release_name, infer_gradle_release_name};
 use crate::utils::xcode::{InfoPlist, XcodeProjectInfo};
@@ -32,6 +32,12 @@ Install with `npm install -g appcenter-cli` and make sure it is on the PATH.";
 #[derive(Debug)]
 pub struct AppCenterPackage {
     pub label: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct AppCenterOutput {
+    #[serde(rename = "errorMessage")]
+    pub error_message: String,
 }
 
 impl<'de> de::Deserialize<'de> for AppCenterPackage {
@@ -66,16 +72,29 @@ impl<'de> de::Deserialize<'de> for AppCenterPackage {
     }
 }
 
+// AppCenter CLI can throw errors in 2 different formats, based on the `--output` flag,
+// and we want to handle them both (we call it with `--output json` ourselves).
+//
+// JSON: `{"succeeded":false,"errorCode":5,"errorMessage":"Command 'appcenter codepush deployment history' requires a logged in user. Use the 'appcenter login' command to log in."}`
+// Text: `Error: Command 'appcenter codepush deployment history' requires a logged in user. Use the 'appcenter login' command to log in.`
+//
+// Also, starting version 2.10.8 (2022-01-10), it prints to `stderr`, where it used to use `stdout` before.
+// ref: https://github.com/microsoft/appcenter-cli/commit/b3d6290afcb84affe6a4096893b1ea11d10ac3cf
 pub fn get_appcenter_error(output: &Output) -> Error {
-    let message = str::from_utf8(&output.stdout).unwrap_or("Unknown AppCenter error");
-
-    let stripped = strip_ansi_codes(message);
-    let cause = if let Some(rest) = stripped.strip_prefix("Error: ") {
-        rest
-    } else {
-        &stripped
-    }
-    .to_string();
+    let cause = serde_json::from_slice::<AppCenterOutput>(&output.stderr)
+        .map(|o| o.error_message)
+        .unwrap_or_else(|_| {
+            str::from_utf8(&output.stderr)
+                .map(|o| {
+                    let stripped = strip_ansi_codes(o);
+                    if let Some(rest) = stripped.strip_prefix("Error: ") {
+                        rest.to_string()
+                    } else {
+                        stripped.to_string()
+                    }
+                })
+                .unwrap_or_else(|_| "Unknown AppCenter error".to_string())
+        });
 
     format_err!(cause)
 }
