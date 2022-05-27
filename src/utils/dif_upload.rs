@@ -28,6 +28,7 @@ use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use walkdir::WalkDir;
 use which::which;
+use zip::result::ZipError;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
 
 use crate::api::{
@@ -533,7 +534,14 @@ where
             match try_open_zip(path) {
                 Ok(Some(zip)) => {
                     debug!("searching zip archive {}", path.display());
-                    walk_difs_zip(zip, options, &mut func)?;
+                    if let Err(err) = walk_difs_zip(zip, options, &mut func) {
+                        if let Some(e) = err.downcast_ref::<ZipError>() {
+                            debug!("skipping zip archive {}", path.display());
+                            debug!("error: {}", e);
+                            continue;
+                        };
+                        return Err(err);
+                    }
                     debug!("finished zip archive {}", path.display());
                     continue;
                 }
