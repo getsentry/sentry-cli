@@ -26,6 +26,7 @@ use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
+use symbolic::il2cpp::ObjectLineMapping;
 use walkdir::WalkDir;
 use which::which;
 use zip::result::ZipError;
@@ -78,6 +79,7 @@ enum ParsedDif<'a> {
     Object(Box<Object<'a>>),
     BcSymbolMap(BcSymbolMap<'a>),
     UuidMap(UuidMapping),
+    Il2Cpp,
 }
 
 impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
@@ -133,6 +135,25 @@ impl<'data> DifMatch<'data> {
         })
     }
 
+    fn from_temp_line_mapping<S>(
+        temp_file: TempFile,
+        name: S,
+        debug_id: Option<DebugId>,
+    ) -> Result<Self>
+    where
+        S: Into<String>,
+    {
+        let buffer = ByteView::open(temp_file.path()).map_err(Error::new)?;
+        let dif = SelfCell::try_new(buffer, |_| Ok::<_, anyhow::Error>(ParsedDif::Il2Cpp))?;
+
+        Ok(DifMatch {
+            _backing: Some(DifBacking::Temp(temp_file)),
+            dif,
+            name: name.into(),
+            debug_id,
+            attachments: None,
+        })
+    }
     /// Creates a [`DifMatch`] from a `.bcsymbolmap` file.
     ///
     /// The `uuid` is the DebugID of the symbolmap while `name` is the filename of the file.
@@ -185,6 +206,7 @@ impl<'data> DifMatch<'data> {
             ParsedDif::Object(ref obj) => Some(obj),
             ParsedDif::BcSymbolMap(_) => None,
             ParsedDif::UuidMap(_) => None,
+            ParsedDif::Il2Cpp => None,
         }
     }
 
@@ -193,6 +215,7 @@ impl<'data> DifMatch<'data> {
             ParsedDif::Object(ref object) => DifFormat::Object(object.file_format()),
             ParsedDif::BcSymbolMap(_) => DifFormat::BcSymbolMap,
             ParsedDif::UuidMap(_) => DifFormat::PList,
+            ParsedDif::Il2Cpp => DifFormat::Il2Cpp,
         }
     }
 
@@ -202,6 +225,7 @@ impl<'data> DifMatch<'data> {
             ParsedDif::Object(ref obj) => obj.data(),
             ParsedDif::BcSymbolMap(_) => self.dif.owner(),
             ParsedDif::UuidMap(_) => self.dif.owner(),
+            ParsedDif::Il2Cpp => self.dif.owner(),
         }
     }
 
@@ -1050,12 +1074,14 @@ pub fn filter_bad_sources(entry: &FileEntry) -> bool {
     }
 }
 
-/// Resolves BCSymbolMaps for all debug files with hidden symbols. All other
-/// files are not touched. Note that this only applies to Apple dSYMs.
+/// Creates a source bundle containing the source files referenced by the input DIFs.
 ///
-/// If there are debug files with hidden symbols but no `symbol_map` path is
-/// given, a warning is emitted.
-fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>> {
+/// If `include_il2cpp_sources` is true, C# files referenced by il2cpp line mapping comments
+/// will also be included.
+fn create_source_bundles<'a>(
+    difs: &[DifMatch<'a>],
+    include_il2cpp_sources: bool,
+) -> Result<Vec<DifMatch<'a>>> {
     let mut source_bundles = Vec::new();
 
     let progress_style = ProgressStyle::default_bar().template(
@@ -1082,7 +1108,8 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>>
         }
 
         let temp_file = TempFile::create()?;
-        let writer = SourceBundleWriter::start(BufWriter::new(temp_file.open()?))?;
+        let mut writer = SourceBundleWriter::start(BufWriter::new(temp_file.open()?))?;
+        writer.collect_il2cpp_sources(include_il2cpp_sources);
 
         // Resolve source files from the object and write their contents into the archive. Skip to
         // upload this bundle if no source could be written. This can happen if there is no file or
@@ -1111,6 +1138,23 @@ fn create_source_bundles<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>>
     );
 
     Ok(source_bundles)
+}
+
+fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>> {
+    let mut line_mappings = Vec::new();
+    for dif in difs {
+        if let Some(object) = dif.object() {
+            let temp_file = TempFile::create()?;
+            let mut writer = BufWriter::new(temp_file.open()?);
+            let line_mapping = ObjectLineMapping::from_object(object)?;
+            line_mapping.to_writer(&mut writer)?;
+            let line_mapping =
+                DifMatch::from_temp_line_mapping(temp_file, dif.path(), dif.debug_id)?;
+            line_mappings.push(line_mapping);
+        }
+    }
+
+    Ok(line_mappings)
 }
 
 /// Calls the assemble endpoint and returns the state for every `DifMatch` along
@@ -1369,6 +1413,7 @@ fn poll_dif_assemble(
                 },
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::UuidMap(_) => String::from("uuidmap"),
+                ParsedDif::Il2Cpp => String::from("il2cpp"),
             };
 
             println!(
@@ -1431,9 +1476,14 @@ fn upload_difs_chunked(
     let symbol_map = options.symbol_map.as_deref();
     let mut processed = process_symbol_maps(found, symbol_map)?;
 
+    if options.upload_il2cpp_mappings {
+        let il2cpp_mappings = create_il2cpp_mappings(&processed)?;
+        processed.extend(il2cpp_mappings);
+    }
+
     // Resolve source code context if specified
     if options.include_sources {
-        let source_bundles = create_source_bundles(&processed)?;
+        let source_bundles = create_source_bundles(&processed, options.upload_il2cpp_mappings)?;
         processed.extend(source_bundles);
     }
 
@@ -1592,6 +1642,8 @@ pub enum DifFormat {
     /// [`symbolic::debuginfo::macho::UuidMapping`] used to map a `dSYM` UUID back to UUID
     /// of the original `BCSymbolMap`.
     PList,
+    /// A Unity il2cpp line mapping file.
+    Il2Cpp,
 }
 
 /// Searches, processes and uploads debug information files (DIFs).
@@ -1640,6 +1692,8 @@ pub struct DifUpload {
     include_sources: bool,
     bcsymbolmaps_allowed: bool,
     wait: bool,
+    upload_il2cpp_mappings: bool,
+    il2cpp_mappings_allowed: bool,
 }
 
 impl DifUpload {
@@ -1677,6 +1731,8 @@ impl DifUpload {
             include_sources: false,
             bcsymbolmaps_allowed: false,
             wait: false,
+            upload_il2cpp_mappings: false,
+            il2cpp_mappings_allowed: false,
         }
     }
 
@@ -1820,6 +1876,14 @@ impl DifUpload {
         self
     }
 
+    /// Set whether il2cpp line mappings should be computed and uploaded.
+    ///
+    /// Defaults to `false`.
+    pub fn il2cpp_mapping(&mut self, il2cpp_mapping: bool) -> &mut Self {
+        self.upload_il2cpp_mappings = il2cpp_mapping;
+        self
+    }
+
     /// Performs the search for DIFs and uploads them.
     ///
     /// ```
@@ -1850,6 +1914,7 @@ impl DifUpload {
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
             self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
             self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
+            self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
 
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 self.validate_capabilities();
@@ -1889,6 +1954,10 @@ impl DifUpload {
             && !self.bcsymbolmaps_allowed
         {
             warn!("BCSymbolMaps are not supported by the configured Sentry server");
+        }
+
+        if self.upload_il2cpp_mappings && !self.il2cpp_mappings_allowed {
+            warn!("il2cpp line mappings are not supported by the configured Sentry server");
         }
     }
 

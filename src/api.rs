@@ -2566,6 +2566,9 @@ pub enum ChunkUploadCapability {
     /// Upload of BCSymbolMap and PList auxiliary DIFs
     BcSymbolmap,
 
+    /// Upload of il2cpp line mappings
+    Il2Cpp,
+
     /// Any other unsupported capability (ignored)
     Unknown,
 }

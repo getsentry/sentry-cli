@@ -50,7 +50,7 @@ serde = { version = "1.0.136", features = ["derive"] }
 serde_json = "1.0.79"
 sha1_smol = { version = "1.0.0", features = ["serde"] }
 sourcemap = { version = "6.0.1", features = ["ram_bundle"] }
-symbolic = { version = "8.7.0", features = ["debuginfo-serde"] }
+symbolic = { version = "8.7.0", features = ["debuginfo-serde", "il2cpp"] }
 thiserror = "1.0.30"
 url = "2.2.2"
 username = "0.2.0"
