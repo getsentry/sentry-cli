@@ -1160,10 +1160,14 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
 
         if let Some(object) = dif.object() {
             let temp_file = TempFile::create()?;
-            let mut writer = BufWriter::new(temp_file.open()?);
+            let written = {
+                let mut writer = BufWriter::new(temp_file.open()?);
 
-            let line_mapping = ObjectLineMapping::from_object(object)?;
-            let written = line_mapping.to_writer(&mut writer)?;
+                let line_mapping = ObjectLineMapping::from_object(object)?;
+                let written = line_mapping.to_writer(&mut writer)?;
+                writer.flush()?;
+                written
+            };
             if !written {
                 continue;
             }
@@ -1427,6 +1431,7 @@ fn poll_dif_assemble(
                 style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
+                // TODO: make sure we get some kind of "kind" for il2cpp, bcsymbolmap, etc
                 dif.data
                     .kind
                     .map(|c| format!(" {:#}", c))

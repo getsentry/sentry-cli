@@ -2584,6 +2584,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "pdbs" => ChunkUploadCapability::Pdbs,
             "sources" => ChunkUploadCapability::Sources,
             "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
+            "il2cpp" => ChunkUploadCapability::Il2Cpp,
             _ => ChunkUploadCapability::Unknown,
         })
     }
