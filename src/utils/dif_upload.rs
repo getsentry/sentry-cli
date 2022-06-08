@@ -277,8 +277,10 @@ impl<'data> DifMatch<'data> {
 impl<'data> fmt::Debug for DifMatch<'data> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DifMatch")
-            .field("object", &self.object())
             .field("name", &self.name)
+            .field("format", &self.format())
+            .field("debug_id", &self.debug_id)
+            .field("object", &self.object())
             .finish()
     }
 }
@@ -1142,17 +1144,47 @@ fn create_source_bundles<'a>(
 
 fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>> {
     let mut line_mappings = Vec::new();
+
+    let progress_style = ProgressStyle::default_bar().template(
+        "{prefix:.dim} Resolving il2cpp mappings... {msg:.dim}\
+         \n{wide_bar}  {pos}/{len}",
+    );
+
+    let pb = ProgressBar::new(difs.len());
+    pb.set_style(progress_style);
+    pb.set_prefix(">");
+
     for dif in difs {
+        pb.inc(1);
+        pb.set_message(dif.path());
+
         if let Some(object) = dif.object() {
             let temp_file = TempFile::create()?;
             let mut writer = BufWriter::new(temp_file.open()?);
+
             let line_mapping = ObjectLineMapping::from_object(object)?;
-            line_mapping.to_writer(&mut writer)?;
+            let written = line_mapping.to_writer(&mut writer)?;
+            if !written {
+                continue;
+            }
+
             let line_mapping =
                 DifMatch::from_temp_line_mapping(temp_file, dif.path(), dif.debug_id)?;
             line_mappings.push(line_mapping);
         }
     }
+
+    let len = line_mappings.len();
+    pb.finish_and_clear();
+    println!(
+        "{} Resolved il2cpp mappings for {} debug information {}",
+        style(">").dim(),
+        style(len).yellow(),
+        match len {
+            1 => "file",
+            _ => "files",
+        }
+    );
 
     Ok(line_mappings)
 }
