@@ -2401,6 +2401,7 @@ dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
  "symbolic-il2cpp",
+ "symbolic-symcache",
 ]
 
 [[package]]
@@ -2454,6 +2455,19 @@ dependencies = [
  "serde_json",
  "symbolic-common",
  "symbolic-debuginfo",
+ "thiserror",
+]
+
+[[package]]
+name = "symbolic-symcache"
+version = "8.7.3"
+dependencies = [
+ "dmsort",
+ "fnv",
+ "indexmap",
+ "symbolic-common",
+ "symbolic-debuginfo",
+ "symbolic-il2cpp",
  "thiserror",
 ]
 

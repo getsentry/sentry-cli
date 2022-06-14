@@ -1431,7 +1431,6 @@ fn poll_dif_assemble(
                 style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
-                // TODO: make sure we get some kind of "kind" for il2cpp, bcsymbolmap, etc
                 dif.data
                     .kind
                     .map(|c| format!(" {:#}", c))
