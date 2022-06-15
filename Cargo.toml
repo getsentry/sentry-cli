@@ -90,6 +90,3 @@ crossbeam-channel = "0.5.4"
 [profile.release]
 opt-level = 3
 panic = "abort"
-
-#[patch.crates-io]
-#symbolic = { path = "../symbolic/symbolic" }
