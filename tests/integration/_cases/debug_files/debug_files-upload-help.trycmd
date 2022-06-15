@@ -23,6 +23,8 @@ OPTIONS:
         --header <KEY:VALUE>         Custom headers that should be attached to all requests
                                      in key:value format.
         --id <ID>                    Search for specific debug identifiers.
+        --il2cpp-mapping             Compute il2cpp line mappings and upload them along with
+                                     sources.
         --include-sources            Include sources from the local file system and upload them as
                                      source bundles.
         --info-plist <PATH>          Optional path to the Info.plist.

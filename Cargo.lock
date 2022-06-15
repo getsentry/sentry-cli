@@ -2396,7 +2396,9 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "symbolic"
-version = "8.7.3"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b49345d083b1103e25c8c10e5e52cff254d33e70e29307c2bc4777074a25258"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2406,7 +2408,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-common"
-version = "8.7.3"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f551f902d5642e58039aee6a9021a61037926af96e071816361644983966f540"
 dependencies = [
  "debugid",
  "memmap2",
@@ -2417,7 +2421,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "8.7.3"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1165dabf9fc1d6bb6819c2c0e27c8dd0e3068d2c53cf186d319788e96517f0d6"
 dependencies = [
  "bitvec",
  "dmsort",
@@ -2445,7 +2451,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-il2cpp"
-version = "8.7.3"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e87460a7057edee737f12ce11efd7b10f66630a496895d2618d29154ba14e80"
 dependencies = [
  "anyhow",
  "gimli",
@@ -2460,7 +2468,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-symcache"
-version = "8.7.3"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9660ab728a9b400c195865453a5b516805cb6e5615e30044c59af6a4f675806b"
 dependencies = [
  "dmsort",
  "fnv",
