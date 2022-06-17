@@ -146,7 +146,7 @@ dependencies = [
  "cfg-if",
  "libc",
  "miniz_oxide",
- "object",
+ "object 0.27.1",
  "rustc-demangle",
 ]
 
@@ -868,6 +868,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78cc372d058dcf6d5ecd98510e7fbc9e5aec4d21de70f65fea8fecebcd881bd4"
 dependencies = [
  "fallible-iterator",
+ "indexmap",
  "stable_deref_trait",
 ]
 
@@ -1374,6 +1375,16 @@ version = "0.27.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67ac1d3f9a1d3616fd9a60c8d74296f22406a238b6a72f5cc1e6f314df4ffbf9"
 dependencies = [
+ "memchr",
+]
+
+[[package]]
+name = "object"
+version = "0.28.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e42c982f2d955fac81dd7e1d0e1426a7d702acd9c98d19ab01083a6a0328c424"
+dependencies = [
+ "flate2",
  "memchr",
 ]
 
@@ -2385,19 +2396,21 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 
 [[package]]
 name = "symbolic"
-version = "8.7.0"
+version = "8.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3fb7f79d0216069be1326a604e8cc483c3c2c08bf8ac6061db40e9f4a2319d91"
+checksum = "7b49345d083b1103e25c8c10e5e52cff254d33e70e29307c2bc4777074a25258"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
+ "symbolic-il2cpp",
+ "symbolic-symcache",
 ]
 
 [[package]]
 name = "symbolic-common"
-version = "8.7.0"
+version = "8.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac6aac7b803adc9ee75344af7681969f76d4b38e4723c6eaacf3b28f5f1d87ff"
+checksum = "f551f902d5642e58039aee6a9021a61037926af96e071816361644983966f540"
 dependencies = [
  "debugid",
  "memmap2",
@@ -2408,9 +2421,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "8.7.0"
+version = "8.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dbe641a3f6504c5b729c0f3b84819616d77f8207a84e836930a3df11f36bd0f1"
+checksum = "1165dabf9fc1d6bb6819c2c0e27c8dd0e3068d2c53cf186d319788e96517f0d6"
 dependencies = [
  "bitvec",
  "dmsort",
@@ -2434,6 +2447,38 @@ dependencies = [
  "thiserror",
  "wasmparser",
  "zip 0.5.13",
+]
+
+[[package]]
+name = "symbolic-il2cpp"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3e87460a7057edee737f12ce11efd7b10f66630a496895d2618d29154ba14e80"
+dependencies = [
+ "anyhow",
+ "gimli",
+ "indexmap",
+ "object 0.28.4",
+ "scroll 0.11.0",
+ "serde_json",
+ "symbolic-common",
+ "symbolic-debuginfo",
+ "thiserror",
+]
+
+[[package]]
+name = "symbolic-symcache"
+version = "8.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9660ab728a9b400c195865453a5b516805cb6e5615e30044c59af6a4f675806b"
+dependencies = [
+ "dmsort",
+ "fnv",
+ "indexmap",
+ "symbolic-common",
+ "symbolic-debuginfo",
+ "symbolic-il2cpp",
+ "thiserror",
 ]
 
 [[package]]

@@ -163,6 +163,10 @@ pub fn make_command(command: Command) -> Command {
                 .long("upload-symbol-maps")
                 .hide(true),
         )
+        .arg(Arg::new("il2cpp_mapping").long("il2cpp-mapping").help(
+            "Compute il2cpp line mappings and upload \
+            them along with sources.",
+        ))
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -218,6 +222,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     });
 
     upload.include_sources(matches.is_present("include_sources"));
+    upload.il2cpp_mapping(matches.is_present("il2cpp_mapping"));
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.value_of("symbol_maps") {
