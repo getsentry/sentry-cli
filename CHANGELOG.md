@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.2.0
+
+### Various fixes & improvements
+
+- feat: Compute and upload il2cpp line mappings (#1248) by @loewenheim
+- ref: Skip protected zip files when uploading debug files (#1245) by @kamilogorek
+
 ## 2.1.0
 
 ### Source Maps Upload Check "y-tho" (ongoing)
