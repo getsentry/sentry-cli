@@ -156,3 +156,45 @@ pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<D
 
     Ok((total_sha.digest(), chunks))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tempfile_goes_away() -> io::Result<()> {
+        let tempfile = TempFile::create()?;
+        let path = tempfile.path().to_owned();
+        assert!(
+            path.exists(),
+            "{} should exist after creating Tempfile",
+            path.display()
+        );
+
+        drop(tempfile);
+        assert!(!path.exists(), "File didn't get deleted");
+
+        Ok(())
+    }
+
+    #[test]
+    fn tempfile_goes_away_with_longer_living_handle() -> io::Result<()> {
+        let tempfile = TempFile::create()?;
+        let path = tempfile.path().to_owned();
+        assert!(
+            path.exists(),
+            "{} should exist after creating Tempfile",
+            path.display()
+        );
+
+        // Create a handle to the file that outlives the TempFile object (which means that
+        // the `Drop` impl will run before our handle is closed).
+        let handle = tempfile.open()?;
+        drop(tempfile);
+
+        drop(handle);
+        assert!(!path.exists(), "{} didn't get deleted", path.display());
+
+        Ok(())
+    }
+}
