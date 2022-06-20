@@ -31,6 +31,7 @@ macro_rules! each_subcommand {
         $mac!(releases);
         $mac!(repos);
         $mac!(send_event);
+        $mac!(send_envelope);
         $mac!(sourcemaps);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);

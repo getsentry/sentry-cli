@@ -302,7 +302,7 @@ impl From<curl::FormError> for ApiError {
 pub type ApiResult<T> = Result<T, ApiError>;
 
 /// Represents an HTTP method that is used by the API.
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub enum Method {
     Get,
     Head,

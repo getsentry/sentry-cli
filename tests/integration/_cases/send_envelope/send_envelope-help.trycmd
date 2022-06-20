@@ -1,0 +1,39 @@
+```
+$ sentry-cli send-envelope --help
+? success
+sentry-cli[EXE]-send-envelope 
+Send a stored envelope to Sentry.{n}{n}This command will validate and attempt to send an envelope to
+Sentry. Due to network errors, rate limits or sampling the envelope is not guaranteed to actually
+arrive. Check debug output for transmission errors by passing --log-level=debug or setting
+`SENTRY_LOG_LEVEL=debug`.
+
+USAGE:
+    sentry-cli[EXE] send-envelope [OPTIONS] <PATH>
+
+ARGS:
+    <PATH>
+            The path or glob to the file(s) in envelope format to send as envelope(s).
+
+OPTIONS:
+        --auth-token <AUTH_TOKEN>
+            Use the given Sentry auth token.
+
+    -h, --help
+            Print help information
+
+        --header <KEY:VALUE>
+            Custom headers that should be attached to all requests
+            in key:value format.
+
+        --log-level <LOG_LEVEL>
+            Set the log output verbosity.
+            
+            [possible values: trace, debug, info, warn, error]
+
+        --quiet
+            Do not print any output while preserving correct exit code. This flag is currently
+            implemented only for selected subcommands.
+            
+            [aliases: silent]
+
+```

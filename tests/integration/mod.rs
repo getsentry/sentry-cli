@@ -8,6 +8,7 @@ mod monitors;
 mod organizations;
 mod projects;
 mod releases;
+mod send_envelope;
 mod send_event;
 mod sourcemaps;
 mod uninstall;
