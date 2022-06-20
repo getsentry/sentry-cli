@@ -5,6 +5,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use failure::{bail, Error};
+use log::error;
 use sha1::{Digest, Sha1};
 use uuid::Uuid;
 
@@ -88,8 +89,37 @@ impl TempFile {
 }
 
 impl Drop for TempFile {
+    #[cfg(not(windows))]
     fn drop(&mut self) {
-        fs::remove_file(&self.path).ok();
+        let result = fs::remove_file(&self.path);
+        if let Err(e) = result {
+            error!(
+                "Failed to delete TempFile {}: {:?}",
+                &self.path.display(),
+                e
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    fn drop(&mut self) {
+        // On Windows, we open the file handle to set "FILE_FLAG_DELETE_ON_CLOSE" so that it will be closed
+        // when the last open handle to this file is gone.
+        extern crate winapi;
+        use std::os::windows::prelude::*;
+        use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
+        let result = fs::OpenOptions::new()
+            .write(true)
+            .custom_flags(FILE_FLAG_DELETE_ON_CLOSE)
+            .open(&self.path);
+
+        if let Err(e) = result {
+            error!(
+                "Failed to open {} to flag for delete: {:?}",
+                &self.path.display(),
+                e
+            );
+        }
     }
 }
 
