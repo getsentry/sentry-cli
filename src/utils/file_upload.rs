@@ -33,7 +33,7 @@ pub struct UploadContext<'a> {
     pub wait: bool,
 }
 
-#[derive(PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone)]
 pub enum LogLevel {
     Warning,
     Error,
