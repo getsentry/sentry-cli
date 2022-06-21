@@ -5,7 +5,7 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Event has release name: ytho-test
 ✔ Event has a valid exception present
 ✔ Event has a valid stacktrace present
-⚠ Exception is already source mapped and resolves to:
+⚠ Exception is already source mapped and first resolved frame points to:
 
   function foo(msg) {
     bar(msg);
