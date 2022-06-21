@@ -74,12 +74,16 @@ fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEven
     }
 }
 
-fn extract_top_frame(stacktrace: &Stacktrace) -> Result<&Frame> {
-    let in_app_frames: Vec<&Frame> = stacktrace
+fn extract_in_app_frames(stacktrace: &Stacktrace) -> Vec<&Frame> {
+    stacktrace
         .frames
         .iter()
         .filter(|frame| frame.in_app.unwrap_or(false))
-        .collect();
+        .collect()
+}
+
+fn extract_top_frame(stacktrace: &Stacktrace) -> Result<&Frame> {
+    let in_app_frames = extract_in_app_frames(stacktrace);
 
     if in_app_frames.is_empty() {
         bail!("Event exception stacktrace has no in_app frames");
@@ -375,8 +379,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 QuietExit(1)
             })?;
         } else {
-            warning("Exception is already source mapped and resolves to:\n");
-            print_mapped_frame(frame);
+            warning("Exception is already source mapped and first resolved frame points to:\n");
+            if let Some(frame) = extract_in_app_frames(stacktrace)
+                .iter()
+                .rev()
+                .find(|f| f.context_line.is_some())
+            {
+                print_mapped_frame(frame);
+            } else {
+                println!("{}", style("> [missing context line]").yellow());
+            }
             return Err(QuietExit(0).into());
         }
     }
