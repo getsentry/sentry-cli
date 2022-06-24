@@ -170,7 +170,7 @@ fn find_matching_artifact(artifacts: &[Artifact], abs_path: &str) -> Result<Arti
 fn verify_dists_matches(artifact: &Artifact, dist: Option<&str>) -> Result<()> {
     if artifact.dist.as_deref() != dist {
         error(format!(
-            "Release artifact distrubition mismatch. Event: {}, Artifact: {}",
+            "Release artifact distribution mismatch. Event: {}, Artifact: {}",
             dist.unwrap_or("[none]"),
             artifact.dist.as_ref().unwrap_or(&String::from("[none]"))
         ));
@@ -181,7 +181,7 @@ fn verify_dists_matches(artifact: &Artifact, dist: Option<&str>) -> Result<()> {
     }
 
     success(format!(
-        "Release artifact distrubition matched. Event: {}, Artifact: {}",
+        "Release artifact distribution matched. Event: {}, Artifact: {}",
         dist.unwrap_or("[none]"),
         artifact.dist.as_ref().unwrap_or(&String::from("[none]"))
     ));
