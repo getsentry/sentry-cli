@@ -66,12 +66,18 @@ impl TempFile {
 
     /// Opens the tempfile at the beginning.
     pub fn open(&self) -> io::Result<fs::File> {
-        let mut f = fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(&self.path)?;
+        let mut opts = fs::OpenOptions::new();
 
+        opts.read(true).write(true).create(true);
+
+        #[cfg(windows)]
+        {
+            use std::os::windows::prelude::*;
+            use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
+            opts.custom_flags(FILE_FLAG_DELETE_ON_CLOSE);
+        }
+
+        let mut f = opts.open(&self.path)?;
         f.seek(SeekFrom::Start(0)).ok();
         Ok(f)
     }
