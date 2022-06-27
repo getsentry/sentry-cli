@@ -2063,6 +2063,7 @@ dependencies = [
  "uuid",
  "walkdir",
  "which 4.2.4",
+ "winapi 0.3.9",
  "zip",
 ]
 

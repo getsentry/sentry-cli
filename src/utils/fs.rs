@@ -5,6 +5,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use failure::{bail, Error};
+use log::error;
 use sha1::{Digest, Sha1};
 use uuid::Uuid;
 
@@ -88,8 +89,36 @@ impl TempFile {
 }
 
 impl Drop for TempFile {
+    #[cfg(not(windows))]
     fn drop(&mut self) {
-        fs::remove_file(&self.path).ok();
+        let result = fs::remove_file(&self.path);
+        if let Err(e) = result {
+            error!(
+                "Failed to delete TempFile {}: {:?}",
+                &self.path.display(),
+                e
+            );
+        }
+    }
+
+    #[cfg(windows)]
+    fn drop(&mut self) {
+        // On Windows, we open the file handle to set "FILE_FLAG_DELETE_ON_CLOSE" so that it will be closed
+        // when the last open handle to this file is gone.
+        use std::os::windows::prelude::*;
+        use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
+        let result = fs::OpenOptions::new()
+            .write(true)
+            .custom_flags(FILE_FLAG_DELETE_ON_CLOSE)
+            .open(&self.path);
+
+        if let Err(e) = result {
+            error!(
+                "Failed to open {} to flag for delete: {:?}",
+                &self.path.display(),
+                e
+            );
+        }
     }
 }
 
@@ -155,4 +184,46 @@ pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<D
     }
 
     Ok((total_sha.digest(), chunks))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tempfile_goes_away() -> io::Result<()> {
+        let tempfile = TempFile::create()?;
+        let path = tempfile.path().to_owned();
+        assert!(
+            path.exists(),
+            "{} should exist after creating Tempfile",
+            path.display()
+        );
+
+        drop(tempfile);
+        assert!(!path.exists(), "File didn't get deleted");
+
+        Ok(())
+    }
+
+    #[test]
+    fn tempfile_goes_away_with_longer_living_handle() -> io::Result<()> {
+        let tempfile = TempFile::create()?;
+        let path = tempfile.path().to_owned();
+        assert!(
+            path.exists(),
+            "{} should exist after creating Tempfile",
+            path.display()
+        );
+
+        // Create a handle to the file that outlives the TempFile object (which means that
+        // the `Drop` impl will run before our handle is closed).
+        let handle = tempfile.open()?;
+        drop(tempfile);
+
+        drop(handle);
+        assert!(!path.exists(), "{} didn't get deleted", path.display());
+
+        Ok(())
+    }
 }
