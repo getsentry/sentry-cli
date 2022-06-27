@@ -210,9 +210,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         script = script.replace("___SENTRY_NO_ENVIRON___", "");
     }
 
-    if !matches.is_present("no_exit") {
-        script.insert_str(0, "set -e\n\n");
+    if matches.is_present("no_exit") {
+        script = script.replace("set -e\n\n", "");
     }
+
     println!("{}", script);
     Ok(())
 }

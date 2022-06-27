@@ -9,3 +9,8 @@ fn command_bash_hook_help() {
 fn command_bash_hook() {
     register_test("bash_hook/bash_hook.trycmd");
 }
+
+#[test]
+fn command_bash_hook_flags() {
+    register_test("bash_hook/bash_hook-flags.trycmd");
+}

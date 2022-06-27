@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+
 _SENTRY_TRACEBACK_FILE="___SENTRY_TRACEBACK_FILE___"
 _SENTRY_LOG_FILE="___SENTRY_LOG_FILE___"
 
