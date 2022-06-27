@@ -198,7 +198,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             },
         )?;
 
-        println!("Success! Set commits for release {}.", version);
+        println!("Success! Set commits for release {}", version);
     }
 
     Ok(())

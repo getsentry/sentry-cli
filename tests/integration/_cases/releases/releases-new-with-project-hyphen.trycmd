@@ -1,6 +1,6 @@
 ```
 $ sentry-cli releases new -p wat-project -hyphenated-release
 ? success
-Created release -hyphenated-release.
+Created release -hyphenated-release
 
 ```

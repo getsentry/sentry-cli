@@ -142,10 +142,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
         }
     }
 
-    bail!(
-        "Could not auto-detect referenced sourcemap for {}.",
-        min_url
-    );
+    bail!("Could not auto-detect referenced sourcemap for {}", min_url);
 }
 
 pub struct SourceMapProcessor {

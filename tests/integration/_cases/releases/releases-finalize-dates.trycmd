@@ -1,6 +1,6 @@
 ```
 $ sentry-cli releases finalize wat-release --started 1431648100 --released 1431648000
 ? success
-Finalized release wat-release.
+Finalized release wat-release
 
 ```

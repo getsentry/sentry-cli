@@ -28,6 +28,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    println!("Restored release {}.", info_rv.version);
+    println!("Restored release {}", info_rv.version);
     Ok(())
 }

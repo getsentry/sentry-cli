@@ -57,6 +57,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    println!("Finalized release {}.", version);
+    println!("Finalized release {}", version);
     Ok(())
 }

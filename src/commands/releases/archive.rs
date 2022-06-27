@@ -28,6 +28,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    println!("Archived release {}.", info_rv.version);
+    println!("Archived release {}", info_rv.version);
     Ok(())
 }
