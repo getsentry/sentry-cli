@@ -1,6 +1,6 @@
 ```
 $ sentry-cli releases finalize -hyphenated-release
 ? success
-Finalized release -hyphenated-release.
+Finalized release -hyphenated-release
 
 ```

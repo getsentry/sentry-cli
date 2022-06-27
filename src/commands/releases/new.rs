@@ -46,6 +46,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    println!("Created release {}.", version);
+    println!("Created release {}", version);
     Ok(())
 }
