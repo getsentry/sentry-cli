@@ -87,6 +87,11 @@ openssl-probe = "0.1.5"
 signal-hook = "0.3.13"
 crossbeam-channel = "0.5.4"
 
+[target."cfg(windows)"]
+
+[target.'cfg(windows)'.dependencies]
+winapi = "0.3.9"
+
 [profile.release]
 opt-level = 3
 panic = "abort"
