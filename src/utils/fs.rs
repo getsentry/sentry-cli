@@ -22,7 +22,7 @@ impl TempDir {
     /// Creates a new tempdir
     pub fn create() -> io::Result<Self> {
         let mut path = env::temp_dir();
-        path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
+        path.push(Uuid::new_v4().as_hyphenated().to_string());
         fs::create_dir(&path)?;
         Ok(TempDir { path })
     }
@@ -49,7 +49,7 @@ impl TempFile {
     /// Creates a new tempfile.
     pub fn create() -> io::Result<Self> {
         let mut path = env::temp_dir();
-        path.push(Uuid::new_v4().to_hyphenated_ref().to_string());
+        path.push(Uuid::new_v4().as_hyphenated().to_string());
 
         let tf = TempFile { path };
         tf.open()?;
@@ -59,7 +59,7 @@ impl TempFile {
     /// Assumes ownership over an existing file and moves it to a temp location.
     pub fn take<P: AsRef<Path>>(path: P) -> io::Result<TempFile> {
         let mut destination = env::temp_dir();
-        destination.push(Uuid::new_v4().to_hyphenated_ref().to_string());
+        destination.push(Uuid::new_v4().as_hyphenated().to_string());
 
         fs::rename(&path, &destination)?;
         Ok(TempFile { path: destination })
