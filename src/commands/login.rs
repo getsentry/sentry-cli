@@ -1,6 +1,6 @@
 use std::env;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
 use url::Url;
 
@@ -27,6 +27,8 @@ fn update_config(config: &Config, token: &str) -> Result<()> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
+    let predefined_token = matches.value_of("auth_token");
+    let has_predefined_token = predefined_token.is_some();
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
     println!("If you do not yet have a token ready we can bring up a browser for you");
@@ -46,13 +48,20 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    if prompt_to_continue("Open browser now?")? && open::that(&token_url).is_err() {
+    if !has_predefined_token
+        && prompt_to_continue("Open browser now?")?
+        && open::that(&token_url).is_err()
+    {
         println!("Cannot open browser. Please manually go to {}", &token_url);
     }
 
     let mut token;
     loop {
-        token = prompt("Enter your token")?;
+        token = if let Some(token) = predefined_token {
+            token.to_string()
+        } else {
+            prompt("Enter your token")?
+        };
 
         let test_cfg = config.make_copy(|cfg| {
             cfg.set_auth(Auth::Token(token.to_string()));
@@ -66,7 +75,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 break;
             }
             Err(err) => {
-                println!("Invalid token: {}", err);
+                let msg = format!("Invalid token: {}", err);
+                if has_predefined_token {
+                    bail!(msg);
+                } else {
+                    println!("{}", msg);
+                }
             }
         }
     }
