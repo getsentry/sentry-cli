@@ -58,7 +58,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut token;
     loop {
         token = if let Some(token) = predefined_token {
-           token.to_string()
+            token.to_string()
         } else {
             prompt("Enter your token")?
         };
