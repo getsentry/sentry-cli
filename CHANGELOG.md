@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.3.0
+
+### Various fixes & improvements
+
+- fix: Allow for using --auth-token with login command (#1266) by @kamilogorek
+- deps: Update all Rust dependencies (#1265) by @kamilogorek
+- fix: Increase TempFile robustness on Windows (#1256) (#1263) by @kamilogorek
+- ref: Remove confusing ending dots from command logs (#1261) by @kamilogorek
+- fix: Correct typo in sourcemaps explain output (#1258) by @huwq1987
+- fix: Use first frame that has context-line in explain (#1255) by @kamilogorek
+- feat: Add send-envelope command (#1254) by @kamilogorek
+
 ## 2.2.0
 
 ### Various fixes & improvements
