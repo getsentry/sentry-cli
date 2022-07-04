@@ -39,11 +39,6 @@ declare module '@sentry/cli' {
      */
     vcsRemote?: string;
     /**
-     * Unique identifier for the distribution, used to further segment your release.
-     * Usually your build number.
-     */
-    dist?: string;
-    /**
      * If true, all logs are suppressed.
      */
     silent?: boolean;
@@ -116,6 +111,11 @@ declare module '@sentry/cli' {
      * By default the following file extensions are processed: js, map, jsbundle and bundle.
      */
     ext?: string[];
+    /**
+     * Unique identifier for the distribution, used to further segment your release.
+     * Usually your build number.
+     */
+    dist?: string;
   }
 
   export interface SentryCliNewDeployOptions {
