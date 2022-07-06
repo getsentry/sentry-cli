@@ -47,9 +47,10 @@ function shouldRenderProgressBar() {
   const silentFlag = process.argv.some((v) => v === '--silent');
   const silentConfig = process.env.npm_config_loglevel === 'silent';
   const silentEnv = process.env.SENTRYCLI_NO_PROGRESS_BAR;
-  const ciEnv = process.env.CI === 'true';
+  const ciEnv = process.env.CI === 'true' || process.env.CI === '1';
+  const notTTY = !process.stdout.isTTY;
   // If any of possible options is set, skip rendering of progress bar
-  return !(silentFlag || silentConfig || silentEnv || ciEnv);
+  return !(silentFlag || silentConfig || silentEnv || ciEnv || notTTY);
 }
 
 function getDownloadUrl(platform, arch) {
