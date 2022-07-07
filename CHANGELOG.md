@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.3.1
+
+### Various fixes & improvements
+
+- ref: Dont print install progressbar for nonTTY and CI=1 (#1270) by @kamilogorek
+- fix: move dist option to SentryCliUploadSourceMapsOptions (#1269) by @ikenfin
+
 ## 2.3.0
 
 ### Various fixes & improvements

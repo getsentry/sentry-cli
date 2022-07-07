@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "repository": "git://github.com/getsentry/sentry-cli.git",
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
