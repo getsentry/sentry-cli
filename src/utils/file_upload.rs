@@ -12,6 +12,7 @@ use console::style;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
@@ -19,7 +20,7 @@ use url::Url;
 use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, FileContents, ProgressBarMode};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
-use crate::utils::fs::{get_sha1_checksums, TempFile};
+use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 
 /// Fallback concurrency for release file uploads.
@@ -56,9 +57,15 @@ pub struct ReleaseFile {
     pub ty: SourceFileType,
     pub headers: Vec<(String, String)>,
     pub messages: Vec<(LogLevel, String)>,
+    pub already_uploaded: bool,
 }
 
 impl ReleaseFile {
+    /// Calculates and returns the SHA1 checksum of the file.
+    pub fn checksum(&self) -> Result<Digest> {
+        get_sha1_checksum(&*self.contents)
+    }
+
     pub fn log(&mut self, level: LogLevel, msg: String) {
         self.messages.push((level, msg));
     }

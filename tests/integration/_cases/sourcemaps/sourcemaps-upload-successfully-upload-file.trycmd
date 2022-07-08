@@ -1,0 +1,20 @@
+```
+$ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map --release=wat-release
+? success
+> Found 1 release file
+> Analyzing 1 sources
+> Rewriting sources
+> Adding source map references
+> Bundled 1 file for upload
+> Uploaded release files to Sentry
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Project: wat-project
+> Release: wat-release
+> Dist: None
+
+Source Map Upload Report
+  Source Maps
+    ~/bundle.min.js.map
+
+```
