@@ -309,7 +309,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let checksum = Digest::from_str(&artifact.sha1)
             .map_err(|_| format_err!("Invalid artifact checksum"))?;
 
-        processor.add_already_uploaded_source(checksum)?;
+        processor.add_already_uploaded_source(checksum);
     }
 
     if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {

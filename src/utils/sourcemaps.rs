@@ -176,9 +176,8 @@ impl SourceMapProcessor {
     }
 
     /// Adds an already uploaded sources checksum.
-    pub fn add_already_uploaded_source(&mut self, checksum: Digest) -> Result<()> {
+    pub fn add_already_uploaded_source(&mut self, checksum: Digest) {
         self.already_uploaded_sources.push(checksum);
-        Ok(())
     }
 
     fn flush_pending_sources(&mut self) {
