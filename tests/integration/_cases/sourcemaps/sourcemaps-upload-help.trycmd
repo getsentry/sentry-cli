@@ -1,0 +1,96 @@
+```
+$ sentry-cli sourcemaps upload --help
+? success
+sentry-cli[EXE]-sourcemaps-upload 
+Upload sourcemaps for a release.
+
+USAGE:
+    sentry-cli[EXE] sourcemaps upload [OPTIONS] [PATHS]...
+
+ARGS:
+    <PATHS>...    The files to upload.
+
+OPTIONS:
+        --auth-token <AUTH_TOKEN>
+            Use the given Sentry auth token.
+
+        --bundle <BUNDLE>
+            Path to the application bundle (indexed, file, or regular)
+
+        --bundle-sourcemap <BUNDLE_SOURCEMAP>
+            Path to the bundle sourcemap
+
+    -d, --dist <DISTRIBUTION>
+            Optional distribution identifier for the sourcemaps.
+
+    -h, --help
+            Print help information
+
+        --header <KEY:VALUE>
+            Custom headers that should be attached to all requests
+            in key:value format.
+
+    -i, --ignore <IGNORE>
+            Ignores all files and folders matching the given glob
+
+    -I, --ignore-file <IGNORE_FILE>
+            Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
+
+        --log-level <LOG_LEVEL>
+            Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+        --no-rewrite
+            Disables rewriting of matching sourcemaps. By default the tool will rewrite sources, so
+            that indexed maps are flattened and missing sources are inlined if possible.
+            This fundamentally changes the upload process to be based on sourcemaps and minified
+            files exclusively and comes in handy for setups like react-native that generate
+            sourcemaps that would otherwise not work for sentry.
+
+        --no-sourcemap-reference
+            Disable emitting of automatic sourcemap references.
+            By default the tool will store a 'Sourcemap' header with minified files so that
+            sourcemaps are located automatically if the tool can detect a link. If this causes
+            issues it can be disabled.
+
+    -o, --org <ORG>
+            The organization slug
+
+    -p, --project <PROJECT>
+            The project slug.
+
+        --quiet
+            Do not print any output while preserving correct exit code. This flag is currently
+            implemented only for selected subcommands. [aliases: silent]
+
+    -r, --release <RELEASE>
+            The release slug.
+
+        --strip-common-prefix
+            Similar to --strip-prefix but strips the most common prefix on all sources references.
+
+        --strip-prefix <PREFIX>
+            Strips the given prefix from all sources references inside the upload sourcemaps (paths
+            used within the sourcemap content, to map minified code to it's original source). Only
+            sources that start with the given prefix will be stripped.
+            This will not modify the uploaded sources paths. To do that, point the upload or
+            upload-sourcemaps command to a more precise directory instead.
+
+    -u, --url-prefix <PREFIX>
+            The URL prefix to prepend to all filenames.
+
+        --url-suffix <SUFFIX>
+            The URL suffix to append to all filenames.
+
+        --validate
+            Enable basic sourcemap validation.
+
+        --wait
+            Wait for the server to fully process uploaded files.
+
+    -x, --ext <EXT>
+            Set the file extensions that are considered for upload. This overrides the default
+            extensions. To add an extension, all default extensions must be repeated. Specify once
+            per extension.
+            Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`
+
+```

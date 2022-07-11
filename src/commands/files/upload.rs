@@ -151,6 +151,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         ty: SourceFileType::Source,
                         headers: headers.clone(),
                         messages: vec![],
+                        already_uploaded: false,
                     },
                 )
             })

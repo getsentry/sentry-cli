@@ -1,9 +1,11 @@
 use std::path::PathBuf;
+use std::str::FromStr;
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use clap::{Arg, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
+use sha1_smol::Digest;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -302,6 +304,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
+
+    for artifact in api.list_release_files(&org, Some(&project), &version)? {
+        let checksum = Digest::from_str(&artifact.sha1)
+            .map_err(|_| format_err!("Invalid artifact checksum"))?;
+
+        processor.add_already_uploaded_source(checksum);
+    }
 
     if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
