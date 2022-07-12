@@ -1,15 +1,18 @@
 use std::ffi::OsStr;
+use std::fs;
+use std::io::Read;
 use std::path::Path;
 
 use anyhow::{bail, format_err, Result};
 use clap::{Arg, ArgMatches, Command};
+use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
-use crate::api::{Api, FileContents, ProgressBarMode};
+use crate::api::{Api, ProgressBarMode};
 use crate::config::Config;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
-use crate::utils::fs::path_as_url;
+use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -33,6 +36,11 @@ pub fn make_command(command: Command) -> Command {
                 .short('d')
                 .value_name("DISTRIBUTION")
                 .help("Optional distribution identifier for this file."),
+        )
+        .arg(
+            Arg::new("decompress")
+                .long("decompress")
+                .help("Enable files gzip decompression prior to upload."),
         )
         .arg(
             Arg::new("wait")
@@ -110,8 +118,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             headers.push((key.trim().to_string(), value.trim().to_string()));
         }
     };
-    let path = Path::new(matches.value_of("path").unwrap());
 
+    let context = &UploadContext {
+        org: &org,
+        project: project.as_deref(),
+        release: &release,
+        dist,
+        wait: matches.is_present("wait"),
+        decompress: matches.is_present("decompress"),
+    };
+
+    let path = Path::new(matches.value_of("path").unwrap());
     // Batch files upload
     if path.is_dir() {
         let ignore_file = matches.value_of("ignore_file").unwrap_or("");
@@ -128,6 +145,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .ignore_file(ignore_file)
             .ignores(ignores)
             .extensions(extensions)
+            .decompress(matches.is_present("decompress"))
             .collect_files()?;
 
         let url_suffix = matches.value_of("url_suffix").unwrap_or("");
@@ -157,15 +175,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             })
             .collect();
 
-        let ctx = &UploadContext {
-            org: &org,
-            project: project.as_deref(),
-            release: &release,
-            dist,
-            wait: matches.is_present("wait"),
-        };
-
-        ReleaseFileUpload::new(ctx).files(&files).upload()
+        ReleaseFileUpload::new(context).files(&files).upload()
     }
     // Single file upload
     else {
@@ -177,13 +187,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .ok_or_else(|| format_err!("No filename provided."))?,
         };
 
+        let mut f = fs::File::open(path)?;
+        let mut contents = Vec::new();
+        f.read_to_end(&mut contents)?;
+
+        if matches.is_present("decompress") && is_gzip_compressed(&contents) {
+            contents = decompress_gzip_content(&contents).unwrap_or_else(|_| {
+                warn!("Could not decompress: {}", name);
+                contents
+            });
+        }
+
         if let Some(artifact) = api.upload_release_file(
-            &org,
-            project.as_deref(),
-            &release,
-            &FileContents::FromPath(path),
+            context,
+            &contents,
             name,
-            dist,
             Some(&headers[..]),
             ProgressBarMode::Request,
         )? {

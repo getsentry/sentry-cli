@@ -17,7 +17,7 @@ use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
-use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, FileContents, ProgressBarMode};
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
@@ -26,12 +26,14 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
 
+#[derive(Default)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
     pub release: &'a str,
     pub dist: Option<&'a str>,
     pub wait: bool,
+    pub decompress: bool,
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -185,12 +187,9 @@ fn upload_files_parallel(
                 }
 
                 api.upload_release_file(
-                    context.org,
-                    context.project,
-                    context.release,
-                    &FileContents::FromBytes(&file.contents),
+                    context,
+                    &file.contents,
                     &file.url,
-                    context.dist,
                     Some(file.headers.as_slice()),
                     mode,
                 )?;

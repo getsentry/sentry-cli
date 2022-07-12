@@ -5,6 +5,7 @@ use std::io::{Read, Seek, SeekFrom};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
+use flate2::read::GzDecoder;
 use log::error;
 use sha1_smol::{Digest, Sha1};
 use uuid::Uuid;
@@ -184,6 +185,21 @@ pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<D
     }
 
     Ok((total_sha.digest(), chunks))
+}
+
+/// Checks if provided slice contains gzipped data.
+pub fn is_gzip_compressed(slice: &[u8]) -> bool {
+    // Per https://www.ietf.org/rfc/rfc1952.txt
+    const GZIP_MAGIC: [u8; 2] = [0x1F, 0x8B];
+    slice.starts_with(&GZIP_MAGIC)
+}
+
+/// Gets gzip decompressed contents.
+pub fn decompress_gzip_content(slice: &[u8]) -> Result<Vec<u8>> {
+    let mut decoder = GzDecoder::new(slice);
+    let mut decoded = vec![];
+    decoder.read_to_end(&mut decoded)?;
+    Ok(decoded)
 }
 
 #[cfg(windows)]

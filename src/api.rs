@@ -9,7 +9,7 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -20,10 +20,8 @@ use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
 use clap::ArgMatches;
-use console::style;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
-use indicatif::ProgressStyle;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::{Mutex, RwLock};
@@ -41,6 +39,7 @@ use uuid::Uuid;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
+use crate::utils::file_upload::UploadContext;
 use crate::utils::http::{self, is_absolute_url, parse_link_header};
 use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
@@ -50,13 +49,6 @@ use crate::utils::xcode::InfoPlist;
 
 const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
 const DEFAULT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET.add(b'`').add(b'?').add(b'{').add(b'}');
-
-/// Represents file contents temporarily
-#[derive(Clone, Debug)]
-pub enum FileContents<'a> {
-    FromPath(&'a Path),
-    FromBytes(&'a [u8]),
-}
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
@@ -669,48 +661,39 @@ impl Api {
 
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
-    // TODO: Simplify this function interface
-    #[allow(clippy::too_many_arguments)]
     pub fn upload_release_file(
         &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-        contents: &FileContents,
+        context: &UploadContext,
+        contents: &[u8],
         name: &str,
-        dist: Option<&str>,
         headers: Option<&[(String, String)]>,
         progress_bar_mode: ProgressBarMode,
     ) -> ApiResult<Option<Artifact>> {
-        let path = if let Some(project) = project {
+        let path = if let Some(project) = context.project {
             format!(
                 "/projects/{}/{}/releases/{}/files/",
-                PathArg(org),
+                PathArg(context.org),
                 PathArg(project),
-                PathArg(version)
+                PathArg(context.release)
             )
         } else {
             format!(
                 "/organizations/{}/releases/{}/files/",
-                PathArg(org),
-                PathArg(version)
+                PathArg(context.org),
+                PathArg(context.release)
             )
         };
         let mut form = curl::easy::Form::new();
-        match contents {
-            FileContents::FromPath(path) => {
-                form.part("file").file(path).add()?;
-            }
-            FileContents::FromBytes(bytes) => {
-                let filename = Path::new(name)
-                    .file_name()
-                    .and_then(OsStr::to_str)
-                    .unwrap_or("unknown.bin");
-                form.part("file").buffer(filename, bytes.to_vec()).add()?;
-            }
-        }
+
+        let filename = Path::new(name)
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("unknown.bin");
+        form.part("file")
+            .buffer(filename, contents.to_vec())
+            .add()?;
         form.part("name").contents(name.as_bytes()).add()?;
-        if let Some(dist) = dist {
+        if let Some(dist) = context.dist {
             form.part("dist").contents(dist.as_bytes()).add()?;
         }
 
@@ -740,90 +723,6 @@ impl Api {
         } else {
             resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
         }
-    }
-
-    pub fn upload_release_files(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-        sources: HashSet<(String, PathBuf)>,
-        dist: Option<&str>,
-        headers: Option<&[(String, String)]>,
-    ) -> Result<(), ApiError> {
-        if sources.is_empty() {
-            return Ok(());
-        }
-
-        let mut successful_req = vec![];
-        let mut failed_req = vec![];
-
-        println!(
-            "{} Uploading {} files for release {}",
-            style(">").dim(),
-            style(sources.len()).cyan(),
-            style(version).cyan()
-        );
-
-        let pb = ProgressBar::new(sources.len());
-        pb.set_style(ProgressStyle::default_bar().template(&format!(
-            "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",
-            style(">").cyan()
-        )));
-
-        for (url, path) in sources {
-            pb.set_message(path.to_str().unwrap());
-
-            let upload_result = self.upload_release_file(
-                org,
-                project,
-                version,
-                &FileContents::FromPath(&path),
-                &url.to_owned(),
-                dist,
-                headers,
-                ProgressBarMode::Disabled,
-            );
-
-            match upload_result {
-                Ok(Some(artifact)) => {
-                    successful_req.push((path, artifact));
-                }
-                Ok(None) => {
-                    failed_req.push((path, url, String::from("File already present")));
-                }
-                Err(err) => {
-                    failed_req.push((path, url, err.to_string()));
-                }
-            };
-
-            pb.inc(1);
-        }
-
-        pb.finish_and_clear();
-
-        for (path, url, reason) in failed_req.iter() {
-            println!(
-                "    Failed to upload: {} as {} ({})",
-                &path.display(),
-                &url,
-                reason
-            );
-        }
-
-        for (path, artifact) in successful_req.iter() {
-            println!(
-                "    Successfully uploaded: {} as {} ({}) ({} bytes)",
-                &path.display(),
-                artifact.name,
-                artifact.sha1,
-                artifact.size
-            );
-        }
-
-        println!("{} Done uploading.", style(">").dim());
-
-        Ok(())
     }
 
     /// Creates a new release.

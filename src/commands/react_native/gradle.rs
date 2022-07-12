@@ -118,6 +118,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             release: &release.version,
             dist: Some(dist),
             wait: matches.is_present("wait"),
+            ..Default::default()
         })?;
     }
 
