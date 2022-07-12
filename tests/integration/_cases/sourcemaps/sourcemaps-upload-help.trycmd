@@ -23,6 +23,9 @@ OPTIONS:
     -d, --dist <DISTRIBUTION>
             Optional distribution identifier for the sourcemaps.
 
+        --decompress
+            Enable files gzip decompression prior to upload.
+
     -h, --help
             Print help information
 

@@ -52,6 +52,11 @@ pub fn make_command(command: Command) -> Command {
                 .help("Enable basic sourcemap validation."),
         )
         .arg(
+            Arg::new("decompress")
+                .long("decompress")
+                .help("Enable files gzip decompression prior to upload."),
+        )
+        .arg(
             Arg::new("wait")
                 .long("wait")
                 .help("Wait for the server to fully process uploaded files."),
@@ -258,6 +263,7 @@ fn process_sources_from_paths(
         };
 
         let mut search = ReleaseFileSearch::new(path.to_path_buf());
+        search.decompress(matches.is_present("decompress"));
 
         if check_ignore {
             search

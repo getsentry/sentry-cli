@@ -8,15 +8,18 @@ use console::style;
 use ignore::overrides::OverrideBuilder;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
-use log::info;
+use log::{info, warn};
 
 use crate::utils::progress::{ProgressBar, ProgressStyle};
+
+use super::fs::{decompress_gzip_content, is_gzip_compressed};
 
 pub struct ReleaseFileSearch {
     path: PathBuf,
     extensions: BTreeSet<String>,
     ignores: BTreeSet<String>,
     ignore_file: Option<String>,
+    decompress: bool,
 }
 
 #[derive(Eq, PartialEq, Hash)]
@@ -33,7 +36,13 @@ impl ReleaseFileSearch {
             extensions: BTreeSet::new(),
             ignore_file: None,
             ignores: BTreeSet::new(),
+            decompress: false,
         }
+    }
+
+    pub fn decompress(&mut self, decompress: bool) -> &mut Self {
+        self.decompress = decompress;
+        self
     }
 
     pub fn extension<E>(&mut self, extension: E) -> &mut Self
@@ -86,9 +95,12 @@ impl ReleaseFileSearch {
     }
 
     pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch> {
+        // NOTE: `collect_file` currently do not handle gzip decompression,
+        // as its mostly used for 3rd tools like xcode, appcenter or gradle.
         let mut f = fs::File::open(path.clone())?;
         let mut contents = Vec::new();
         f.read_to_end(&mut contents)?;
+
         Ok(ReleaseFileMatch {
             base_path: path.clone(),
             path,
@@ -154,6 +166,13 @@ impl ReleaseFileSearch {
             let mut f = fs::File::open(file.path())?;
             let mut contents = Vec::new();
             f.read_to_end(&mut contents)?;
+
+            if self.decompress && is_gzip_compressed(&contents) {
+                contents = decompress_gzip_content(&contents).unwrap_or_else(|_| {
+                    warn!("Could not decompress: {}", file.path().display());
+                    contents
+                });
+            }
 
             let file_match = ReleaseFileMatch {
                 base_path: self.path.clone(),
