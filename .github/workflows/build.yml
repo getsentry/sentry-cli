@@ -113,6 +113,12 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
+      # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
+      - name: Disable rustup self-update
+        shell: bash
+        run: rustup set auto-self-update disable
+
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable-${{ matrix.arch }}-pc-windows-msvc
