@@ -26,14 +26,12 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
 
-#[derive(Default)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
     pub release: &'a str,
     pub dist: Option<&'a str>,
     pub wait: bool,
-    pub decompress: bool,
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]

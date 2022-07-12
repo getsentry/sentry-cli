@@ -340,7 +340,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         release: &release.version,
         dist: matches.value_of("dist"),
         wait: matches.is_present("wait"),
-        decompress: matches.is_present("decompress"),
     })?;
 
     Ok(())

@@ -125,7 +125,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         release: &release,
         dist,
         wait: matches.is_present("wait"),
-        decompress: matches.is_present("decompress"),
     };
 
     let path = Path::new(matches.value_of("path").unwrap());
