@@ -311,13 +311,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
 
-    for artifact in api.list_release_files(&org, Some(&project), &version)? {
-        let checksum = Digest::from_str(&artifact.sha1)
-            .map_err(|_| format_err!("Invalid artifact checksum"))?;
-
-        processor.add_already_uploaded_source(checksum);
-    }
-
     if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
     } else {
@@ -333,6 +326,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             ..Default::default()
         },
     )?;
+
+    for artifact in api.list_release_files(&org, Some(&project), &release.version)? {
+        let checksum = Digest::from_str(&artifact.sha1)
+            .map_err(|_| format_err!("Invalid artifact checksum"))?;
+
+        processor.add_already_uploaded_source(checksum);
+    }
 
     processor.upload(&UploadContext {
         org: &org,
