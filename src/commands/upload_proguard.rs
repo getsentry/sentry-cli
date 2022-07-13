@@ -66,8 +66,8 @@ pub fn make_command(command: Command) -> Command {
                 .requires("version")
                 .help(
                     "Optionally associate the mapping files with an application \
-                     ID.{n}If you have multiple apps in one sentry project you can \
-                     then easlier tell them apart.",
+                     ID.{n}If you have multiple apps in one sentry project, you can \
+                     then easily tell them apart.",
                 ),
         )
         .arg(
