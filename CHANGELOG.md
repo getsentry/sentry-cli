@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.4.0
+
+### Various fixes & improvements
+
+- ci: Disable rustup self-update (#1278) by @kamilogorek
+- feat: Add decompress flag to sourcemaps and files upload (#1277) by @kamilogorek
+- feat: Use checksum to dedupe uploaded release artifacts (#1275) by @kamilogorek
+
 ## 2.3.1
 
 ### Various fixes & improvements
