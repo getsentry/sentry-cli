@@ -2,7 +2,7 @@ use std::env;
 use std::ffi::OsStr;
 use std::fs;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use if_chain::if_chain;
@@ -134,7 +134,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut processor = SourceMapProcessor::new();
 
     for path in matches.values_of("paths").unwrap() {
-        for entry in (fs::read_dir(path)?).flatten() {
+        let entries = fs::read_dir(path)
+            .map_err(|e| anyhow!(e).context(format!("Failed processing path: \"{}\"", &path)))?;
+
+        for entry in entries.flatten() {
             if_chain! {
                 if let Some(filename) = entry.file_name().to_str();
                 if let Some(ext) = entry.path().extension();
