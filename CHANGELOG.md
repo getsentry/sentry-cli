@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.4.1
+
+### Various fixes & improvements
+
+- ref: Print better error when processing appcenter paths (#1287) by @kamilogorek
+- fix: Make sure release exists before querying for artifacts (#1284) by @kamilogorek
+
 ## 2.4.0
 
 ### Various fixes & improvements
