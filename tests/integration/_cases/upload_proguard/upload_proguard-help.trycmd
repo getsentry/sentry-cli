@@ -16,7 +16,7 @@ OPTIONS:
 
         --app-id <APP_ID>
             Optionally associate the mapping files with an application ID.
-            If you have multiple apps in one sentry project you can then easlier tell them apart.
+            If you have multiple apps in one sentry project, you can then easily tell them apart.
 
         --auth-token <AUTH_TOKEN>
             Use the given Sentry auth token.
