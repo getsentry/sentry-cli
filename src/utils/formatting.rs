@@ -5,7 +5,7 @@ use chrono::Duration;
 /// Helper for formatting durations.
 pub struct HumanDuration(pub Duration);
 
-impl<'a> fmt::Display for HumanDuration {
+impl fmt::Display for HumanDuration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         macro_rules! try_write {
             ($num:expr, $str:expr) => {
