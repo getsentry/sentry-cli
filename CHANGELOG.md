@@ -79,22 +79,22 @@ This is something users would run locally so I do not think we can track usage e
 * Verify workers are sharing the same volume as web (if running self-hosted Sentry via Docker)
 * Should spit out an easily readable and easily copy and paste - to put into ZenDesk or elsewhere for support colleagues
 
-*Possible second milestone:*  
+*Possible second milestone:*
 
 https://github.com/getsentry/rust-sourcemap/tree/master/cli
 
-* In sentry error incorrect source map location 
-* this helps when producing sourcemaps locally then line and column 
-* this verify that it resolves locally 
-  * if yes then it is a problem in between on sentry server side or upload 
-  * 1st Verifies what you upload to sentry is exactly what you upload to sentry 
-  * 2nd step from “y-tho” ensure previous steps are not for waste 
+* In sentry error incorrect source map location
+* this helps when producing sourcemaps locally then line and column
+* this verify that it resolves locally
+  * if yes then it is a problem in between on sentry server side or upload
+  * 1st Verifies what you upload to sentry is exactly what you upload to sentry
+  * 2nd step from “y-tho” ensure previous steps are not for waste
 * What is being automated?
   * on release page you have your files (release artificats)
     * download
-    * manually check the line number matches the error 
-    * if correct then data is correct 
-    * then you know an error with cli and not with the source maps that were uploaded 
+    * manually check the line number matches the error
+    * if correct then data is correct
+    * then you know an error with cli and not with the source maps that were uploaded
 
 
 
@@ -188,6 +188,13 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 - ref: Make `--auth-token` a global argument
 - ref: Make all `ProgressBar` instances and logs always write to `stderr`
 - ref: Migrate error handling from `failure` to `anyhow` crate
+
+## 1.74.4
+
+### Various fixes & improvements
+
+- ci: Add merge target (f9a2db3) by @kamilogorek
+- ref: Prevent @vercel/nft and similar tools from including binary file in their bundles (#1207) by @kamilogorek
 
 ## 1.74.3
 
