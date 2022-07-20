@@ -385,3 +385,29 @@ fn command_sourcemaps_explain_print_sourcemap() {
 
     register_test("sourcemaps/sourcemaps-explain-print-sourcemap.trycmd");
 }
+
+#[test]
+fn command_sourcemaps_explain_select_frame() {
+    let _event = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
+            200,
+        )
+        .with_response_file("sourcemaps/get-event-select-frame.json"),
+    );
+    register_test("sourcemaps/sourcemaps-explain-select-frame.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_explain_select_frame_out_of_range() {
+    let _event = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
+            200,
+        )
+        .with_response_file("sourcemaps/get-event-select-frame.json"),
+    );
+    register_test("sourcemaps/sourcemaps-explain-select-frame-out-of-range.trycmd");
+}

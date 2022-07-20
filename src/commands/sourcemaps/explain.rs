@@ -25,6 +25,13 @@ pub fn make_command(command: Command) -> Command {
                 .help("ID of an event to be explained."),
         )
         .arg(
+            Arg::new("frame")
+                .long("frame")
+                .default_value("0")
+                .value_parser(clap::value_parser!(usize))
+                .help("Position of the frame that should be used for source map resolution."),
+        )
+        .arg(
             Arg::new("force")
                 .long("force")
                 .short('f')
@@ -82,28 +89,34 @@ fn extract_in_app_frames(stacktrace: &Stacktrace) -> Vec<&Frame> {
         .collect()
 }
 
-fn extract_top_frame(stacktrace: &Stacktrace) -> Result<&Frame> {
-    let in_app_frames = extract_in_app_frames(stacktrace);
+fn extract_nth_frame(stacktrace: &Stacktrace, position: usize) -> Result<&Frame> {
+    let mut in_app_frames = extract_in_app_frames(stacktrace);
 
     if in_app_frames.is_empty() {
         bail!("Event exception stacktrace has no in_app frames");
     }
 
-    let top_frame = in_app_frames.last().unwrap();
-    let abs_path = top_frame
+    // Frames are in bottom-up order.
+    in_app_frames.reverse();
+
+    let frame = in_app_frames
+        .get(position)
+        .ok_or_else(|| format_err!("Selected frame ({}) is missing.", position))?;
+
+    let abs_path = frame
         .abs_path
         .as_ref()
-        .ok_or_else(|| format_err!("Top frame is missing an abs_path"))?;
+        .ok_or_else(|| format_err!("Selected frame ({}) is missing an abs_path", position))?;
 
     if let Ok(abs_path) = Url::parse(abs_path) {
         if Path::new(abs_path.path()).extension().is_none() {
-            bail!("Top frame of event exception originates from the <script> tag, its not possible to resolve source maps");
+            bail!("Selected frame ({}) of event exception originates from the <script> tag, its not possible to resolve source maps", position);
         }
     } else {
-        bail!("Event exception stacktrace top frame has incorrect abs_path (valid url is required). Found {}", abs_path);
+        bail!("Event exception stacktrace selected frame ({}) has incorrect abs_path (valid url is required). Found {}", position, abs_path);
     }
 
-    Ok(top_frame)
+    Ok(frame)
 }
 
 fn fetch_release_artifacts(org: &str, project: &str, release: &str) -> Result<Vec<Artifact>> {
@@ -363,10 +376,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     })?;
     success("Event has a valid stacktrace present");
 
-    let mut frame = extract_top_frame(stacktrace).map_err(|err| {
-        error(err);
-        QuietExit(1)
-    })?;
+    let mut frame = extract_nth_frame(stacktrace, *matches.get_one::<usize>("frame").unwrap())
+        .map_err(|err| {
+            error(err);
+            QuietExit(1)
+        })?;
 
     if exception.raw_stacktrace.is_some() {
         if matches.is_present("force") {
@@ -374,10 +388,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 "Exception is already source mapped, however 'force' flag was used. Moving along.",
             );
             let raw_stacktrace = exception.raw_stacktrace.as_ref().unwrap();
-            frame = extract_top_frame(raw_stacktrace).map_err(|err| {
-                error(err);
-                QuietExit(1)
-            })?;
+            frame = extract_nth_frame(raw_stacktrace, *matches.get_one::<usize>("frame").unwrap())
+                .map_err(|err| {
+                    error(err);
+                    QuietExit(1)
+                })?;
         } else {
             warning("Exception is already source mapped and first resolved frame points to:\n");
             if let Some(frame) = extract_in_app_frames(stacktrace)

@@ -1,10 +1,10 @@
 ```
-$ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
+$ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4 --frame 42
 ? failed
 ✔ Fetched data for event: 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Event has release name: ytho-test
 ✔ Event has a valid exception present
 ✔ Event has a valid stacktrace present
-✖ Selected frame (0) is missing an abs_path
+✖ Selected frame (42) is missing.
 
 ```
