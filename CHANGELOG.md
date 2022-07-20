@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.5.0
+
+### Various fixes & improvements
+
+- feat: Allow for selecting frame in sourcemaps explain (#1293) by @kamilogorek
+- misc: 1.74.5 changelog (#1291) by @kamilogorek
+- chore: add missing changelog entry for 1.74.4 (#1289) by @vaind
+
 ## 2.4.1
 
 ### Various fixes & improvements
