@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.74.5
+
+### Various fixes & improvements
+
+- deps: Add resolution to bump `ansi-regex` to version `^3.0.1` (#1281)
+- ref: Increase `TempFile` robustness on Windows (#1256)
+
 ## 1.74.4
 
 ### Various fixes & improvements
