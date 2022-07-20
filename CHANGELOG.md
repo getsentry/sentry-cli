@@ -189,6 +189,13 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 - ref: Make all `ProgressBar` instances and logs always write to `stderr`
 - ref: Migrate error handling from `failure` to `anyhow` crate
 
+## 1.74.5
+
+### Various fixes & improvements
+
+- deps: Add resolution to bump `ansi-regex` to version `^3.0.1` (#1281)
+- ref: Increase `TempFile` robustness on Windows (#1256)
+
 ## 1.74.4
 
 ### Various fixes & improvements
