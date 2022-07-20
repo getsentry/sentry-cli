@@ -908,9 +908,7 @@ fn execute_files_upload<'a>(
             if !header.contains(':') {
                 bail!("Invalid header. Needs to be in key:value format");
             }
-            let mut iter = header.splitn(2, ':');
-            let key = iter.next().unwrap();
-            let value = iter.next().unwrap();
+            let (key, value) = header.split_once(':').unwrap();
             headers.push((key.trim().to_string(), value.trim().to_string()));
         }
     };
