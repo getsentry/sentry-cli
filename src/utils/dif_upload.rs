@@ -1063,17 +1063,25 @@ fn process_symbol_maps<'a>(
 /// Default filter function to skip over bad sources we do not want to include.
 pub fn filter_bad_sources(entry: &FileEntry) -> bool {
     let max_size = Config::current().get_max_dif_item_size();
+    let path = &entry.abs_path_str();
 
     if entry.name_str().ends_with(".pch") {
         // always ignore pch files
-        false
-    } else if let Ok(meta) = fs::metadata(&entry.abs_path_str()) {
+        return false;
+    } else if let Ok(meta) = fs::metadata(path) {
+        let item_size = meta.len();
         // ignore files larger than limit (defaults to 1MB)
-        meta.len() < max_size
-    } else {
-        // if a file metadata could not be read it will be skipped later.
-        true
+        if item_size > max_size {
+            warn!(
+                "Source exceded maximum item size limit ({}). {}",
+                item_size, path
+            );
+            return false;
+        }
     }
+
+    // if a file metadata could not be read it will be skipped later.
+    true
 }
 
 /// Creates a source bundle containing the source files referenced by the input DIFs.
