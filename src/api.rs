@@ -1419,9 +1419,11 @@ impl Api {
         &self,
         org: &str,
         project: &str,
+        limit: u16,
     ) -> ApiResult<Vec<Event>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
+        let mut _limit = limit;
 
         loop {
             let resp = self.get(&format!(
@@ -1440,6 +1442,12 @@ impl Api {
             }
             let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<Event>>()?.into_iter());
+
+            _limit -= 1;
+            if _limit == 0 {
+                break;
+            }
+
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {

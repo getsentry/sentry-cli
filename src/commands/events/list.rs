@@ -15,7 +15,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches)?;
-    let events = api.list_organization_project_events(&org, &project)?;
+    let limit = matches.value_of("limit").unwrap();
+
+    let events =
+        api.list_organization_project_events(&org, &project, limit.parse::<u16>().unwrap())?;
 
     let mut table = Table::new();
     let row = table.title_row().add("Event ID").add("Date").add("Title");
@@ -27,7 +30,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         row.add("Tags");
     }
 
-    for event in &events {
+    let max_rows = if matches.is_present("max-rows") {
+        matches
+            .value_of("max-rows")
+            .unwrap()
+            .parse::<usize>()
+            .unwrap()
+    } else {
+        events.len()
+    };
+
+    for event in &events[..max_rows] {
         let row = table.add_row();
         row.add(&event.event_id)
             .add(&event.date_created)

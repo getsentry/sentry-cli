@@ -39,6 +39,19 @@ pub fn make_command(mut command: Command) -> Command {
                 .short('t')
                 .global(true)
                 .help("Include tags into the list."),
+        )
+        .arg(
+            Arg::new("max-rows")
+                .long("max-rows")
+                .global(true)
+                .help("Max of rows for a table."),
+        )
+        .arg(
+            Arg::new("limit")
+                .long("limit")
+                .global(true)
+                .default_value("10")
+                .help("Limit of requests."),
         );
     each_subcommand!(add_subcommand);
     command
