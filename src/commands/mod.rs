@@ -20,6 +20,7 @@ macro_rules! each_subcommand {
         $mac!(bash_hook);
         $mac!(debug_files);
         $mac!(deploys);
+        $mac!(events);
         $mac!(files);
         $mac!(info);
         $mac!(issues);
@@ -62,6 +63,7 @@ to learn more about them.";
 const UPDATE_NAGGER_CMDS: &[&str] = &[
     "debug-files",
     "deploys",
+    "events",
     "files",
     "info",
     "issues",
