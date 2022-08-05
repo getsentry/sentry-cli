@@ -43,6 +43,7 @@ pub fn make_command(mut command: Command) -> Command {
         .arg(
             Arg::new("max-rows")
                 .long("max-rows")
+                .value_name("MAX-ROWS")
                 .global(true)
                 .help("Max of rows for a table."),
         )
@@ -50,6 +51,7 @@ pub fn make_command(mut command: Command) -> Command {
             Arg::new("limit")
                 .long("limit")
                 .global(true)
+                .value_name("LIMIT")
                 .default_value("10")
                 .help("Limit of requests."),
         );
