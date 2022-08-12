@@ -1,7 +1,7 @@
 //! Searches, processes and uploads debug information files (DIFs). See
 //! `DifUpload` for more information.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display};
@@ -27,6 +27,7 @@ use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use symbolic::il2cpp::ObjectLineMapping;
+use symbolic_ppdb::PortablePdb;
 use walkdir::WalkDir;
 use which::which;
 use zip::result::ZipError;
@@ -77,6 +78,8 @@ impl<'a> Iterator for DifChunks<'a> {
 /// [`DifMatch`] instead of this instead.
 enum ParsedDif<'a> {
     Object(Box<Object<'a>>),
+    // TODO: consider making this an `Object` in symbolic-debuginfo?
+    PPdb(Box<PortablePdb<'a>>),
     BcSymbolMap(BcSymbolMap<'a>),
     UuidMap(UuidMapping),
     Il2Cpp,
@@ -204,6 +207,7 @@ impl<'data> DifMatch<'data> {
     pub fn object(&self) -> Option<&Object<'data>> {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => Some(obj),
+            ParsedDif::PPdb(_) => None,
             ParsedDif::BcSymbolMap(_) => None,
             ParsedDif::UuidMap(_) => None,
             ParsedDif::Il2Cpp => None,
@@ -213,6 +217,7 @@ impl<'data> DifMatch<'data> {
     pub fn format(&self) -> DifFormat {
         match self.dif.get() {
             ParsedDif::Object(ref object) => DifFormat::Object(object.file_format()),
+            ParsedDif::PPdb(_) => DifFormat::PPdb,
             ParsedDif::BcSymbolMap(_) => DifFormat::BcSymbolMap,
             ParsedDif::UuidMap(_) => DifFormat::PList,
             ParsedDif::Il2Cpp => DifFormat::Il2Cpp,
@@ -223,6 +228,7 @@ impl<'data> DifMatch<'data> {
     pub fn data(&self) -> &[u8] {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => obj.data(),
+            ParsedDif::PPdb(_) => self.dif.owner(),
             ParsedDif::BcSymbolMap(_) => self.dif.owner(),
             ParsedDif::UuidMap(_) => self.dif.owner(),
             ParsedDif::Il2Cpp => self.dif.owner(),
@@ -706,6 +712,11 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::UuidMap) {
                     collected.push(dif);
                 }
+            } else if buffer.starts_with(&0x424A_5342_u32.to_le_bytes()) {
+                // The ECMA-335 magic is `0x424A_5342`
+                if let Some(dif) = collect_ppdb(name, buffer, options) {
+                    collected.push(dif);
+                }
             };
 
             pb.set_prefix(&collected.len().to_string());
@@ -800,7 +811,7 @@ fn collect_auxdif<'a>(
     Some(dif)
 }
 
-/// Processes and [`DifSource`] which is expected to be an object file.
+/// Processes a [`DifSource`] which is expected to be an object file.
 fn collect_object_dif<'a>(
     mut source: DifSource<'_>,
     name: String,
@@ -898,6 +909,48 @@ fn collect_object_dif<'a>(
     }
 
     collected
+}
+
+fn collect_ppdb<'a>(
+    name: String,
+    buffer: ByteView<'static>,
+    options: &DifUpload,
+) -> Option<DifMatch<'a>> {
+    if !options.valid_format(DifFormat::PPdb) {
+        return None;
+    }
+
+    let mut debug_id = None;
+
+    let cell = SelfCell::try_new(buffer, |buffer| {
+        let ppdb = symbolic_ppdb::PortablePdb::parse(unsafe { &*buffer })?;
+
+        // TODO: we should really expose a `DebugId` directly!
+        let pdb_id = ppdb.pdb_id().ok_or("no debug_id")?;
+        let (guid, age) = pdb_id.split_at(16);
+        let age = u32::from_ne_bytes(age.try_into().unwrap());
+        debug_id = Some(DebugId::from_guid_age(guid, age)?);
+
+        // we don't really care about the errors, but we need one to satisfy
+        // the `try_new` signature.
+        Ok::<_, Box<dyn std::error::Error>>(ParsedDif::PPdb(Box::new(ppdb)))
+    })
+    .ok()?;
+
+    let dif = DifMatch {
+        _backing: None,
+        dif: cell,
+        name,
+        debug_id,
+        attachments: None,
+    };
+
+    // Skip this file if we don't want to process it.
+    if !options.validate_dif(&dif) {
+        return None;
+    }
+
+    Some(dif)
 }
 
 /// Resolves BCSymbolMaps and replaces hidden symbols in a `DifMatch` using
@@ -1201,6 +1254,57 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
     Ok(line_mappings)
 }
 
+fn resolve_ppdb(mut difs: Vec<DifMatch>) -> Vec<DifMatch> {
+    let mut mvid_by_debug_id = HashMap::new();
+    let mut ppdb_by_debug_id = HashMap::new();
+
+    // NOTE: this is essentially `drain_filter`, which is not yet stable however
+    // See https://doc.rust-lang.org/std/vec/struct.Vec.html#method.drain_filter
+    let mut idx = 0;
+    while idx < difs.len() {
+        let dif = &difs[idx];
+        let parsed_dif = dif.dif.get();
+
+        // TODO: maybe symbolic-debuginfo could parse ppdb as `Object`?
+        if let ParsedDif::PPdb(ppdb) = parsed_dif {
+            // TODO: we should really expose a `DebugId` directly!
+            let pdb_id = ppdb.pdb_id().unwrap();
+            let (guid, age) = pdb_id.split_at(16);
+            let age = u32::from_ne_bytes(age.try_into().unwrap());
+            let debug_id = DebugId::from_guid_age(guid, age).unwrap();
+
+            let dif = difs.swap_remove(idx);
+            ppdb_by_debug_id.insert(debug_id, dif);
+        } else if let ParsedDif::Object(obj) = parsed_dif {
+            let debug_id = obj.debug_id();
+            if let Object::Pe(pe) = obj.as_ref() {
+                if let Some(mvid) = pe
+                    .clr_metadata()
+                    .and_then(|clr_metadata_buf| PortablePdb::parse(clr_metadata_buf).ok())
+                    .and_then(|metadata| metadata.mvid())
+                {
+                    mvid_by_debug_id.insert(debug_id, mvid);
+                }
+            }
+
+            idx += 1;
+        } else {
+            idx += 1;
+        }
+    }
+
+    for (debug_id, mut dif) in ppdb_by_debug_id {
+        // Overwrite the debug_id with the mvid of the PE file if we have one.
+        if let Some(mvid) = mvid_by_debug_id.remove(&debug_id) {
+            dif.debug_id = Some(DebugId::from_uuid(mvid));
+            difs.push(dif);
+        }
+        // else: we discard the PPdb, as we can't use it with its original debug_id
+    }
+
+    difs
+}
+
 /// Calls the assemble endpoint and returns the state for every `DifMatch` along
 /// with info on missing chunks.
 ///
@@ -1455,6 +1559,7 @@ fn poll_dif_assemble(
                     symbolic::debuginfo::ObjectKind::None => String::new(),
                     k => format!(" {:#}", k),
                 },
+                ParsedDif::PPdb(_) => String::from("portable-pdb"),
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::UuidMap(_) => String::from("uuidmap"),
                 ParsedDif::Il2Cpp => String::from("il2cpp"),
@@ -1518,8 +1623,12 @@ fn upload_difs_chunked(
 
     // Try to resolve BCSymbolMaps
     let symbol_map = options.symbol_map.as_deref();
-    let mut processed = process_symbol_maps(found, symbol_map)?;
+    let processed = process_symbol_maps(found, symbol_map)?;
 
+    // Resolve portable PDBs to associate them with their corresponding mvid.
+    let mut processed = resolve_ppdb(processed);
+
+    // Create il2cpp mappings if requested
     if options.upload_il2cpp_mappings {
         let il2cpp_mappings = create_il2cpp_mappings(&processed)?;
         processed.extend(il2cpp_mappings);
@@ -1688,6 +1797,8 @@ pub enum DifFormat {
     PList,
     /// A Unity il2cpp line mapping file.
     Il2Cpp,
+    /// A Portable PDB file.
+    PPdb,
 }
 
 /// Searches, processes and uploads debug information files (DIFs).
