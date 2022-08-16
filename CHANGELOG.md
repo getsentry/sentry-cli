@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.5.1
+
+### Various fixes & improvements
+
+- fix: Fallback to xcodebuild vars for faulty Info.plist files (#1310) by @kamilogorek
+- ref: Log warning when debug source excedes item size limit (#1305) by @kamilogorek
+
 ## 2.5.0
 
 ### Various fixes & improvements
