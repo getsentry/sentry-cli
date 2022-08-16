@@ -224,26 +224,79 @@ impl InfoPlist {
         }
     }
 
-    /// Lodas an info plist from a given project info
+    /// Loads an info plist from a given project info
     pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>> {
         if_chain! {
             if let Some(config) = pi.get_configuration("release")
                 .or_else(|| pi.get_configuration("debug"));
             if let Some(target) = pi.get_first_target();
+
             then {
                 let vars = pi.get_build_vars(target, config)?;
+
                 if let Some(path) = vars.get("INFOPLIST_FILE") {
                     let base = vars.get("PROJECT_DIR").map(|x| Path::new(x.as_str()))
                         .unwrap_or_else(|| pi.base_path());
-                    let path = base.join(path);
-                    return Ok(Some(InfoPlist::load_and_process(path, &vars)?));
+
+                    return InfoPlist::load_and_process(base.join(path), &vars).map_or_else(|err| {
+                        /*
+                        This is sort of an edge-case, as XCode is not producing an `Info.plist` file
+                        by default anymore. However, it still does so for some templates.
+
+                        For example iOS Storyboard template will produce a partial `Info.plist` file,
+                        with a content only related to the Storyboard itself, but not the project as a whole. eg.
+
+                        <?xml version="1.0" encoding="UTF-8"?>
+                        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                        <plist version="1.0">
+                        <dict>
+                            <key>UIApplicationSceneManifest</key>
+                            <dict>
+                                <key>UISceneConfigurations</key>
+                                <dict>
+                                    <key>UIWindowSceneSessionRoleApplication</key>
+                                    <array>
+                                        <dict>
+                                            <key>UISceneStoryboardFile</key>
+                                            <string>Main</string>
+                                        </dict>
+                                    </array>
+                                </dict>
+                            </dict>
+                        </dict>
+                        </plist>
+
+                        This causes a false-positive in this branch, as `INFOPLIST_FILE` is present, yet it contains
+                        no data required by the CLI to correctly produce a `InfoPlist` struct.
+
+                        In the case like that, we try to fallback to variables produced by `xcodebuild` binary,
+                        and read them directly, just like we do in `from_xcode_env` method.
+                        */
+                        if_chain! {
+                            if let Some(name) = vars.get("PRODUCT_NAME");
+                            if let Some(bundle_id) = vars.get("PRODUCT_BUNDLE_IDENTIFIER");
+                            if let Some(version) = vars.get("MARKETING_VERSION");
+                            if let Some(build) = vars.get("CURRENT_PROJECT_VERSION");
+
+                            then {
+                                Ok(Some(InfoPlist {
+                                    name: name.to_string(),
+                                    bundle_id: bundle_id.to_string(),
+                                    version: version.to_string(),
+                                    build: build.to_string(),
+                                }))
+                            } else {
+                                Err(err)
+                            }
+                        }
+                    }, |v| Ok(Some(v)));
                 }
             }
         }
         Ok(None)
     }
 
-    /// loads an info plist file from a path and processes it with the given vars
+    /// Loads an info plist file from a path and processes it with the given vars
     pub fn load_and_process<P: AsRef<Path>>(
         path: P,
         vars: &HashMap<String, String>,
