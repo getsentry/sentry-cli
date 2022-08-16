@@ -2017,7 +2017,7 @@ dependencies = [
 
 [[package]]
 name = "sentry-cli"
-version = "2.5.0"
+version = "2.5.1"
 dependencies = [
  "anyhow",
  "anylog",
