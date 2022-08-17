@@ -1,57 +1,94 @@
 use anyhow::Result;
-use clap::{ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::formatting::Table;
 
 pub fn make_command(command: Command) -> Command {
-    command.about("List all events in your organization.")
+    command
+        .about("List all events in your organization.")
+        .arg(
+            Arg::with_name("show_user")
+                .long("show-user")
+                .short('U')
+                .help("Display the Users column."),
+        )
+        .arg(
+            Arg::with_name("show_tags")
+                .long("show-tags")
+                .short('T')
+                .help("Display the Tags column."),
+        )
+        .arg(
+            Arg::new("max_rows")
+                .long("max-rows")
+                .value_name("MAX_ROWS")
+                .value_parser(clap::value_parser!(usize))
+                .help("Maximum number of rows to print."),
+        )
+        .arg(
+            Arg::new("pages")
+                .long("pages")
+                .value_name("PAGES")
+                .default_value("5")
+                .value_parser(clap::value_parser!(usize))
+                .help("Maximum number of pages to fetch (100 events/page)."),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let api = Api::current();
-
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches)?;
-    let limit = matches.value_of("limit").unwrap();
+    let pages = *matches.get_one("pages").unwrap();
+    let api = Api::current();
 
-    let events =
-        api.list_organization_project_events(&org, &project, limit.parse::<u16>().unwrap())?;
+    let events = api.list_organization_project_events(&org, &project, pages)?;
 
     let mut table = Table::new();
-    let row = table.title_row().add("Event ID").add("Date").add("Title");
-    if matches.is_present("user") {
-        row.add("User");
+    let title_row = table.title_row().add("Event ID").add("Date").add("Title");
+
+    if matches.is_present("show_user") {
+        title_row.add("User");
     }
 
-    if matches.is_present("tags") {
-        row.add("Tags");
+    if matches.is_present("show_tags") {
+        title_row.add("Tags");
     }
 
-    let max_rows = if matches.is_present("max-rows") {
-        matches
-            .value_of("max-rows")
-            .unwrap()
-            .parse::<usize>()
-            .unwrap()
-    } else {
-        events.len()
-    };
+    let max_rows = std::cmp::min(
+        events.len(),
+        *matches.get_one("max_rows").unwrap_or(&std::usize::MAX),
+    );
 
-    for event in &events[..max_rows] {
-        let row = table.add_row();
-        row.add(&event.event_id)
-            .add(&event.date_created)
-            .add(&event.title);
+    if let Some(events) = events.get(..max_rows) {
+        for event in events {
+            let row = table.add_row();
+            row.add(&event.event_id)
+                .add(&event.date_created)
+                .add(&event.title);
 
-        if matches.is_present("user") {
-            row.add(&event.user);
-        }
+            if matches.is_present("show_user") {
+                if let Some(user) = &event.user {
+                    row.add(user);
+                } else {
+                    row.add("-");
+                }
+            }
 
-        if matches.is_present("tags") {
-            row.add(&event.tags);
+            if matches.is_present("show_tags") {
+                if let Some(tags) = &event.tags {
+                    row.add(
+                        tags.iter()
+                            .map(|t| t.to_string())
+                            .collect::<Vec<_>>()
+                            .join("\n"),
+                    );
+                } else {
+                    row.add("-");
+                }
+            }
         }
     }
 

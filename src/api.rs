@@ -1419,13 +1419,15 @@ impl Api {
         &self,
         org: &str,
         project: &str,
-        limit: u16,
-    ) -> ApiResult<Vec<Event>> {
+        max_pages: usize,
+    ) -> ApiResult<Vec<ProcessedEvent>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
-        let mut _limit = limit;
+        let mut requests_no = 0;
 
         loop {
+            requests_no += 1;
+
             let resp = self.get(&format!(
                 "/projects/{}/{}/events/?cursor={}",
                 PathArg(org),
@@ -1440,11 +1442,11 @@ impl Api {
                     break;
                 }
             }
-            let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Event>>()?.into_iter());
 
-            _limit -= 1;
-            if _limit == 0 {
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<ProcessedEvent>>()?.into_iter());
+
+            if requests_no == max_pages {
                 break;
             }
 
@@ -2352,81 +2354,6 @@ pub struct Project {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct EventTag {
-    pub key: String,
-    pub value: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EventTags(pub Vec<EventTag>);
-
-impl fmt::Display for EventTags {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        for event in &self.0 {
-            write!(f, "{} = {}, ", event.key, event.value)?;
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EventUserOption {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub user: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ip_address: Option<String>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EventUser(pub Option<EventUserOption>);
-
-impl fmt::Display for EventUser {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if let Some(event) = &self.0 {
-            if let Some(ref id) = event.id {
-                write!(f, "ID: {}, ", id)?;
-            }
-
-            if let Some(ref username) = event.username {
-                write!(f, "Username: {}, ", username)?;
-            }
-
-            if let Some(ref user) = event.user {
-                write!(f, "User: {}, ", user)?;
-            }
-
-            if let Some(ref email) = event.email {
-                write!(f, "Email: {}, ", email)?;
-            }
-
-            if let Some(ref ip_address) = event.ip_address {
-                write!(f, "IP: {}, ", ip_address)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Event {
-    #[serde(rename = "eventID")]
-    pub event_id: String,
-    pub title: String,
-    #[serde(rename = "dateCreated")]
-    pub date_created: String,
-    pub tags: EventTags,
-    pub user: EventUser,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct Monitor {
     pub id: String,
     pub name: String,
@@ -2723,7 +2650,12 @@ pub struct GitCommit {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ProcessedEvent {
+    #[serde(alias = "eventID")]
     pub event_id: Uuid,
+    #[serde(default, alias = "dateCreated")]
+    pub date_created: String,
+    #[serde(default)]
+    pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2732,4 +2664,55 @@ pub struct ProcessedEvent {
     pub dist: Option<String>,
     #[serde(default, skip_serializing_if = "Values::is_empty")]
     pub exception: Values<Exception>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<ProcessedEventUser>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<ProcessedEventTag>>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProcessedEventUser {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip_address: Option<String>,
+}
+
+impl fmt::Display for ProcessedEventUser {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(id) = &self.id {
+            write!(f, "ID: {}", id)?;
+        }
+
+        if let Some(username) = &self.username {
+            write!(f, "Username: {}", username)?;
+        }
+
+        if let Some(email) = &self.email {
+            write!(f, "Email: {}", email)?;
+        }
+
+        if let Some(ip_address) = &self.ip_address {
+            write!(f, "IP: {}", ip_address)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProcessedEventTag {
+    pub key: String,
+    pub value: String,
+}
+
+impl fmt::Display for ProcessedEventTag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", &self.key, &self.value)?;
+        Ok(())
+    }
 }

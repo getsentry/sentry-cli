@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{ArgMatches, Command};
 
 use crate::utils::args::ArgExt;
 
@@ -25,36 +25,7 @@ pub fn make_command(mut command: Command) -> Command {
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()
-        .project_arg(true)
-        .arg(
-            Arg::with_name("user")
-                .long("user")
-                .short('u')
-                .global(true)
-                .help("Include user's info into the list."),
-        )
-        .arg(
-            Arg::with_name("tags")
-                .long("tags")
-                .short('t')
-                .global(true)
-                .help("Include tags into the list."),
-        )
-        .arg(
-            Arg::new("max-rows")
-                .long("max-rows")
-                .value_name("MAX-ROWS")
-                .global(true)
-                .help("Max of rows for a table."),
-        )
-        .arg(
-            Arg::new("limit")
-                .long("limit")
-                .global(true)
-                .value_name("LIMIT")
-                .default_value("10")
-                .help("Limit of requests."),
-        );
+        .project_arg(true);
     each_subcommand!(add_subcommand);
     command
 }
