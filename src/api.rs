@@ -1414,6 +1414,52 @@ impl Api {
         Ok(rv)
     }
 
+    /// List all events associated with an organization and a project
+    pub fn list_organization_project_events(
+        &self,
+        org: &str,
+        project: &str,
+        max_pages: usize,
+    ) -> ApiResult<Vec<ProcessedEvent>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        let mut requests_no = 0;
+
+        loop {
+            requests_no += 1;
+
+            let resp = self.get(&format!(
+                "/projects/{}/{}/events/?cursor={}",
+                PathArg(org),
+                PathArg(project),
+                QueryArg(&cursor)
+            ))?;
+
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                } else {
+                    break;
+                }
+            }
+
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<ProcessedEvent>>()?.into_iter());
+
+            if requests_no == max_pages {
+                break;
+            }
+
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+
+        Ok(rv)
+    }
+
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let mut rv = vec![];
@@ -2604,7 +2650,12 @@ pub struct GitCommit {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ProcessedEvent {
+    #[serde(alias = "eventID")]
     pub event_id: Uuid,
+    #[serde(default, alias = "dateCreated")]
+    pub date_created: String,
+    #[serde(default)]
+    pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub project: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2613,4 +2664,55 @@ pub struct ProcessedEvent {
     pub dist: Option<String>,
     #[serde(default, skip_serializing_if = "Values::is_empty")]
     pub exception: Values<Exception>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub user: Option<ProcessedEventUser>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub tags: Option<Vec<ProcessedEventTag>>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProcessedEventUser {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip_address: Option<String>,
+}
+
+impl fmt::Display for ProcessedEventUser {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        if let Some(id) = &self.id {
+            write!(f, "ID: {}", id)?;
+        }
+
+        if let Some(username) = &self.username {
+            write!(f, "Username: {}", username)?;
+        }
+
+        if let Some(email) = &self.email {
+            write!(f, "Email: {}", email)?;
+        }
+
+        if let Some(ip_address) = &self.ip_address {
+            write!(f, "IP: {}", ip_address)?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProcessedEventTag {
+    pub key: String,
+    pub value: String,
+}
+
+impl fmt::Display for ProcessedEventTag {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}: {}", &self.key, &self.value)?;
+        Ok(())
+    }
 }
