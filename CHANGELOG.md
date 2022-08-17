@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.5.2
+
+### Various fixes & improvements
+
+- fix: Use direct plist env vars fallback when called within xcode itself (#1311) by @kamilogorek
+
 ## 2.5.1
 
 ### Various fixes & improvements
