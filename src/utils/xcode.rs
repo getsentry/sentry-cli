@@ -7,7 +7,7 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use anyhow::{Context, Result};
+use anyhow::{format_err, Context, Result};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::warn;
@@ -202,7 +202,7 @@ impl InfoPlist {
                 let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
                 Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
-            } else if let Ok(default_plist) = InfoPlist::from_xcode_env() {
+            } else if let Ok(default_plist) = InfoPlist::from_env_vars(&vars) {
                 Ok(Some(default_plist))
             } else {
                 Ok(None)
@@ -235,61 +235,10 @@ impl InfoPlist {
                 let vars = pi.get_build_vars(target, config)?;
 
                 if let Some(path) = vars.get("INFOPLIST_FILE") {
-                    let base = vars.get("PROJECT_DIR").map(|x| Path::new(x.as_str()))
+                    let base = vars.get("PROJECT_DIR").map(Path::new)
                         .unwrap_or_else(|| pi.base_path());
-
-                    return InfoPlist::load_and_process(base.join(path), &vars).map_or_else(|err| {
-                        /*
-                        This is sort of an edge-case, as XCode is not producing an `Info.plist` file
-                        by default anymore. However, it still does so for some templates.
-
-                        For example iOS Storyboard template will produce a partial `Info.plist` file,
-                        with a content only related to the Storyboard itself, but not the project as a whole. eg.
-
-                        <?xml version="1.0" encoding="UTF-8"?>
-                        <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-                        <plist version="1.0">
-                        <dict>
-                            <key>UIApplicationSceneManifest</key>
-                            <dict>
-                                <key>UISceneConfigurations</key>
-                                <dict>
-                                    <key>UIWindowSceneSessionRoleApplication</key>
-                                    <array>
-                                        <dict>
-                                            <key>UISceneStoryboardFile</key>
-                                            <string>Main</string>
-                                        </dict>
-                                    </array>
-                                </dict>
-                            </dict>
-                        </dict>
-                        </plist>
-
-                        This causes a false-positive in this branch, as `INFOPLIST_FILE` is present, yet it contains
-                        no data required by the CLI to correctly produce a `InfoPlist` struct.
-
-                        In the case like that, we try to fallback to variables produced by `xcodebuild` binary,
-                        and read them directly, just like we do in `from_xcode_env` method.
-                        */
-                        if_chain! {
-                            if let Some(name) = vars.get("PRODUCT_NAME");
-                            if let Some(bundle_id) = vars.get("PRODUCT_BUNDLE_IDENTIFIER");
-                            if let Some(version) = vars.get("MARKETING_VERSION");
-                            if let Some(build) = vars.get("CURRENT_PROJECT_VERSION");
-
-                            then {
-                                Ok(Some(InfoPlist {
-                                    name: name.to_string(),
-                                    bundle_id: bundle_id.to_string(),
-                                    version: version.to_string(),
-                                    build: build.to_string(),
-                                }))
-                            } else {
-                                Err(err)
-                            }
-                        }
-                    }, |v| Ok(Some(v)));
+                    let path = base.join(path);
+                    return Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
                 }
             }
         }
@@ -302,7 +251,7 @@ impl InfoPlist {
         vars: &HashMap<String, String>,
     ) -> Result<InfoPlist> {
         // do we want to preprocess the plist file?
-        let mut rv = if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
+        if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
             let mut c = process::Command::new("cc");
             c.arg("-xc").arg("-P").arg("-E");
             if let Some(defs) = vars.get("INFOPLIST_OTHER_PREPROCESSOR_FLAGS") {
@@ -317,27 +266,79 @@ impl InfoPlist {
             }
             c.arg(path.as_ref());
             let p = c.output()?;
-            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))?
-        } else {
-            InfoPlist::from_path(path)?
-        };
+            let mut plist = InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))?;
 
-        // expand xcodevars here
-        rv.name = expand_xcodevars(&rv.name, vars);
-        rv.bundle_id = expand_xcodevars(&rv.bundle_id, vars);
-        rv.version = expand_xcodevars(&rv.version, vars);
-        rv.build = expand_xcodevars(&rv.build, vars);
+            // expand xcodevars here
+            plist.name = expand_xcodevars(&plist.name, vars);
+            plist.bundle_id = expand_xcodevars(&plist.bundle_id, vars);
+            plist.version = expand_xcodevars(&plist.version, vars);
+            plist.build = expand_xcodevars(&plist.build, vars);
 
-        Ok(rv)
+            return Ok(plist);
+        }
+
+        InfoPlist::from_path(path).or_else(|err| {
+            /*
+            This is sort of an edge-case, as XCode is not producing an `Info.plist` file
+            by default anymore. However, it still does so for some templates.
+
+            For example iOS Storyboard template will produce a partial `Info.plist` file,
+            with a content only related to the Storyboard itself, but not the project as a whole. eg.
+
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+            <plist version="1.0">
+            <dict>
+                <key>UIApplicationSceneManifest</key>
+                <dict>
+                    <key>UISceneConfigurations</key>
+                    <dict>
+                        <key>UIWindowSceneSessionRoleApplication</key>
+                        <array>
+                            <dict>
+                                <key>UISceneStoryboardFile</key>
+                                <string>Main</string>
+                            </dict>
+                        </array>
+                    </dict>
+                </dict>
+            </dict>
+            </plist>
+
+            This causes a sort of false-positive, as `INFOPLIST_FILE` is present, yet it contains
+            no data required by the CLI to correctly produce a `InfoPlist` struct.
+
+            In the case like that, we try to fallback to env variables collected either by `xcodebuild` binary,
+            or directly through `env` if we were called from within XCode itself.
+            */
+            InfoPlist::from_env_vars(vars).map_err(|e| e.context(err))
+        })
     }
 
-    /// Loads an info plist from current environment based on default env variables settings in Xcode
-    pub fn from_xcode_env() -> Result<InfoPlist> {
+    /// Loads an info plist from provided environment variables list
+    pub fn from_env_vars(vars: &HashMap<String, String>) -> Result<InfoPlist> {
+        let name = vars
+            .get("PRODUCT_NAME")
+            .map(String::to_owned)
+            .ok_or_else(|| format_err!("PRODUCT_NAME is missing"))?;
+        let bundle_id = vars
+            .get("PRODUCT_BUNDLE_IDENTIFIER")
+            .map(String::to_owned)
+            .ok_or_else(|| format_err!("PRODUCT_BUNDLE_IDENTIFIER is missing"))?;
+        let version = vars
+            .get("MARKETING_VERSION")
+            .map(String::to_owned)
+            .ok_or_else(|| format_err!("MARKETING_VERSION is missing"))?;
+        let build = vars
+            .get("CURRENT_PROJECT_VERSION")
+            .map(String::to_owned)
+            .ok_or_else(|| format_err!("CURRENT_PROJECT_VERSION is missing"))?;
+
         Ok(InfoPlist {
-            name: env::var("PRODUCT_NAME")?,
-            bundle_id: env::var("PRODUCT_BUNDLE_IDENTIFIER")?,
-            version: env::var("MARKETING_VERSION")?,
-            build: env::var("CURRENT_PROJECT_VERSION")?,
+            name,
+            bundle_id,
+            version,
+            build,
         })
     }
 
