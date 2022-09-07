@@ -67,6 +67,9 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let tx_ctx = sentry::TransactionContext::new("bundle_sources", "create source bundle for debug file");
+    let transaction = sentry::start_transaction(tx_ctx);
+
     let output_path = matches.value_of("output").map(Path::new);
 
     for orig_path in matches.values_of("paths").unwrap() {
@@ -118,6 +121,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         }
     }
+    transaction.finish();
 
     Ok(())
 }

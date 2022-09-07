@@ -45,7 +45,7 @@ regex = "1.5.6"
 runas = "0.2.1"
 rust-ini = "0.18.0"
 semver = "1.0.11"
-sentry = { version = "0.27.0", default-features = false, features = ["anyhow", "curl"] }
+sentry = { git = "https://github.com/getsentry/sentry-rust", version = "0.27.0", default-features = false, features = ["anyhow", "curl"] }
 serde = { version = "1.0.137", features = ["derive"] }
 serde_json = "1.0.81"
 sha1_smol = { version = "1.0.0", features = ["serde"] }
@@ -80,12 +80,13 @@ mac-process-info = "0.2.0"
 osascript = "0.3.0"
 unix-daemonize = "0.1.2"
 
-[target."cfg(unix)"]
+#[target.'cfg(target_family = "unix")']
 
-[target."cfg(unix)".dependencies]
+[target.'cfg(target_family = "unix")'.dependencies]
 openssl-probe = "0.1.5"
 signal-hook = "0.3.14"
 crossbeam-channel = "0.5.5"
+sentry = { git = "https://github.com/getsentry/sentry-rust", version = "0.27.0", default-features = false, features = ["anyhow", "curl", "profiling", "frame-pointer"] }
 
 [target."cfg(windows)"]
 
@@ -95,3 +96,4 @@ winapi = "0.3.9"
 [profile.release]
 opt-level = 3
 panic = "abort"
+debug = true

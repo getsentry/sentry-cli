@@ -35,9 +35,19 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
           DOCKER_TAG: ${{ matrix.container }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+
 
       - name: Rename Binary
         run: mv target/*/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
+
+      - name: Upload Symbols
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: sentry-cli-Linux-${{ matrix.arch }} upload-dif sentry-cli-Linux-${{ matrix.arch }} --org <FILL IN ORG> --project <FILL IN PROJECT>
+
+      - name: Strip Symbols from Binary
+        run: strip sentry-cli-Linux-${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v2
         with:
@@ -68,15 +78,34 @@ jobs:
           target: ${{ matrix.target }}
           profile: minimal
           override: true
+          components: rust-src
 
-      - name: Run Cargo Build
-        uses: actions-rs/cargo@v1
+      - name: Install Nightly Toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          command: build
-          args: --target=${{ matrix.target }} --release --locked
+          toolchain: nightly
+          target: ${{ matrix.target }}
+          profile: minimal
+          components: rust-src
+
+      - name: Build with Frame Pointer
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        shell: bash
+        run: |
+          cargo +nightly run -Z build-std --target ${{ matrix.target }}
+          RUSTFLAGS="-C force-frame-pointers=yes" cargo build --release --target=${{ matrix.target }} --locked
 
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
+
+      - name: Upload Symbols
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: sentry-cli-Darwin-${{ matrix.arch }} upload-dif sentry-cli-Darwin-${{ matrix.arch }} --org sentry --project sentry-cli
+
+      - name: Strip Symbols from Binary
+        run: strip sentry-cli-Darwin-${{ matrix.arch }}
 
       - uses: actions/upload-artifact@v2
         with:

@@ -40,6 +40,9 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let tx_ctx = sentry::TransactionContext::new("check_files", "check which debug information files can be used by sentry");
+    let transaction = sentry::start_transaction(tx_ctx);
+
     let path = Path::new(matches.value_of("path").unwrap());
 
     // which types should we consider?
@@ -89,9 +92,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     if let Some(prob) = dif.get_problem() {
         println!("  Usable: {} ({})", style("no").red(), prob);
+        transaction.finish();
         Err(QuietExit(1).into())
     } else {
         println!("  Usable: {}", style("yes").green());
+        transaction.finish();
         Ok(())
     }
 }

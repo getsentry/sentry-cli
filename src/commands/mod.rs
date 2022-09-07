@@ -2,6 +2,7 @@
 
 use std::env;
 use std::process;
+use std::time::{Duration};
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -9,7 +10,7 @@ use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, PLATFORM, VERSION};
+use crate::constants::{ARCH, PLATFORM, VERSION, USER_AGENT};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
@@ -247,7 +248,23 @@ pub fn execute() -> Result<()> {
             .join(" ")
     );
 
-    run_command(&matches)
+    let _guard = sentry::init((
+        env!("SENTRY_DSN").to_string(),
+        sentry::ClientOptions {
+            release: sentry::release_name!(),
+            user_agent: USER_AGENT.into(),
+            traces_sample_rate: 0.1,
+            enable_profiling: true,
+            profiles_sample_rate: 1.0,
+            ..Default::default()
+        },
+    ));
+
+    let res = run_command(&matches);
+
+    _guard.flush(Some(Duration::from_secs(2)));
+
+    res
 }
 
 fn setup() {

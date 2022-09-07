@@ -170,6 +170,9 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let tx_ctx = sentry::TransactionContext::new("upload_debug_file", "upload debugging information files");
+    let transaction = sentry::start_transaction(tx_ctx);
+
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -316,18 +319,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 for id in missing_ids {
                     println!("  {}", id);
                 }
-
+                
+                transaction.finish();
                 return Err(QuietExit(1).into());
             }
         }
+
+        
 
         // report a non 0 status code if the server encountered issues.
         if has_processing_errors {
             eprintln!();
             eprintln!("{}", style("Error: some symbols did not process correctly"));
+            transaction.finish();
             return Err(QuietExit(1).into());
         }
 
+        transaction.finish();
         Ok(())
     })
 }

@@ -316,6 +316,9 @@ fn extract_remaining_ids(
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let tx_ctx = sentry::TransactionContext::new("locate_debug_file", "locate debug information files");
+    let transaction = sentry::start_transaction(tx_ctx);
+
     let mut paths = HashSet::new();
     let mut types = HashSet::new();
     let mut ids = HashSet::new();
@@ -370,12 +373,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             ids.insert(id.parse().unwrap());
         }
     } else {
+        transaction.finish();
         return Ok(());
     }
 
     if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
+        transaction.finish();
         return Err(QuietExit(1).into());
     }
 
+    transaction.finish();
     Ok(())
 }
