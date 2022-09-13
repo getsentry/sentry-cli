@@ -253,7 +253,7 @@ pub fn execute() -> Result<()> {
         sentry::ClientOptions {
             release: sentry::release_name!(),
             user_agent: USER_AGENT.into(),
-            traces_sample_rate: 0.01,
+            traces_sample_rate: 0.05,
             enable_profiling: true,
             profiles_sample_rate: 1.0,
             ..Default::default()
