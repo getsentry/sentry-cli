@@ -2,7 +2,7 @@
 
 use std::env;
 use std::process;
-use std::time::{Duration};
+use std::time::Duration;
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -10,7 +10,7 @@ use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, PLATFORM, VERSION, USER_AGENT};
+use crate::constants::{ARCH, PLATFORM, USER_AGENT, VERSION};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
