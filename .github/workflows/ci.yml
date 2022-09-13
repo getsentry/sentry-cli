@@ -68,6 +68,8 @@ jobs:
 
       - name: Run Cargo Tests
         uses: actions-rs/cargo@v1
+        env:
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         with:
           command: test
           args: --all
