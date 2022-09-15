@@ -8,7 +8,8 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Artifact ~/dist/bundle.min.js found.
 ✔ Release artifact distribution matched. Event: [none], Artifact: [none]
 ✔ Successfully fetched ~/dist/bundle.min.js file metadata from the server.
-✔ Found source map location: dist/bundle.min.js.map
+✔ Found source map location: bundle.min.js.map
+✔ Resolved source map url: ~/dist/bundle.min.js.map
 ✖ Uploaded artifacts do not include entry: ~/dist/bundle.min.js.map
 
 ```
