@@ -455,4 +455,4 @@ class _ {
   }
 }
 export { d as Scope, _ as Session };
-//# sourceMappingURL=dist/bundle.min.js.map
+//# sourceMappingURL=bundle.min.js.map

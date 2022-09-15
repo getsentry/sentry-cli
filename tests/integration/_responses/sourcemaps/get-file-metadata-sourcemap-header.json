@@ -3,7 +3,7 @@
   "name": "~/dist/bundle.min.js",
   "dist": null,
   "headers": {
-    "Sourcemap": "dist/bundle.min.js.map"
+    "Sourcemap": "bundle.min.js.map"
   },
   "size": 497,
   "sha1": "2fb719956748ab7ec5ae9bcb47606733f5589b72",
