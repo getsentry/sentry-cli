@@ -42,6 +42,10 @@ OPTIONS:
         --log-level <LOG_LEVEL>
             Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
+        --no-dedupe
+            Skip artifacts deduplication prior to uploading. This will force all artifacts to be
+            uploaded, no matter whether they are already present on the server.
+
         --no-rewrite
             Disables rewriting of matching sourcemaps. By default the tool will rewrite sources, so
             that indexed maps are flattened and missing sources are inlined if possible.

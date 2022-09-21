@@ -139,6 +139,11 @@ pub fn make_command(command: Command) -> Command {
                 .requires_all(&["bundle"])
                 .help("Path to the bundle sourcemap"),
         )
+        .arg(Arg::new("no_dedupe").long("no-dedupe").help(
+            "Skip artifacts deduplication prior to uploading. \
+                This will force all artifacts to be uploaded, \
+                no matter whether they are already present on the server.",
+        ))
         .arg(
             Arg::new("extensions")
                 .long("ext")
@@ -327,11 +332,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    for artifact in api.list_release_files(&org, Some(&project), &release.version)? {
-        let checksum = Digest::from_str(&artifact.sha1)
-            .map_err(|_| format_err!("Invalid artifact checksum"))?;
+    if !matches.is_present("no_dedupe") {
+        for artifact in api.list_release_files(&org, Some(&project), &release.version)? {
+            let checksum = Digest::from_str(&artifact.sha1)
+                .map_err(|_| format_err!("Invalid artifact checksum"))?;
 
-        processor.add_already_uploaded_source(checksum);
+            processor.add_already_uploaded_source(checksum);
+        }
     }
 
     processor.upload(&UploadContext {

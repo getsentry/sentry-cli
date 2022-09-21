@@ -548,6 +548,12 @@ impl SourceMapProcessor {
     }
 
     fn flag_uploaded_sources(&mut self) {
+        // There is no point in going through all the sources if nothing was uploaded,
+        // or we did not collect uploaded files.
+        if self.already_uploaded_sources.is_empty() {
+            return;
+        }
+
         for source in self.sources.values_mut() {
             if let Ok(checksum) = &source.checksum() {
                 if self.already_uploaded_sources.contains(checksum) {

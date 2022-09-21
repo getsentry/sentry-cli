@@ -38,16 +38,40 @@ fn command_sourcemaps_upload_skip_already_uploaded() {
         .with_response_body(
             r#"[{
                 "id": "1337",
-                "name": "~/bundle.min.js.map",
+                "name": "~/vendor.min.js.map",
                 "headers": {},
                 "size": 1522,
-                "sha1": "38ed853073df85147960ea3a5bced6170ec389b0",
+                "sha1": "f3673e2cea68bcb86bb74254a9efaa381d74929f",
                 "dateCreated": "2022-05-12T11:08:01.496220Z"
             }]"#,
         ),
     );
 
     register_test("sourcemaps/sourcemaps-upload-skip-already-uploaded.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_upload_no_dedupe() {
+    let _upload_endpoints = mock_common_upload_endpoints();
+    let _files = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
+            200,
+        )
+        .with_response_body(
+            r#"[{
+                "id": "1337",
+                "name": "~/vendor.min.js.map",
+                "headers": {},
+                "size": 1522,
+                "sha1": "f3673e2cea68bcb86bb74254a9efaa381d74929f",
+                "dateCreated": "2022-05-12T11:08:01.496220Z"
+            }]"#,
+        ),
+    );
+
+    register_test("sourcemaps/sourcemaps-upload-no-dedupe.trycmd");
 }
 
 // Endpoints need to be bound, as they need to live long enough for test to finish
