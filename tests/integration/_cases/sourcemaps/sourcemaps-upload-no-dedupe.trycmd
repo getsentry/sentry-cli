@@ -1,5 +1,5 @@
 ```
-$ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tests/integration/_fixtures/vendor.min.js.map --release=wat-release
+$ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tests/integration/_fixtures/vendor.min.js.map --release=wat-release --no-dedupe
 ? success
 > Found 1 release file
 > Found 1 release file
@@ -17,6 +17,6 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tes
 Source Map Upload Report
   Source Maps
     ~/bundle.min.js.map
-    ~/vendor.min.js.map (skipped; already uploaded)
+    ~/vendor.min.js.map
 
 ```
