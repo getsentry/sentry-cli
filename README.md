@@ -36,6 +36,8 @@ To do that, you can use the exact same method, with an additional version specif
 
 This will automatically download the correct version of `sentry-cli` for your operating system and install it. If necessary, it will prompt for your admin password for `sudo`. For a different installation location or for systems without `sudo` (like Windows), you can `export INSTALL_DIR=/custom/installation/path` before running this command.
 
+If you are using `sentry-cli` on Windows environments, [Microsoft Visual C++ Redistributable](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist) is required.
+
 To verify it’s installed correctly you can bring up the help:
 
     sentry-cli --help
