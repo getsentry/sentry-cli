@@ -44,7 +44,7 @@ jobs:
       - name: Upload Symbols
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
-        run: sentry-cli-Linux-${{ matrix.arch }} upload-dif sentry-cli-Linux-${{ matrix.arch }} --org <FILL IN ORG> --project <FILL IN PROJECT>
+        run: sentry-cli-Linux-${{ matrix.arch }} upload-dif sentry-cli-Linux-${{ matrix.arch }} --org sentry --project sentry-cli
 
       - name: Strip Symbols from Binary
         run: strip sentry-cli-Linux-${{ matrix.arch }}
