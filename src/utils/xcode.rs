@@ -182,12 +182,10 @@ impl XcodeProjectInfo {
     /// Returns the config with a certain name
     pub fn get_configuration(&self, name: &str) -> Option<&str> {
         let name = name.to_lowercase();
-        for cfg in &self.configurations {
-            if cfg.to_lowercase() == name {
-                return Some(cfg);
-            }
-        }
-        None
+        self.configurations
+            .iter()
+            .find(|&cfg| cfg.to_lowercase() == name)
+            .map(|v| v.as_ref())
     }
 }
 

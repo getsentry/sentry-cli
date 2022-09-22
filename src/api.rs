@@ -502,22 +502,33 @@ impl Api {
                     PathArg(org),
                     PathArg(project),
                     PathArg(release),
-                    QueryArg(cursor),
+                    QueryArg(&cursor),
                 )
             } else {
                 format!(
                     "/organizations/{}/releases/{}/files/?cursor={}",
                     PathArg(org),
                     PathArg(release),
-                    QueryArg(cursor),
+                    QueryArg(&cursor),
                 )
             };
+
+            // TODO(kamil): Instead of breaking out of the loop here when we reach the limit
+            // (200 pages of 100 items, for a total of 20_000 files), we should send a list of hashes
+            // to the server, perform an intersection there, and change the upload mechanism
+            // to leave out only those files that were gave back to us by the server.
+            // This would also limit number of API requests for deduping from `N=[1:200]` to 1.
             let resp = self.get(&path)?;
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::ReleaseNotFound.into());
+                } else {
+                    break;
+                }
+            }
+
             let pagination = resp.pagination();
-            rv.extend(
-                resp.convert_rnf::<Vec<Artifact>>(ApiErrorKind::ReleaseNotFound)?
-                    .into_iter(),
-            );
+            rv.extend(resp.convert::<Vec<Artifact>>()?.into_iter());
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
