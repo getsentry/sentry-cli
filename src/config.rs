@@ -10,7 +10,7 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
 use ini::Ini;
 use lazy_static::lazy_static;
-use log::set_max_level;
+use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
 use sentry::types::Dsn;
 
@@ -518,11 +518,17 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                         bail!("Could not load java style properties file: {}", err);
                     }
                 };
+                info!(
+                    "Loaded file referenced by SENTRY_PROPERTIES ({})",
+                    &prop_path
+                );
                 for (key, value) in props {
                     let mut iter = key.rsplitn(2, '.');
                     if let Some(key) = iter.next() {
                         let section = iter.next();
                         rv.set_to(section, key.to_string(), value);
+                    } else {
+                        debug!("Incorrect properties file key: {}", key);
                     }
                 }
             }
@@ -532,6 +538,11 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                         "Failed to load file referenced by SENTRY_PROPERTIES ({})",
                         &prop_path
                     )));
+                } else {
+                    warn!(
+                        "Failed to find file referenced by SENTRY_PROPERTIES ({})",
+                        &prop_path
+                    );
                 }
             }
         }
