@@ -43,60 +43,65 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let tx_ctx = sentry::TransactionContext::new("check_files", "check which debug information files can be used by sentry");
     let transaction = sentry::start_transaction(tx_ctx);
 
-    let path = Path::new(matches.value_of("path").unwrap());
+    let command = || -> Result<()>{
+        let path = Path::new(matches.value_of("path").unwrap());
 
-    // which types should we consider?
-    let ty = matches.value_of("type").map(|t| t.parse().unwrap());
-    let dif = DifFile::open_path(path, ty)?;
+        // which types should we consider?
+        let ty = matches.value_of("type").map(|t| t.parse().unwrap());
+        let dif = DifFile::open_path(path, ty)?;
 
-    if matches.is_present("json") {
-        serde_json::to_writer_pretty(&mut io::stdout(), &dif)?;
-        println!();
-    }
+        if matches.is_present("json") {
+            serde_json::to_writer_pretty(&mut io::stdout(), &dif)?;
+            println!();
+        }
 
-    if matches.is_present("json") || is_quiet_mode() {
-        return if dif.is_usable() {
-            Ok(())
-        } else {
+        if matches.is_present("json") || is_quiet_mode() {
+            return if dif.is_usable() {
+                Ok(())
+            } else {
+                Err(QuietExit(1).into())
+            };
+        }
+
+        println!("{}", style("Debug Info File Check").dim().bold());
+        match dif.kind() {
+            Some(class) => println!(
+                "  Type: {} {:#}",
+                style(dif.ty()).cyan(),
+                style(class).cyan()
+            ),
+            None => println!("  Type: {}", style(dif.ty()).cyan()),
+        }
+
+        println!("  Contained debug identifiers:");
+        for variant in dif.variants() {
+            println!("    > Debug ID: {}", style(variant.debug_id).dim());
+            if let Some(code_id) = variant.code_id {
+                println!("      Code ID:  {}", style(code_id).dim());
+            }
+            if let Some(arch) = variant.arch {
+                println!("      Arch:     {}", style(arch).dim());
+            }
+        }
+
+        println!("  Contained debug information:");
+        println!("    > {}", dif.features());
+
+        if let Some(msg) = dif.get_note() {
+            println!("  Note: {}", msg);
+        }
+
+        if let Some(prob) = dif.get_problem() {
+            println!("  Usable: {} ({})", style("no").red(), prob);
             Err(QuietExit(1).into())
-        };
-    }
-
-    println!("{}", style("Debug Info File Check").dim().bold());
-    match dif.kind() {
-        Some(class) => println!(
-            "  Type: {} {:#}",
-            style(dif.ty()).cyan(),
-            style(class).cyan()
-        ),
-        None => println!("  Type: {}", style(dif.ty()).cyan()),
-    }
-
-    println!("  Contained debug identifiers:");
-    for variant in dif.variants() {
-        println!("    > Debug ID: {}", style(variant.debug_id).dim());
-        if let Some(code_id) = variant.code_id {
-            println!("      Code ID:  {}", style(code_id).dim());
+        } else {
+            println!("  Usable: {}", style("yes").green());
+            Ok(())
         }
-        if let Some(arch) = variant.arch {
-            println!("      Arch:     {}", style(arch).dim());
-        }
-    }
+    };
 
-    println!("  Contained debug information:");
-    println!("    > {}", dif.features());
+    let command_result = command();
+    transaction.finish();
 
-    if let Some(msg) = dif.get_note() {
-        println!("  Note: {}", msg);
-    }
-
-    if let Some(prob) = dif.get_problem() {
-        println!("  Usable: {} ({})", style("no").red(), prob);
-        transaction.finish();
-        Err(QuietExit(1).into())
-    } else {
-        println!("  Usable: {}", style("yes").green());
-        transaction.finish();
-        Ok(())
-    }
+    command_result
 }

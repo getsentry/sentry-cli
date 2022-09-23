@@ -2,7 +2,6 @@
 
 use std::env;
 use std::process;
-use std::time::Duration;
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -260,11 +259,7 @@ pub fn execute() -> Result<()> {
         },
     ));
 
-    let res = run_command(&matches);
-
-    _guard.flush(Some(Duration::from_secs(2)));
-
-    res
+    run_command(&matches)
 }
 
 fn setup() {
