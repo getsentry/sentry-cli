@@ -316,8 +316,10 @@ fn extract_remaining_ids(
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let tx_ctx = sentry::TransactionContext::new("locate_debug_file", "locate debug information files");
-    let transaction = sentry::start_transaction(tx_ctx);
+    #[cfg(feature = "profiling")]
+    let transaction = sentry::start_transaction(
+        sentry::TransactionContext::new("locate_debug_file", "locate debug information files")
+    );
 
     let command = || -> Result<()> {
         let mut paths = HashSet::new();
@@ -385,6 +387,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     let command_result = command();
+    #[cfg(feature = "profiling")]
     transaction.finish();
 
     command_result

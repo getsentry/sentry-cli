@@ -67,8 +67,10 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let tx_ctx = sentry::TransactionContext::new("bundle_sources", "create source bundle for debug file");
-    let transaction = sentry::start_transaction(tx_ctx);
+    #[cfg(feature = "profiling")]
+    let transaction = sentry::start_transaction(
+        sentry::TransactionContext::new("bundle_sources", "create source bundle for debug file")
+    );
 
     let command = || -> Result<()>{
 
@@ -126,6 +128,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Ok(())
     };
     let command_result = command();
+    #[cfg(feature = "profiling")]
     transaction.finish();
 
     command_result

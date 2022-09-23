@@ -70,6 +70,7 @@ trycmd = "0.13.4"
 default = []
 managed = []
 with_crash_reporting = []
+profiling = ["sentry"]
 
 [target]
 
@@ -86,7 +87,7 @@ unix-daemonize = "0.1.2"
 openssl-probe = "0.1.5"
 signal-hook = "0.3.14"
 crossbeam-channel = "0.5.5"
-sentry = { git = "https://github.com/getsentry/sentry-rust", version = "0.27.0", default-features = false, features = ["anyhow", "curl", "profiling", "frame-pointer"] }
+sentry = { git = "https://github.com/getsentry/sentry-rust", version = "0.27.0", default-features = false, optional = true, features = ["anyhow", "curl", "profiling", "frame-pointer"] }
 
 [target."cfg(windows)"]
 

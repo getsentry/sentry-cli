@@ -18,7 +18,7 @@ docker run \
   /bin/bash -c "rustup toolchain install nightly;
   rustup component add rust-src --toolchain nightly;
   cargo +nightly run -Z build-std --target ${TARGET}; 
-  RUSTFLAGS=\"-C force-frame-pointers=yes\" cargo build --release --target=${TARGET} --locked"
+  RUSTFLAGS=\"-C force-frame-pointers=yes\" cargo build --release --target=${TARGET} --features \"profiling\" --locked"
 
 # Smoke test (but only when building from the same repo).
 # $TRAVIS_PULL_REQUEST_SLUG is set either to head repo slug, or to "" when

@@ -9,7 +9,7 @@ use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, PLATFORM, USER_AGENT, VERSION};
+use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
@@ -247,11 +247,12 @@ pub fn execute() -> Result<()> {
             .join(" ")
     );
 
+    #[cfg(feature = "profiling")]
     let _guard = sentry::init((
         env!("SENTRY_DSN").to_string(),
         sentry::ClientOptions {
             release: sentry::release_name!(),
-            user_agent: USER_AGENT.into(),
+            user_agent: crate::constants::USER_AGENT.into(),
             traces_sample_rate: 0.05,
             enable_profiling: true,
             profiles_sample_rate: 1.0,

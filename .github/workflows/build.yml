@@ -94,7 +94,7 @@ jobs:
         shell: bash
         run: |
           cargo +nightly run -Z build-std --target ${{ matrix.target }}
-          RUSTFLAGS="-C force-frame-pointers=yes" cargo build --release --target=${{ matrix.target }} --locked
+          RUSTFLAGS="-C force-frame-pointers=yes" cargo build --release --target=${{ matrix.target }} --features "profiling" --locked
 
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}

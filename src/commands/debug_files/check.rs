@@ -40,8 +40,10 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let tx_ctx = sentry::TransactionContext::new("check_files", "check which debug information files can be used by sentry");
-    let transaction = sentry::start_transaction(tx_ctx);
+    #[cfg(feature = "profiling")]
+    let transaction = sentry::start_transaction(
+        sentry::TransactionContext::new("check_files", "check which debug information files can be used by sentry")
+    );
 
     let command = || -> Result<()>{
         let path = Path::new(matches.value_of("path").unwrap());
@@ -101,6 +103,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     let command_result = command();
+    #[cfg(feature = "profiling")]
     transaction.finish();
 
     command_result

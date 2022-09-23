@@ -170,8 +170,10 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let tx_ctx = sentry::TransactionContext::new("upload_debug_file", "upload debugging information files");
-    let transaction = sentry::start_transaction(tx_ctx);
+    #[cfg(feature = "profiling")]
+    let transaction = sentry::start_transaction(
+        sentry::TransactionContext::new("upload_debug_file", "upload debugging information files")
+    );
 
     let command = || -> Result<()> {
         let config = Config::current();
@@ -339,6 +341,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     let command_result = command();
+    #[cfg(feature = "profiling")]
     transaction.finish();
 
     command_result
