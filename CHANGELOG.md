@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.6.0
+
+### Various fixes & improvements
+
+- fix: Update symbolic to fix spurious EOF errors (#1339) by @Swatinem
+- fix: Break out of the loop when we reach cursor limit for list_release_files (#1337) by @kamilogorek
+- ref: Provide better user messages for properties file configs (#1336) by @kamilogorek
+- feat(sourcemaps): Add no-dedupe flag for skipping deduplication (#1334) by @kamilogorek
+- misc: Add note about MSVC requirement (#1333) by @kamilogorek
+- ref: Use better artifacts url resolution for sourcemaps explain (#1329) by @kamilogorek
+- feat: Add top-level events command with  list subcommand (#1307) by @dcariotti
+
 ## 2.5.2
 
 ### Various fixes & improvements
