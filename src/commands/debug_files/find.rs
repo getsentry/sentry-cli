@@ -316,79 +316,66 @@ fn extract_remaining_ids(
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    #[cfg(feature = "profiling")]
-    let transaction = sentry::start_transaction(
-        sentry::TransactionContext::new("locate_debug_file", "locate debug information files")
-    );
+    let mut paths = HashSet::new();
+    let mut types = HashSet::new();
+    let mut ids = HashSet::new();
 
-    let command = || -> Result<()> {
-        let mut paths = HashSet::new();
-        let mut types = HashSet::new();
-        let mut ids = HashSet::new();
-
-        // which types should we consider?
-        if let Some(t) = matches.values_of("types") {
-            for ty in t {
-                types.insert(ty.parse().unwrap());
-            }
-        } else {
-            types.insert(DifType::Dsym);
-            types.insert(DifType::Pdb);
-            types.insert(DifType::Pe);
-            types.insert(DifType::Proguard);
-            types.insert(DifType::SourceBundle);
-            types.insert(DifType::Breakpad);
+    // which types should we consider?
+    if let Some(t) = matches.values_of("types") {
+        for ty in t {
+            types.insert(ty.parse().unwrap());
         }
+    } else {
+        types.insert(DifType::Dsym);
+        types.insert(DifType::Pdb);
+        types.insert(DifType::Pe);
+        types.insert(DifType::Proguard);
+        types.insert(DifType::SourceBundle);
+        types.insert(DifType::Breakpad);
+    }
 
-        let with_well_known = !matches.is_present("no_well_known");
-        let with_cwd = !matches.is_present("no_cwd");
+    let with_well_known = !matches.is_present("no_well_known");
+    let with_cwd = !matches.is_present("no_cwd");
 
-        // start adding well known locations
-        if_chain! {
-            if with_well_known;
-            if types.contains(&DifType::Dsym);
-            if let Some(path) = dirs::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
-            if path.is_dir();
-            then {
-                paths.insert(path);
-            }
+    // start adding well known locations
+    if_chain! {
+        if with_well_known;
+        if types.contains(&DifType::Dsym);
+        if let Some(path) = dirs::home_dir().map(|x| x.join("Library/Developer/Xcode/DerivedData"));
+        if path.is_dir();
+        then {
+            paths.insert(path);
         }
+    }
 
-        // current folder if wanted
-        if_chain! {
-            if with_cwd;
-            if let Ok(path) = env::current_dir();
-            then {
-                paths.insert(path);
-            }
+    // current folder if wanted
+    if_chain! {
+        if with_cwd;
+        if let Ok(path) = env::current_dir();
+        then {
+            paths.insert(path);
         }
+    }
 
-        // extra paths
-        if let Some(p) = matches.values_of("paths") {
-            for path in p {
-                paths.insert(PathBuf::from(path));
-            }
+    // extra paths
+    if let Some(p) = matches.values_of("paths") {
+        for path in p {
+            paths.insert(PathBuf::from(path));
         }
+    }
 
-        // which ids are we looking for?
-        if let Some(i) = matches.values_of("ids") {
-            for id in i {
-                ids.insert(id.parse().unwrap());
-            }
-        } else {
-            return Ok(());
+    // which ids are we looking for?
+    if let Some(i) = matches.values_of("ids") {
+        for id in i {
+            ids.insert(id.parse().unwrap());
         }
+    } else {
+        return Ok(());
+    }
 
-        if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
-            return Err(QuietExit(1).into());
-        }
+    if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
+        return Err(QuietExit(1).into());
+    }
 
-        Ok(())
-    };
-
-    let command_result = command();
-    #[cfg(feature = "profiling")]
-    transaction.finish();
-
-    command_result
+    Ok(())
 }

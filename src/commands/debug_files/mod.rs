@@ -40,7 +40,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             if let Some(sub_matches) =
                 matches.subcommand_matches(&stringify!($name).replace('_', "-"))
             {
-                return crate::commands::debug_files::$name::execute(&sub_matches);
+                #[cfg(feature = "profiling")]
+                let transaction = sentry::start_transaction(
+                    sentry::TransactionContext::new("bundle_sources", format!("running `{}` command", stringify!($name)).as_str())
+                );
+
+                let res = crate::commands::debug_files::$name::execute(&sub_matches);
+
+                #[cfg(feature = "profiling")]
+                transaction.finish();
+                
+                return res;
             }
         }};
     }

@@ -2189,7 +2189,7 @@ checksum = "388a1df253eca08550bef6c72392cfe7c30914bf41df5269b68cbd6ff8f570a3"
 [[package]]
 name = "sentry"
 version = "0.27.0"
-source = "git+https://github.com/getsentry/sentry-rust#bb81c88d308213c6b9ebfdd19cedd4cf444e7795"
+source = "git+https://github.com/getsentry/sentry-rust#a433f638c872be73c773bda7c30c4fd1b2395c03"
 dependencies = [
  "curl",
  "httpdate",
@@ -2200,7 +2200,7 @@ dependencies = [
 [[package]]
 name = "sentry-anyhow"
 version = "0.27.0"
-source = "git+https://github.com/getsentry/sentry-rust#bb81c88d308213c6b9ebfdd19cedd4cf444e7795"
+source = "git+https://github.com/getsentry/sentry-rust#a433f638c872be73c773bda7c30c4fd1b2395c03"
 dependencies = [
  "anyhow",
  "sentry-backtrace",
@@ -2210,7 +2210,7 @@ dependencies = [
 [[package]]
 name = "sentry-backtrace"
 version = "0.27.0"
-source = "git+https://github.com/getsentry/sentry-rust#bb81c88d308213c6b9ebfdd19cedd4cf444e7795"
+source = "git+https://github.com/getsentry/sentry-rust#a433f638c872be73c773bda7c30c4fd1b2395c03"
 dependencies = [
  "backtrace",
  "once_cell",
@@ -2290,7 +2290,7 @@ dependencies = [
 [[package]]
 name = "sentry-core"
 version = "0.27.0"
-source = "git+https://github.com/getsentry/sentry-rust#bb81c88d308213c6b9ebfdd19cedd4cf444e7795"
+source = "git+https://github.com/getsentry/sentry-rust#a433f638c872be73c773bda7c30c4fd1b2395c03"
 dependencies = [
  "build_id",
  "findshlibs",
@@ -2307,7 +2307,7 @@ dependencies = [
 [[package]]
 name = "sentry-types"
 version = "0.27.0"
-source = "git+https://github.com/getsentry/sentry-rust#bb81c88d308213c6b9ebfdd19cedd4cf444e7795"
+source = "git+https://github.com/getsentry/sentry-rust#a433f638c872be73c773bda7c30c4fd1b2395c03"
 dependencies = [
  "debugid",
  "getrandom 0.2.7",

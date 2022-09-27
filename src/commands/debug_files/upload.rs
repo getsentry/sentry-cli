@@ -170,179 +170,166 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    #[cfg(feature = "profiling")]
-    let transaction = sentry::start_transaction(
-        sentry::TransactionContext::new("upload_debug_file", "upload debugging information files")
+    let config = Config::current();
+    let (org, project) = config.get_org_and_project(matches)?;
+
+    let ids = matches
+        .values_of("ids")
+        .unwrap_or_default()
+        .filter_map(|s| DebugId::from_str(s).ok());
+
+    info!(
+        "Issuing a command for Organization: {} Project: {}",
+        org, project
     );
 
-    let command = || -> Result<()> {
-        let config = Config::current();
-        let (org, project) = config.get_org_and_project(matches)?;
+    // Build generic upload parameters
+    let mut upload = DifUpload::new(org.clone(), project.clone());
+    upload
+        .wait(matches.is_present("wait"))
+        .search_paths(matches.values_of("paths").unwrap_or_default())
+        .allow_zips(!matches.is_present("no_zips"))
+        .filter_ids(ids);
 
-        let ids = matches
-            .values_of("ids")
-            .unwrap_or_default()
-            .filter_map(|s| DebugId::from_str(s).ok());
-
-        info!(
-            "Issuing a command for Organization: {} Project: {}",
-            org, project
-        );
-
-        // Build generic upload parameters
-        let mut upload = DifUpload::new(org.clone(), project.clone());
-        upload
-            .wait(matches.is_present("wait"))
-            .search_paths(matches.values_of("paths").unwrap_or_default())
-            .allow_zips(!matches.is_present("no_zips"))
-            .filter_ids(ids);
-
-        // Restrict symbol types, if specified by the user
-        for ty in matches.values_of("types").unwrap_or_default() {
-            match ty {
-                "dsym" => upload.filter_format(DifFormat::Object(FileFormat::MachO)),
-                "elf" => upload.filter_format(DifFormat::Object(FileFormat::Elf)),
-                "breakpad" => upload.filter_format(DifFormat::Object(FileFormat::Breakpad)),
-                "pdb" => upload.filter_format(DifFormat::Object(FileFormat::Pdb)),
-                "pe" => upload.filter_format(DifFormat::Object(FileFormat::Pe)),
-                "sourcebundle" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
-                "bcsymbolmap" => {
-                    upload.filter_format(DifFormat::BcSymbolMap);
-                    upload.filter_format(DifFormat::PList)
-                }
-                other => bail!("Unsupported type: {}", other),
-            };
-        }
-
-        upload.filter_features(ObjectDifFeatures {
-            // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
-            // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
-            // we also upload all files with a public symbol table.
-            debug: !matches.is_present("no_debug"),
-            symtab: !matches.is_present("no_debug"),
-            // Allow executables and dynamic/shared libraries, but not object files.
-            // They are guaranteed to contain unwind info, for instance `eh_frame`,
-            // and may optionally contain debugging information such as DWARF.
-            unwind: !matches.is_present("no_unwind"),
-            sources: !matches.is_present("no_sources"),
-        });
-
-        upload.include_sources(matches.is_present("include_sources"));
-        upload.il2cpp_mapping(matches.is_present("il2cpp_mapping"));
-
-        // Configure BCSymbolMap resolution, if possible
-        if let Some(symbol_map) = matches.value_of("symbol_maps") {
-            upload
-                .symbol_map(symbol_map)
-                .map_err(|_| format_err!("--symbol-maps requires Apple dsymutil to be available."))?;
-        }
-
-        // Add a path to XCode's DerivedData, if configured
-        if matches.is_present("derived_data") {
-            let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA_FOLDER));
-            if let Some(path) = derived_data {
-                if path.is_dir() {
-                    upload.search_path(path);
-                }
+    // Restrict symbol types, if specified by the user
+    for ty in matches.values_of("types").unwrap_or_default() {
+        match ty {
+            "dsym" => upload.filter_format(DifFormat::Object(FileFormat::MachO)),
+            "elf" => upload.filter_format(DifFormat::Object(FileFormat::Elf)),
+            "breakpad" => upload.filter_format(DifFormat::Object(FileFormat::Breakpad)),
+            "pdb" => upload.filter_format(DifFormat::Object(FileFormat::Pdb)),
+            "pe" => upload.filter_format(DifFormat::Object(FileFormat::Pe)),
+            "sourcebundle" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
+            "bcsymbolmap" => {
+                upload.filter_format(DifFormat::BcSymbolMap);
+                upload.filter_format(DifFormat::PList)
             }
-        }
-
-        // Try to resolve the Info.plist either by path or from Xcode
-        let info_plist = match matches.value_of("info_plist") {
-            Some(path) => Some(InfoPlist::from_path(path)?),
-            None => InfoPlist::discover_from_env()?,
+            other => bail!("Unsupported type: {}", other),
         };
+    }
 
-        if matches.is_present("no_upload") {
-            println!("{} skipping upload.", style(">").dim());
-            return Ok(());
+    upload.filter_features(ObjectDifFeatures {
+        // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
+        // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
+        // we also upload all files with a public symbol table.
+        debug: !matches.is_present("no_debug"),
+        symtab: !matches.is_present("no_debug"),
+        // Allow executables and dynamic/shared libraries, but not object files.
+        // They are guaranteed to contain unwind info, for instance `eh_frame`,
+        // and may optionally contain debugging information such as DWARF.
+        unwind: !matches.is_present("no_unwind"),
+        sources: !matches.is_present("no_sources"),
+    });
+
+    upload.include_sources(matches.is_present("include_sources"));
+    upload.il2cpp_mapping(matches.is_present("il2cpp_mapping"));
+
+    // Configure BCSymbolMap resolution, if possible
+    if let Some(symbol_map) = matches.value_of("symbol_maps") {
+        upload
+            .symbol_map(symbol_map)
+            .map_err(|_| format_err!("--symbol-maps requires Apple dsymutil to be available."))?;
+    }
+
+    // Add a path to XCode's DerivedData, if configured
+    if matches.is_present("derived_data") {
+        let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA_FOLDER));
+        if let Some(path) = derived_data {
+            if path.is_dir() {
+                upload.search_path(path);
+            }
         }
+    }
 
-        MayDetach::wrap("Debug symbol upload", |handle| {
-            // Optionally detach if run from Xcode
-            if !matches.is_present("force_foreground") {
-                handle.may_detach()?;
-            }
-
-            // Execute the upload
-            let (uploaded, has_processing_errors) = upload.upload()?;
-            let api = Api::current();
-
-            // Associate the dSYMs with the Info.plist data, if available
-            if let Some(ref info_plist) = info_plist {
-                let progress_style = ProgressStyle::default_spinner()
-                    .template("{spinner} Associating dSYMs with {msg}...");
-
-                let pb = ProgressBar::new_spinner();
-                pb.enable_steady_tick(100);
-                pb.set_style(progress_style);
-                pb.set_message(&info_plist.to_string());
-
-                let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
-                let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
-                pb.finish_and_clear();
-
-                if let Some(association) = response {
-                    if association.associated_dsyms.is_empty() {
-                        println!("{} No new debug symbols to associate.", style(">").dim());
-                    } else {
-                        println!(
-                            "{} Associated {} debug symbols with the build.",
-                            style(">").dim(),
-                            style(association.associated_dsyms.len()).yellow()
-                        );
-                    }
-                } else {
-                    info!("Server does not support dSYM associations. Ignoring.");
-                }
-            }
-
-            // Trigger reprocessing only if requested by user
-            if matches.is_present("no_reprocessing") {
-                println!("{} skipped reprocessing", style(">").dim());
-            } else if !api.trigger_reprocessing(&org, &project)? {
-                println!("{} Server does not support reprocessing.", style(">").dim());
-            }
-
-            // Did we miss explicitly requested symbols?
-            if matches.is_present("require_all") {
-                let required_ids: BTreeSet<_> = matches
-                    .values_of("ids")
-                    .unwrap_or_default()
-                    .filter_map(|s| DebugId::from_str(s).ok())
-                    .collect();
-
-                let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();
-                let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
-
-                if !missing_ids.is_empty() {
-                    eprintln!();
-                    eprintln!("{}", style("Error: Some symbols could not be found!").red());
-                    eprintln!("The following symbols are still missing:");
-                    for id in missing_ids {
-                        println!("  {}", id);
-                    }
-                    
-                    return Err(QuietExit(1).into());
-                }
-            }
-
-            
-
-            // report a non 0 status code if the server encountered issues.
-            if has_processing_errors {
-                eprintln!();
-                eprintln!("{}", style("Error: some symbols did not process correctly"));
-                return Err(QuietExit(1).into());
-            }
-
-            Ok(())
-        })
+    // Try to resolve the Info.plist either by path or from Xcode
+    let info_plist = match matches.value_of("info_plist") {
+        Some(path) => Some(InfoPlist::from_path(path)?),
+        None => InfoPlist::discover_from_env()?,
     };
 
-    let command_result = command();
-    #[cfg(feature = "profiling")]
-    transaction.finish();
+    if matches.is_present("no_upload") {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(());
+    }
 
-    command_result
+    MayDetach::wrap("Debug symbol upload", |handle| {
+        // Optionally detach if run from Xcode
+        if !matches.is_present("force_foreground") {
+            handle.may_detach()?;
+        }
+
+        // Execute the upload
+        let (uploaded, has_processing_errors) = upload.upload()?;
+        let api = Api::current();
+
+        // Associate the dSYMs with the Info.plist data, if available
+        if let Some(ref info_plist) = info_plist {
+            let progress_style = ProgressStyle::default_spinner()
+                .template("{spinner} Associating dSYMs with {msg}...");
+
+            let pb = ProgressBar::new_spinner();
+            pb.enable_steady_tick(100);
+            pb.set_style(progress_style);
+            pb.set_message(&info_plist.to_string());
+
+            let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
+            let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
+            pb.finish_and_clear();
+
+            if let Some(association) = response {
+                if association.associated_dsyms.is_empty() {
+                    println!("{} No new debug symbols to associate.", style(">").dim());
+                } else {
+                    println!(
+                        "{} Associated {} debug symbols with the build.",
+                        style(">").dim(),
+                        style(association.associated_dsyms.len()).yellow()
+                    );
+                }
+            } else {
+                info!("Server does not support dSYM associations. Ignoring.");
+            }
+        }
+
+        // Trigger reprocessing only if requested by user
+        if matches.is_present("no_reprocessing") {
+            println!("{} skipped reprocessing", style(">").dim());
+        } else if !api.trigger_reprocessing(&org, &project)? {
+            println!("{} Server does not support reprocessing.", style(">").dim());
+        }
+
+        // Did we miss explicitly requested symbols?
+        if matches.is_present("require_all") {
+            let required_ids: BTreeSet<_> = matches
+                .values_of("ids")
+                .unwrap_or_default()
+                .filter_map(|s| DebugId::from_str(s).ok())
+                .collect();
+
+            let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();
+            let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
+
+            if !missing_ids.is_empty() {
+                eprintln!();
+                eprintln!("{}", style("Error: Some symbols could not be found!").red());
+                eprintln!("The following symbols are still missing:");
+                for id in missing_ids {
+                    println!("  {}", id);
+                }
+                
+                return Err(QuietExit(1).into());
+            }
+        }
+
+        
+
+        // report a non 0 status code if the server encountered issues.
+        if has_processing_errors {
+            eprintln!();
+            eprintln!("{}", style("Error: some symbols did not process correctly"));
+            return Err(QuietExit(1).into());
+        }
+
+        Ok(())
+    })
 }

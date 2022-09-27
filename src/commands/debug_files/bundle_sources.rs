@@ -67,69 +67,56 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    #[cfg(feature = "profiling")]
-    let transaction = sentry::start_transaction(
-        sentry::TransactionContext::new("bundle_sources", "create source bundle for debug file")
-    );
+    let output_path = matches.value_of("output").map(Path::new);
 
-    let command = || -> Result<()>{
+    for orig_path in matches.values_of("paths").unwrap() {
+        let canonical_path = get_canonical_path(orig_path)?;
 
-        let output_path = matches.value_of("output").map(Path::new);
+        let archive = match DifFile::open_path(&canonical_path, None)? {
+            DifFile::Archive(archive) => archive,
+            _ => {
+                warn!("Cannot build source bundles from {}", orig_path);
+                continue;
+            }
+        };
 
-        for orig_path in matches.values_of("paths").unwrap() {
-            let canonical_path = get_canonical_path(orig_path)?;
+        // At this point we can be sure that we're dealing with a file
+        let parent_path = get_sane_parent(&canonical_path);
+        let filename = canonical_path.file_name().unwrap();
 
-            let archive = match DifFile::open_path(&canonical_path, None)? {
-                DifFile::Archive(archive) => archive,
-                _ => {
-                    warn!("Cannot build source bundles from {}", orig_path);
-                    continue;
-                }
+        for (index, object) in archive.get().objects().enumerate() {
+            let object = object?;
+            if object.has_sources() {
+                eprintln!("skipped {} (no source info)", orig_path);
+                continue;
+            }
+
+            let mut out = output_path.unwrap_or(parent_path).join(filename);
+            match index {
+                0 => out.set_extension("src.zip"),
+                index => out.set_extension(&format!("{}.src.zip", index)),
             };
 
-            // At this point we can be sure that we're dealing with a file
-            let parent_path = get_sane_parent(&canonical_path);
-            let filename = canonical_path.file_name().unwrap();
+            fs::create_dir_all(out.parent().unwrap())?;
+            let writer = SourceBundleWriter::create(&out)?;
 
-            for (index, object) in archive.get().objects().enumerate() {
-                let object = object?;
-                if object.has_sources() {
-                    eprintln!("skipped {} (no source info)", orig_path);
-                    continue;
-                }
+            // Resolve source files from the object and write their contents into the archive. Skip to
+            // upload this bundle if no source could be written. This can happen if there is no file or
+            // line information in the object file, or if none of the files could be resolved.
+            let written = writer.write_object_with_filter(
+                &object,
+                &filename.to_string_lossy(),
+                filter_bad_sources,
+            )?;
 
-                let mut out = output_path.unwrap_or(parent_path).join(filename);
-                match index {
-                    0 => out.set_extension("src.zip"),
-                    index => out.set_extension(&format!("{}.src.zip", index)),
-                };
-
-                fs::create_dir_all(out.parent().unwrap())?;
-                let writer = SourceBundleWriter::create(&out)?;
-
-                // Resolve source files from the object and write their contents into the archive. Skip to
-                // upload this bundle if no source could be written. This can happen if there is no file or
-                // line information in the object file, or if none of the files could be resolved.
-                let written = writer.write_object_with_filter(
-                    &object,
-                    &filename.to_string_lossy(),
-                    filter_bad_sources,
-                )?;
-
-                if !written {
-                    eprintln!("skipped {} (no files found)", orig_path);
-                    fs::remove_file(&out)?;
-                    continue;
-                } else {
-                    println!("{}", out.display());
-                }
+            if !written {
+                eprintln!("skipped {} (no files found)", orig_path);
+                fs::remove_file(&out)?;
+                continue;
+            } else {
+                println!("{}", out.display());
             }
         }
-        Ok(())
-    };
-    let command_result = command();
-    #[cfg(feature = "profiling")]
-    transaction.finish();
-
-    command_result
+    }
+    Ok(())
 }
