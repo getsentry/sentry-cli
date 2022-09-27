@@ -249,7 +249,11 @@ pub fn execute() -> Result<()> {
 
     #[cfg(feature = "profiling")]
     let _guard = sentry::init((
-        env!("SENTRY_DSN", "Environment variable 'SENTRY_DSN' is required for 'profiling' feature").to_string(),
+        env!(
+            "SENTRY_DSN",
+            "Environment variable 'SENTRY_DSN' is required for 'profiling' feature"
+        )
+        .to_string(),
         sentry::ClientOptions {
             release: sentry::release_name!(),
             user_agent: crate::constants::USER_AGENT.into(),
