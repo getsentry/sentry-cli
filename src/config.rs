@@ -441,6 +441,16 @@ impl Config {
             false
         }
     }
+
+    pub fn get_allow_failure(&self, matches: &ArgMatches) -> bool {
+        matches
+            .is_present("allow_failure")
+            || if let Ok(var) = env::var("SENTRY_ALLOW_FAILURE") {
+                &var == "1" || &var == "true"
+            } else {
+                false
+            }
+    }
 }
 
 fn find_global_config_file() -> Result<PathBuf> {

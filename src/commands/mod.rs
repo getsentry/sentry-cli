@@ -5,6 +5,7 @@ use std::process;
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
+use console::style;
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
@@ -178,6 +179,12 @@ fn app() -> Command<'static> {
                 .global(true)
                 .help("Do not print any output while preserving correct exit code. This flag is currently implemented only for selected subcommands."),
         )
+        .arg(
+          Arg::new("allow_failure")
+              .long("allow_failure")
+              .global(true)
+              .help("Always return 0 exit code."),
+        )
 }
 
 fn add_commands(mut app: Command) -> Command {
@@ -247,7 +254,24 @@ pub fn execute() -> Result<()> {
             .join(" ")
     );
 
-    run_command(&matches)
+    let command_result = run_command(&matches);
+
+    if Config::current().get_allow_failure(&matches) {
+        match command_result.err() {
+            Some(err) => print_error(&err),
+            None => {
+                eprintln!();
+                eprintln!("{}", style("The allow_failure options is active, but command exited successfully. Consider removing this option.").yellow());
+            },
+        }
+        Ok(())
+    } else {
+        match command_result.as_ref().err() {
+            Some(_err) => eprintln!("{}", style("The command failed. Consider adding allow_failure option if this blocks your process.").yellow()),
+            None => {},
+        }
+        command_result
+    }
 }
 
 fn setup() {
