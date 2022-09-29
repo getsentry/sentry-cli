@@ -266,9 +266,8 @@ pub fn execute() -> Result<()> {
         }
         Ok(())
     } else {
-        match command_result.as_ref().err() {
-            Some(_err) => eprintln!("{}", style("The command failed. Consider adding allow_failure option if this blocks your process.").yellow()),
-            None => {},
+        if let Some(_err) = command_result.as_ref().err() {
+            eprintln!("{}", style("The command failed. Consider adding allow_failure option if this blocks your process.").yellow());
         }
         command_result
     }
