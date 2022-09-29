@@ -4,5 +4,6 @@ $ sentry-cli uninstall
 Cannot uninstall on Windows :(
 
 Delete this file yourself: [CWD]/target/debug/sentry-cli[EXE]
+The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```
