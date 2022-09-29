@@ -7,5 +7,6 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Event has a valid stacktrace present
 ✖ Release has no artifacts uploaded
 ℹ https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifacts-are-uploaded
+The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```

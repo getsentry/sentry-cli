@@ -8,6 +8,7 @@ USAGE:
     sentry-cli[EXE] login [OPTIONS]
 
 OPTIONS:
+        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
     -g, --global                     Store authentication token globally rather than locally.
     -h, --help                       Print help information

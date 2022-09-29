@@ -6,5 +6,6 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
 ℹ Configure 'release' option in the SDK.
   https://docs.sentry.io/platforms/javascript/configuration/options/#release
   https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-a-release-is-configured-in-your-sdk
+The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```

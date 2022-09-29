@@ -11,6 +11,7 @@ ARGS:
     <VERSION>    The version of the release
 
 OPTIONS:
+        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
         --finalize                   Immediately finalize the release. (sets it to released)
     -h, --help                       Print help information

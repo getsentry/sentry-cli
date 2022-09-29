@@ -19,6 +19,9 @@ OPTIONS:
     -a, --message-arg <MESSAGE_ARG>
             Arguments for the event message.
 
+        --allow_failure
+            Always return 0 exit code.
+
         --auth-token <AUTH_TOKEN>
             Use the given Sentry auth token.
 

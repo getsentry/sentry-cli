@@ -4,5 +4,6 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Fetched data for event: 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Event has release name: ytho-test
 ⚠ Event has no exception captured, there is no use for source maps
+The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```

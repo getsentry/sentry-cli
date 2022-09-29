@@ -11,6 +11,7 @@ ARGS:
     <PATH>...    A path to search recursively for symbol files.
 
 OPTIONS:
+        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
         --derived-data               Search for debug symbols in Xcode's derived data.
         --force-foreground           Wait for the process to finish.

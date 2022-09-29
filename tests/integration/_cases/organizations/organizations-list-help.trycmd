@@ -8,6 +8,7 @@ USAGE:
     sentry-cli[EXE] organizations list [OPTIONS]
 
 OPTIONS:
+        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
     -h, --help                       Print help information
         --header <KEY:VALUE>         Custom headers that should be attached to all requests

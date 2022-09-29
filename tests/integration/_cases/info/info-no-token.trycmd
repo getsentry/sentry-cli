@@ -4,6 +4,7 @@ $ sentry-cli info
 Sentry Server: https://sentry.io
 Default Organization: -
 Default Project: -
+The command failed. Consider adding allow_failure option if this blocks your process.
 
 Authentication Info:
   Method: Unauthorized
