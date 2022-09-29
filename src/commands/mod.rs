@@ -262,7 +262,7 @@ pub fn execute() -> Result<()> {
             None => {
                 eprintln!();
                 eprintln!("{}", style("The allow_failure options is active, but command exited successfully. Consider removing this option.").yellow());
-            },
+            }
         }
         Ok(())
     } else {
