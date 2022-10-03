@@ -19,6 +19,7 @@ pub enum DifType {
     SourceBundle,
     Pe,
     Pdb,
+    PortablePdb,
     Wasm,
 }
 
@@ -29,6 +30,7 @@ impl DifType {
             DifType::Elf => "elf",
             DifType::Pe => "pe",
             DifType::Pdb => "pdb",
+            DifType::PortablePdb => "portablepdb",
             DifType::SourceBundle => "sourcebundle",
             DifType::Breakpad => "breakpad",
             DifType::Proguard => "proguard",
@@ -52,6 +54,7 @@ impl str::FromStr for DifType {
             "elf" => Ok(DifType::Elf),
             "pe" => Ok(DifType::Pe),
             "pdb" => Ok(DifType::Pdb),
+            "portablepdb" => Ok(DifType::PortablePdb),
             "sourcebundle" => Ok(DifType::SourceBundle),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
@@ -191,6 +194,7 @@ impl DifFile<'static> {
                 | FileFormat::Elf
                 | FileFormat::Pe
                 | FileFormat::Pdb
+                | FileFormat::PortablePdb
                 | FileFormat::Breakpad
                 | FileFormat::Wasm
                 | FileFormat::SourceBundle => return DifFile::from_archive(archive),
@@ -214,6 +218,7 @@ impl DifFile<'static> {
             Some(DifType::Elf) => DifFile::open_object(path, FileFormat::Elf),
             Some(DifType::Pe) => DifFile::open_object(path, FileFormat::Pe),
             Some(DifType::Pdb) => DifFile::open_object(path, FileFormat::Pdb),
+            Some(DifType::PortablePdb) => DifFile::open_object(path, FileFormat::PortablePdb),
             Some(DifType::SourceBundle) => DifFile::open_object(path, FileFormat::SourceBundle),
             Some(DifType::Wasm) => DifFile::open_object(path, FileFormat::Wasm),
             Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
@@ -246,6 +251,7 @@ impl<'a> DifFile<'a> {
                 FileFormat::Breakpad => DifType::Breakpad,
                 FileFormat::Elf => DifType::Elf,
                 FileFormat::Pdb => DifType::Pdb,
+                FileFormat::PortablePdb => DifType::PortablePdb,
                 FileFormat::Pe => DifType::Pe,
                 FileFormat::Wasm => DifType::Wasm,
                 FileFormat::SourceBundle => DifType::SourceBundle,

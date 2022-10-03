@@ -1732,6 +1732,7 @@ pub struct DifUpload {
     max_file_size: u64,
     max_wait: Duration,
     pdbs_allowed: bool,
+    portablepdbs_allowed: bool,
     sources_allowed: bool,
     include_sources: bool,
     bcsymbolmaps_allowed: bool,
@@ -1771,6 +1772,7 @@ impl DifUpload {
             max_file_size: DEFAULT_MAX_DIF_SIZE,
             max_wait: DEFAULT_MAX_WAIT,
             pdbs_allowed: false,
+            portablepdbs_allowed: false,
             sources_allowed: false,
             include_sources: false,
             bcsymbolmaps_allowed: false,
@@ -1956,6 +1958,7 @@ impl DifUpload {
             }
 
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
+            self.portablepdbs_allowed = chunk_options.supports(ChunkUploadCapability::PortablePdbs);
             self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
             self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
             self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
@@ -1992,6 +1995,16 @@ impl DifUpload {
             // This is validated additionally in .valid_format()
         }
 
+        // Checks whether Portable PDBs were *explicitly* requested on the command line.
+        if self
+            .formats
+            .contains(&DifFormat::Object(FileFormat::PortablePdb))
+            && !self.portablepdbs_allowed
+        {
+            warn!("Portable PDBs are not supported by the configured Sentry server");
+            // This is validated additionally in .valid_format()
+        }
+
         // Checks whether BCSymbolMaps and PLists are **explicitly** requested on the command line.
         if (self.formats.contains(&DifFormat::BcSymbolMap)
             || self.formats.contains(&DifFormat::PList))
@@ -2022,6 +2035,7 @@ impl DifUpload {
             DifFormat::Object(FileFormat::Pdb) if !self.pdbs_allowed => false,
             DifFormat::Object(FileFormat::Pe) if !self.pdbs_allowed => false,
             DifFormat::Object(FileFormat::SourceBundle) if !self.sources_allowed => false,
+            DifFormat::Object(FileFormat::PortablePdb) if !self.portablepdbs_allowed => false,
             DifFormat::BcSymbolMap | DifFormat::PList if !self.bcsymbolmaps_allowed => false,
             format => self.formats.is_empty() || self.formats.contains(&format),
         }
