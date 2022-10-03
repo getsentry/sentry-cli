@@ -5,7 +5,6 @@ use std::process;
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
-use console::style;
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
@@ -258,18 +257,13 @@ pub fn execute() -> Result<()> {
     let command_result = run_command(&matches);
 
     if Config::current().get_allow_failure(&matches) {
-        match command_result.err() {
-            Some(err) => print_error(&err),
-            None => {
-                eprintln!();
-                eprintln!("{}", style("The allow_failure options is active, but command exited successfully. Consider removing this option.").yellow());
-            }
+        if let Some(err) = command_result.as_ref().err() {
+            println!("Command failed, however, the \"allow-failure\" flag was present. Exiting gracefully.");
+            println!("Original error:");
+            print_error(err);
         }
         Ok(())
     } else {
-        if let Some(_err) = command_result.as_ref().err() {
-            eprintln!("{}", style("The command failed. Consider adding allow_failure option if this blocks your process.").yellow());
-        }
         command_result
     }
 }
