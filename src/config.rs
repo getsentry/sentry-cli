@@ -443,7 +443,7 @@ impl Config {
     }
 
     pub fn get_allow_failure(&self, matches: &ArgMatches) -> bool {
-        matches.is_present("allow_failure")
+        matches.is_present("allow-failure")
             || if let Ok(var) = env::var("SENTRY_ALLOW_FAILURE") {
                 &var == "1" || &var == "true"
             } else {
