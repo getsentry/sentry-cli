@@ -1,0 +1,17 @@
+```
+$ sentry-cli info --config-status-json
+? success
+{
+  "config": {
+    "org": "",
+    "project": "",
+    "url": "[SERVER]"
+  },
+  "auth": {
+    "type": "token",
+    "successful": true
+  },
+  "have_dsn": true
+}
+
+```

@@ -33,7 +33,7 @@ SUBCOMMANDS:
     events             Manage events on Sentry.
     files              Manage release artifacts.
     help               Print this message or the help of the given subcommand(s)
-    info               Print information about the Sentry server.
+    info               Print information about the configuration and verify authentication.
     issues             Manage issues in Sentry.
     login              Authenticate with the Sentry server.
     organizations      Manage organizations on Sentry.
