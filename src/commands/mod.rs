@@ -183,6 +183,7 @@ fn app() -> Command<'static> {
           Arg::new("allow_failure")
               .long("allow_failure")
               .global(true)
+              .hide(true)
               .help("Always return 0 exit code."),
         )
 }
