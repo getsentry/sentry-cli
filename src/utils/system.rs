@@ -53,7 +53,7 @@ where
 #[cfg(windows)]
 pub fn run_or_interrupt<F>(f: F)
 where
-    F: FnOnce() -> (),
+    F: FnOnce(),
     F: Send + 'static,
 {
     f();

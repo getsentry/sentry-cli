@@ -11,7 +11,7 @@ use symbolic::debuginfo::FileFormat;
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_id, ArgExt};
-use crate::utils::dif::ObjectDifFeatures;
+use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
@@ -20,6 +20,9 @@ use crate::utils::xcode::{InfoPlist, MayDetach};
 static DERIVED_DATA_FOLDER: &str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_command(command: Command) -> Command {
+    let mut types = vec!["bcsymbolmap"];
+    types.extend(DifType::all_names());
+
     command
         .about("Upload debugging information files.")
         .org_arg()
@@ -36,15 +39,7 @@ pub fn make_command(command: Command) -> Command {
                 .short('t')
                 .value_name("TYPE")
                 .multiple_occurrences(true)
-                .possible_values(&[
-                    "dsym",
-                    "elf",
-                    "breakpad",
-                    "pdb",
-                    "pe",
-                    "sourcebundle",
-                    "bcsymbolmap",
-                ])
+                .possible_values(types)
                 .help(
                     "Only consider debug information files of the given \
                     type.  By default, all types are considered.",

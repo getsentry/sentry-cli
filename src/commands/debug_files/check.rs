@@ -5,7 +5,7 @@ use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 
-use crate::utils::dif::DifFile;
+use crate::utils::dif::{DifFile, DifType};
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::system::QuietExit;
 
@@ -26,7 +26,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .possible_values(&["dsym", "elf", "proguard", "breakpad"])
+                .possible_values(DifType::all_names())
                 .help(
                     "Explicitly set the type of the debug info file. \
                      This should not be needed as files are auto detected.",

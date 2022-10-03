@@ -37,6 +37,34 @@ impl DifType {
             DifType::Wasm => "wasm",
         }
     }
+
+    pub fn all() -> &'static [DifType] {
+        &[
+            DifType::Dsym,
+            DifType::Elf,
+            DifType::Pe,
+            DifType::Pdb,
+            DifType::PortablePdb,
+            DifType::SourceBundle,
+            DifType::Breakpad,
+            DifType::Proguard,
+            DifType::Wasm,
+        ]
+    }
+
+    pub fn all_names() -> &'static [&'static str] {
+        &[
+            "dsym",
+            "elf",
+            "pe",
+            "pdb",
+            "portablepdb",
+            "sourcebundle",
+            "breakpad",
+            "proguard",
+            "wasm",
+        ]
+    }
 }
 
 impl fmt::Display for DifType {

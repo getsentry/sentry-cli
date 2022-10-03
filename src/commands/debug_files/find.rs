@@ -47,15 +47,7 @@ pub fn make_command(command: Command) -> Command {
                 .short('t')
                 .value_name("TYPE")
                 .multiple_occurrences(true)
-                .possible_values(&[
-                    "dsym",
-                    "elf",
-                    "pe",
-                    "pdb",
-                    "proguard",
-                    "breakpad",
-                    "sourcebundle",
-                ])
+                .possible_values(DifType::all_names())
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
@@ -341,12 +333,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             types.insert(ty.parse().unwrap());
         }
     } else {
-        types.insert(DifType::Dsym);
-        types.insert(DifType::Pdb);
-        types.insert(DifType::Pe);
-        types.insert(DifType::Proguard);
-        types.insert(DifType::SourceBundle);
-        types.insert(DifType::Breakpad);
+        types.extend(DifType::all());
     }
 
     let with_well_known = !matches.is_present("no_well_known");
