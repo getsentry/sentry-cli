@@ -6,6 +6,5 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4 --frame 2
 ✔ Event has a valid exception present
 ✔ Event has a valid stacktrace present
 ✖ Event exception stacktrace selected frame (2) has incorrect abs_path (valid url is required). Found wrongabspath
-The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```

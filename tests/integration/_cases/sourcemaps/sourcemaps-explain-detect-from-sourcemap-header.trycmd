@@ -11,6 +11,5 @@ $ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
 ✔ Found source map location: bundle.min.js.map
 ✔ Resolved source map url: ~/dist/bundle.min.js.map
 ✖ Uploaded artifacts do not include entry: ~/dist/bundle.min.js.map
-The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```

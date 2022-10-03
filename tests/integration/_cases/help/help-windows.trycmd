@@ -13,7 +13,6 @@ USAGE:
     sentry-cli[EXE] [OPTIONS] <SUBCOMMAND>
 
 OPTIONS:
-        --allow_failure              Always return 0 exit code.
         --api-key <API_KEY>          The given Sentry API key.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
     -h, --help                       Print help information

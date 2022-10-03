@@ -8,7 +8,6 @@ USAGE:
     sentry-cli[EXE] info [OPTIONS]
 
 OPTIONS:
-        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
         --config-status-json         Return the status of the config that sentry-cli loads as JSON
                                      dump. This can be used by external tools to aid the user

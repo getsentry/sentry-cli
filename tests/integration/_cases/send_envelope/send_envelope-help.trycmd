@@ -15,9 +15,6 @@ ARGS:
             The path or glob to the file(s) in envelope format to send as envelope(s).
 
 OPTIONS:
-        --allow_failure
-            Always return 0 exit code.
-
         --auth-token <AUTH_TOKEN>
             Use the given Sentry auth token.
 

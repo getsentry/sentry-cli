@@ -11,7 +11,6 @@ ARGS:
     <EVENT_ID>    ID of an event to be explained.
 
 OPTIONS:
-        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
     -f, --force                      Force full validation flow, even when event is already source
                                      mapped.

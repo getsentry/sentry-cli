@@ -1,6 +1,5 @@
 ```
 $ sentry-cli releases info wat-release
 ? failed
-The command failed. Consider adding allow_failure option if this blocks your process.
 
 ```

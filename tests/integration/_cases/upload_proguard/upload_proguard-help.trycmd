@@ -11,9 +11,6 @@ ARGS:
     <PATH>...    The path to the mapping files.
 
 OPTIONS:
-        --allow_failure
-            Always return 0 exit code.
-
         --android-manifest <PATH>
             Read version and version code from an Android manifest file.
 

@@ -8,7 +8,6 @@ USAGE:
     sentry-cli[EXE] bash-hook [OPTIONS]
 
 OPTIONS:
-        --allow_failure              Always return 0 exit code.
         --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
         --cli <CMD>                  Explicitly set/override the sentry-cli command
     -h, --help                       Print help information
