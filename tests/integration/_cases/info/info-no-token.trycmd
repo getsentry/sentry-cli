@@ -5,4 +5,7 @@ Sentry Server: https://sentry.io
 Default Organization: -
 Default Project: -
 
+Authentication Info:
+  Method: Unauthorized
+
 ```

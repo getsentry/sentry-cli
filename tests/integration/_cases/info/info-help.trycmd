@@ -2,7 +2,7 @@
 $ sentry-cli info --help
 ? success
 sentry-cli[EXE]-info 
-Print information about the Sentry server.
+Print information about the configuration and verify authentication.
 
 USAGE:
     sentry-cli[EXE] info [OPTIONS]
@@ -17,6 +17,9 @@ OPTIONS:
                                      in key:value format.
         --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
                                      info, warn, error]
+        --no-defaults                Skip default organization and project checks. This allows you
+                                     to verify your authentication method, without the need for
+                                     setting other defaults.
         --quiet                      Do not print any output while preserving correct exit code.
                                      This flag is currently implemented only for selected
                                      subcommands. [aliases: silent]

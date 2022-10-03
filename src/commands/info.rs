@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::io;
 
 use anyhow::Result;
@@ -19,14 +18,21 @@ pub struct AuthStatus {
 
 #[derive(Serialize, Default)]
 pub struct ConfigStatus {
-    config: HashMap<String, Option<String>>,
+    org: Option<String>,
+    project: Option<String>,
+    url: Option<String>,
+}
+
+#[derive(Serialize, Default)]
+pub struct Status {
+    config: ConfigStatus,
     auth: AuthStatus,
     have_dsn: bool,
 }
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Print information about the Sentry server.")
+        .about("Print information about the configuration and verify authentication.")
         .arg(
             Arg::new("config_status_json")
                 .long("config-status-json")
@@ -36,6 +42,11 @@ pub fn make_command(command: Command) -> Command {
                      the user towards configuration.",
                 ),
         )
+        .arg(Arg::new("no_defaults").long("no-defaults").help(
+            "Skip default organization and project checks. \
+             This allows you to verify your authentication method, \
+             without the need for setting other defaults.",
+        ))
 }
 
 fn describe_auth(auth: Option<&Auth>) -> &str {
@@ -48,13 +59,12 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
 
 fn get_config_status_json() -> Result<()> {
     let config = Config::current();
-    let mut rv = ConfigStatus::default();
+    let mut rv = Status::default();
 
     let (org, project) = config.get_org_and_project_defaults();
-    rv.config.insert("org".into(), org);
-    rv.config.insert("project".into(), project);
-    rv.config
-        .insert("url".into(), Some(config.get_base_url()?.to_string()));
+    rv.config.org = org;
+    rv.config.project = project;
+    rv.config.url = Some(config.get_base_url()?.to_string());
 
     rv.auth.auth_type = config.get_auth().map(|val| match val {
         Auth::Token(_) => "token".into(),
@@ -75,9 +85,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let config = Config::current();
     let (org, project) = config.get_org_and_project_defaults();
+    let org = org.filter(|s| !s.is_empty());
+    let project = project.filter(|s| !s.is_empty());
     let info_rv = Api::current().get_auth_info();
-    let errors =
-        project.is_none() || org.is_none() || config.get_auth().is_none() || info_rv.is_err();
+    let mut errors = config.get_auth().is_none() || info_rv.is_err();
+
+    // If `no-defaults` is present, only authentication should be verified.
+    if !matches.is_present("no_defaults") {
+        errors = errors || project.is_none() || org.is_none();
+    }
 
     if is_quiet_mode() {
         return if errors {
@@ -88,31 +104,32 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
-    println!(
-        "Default Organization: {}",
-        org.unwrap_or_else(|| "-".into())
-    );
-    println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
 
-    if config.get_auth().is_some() {
-        println!();
-        println!("Authentication Info:");
-        println!("  Method: {}", describe_auth(config.get_auth()));
-        match info_rv {
-            Ok(info) => {
-                if let Some(ref user) = info.user {
-                    println!("  User: {}", user.email);
-                }
-                if let Some(ref auth) = info.auth {
-                    println!("  Scopes:");
-                    for scope in &auth.scopes {
-                        println!("    - {}", scope);
-                    }
+    if !matches.is_present("no_defaults") {
+        println!(
+            "Default Organization: {}",
+            org.unwrap_or_else(|| "-".into())
+        );
+        println!("Default Project: {}", project.unwrap_or_else(|| "-".into()));
+    }
+
+    println!();
+    println!("Authentication Info:");
+    println!("  Method: {}", describe_auth(config.get_auth()));
+    match info_rv {
+        Ok(info) => {
+            if let Some(ref user) = info.user {
+                println!("  User: {}", user.email);
+            }
+            if let Some(ref auth) = info.auth {
+                println!("  Scopes:");
+                for scope in &auth.scopes {
+                    println!("    - {}", scope);
                 }
             }
-            Err(err) => {
-                println!("  (failure on authentication: {})", err);
-            }
+        }
+        Err(err) => {
+            println!("  (failure on authentication: {})", err);
         }
     }
 

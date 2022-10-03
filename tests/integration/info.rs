@@ -22,3 +22,31 @@ fn command_info_basic() {
     let t = register_test("info/info-basic.trycmd");
     t.insert_var("[SERVER]", server_url()).unwrap();
 }
+
+#[test]
+fn command_info_no_defaults() {
+    let _server = mock_endpoint(
+        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+    );
+    let t = register_test("info/info-json.trycmd");
+    t.insert_var("[SERVER]", server_url()).unwrap();
+}
+
+#[test]
+fn command_info_json() {
+    let _server = mock_endpoint(
+        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+    );
+    let t = register_test("info/info-basic.trycmd");
+    t.insert_var("[SERVER]", server_url()).unwrap();
+}
+
+#[test]
+fn command_info_json_without_defaults() {
+    let _server = mock_endpoint(
+        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+    );
+    let t = register_test("info/info-json-no-defaults.trycmd");
+    t.env("SENTRY_ORG", "").env("SENTRY_PROJECT", "");
+    t.insert_var("[SERVER]", server_url()).unwrap();
+}

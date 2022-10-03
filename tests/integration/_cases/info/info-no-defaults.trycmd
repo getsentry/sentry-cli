@@ -1,0 +1,13 @@
+```
+$ sentry-cli info --no-defaults
+? success
+Sentry Server: [SERVER]
+
+Authentication Info:
+  Method: Auth Token
+  User: kamil@sentry.io
+  Scopes:
+    - project:read
+    - project:releases
+
+```
