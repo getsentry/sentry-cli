@@ -75,6 +75,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .long("path")
                 .short('p')
+                .value_name("PATH")
                 .multiple_occurrences(true)
                 .help("Add a path to search recursively for debug info files."),
         )
