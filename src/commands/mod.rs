@@ -259,7 +259,7 @@ pub fn execute() -> Result<()> {
         Err(e) => {
             if Config::current().get_allow_failure(&matches) {
                 print_error(&e);
-                eprintln!("\nCommand failed, however, the \"SENTRY_ALLOW_FAILURE\" variable was set. Exiting with 0 exit code.");
+                eprintln!("\nCommand failed, however, \"SENTRY_ALLOW_FAILURE\" variable or \"allow-failure\" flag was set. Exiting with 0 exit code.");
                 Ok(())
             } else {
                 Err(e)

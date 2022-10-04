@@ -6,5 +6,6 @@ error: The system cannot find the file specified. (os error 2)
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
 Please attach the full debug log to all bug reports.
 
-Command failed, however, the "SENTRY_ALLOW_FAILURE" variable was set. Exiting with 0 exit code.
+Command failed, however, "SENTRY_ALLOW_FAILURE" variable or "allow-failure" flag was set. Exiting with 0 exit code.
+
 ```
