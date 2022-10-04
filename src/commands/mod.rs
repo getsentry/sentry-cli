@@ -254,17 +254,17 @@ pub fn execute() -> Result<()> {
             .join(" ")
     );
 
-    let command_result = run_command(&matches);
-
-    if Config::current().get_allow_failure(&matches) {
-        if let Some(err) = command_result.as_ref().err() {
-            println!("Command failed, however, the \"allow-failure\" flag was present. Exiting gracefully.");
-            println!("Original error:");
-            print_error(err);
+    match run_command(&matches) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if Config::current().get_allow_failure(&matches) {
+                print_error(&e);
+                eprintln!("\nCommand failed, however, the \"SENTRY_ALLOW_FAILURE\" variable was set. Exiting with 0 exit code.");
+                Ok(())
+            } else {
+                Err(e)
+            }
         }
-        Ok(())
-    } else {
-        command_result
     }
 }
 
