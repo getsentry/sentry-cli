@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.7.0
+
+### Various fixes & improvements
+
+- fix: paths argument for debug-files find should take a value (#1346) by @kamilogorek
+- chore: reuse danger workflow (#1332) by @vaind
+
 ## 2.6.0
 
 ### Various fixes & improvements
