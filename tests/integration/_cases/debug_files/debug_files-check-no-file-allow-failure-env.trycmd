@@ -1,0 +1,11 @@
+```
+$ SENTRY_ALLOW_FAILURE=1 sentry-cli debug-files check non-existing-file-path
+? success
+error: No such file or directory (os error 2)
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+Command failed, however, "SENTRY_ALLOW_FAILURE" variable or "allow-failure" flag was set. Exiting with 0 exit code.
+
+```

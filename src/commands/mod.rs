@@ -178,6 +178,13 @@ fn app() -> Command<'static> {
                 .global(true)
                 .help("Do not print any output while preserving correct exit code. This flag is currently implemented only for selected subcommands."),
         )
+        .arg(
+          Arg::new("allow_failure")
+              .long("allow-failure")
+              .global(true)
+              .hide(true)
+              .help("Always return 0 exit code."),
+        )
 }
 
 fn add_commands(mut app: Command) -> Command {
@@ -247,7 +254,18 @@ pub fn execute() -> Result<()> {
             .join(" ")
     );
 
-    run_command(&matches)
+    match run_command(&matches) {
+        Ok(()) => Ok(()),
+        Err(e) => {
+            if Config::current().get_allow_failure(&matches) {
+                print_error(&e);
+                eprintln!("\nCommand failed, however, \"SENTRY_ALLOW_FAILURE\" variable or \"allow-failure\" flag was set. Exiting with 0 exit code.");
+                Ok(())
+            } else {
+                Err(e)
+            }
+        }
+    }
 }
 
 fn setup() {
