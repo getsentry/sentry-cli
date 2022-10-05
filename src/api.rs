@@ -1471,6 +1471,52 @@ impl Api {
         Ok(rv)
     }
 
+    /// List all issues associated with an organization and a project
+    pub fn list_organization_project_issues(
+        &self,
+        org: &str,
+        project: &str,
+        max_pages: usize,
+    ) -> ApiResult<Vec<ProcessedIssue>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        let mut requests_no = 0;
+
+        loop {
+            requests_no += 1;
+
+            let resp = self.get(&format!(
+                "/projects/{}/{}/issues/?cursor={}",
+                PathArg(org),
+                PathArg(project),
+                QueryArg(&cursor)
+            ))?;
+
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                } else {
+                    break;
+                }
+            }
+
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<ProcessedIssue>>()?.into_iter());
+
+            if requests_no == max_pages {
+                break;
+            }
+
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+
+        Ok(rv)
+    }
+
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let mut rv = vec![];
@@ -2691,6 +2737,18 @@ pub struct ProcessedEventUser {
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct ProcessedIssue {
+    pub id: String,
+    #[serde(alias = "shortId")]
+    pub short_id: String,
+    pub title: String,
+    #[serde(default, alias = "lastSeen")]
+    pub last_seen: String,
+    pub status: String,
+    pub level: String,
 }
 
 impl fmt::Display for ProcessedEventUser {
