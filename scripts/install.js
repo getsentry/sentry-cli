@@ -235,6 +235,10 @@ async function downloadBinary() {
     if (error.code) {
       errorMsg += `\nError code: ${error.code}`;
     }
+    errorMsg +=
+      "\nTo use a local copy of the binary, make sure it's in your PATH and then set SENTRYCLI_USE_LOCAL=1 in your environment.";
+    errorMsg +=
+      '\nPlease see https://github.com/getsentry/sentry-cli#sentrycli for more information and troubleshooting steps.';
     throw new Error(errorMsg);
   }
 
