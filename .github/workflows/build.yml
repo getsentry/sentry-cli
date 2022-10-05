@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # pin@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
@@ -70,7 +70,7 @@ jobs:
           override: true
 
       - name: Run Cargo Build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # pin@v1
         with:
           command: build
           args: --target=${{ matrix.target }} --release --locked
@@ -119,14 +119,14 @@ jobs:
         shell: bash
         run: rustup set auto-self-update disable
 
-      - uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # pin@v1
         with:
           toolchain: stable-${{ matrix.arch }}-pc-windows-msvc
           profile: minimal
           override: true
 
       - name: Run Cargo Build
-        uses: actions-rs/cargo@v1
+        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # pin@v1
         with:
           command: build
           args: --release --locked
