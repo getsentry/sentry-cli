@@ -23,6 +23,13 @@ pub fn make_command(command: Command) -> Command {
                 .value_parser(clap::value_parser!(usize))
                 .help("Maximum number of pages to fetch (100 issues/page)."),
         )
+        .arg(
+            Arg::new("query")
+                .long("query")
+                .value_name("QUERY")
+                .default_value("")
+                .help("Query to pass at the request. An example is \"is:unresolved\""),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -30,9 +37,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches)?;
     let pages = *matches.get_one("pages").unwrap();
+    let query = match matches.get_one::<String>("query") {
+        Some(query) => query.clone(),
+        None => String::new(),
+    };
     let api = Api::current();
 
-    let issues = api.list_organization_project_issues(&org, &project, pages)?;
+    let issues = api.list_organization_project_issues(&org, &project, pages, query)?;
 
     let mut table = Table::new();
     table

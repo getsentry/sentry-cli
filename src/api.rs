@@ -1477,6 +1477,7 @@ impl Api {
         org: &str,
         project: &str,
         max_pages: usize,
+        query: String,
     ) -> ApiResult<Vec<ProcessedIssue>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
@@ -1486,9 +1487,10 @@ impl Api {
             requests_no += 1;
 
             let resp = self.get(&format!(
-                "/projects/{}/{}/issues/?cursor={}",
+                "/projects/{}/{}/issues/?query={}&cursor={}",
                 PathArg(org),
                 PathArg(project),
+                QueryArg(&query),
                 QueryArg(&cursor)
             ))?;
 
