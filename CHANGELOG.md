@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- List issues (#1349) by @dcariotti
+
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
 ## 2.7.0
