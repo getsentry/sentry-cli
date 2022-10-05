@@ -1478,7 +1478,7 @@ impl Api {
         project: &str,
         max_pages: usize,
         query: String,
-    ) -> ApiResult<Vec<ProcessedIssue>> {
+    ) -> ApiResult<Vec<Issue>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
         let mut requests_no = 0;
@@ -1503,7 +1503,7 @@ impl Api {
             }
 
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<ProcessedIssue>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Issue>>()?.into_iter());
 
             if requests_no == max_pages {
                 break;
@@ -2742,7 +2742,7 @@ pub struct ProcessedEventUser {
 }
 
 #[derive(Clone, Debug, Deserialize)]
-pub struct ProcessedIssue {
+pub struct Issue {
     pub id: String,
     #[serde(alias = "shortId")]
     pub short_id: String,
