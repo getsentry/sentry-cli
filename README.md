@@ -44,40 +44,8 @@ To verify it’s installed correctly you can bring up the help:
 
 ### Node
 
-Additionally you can also install this binary via npm:
+The `sentry-cli` binary can also be installed as part of the `@sentry/cli` npm package. See the [`@sentry/cli` section below](#sentrycli) for details.
 
-    npm install @sentry/cli
-
-When installing globally, make sure to have set
-[correct permissions on the global node_modules directory](https://docs.npmjs.com/getting-started/fixing-npm-permissions).
-If this is not possible in your environment or still produces an EACCESS error,
-install as root:
-
-    sudo npm install -g @sentry/cli --unsafe-perm
-
-By default, this package will download sentry-cli from the CDN managed by [Fastly](https://www.fastly.com/).
-To use a custom CDN, set the npm config property `sentrycli_cdnurl`. The downloader will append
-`"/<version>/sentry-cli-<dist>"`.
-
-```sh
-npm install @sentry/cli --sentrycli_cdnurl=https://mymirror.local/path
-```
-
-Or add property into your `.npmrc` file (https://www.npmjs.org/doc/files/npmrc.html)
-
-```rc
-sentrycli_cdnurl=https://mymirror.local/path
-```
-
-Another option is to use the environment variable `SENTRYCLI_CDNURL`.
-
-```sh
-SENTRYCLI_CDNURL=https://mymirror.local/path npm install @sentry/cli
-```
-
-If you're installing the CLI with NPM from behind a proxy, the install script will
-use either NPM's configured HTTPS proxy server, or the value from your `HTTPS_PROXY`
-environment variable.
 
 ### Homebrew
 
@@ -116,3 +84,48 @@ Also, there is a Dockerfile that builds an Alpine-based Docker image with
 docker build -t sentry-cli .
 docker run --rm -v $(pwd):/work sentry-cli --help
 ```
+
+## `@sentry/cli`
+
+The `sentry-cli` binary is also available as part of the `@sentry/cli` npm package.
+
+### Installation
+
+```sh
+npm install @sentry/cli
+```
+
+This will install the npm package, which will then download the appropriate binary for your operating system. (To skip downloading and use a local copy of the binary when using `@sentry/cli`, make sure it's in your PATH and set `SENTRYCLI_USE_LOCAL=1` in your environment.)
+
+If installing globally, make sure to have set [correct permissions on the global node_modules directory](https://docs.npmjs.com/getting-started/fixing-npm-permissions). If this is not possible in your environment or still produces an EACCESS error, install as root:
+
+```sh
+sudo npm install -g @sentry/cli --unsafe-perm
+```
+
+If you're installing the CLI with NPM from behind a proxy, the install script will use either NPM's configured HTTPS proxy server, or the value from your `HTTPS_PROXY` environment variable.
+
+### Changing Download CDN
+
+By default, this package will download sentry-cli from the CDN managed by [Fastly](https://www.fastly.com/).
+To use a different CDN, either an established one like GitHub (`https://github.com/getsentry/sentry-cli/releases/download/`) or a custom one (for example `http://www.some.cdn/some/path/`), set it as the CDN URL when installing `@sentry/cli`, using one of the following methods:
+
+- Using a CLI flag
+  ```sh
+  npm install @sentry/cli --sentrycli_cdnurl=http://www.some.cdn/some/path
+  ```
+- Adding it as a property in your [`.npmrc` file](https://www.npmjs.org/doc/files/npmrc.html)
+  ```rc
+  sentrycli_cdnurl=http://www.some.cdn/some/path
+  ```
+- Using an environment variable
+  ```sh
+  SENTRYCLI_CDNURL=http://www.some.cdn/some/path npm install @sentry/cli
+  ```
+
+If using a custom CDN like `http://www.some.cdn/some/path/`, perform the following on the machine hosting `sentry-cli` (the one reachable at `http://www.some.cdn`):
+
+1. Install `sentry-cli` using any of the methods listed in this README.
+2. Run `cd some/path && node customCDNHelper.js`. (`customCDNHelper.js` can be found [here](https://github.com/getsentry/sentry-cli/blob/master/scripts/customCDNHelper.js) in the `scripts` directory in this repo.) This will move and rename the binary so `@sentry/cli` can find it when downloading.
+
+Make sure the version being hosted matches the version listed in `@sentry/cli`'s `package.json`.
