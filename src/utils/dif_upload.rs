@@ -1073,7 +1073,7 @@ pub fn filter_bad_sources(entry: &FileEntry) -> bool {
         // ignore files larger than limit (defaults to 1MB)
         if item_size > max_size {
             warn!(
-                "Source exceded maximum item size limit ({}). {}",
+                "Source exceeded maximum item size limit ({}). {}",
                 item_size, path
             );
             return false;
