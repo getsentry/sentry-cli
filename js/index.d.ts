@@ -47,6 +47,11 @@ declare module '@sentry/cli' {
      * This value will update `CUSTOM_HEADER` env variable.
      */
     customHeader?: string;
+    /**
+     * Headers added to every outgoing network request.
+     * This value does not set any env variable, and is overriden by `customHeader`.
+     */
+    headers?: Record<string, string>;
   }
 
   /**
