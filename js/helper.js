@@ -165,8 +165,8 @@ async function execute(args, live, silent, configFile, config = {}) {
   if (config.customHeader) {
     env.CUSTOM_HEADER = config.customHeader;
   } else if (config.headers) {
-    const headers = Object.entries(config.headers).flatMap(([key, value]) => ['--header', `${key}:${value}`])
-    args = [...headers, ...args]
+    const headers = Object.entries(config.headers).flatMap(([key, value]) => ['--header', `${key}:${value}`]);
+    args = [...headers, ...args];
   }
   return new Promise((resolve, reject) => {
     if (live === true) {
