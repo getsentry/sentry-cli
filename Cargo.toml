@@ -60,7 +60,7 @@ which = "4.2.5"
 zip = "0.6.2"
 
 [dev-dependencies]
-insta = { version = "1.15.0", features = ["redactions"] }
+insta = { version = "1.15.0", features = ["redactions", "yaml"] }
 mockito = "0.31.0"
 predicates = "2.1.1"
 tempfile = "3.3.0"
