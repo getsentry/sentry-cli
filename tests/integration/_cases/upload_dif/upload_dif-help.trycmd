@@ -69,8 +69,9 @@ OPTIONS:
                                      without this option if they are found in the PATH searched for
                                      symbol files.
     -t, --type <TYPE>                Only consider debug information files of the given type.  By
-                                     default, all types are considered. [possible values: dsym, elf,
-                                     breakpad, pdb, pe, sourcebundle, bcsymbolmap]
+                                     default, all types are considered. [possible values:
+                                     bcsymbolmap, dsym, elf, pe, pdb, portablepdb, sourcebundle,
+                                     breakpad, proguard, wasm]
         --wait                       Wait for the server to fully process uploaded files. Errors can
                                      only be displayed if --wait is specified, but this will
                                      significantly slow down the upload process.

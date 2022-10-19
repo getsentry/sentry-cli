@@ -47,15 +47,7 @@ pub fn make_command(command: Command) -> Command {
                 .short('t')
                 .value_name("TYPE")
                 .multiple_occurrences(true)
-                .possible_values(&[
-                    "dsym",
-                    "elf",
-                    "pe",
-                    "pdb",
-                    "proguard",
-                    "breakpad",
-                    "sourcebundle",
-                ])
+                .possible_values(DifType::all_names())
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
@@ -148,6 +140,7 @@ fn find_ids(
                 DifType::Elf => find_ids_for_elf(&dirent, &remaining),
                 DifType::Pe => find_ids_for_pe(&dirent, &remaining),
                 DifType::Pdb => find_ids_for_pdb(&dirent, &remaining),
+                DifType::PortablePdb => find_ids_for_portablepdb(&dirent, &remaining),
                 DifType::SourceBundle => find_ids_for_sourcebundle(&dirent, &remaining),
                 DifType::Breakpad => find_ids_for_breakpad(&dirent, &remaining),
                 DifType::Proguard => find_ids_for_proguard(&dirent, &proguard_uuids),
@@ -273,6 +266,20 @@ fn find_ids_for_pdb(
     None
 }
 
+fn find_ids_for_portablepdb(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if dirent.path().extension() == Some(OsStr::new("pdb"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::PortablePdb));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::PortablePdb))
+        }
+    }
+    None
+}
+
 fn find_ids_for_sourcebundle(
     dirent: &DirEntry,
     remaining: &HashSet<DebugId>,
@@ -327,12 +334,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             types.insert(ty.parse().unwrap());
         }
     } else {
-        types.insert(DifType::Dsym);
-        types.insert(DifType::Pdb);
-        types.insert(DifType::Pe);
-        types.insert(DifType::Proguard);
-        types.insert(DifType::SourceBundle);
-        types.insert(DifType::Breakpad);
+        types.extend(DifType::all());
     }
 
     let with_well_known = !matches.is_present("no_well_known");

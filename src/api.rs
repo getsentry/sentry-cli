@@ -2516,6 +2516,9 @@ pub enum ChunkUploadCapability {
     /// Upload of PDBs and debug id overrides
     Pdbs,
 
+    /// Upload of Portable PDBs
+    PortablePdbs,
+
     /// Uploads of source archives
     Sources,
 
@@ -2538,6 +2541,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
             "pdbs" => ChunkUploadCapability::Pdbs,
+            "portablepdbs" => ChunkUploadCapability::PortablePdbs,
             "sources" => ChunkUploadCapability::Sources,
             "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
             "il2cpp" => ChunkUploadCapability::Il2Cpp,
