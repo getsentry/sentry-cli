@@ -47,8 +47,17 @@ use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
 
+// Based on https://docs.rs/percent-encoding/1.0.1/src/percent_encoding/lib.rs.html#104
+// WHATWG Spec: https://url.spec.whatwg.org/#percent-encoded-bytes
+// RFC3986 Reserved Characters: https://www.rfc-editor.org/rfc/rfc3986#section-2.2
 const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
-const DEFAULT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET.add(b'`').add(b'?').add(b'{').add(b'}');
+const PATH_SEGMENT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET
+    .add(b'`')
+    .add(b'?')
+    .add(b'{')
+    .add(b'}')
+    .add(b'%')
+    .add(b'/');
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
@@ -136,7 +145,7 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
         if val == ".." || val == "." {
             val = "\u{fffd}".into();
         }
-        utf8_percent_encode(&val, &DEFAULT_ENCODE_SET).fmt(f)
+        utf8_percent_encode(&val, &PATH_SEGMENT_ENCODE_SET).fmt(f)
     }
 }
 
