@@ -50,7 +50,13 @@ use crate::utils::xcode::InfoPlist;
 // Based on https://docs.rs/percent-encoding/1.0.1/src/percent_encoding/lib.rs.html#104
 // WHATWG Spec: https://url.spec.whatwg.org/#percent-encoded-bytes
 // RFC3986 Reserved Characters: https://www.rfc-editor.org/rfc/rfc3986#section-2.2
-const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
+const QUERY_ENCODE_SET: AsciiSet = CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'<')
+    .add(b'>')
+    .add(b'+');
 const PATH_SEGMENT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET
     .add(b'`')
     .add(b'?')
