@@ -7,7 +7,7 @@ const childProcess = require('child_process');
  * @type {string}
  */
 let binaryPath = eval(
-  "require('path').resolve(__dirname, require('os').platform() === 'win32' ? '..\\sentry-cli.exe' : '../sentry-cli')"
+  "require('path').resolve(__dirname, require('os').platform() === 'win32' ? '../sentry-cli.exe' : '../sentry-cli')"
 );
 
 /**
