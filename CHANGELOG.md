@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.8.0
+
+### Various fixes & improvements
+
+- fix: Use forward slash for Windows binary location path (#1369) by @timfish
+- fix: Add + to reserved query characters in url encoding (#1365) by @kamilogorek
+- feat: Add `headers` option to the JavaScript API (#1355) by @thibmeu
+- fix: Add % and / to reserved path characters in url encoding (#1364) by @kamilogorek
+- feat: Add support for Portable PDB debug files (#1345) by @Swatinem
+
 ## 2.7.0
 
 ### Various fixes & improvements
