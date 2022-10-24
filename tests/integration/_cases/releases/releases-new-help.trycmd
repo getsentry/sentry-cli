@@ -5,7 +5,7 @@ sentry-cli[EXE]-releases-new
 Create a new release.
 
 USAGE:
-    sentry-cli releases new [OPTIONS] <VERSION>
+    sentry-cli[EXE] releases new [OPTIONS] <VERSION>
 
 ARGS:
     <VERSION>    The version of the release
