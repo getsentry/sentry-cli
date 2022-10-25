@@ -1,16 +1,29 @@
 'use strict';
 
+const path = require('path');
 const childProcess = require('child_process');
+
+/**
+ * This convoluted function resolves the path to the `sentry-cli` binary in a
+ * way that can't be analysed by @vercel/nft.
+ *
+ * Without this, the binary can be detected as an asset and included by bundlers
+ * that use @vercel/nft.
+ * @returns {string} The path to the sentry-cli binary
+ */
+function getBinaryPath() {
+  const parts = [];
+  parts.push(__dirname);
+  parts.push('..');
+  parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
+  return path.resolve(...parts);
+}
 
 /**
  * Absolute path to the sentry-cli binary (platform dependent).
  * @type {string}
  */
-let binaryPath = require('path').resolve(
-  __dirname,
-  '..',
-  process.platform === 'win32' ? 'sentry-cli.exe' : 'sentry-cli'
-);
+let binaryPath = getBinaryPath();
 
 /**
  * Overrides the default binary path with a mock value, useful for testing.
@@ -160,7 +173,10 @@ async function execute(args, live, silent, configFile, config = {}) {
   if (config.customHeader) {
     env.CUSTOM_HEADER = config.customHeader;
   } else if (config.headers) {
-    const headers = Object.entries(config.headers).flatMap(([key, value]) => ['--header', `${key}:${value}`]);
+    const headers = Object.entries(config.headers).flatMap(([key, value]) => [
+      '--header',
+      `${key}:${value}`,
+    ]);
     args = [...headers, ...args];
   }
   return new Promise((resolve, reject) => {
