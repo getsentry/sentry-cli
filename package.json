@@ -23,6 +23,7 @@
     "which": "^2.0.2"
   },
   "devDependencies": {
+    "@vercel/nft": "^0.22.1",
     "eslint": "^8.13.0",
     "eslint-config-prettier": "^8.5.0",
     "jest": "^27.5.1",
@@ -34,11 +35,12 @@
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",
-    "test": "npm-run-all test:jest test:eslint test:prettier",
+    "test": "npm-run-all test:jest test:eslint test:prettier test:vercel-nft",
     "test:jest": "jest",
     "test:watch": "jest --watch --notify",
     "test:eslint": "eslint bin/* scripts/**/*.js js/**/*.js",
-    "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js"
+    "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js",
+    "test:vercel-nft": "node scripts/test-vercel-nft.js"
   },
   "jest": {
     "collectCoverage": true,
