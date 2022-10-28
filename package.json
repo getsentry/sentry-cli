@@ -28,11 +28,12 @@
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",
-    "test": "npm-run-all test:jest test:eslint test:prettier",
+    "test": "npm-run-all test:jest test:eslint test:prettier test:vercel-nft",
     "test:jest": "jest",
     "test:watch": "jest --watch --notify",
     "test:eslint": "eslint bin/* scripts/**/*.js js/**/*.js",
-    "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js"
+    "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js",
+    "test:vercel-nft": "node scripts/test-vercel-nft.js"
   },
   "dependencies": {
     "https-proxy-agent": "^5.0.0",
@@ -44,6 +45,7 @@
     "which": "^2.0.2"
   },
   "devDependencies": {
+    "@vercel/nft": "^0.22.1",
     "eslint": "^6.8.0",
     "eslint-config-airbnb-base": "^14.1.0",
     "eslint-config-prettier": "^6.10.1",
