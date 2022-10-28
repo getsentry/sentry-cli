@@ -1,9 +1,10 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
 const { nodeFileTrace } = require('@vercel/nft');
 
 const entryPoint = require.resolve('..');
 
 // Trace the module entrypoint
-nodeFileTrace([entryPoint]).then((result) => {
+nodeFileTrace([entryPoint]).then(result => {
   console.log('@vercel/nft traced dependencies:', Array.from(result.fileList));
 
   // If either binary is picked up, fail the test
