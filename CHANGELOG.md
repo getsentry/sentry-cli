@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.8.1
+
+### Various fixes & improvements
+
+- fix: Replace usage of eval to obfuscate binary path from bundlers (#1374) by @timfish
+
 ## 2.8.0
 
 ### Various fixes & improvements
