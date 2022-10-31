@@ -302,6 +302,7 @@ impl From<curl::FormError> for ApiError {
 pub type ApiResult<T> = Result<T, ApiError>;
 
 /// Represents an HTTP method that is used by the API.
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Debug)]
 pub enum Method {
     Get,

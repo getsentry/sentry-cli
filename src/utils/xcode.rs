@@ -182,6 +182,7 @@ impl XcodeProjectInfo {
     /// Returns the config with a certain name
     pub fn get_configuration(&self, name: &str) -> Option<&str> {
         let name = name.to_lowercase();
+        #[allow(clippy::manual_find)]
         for cfg in &self.configurations {
             if cfg.to_lowercase() == name {
                 return Some(cfg);

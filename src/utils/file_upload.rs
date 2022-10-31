@@ -33,6 +33,7 @@ pub struct UploadContext<'a> {
     pub wait: bool,
 }
 
+#[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(PartialEq, Debug, Copy, Clone)]
 pub enum LogLevel {
     Warning,
