@@ -39,7 +39,7 @@ jobs:
       - name: Rename Binary
         run: mv target/*/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3.1.1
         with:
           name: ${{ github.sha }}
           path: sentry-cli-Linux-${{ matrix.arch }}
@@ -78,7 +78,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3.1.1
         with:
           name: ${{ github.sha }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -96,7 +96,7 @@ jobs:
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3.1.1
         with:
           name: ${{ github.sha }}
           path: sentry-cli-Darwin-universal
@@ -134,7 +134,7 @@ jobs:
       - name: Rename Binary
         run: mv target/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3.1.1
         with:
           name: ${{ github.sha }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
@@ -165,7 +165,7 @@ jobs:
 
       - run: npm pack
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3.1.1
         with:
           name: ${{ github.sha }}
           path: '*.tgz'
