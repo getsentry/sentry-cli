@@ -50,6 +50,22 @@ fn validate_release(v: &str) -> Result<(), String> {
     }
 }
 
+pub fn validate_distribution(v: &str) -> Result<(), String> {
+    if v.trim() != v {
+        Err(
+            "Invalid distribution name. Distribution must not contain leading or trailing spaces."
+                .to_string(),
+        )
+    } else if v.len() > 64 {
+        Err(
+            "Invalid distribution name. Distribution name must not be longer than 64 characters."
+                .to_string(),
+        )
+    } else {
+        Ok(())
+    }
+}
+
 pub fn validate_int(v: &str) -> Result<(), String> {
     if v.parse::<i64>().is_ok() {
         Ok(())

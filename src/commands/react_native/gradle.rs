@@ -8,7 +8,7 @@ use sourcemap::ram_bundle::RamBundle;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
-use crate::utils::args::ArgExt;
+use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
@@ -45,6 +45,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .required(true)
                 .multiple_occurrences(true)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(

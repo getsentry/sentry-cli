@@ -11,7 +11,7 @@ use log::info;
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
-use crate::utils::args::ArgExt;
+use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
@@ -50,6 +50,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .value_name("DISTRIBUTION")
                 .multiple_occurrences(true)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(

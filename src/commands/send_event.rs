@@ -15,7 +15,7 @@ use serde_json::Value;
 use username::get_user_name;
 
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, validate_timestamp};
+use crate::utils::args::{get_timestamp, validate_distribution, validate_timestamp};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use crate::utils::releases::detect_release_name;
 
@@ -58,6 +58,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .long("dist")
                 .short('d')
+                .value_parser(validate_distribution)
                 .help("Set the distribution."),
         )
         .arg(
