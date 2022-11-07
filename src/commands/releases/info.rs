@@ -61,7 +61,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let data_row = tbl
             .add_row()
             .add(&release.version)
-            .add(&release.date_created);
+            .add(release.date_created);
 
         if let Some(last_event) = release.last_event {
             data_row.add(last_event);

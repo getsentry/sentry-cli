@@ -67,7 +67,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     if !is_writable(&exe) {
         println!("Need to sudo to uninstall {}", exe.display());
-        runas::Command::new("rm").arg("-f").arg(&exe).status()?;
+        runas::Command::new("rm").arg("-f").arg(exe).status()?;
     } else {
         fs::remove_file(&exe)?;
     }

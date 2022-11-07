@@ -854,7 +854,7 @@ fn test_url_normalization() {
 #[cfg(test)]
 fn git_initialize_repo(dir: &Path) {
     Command::new("git")
-        .args(&["init", "--quiet"])
+        .args(["init", "--quiet"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git init`.")
@@ -862,7 +862,7 @@ fn git_initialize_repo(dir: &Path) {
         .expect("Failed to wait on git init.");
 
     Command::new("git")
-        .args(&["config", "--local", "user.name", "test"])
+        .args(["config", "--local", "user.name", "test"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git config`.")
@@ -870,7 +870,7 @@ fn git_initialize_repo(dir: &Path) {
         .expect("Failed to wait on git config.");
 
     Command::new("git")
-        .args(&["config", "--local", "user.email", "test@example.com"])
+        .args(["config", "--local", "user.email", "test@example.com"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git config`.")
@@ -878,7 +878,7 @@ fn git_initialize_repo(dir: &Path) {
         .expect("Failed to wait on git config.");
 
     Command::new("git")
-        .args(&[
+        .args([
             "remote",
             "add",
             "origin",
@@ -898,7 +898,7 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
     file.write_all(content).expect("Failed to execute.");
 
     let mut add = Command::new("git")
-        .args(&["add", "-A"])
+        .args(["add", "-A"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git add .`");
@@ -906,7 +906,7 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
     add.wait().expect("Failed to wait on git add.");
 
     let mut commit = Command::new("git")
-        .args(&[
+        .args([
             "commit",
             "-am",
             commit_message,
@@ -940,7 +940,7 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
     tag.wait().expect("Failed to wait on git tag.");
 
     let hash = Command::new("git")
-        .args(&["rev-list", "-n", "1", tag_name])
+        .args(["rev-list", "-n", "1", tag_name])
         .current_dir(dir)
         .output()
         .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {}`.", tag_name));

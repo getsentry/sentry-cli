@@ -463,7 +463,7 @@ impl<'a> DifSource<'a> {
     {
         match *self {
             DifSource::FileSystem(base) => Self::get_relative_fs(base, path.as_ref()),
-            DifSource::Zip(ref mut zip, name) => Self::get_relative_zip(*zip, name, path.as_ref()),
+            DifSource::Zip(ref mut zip, name) => Self::get_relative_zip(zip, name, path.as_ref()),
         }
     }
 }
