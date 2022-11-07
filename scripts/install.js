@@ -258,19 +258,29 @@ async function downloadBinary() {
     decompressor = new stream.PassThrough();
   }
   const name = downloadUrl.match(/.*\/(.*?)$/)[1];
-  const total = parseInt(response.headers.get('content-length'), 10);
-  const progressBar = createProgressBar(name, total);
+  let downloadedBytes = 0;
+  const totalBytes = parseInt(response.headers.get('content-length'), 10);
+  const progressBar = createProgressBar(name, totalBytes);
   const tempPath = getTempFile(cachedPath);
   fs.mkdirSync(path.dirname(tempPath), { recursive: true });
 
   await new Promise((resolve, reject) => {
     response.body
       .on('error', (e) => reject(e))
-      .on('data', (chunk) => progressBar.tick(chunk.length))
+      .on('data', (chunk) => {
+        downloadedBytes += chunk.length;
+        progressBar.tick(chunk.length);
+      })
       .pipe(decompressor)
       .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
       .on('error', (e) => reject(e))
-      .on('close', () => resolve());
+      .on('close', () => {
+        if (downloadedBytes >= totalBytes) {
+          resolve();
+        } else {
+          reject(new Error('connection interrupted'));
+        }
+      });
   });
 
   if (process.env.SENTRYCLI_SKIP_CHECKSUM_VALIDATION !== '1') {
