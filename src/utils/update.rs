@@ -31,19 +31,19 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
         runas::Command::new("cmd")
             .arg("/c")
             .arg("move")
-            .arg(&exe)
+            .arg(exe)
             .arg(&tmp)
             .arg("&")
             .arg("move")
-            .arg(&downloaded_path)
-            .arg(&exe)
+            .arg(downloaded_path)
+            .arg(exe)
             .arg("&")
             .arg("del")
-            .arg(&tmp)
+            .arg(tmp)
             .status()?;
     } else {
-        fs::rename(&exe, &tmp)?;
-        fs::rename(&downloaded_path, &exe)?;
+        fs::rename(exe, &tmp)?;
+        fs::rename(downloaded_path, exe)?;
         fs::remove_file(&tmp).ok();
     }
 
@@ -55,11 +55,11 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
         runas::Command::new("mv")
-            .arg(&downloaded_path)
-            .arg(&exe)
+            .arg(downloaded_path)
+            .arg(exe)
             .status()?;
     } else {
-        fs::rename(&downloaded_path, &exe)?;
+        fs::rename(downloaded_path, exe)?;
     }
     Ok(())
 }

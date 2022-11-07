@@ -36,7 +36,7 @@ pub fn make_command(mut command: Command) -> Command {
                 .short('s')
                 .value_name("STATUS")
                 .global(true)
-                .possible_values(&["resolved", "muted", "unresolved"])
+                .possible_values(["resolved", "muted", "unresolved"])
                 .help("Select all issues matching a given status."),
         )
         .arg(
