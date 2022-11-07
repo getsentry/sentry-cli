@@ -58,7 +58,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .long("dist")
                 .short('d')
-                .value_parser(validate_distribution)
+                .validator(validate_distribution)
                 .help("Set the distribution."),
         )
         .arg(

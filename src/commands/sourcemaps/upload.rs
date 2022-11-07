@@ -45,7 +45,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .short('d')
                 .value_name("DISTRIBUTION")
-                .value_parser(validate_distribution)
+                .validator(validate_distribution)
                 .help("Optional distribution identifier for the sourcemaps."),
         )
         .arg(
