@@ -56,7 +56,7 @@ pub fn validate_distribution(v: &str) -> Result<(), String> {
             "Invalid distribution name. Distribution must not contain leading or trailing spaces."
                 .to_string(),
         )
-    } else if v.len() > 64 {
+    } else if bytecount::num_chars(v.as_bytes()) > 64 {
         Err(
             "Invalid distribution name. Distribution name must not be longer than 64 characters."
                 .to_string(),
