@@ -442,7 +442,7 @@ impl<'a> MayDetach<'a> {
                 if let Some(ref output_file) = md.output_file {
                     crate::utils::system::print_error(&err);
                     if md.show_critical_info()? {
-                        open::that(&output_file.path())?;
+                        open::that(output_file.path())?;
                         std::thread::sleep(Duration::from_millis(5000));
                     }
                 }

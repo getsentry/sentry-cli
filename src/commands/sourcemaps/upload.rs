@@ -22,7 +22,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .value_name("PATHS")
-                .required_unless_present_any(&["bundle", "bundle_sourcemap"])
+                .required_unless_present_any(["bundle", "bundle_sourcemap"])
                 .multiple_occurrences(true)
                 .help("The files to upload."),
         )

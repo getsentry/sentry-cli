@@ -65,7 +65,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if let Some(events) = events.get(..max_rows) {
         for event in events {
             let row = table.add_row();
-            row.add(&event.event_id)
+            row.add(event.event_id)
                 .add(&event.date_created)
                 .add(&event.title);
 

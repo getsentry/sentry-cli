@@ -341,7 +341,7 @@ pub fn wrap_call() -> Result<()> {
     sourcemap_report.bundle_path = bundle_path.map(PathBuf::from);
 
     let rv = process::Command::new(env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap())
-        .args(&args)
+        .args(args)
         .spawn()?
         .wait()?;
     propagate_exit_status(rv);

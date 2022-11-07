@@ -24,7 +24,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .add_row()
             .add(&repo.name)
             .add(&repo.provider.name)
-            .add(&repo.url.as_deref().unwrap_or("-"));
+            .add(repo.url.as_deref().unwrap_or("-"));
     }
 
     if table.is_empty() {
