@@ -9,6 +9,7 @@ use sha1_smol::Digest;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
+use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::path_as_url;
@@ -44,6 +45,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .short('d')
                 .value_name("DISTRIBUTION")
+                .validator(validate_distribution)
                 .help("Optional distribution identifier for the sourcemaps."),
         )
         .arg(

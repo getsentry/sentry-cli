@@ -18,3 +18,8 @@ fn command_send_event_raw() {
 fn command_send_event_file() {
     register_test("send_event/send_event-file.trycmd");
 }
+
+#[test]
+fn command_send_event_raw_fail() {
+    register_test("send_event/send_event-raw-fail.trycmd");
+}

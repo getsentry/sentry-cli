@@ -10,6 +10,7 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 use crate::api::{Api, ProgressBarMode};
 use crate::config::Config;
+use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
 use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
@@ -35,6 +36,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .short('d')
                 .value_name("DISTRIBUTION")
+                .validator(validate_distribution)
                 .help("Optional distribution identifier for this file."),
         )
         .arg(
