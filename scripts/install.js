@@ -15,11 +15,11 @@ const fetch = require('node-fetch');
 const HttpsProxyAgent = require('https-proxy-agent');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
-const npmLog = require('npmlog');
 const which = require('which');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
+const logger = require('../js/logger');
 
 const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
@@ -157,14 +157,14 @@ function validateChecksum(tempPath, name) {
       }
     }
   } catch (e) {
-    npmLog.info(
+    logger.info(
       'Checksums are generated when the package is published to npm. They are not available directly in the source repository. Skipping validation.'
     );
     return;
   }
 
   if (!storedHash) {
-    npmLog.info(`Checksum for ${name} not found, skipping validation.`);
+    logger.info(`Checksum for ${name} not found, skipping validation.`);
     return;
   }
 
@@ -176,7 +176,7 @@ function validateChecksum(tempPath, name) {
       `Checksum validation for ${name} failed.\nExpected: ${storedHash}\nReceived: ${currentHash}`
     );
   } else {
-    npmLog.info('Checksum validation passed.');
+    logger.info('Checksum validation passed.');
   }
 }
 
@@ -188,7 +188,7 @@ async function downloadBinary() {
   if (process.env.SENTRYCLI_USE_LOCAL === '1') {
     try {
       const binPath = which.sync('sentry-cli');
-      npmLog.info('sentry-cli', `Using local binary: ${binPath}`);
+      logger.info('sentry-cli', `Using local binary: ${binPath}`);
       fs.copyFileSync(binPath, outputPath);
       return Promise.resolve();
     } catch (e) {
@@ -206,7 +206,7 @@ async function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    npmLog.info('sentry-cli', `Using cached binary: ${cachedPath}`);
+    logger.info('sentry-cli', `Using cached binary: ${cachedPath}`);
     fs.copyFileSync(cachedPath, outputPath);
     return;
   }
@@ -214,10 +214,10 @@ async function downloadBinary() {
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
   const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
 
-  npmLog.info('sentry-cli', `Downloading from ${downloadUrl}`);
+  logger.info('sentry-cli', `Downloading from ${downloadUrl}`);
 
   if (proxyUrl) {
-    npmLog.info('sentry-cli', `Using proxy URL: ${proxyUrl}`);
+    logger.info('sentry-cli', `Using proxy URL: ${proxyUrl}`);
   }
 
   let response;
@@ -316,10 +316,10 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   process.on('exit', () => server.close());
 }
 
-npmLog.stream = getLogStream('stderr');
+logger.stream = getLogStream('stderr');
 
 if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
-  npmLog.info('sentry-cli', `Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
+  logger.info('sentry-cli', `Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
   process.exit(0);
 }
 
