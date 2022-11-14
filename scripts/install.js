@@ -19,7 +19,9 @@ const which = require('which');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
-const logger = require('../js/logger');
+const Logger = require('../js/logger');
+
+const logger = new Logger(getLogStream('stderr'));
 
 const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
@@ -157,18 +159,21 @@ function validateChecksum(tempPath, name) {
       }
     }
   } catch (e) {
-    logger.info(
+    logger.log(
       'Checksums are generated when the package is published to npm. They are not available directly in the source repository. Skipping validation.'
     );
     return;
   }
 
   if (!storedHash) {
-    logger.info(`Checksum for ${name} not found, skipping validation.`);
+    logger.log(`Checksum for ${name} not found, skipping validation.`);
     return;
   }
 
-  const currentHash = crypto.createHash('sha256').update(fs.readFileSync(tempPath)).digest('hex');
+  const currentHash = crypto
+    .createHash('sha256')
+    .update(fs.readFileSync(tempPath))
+    .digest('hex');
 
   if (storedHash !== currentHash) {
     fs.unlinkSync(tempPath);
@@ -176,7 +181,7 @@ function validateChecksum(tempPath, name) {
       `Checksum validation for ${name} failed.\nExpected: ${storedHash}\nReceived: ${currentHash}`
     );
   } else {
-    logger.info('Checksum validation passed.');
+    logger.log('Checksum validation passed.');
   }
 }
 
@@ -188,7 +193,7 @@ async function downloadBinary() {
   if (process.env.SENTRYCLI_USE_LOCAL === '1') {
     try {
       const binPath = which.sync('sentry-cli');
-      logger.info('sentry-cli', `Using local binary: ${binPath}`);
+      logger.log(`Using local binary: ${binPath}`);
       fs.copyFileSync(binPath, outputPath);
       return Promise.resolve();
     } catch (e) {
@@ -206,7 +211,7 @@ async function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    logger.info('sentry-cli', `Using cached binary: ${cachedPath}`);
+    logger.log(`Using cached binary: ${cachedPath}`);
     fs.copyFileSync(cachedPath, outputPath);
     return;
   }
@@ -214,10 +219,10 @@ async function downloadBinary() {
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
   const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
 
-  logger.info('sentry-cli', `Downloading from ${downloadUrl}`);
+  logger.log(`Downloading from ${downloadUrl}`);
 
   if (proxyUrl) {
-    logger.info('sentry-cli', `Using proxy URL: ${proxyUrl}`);
+    logger.log(`Using proxy URL: ${proxyUrl}`);
   }
 
   let response;
@@ -316,10 +321,8 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   process.on('exit', () => server.close());
 }
 
-logger.stream = getLogStream('stderr');
-
 if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
-  logger.info('sentry-cli', `Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
+  logger.log(`Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
   process.exit(0);
 }
 
