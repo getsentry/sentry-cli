@@ -170,10 +170,7 @@ function validateChecksum(tempPath, name) {
     return;
   }
 
-  const currentHash = crypto
-    .createHash('sha256')
-    .update(fs.readFileSync(tempPath))
-    .digest('hex');
+  const currentHash = crypto.createHash('sha256').update(fs.readFileSync(tempPath)).digest('hex');
 
   if (storedHash !== currentHash) {
     fs.unlinkSync(tempPath);
