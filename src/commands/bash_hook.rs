@@ -56,10 +56,26 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .hide(true),
         )
+        .arg(
+            Arg::new("tags")
+                .value_name("KEY:VALUE")
+                .long("tag")
+                .short('t')
+                .multiple_occurrences(true)
+                .help("Add a tag (key:value) to the event."),
+        )
+        .arg(
+            Arg::new("extra")
+                .value_name("KEY:VALUE")
+                .long("extra")
+                .short('e')
+                .multiple_occurrences(true)
+                .help("Add extra information (key:value) to the event."),
+        )
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str, tags: std::option::Option<&str>, extra_data: std::option::Option<&str>, environ: bool) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
@@ -79,6 +95,20 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
             "environ".into(),
             Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
         );
+    }
+
+    for tag in tags {
+        let mut split = tag.splitn(2, ':');
+        let key = split.next();
+        let value = split.next();
+        event.tags.insert(key.unwrap().into(), value.unwrap().into());
+    }
+
+    for extra_item in extra_data {
+        let mut split = extra_item.splitn(2, ':');
+        let key = split.next();
+        let value = split.next();
+        event.extra.insert(key.unwrap().into(), Value::String(value.unwrap().into()));
     }
 
     let mut cmd = "unknown".to_string();
@@ -175,6 +205,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return send_event(
             matches.value_of("traceback").unwrap(),
             matches.value_of("log").unwrap(),
+            matches.value_of("tags"),
+            matches.value_of("extra"),
             !matches.is_present("no_environ"),
         );
     }
