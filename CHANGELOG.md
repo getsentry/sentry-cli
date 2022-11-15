@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.9.0
+
+### Various fixes & improvements
+
+- feat: Replace `npmlog` dependency and restore support for Node v10 (#1392) by @mydea
+- fix: Handle closed connection when fetching `sentry-cli` binary via JS script (#1389) by @kamilogorek
+- fix: Re-add `server_name` in events via `contexts` sentry-rust feature (#1383) by @bengentil
+- ref: Add length limit validation to `org` arguments (#1386) by @olksdr
+
 ## 2.8.1
 
 ### Various fixes & improvements
