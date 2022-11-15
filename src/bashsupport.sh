@@ -18,6 +18,30 @@ _sentry_exit_trap() {
   exit $_exit_code
 }
 
+_sentry_gather_tags() {
+    TAGS=' '
+    for tag in $SENTRY_TAGS
+    do
+        if [[ $tag =~ [A-Za-z0-9_-]:[A-Za-z0-9_-] ]]
+        then
+            TAGS+="--tag ${tag} "
+        fi
+    done
+    echo $TAGS
+}
+
+_sentry_gather_extra() {
+    EXTRA=' '
+    for ex in $SENTRY_EXTRA
+    do
+        if [[ $ex =~ [A-Za-z0-9_-]:[A-Za-z0-9_-] ]]
+        then
+            EXTRA+="--extra ${ex} "
+        fi
+    done
+    echo $EXTRA
+}
+
 _sentry_err_trap() {
   local _exit_code="$?"
   local _command="${BASH_COMMAND:-unknown}"
@@ -32,7 +56,9 @@ _sentry_err_trap() {
   echo "@exit_code:${_exit_code}" >> "$_SENTRY_TRACEBACK_FILE"
 
   : >> "$_SENTRY_LOG_FILE"
-  export SENTRY_LAST_EVENT=$(/usr/local/bin/sentry-cli bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --tag "job_name:$CI_JOB_NAME" -e "job_id:$CI_JOB_ID" -e "job_url:CI_JOB_URL" --log "$_SENTRY_LOG_FILE")
+  HOOK_TAGS="$(_sentry_gather_tags)"
+  HOOK_EXTRA="$(_sentry_gather_extra)"
+  export SENTRY_LAST_EVENT=$(___SENTRY_CLI___ bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" $HOOK_TAGS $HOOK_EXTRA --log "$_SENTRY_LOG_FILE" ___SENTRY_NO_ENVIRON___)
   rm -f "$_SENTRY_TRACEBACK_FILE" "$_SENTRY_LOG_FILE"
 }
 

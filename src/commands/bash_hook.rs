@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use clap::Command;
 use clap::{Arg, ArgMatches};
 use lazy_static::lazy_static;
@@ -75,7 +75,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(traceback: &str, logfile: &str, tags: std::option::Option<&str>, extra_data: std::option::Option<&str>, environ: bool) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str, tags: clap::Values<'_>, extra_data: clap::Values<'_>, environ: bool) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
@@ -99,16 +99,16 @@ fn send_event(traceback: &str, logfile: &str, tags: std::option::Option<&str>, e
 
     for tag in tags {
         let mut split = tag.splitn(2, ':');
-        let key = split.next();
-        let value = split.next();
-        event.tags.insert(key.unwrap().into(), value.unwrap().into());
+        let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
+        let value = split.next().ok_or_else(|| format_err!("missing tag value"))?;
+        event.tags.insert(key.into(), value.into());
     }
 
     for extra_item in extra_data {
         let mut split = extra_item.splitn(2, ':');
-        let key = split.next();
-        let value = split.next();
-        event.extra.insert(key.unwrap().into(), Value::String(value.unwrap().into()));
+        let key = split.next().ok_or_else(|| format_err!("missing extra key"))?;
+        let value = split.next().ok_or_else(|| format_err!("missing extra value"))?;
+        event.extra.insert(key.into(), Value::String(value.into()));
     }
 
     let mut cmd = "unknown".to_string();
@@ -205,8 +205,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return send_event(
             matches.value_of("traceback").unwrap(),
             matches.value_of("log").unwrap(),
-            matches.value_of("tags"),
-            matches.value_of("extra"),
+            matches.values_of("tags").unwrap_or_default(),
+            matches.values_of("extra").unwrap_or_default(),
             !matches.is_present("no_environ"),
         );
     }
