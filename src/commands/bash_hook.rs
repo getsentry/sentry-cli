@@ -201,12 +201,15 @@ fn send_event(traceback: &str, logfile: &str, tags: clap::Values<'_>, extra_data
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let tags = matches.values_of("tags").unwrap_or_default();
+    let extra = matches.values_of("extra").unwrap_or_default();
+
     if matches.is_present("send_event") {
         return send_event(
             matches.value_of("traceback").unwrap(),
             matches.value_of("log").unwrap(),
-            matches.values_of("tags").unwrap_or_default(),
-            matches.values_of("extra").unwrap_or_default(),
+            tags,
+            extra,
             !matches.is_present("no_environ"),
         );
     }
@@ -230,6 +233,36 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         script = script.replace(
             "___SENTRY_CLI___",
             &env::current_exe().unwrap().display().to_string(),
+        );
+    }
+
+    let mut hook_tags = "".to_string();
+    for tag in tags {
+        hook_tags.push_str(&"-t ".to_string());
+        hook_tags.push_str(&tag.to_string());
+    }
+
+    let mut hook_extra = "".to_string();
+    for ex in extra {
+        hook_extra.push_str(&"--extra ".to_string());
+        hook_extra.push_str(&ex.to_string());
+    }
+
+    if hook_tags.is_empty() {
+        script = script.replace("___SENTRY_TAGS___", &"".to_string())
+    } else {
+        script = script.replace(
+            "___SENTRY_TAGS___",
+            &hook_tags.to_string(),
+        );
+    }
+
+    if hook_extra.is_empty() {
+        script = script.replace("___SENTRY_EXTRA___", &"".to_string())
+    } else {
+        script = script.replace(
+            "___SENTRY_EXTRA___",
+            &hook_extra.to_string(),
         );
     }
 
