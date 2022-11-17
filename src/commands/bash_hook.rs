@@ -239,13 +239,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut hook_tags = "".to_string();
     for tag in tags {
         hook_tags.push_str(&"-t ".to_string());
-        hook_tags.push_str(&tag.to_string());
+        let tag_value = format!("\"{}\"", tag.to_string());
+        hook_tags.push_str(&tag_value.to_string());
     }
 
     let mut hook_extra = "".to_string();
     for ex in extra {
         hook_extra.push_str(&"--extra ".to_string());
-        hook_extra.push_str(&ex.to_string());
+        let extra_value = format!("\"{}\"", ex.to_string());
+        hook_extra.push_str(&extra_value.to_string());
     }
 
     if hook_tags.is_empty() {
