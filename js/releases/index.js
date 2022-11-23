@@ -146,7 +146,8 @@ class Releases {
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
    *   urlSuffix: '',             // add a suffix source map urls after stripping them
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
-   *   projects: ['node']        // provide a list of projects
+   *   projects: ['node'],        // provide a list of projects
+   *   decompress: false          // decompress gzip files before uploading
    * });
    *
    * @param {string} release Unique name of the release.
