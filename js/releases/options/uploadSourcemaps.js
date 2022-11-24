@@ -11,6 +11,10 @@ module.exports = {
     param: '--dist',
     type: 'string',
   },
+  decompress: {
+    param: '--decompress',
+    type: 'boolean',
+  },
   rewrite: {
     param: '--rewrite',
     invertedParam: '--no-rewrite',
