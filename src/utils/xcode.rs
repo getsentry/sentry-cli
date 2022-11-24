@@ -264,7 +264,7 @@ impl InfoPlist {
             }
             c.arg(path.as_ref());
             let p = c.output()?;
-            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..])).map_err(|e| e)
+            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))
         } else {
             InfoPlist::from_path(path).or_else(|err| {
                 /*
@@ -304,20 +304,12 @@ impl InfoPlist {
             })
         };
 
-        if let Ok(raw) = plist {
-            let name = expand_xcodevars(&raw.name, vars);
-            let bundle_id = expand_xcodevars(&raw.bundle_id, vars);
-            let version = expand_xcodevars(&raw.version, vars);
-            let build = expand_xcodevars(&raw.build, vars);
-            return Ok(InfoPlist {
-                name,
-                bundle_id,
-                version,
-                build,
-            });
-        } else {
-          return plist;
-        }
+        plist.map(|raw| InfoPlist {
+            name: expand_xcodevars(&raw.name, vars),
+            bundle_id: expand_xcodevars(&raw.bundle_id, vars),
+            version: expand_xcodevars(&raw.version, vars),
+            build: expand_xcodevars(&raw.build, vars),
+        })
     }
 
     /// Loads an info plist from provided environment variables list
