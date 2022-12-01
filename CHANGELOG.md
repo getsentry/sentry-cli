@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.10.0
+
+### Various fixes & improvements
+
+- feat: Add `--decompress` option to JS types (#1402) by @FSchieber
+- fix: Always expand Plist vars during XCode upload (#1403) by @krystofwoldrich
+
 ## 2.9.0
 
 ### Various fixes & improvements
