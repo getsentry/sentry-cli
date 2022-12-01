@@ -94,6 +94,9 @@ jobs:
       - run: npm test
 
   test_install:
+    # Don't run size check on release branches, as at this point binaries were not published to CDN yet.
+    if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
+
     strategy:
       fail-fast: false
       matrix:
@@ -113,7 +116,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Setup empty test app
-        run:  mkdir test-app && cd test-app && npm init --yes
+        run: mkdir test-app && cd test-app && npm init --yes
 
       - name: Install @sentry/cli
         run: npm install ../sentry-cli-dep --install-links
@@ -130,4 +133,3 @@ jobs:
 
       - name: Ensure binary is installed globally
         run: sentry-cli help
-
