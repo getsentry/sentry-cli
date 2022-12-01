@@ -1,0 +1,9 @@
+```
+$ sentry-cli debug-files upload --include-sources tests/integration/_fixtures/Sentry.Samples.Console.Basic-embedded-sources.pdb
+? success
+> Found 1 debug information file (1 with embedded sources)
+> Resolved source code for 0 debug information files
+> Prepared debug information file for upload
+> Nothing to upload, all files are on the server
+
+```
