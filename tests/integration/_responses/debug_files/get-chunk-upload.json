@@ -13,6 +13,7 @@
     "debug_files",
     "release_files",
     "pdbs",
+    "portablepdbs",
     "sources",
     "bcsymbolmaps"
   ]

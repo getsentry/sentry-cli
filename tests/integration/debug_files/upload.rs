@@ -35,6 +35,38 @@ fn command_debug_files_upload() {
 }
 
 #[test]
+fn command_debug_files_upload_pdb() {
+    let _chunk_upload = mock_endpoint(
+        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            .with_response_file("debug_files/get-chunk-upload.json"),
+    );
+    let _assemble = mock_endpoint(
+        EndpointOptions::new(
+            "POST",
+            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+            200,
+        )
+        .with_response_body(
+            r#"{
+                "5f81d6becc51980870acc9f6636ab53d26160763": {
+                    "state": "ok",
+                    "missingChunks": []
+                }
+            }"#,
+        ),
+    );
+    let _reprocessing = mock_endpoint(
+        EndpointOptions::new(
+            "POST",
+            "/api/0/projects/wat-org/wat-project/reprocessing/",
+            200,
+        )
+        .with_response_body("[]"),
+    );
+    register_test("debug_files/debug_files-upload-pdb.trycmd");
+}
+
+#[test]
 fn command_debug_files_upload_no_upload() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
