@@ -718,7 +718,8 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
     }
 
     pb.finish_and_clear();
-    println!(
+
+    print!(
         "{} Found {} debug information {}",
         style(">").dim(),
         style(collected.len()).yellow(),
@@ -727,6 +728,22 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
             _ => "files",
         }
     );
+
+    let count_with_sources = match options.include_sources {
+        true => collected
+            .iter()
+            .filter(|dif| match dif.object() {
+                Some(object) => object.has_sources(),
+                None => false,
+            })
+            .count(),
+        false => 0,
+    };
+
+    match count_with_sources {
+        0 => println!(),
+        _ => println!(" ({} with embedded sources)", count_with_sources),
+    }
 
     Ok(collected)
 }

@@ -9,3 +9,5 @@ checksums.txt
 
 /sentry-cli
 /sentry-cli.exe
+
+/dump/*
