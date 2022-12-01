@@ -94,7 +94,7 @@ jobs:
       - run: npm test
 
   test_install:
-    # Don't run size check on release branches, as at this point binaries were not published to CDN yet.
+    # Don't run install test on release branches, as at this point binaries were not published to CDN yet.
     if: ${{ !startsWith(github.ref, 'refs/heads/release/') }}
 
     strategy:
