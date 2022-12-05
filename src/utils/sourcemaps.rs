@@ -2,7 +2,7 @@
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::mem;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str;
 
 use anyhow::{bail, Error, Result};
@@ -581,8 +581,17 @@ fn validate_script(source: &mut ReleaseFile) -> Result<()> {
             source.warn("encountered a legacy reference".into());
         }
         let url = sm_ref.get_url();
-        let full_url = join_url(&source.url, url)?;
-        info!("found sourcemap for {} at {}", &source.url, full_url);
+        if source.url.starts_with('/') {
+            let full_url = Path::new(&source.url).join(url);
+            info!(
+                "found sourcemap for {} at {}",
+                &source.url,
+                full_url.display()
+            );
+        } else {
+            let full_url = join_url(&source.url, url)?;
+            info!("found sourcemap for {} at {}", &source.url, full_url);
+        };
     } else if source.ty == SourceFileType::MinifiedSource {
         source.error("missing sourcemap!".into());
     }
