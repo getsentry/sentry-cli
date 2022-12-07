@@ -8,7 +8,7 @@ use crate::utils::logging;
 pub use indicatif::{ProgressDrawTarget, ProgressStyle};
 
 pub fn is_progress_bar_visible() -> bool {
-    env::var("SENTRY_NO_PROGRESS_BAR") != Ok("1".into())
+    env::var("SENTRYCLI_NO_PROGRESS_BAR") != Ok("1".into())
 }
 
 pub struct ProgressBar {
