@@ -113,7 +113,7 @@ pub fn get_react_native_codepush_release(
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
         for entry in (glob_with("ios/*.xcodeproj", opts)?).flatten() {
-            let pi = XcodeProjectInfo::from_path(&entry)?;
+            let pi = XcodeProjectInfo::from_path(entry)?;
             if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                 if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
                     return Ok(format!("{}+codepush:{}", release_name, package.label));

@@ -36,7 +36,7 @@ where
     T: Into<u64> + Copy,
 {
     fn size(&self) -> u64 {
-        (*self).into() as u64
+        (*self).into()
     }
 }
 

@@ -3,11 +3,12 @@ use std::time::Instant;
 
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
+use console::style;
 use uuid::Uuid;
 
 use crate::api::{Api, CreateMonitorCheckIn, MonitorStatus, UpdateMonitorCheckIn};
 use crate::utils::args::validate_uuid;
-use crate::utils::system::QuietExit;
+use crate::utils::system::{print_error, QuietExit};
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -55,7 +56,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
-    let exit_status = p.status()?;
+    let (success, code) = match p.status() {
+        Ok(status) => (status.success(), status.code()),
+        Err(err) => {
+            eprintln!(
+                "{} could not invoke program '{}': {}",
+                style("error").red(),
+                args[0],
+                err
+            );
+            (false, None)
+        }
+    };
 
     match monitor_checkin {
         Ok(checkin) => {
@@ -63,7 +75,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 &monitor,
                 &checkin.id,
                 &UpdateMonitorCheckIn {
-                    status: Some(if exit_status.success() {
+                    status: Some(if success {
                         MonitorStatus::Ok
                     } else {
                         MonitorStatus::Error
@@ -78,15 +90,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
         Err(e) => {
             if allow_failure {
-                eprintln!("{}", e);
+                print_error(&anyhow::Error::from(e));
             } else {
                 return Err(e.into());
             }
         }
     }
 
-    if !exit_status.success() {
-        if let Some(code) = exit_status.code() {
+    if !success {
+        if let Some(code) = code {
             Err(QuietExit(code).into())
         } else {
             Err(QuietExit(1).into())
