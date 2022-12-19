@@ -6,7 +6,7 @@ use std::path::Path;
 fn main() {
     let out_dir = env::var("OUT_DIR").unwrap();
     let dest_path = Path::new(&out_dir).join("constants.gen.rs");
-    let mut f = File::create(&dest_path).unwrap();
+    let mut f = File::create(dest_path).unwrap();
 
     let target = env::var("TARGET").unwrap();
     let mut target_bits = target.split('-');
