@@ -174,7 +174,7 @@ pub fn get_react_native_appcenter_release(
         opts.case_sensitive = false;
 
         for entry in (glob_with("ios/*.xcodeproj", opts)?).flatten() {
-            let pi = XcodeProjectInfo::from_path(&entry)?;
+            let pi = XcodeProjectInfo::from_path(entry)?;
             if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                 if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
                     let vec: Vec<&str> = release_name.split('@').collect();

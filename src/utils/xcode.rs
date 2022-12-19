@@ -199,7 +199,7 @@ impl InfoPlist {
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
                 let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
-                Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+                Ok(Some(InfoPlist::load_and_process(path, &vars)?))
             } else if let Ok(default_plist) = InfoPlist::from_env_vars(&vars) {
                 Ok(Some(default_plist))
             } else {
@@ -236,7 +236,7 @@ impl InfoPlist {
                     let base = vars.get("PROJECT_DIR").map(Path::new)
                         .unwrap_or_else(|| pi.base_path());
                     let path = base.join(path);
-                    return Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+                    return Ok(Some(InfoPlist::load_and_process(path, &vars)?))
                 }
             }
         }
@@ -264,7 +264,7 @@ impl InfoPlist {
             }
             c.arg(path.as_ref());
             let p = c.output()?;
-            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))
+            InfoPlist::from_reader(Cursor::new(&p.stdout[..]))
         } else {
             InfoPlist::from_path(path).or_else(|err| {
                 /*
