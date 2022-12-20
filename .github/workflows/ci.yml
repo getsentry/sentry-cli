@@ -91,6 +91,10 @@ jobs:
         env:
           SENTRYCLI_LOCAL_CDNURL: 'http://localhost:8999/'
 
+      # older node versions need an older nft
+      - run: npm install @vercel/nft@0.22.1
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
+
       - run: npm test
 
   test_install:
