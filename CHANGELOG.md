@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.11.0
+
+### Various fixes & improvements
+
+- feat: Report spawn failures for monitors by @mitsuhiko
+- fix: Allow for path based sourcemaps in validation report @kamilogorek
+
 ## 2.10.0
 
 ### Various fixes & improvements
