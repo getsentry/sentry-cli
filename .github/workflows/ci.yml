@@ -93,7 +93,7 @@ jobs:
 
       # older node versions need an older nft
       - run: npm install @vercel/nft@0.22.1
-        if: matrix.node-version == '10.x' || matrix.node-verison == '12.x'
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
       - run: npm test
 
