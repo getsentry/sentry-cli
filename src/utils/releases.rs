@@ -117,7 +117,7 @@ pub fn detect_release_name() -> Result<String> {
             return Ok(release);
         }
     }
-    
+
     // try Cloudflare Pages: https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables
     if let Ok(release) = env::var("CF_PAGES_COMMIT_SHA") {
         if !release.is_empty() {
