@@ -118,6 +118,13 @@ pub fn detect_release_name() -> Result<String> {
         }
     }
 
+    // try Cloudflare Pages: https://developers.cloudflare.com/pages/platform/build-configuration/#environment-variables
+    if let Ok(release) = env::var("CF_PAGES_COMMIT_SHA") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
     // for now only execute this on macs.  The reason is that this uses
     // xcodebuild which does not exist anywhere but there.
     if_chain! {
