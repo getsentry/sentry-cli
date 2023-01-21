@@ -100,7 +100,7 @@ pub fn validate_id(s: &str) -> Result<(), String> {
 
 pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
     if let Ok(int) = value.parse::<i64>() {
-        Ok(Utc.timestamp(int, 0))
+        Ok(Utc.timestamp_opt(int, 0).single().unwrap())
     } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
         Ok(dt.with_timezone(&Utc))
     } else if let Ok(dt) = DateTime::parse_from_rfc2822(value) {
