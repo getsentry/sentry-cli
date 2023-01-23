@@ -571,7 +571,11 @@ pub fn generate_patch_set(
 }
 
 pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
-    FixedOffset::east(time.offset_minutes() * 60).timestamp(time.seconds(), 0)
+    FixedOffset::east_opt(time.offset_minutes() * 60)
+        .unwrap()
+        .timestamp_opt(time.seconds(), 0)
+        .single()
+        .unwrap()
 }
 
 #[cfg(test)]
