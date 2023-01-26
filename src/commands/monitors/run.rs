@@ -56,6 +56,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
+    p.env("SENTRY_MONITOR_ID", monitor.to_string());
+
     let (success, code) = match p.status() {
         Ok(status) => (status.success(), status.code()),
         Err(err) => {

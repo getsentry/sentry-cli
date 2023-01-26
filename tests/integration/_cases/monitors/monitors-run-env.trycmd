@@ -1,0 +1,6 @@
+```
+$ sentry-cli monitors run 85a34e5a-c0b6-11ec-9d64-0242ac120002 -- sh -c 'env | grep SENTRY_MONITOR_ID'
+? success
+SENTRY_MONITOR_ID=85a34e5a-c0b6-11ec-9d64-0242ac120002
+
+```
