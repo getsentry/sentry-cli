@@ -64,11 +64,11 @@ fn command_debug_files_upload_pdb() {
         .with_response_body("[]"),
     );
     register_test("debug_files/debug_files-upload-pdb.trycmd");
+    register_test("debug_files/debug_files-upload-pdb-include-sources.trycmd");
 }
 
-// TODO update once sources are supported by symbolic-debuginfo for PPDB
 #[test]
-fn command_debug_files_upload_pdb_with_sources() {
+fn command_debug_files_upload_pdb_embedded_sources() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
@@ -81,7 +81,7 @@ fn command_debug_files_upload_pdb_with_sources() {
         )
         .with_response_body(
             r#"{
-                "5f81d6becc51980870acc9f6636ab53d26160763": {
+                "50dd9456dc89cdbc767337da512bdb36b15db6b2": {
                     "state": "ok",
                     "missingChunks": []
                 }
@@ -96,7 +96,7 @@ fn command_debug_files_upload_pdb_with_sources() {
         )
         .with_response_body("[]"),
     );
-    register_test("debug_files/debug_files-upload-pdb-include-sources.trycmd");
+    register_test("debug_files/debug_files-upload-pdb-embedded-sources.trycmd");
 }
 
 #[test]
