@@ -29,11 +29,11 @@ fn is_likely_minified_js(code: &[u8]) -> bool {
 
 fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
-        match Url::parse(&format!("http://{}", base_url))?.join(url) {
+        match Url::parse(&format!("http://{base_url}"))?.join(url) {
             Ok(url) => {
                 let rv = url.to_string();
                 if let Some(rest) = rv.strip_prefix("http://~/") {
-                    Ok(format!("~/{}", rest))
+                    Ok(format!("~/{rest}"))
                 } else {
                     Ok(rv)
                 }
@@ -73,7 +73,7 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
 }
 
 pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
-    get_sourcemap_reference_from_headers(file.headers.iter().map(|&(ref k, ref v)| (k, v)))
+    get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
         .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
@@ -118,14 +118,14 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 
     if let Some(ext) = ext.as_ref() {
         // foo.min.js -> foo.min.js.map
-        let new_ext = format!("{}.{}", ext, map_ext);
+        let new_ext = format!("{ext}.{map_ext}");
         if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
             return Ok(unsplit_url(None, basename, Some(&new_ext)));
         }
 
         // foo.min.js -> foo.js.map
         if let Some(rest) = ext.strip_prefix("min.") {
-            let new_ext = format!("{}.{}", rest, map_ext);
+            let new_ext = format!("{rest}.{map_ext}");
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
                 return Ok(unsplit_url(None, basename, Some(&new_ext)));
             }
@@ -324,13 +324,13 @@ impl SourceMapProcessor {
             match source.ty {
                 SourceFileType::Source | SourceFileType::MinifiedSource => {
                     if let Err(err) = validate_script(source) {
-                        source.error(format!("failed to process: {}", err));
+                        source.error(format!("failed to process: {err}"));
                         failed = true;
                     }
                 }
                 SourceFileType::SourceMap => {
                     if let Err(err) = validate_sourcemap(&source_urls, source) {
-                        source.error(format!("failed to process: {}", err));
+                        source.error(format!("failed to process: {err}"));
                         failed = true;
                     }
                 }
@@ -424,7 +424,7 @@ impl SourceMapProcessor {
             );
 
             debug!("Inserting sourcemap for {}", name);
-            let sourcemap_name = format!("{}.map", name);
+            let sourcemap_name = format!("{name}.map");
             let sourcemap_url = join_url(bundle_source_url, &sourcemap_name)?;
             let mut sourcemap_content: Vec<u8> = vec![];
             sourcemap.to_writer(&mut sourcemap_content)?;
@@ -538,8 +538,7 @@ impl SourceMapProcessor {
                 }
                 Err(err) => {
                     source.warn(format!(
-                        "could not determine a source map reference ({})",
-                        err
+                        "could not determine a source map reference ({err})"
                     ));
                 }
             }
@@ -609,7 +608,7 @@ fn validate_regular(
         if sm.get_source_contents(idx).is_some() || source_urls.contains(source_url) {
             info!("validator found source ({})", source_url);
         } else {
-            source.warn(format!("missing sourcecode ({})", source_url));
+            source.warn(format!("missing sourcecode ({source_url})"));
         }
     }
 }

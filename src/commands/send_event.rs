@@ -286,7 +286,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     let id = send_raw_event(event, dsn);
-    println!("Event dispatched: {}", id);
+    println!("Event dispatched: {id}");
 
     Ok(())
 }

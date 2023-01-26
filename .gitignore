@@ -6,6 +6,7 @@ node_modules
 coverage
 dist
 checksums.txt
+/dump
 
 /sentry-cli
 /sentry-cli.exe

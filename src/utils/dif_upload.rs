@@ -6,7 +6,7 @@ use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display};
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, Write};
 use std::iter::IntoIterator;
 use std::mem::transmute;
 use std::ops::Deref;
@@ -488,7 +488,7 @@ where
         return Ok(None);
     }
 
-    file.seek(SeekFrom::Start(0))?;
+    file.rewind()?;
     Ok(match &magic {
         b"PK" => Some(ZipArchive::new(BufReader::new(file))?),
         _ => None,
@@ -1287,7 +1287,7 @@ fn upload_missing_chunks(
     missing_info: &MissingDifsInfo<'_, '_>,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let &(ref difs, ref chunks) = missing_info;
+    let (difs, chunks) = missing_info;
 
     // Chunks might be empty if errors occurred in a previous upload. We do
     // not need to render a progress bar or perform an upload in this case.
@@ -1412,11 +1412,11 @@ fn poll_dif_assemble(
 
     let (errors, mut successes): (Vec<_>, _) = response
         .into_iter()
-        .partition(|&(_, ref r)| r.state.is_err() || options.wait && r.state.is_pending());
+        .partition(|(_, r)| r.state.is_err() || options.wait && r.state.is_pending());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
-    successes.sort_by_key(|&(_, ref success)| {
+    successes.sort_by_key(|(_, success)| {
         success
             .dif
             .as_ref()
@@ -1441,7 +1441,7 @@ fn poll_dif_assemble(
                 dif.cpu_name,
                 dif.data
                     .kind
-                    .map(|c| format!(" {:#}", c))
+                    .map(|c| format!(" {c:#}"))
                     .unwrap_or_default()
             );
 
@@ -1453,7 +1453,7 @@ fn poll_dif_assemble(
             let kind = match dif.dif.get() {
                 ParsedDif::Object(ref object) => match object.kind() {
                     symbolic::debuginfo::ObjectKind::None => String::new(),
-                    k => format!(" {:#}", k),
+                    k => format!(" {k:#}"),
                 },
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::UuidMap(_) => String::from("uuidmap"),

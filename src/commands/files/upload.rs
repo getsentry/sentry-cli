@@ -135,7 +135,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let ignore_file = matches.value_of("ignore_file").unwrap_or("");
         let ignores = matches
             .values_of("ignore")
-            .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
+            .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
             .unwrap_or_else(Vec::new);
         let extensions = matches
             .values_of("extensions")
