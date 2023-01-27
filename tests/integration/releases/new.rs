@@ -97,7 +97,7 @@ fn creates_release_which_is_instantly_finalized() {
                     "version": "wat-release",
                     "projects": ["wat-project"],
                 })),
-                Matcher::Regex(format!(r#""dateReleased":"{}""#, UTC_DATE_FORMAT)),
+                Matcher::Regex(format!(r#""dateReleased":"{UTC_DATE_FORMAT}""#)),
             ])),
     );
     register_test("releases/releases-new-finalize.trycmd");

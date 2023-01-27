@@ -46,7 +46,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .collect::<Vec<_>>()
             .join(matches.value_of("delimiter").unwrap_or("\n"));
 
-        println!("{}", versions);
+        println!("{versions}");
         return Ok(());
     }
 

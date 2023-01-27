@@ -20,8 +20,8 @@ pub enum GitReference<'a> {
 impl<'a> fmt::Display for GitReference<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            GitReference::Commit(ref c) => write!(f, "{}", c),
-            GitReference::Symbolic(ref s) => write!(f, "{}", s),
+            GitReference::Commit(ref c) => write!(f, "{c}"),
+            GitReference::Symbolic(ref s) => write!(f, "{s}"),
         }
     }
 }
@@ -478,8 +478,7 @@ pub fn get_commits_from_git<'a>(
                 // Create a new release with default count if `--ignore-missing` is present
                 if ignore_missing {
                     println!(
-                        "Could not find the SHA of the previous release in the git history. Skipping previous release and creating a new one with {} commits.",
-                        default_count
+                        "Could not find the SHA of the previous release in the git history. Skipping previous release and creating a new one with {default_count} commits."
                     );
                     return get_default_commits_from_git(repo, default_count);
                 // Or throw an error and point to the right solution otherwise.
@@ -497,8 +496,7 @@ pub fn get_commits_from_git<'a>(
         Err(_) => {
             // If there is no previous commit, return the default number of commits
             println!(
-                "Could not find the previous commit. Creating a release with {} commits.",
-                default_count
+                "Could not find the previous commit. Creating a release with {default_count} commits."
             );
             get_default_commits_from_git(repo, default_count)
         }
@@ -1092,7 +1090,7 @@ fn test_generate_patch_default_twenty() {
     );
 
     for n in 0..20 {
-        let file = format!("foo{}.js", n);
+        let file = format!("foo{n}.js");
         git_create_commit(
             dir.path(),
             &file,
@@ -1132,7 +1130,7 @@ fn test_generate_patch_ignore_missing() {
     );
 
     for n in 0..5 {
-        let file = format!("foo{}.js", n);
+        let file = format!("foo{n}.js");
         git_create_commit(
             dir.path(),
             &file,

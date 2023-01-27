@@ -33,7 +33,7 @@ pub fn register_test(path: &str) -> TestCases {
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
         .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
-        .case(format!("tests/integration/_cases/{}", path));
+        .case(format!("tests/integration/_cases/{path}"));
     test_case.insert_var("[VERSION]", VERSION).unwrap();
     test_case
 }
@@ -67,7 +67,7 @@ impl EndpointOptions {
     }
 
     pub fn with_response_file(mut self, path: &str) -> Self {
-        self.response_file = Some(format!("tests/integration/_responses/{}", path));
+        self.response_file = Some(format!("tests/integration/_responses/{path}"));
         self
     }
 

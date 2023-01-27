@@ -84,7 +84,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!("    > {}", dif.features());
 
     if let Some(msg) = dif.get_note() {
-        println!("  Note: {}", msg);
+        println!("  Note: {msg}");
     }
 
     if let Some(prob) = dif.get_problem() {
