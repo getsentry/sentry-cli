@@ -124,12 +124,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             if let Some(ref auth) = info.auth {
                 println!("  Scopes:");
                 for scope in &auth.scopes {
-                    println!("    - {}", scope);
+                    println!("    - {scope}");
                 }
             }
         }
         Err(err) => {
-            println!("  (failure on authentication: {})", err);
+            println!("  (failure on authentication: {err})");
         }
     }
 

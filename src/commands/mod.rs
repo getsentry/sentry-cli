@@ -249,7 +249,7 @@ pub fn execute() -> Result<()> {
     info!(
         "sentry-cli was invoked with the following command line: {}",
         env::args()
-            .map(|a| format!("\"{}\"", a))
+            .map(|a| format!("\"{a}\""))
             .collect::<Vec<String>>()
             .join(" ")
     );

@@ -259,7 +259,7 @@ impl InfoPlist {
             }
             if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
                 for token in defs.split_whitespace() {
-                    c.arg(format!("-D{}", token));
+                    c.arg(format!("-D{token}"));
                 }
             }
             c.arg(path.as_ref());

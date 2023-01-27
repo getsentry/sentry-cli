@@ -357,14 +357,14 @@ fn url_to_bundle_path(url: &str) -> Result<String> {
 
     let mut path = url.path().to_string();
     if let Some(fragment) = url.fragment() {
-        path = format!("{}#{}", path, fragment);
+        path = format!("{path}#{fragment}");
     }
     if path.starts_with('/') {
         path.remove(0);
     }
 
     Ok(match url.host_str() {
-        Some("~") => format!("_/_/{}", path),
+        Some("~") => format!("_/_/{path}"),
         Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
         None => format!("{}/_/{}", url.scheme(), path),
     })
