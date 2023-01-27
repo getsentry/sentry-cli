@@ -164,7 +164,7 @@ pub fn init_backtrace() {
                     backtrace
                 );
             }
-            None => eprintln!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+            None => eprintln!("thread '{thread}' panicked at '{msg}'{backtrace:?}"),
         }
     }));
 }

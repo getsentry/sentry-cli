@@ -25,7 +25,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if Api::current().bulk_update_issue(&org, &project, &filter, &changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
-            println!("  new status: {}", status);
+            println!("  new status: {status}");
         }
     } else {
         println!("No changes requested.");

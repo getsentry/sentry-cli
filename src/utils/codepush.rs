@@ -74,7 +74,7 @@ pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
-            let format_err = format!("Command `{} deployment ls {} --format json` failed to produce a valid JSON output.", codepush_bin, app);
+            let format_err = format!("Command `{codepush_bin} deployment ls {app} --format json` failed to produce a valid JSON output.");
             panic!("{}", format_err);
         }))
     } else {

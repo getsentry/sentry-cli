@@ -251,7 +251,7 @@ fn process_sources_from_paths(
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
         .values_of("ignore")
-        .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
+        .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
 
     let opts = MatchOptions::new();

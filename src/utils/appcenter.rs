@@ -126,7 +126,7 @@ pub fn get_appcenter_deployment_history(
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
-            let format_err = format!("Command `{} codepush deployment history {} --app {} --output json` failed to produce a valid JSON output.", appcenter_bin, deployment, app);
+            let format_err = format!("Command `{appcenter_bin} codepush deployment history {deployment} --app {app} --output json` failed to produce a valid JSON output.");
             panic!("{}", format_err);
         }))
     } else {

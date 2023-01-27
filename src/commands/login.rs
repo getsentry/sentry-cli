@@ -75,11 +75,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 break;
             }
             Err(err) => {
-                let msg = format!("Invalid token: {}", err);
+                let msg = format!("Invalid token: {err}");
                 if has_predefined_token {
                     bail!(msg);
                 } else {
-                    println!("{}", msg);
+                    println!("{msg}");
                 }
             }
         }

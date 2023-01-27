@@ -19,11 +19,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
 
     if api.delete_release(&config.get_org(matches)?, project.as_deref(), version)? {
-        println!("Deleted release {}!", version);
+        println!("Deleted release {version}!");
     } else {
         println!(
-            "Did nothing. Release with this version ({}) does not exist.",
-            version
+            "Did nothing. Release with this version ({version}) does not exist."
         );
     }
 

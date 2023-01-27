@@ -156,7 +156,7 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
 
     event.exception.values.push(Exception {
         ty: "BashError".into(),
-        value: Some(format!("command {} exited with status {}", cmd, exit_code)),
+        value: Some(format!("command {cmd} exited with status {exit_code}")),
         stacktrace: Some(Stacktrace {
             frames,
             ..Default::default()
@@ -165,7 +165,7 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
     });
 
     let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
-    println!("{}", id);
+    println!("{id}");
 
     Ok(())
 }
@@ -210,6 +210,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if !matches.is_present("no_exit") {
         script.insert_str(0, "set -e\n\n");
     }
-    println!("{}", script);
+    println!("{script}");
     Ok(())
 }

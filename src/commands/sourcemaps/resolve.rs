@@ -81,12 +81,12 @@ pub fn print_source(token: &Token<'_>, view: &SourceView) {
 
 fn print_token(token: &Token<'_>) {
     if let Some(name) = token.get_name() {
-        println!("  name: {:?}", name);
+        println!("  name: {name:?}");
     } else {
         println!("  name: not found");
     }
     if let Some(source) = token.get_source() {
-        println!("  source file: {:?}", source);
+        println!("  source file: {source:?}");
     } else {
         println!("  source file: not found");
     }
@@ -116,12 +116,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         DecodedMap::Index(..) => "indexed",
         DecodedMap::Hermes(..) => "hermes",
     };
-    println!("source map path: {:?}", sourcemap_path);
-    println!("source map type: {}", ty);
+    println!("source map path: {sourcemap_path:?}");
+    println!("source map type: {ty}");
 
     // perform a lookup
     if let Some((line, column)) = lookup_pos(matches) {
-        println!("lookup line: {}, column: {}:", line, column);
+        println!("lookup line: {line}, column: {column}:");
         if let Some(token) = sm.lookup_token(line, column) {
             print_token(&token);
         } else {
