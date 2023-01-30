@@ -39,7 +39,6 @@
     "https-proxy-agent": "^5.0.0",
     "mkdirp": "^0.5.5",
     "node-fetch": "^2.6.7",
-    "npmlog": "^4.1.2",
     "progress": "^2.0.3",
     "proxy-from-env": "^1.1.0",
     "which": "^2.0.2"
@@ -54,14 +53,15 @@
     "npm-run-all": "^4.1.5",
     "prettier": "^1.19.1"
   },
-  "resolutions": {
-    "npmlog/**/ansi-regex": "^3.0.1"
-  },
   "jest": {
     "collectCoverage": true,
     "testEnvironment": "node",
     "testPathIgnorePatterns": [
       "src/utils"
     ]
+  },
+  "volta": {
+    "node": "10.24.1",
+    "yarn": "1.22.19"
   }
 }
