@@ -43,8 +43,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|x| x.parse::<Uuid>().unwrap())
         .unwrap();
 
-    let trace_id = Uuid::new_v4();
-
     let allow_failure = matches.is_present("allow_failure");
     let args: Vec<_> = matches.values_of("args").unwrap().collect();
 
@@ -61,9 +59,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     p.env("SENTRY_MONITOR_ID", monitor.to_string());
 
     // Inherit outer SENTRY_TRACE_ID if present
-    if env::var_os("SENTRY_TRACE_ID").is_none() {
-        p.env("SENTRY_TRACE_ID", trace_id.to_string().replace("-", ""));
-    }
+    let trace_id = env::var_os("SENTRY_TRACE_ID")
+        .unwrap_or_else(|| Uuid::new_v4().simple().to_string().into());
+    p.env("SENTRY_TRACE_ID", trace_id);
 
     let (success, code) = match p.status() {
         Ok(status) => (status.success(), status.code()),
