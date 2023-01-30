@@ -76,7 +76,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     println!("    > {}", dif.features());
 
     if let Some(msg) = dif.get_note() {
-        println!("  Note: {}", msg);
+        println!("  Note: {msg}");
     }
 
     if let Some(prob) = dif.get_problem() {

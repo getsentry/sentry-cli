@@ -50,7 +50,7 @@ impl<'a> ReleaseContext<'a> {
         self.get_projects(matches).map(|p| p[0].clone())
     }
 
-    pub fn get_projects(&'a self, matches: &ArgMatches<'a>) -> Result<Vec<String>, Error> {
+    pub fn get_projects(&'a self, matches: &ArgMatches) -> Result<Vec<String>, Error> {
         if let Some(projects) = matches.values_of("project") {
             Ok(projects.map(str::to_owned).collect())
         } else if let Some(project) = self.project_default {
@@ -444,7 +444,7 @@ fn path_as_url(path: &Path) -> String {
     path.display().to_string()
 }
 
-fn execute_new<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_new(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     ctx.api.new_release(
         ctx.get_org()?,
@@ -460,11 +460,11 @@ fn execute_new<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result
             },
         },
     )?;
-    println!("Created release {}.", version);
+    println!("Created release {version}.");
     Ok(())
 }
 
-fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_finalize(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<Utc>>, Error> {
         match value {
             None => Ok(if now_default { Some(Utc::now()) } else { None }),
@@ -484,7 +484,7 @@ fn execute_finalize<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> R
             ..Default::default()
         },
     )?;
-    println!("Finalized release {}.", version);
+    println!("Finalized release {version}.");
     Ok(())
 }
 
@@ -493,10 +493,7 @@ fn execute_propose_version() -> Result<(), Error> {
     Ok(())
 }
 
-fn execute_set_commits<'a>(
-    ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
-) -> Result<(), Error> {
+fn execute_set_commits(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
 
     let org = ctx.get_org()?;
@@ -624,30 +621,27 @@ fn execute_set_commits<'a>(
             },
         )?;
 
-        println!("Success! Set commits for release {}.", version);
+        println!("Success! Set commits for release {version}.");
     }
 
     Ok(())
 }
 
-fn execute_delete<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_delete(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let project = ctx.get_project(matches).ok();
     if ctx
         .api
         .delete_release(ctx.get_org()?, project.as_deref(), version)?
     {
-        println!("Deleted release {}!", version);
+        println!("Deleted release {version}!");
     } else {
-        println!(
-            "Did nothing. Release with this version ({}) does not exist.",
-            version
-        );
+        println!("Did nothing. Release with this version ({version}) does not exist.");
     }
     Ok(())
 }
 
-fn execute_archive<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_archive(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let info_rv = ctx.api.update_release(
         ctx.get_org()?,
@@ -663,7 +657,7 @@ fn execute_archive<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
     Ok(())
 }
 
-fn execute_restore<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_restore(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let info_rv = ctx.api.update_release(
         ctx.get_org()?,
@@ -679,7 +673,7 @@ fn execute_restore<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Re
     Ok(())
 }
 
-fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_list(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let project = ctx.get_project(matches).ok();
     let releases = ctx.api.list_releases(ctx.get_org()?, project.as_deref())?;
 
@@ -690,7 +684,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
             .collect::<Vec<_>>()
             .join(matches.value_of("delimiter").unwrap_or("\n"));
 
-        println!("{}", versions);
+        println!("{versions}");
         return Ok(());
     }
 
@@ -738,7 +732,7 @@ fn execute_list<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     Ok(())
 }
 
-fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_info(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let version = matches.value_of("version").unwrap();
     let org = ctx.get_org()?;
     let project = ctx.get_project(matches).ok();
@@ -771,7 +765,7 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
         let data_row = tbl
             .add_row()
             .add(&release.version)
-            .add(&release.date_created);
+            .add(release.date_created);
 
         if let Some(last_event) = release.last_event {
             data_row.add(last_event);
@@ -818,9 +812,9 @@ fn execute_info<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resul
     Ok(())
 }
 
-fn execute_files_list<'a>(
+fn execute_files_list(
     ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches,
     release: &str,
 ) -> Result<(), Error> {
     let mut table = Table::new();
@@ -857,9 +851,9 @@ fn execute_files_list<'a>(
     Ok(())
 }
 
-fn execute_files_delete<'a>(
+fn execute_files_delete(
     ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches,
     release: &str,
 ) -> Result<(), Error> {
     let org = ctx.get_org()?;
@@ -896,9 +890,9 @@ fn execute_files_delete<'a>(
     Ok(())
 }
 
-fn execute_files_upload<'a>(
+fn execute_files_upload(
     ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches,
     version: &str,
 ) -> Result<(), Error> {
     let dist = matches.value_of("dist");
@@ -921,7 +915,7 @@ fn execute_files_upload<'a>(
         let ignore_file = matches.value_of("ignore_file").unwrap_or("");
         let ignores = matches
             .values_of("ignore")
-            .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
+            .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
             .unwrap_or_else(Vec::new);
         let extensions = matches
             .values_of("extensions")
@@ -994,7 +988,7 @@ fn execute_files_upload<'a>(
     }
 }
 
-fn get_url_prefix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
+fn get_url_prefix_from_args<'a>(matches: &'a ArgMatches) -> &'a str {
     let mut rv = matches.value_of("url_prefix").unwrap_or("~");
     // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
     if rv.ends_with('/') {
@@ -1003,11 +997,11 @@ fn get_url_prefix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
     rv
 }
 
-fn get_url_suffix_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> &'b str {
+fn get_url_suffix_from_args<'a>(matches: &'a ArgMatches) -> &'a str {
     matches.value_of("url_suffix").unwrap_or("")
 }
 
-fn get_prefixes_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> Vec<&'b str> {
+fn get_prefixes_from_args<'a>(matches: &'a ArgMatches) -> Vec<&'a str> {
     let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
         Some(paths) => paths.collect(),
         None => vec![],
@@ -1018,8 +1012,8 @@ fn get_prefixes_from_args<'a, 'b>(matches: &'b ArgMatches<'a>) -> Vec<&'b str> {
     prefixes
 }
 
-fn process_sources_from_bundle<'a>(
-    matches: &ArgMatches<'a>,
+fn process_sources_from_bundle(
+    matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<(), Error> {
     let url_prefix = get_url_prefix_from_args(matches);
@@ -1077,8 +1071,8 @@ fn process_sources_from_bundle<'a>(
     Ok(())
 }
 
-fn process_sources_from_paths<'a>(
-    matches: &ArgMatches<'a>,
+fn process_sources_from_paths(
+    matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<(), Error> {
     let paths = matches.values_of("paths").unwrap();
@@ -1089,7 +1083,7 @@ fn process_sources_from_paths<'a>(
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
         .values_of("ignore")
-        .map(|ignores| ignores.map(|i| format!("!{}", i)).collect())
+        .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
 
     let opts = MatchOptions::new();
@@ -1144,9 +1138,9 @@ fn process_sources_from_paths<'a>(
     Ok(())
 }
 
-fn execute_files_upload_sourcemaps<'a>(
+fn execute_files_upload_sourcemaps(
     ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches,
     version: &str,
 ) -> Result<(), Error> {
     let mut processor = SourceMapProcessor::new();
@@ -1181,7 +1175,7 @@ fn execute_files_upload_sourcemaps<'a>(
     Ok(())
 }
 
-fn execute_files<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_files(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("list") {
         return execute_files_list(ctx, sub_matches, release);
@@ -1198,9 +1192,9 @@ fn execute_files<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Resu
     unreachable!();
 }
 
-fn execute_deploys_new<'a>(
+fn execute_deploys_new(
     ctx: &ReleaseContext<'_>,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches,
     version: &str,
 ) -> Result<(), Error> {
     let mut deploy = Deploy {
@@ -1233,9 +1227,9 @@ fn execute_deploys_new<'a>(
     Ok(())
 }
 
-fn execute_deploys_list<'a>(
+fn execute_deploys_list(
     ctx: &ReleaseContext<'_>,
-    _matches: &ArgMatches<'a>,
+    _matches: &ArgMatches,
     version: &str,
 ) -> Result<(), Error> {
     let mut table = Table::new();
@@ -1264,7 +1258,7 @@ fn execute_deploys_list<'a>(
     Ok(())
 }
 
-fn execute_deploys<'a>(ctx: &ReleaseContext<'_>, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_deploys(ctx: &ReleaseContext<'_>, matches: &ArgMatches) -> Result<(), Error> {
     let release = matches.value_of("version").unwrap();
     if let Some(sub_matches) = matches.subcommand_matches("new") {
         return execute_deploys_new(ctx, sub_matches, release);

@@ -205,7 +205,7 @@ impl fmt::Display for SentryError {
             self.status
         )?;
         if let Some(ref extra) = self.extra {
-            write!(f, "\n  {:?}", extra)?;
+            write!(f, "\n  {extra:?}")?;
         }
         Ok(())
     }
@@ -648,9 +648,9 @@ impl Api {
         }
 
         if let Some(headers) = headers {
-            for &(ref key, ref value) in headers {
+            for (key, value) in headers {
                 form.part("header")
-                    .contents(format!("{}:{}", key, value).as_bytes())
+                    .contents(format!("{key}:{value}").as_bytes())
                     .add()?;
             }
         }
@@ -1593,12 +1593,12 @@ impl ApiRequest {
             Some(env) => {
                 debug!("pipeline: {}", env);
                 headers
-                    .append(&format!("User-Agent: sentry-cli/{} {}", VERSION, env))
+                    .append(&format!("User-Agent: sentry-cli/{VERSION} {env}"))
                     .ok();
             }
             None => {
                 headers
-                    .append(&format!("User-Agent: sentry-cli/{}", VERSION))
+                    .append(&format!("User-Agent: sentry-cli/{VERSION}"))
                     .ok();
             }
         }
@@ -1650,7 +1650,7 @@ impl ApiRequest {
             }
             Auth::Token(ref token) => {
                 debug!("using token authentication");
-                self.with_header("Authorization", &format!("Bearer {}", token))
+                self.with_header("Authorization", &format!("Bearer {token}"))
             }
         }
     }
@@ -1658,7 +1658,7 @@ impl ApiRequest {
     /// adds a specific header to the request
     pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<Self> {
         let value = value.trim().lines().next().unwrap_or("");
-        self.headers.append(&format!("{}: {}", key, value))?;
+        self.headers.append(&format!("{key}: {value}"))?;
         Ok(self)
     }
 
@@ -1959,7 +1959,7 @@ pub struct Artifact {
 }
 
 impl Artifact {
-    pub fn get_header<'a, 'b>(&'a self, key: &'b str) -> Option<&'a str> {
+    pub fn get_header<'a>(&'a self, key: &str) -> Option<&'a str> {
         let ikey = key.to_lowercase();
         for (k, v) in &self.headers {
             if k.to_lowercase() == ikey {
@@ -2171,11 +2171,11 @@ impl IssueFilter {
                     return None;
                 }
                 for id in ids {
-                    rv.push(format!("id={}", id));
+                    rv.push(format!("id={id}"));
                 }
             }
             IssueFilter::Status(ref status) => {
-                rv.push(format!("status={}", status));
+                rv.push(format!("status={status}"));
             }
         }
         Some(rv.join("&"))
@@ -2266,7 +2266,7 @@ impl fmt::Display for Repo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{}", &self.provider.id, &self.id)?;
         if let Some(ref url) = self.url {
-            write!(f, " ({})", url)?;
+            write!(f, " ({url})")?;
         }
         Ok(())
     }

@@ -6,7 +6,7 @@ use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display};
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, Write};
 use std::iter::IntoIterator;
 use std::mem::transmute;
 use std::ops::Deref;
@@ -440,7 +440,7 @@ impl<'a> DifSource<'a> {
     {
         match *self {
             DifSource::FileSystem(base) => Self::get_relative_fs(base, path.as_ref()),
-            DifSource::Zip(ref mut zip, name) => Self::get_relative_zip(*zip, name, path.as_ref()),
+            DifSource::Zip(ref mut zip, name) => Self::get_relative_zip(zip, name, path.as_ref()),
         }
     }
 }
@@ -465,7 +465,7 @@ where
         return Ok(None);
     }
 
-    file.seek(SeekFrom::Start(0))?;
+    file.rewind()?;
     Ok(match &magic {
         b"PK" => Some(ZipArchive::new(BufReader::new(file))?),
         _ => None,
@@ -1035,7 +1035,7 @@ pub fn filter_bad_sources(entry: &FileEntry) -> bool {
     if entry.name_str().ends_with(".pch") {
         // always ignore pch files
         false
-    } else if let Ok(meta) = fs::metadata(&entry.abs_path_str()) {
+    } else if let Ok(meta) = fs::metadata(entry.abs_path_str()) {
         // ignore files larger than limit (defaults to 1MB)
         meta.len() < max_size
     } else {
@@ -1193,7 +1193,7 @@ fn upload_missing_chunks(
     missing_info: &MissingDifsInfo<'_, '_>,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<(), Error> {
-    let &(ref difs, ref chunks) = missing_info;
+    let (difs, chunks) = missing_info;
 
     // Chunks might be empty if errors occurred in a previous upload. We do
     // not need to render a progress bar or perform an upload in this case.
@@ -1318,11 +1318,11 @@ fn poll_dif_assemble(
 
     let (errors, mut successes): (Vec<_>, _) = response
         .into_iter()
-        .partition(|&(_, ref r)| r.state.is_err() || options.wait && r.state.is_pending());
+        .partition(|(_, r)| r.state.is_err() || options.wait && r.state.is_pending());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
-    successes.sort_by_key(|&(_, ref success)| {
+    successes.sort_by_key(|(_, success)| {
         success
             .dif
             .as_ref()
@@ -1345,10 +1345,7 @@ fn poll_dif_assemble(
                 style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
-                dif.data
-                    .kind
-                    .map(|c| format!(" {:#}", c))
-                    .unwrap_or_default()
+                dif.data.kind.map(|c| format!(" {c:#}")).unwrap_or_default()
             );
 
             render_detail(&success.detail, None);
@@ -1359,7 +1356,7 @@ fn poll_dif_assemble(
             let kind = match dif.dif.get() {
                 ParsedDif::Object(ref object) => match object.kind() {
                     symbolic::debuginfo::ObjectKind::None => String::new(),
-                    k => format!(" {:#}", k),
+                    k => format!(" {k:#}"),
                 },
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::UuidMap(_) => String::from("uuidmap"),

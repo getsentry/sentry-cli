@@ -6,7 +6,7 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 /// Prints a message and loops until yes or no is entered.
 pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
     loop {
-        print!("{} [y/n] ", message);
+        print!("{message} [y/n] ");
         io::stdout().flush()?;
 
         let mut buf = String::new();
@@ -25,7 +25,7 @@ pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
 /// Prompts for input and returns it.
 pub fn prompt(message: &str) -> io::Result<String> {
     loop {
-        print!("{}: ", message);
+        print!("{message}: ");
         io::stdout().flush()?;
         let mut buf = String::new();
         io::stdin().read_line(&mut buf)?;

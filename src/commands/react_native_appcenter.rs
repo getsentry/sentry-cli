@@ -125,7 +125,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         matches.value_of("release_name"),
     )?;
     if print_release_name {
-        println!("{}", release);
+        println!("{release}");
         return Ok(());
     }
 
@@ -144,7 +144,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                    ext == OsStr::new("map") ||
                    ext == OsStr::new("bundle");
                 then {
-                    let url = format!("~/{}", filename);
+                    let url = format!("~/{filename}");
                     processor.add(&url, ReleaseFileSearch::collect_file(entry.path())?)?;
                 }
             }

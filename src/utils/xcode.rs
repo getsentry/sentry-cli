@@ -202,7 +202,7 @@ impl InfoPlist {
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
                 let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
-                Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+                Ok(Some(InfoPlist::load_and_process(path, &vars)?))
             } else if let Ok(default_plist) = InfoPlist::from_xcode_env() {
                 Ok(Some(default_plist))
             } else {
@@ -260,12 +260,12 @@ impl InfoPlist {
             }
             if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
                 for token in defs.split_whitespace() {
-                    c.arg(format!("-D{}", token));
+                    c.arg(format!("-D{token}"));
                 }
             }
             c.arg(path.as_ref());
             let p = c.output()?;
-            InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))?
+            InfoPlist::from_reader(Cursor::new(&p.stdout[..]))?
         } else {
             InfoPlist::from_path(path)?
         };
@@ -391,7 +391,7 @@ impl<'a> MayDetach<'a> {
                 if let Some(ref output_file) = md.output_file {
                     crate::utils::system::print_error(&err);
                     if md.show_critical_info()? {
-                        open::that(&output_file.path())?;
+                        open::that(output_file.path())?;
                         std::thread::sleep(Duration::from_millis(5000));
                     }
                 }

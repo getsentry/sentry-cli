@@ -23,7 +23,7 @@ where
     }
 
     let (tx, rx) = crossbeam_channel::bounded(100);
-    let mut signals = signal_hook::iterator::Signals::new(&[
+    let mut signals = signal_hook::iterator::Signals::new([
         signal_hook::consts::SIGTERM,
         signal_hook::consts::SIGINT,
     ])
@@ -172,7 +172,7 @@ pub fn init_backtrace() {
                     backtrace
                 );
             }
-            None => eprintln!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+            None => eprintln!("thread '{thread}' panicked at '{msg}'{backtrace:?}"),
         }
 
         #[cfg(feature = "with_client_implementation")]

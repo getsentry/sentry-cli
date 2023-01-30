@@ -182,7 +182,7 @@ impl<'a> fmt::Display for DebugArgs<'a> {
             if idx > 0 {
                 write!(f, " ")?;
             }
-            write!(f, "{:?}", arg)?;
+            write!(f, "{arg:?}")?;
         }
         Ok(())
     }

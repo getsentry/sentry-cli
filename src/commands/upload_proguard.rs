@@ -169,9 +169,8 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                 let mapping = ProguardMapping::new(&byteview);
                 if !mapping.has_line_info() {
                     eprintln!(
-                        "warning: proguard mapping '{}' was ignored because it \
-                         does not contain any line information.",
-                        path
+                        "warning: proguard mapping '{path}' was ignored because it \
+                         does not contain any line information."
                     );
                 } else {
                     let mut f = fs::File::open(path)?;
@@ -187,15 +186,14 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             }
             Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
                 eprintln!(
-                    "warning: proguard mapping '{}' does not exist. This \
+                    "warning: proguard mapping '{path}' does not exist. This \
                      might be because the build process did not generate \
-                     one (for instance because -dontobfuscate is used)",
-                    path
+                     one (for instance because -dontobfuscate is used)"
                 );
             }
             Err(err) => {
                 return Err(Error::from(err)
-                    .context(format!("failed to open proguard mapping '{}'", path))
+                    .context(format!("failed to open proguard mapping '{path}'"))
                     .into());
             }
         }

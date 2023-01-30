@@ -198,11 +198,11 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             }
 
             api.download(
-                &format!("{}/index.ios.bundle?platform=ios&dev=true", url),
+                &format!("{url}/index.ios.bundle?platform=ios&dev=true"),
                 &mut bundle_file.open()?,
             )?;
             api.download(
-                &format!("{}/index.ios.map?platform=ios&dev=true", url),
+                &format!("{url}/index.ios.map?platform=ios&dev=true"),
                 &mut sourcemap_file.open()?,
             )?;
 

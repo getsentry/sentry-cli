@@ -61,11 +61,11 @@ impl log::Log for Logger {
         let short_target = record.target().split("::").next().unwrap_or("");
         let msg = format!(
             "{} {} {}{}",
-            style(format!("  {}  ", level_name)).bg(level_color).black(),
+            style(format!("  {level_name}  ")).bg(level_color).black(),
             style(Local::now()).dim(),
             style(record.args()),
             style(if short_target != "sentry_cli" {
-                format!("  (from {})", short_target)
+                format!("  (from {short_target})")
             } else {
                 "".to_string()
             })
@@ -79,7 +79,7 @@ impl log::Log for Logger {
         if let Some(pb) = get_progress_bar() {
             pb.println(msg);
         } else {
-            writeln!(io::stderr(), "{}", msg).ok();
+            writeln!(io::stderr(), "{msg}").ok();
         }
     }
 

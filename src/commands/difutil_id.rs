@@ -54,7 +54,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
 
     if !matches.is_present("json") {
         for id in f.ids() {
-            println!("{}", id);
+            println!("{id}");
         }
     } else if matches.is_present("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &f.ids())?;

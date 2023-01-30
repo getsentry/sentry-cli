@@ -87,14 +87,14 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         for (index, object) in archive.get().objects().enumerate() {
             let object = object?;
             if object.has_sources() {
-                eprintln!("skipped {} (no source info)", orig_path);
+                eprintln!("skipped {orig_path} (no source info)");
                 continue;
             }
 
             let mut out = output_path.unwrap_or(parent_path).join(filename);
             match index {
                 0 => out.set_extension("src.zip"),
-                index => out.set_extension(&format!("{}.src.zip", index)),
+                index => out.set_extension(&format!("{index}.src.zip")),
             };
 
             fs::create_dir_all(out.parent().unwrap())?;
@@ -110,7 +110,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
             )?;
 
             if !written {
-                eprintln!("skipped {} (no files found)", orig_path);
+                eprintln!("skipped {orig_path} (no files found)");
                 fs::remove_file(&out)?;
                 continue;
             } else {
