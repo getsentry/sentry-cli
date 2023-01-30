@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.12.0
+
+### Various fixes & improvements
+
+- feat: Enable portable PDB debug-files upload via Symbolic v11 (#1440)
+- feat: Add support for Cloudflare Pages when detecting a release name (#1419)
+- feat: Pass `SENTRY_TRACE_ID` to executed process in `monitors` (#1441)
+- feat: Pass `SENTRY_MONITOR_ID` to executed process in `monitors` (#1438)
+- fix: Prevent Sentry from attempting to access unbound variables in `bash-hook` (#1415)
+
 ## 2.11.0
 
 ### Various fixes & improvements
