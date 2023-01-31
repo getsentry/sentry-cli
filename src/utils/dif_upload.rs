@@ -1121,8 +1121,10 @@ fn create_source_bundles<'a>(
     pb.set_prefix(">");
 
     for dif in difs {
+        let name = dif.path();
         pb.inc(1);
-        pb.set_message(dif.path());
+        pb.set_message(name);
+        debug!("trying to collect sources for {}", name);
 
         let object = match dif.object() {
             Some(object) => object,
@@ -1131,6 +1133,7 @@ fn create_source_bundles<'a>(
         if object.has_sources() {
             // Do not create standalone source bundles if the original object already contains
             // source code. This would just store duplicate information in Sentry.
+            debug!("skipping {} because it already embeds sources", name);
             continue;
         }
 
@@ -1144,10 +1147,11 @@ fn create_source_bundles<'a>(
         let written =
             writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
+            debug!("No sources found for {}", name);
             continue;
         }
 
-        let mut source_bundle = DifMatch::from_temp_object(temp_file, dif.path())?;
+        let mut source_bundle = DifMatch::from_temp_object(temp_file, name)?;
         source_bundle.debug_id = dif.debug_id;
         source_bundles.push(source_bundle);
     }
