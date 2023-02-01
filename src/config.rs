@@ -483,14 +483,17 @@ fn load_global_config_file() -> Result<(PathBuf, Ini)> {
     match fs::File::open(&filename) {
         Ok(mut file) => match Ini::read_from(&mut file) {
             Ok(ini) => Ok((filename, ini)),
-            Err(err) => Err(Error::from(err)),
+            Err(err) => Err(Error::from(err).context(format!(
+                "Failed to parse {CONFIG_RC_FILE_NAME} file from the home folder."
+            ))),
         },
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
                 Ok((filename, Ini::new()))
             } else {
-                Err(Error::from(err)
-                    .context("Failed to load .sentryclirc file from the home folder."))
+                Err(Error::from(err).context(format!(
+                    "Failed to load {CONFIG_RC_FILE_NAME} file from the home folder."
+                )))
             }
         }
     }
@@ -500,14 +503,14 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let (global_filename, mut rv) = load_global_config_file()?;
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let mut f = fs::File::open(&project_config_path).with_context(|| {
-            format!(
-                "Failed to load {} file from project path ({})",
-                CONFIG_RC_FILE_NAME,
-                project_config_path.display()
-            )
-        })?;
-        let ini = Ini::read_from(&mut f)?;
+        let file_desc = format!(
+            "{} file from project path ({})",
+            CONFIG_RC_FILE_NAME,
+            project_config_path.display()
+        );
+        let mut f =
+            fs::File::open(&project_config_path).context(format!("Failed to load {file_desc}"))?;
+        let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
         for (section, props) in ini.iter() {
             for (key, value) in props.iter() {
                 rv.set_to(section, key.to_string(), value.to_owned());
