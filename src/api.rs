@@ -501,17 +501,18 @@ impl Api {
         self.get("/")?.convert()
     }
 
-    /// Lists all the release file for the given `release`.
-    pub fn list_release_files(
+    /// Lists release files for the given `release`.
+    fn _list_release_files(
         &self,
         org: &str,
         project: Option<&str>,
         release: &str,
+        checksums: &[String],
     ) -> ApiResult<Vec<Artifact>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
         loop {
-            let path = if let Some(project) = project {
+            let mut path = if let Some(project) = project {
                 format!(
                     "/projects/{}/{}/releases/{}/files/?cursor={}",
                     PathArg(org),
@@ -528,11 +529,10 @@ impl Api {
                 )
             };
 
-            // TODO(kamil): Instead of breaking out of the loop here when we reach the limit
-            // (200 pages of 100 items, for a total of 20_000 files), we should send a list of hashes
-            // to the server, perform an intersection there, and change the upload mechanism
-            // to leave out only those files that were gave back to us by the server.
-            // This would also limit number of API requests for deduping from `N=[1:200]` to 1.
+            for checksum in checksums.iter() {
+                path.push_str(&format!("&checksum={}", QueryArg(checksum)));
+            }
+
             let resp = self.get(&path)?;
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
@@ -551,6 +551,27 @@ impl Api {
             }
         }
         Ok(rv)
+    }
+
+    /// Lists all the release files for the given `release`.
+    pub fn list_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+    ) -> ApiResult<Vec<Artifact>> {
+        self._list_release_files(org, project, release, &[])
+    }
+
+    /// Lists release files for the given `release`, filtered by a set of checksums.
+    pub fn list_release_files_by_checksum(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        checksums: &[String],
+    ) -> ApiResult<Vec<Artifact>> {
+        self._list_release_files(org, project, release, checksums)
     }
 
     /// Get a single release file and store it inside provided descriptor.

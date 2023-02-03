@@ -1,11 +1,9 @@
 use std::path::PathBuf;
-use std::str::FromStr;
 
-use anyhow::{format_err, Result};
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
-use sha1_smol::Digest;
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -334,21 +332,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    if !matches.is_present("no_dedupe") {
-        for artifact in api.list_release_files(&org, Some(&project), &release.version)? {
-            let checksum = Digest::from_str(&artifact.sha1)
-                .map_err(|_| format_err!("Invalid artifact checksum"))?;
-
-            processor.add_already_uploaded_source(checksum);
-        }
-    }
-
     processor.upload(&UploadContext {
         org: &org,
         project: Some(&project),
         release: &release.version,
         dist: matches.value_of("dist"),
         wait: matches.is_present("wait"),
+        dedupe: !matches.is_present("no_dedupe"),
     })?;
 
     Ok(())

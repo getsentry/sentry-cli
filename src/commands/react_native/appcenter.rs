@@ -178,6 +178,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 release: &release.version,
                 dist: None,
                 wait: matches.is_present("wait"),
+                ..Default::default()
             })?;
         }
         Some(dists) => {
@@ -193,6 +194,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     release: &release.version,
                     dist: Some(dist),
                     wait: matches.is_present("wait"),
+                    ..Default::default()
                 })?;
             }
         }
