@@ -501,9 +501,8 @@ impl Api {
         self.get("/")?.convert()
     }
 
-    /// Lists all the release file for the given `release`.
-    /// Optionally filtered by a list of checksums.
-    pub fn list_release_files(
+    /// Lists release files for the given `release`.
+    fn _list_release_files(
         &self,
         org: &str,
         project: Option<&str>,
@@ -530,11 +529,8 @@ impl Api {
                 )
             };
 
-            // Checksums need to be sorted in order to satisfy integration tests constraints.
             if let Some(checksums) = checksums {
-                let mut checksums = checksums.clone();
-                checksums.sort();
-                for checksum in checksums.into_iter() {
+                for checksum in checksums.iter() {
                     path.push_str(&format!("&checksum={}", QueryArg(checksum)));
                 }
             }
@@ -557,6 +553,27 @@ impl Api {
             }
         }
         Ok(rv)
+    }
+
+    /// Lists all the release files for the given `release`.
+    pub fn list_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+    ) -> ApiResult<Vec<Artifact>> {
+        self._list_release_files(org, project, release, None)
+    }
+
+    /// Lists release files for the given `release`, filtered by a set of checksums.
+    pub fn list_release_files_by_checksum(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        checksums: &Vec<String>,
+    ) -> ApiResult<Vec<Artifact>> {
+        self._list_release_files(org, project, release, Some(checksums))
     }
 
     /// Get a single release file and store it inside provided descriptor.

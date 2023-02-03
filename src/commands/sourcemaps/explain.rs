@@ -120,7 +120,7 @@ fn extract_nth_frame(stacktrace: &Stacktrace, position: usize) -> Result<&Frame>
 }
 
 fn fetch_release_artifacts(org: &str, project: &str, release: &str) -> Result<Vec<Artifact>> {
-    Api::current().list_release_files(org, Some(project), release, None).map(|artifacts| {
+    Api::current().list_release_files(org, Some(project), release).map(|artifacts| {
         if artifacts.is_empty() {
             error("Release has no artifacts uploaded");
             tip("https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifacts-are-uploaded");

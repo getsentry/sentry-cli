@@ -140,7 +140,7 @@ fn upload_files_parallel(
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
-        .list_release_files(context.org, context.project, context.release, None)?
+        .list_release_files(context.org, context.project, context.release)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
         .collect();

@@ -546,19 +546,22 @@ impl SourceMapProcessor {
             return;
         }
 
-        let sources_checksums: Vec<_> = self
+        let mut sources_checksums: Vec<_> = self
             .sources
             .values()
             .filter_map(|s| s.checksum().map(|c| c.to_string()).ok())
             .collect();
 
+        // Checksums need to be sorted in order to satisfy integration tests constraints.
+        sources_checksums.sort();
+
         let api = Api::current();
 
-        if let Ok(artifacts) = api.list_release_files(
+        if let Ok(artifacts) = api.list_release_files_by_checksum(
             context.org,
             context.project,
             context.release,
-            Some(&sources_checksums),
+            &sources_checksums,
         ) {
             let already_uploaded_checksums: Vec<_> = artifacts
                 .iter()
