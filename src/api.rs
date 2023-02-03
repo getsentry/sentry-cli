@@ -501,8 +501,9 @@ impl Api {
         self.get("/")?.convert()
     }
 
-    /// Lists release files for the given `release`.
-    fn _list_release_files(
+    /// Lists release files for the given `release`, filtered by a set of checksums.
+    /// When empty checksums list is provided, fetches all possible artifacts.
+    pub fn list_release_files_by_checksum(
         &self,
         org: &str,
         project: Option<&str>,
@@ -560,18 +561,7 @@ impl Api {
         project: Option<&str>,
         release: &str,
     ) -> ApiResult<Vec<Artifact>> {
-        self._list_release_files(org, project, release, &[])
-    }
-
-    /// Lists release files for the given `release`, filtered by a set of checksums.
-    pub fn list_release_files_by_checksum(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        checksums: &[String],
-    ) -> ApiResult<Vec<Artifact>> {
-        self._list_release_files(org, project, release, checksums)
+        self.list_release_files_by_checksum(org, project, release, &[])
     }
 
     /// Get a single release file and store it inside provided descriptor.
