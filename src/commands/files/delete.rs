@@ -43,7 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
-    for file in api.list_release_files(&org, project.as_deref(), &release)? {
+    for file in api.list_release_files(&org, project.as_deref(), &release, None)? {
         if !files.contains(&file.name) {
             continue;
         }

@@ -4,6 +4,7 @@ use std::ffi::OsStr;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
+use std::str::FromStr;
 
 use anyhow::{bail, Error, Result};
 use console::style;
@@ -13,6 +14,7 @@ use sha1_smol::Digest;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
+use crate::api::Api;
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, ReleaseFiles, UploadContext};
@@ -148,7 +150,6 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
-    already_uploaded_sources: Vec<Digest>,
     sources: ReleaseFiles,
 }
 
@@ -164,7 +165,6 @@ impl SourceMapProcessor {
     pub fn new() -> SourceMapProcessor {
         SourceMapProcessor {
             pending_sources: HashSet::new(),
-            already_uploaded_sources: Vec::new(),
             sources: HashMap::new(),
         }
     }
@@ -173,11 +173,6 @@ impl SourceMapProcessor {
     pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<()> {
         self.pending_sources.insert((url.to_string(), file));
         Ok(())
-    }
-
-    /// Adds an already uploaded sources checksum.
-    pub fn add_already_uploaded_source(&mut self, checksum: Digest) {
-        self.already_uploaded_sources.push(checksum);
     }
 
     fn flush_pending_sources(&mut self) {
@@ -546,17 +541,35 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    fn flag_uploaded_sources(&mut self) {
-        // There is no point in going through all the sources if nothing was uploaded,
-        // or we did not collect uploaded files.
-        if self.already_uploaded_sources.is_empty() {
+    fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) {
+        if !context.dedupe {
             return;
         }
 
-        for source in self.sources.values_mut() {
-            if let Ok(checksum) = &source.checksum() {
-                if self.already_uploaded_sources.contains(checksum) {
-                    source.already_uploaded = true;
+        let sources_checksums: Vec<_> = self
+            .sources
+            .values()
+            .filter_map(|s| s.checksum().map(|c| c.to_string()).ok())
+            .collect();
+
+        let api = Api::current();
+
+        if let Ok(artifacts) = api.list_release_files(
+            context.org,
+            context.project,
+            context.release,
+            Some(&sources_checksums),
+        ) {
+            let already_uploaded_checksums: Vec<_> = artifacts
+                .iter()
+                .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())
+                .collect();
+
+            for mut source in self.sources.values_mut() {
+                if let Ok(checksum) = source.checksum() {
+                    if already_uploaded_checksums.contains(&checksum) {
+                        source.already_uploaded = true;
+                    }
                 }
             }
         }
@@ -565,7 +578,7 @@ impl SourceMapProcessor {
     /// Uploads all files
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
         self.flush_pending_sources();
-        self.flag_uploaded_sources();
+        self.flag_uploaded_sources(context);
         let mut uploader = ReleaseFileUpload::new(context);
         uploader.files(&self.sources);
         uploader.upload()?;

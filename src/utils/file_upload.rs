@@ -26,12 +26,14 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
 
+#[derive(Default)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
     pub release: &'a str,
     pub dist: Option<&'a str>,
     pub wait: bool,
+    pub dedupe: bool,
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -96,7 +98,9 @@ impl<'a> ReleaseFileUpload<'a> {
 
     pub fn files(&mut self, files: &ReleaseFiles) -> &mut Self {
         for (k, v) in files {
-            self.files.insert(k.to_owned(), v.to_owned());
+            if !v.already_uploaded {
+                self.files.insert(k.to_owned(), v.to_owned());
+            }
         }
         self
     }
@@ -136,7 +140,7 @@ fn upload_files_parallel(
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
-        .list_release_files(context.org, context.project, context.release)?
+        .list_release_files(context.org, context.project, context.release, None)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
         .collect();

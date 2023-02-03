@@ -6,7 +6,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tes
 > Analyzing 2 sources
 > Rewriting sources
 > Adding source map references
-> Bundled 2 files for upload
+> Bundled 1 file for upload
 > Uploaded release files to Sentry
 > File upload complete (processing pending on server)
 > Organization: wat-org
