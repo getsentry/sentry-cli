@@ -507,7 +507,7 @@ impl Api {
         org: &str,
         project: Option<&str>,
         release: &str,
-        checksums: Option<&Vec<String>>,
+        checksums: &[String],
     ) -> ApiResult<Vec<Artifact>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
@@ -529,10 +529,8 @@ impl Api {
                 )
             };
 
-            if let Some(checksums) = checksums {
-                for checksum in checksums.iter() {
-                    path.push_str(&format!("&checksum={}", QueryArg(checksum)));
-                }
+            for checksum in checksums.iter() {
+                path.push_str(&format!("&checksum={}", QueryArg(checksum)));
             }
 
             let resp = self.get(&path)?;
@@ -562,7 +560,7 @@ impl Api {
         project: Option<&str>,
         release: &str,
     ) -> ApiResult<Vec<Artifact>> {
-        self._list_release_files(org, project, release, None)
+        self._list_release_files(org, project, release, &[])
     }
 
     /// Lists release files for the given `release`, filtered by a set of checksums.
@@ -571,9 +569,9 @@ impl Api {
         org: &str,
         project: Option<&str>,
         release: &str,
-        checksums: &Vec<String>,
+        checksums: &[String],
     ) -> ApiResult<Vec<Artifact>> {
-        self._list_release_files(org, project, release, Some(checksums))
+        self._list_release_files(org, project, release, checksums)
     }
 
     /// Get a single release file and store it inside provided descriptor.
