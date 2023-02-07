@@ -24,6 +24,7 @@ use log::{debug, info, warn};
 use sha1_smol::Digest;
 use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
+use symbolic::debuginfo::pe::PeObject;
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use symbolic::il2cpp::ObjectLineMapping;
@@ -114,7 +115,7 @@ struct DifMatch<'data> {
 }
 
 impl<'data> DifMatch<'data> {
-    fn from_temp_object<S>(temp_file: TempFile, name: S) -> Result<Self>
+    fn from_temp_object<S>(temp_file: TempFile, name: S, debug_id: Option<DebugId>) -> Result<Self>
     where
         S: Into<String>,
     {
@@ -123,14 +124,11 @@ impl<'data> DifMatch<'data> {
             Object::parse(unsafe { &*b }).map(|object| ParsedDif::Object(Box::new(object)))
         })?;
 
-        // Even though we could supply the debug_id here from the object we do not, the
-        // server will do the same anyway and we actually have control over the version of
-        // the code running there so can fix bugs more reliably.
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
             dif,
             name: name.into(),
-            debug_id: None,
+            debug_id,
             attachments: None,
         })
     }
@@ -197,7 +195,11 @@ impl<'data> DifMatch<'data> {
         S: Into<String>,
     {
         let temp_file = TempFile::take(path)?;
-        Self::from_temp_object(temp_file, name)
+
+        // Even though we could supply the debug_id here from the object we do not, the
+        // server will do the same anyway and we actually have control over the version of
+        // the code running there so can fix bugs more reliably.
+        Self::from_temp_object(temp_file, name, None)
     }
 
     /// Returns the parsed [`Object`] of this DIF.
@@ -853,7 +855,7 @@ fn collect_object_dif<'a>(
 
     // Each `FatObject` might contain multiple matching objects, each of
     // which needs to retain a reference to the original fat file. We
-    // create a shared instance here and clone it into `DifMatche`s
+    // create a shared instance here and clone it into `DifMatch`es
     // below.
     for object in archive.objects() {
         // Silently skip all objects that we cannot process. This can
@@ -871,6 +873,15 @@ fn collect_object_dif<'a>(
         if id.is_nil() {
             continue;
         }
+
+        // If this is a PE file with an embedded Portable PDB, we extract and process the PPDB separately.
+        if let Object::Pe(pe) = &object {
+            if let Ok(Some(ppdb_dif)) = extract_embedded_ppdb(pe, name.as_str()) {
+                if options.validate_dif(&ppdb_dif) {
+                    collected.push(ppdb_dif);
+                }
+            }
+        };
 
         // Store a mapping of "age" values for all encountered PE files,
         // regardless of whether they will be uploaded. This is used later
@@ -1077,6 +1088,30 @@ fn process_symbol_maps<'a>(
     Ok(without_hidden)
 }
 
+/// Runs all `DifMatch` objects through the provided callback and displays a
+/// progress bar while doing so.
+///
+/// ```
+/// prepare_difs(processed, |m| HashedDifMatch::from(m))?
+/// ```
+fn extract_embedded_ppdb<'a>(pe: &PeObject, pe_name: &str) -> Result<Option<DifMatch<'a>>> {
+    if let Some(embedded_ppdb) = pe.embedded_ppdb()? {
+        let temp_file = TempFile::create()?;
+        temp_file
+            .open()
+            .map(|f| embedded_ppdb.decompress_to(BufWriter::new(f)))??;
+
+        let dif = DifMatch::from_temp_object(
+            temp_file,
+            Path::new(pe_name).with_extension("pdb").to_string_lossy(),
+            Some(pe.debug_id()),
+        )?;
+        Ok(Some(dif))
+    } else {
+        Ok(None)
+    }
+}
+
 /// Default filter function to skip over bad sources we do not want to include.
 pub fn filter_bad_sources(entry: &FileEntry) -> bool {
     let max_size = Config::current().get_max_dif_item_size();
@@ -1151,9 +1186,11 @@ fn create_source_bundles<'a>(
             continue;
         }
 
-        let mut source_bundle = DifMatch::from_temp_object(temp_file, name)?;
-        source_bundle.debug_id = dif.debug_id;
-        source_bundles.push(source_bundle);
+        source_bundles.push(DifMatch::from_temp_object(
+            temp_file,
+            name,
+            dif.debug_id,
+        )?);
     }
 
     let len = source_bundles.len();
