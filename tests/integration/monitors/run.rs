@@ -10,7 +10,11 @@ fn command_monitors_run() {
         )
         .with_response_file("monitors/post-monitors.json"),
     );
-    register_test("monitors/monitors-run.trycmd");
+    if cfg!(windows) {
+        register_test("monitors/monitors-run-win.trycmd");
+    } else {
+        register_test("monitors/monitors-run.trycmd");
+    }
 }
 
 #[test]
