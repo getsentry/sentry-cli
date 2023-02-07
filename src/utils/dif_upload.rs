@@ -195,10 +195,6 @@ impl<'data> DifMatch<'data> {
         S: Into<String>,
     {
         let temp_file = TempFile::take(path)?;
-
-        // Even though we could supply the debug_id here from the object we do not, the
-        // server will do the same anyway and we actually have control over the version of
-        // the code running there so can fix bugs more reliably.
         Self::from_temp_object(temp_file, name, None)
     }
 
@@ -1085,12 +1081,7 @@ fn process_symbol_maps<'a>(
     Ok(without_hidden)
 }
 
-/// Runs all `DifMatch` objects through the provided callback and displays a
-/// progress bar while doing so.
-///
-/// ```
-/// prepare_difs(processed, |m| HashedDifMatch::from(m))?
-/// ```
+/// Checks whether the `PeObject` contains an embedded Portable PDB and extracts it as a separate  `DifMatch`.
 fn extract_embedded_ppdb<'a>(pe: &PeObject, pe_name: &str) -> Result<Option<DifMatch<'a>>> {
     if let Some(embedded_ppdb) = pe.embedded_ppdb()? {
         let temp_file = TempFile::create()?;
