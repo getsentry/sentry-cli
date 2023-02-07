@@ -100,6 +100,38 @@ fn command_debug_files_upload_pdb_embedded_sources() {
 }
 
 #[test]
+fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
+    let _chunk_upload = mock_endpoint(
+        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            .with_response_file("debug_files/get-chunk-upload.json"),
+    );
+    let _assemble = mock_endpoint(
+        EndpointOptions::new(
+            "POST",
+            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+            200,
+        )
+        .with_response_body(
+            r#"{
+                "fc1c9e58a65bd4eaf973bbb7e7a7cc01bfdaf15e": {
+                    "state": "ok",
+                    "missingChunks": []
+                }
+            }"#,
+        ),
+    );
+    let _reprocessing = mock_endpoint(
+        EndpointOptions::new(
+            "POST",
+            "/api/0/projects/wat-org/wat-project/reprocessing/",
+            200,
+        )
+        .with_response_body("[]"),
+    );
+    register_test("debug_files/debug_files-upload-dll-embedded-ppdb-with-sources.trycmd");
+}
+
+#[test]
 fn command_debug_files_upload_no_upload() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)

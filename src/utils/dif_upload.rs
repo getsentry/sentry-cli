@@ -731,16 +731,13 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
         }
     );
 
-    let count_with_sources = match options.include_sources {
-        true => collected
-            .iter()
-            .filter(|dif| match dif.object() {
-                Some(object) => object.has_sources(),
-                None => false,
-            })
-            .count(),
-        false => 0,
-    };
+    let count_with_sources = collected
+        .iter()
+        .filter(|dif| match dif.object() {
+            Some(object) => object.has_sources(),
+            None => false,
+        })
+        .count();
 
     match count_with_sources {
         0 => println!(),

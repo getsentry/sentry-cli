@@ -1,0 +1,8 @@
+```
+$ sentry-cli debug-files upload tests/integration/_fixtures/Sentry.Samples.Console.Basic-embedded-ppdb-with-sources.dll
+? success
+> Found 1 debug information file (1 with embedded sources)
+> Prepared debug information file for upload
+> Nothing to upload, all files are on the server
+
+```
