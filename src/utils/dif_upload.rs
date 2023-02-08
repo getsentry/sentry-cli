@@ -1174,11 +1174,7 @@ fn create_source_bundles<'a>(
             continue;
         }
 
-        source_bundles.push(DifMatch::from_temp_object(
-            temp_file,
-            name,
-            dif.debug_id,
-        )?);
+        source_bundles.push(DifMatch::from_temp_object(temp_file, name, dif.debug_id)?);
     }
 
     let len = source_bundles.len();
