@@ -1,0 +1,6 @@
+```
+$ sentry-cli monitors run 85a34e5a-c0b6-11ec-9d64-0242ac120002 -- cmd.exe /C echo 123
+? success
+123
+
+```
