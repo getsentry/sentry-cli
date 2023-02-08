@@ -105,7 +105,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [i686, x86_64]
+        arch: [i686, x86_64, aarch64]
 
     name: Windows ${{ matrix.arch }}
     runs-on: windows-2019
