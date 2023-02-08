@@ -194,6 +194,9 @@ impl<'data> DifMatch<'data> {
         P: AsRef<Path>,
         S: Into<String>,
     {
+        // Even though we could supply the debug_id here from the object we do not, the
+        // server will do the same anyway and we actually have control over the version of
+        // the code running there so can fix bugs more reliably.
         let temp_file = TempFile::take(path)?;
         Self::from_temp_object(temp_file, name, None)
     }

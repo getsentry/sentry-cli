@@ -346,7 +346,9 @@ impl<'a> DifFile<'a> {
                 for object in archive.get().objects().filter_map(Result::ok) {
                     add_object_features(&object);
 
-                    // Combine features with an embedded Portable PDB, if any.
+                    // Combine features with an embedded Portable PDB, if any to show up correctly in `dif check` cmd.
+                    // Note: this is intentionally different than `DifUpload.valid_features()` because we don't want to
+                    // upload the PE file separately, unless it has features we need. The PPDB is extracted instead.
                     if let Ok(Some(Object::Pe(pe))) = archive.get().object_by_index(0) {
                         if let Ok(Some(ppdb_data)) = pe.embedded_ppdb() {
                             let mut buf = Vec::new();
