@@ -1,0 +1,14 @@
+```
+$ SENTRY_ALLOW_FAILURE=1 sentry-cli debug-files check tests/integration/_fixtures/Sentry.Samples.Console.Basic-embedded-ppdb-with-sources.dll
+? success
+Debug Info File Check
+  Type: pe executable
+  Contained debug identifiers:
+    > Debug ID: 623535c7-c0ea-4dee-b99b-4669e99a7ecc-a878d1fa
+      Code ID:  d1dde1d5a000
+      Arch:     x86
+  Contained debug information:
+    > debug, sources
+  Usable: yes
+
+```

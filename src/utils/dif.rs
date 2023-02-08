@@ -335,11 +335,30 @@ impl<'a> DifFile<'a> {
         match self {
             DifFile::Archive(archive) => {
                 let mut features = ObjectDifFeatures::none();
-                for object in archive.get().objects().filter_map(Result::ok) {
+
+                let mut add_object_features = |object: &Object| {
                     features.symtab = features.symtab || object.has_symbols();
                     features.debug = features.debug || object.has_debug_info();
                     features.unwind = features.unwind || object.has_unwind_info();
                     features.sources = features.sources || object.has_sources();
+                };
+
+                for object in archive.get().objects().filter_map(Result::ok) {
+                    add_object_features(&object);
+
+                    // Combine features with an embedded Portable PDB, if any to show up correctly in `dif check` cmd.
+                    // Note: this is intentionally different than `DifUpload.valid_features()` because we don't want to
+                    // upload the PE file separately, unless it has features we need. The PPDB is extracted instead.
+                    if let Ok(Some(Object::Pe(pe))) = archive.get().object_by_index(0) {
+                        if let Ok(Some(ppdb_data)) = pe.embedded_ppdb() {
+                            let mut buf = Vec::new();
+                            if ppdb_data.decompress_to(&mut buf).is_ok() {
+                                if let Ok(ppdb) = Object::parse(&buf) {
+                                    add_object_features(&ppdb);
+                                }
+                            }
+                        }
+                    }
                 }
                 features
             }
