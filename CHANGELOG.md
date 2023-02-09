@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes & improvements
+
+- feat: Added the `--raw` flag to `send-envelope` to allow sending envelopes without parsing
+  or validation. (#1468)
+
 ## 2.12.0
 
 ### Various fixes & improvements
