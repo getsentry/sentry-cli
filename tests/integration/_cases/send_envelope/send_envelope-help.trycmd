@@ -36,4 +36,7 @@ OPTIONS:
             
             [aliases: silent]
 
+        --raw
+            Send envelopes without attempting to parse their contents.
+
 ```
