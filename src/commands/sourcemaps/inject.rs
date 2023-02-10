@@ -82,11 +82,7 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
             continue;
         }
 
-        // Generate a fresh debug id. This might not end up being used
-        // if the sourcemap already contains a debug id.
-        let fresh_debug_id = Uuid::new_v4();
-
-        let debug_id = fixup_sourcemap(&sourcemap_path, fresh_debug_id)
+        let debug_id = fixup_sourcemap(&sourcemap_path)
             .context(format!("Failed to process {}", sourcemap_path.display()))?;
 
         fixup_js_file(js_path, debug_id)
@@ -118,11 +114,11 @@ fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
 
 /// Fixes up a sourcemap file with a debug id.
 ///
-/// If the file already contains a debug id under the `debugId` key, it is left unmodified.
-/// Otherwise, the provided debug id is inserted under that key.
+/// If the file already contains a debug id under the `debugID` key, it is left unmodified.
+/// Otherwise, a fresh debug id is inserted under that key.
 ///
-/// In either case, the value of the `debugId` key is returned.
-fn fixup_sourcemap(sourcemap_path: &Path, debug_id: Uuid) -> Result<Uuid> {
+/// In either case, the value of the `debugID` key is returned.
+fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
     let mut sourcemap_file = File::options()
         .read(true)
         .write(true)
@@ -143,6 +139,7 @@ fn fixup_sourcemap(sourcemap_path: &Path, debug_id: Uuid) -> Result<Uuid> {
         }
 
         None => {
+            let debug_id = Uuid::new_v4();
             let id = serde_json::to_value(debug_id)?;
             map.insert("debugID".to_string(), id);
 
