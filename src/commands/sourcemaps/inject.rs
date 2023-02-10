@@ -97,7 +97,7 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
 ///
 /// <CODE_SNIPPET>[<debug_id>]
 /// //# sentryDebugId=<debug_id>
-///````
+///```
 /// where `<CODE_SNIPPET>[<debug_id>]`
 /// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
 /// placeholder.
