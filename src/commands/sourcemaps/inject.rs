@@ -11,6 +11,7 @@ use uuid::Uuid;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
+const SOURCEMAP_DEBUG_ID_KEY: &str = "x_sentry_debug_id";
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -131,7 +132,7 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
         bail!("Invalid sourcemap");
     };
 
-    match map.get("debugID") {
+    match map.get(SOURCEMAP_DEBUG_ID_KEY) {
         Some(id) => {
             let debug_id = serde_json::from_value(id.clone())?;
             debug!("Sourcemap already has a debug id");
@@ -141,7 +142,7 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
         None => {
             let debug_id = Uuid::new_v4();
             let id = serde_json::to_value(debug_id)?;
-            map.insert("debugID".to_string(), id);
+            map.insert(SOURCEMAP_DEBUG_ID_KEY.to_string(), id);
 
             serde_json::to_writer(&mut sourcemap_file, &sourcemap)?;
             Ok(debug_id)
