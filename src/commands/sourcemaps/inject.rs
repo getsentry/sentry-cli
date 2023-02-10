@@ -33,10 +33,14 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path = matches.value_of("path").unwrap();
 
-    let collected_paths: Vec<PathBuf> = glob(path).unwrap().flatten().collect();
+    let collected_paths: Vec<PathBuf> = glob(path)
+        .unwrap()
+        .flatten()
+        .filter(|path| path.extension().map_or(false, |ext| ext == "js"))
+        .collect();
 
     if collected_paths.is_empty() {
-        warn!("Did not match any files for pattern: {}", path);
+        warn!("Did not match any JavaScript files for pattern: {}", path);
         return Ok(());
     }
 
@@ -46,14 +50,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 fn fixup_files(paths: &[PathBuf]) -> Result<()> {
     'paths: for path in paths {
         let js_path = path.as_path();
-
-        let Some(ext) = js_path.extension() else {
-            continue;
-        };
-
-        if ext != "js" {
-            continue;
-        }
 
         debug!("Processing js file {}", js_path.display());
 
