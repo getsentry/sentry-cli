@@ -1,6 +1,7 @@
 use crate::integration::register_test;
 
 mod explain;
+mod inject;
 mod resolve;
 mod upload;
 
