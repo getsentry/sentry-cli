@@ -52,7 +52,7 @@ regex = "1.7.1"
 runas = "0.2.1"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.29.2", default-features = false, features = [
+sentry = { version = "0.29.3", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",

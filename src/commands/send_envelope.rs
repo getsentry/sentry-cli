@@ -26,6 +26,11 @@ pub fn make_command(command: Command) -> Command {
                 .required(true)
                 .help("The path or glob to the file(s) in envelope format to send as envelope(s)."),
         )
+        .arg(
+            Arg::new("raw")
+                .long("raw")
+                .help("Send envelopes without attempting to parse their contents."),
+        )
 }
 
 fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
@@ -36,6 +41,7 @@ fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
+    let raw = matches.is_present("raw");
 
     let path = matches.value_of("path").unwrap();
 
@@ -51,7 +57,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     for path in collected_paths {
         let p = path.as_path();
-        let envelope: Envelope = Envelope::from_path(p)?;
+        let envelope: Envelope = if raw {
+            Envelope::from_path_raw(p)
+        } else {
+            Envelope::from_path(p)
+        }?;
         send_raw_envelope(envelope, dsn.clone());
         println!("Envelope from file {} dispatched", p.display());
     }
