@@ -6,7 +6,7 @@ use clap::{Arg, ArgMatches, Command};
 use console::style;
 use uuid::Uuid;
 
-use crate::api::{Api, CreateMonitorCheckIn, MonitorStatus, UpdateMonitorCheckIn};
+use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
 use crate::utils::args::validate_uuid;
 use crate::utils::system::{print_error, QuietExit};
 
@@ -49,7 +49,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let monitor_checkin = api.create_monitor_checkin(
         &monitor,
         &CreateMonitorCheckIn {
-            status: MonitorStatus::InProgress,
+            status: MonitorCheckinStatus::InProgress,
         },
     );
 
@@ -83,9 +83,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 &checkin.id,
                 &UpdateMonitorCheckIn {
                     status: Some(if success {
-                        MonitorStatus::Ok
+                        MonitorCheckinStatus::Ok
                     } else {
-                        MonitorStatus::Error
+                        MonitorCheckinStatus::Error
                     }),
                     duration: Some({
                         let elapsed = started.elapsed();

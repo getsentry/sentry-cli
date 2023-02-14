@@ -2388,7 +2388,7 @@ pub struct Monitor {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum MonitorStatus {
+pub enum MonitorCheckinStatus {
     Unknown,
     Ok,
     InProgress,
@@ -2398,19 +2398,19 @@ pub enum MonitorStatus {
 #[derive(Debug, Deserialize)]
 pub struct MonitorCheckIn {
     pub id: Uuid,
-    pub status: MonitorStatus,
+    pub status: MonitorCheckinStatus,
     pub duration: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct CreateMonitorCheckIn {
-    pub status: MonitorStatus,
+    pub status: MonitorCheckinStatus,
 }
 
 #[derive(Debug, Serialize, Default)]
 pub struct UpdateMonitorCheckIn {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<MonitorStatus>,
+    pub status: Option<MonitorCheckinStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<u64>,
 }
