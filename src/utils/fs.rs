@@ -73,7 +73,7 @@ impl TempFile {
             .create(true)
             .open(&self.path)?;
 
-        f.seek(SeekFrom::Start(0)).ok();
+        f.rewind().ok();
         Ok(f)
     }
 

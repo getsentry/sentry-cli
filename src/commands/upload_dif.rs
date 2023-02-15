@@ -352,7 +352,7 @@ fn execute_internal(matches: &ArgMatches<'_>, legacy: bool) -> Result<(), Error>
                 eprintln!("{}", style("Error: Some symbols could not be found!").red());
                 eprintln!("The following symbols are still missing:");
                 for id in missing_ids {
-                    println!("  {}", id);
+                    println!("  {id}");
                 }
 
                 return Err(QuietExit(1).into());

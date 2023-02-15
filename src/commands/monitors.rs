@@ -71,7 +71,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     unreachable!();
 }
 
-fn execute_list<'a>(ctx: &MonitorContext, _matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_list(ctx: &MonitorContext, _matches: &ArgMatches) -> Result<(), Error> {
     let mut monitors = ctx.api.list_organization_monitors(ctx.get_org()?)?;
     monitors.sort_by_key(|p| (p.name.clone()));
 
@@ -91,7 +91,7 @@ fn execute_list<'a>(ctx: &MonitorContext, _matches: &ArgMatches<'a>) -> Result<(
     Ok(())
 }
 
-fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(), Error> {
+fn execute_run(ctx: &MonitorContext, matches: &ArgMatches) -> Result<(), Error> {
     let monitor = matches
         .value_of("monitor")
         .unwrap()
@@ -134,7 +134,7 @@ fn execute_run<'a>(ctx: &MonitorContext, matches: &ArgMatches<'a>) -> Result<(),
         }
         Err(e) => {
             if allow_failure {
-                eprintln!("{}", e);
+                eprintln!("{e}");
             } else {
                 return Err(e.into());
             }

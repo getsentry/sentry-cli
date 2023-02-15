@@ -95,7 +95,7 @@ impl Table {
         for row in &self.rows {
             tbl.add_row(row.make_row());
         }
-        tbl.print_tty(false);
+        tbl.print_tty(false).ok();
     }
 }
 

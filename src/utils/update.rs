@@ -55,11 +55,11 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<(), E
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
         runas::Command::new("mv")
-            .arg(&downloaded_path)
-            .arg(&exe)
+            .arg(downloaded_path)
+            .arg(exe)
             .status()?;
     } else {
-        fs::rename(&downloaded_path, &exe)?;
+        fs::rename(downloaded_path, exe)?;
     }
     Ok(())
 }

@@ -58,7 +58,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
                 break;
             }
             Err(err) => {
-                println!("Invalid token: {}", err);
+                println!("Invalid token: {err}");
             }
         }
     }

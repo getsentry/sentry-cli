@@ -14,7 +14,7 @@ pub fn register_test(path: &str) -> TestCases {
         .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
-        .case(format!("tests/integration/_cases/{}", path));
+        .case(format!("tests/integration/_cases/{path}"));
     test_case
 }
 pub struct EndpointOptions {
@@ -37,7 +37,7 @@ impl EndpointOptions {
     }
 
     pub fn with_response_file(mut self, path: &str) -> Self {
-        self.response_file = Some(format!("tests/integration/_api/{}", path));
+        self.response_file = Some(format!("tests/integration/_api/{path}"));
         self
     }
 
