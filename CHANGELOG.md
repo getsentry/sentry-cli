@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.75.0
+
+- feat(backport): Replace `npmlog` dependency in order to avoid vulnerability (#1445)
+
 ## 1.74.6
 
 ### Various fixes & improvements
