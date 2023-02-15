@@ -47,7 +47,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 }
 
 fn print_object_sources(object: &Object) -> Result<()> {
-    if !object.has_sources() {
+    let debug_session = object.debug_session()?;
+
+    // We're not using object.has_sources() because it only reports on embedded sources, not referenced files.
+    if debug_session.files().next().is_none() {
         println!(
             "{} {} has no sources.",
             object.file_format(),
@@ -59,11 +62,10 @@ fn print_object_sources(object: &Object) -> Result<()> {
             object.file_format(),
             object.debug_id()
         );
-        let debug_session = object.debug_session()?;
         for file in debug_session.files() {
             let file = file?;
-            println!("  {}", file.path_str());
             let abs_path = file.abs_path_str();
+            println!("  {}", &abs_path);
             match debug_session.source_by_path(abs_path.as_str())? {
                 Some(source) => {
                     println!("    Embedded, {} bytes", source.len());
@@ -72,7 +74,7 @@ fn print_object_sources(object: &Object) -> Result<()> {
                     if Path::new(&abs_path).exists() {
                         println!("    Not embedded, but available on the local disk.");
                     } else {
-                        println!("    Not available in file or on disk.");
+                        println!("    Not embedded nor available locally at the referenced path.");
                     }
                 }
             }
