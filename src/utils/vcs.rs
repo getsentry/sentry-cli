@@ -937,7 +937,7 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
         .args(tag_cmd)
         .current_dir(dir)
         .spawn()
-        .unwrap_or_else(|_| panic!("Failed to execute `git tag {}`", tag_name));
+        .unwrap_or_else(|_| panic!("Failed to execute `git tag {tag_name}`"));
 
     tag.wait().expect("Failed to wait on git tag.");
 
@@ -945,7 +945,7 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
         .args(["rev-list", "-n", "1", tag_name])
         .current_dir(dir)
         .output()
-        .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {}`.", tag_name));
+        .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {tag_name}`."));
 
     String::from_utf8(hash.stdout)
         .map(|s| s.trim().to_string())
