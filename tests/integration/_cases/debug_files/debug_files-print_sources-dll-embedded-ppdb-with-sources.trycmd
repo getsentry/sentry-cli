@@ -1,5 +1,5 @@
 ```
-$ sentry-cli debug-files dump-sources tests/integration/_fixtures/Sentry.Samples.Console.Basic-embedded-ppdb-with-sources.dll
+$ sentry-cli debug-files print-sources tests/integration/_fixtures/Sentry.Samples.Console.Basic-embedded-ppdb-with-sources.dll
 ? success
 pe 623535c7-c0ea-4dee-b99b-4669e99a7ecc-a878d1fa has no sources.
 portablepdb 623535c7-c0ea-4dee-b99b-4669e99a7ecc-a878d1fa references sources:

@@ -1,5 +1,5 @@
 ```
-$ sentry-cli debug-files dump-sources tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb
+$ sentry-cli debug-files print-sources tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb
 ? success
 portablepdb 54fdf14a-41a1-426a-a073-8185e11a89d6-83920e6f references sources:
   C:/dev/sentry-dotnet/samples/Sentry.Samples.Console.Basic/Program.cs

@@ -3,16 +3,16 @@ use clap::{ArgMatches, Command};
 
 pub mod bundle_sources;
 pub mod check;
-pub mod dump_sources;
 pub mod find;
+pub mod print_sources;
 pub mod upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bundle_sources);
         $mac!(check);
-        $mac!(dump_sources);
         $mac!(find);
+        $mac!(print_sources);
         $mac!(upload);
     };
 }
