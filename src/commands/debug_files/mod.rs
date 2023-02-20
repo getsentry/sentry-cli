@@ -4,6 +4,7 @@ use clap::{ArgMatches, Command};
 pub mod bundle_sources;
 pub mod check;
 pub mod find;
+pub mod print_sources;
 pub mod upload;
 
 macro_rules! each_subcommand {
@@ -11,6 +12,7 @@ macro_rules! each_subcommand {
         $mac!(bundle_sources);
         $mac!(check);
         $mac!(find);
+        $mac!(print_sources);
         $mac!(upload);
     };
 }

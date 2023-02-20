@@ -23,6 +23,7 @@ SUBCOMMANDS:
     check             Check the debug info file at a given path.
     find              Locate debug information files for given debug identifiers.
     help              Print this message or the help of the given subcommand(s)
+    print-sources     Print source files linked by the given debug info file.
     upload            Upload debugging information files.
 
 ```
