@@ -125,7 +125,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if let Ok(val) = env::var("PLATFORM_NAME");
         if val.ends_with("simulator");
         then {
-            let url = matches.get_one::<String>("fetch_from").unwrap_or("http://127.0.0.1:8081/");
+            let url = matches.get_one::<String>("fetch_from").map(String::as_str).unwrap_or("http://127.0.0.1:8081/");
             info!("Fetching sourcemaps from {}", url);
             fetch_url = Some(url);
         } else {
