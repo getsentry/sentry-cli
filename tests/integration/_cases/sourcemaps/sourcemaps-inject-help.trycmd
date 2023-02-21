@@ -7,7 +7,7 @@ references a sourcemap, a debug id is generated and inserted into both files. If
 sourcemap already contains a debug id, that id is used instead.
 
 USAGE:
-    sentry-cli sourcemaps inject [OPTIONS] <PATH>
+    sentry-cli[EXE] sourcemaps inject [OPTIONS] <PATH>
 
 ARGS:
     <PATH>
