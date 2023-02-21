@@ -9,13 +9,13 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("List all events in your organization.")
         .arg(
-            Arg::with_name("show_user")
+            Arg::new("show_user")
                 .long("show-user")
                 .short('U')
                 .help("Display the Users column."),
         )
         .arg(
-            Arg::with_name("show_tags")
+            Arg::new("show_tags")
                 .long("show-tags")
                 .short('T')
                 .help("Display the Tags column."),
