@@ -4,7 +4,7 @@ use clap::{Arg, ArgMatches, Command};
 
 use crate::api::{Api, UpdatedRelease};
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, validate_timestamp, ArgExt};
+use crate::utils::args::{get_timestamp, ArgExt};
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -20,27 +20,20 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("started")
                 .long("started")
-                .validator(validate_timestamp)
+                .value_parser(get_timestamp)
                 .value_name("TIMESTAMP")
                 .help("Set the release start date."),
         )
         .arg(
             Arg::new("released")
                 .long("released")
-                .validator(validate_timestamp)
+                .value_parser(get_timestamp)
                 .value_name("TIMESTAMP")
                 .help("Set the release time. [defaults to the current time]"),
         )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    fn get_date(value: Option<&str>, now_default: bool) -> Result<Option<DateTime<Utc>>> {
-        match value {
-            None => Ok(if now_default { Some(Utc::now()) } else { None }),
-            Some(value) => Ok(Some(get_timestamp(value)?)),
-        }
-    }
-
     let config = Config::current();
     let api = Api::current();
     let version = matches.get_one::<String>("version").unwrap();
@@ -51,14 +44,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         &UpdatedRelease {
             projects: config.get_projects(matches).ok(),
             url: matches.get_one::<String>("url").map(String::clone),
-            date_started: get_date(
-                matches.get_one::<String>("started").map(String::as_str),
-                false,
-            )?,
-            date_released: get_date(
-                matches.get_one::<String>("released").map(String::as_str),
-                true,
-            )?,
+            date_started: matches.get_one::<DateTime<Utc>>("started").copied(),
+            date_released: Some(
+                matches
+                    .get_one::<DateTime<Utc>>("released")
+                    .copied()
+                    .unwrap_or(Utc::now()),
+            ),
             ..Default::default()
         },
     )?;

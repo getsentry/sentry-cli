@@ -5,7 +5,7 @@ use regex::Regex;
 
 use crate::api::{Api, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, UpdatedRelease};
 use crate::config::Config;
-use crate::utils::args::{validate_int, ArgExt};
+use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
     find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,
@@ -41,7 +41,7 @@ pub fn make_command(command: Command) -> Command {
             .conflicts_with("auto")
             .long("initial-depth")
             .value_name("INITIAL DEPTH")
-            .validator(validate_int)
+            .value_parser(clap::value_parser!(usize))
             .help("Set the number of commits of the initial release. The default is 20."))
         .arg(Arg::new("commits")
             .long("commit")
@@ -156,10 +156,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         api.set_release_refs(&org, version, heads)?;
     } else {
         let default_count = matches
-            .get_one::<String>("initial-depth")
-            .map(String::as_str)
-            .unwrap_or("20")
-            .parse::<usize>()?;
+            .get_one::<usize>("initial-depth")
+            .copied()
+            .unwrap_or(20);
 
         if matches.contains_id("auto") {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");

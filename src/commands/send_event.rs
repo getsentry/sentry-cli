@@ -5,6 +5,7 @@ use std::io::BufReader;
 use std::path::PathBuf;
 
 use anyhow::{format_err, Result};
+use chrono::{DateTime, Utc};
 use clap::{Arg, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
@@ -15,7 +16,7 @@ use serde_json::Value;
 use username::get_user_name;
 
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, validate_distribution, validate_timestamp};
+use crate::utils::args::{get_timestamp, validate_distribution};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use crate::utils::releases::detect_release_name;
 
@@ -43,7 +44,7 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(Arg::new("timestamp")
                  .long("timestamp")
-                 .validator(validate_timestamp)
+                 .value_parser(get_timestamp)
                  .value_name("TIMESTAMP")
                  .help("Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or RFC3339."))
         .arg(
@@ -58,7 +59,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .long("dist")
                 .short('d')
-                .validator(validate_distribution)
+                .value_parser(validate_distribution)
                 .help("Set the distribution."),
         )
         .arg(
@@ -213,8 +214,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ..Event::default()
     };
 
-    if let Some(timestamp) = matches.get_one::<String>("timestamp") {
-        event.timestamp = get_timestamp(timestamp).map(|t| t.into())?;
+    if let Some(timestamp) = matches.get_one::<DateTime<Utc>>("timestamp") {
+        event.timestamp = (*timestamp).into();
     }
 
     for tag in matches.get_many::<String>("tags").unwrap_or_default() {

@@ -5,8 +5,6 @@ use anyhow::{format_err, Result};
 use clap::{Arg, ArgMatches, Command};
 use sourcemap::{DecodedMap, SourceView, Token};
 
-use crate::utils::args::validate_int;
-
 pub fn make_command(command: Command) -> Command {
     command
         .about("Resolve sourcemap for a given line/column position.")
@@ -20,7 +18,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("line")
                 .short('l')
                 .value_name("LINE")
-                .validator(validate_int)
+                .value_parser(clap::value_parser!(u32))
                 .help("Line number for minified source."),
         )
         .arg(
@@ -28,7 +26,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("column")
                 .short('c')
                 .value_name("COLUMN")
-                .validator(validate_int)
+                .value_parser(clap::value_parser!(u32))
                 .help("Column number for minified source."),
         )
 }
@@ -36,12 +34,8 @@ pub fn make_command(command: Command) -> Command {
 /// Returns the zero indexed position from matches
 fn lookup_pos(matches: &ArgMatches) -> Option<(u32, u32)> {
     Some((
-        matches
-            .get_one::<String>("line")
-            .map_or(0, |x| x.parse::<u32>().unwrap() - 1),
-        matches
-            .get_one::<String>("column")
-            .map_or(0, |x| x.parse::<u32>().unwrap() - 1),
+        matches.get_one::<u32>("line").map_or(0, |x| x - 1),
+        matches.get_one::<u32>("column").map_or(0, |x| x - 1),
     ))
 }
 

@@ -13,7 +13,7 @@ use uuid::Uuid;
 use crate::api::{Api, AssociateDsyms};
 use crate::config::Config;
 use crate::utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
-use crate::utils::args::{validate_uuid, ArgExt};
+use crate::utils::args::ArgExt;
 use crate::utils::fs::{get_sha1_checksum, TempFile};
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
@@ -118,7 +118,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("uuid")
                 .short('u')
                 .value_name("UUID")
-                .validator(validate_uuid)
+                .value_parser(Uuid::parse_str)
                 .help(
                     "Explicitly override the UUID of the mapping file with another one.{n}\
                      This should be used with caution as it means that you can upload \
@@ -148,9 +148,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         None
     };
 
-    let forced_uuid = matches
-        .get_one::<String>("uuid")
-        .map(|x| x.parse::<Uuid>().unwrap());
+    let forced_uuid = matches.get_one::<Uuid>("uuid");
     if forced_uuid.is_some() && paths.len() != 1 {
         bail!(
             "When forcing a UUID a single proguard file needs to be \
@@ -180,7 +178,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
                         size: md.len(),
-                        uuid: forced_uuid.unwrap_or_else(|| mapping.uuid()),
+                        uuid: forced_uuid.copied().unwrap_or_else(|| mapping.uuid()),
                     });
                 }
             }

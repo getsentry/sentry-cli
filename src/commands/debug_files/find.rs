@@ -1,8 +1,10 @@
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsStr;
+use std::fmt::Debug;
 use std::io;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
@@ -14,7 +16,6 @@ use symbolic::common::{ByteView, DebugId};
 use uuid::{Uuid, Version as UuidVersion};
 use walkdir::{DirEntry, WalkDir};
 
-use crate::utils::args::validate_id;
 use crate::utils::dif::{DifFile, DifType};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
@@ -38,7 +39,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("ids")
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
-                .validator(validate_id)
+                .value_parser(DebugId::from_str)
                 .multiple_occurrences(true),
         )
         .arg(
@@ -368,9 +369,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // which ids are we looking for?
-    if let Some(i) = matches.get_many::<String>("ids") {
+    if let Some(i) = matches.get_many::<DebugId>("ids") {
         for id in i {
-            ids.insert(id.parse().unwrap());
+            ids.insert(*id);
         }
     } else {
         return Ok(());

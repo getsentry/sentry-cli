@@ -45,7 +45,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .required(true)
                 .multiple_occurrences(true)
-                .validator(validate_distribution)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
