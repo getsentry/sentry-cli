@@ -29,14 +29,14 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
 
     api.new_release(
         &config.get_org(matches)?,
         &NewRelease {
             version: version.to_owned(),
             projects: config.get_projects(matches)?,
-            url: matches.value_of("url").map(str::to_owned),
+            url: matches.get_one::<String>("url").map(String::clone),
             date_started: Some(Utc::now()),
             date_released: if matches.is_present("finalize") {
                 Some(Utc::now())

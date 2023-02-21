@@ -2329,7 +2329,7 @@ impl IssueFilter {
         if matches.is_present("all") {
             return Ok(IssueFilter::All);
         }
-        if let Some(status) = matches.value_of("status") {
+        if let Some(status) = matches.get_one::<String>("status") {
             return Ok(IssueFilter::Status(status.into()));
         }
         let mut ids = vec![];

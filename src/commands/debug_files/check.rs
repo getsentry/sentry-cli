@@ -40,10 +40,12 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = Path::new(matches.value_of("path").unwrap());
+    let path = Path::new(matches.get_one::<String>("path").unwrap());
 
     // which types should we consider?
-    let ty = matches.value_of("type").map(|t| t.parse().unwrap());
+    let ty = matches
+        .get_one::<String>("type")
+        .map(|t| t.parse().unwrap());
     let dif = DifFile::open_path(path, ty)?;
 
     if matches.is_present("json") {

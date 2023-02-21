@@ -16,7 +16,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = Path::new(matches.value_of("path").unwrap());
+    let path = Path::new(matches.get_one::<String>("path").unwrap());
 
     // which types should we consider?
     let data = ByteView::open(path)?;

@@ -109,7 +109,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let api = Api::current();
 
-    let dist = matches.value_of("dist");
+    let dist = matches.get_one::<String>("dist").map(String::as_str);
     let mut headers = vec![];
     if let Some(header_list) = matches.values_of("file-headers") {
         for header in header_list {
@@ -130,10 +130,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ..Default::default()
     };
 
-    let path = Path::new(matches.value_of("path").unwrap());
+    let path = Path::new(matches.get_one::<String>("path").unwrap());
     // Batch files upload
     if path.is_dir() {
-        let ignore_file = matches.value_of("ignore_file").unwrap_or("");
+        let ignore_file = matches
+            .get_one::<String>("ignore_file")
+            .map(String::as_str)
+            .unwrap_or_default();
         let ignores = matches
             .values_of("ignore")
             .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
@@ -150,8 +153,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .decompress(matches.is_present("decompress"))
             .collect_files()?;
 
-        let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-        let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+        let url_suffix = matches
+            .get_one::<String>("url_suffix")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let mut url_prefix = matches
+            .get_one::<String>("url_prefix")
+            .map(String::as_str)
+            .unwrap_or("~");
         // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
         if url_prefix.ends_with('/') {
             url_prefix = &url_prefix[..url_prefix.len() - 1];
@@ -181,7 +190,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     // Single file upload
     else {
-        let name = match matches.value_of("name") {
+        let name = match matches.get_one::<String>("name") {
             Some(name) => name,
             None => Path::new(path)
                 .file_name()

@@ -15,7 +15,7 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
 
     let info_rv = api.update_release(
         &config.get_org(matches)?,

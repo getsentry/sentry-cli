@@ -61,8 +61,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let base = env::current_dir()?;
 
-    let sourcemap_path = PathBuf::from(matches.value_of("sourcemap").unwrap());
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
+    let sourcemap_path = PathBuf::from(matches.get_one::<String>("sourcemap").unwrap());
+    let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let sourcemap_url = format!(
         "~/{}",
         sourcemap_path.file_name().unwrap().to_string_lossy()
@@ -101,7 +101,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = api.new_release(
         &org,
         &NewRelease {
-            version: matches.value_of("release").unwrap().to_string(),
+            version: matches.get_one::<String>("release").unwrap().to_string(),
             projects: vec![project.to_string()],
             ..Default::default()
         },

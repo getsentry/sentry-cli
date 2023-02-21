@@ -44,7 +44,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .iter()
             .map(|release_info| release_info.version.clone())
             .collect::<Vec<_>>()
-            .join(matches.value_of("delimiter").unwrap_or("\n"));
+            .join(matches.get_one::<String>("delimiter").map(String::as_str).unwrap_or("\n"));
 
         println!("{versions}");
         return Ok(());

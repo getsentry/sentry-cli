@@ -142,13 +142,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut mappings = vec![];
     let mut all_checksums = vec![];
 
-    let android_manifest = if let Some(path) = matches.value_of("android_manifest") {
+    let android_manifest = if let Some(path) = matches.get_one::<String>("android_manifest") {
         Some(AndroidManifest::from_path(path)?)
     } else {
         None
     };
 
-    let forced_uuid = matches.value_of("uuid").map(|x| x.parse::<Uuid>().unwrap());
+    let forced_uuid = matches
+        .get_one::<String>("uuid")
+        .map(|x| x.parse::<Uuid>().unwrap());
     if forced_uuid.is_some() && paths.len() != 1 {
         bail!(
             "When forcing a UUID a single proguard file needs to be \
@@ -220,7 +222,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // write UUIDs into the mapping file.
-    if let Some(p) = matches.value_of("write_properties") {
+    if let Some(p) = matches.get_one::<String>("write_properties") {
         let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
         dump_proguard_uuids_as_properties(p, &uuids)?;
     }
@@ -257,20 +259,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         api.associate_android_proguard_mappings(&org, &project, &android_manifest, all_checksums)?;
 
     // if values are given associate
-    } else if let Some(app_id) = matches.value_of("app_id") {
+    } else if let Some(app_id) = matches.get_one::<String>("app_id") {
         api.associate_dsyms(
             &org,
             &project,
             &AssociateDsyms {
                 platform: matches
-                    .value_of("platform")
+                    .get_one::<String>("platform")
+                    .map(String::as_str)
                     .unwrap_or("android")
                     .to_string(),
                 checksums: all_checksums,
                 name: app_id.to_string(),
                 app_id: app_id.to_string(),
-                version: matches.value_of("version").unwrap().to_owned(),
-                build: matches.value_of("version_code").map(str::to_owned),
+                version: matches.get_one::<String>("version").unwrap().to_owned(),
+                build: matches.get_one::<String>("version_code").map(String::clone),
             },
         )?;
     }

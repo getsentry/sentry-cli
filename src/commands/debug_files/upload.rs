@@ -221,7 +221,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     upload.il2cpp_mapping(matches.is_present("il2cpp_mapping"));
 
     // Configure BCSymbolMap resolution, if possible
-    if let Some(symbol_map) = matches.value_of("symbol_maps") {
+    if let Some(symbol_map) = matches.get_one::<String>("symbol_maps") {
         upload
             .symbol_map(symbol_map)
             .map_err(|_| format_err!("--symbol-maps requires Apple dsymutil to be available."))?;
@@ -238,7 +238,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // Try to resolve the Info.plist either by path or from Xcode
-    let info_plist = match matches.value_of("info_plist") {
+    let info_plist = match matches.get_one::<String>("info_plist") {
         Some(path) => Some(InfoPlist::from_path(path)?),
         None => InfoPlist::discover_from_env()?,
     };

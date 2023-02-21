@@ -29,7 +29,7 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();

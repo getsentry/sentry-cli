@@ -105,7 +105,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             Err(_) => bail!("Need to run this from Xcode"),
         };
     let base = env::current_dir()?;
-    let script = if let Some(path) = matches.value_of("build_script") {
+    let script = if let Some(path) = matches.get_one::<String>("build_script") {
         base.join(path)
     } else {
         base.join("../node_modules/react-native/scripts/react-native-xcode.sh")
@@ -125,7 +125,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if let Ok(val) = env::var("PLATFORM_NAME");
         if val.ends_with("simulator");
         then {
-            let url = matches.value_of("fetch_from").unwrap_or("http://127.0.0.1:8081/");
+            let url = matches.get_one::<String>("fetch_from").unwrap_or("http://127.0.0.1:8081/");
             info!("Fetching sourcemaps from {}", url);
             fetch_url = Some(url);
         } else {

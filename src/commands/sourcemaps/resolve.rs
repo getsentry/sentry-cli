@@ -37,10 +37,10 @@ pub fn make_command(command: Command) -> Command {
 fn lookup_pos(matches: &ArgMatches) -> Option<(u32, u32)> {
     Some((
         matches
-            .value_of("line")
+            .get_one::<String>("line")
             .map_or(0, |x| x.parse::<u32>().unwrap() - 1),
         matches
-            .value_of("column")
+            .get_one::<String>("column")
             .map_or(0, |x| x.parse::<u32>().unwrap() - 1),
     ))
 }
@@ -106,7 +106,7 @@ fn print_token(token: &Token<'_>) {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let sourcemap_path = matches
-        .value_of("path")
+        .get_one::<String>("path")
         .ok_or_else(|| format_err!("Sourcemap not provided"))?;
 
     let sm = sourcemap::decode_slice(&fs::read(PathBuf::from(sourcemap_path))?)?;

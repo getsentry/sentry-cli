@@ -274,8 +274,8 @@ impl Config {
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
         matches
-            .value_of("org")
-            .map(str::to_owned)
+            .get_one::<String>("org")
+            .map(String::clone)
             .or_else(|| env::var("SENTRY_ORG").ok())
             .or_else(|| {
                 self.ini
@@ -288,15 +288,15 @@ impl Config {
     /// Given a match object from clap, this returns the release from it.
     pub fn get_release(&self, matches: &ArgMatches) -> Result<String> {
         matches
-            .value_of("release")
-            .map(str::to_owned)
+            .get_one::<String>("release")
+            .map(String::clone)
             .or_else(|| env::var("SENTRY_RELEASE").ok())
             .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
     pub fn get_release_with_legacy_fallback(&self, matches: &ArgMatches) -> Result<String> {
-        if let Some(version) = matches.value_of("version") {
+        if let Some(version) = matches.get_one::<String>("version") {
             Ok(version.to_string())
         } else {
             self.get_release(matches)

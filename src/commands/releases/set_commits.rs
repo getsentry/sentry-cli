@@ -79,7 +79,7 @@ fn strip_sha(sha: &str) -> &str {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
     let org = config.get_org(matches)?;
     let repos = api.list_organization_repos(&org)?;
     let mut commit_specs = vec![];
@@ -156,7 +156,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         api.set_release_refs(&org, version, heads)?;
     } else {
         let default_count = matches
-            .value_of("initial-depth")
+            .get_one::<String>("initial-depth")
+            .map(String::as_str)
             .unwrap_or("20")
             .parse::<usize>()?;
 

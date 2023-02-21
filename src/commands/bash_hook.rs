@@ -173,8 +173,8 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     if matches.is_present("send_event") {
         return send_event(
-            matches.value_of("traceback").unwrap(),
-            matches.value_of("log").unwrap(),
+            matches.get_one::<String>("traceback").unwrap(),
+            matches.get_one::<String>("log").unwrap(),
             !matches.is_present("no_environ"),
         );
     }
@@ -193,7 +193,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
     if matches.is_present("cli") {
-        script = script.replace("___SENTRY_CLI___", matches.value_of("cli").unwrap());
+        script = script.replace(
+            "___SENTRY_CLI___",
+            matches.get_one::<String>("cli").unwrap(),
+        );
     } else {
         script = script.replace(
             "___SENTRY_CLI___",

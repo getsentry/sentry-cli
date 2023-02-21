@@ -43,16 +43,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let config = Config::current();
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
 
     api.update_release(
         &config.get_org(matches)?,
         version,
         &UpdatedRelease {
             projects: config.get_projects(matches).ok(),
-            url: matches.value_of("url").map(str::to_owned),
-            date_started: get_date(matches.value_of("started"), false)?,
-            date_released: get_date(matches.value_of("released"), true)?,
+            url: matches.get_one::<String>("url").map(String::clone),
+            date_started: get_date(
+                matches.get_one::<String>("started").map(String::as_str),
+                false,
+            )?,
+            date_released: get_date(
+                matches.get_one::<String>("released").map(String::as_str),
+                true,
+            )?,
             ..Default::default()
         },
     )?;

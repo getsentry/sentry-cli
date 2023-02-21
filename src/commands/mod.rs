@@ -97,7 +97,7 @@ fn preexecute_hooks() -> Result<bool> {
 }
 
 fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
-    if let Some(url) = matches.value_of("url") {
+    if let Some(url) = matches.get_one::<String>("url") {
         config.set_base_url(url);
     }
 
@@ -106,15 +106,15 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_headers(headers);
     }
 
-    if let Some(api_key) = matches.value_of("api_key") {
+    if let Some(api_key) = matches.get_one::<String>("api_key") {
         config.set_auth(Auth::Key(api_key.to_owned()));
     }
 
-    if let Some(auth_token) = matches.value_of("auth_token") {
+    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
         config.set_auth(Auth::Token(auth_token.to_owned()));
     }
 
-    if let Some(level_str) = matches.value_of("log_level") {
+    if let Some(level_str) = matches.get_one::<String>("log_level") {
         match level_str.parse() {
             Ok(level) => {
                 config.set_log_level(level);

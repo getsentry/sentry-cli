@@ -68,23 +68,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let version = config.get_release_with_legacy_fallback(matches)?;
     let mut deploy = Deploy {
-        env: matches.value_of("env").unwrap().to_string(),
-        name: matches.value_of("name").map(str::to_owned),
-        url: matches.value_of("url").map(str::to_owned),
+        env: matches.get_one::<String>("env").unwrap().to_string(),
+        name: matches.get_one::<String>("name").map(String::clone),
+        url: matches.get_one::<String>("url").map(String::clone),
         ..Default::default()
     };
 
-    if let Some(value) = matches.value_of("time") {
+    if let Some(value) = matches.get_one::<String>("time") {
         let finished = Utc::now();
         deploy.finished = Some(finished);
         deploy.started = Some(finished - Duration::seconds(value.parse().unwrap()));
     } else {
-        if let Some(finished_str) = matches.value_of("finished") {
+        if let Some(finished_str) = matches.get_one::<String>("finished") {
             deploy.finished = Some(get_timestamp(finished_str)?);
         } else {
             deploy.finished = Some(Utc::now());
         }
-        if let Some(started_str) = matches.value_of("started") {
+        if let Some(started_str) = matches.get_one::<String>("started") {
             deploy.started = Some(get_timestamp(started_str)?);
         }
     }

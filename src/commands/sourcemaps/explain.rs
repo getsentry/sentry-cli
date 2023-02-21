@@ -362,7 +362,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let event_id = matches.value_of("event").unwrap();
+    let event_id = matches.get_one::<String>("event").unwrap();
 
     let event = fetch_event(&org, &project, event_id)?;
     let release = extract_release(&event)?;

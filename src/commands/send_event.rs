@@ -158,7 +158,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
 
-    if let Some(path) = matches.value_of("path") {
+    if let Some(path) = matches.get_one::<String>("path") {
         let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
             .unwrap()
             .flatten()
@@ -184,23 +184,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut event = Event {
         sdk: Some(get_sdk_info()),
         level: matches
-            .value_of("level")
+            .get_one::<String>("level")
             .and_then(|l| l.parse().ok())
             .unwrap_or(Level::Error),
         release: matches
-            .value_of("release")
-            .map(str::to_owned)
-            .or_else(|| detect_release_name().ok())
-            .map(Cow::from),
-        dist: matches.value_of("dist").map(|x| x.to_string().into()),
+            .get_one::<String>("release")
+            .map(|s| Cow::Owned(s.clone()))
+            .or_else(|| detect_release_name().ok().map(Cow::from)),
+        dist: matches
+            .get_one::<String>("dist")
+            .map(|s| Cow::Owned(s.clone())),
         platform: matches
-            .value_of("platform")
-            .unwrap_or("other")
-            .to_string()
-            .into(),
+            .get_one::<String>("platform")
+            .map(|s| Cow::Owned(s.clone()))
+            .unwrap_or(Cow::from("other")),
         environment: matches
-            .value_of("environment")
-            .map(|x| x.to_string().into()),
+            .get_one::<String>("environment")
+            .map(|s| Cow::Owned(s.clone())),
         logentry: matches.values_of("message").map(|mut lines| LogEntry {
             message: lines.join("\n"),
             params: matches
@@ -211,7 +211,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ..Event::default()
     };
 
-    if let Some(timestamp) = matches.value_of("timestamp") {
+    if let Some(timestamp) = matches.get_one::<String>("timestamp") {
         event.timestamp = get_timestamp(timestamp).map(|t| t.into())?;
     }
 
@@ -281,7 +281,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .into();
     }
 
-    if let Some(logfile) = matches.value_of("logfile") {
+    if let Some(logfile) = matches.get_one::<String>("logfile") {
         attach_logfile(&mut event, logfile, matches.is_present("with_categories"))?;
     }
 

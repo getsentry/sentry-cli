@@ -43,7 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let dsn = config.get_dsn()?;
     let raw = matches.is_present("raw");
 
-    let path = matches.value_of("path").unwrap();
+    let path = matches.get_one::<String>("path").unwrap();
 
     let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
         .unwrap()

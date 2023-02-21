@@ -96,9 +96,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
     let (org, project) = config.get_org_and_project(matches)?;
-    let app = matches.value_of("app_name").unwrap();
-    let platform = matches.value_of("platform").unwrap();
-    let deployment = matches.value_of("deployment").unwrap_or("Staging");
+    let app = matches.get_one::<String>("app_name").unwrap();
+    let platform = matches.get_one::<String>("platform").unwrap();
+    let deployment = matches
+        .get_one::<String>("deployment")
+        .map(String::as_str)
+        .unwrap_or("Staging");
     let api = Api::current();
     let print_release_name = matches.is_present("print_release_name");
 
@@ -118,9 +121,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = get_react_native_appcenter_release(
         &package,
         platform,
-        matches.value_of("bundle_id"),
-        matches.value_of("version_name"),
-        matches.value_of("release_name"),
+        matches.get_one::<String>("bundle_id").map(String::as_str),
+        matches
+            .get_one::<String>("version_name")
+            .map(String::as_str),
+        matches
+            .get_one::<String>("release_name")
+            .map(String::as_str),
     )?;
     if print_release_name {
         println!("{release}");

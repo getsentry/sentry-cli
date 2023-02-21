@@ -39,7 +39,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
     let monitor = matches
-        .value_of("monitor")
+        .get_one::<String>("monitor")
         .map(|x| x.parse::<Uuid>().unwrap())
         .unwrap();
 

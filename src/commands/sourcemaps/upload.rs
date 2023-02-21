@@ -178,14 +178,20 @@ fn process_sources_from_bundle(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-    let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+    let url_suffix = matches
+        .get_one::<String>("url_suffix")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let mut url_prefix = matches
+        .get_one::<String>("url_prefix")
+        .map(String::as_str)
+        .unwrap_or("~");
     // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
     if url_prefix.ends_with('/') {
         url_prefix = &url_prefix[..url_prefix.len() - 1];
     }
 
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
+    let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let bundle_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -193,7 +199,7 @@ fn process_sources_from_bundle(
         url_suffix
     );
 
-    let sourcemap_path = PathBuf::from(matches.value_of("bundle_sourcemap").unwrap());
+    let sourcemap_path = PathBuf::from(matches.get_one::<String>("bundle_sourcemap").unwrap());
     let sourcemap_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -242,7 +248,10 @@ fn process_sources_from_paths(
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
     let paths = matches.values_of("paths").unwrap();
-    let ignore_file = matches.value_of("ignore_file").unwrap_or("");
+    let ignore_file = matches
+        .get_one::<String>("ignore_file")
+        .map(String::as_str)
+        .unwrap_or_default();
     let extensions = matches
         .values_of("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
@@ -279,8 +288,14 @@ fn process_sources_from_paths(
 
         let sources = search.collect_files()?;
 
-        let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-        let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+        let url_suffix = matches
+            .get_one::<String>("url_suffix")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let mut url_prefix = matches
+            .get_one::<String>("url_prefix")
+            .map(String::as_str)
+            .unwrap_or("~");
         // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
         if url_prefix.ends_with('/') {
             url_prefix = &url_prefix[..url_prefix.len() - 1];
@@ -336,7 +351,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org: &org,
         project: Some(&project),
         release: &release.version,
-        dist: matches.value_of("dist"),
+        dist: matches.get_one::<String>("dist").map(String::as_str),
         wait: matches.is_present("wait"),
         dedupe: !matches.is_present("no_dedupe"),
     })?;

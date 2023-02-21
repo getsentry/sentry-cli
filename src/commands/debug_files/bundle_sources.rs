@@ -67,7 +67,7 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let output_path = matches.value_of("output").map(Path::new);
+    let output_path = matches.get_one::<String>("output").map(Path::new);
 
     for orig_path in matches.values_of("paths").unwrap() {
         let canonical_path = get_canonical_path(orig_path)?;
