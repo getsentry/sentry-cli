@@ -2333,7 +2333,7 @@ impl IssueFilter {
             return Ok(IssueFilter::Status(status.into()));
         }
         let mut ids = vec![];
-        if let Some(values) = matches.values_of("id") {
+        if let Some(values) = matches.get_many::<String>("id") {
             for value in values {
                 ids.push(value.parse::<u64>().context("Invalid issue ID")?);
             }

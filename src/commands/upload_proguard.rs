@@ -133,7 +133,7 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
-    let paths: Vec<_> = match matches.values_of("paths") {
+    let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
             return Ok(());

@@ -107,7 +107,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    for dist in matches.values_of("dist").unwrap() {
+    for dist in matches.get_many::<String>("dist").unwrap() {
         println!(
             "Uploading sourcemaps for release {} distribution {}",
             &release.version, dist

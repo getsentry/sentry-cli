@@ -169,7 +169,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
 
     let ids = matches
-        .values_of("ids")
+        .get_many::<String>("ids")
         .unwrap_or_default()
         .filter_map(|s| DebugId::from_str(s).ok());
 
@@ -182,12 +182,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
         .wait(matches.contains_id("wait"))
-        .search_paths(matches.values_of("paths").unwrap_or_default())
+        .search_paths(matches.get_many::<String>("paths").unwrap_or_default())
         .allow_zips(!matches.contains_id("no_zips"))
         .filter_ids(ids);
 
     // Restrict symbol types, if specified by the user
-    for ty in matches.values_of("types").unwrap_or_default() {
+    for ty in matches.get_many::<String>("types").unwrap_or_default().map(String::as_str) {
         match ty {
             "dsym" => upload.filter_format(DifFormat::Object(FileFormat::MachO)),
             "elf" => upload.filter_format(DifFormat::Object(FileFormat::Elf)),
@@ -297,7 +297,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Did we miss explicitly requested symbols?
         if matches.contains_id("require_all") {
             let required_ids: BTreeSet<_> = matches
-                .values_of("ids")
+                .get_many::<String>("ids")
                 .unwrap_or_default()
                 .filter_map(|s| DebugId::from_str(s).ok())
                 .collect();

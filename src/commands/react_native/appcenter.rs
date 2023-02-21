@@ -141,7 +141,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mut processor = SourceMapProcessor::new();
 
-    for path in matches.values_of("paths").unwrap() {
+    for path in matches.get_many::<String>("paths").unwrap() {
         let entries = fs::read_dir(path)
             .map_err(|e| anyhow!(e).context(format!("Failed processing path: \"{}\"", &path)))?;
 
@@ -172,7 +172,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    match matches.values_of("dist") {
+    match matches.get_many::<String>("dist") {
         None => {
             println!(
                 "Uploading sourcemaps for release {} (no distribution value given; use --dist to set distribution value)",

@@ -44,7 +44,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .unwrap();
 
     let allow_failure = matches.contains_id("allow_failure");
-    let args: Vec<_> = matches.values_of("args").unwrap().collect();
+    let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
     let monitor_checkin = api.create_monitor_checkin(
         &monitor,

@@ -201,13 +201,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         environment: matches
             .get_one::<String>("environment")
             .map(|s| Cow::Owned(s.clone())),
-        logentry: matches.values_of("message").map(|mut lines| LogEntry {
-            message: lines.join("\n"),
-            params: matches
-                .values_of("message_args")
-                .map(|args| args.map(|x| x.into()).collect())
-                .unwrap_or_default(),
-        }),
+        logentry: matches
+            .get_many::<String>("message")
+            .map(|mut lines| LogEntry {
+                message: lines.join("\n"),
+                params: matches
+                    .get_many::<String>("message_args")
+                    .map(|args| args.map(|x| x.as_str().into()).collect())
+                    .unwrap_or_default(),
+            }),
         ..Event::default()
     };
 
@@ -215,7 +217,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         event.timestamp = get_timestamp(timestamp).map(|t| t.into())?;
     }
 
-    for tag in matches.values_of("tags").unwrap_or_default() {
+    for tag in matches.get_many::<String>("tags").unwrap_or_default() {
         let mut split = tag.splitn(2, ':');
         let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
         let value = split
@@ -231,7 +233,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         );
     }
 
-    for pair in matches.values_of("extra").unwrap_or_default() {
+    for pair in matches.get_many::<String>("extra").unwrap_or_default() {
         let mut split = pair.splitn(2, ':');
         let key = split
             .next()
@@ -242,7 +244,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         event.extra.insert(key.into(), Value::String(value.into()));
     }
 
-    if let Some(user_data) = matches.values_of("user_data") {
+    if let Some(user_data) = matches.get_many::<String>("user_data") {
         let mut user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
@@ -274,7 +276,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         });
     }
 
-    if let Some(fingerprint) = matches.values_of("fingerprint") {
+    if let Some(fingerprint) = matches.get_many::<String>("fingerprint") {
         event.fingerprint = fingerprint
             .map(|x| x.to_string().into())
             .collect::<Vec<_>>()

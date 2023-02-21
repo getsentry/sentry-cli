@@ -69,7 +69,7 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let output_path = matches.get_one::<String>("output").map(Path::new);
 
-    for orig_path in matches.values_of("paths").unwrap() {
+    for orig_path in matches.get_many::<String>("paths").unwrap() {
         let canonical_path = get_canonical_path(orig_path)?;
 
         let archive = match DifFile::open_path(&canonical_path, None)? {

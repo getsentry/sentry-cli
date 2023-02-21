@@ -98,7 +98,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     } else if matches.contains_id("local") {
         None
     } else {
-        if let Some(commits) = matches.values_of("commits") {
+        if let Some(commits) = matches.get_many::<String>("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
                 if repos.iter().any(|r| r.name == commit_spec.repo) {

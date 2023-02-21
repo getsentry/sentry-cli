@@ -278,7 +278,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             },
         )?;
 
-        match matches.values_of("dist") {
+        match matches.get_many::<String>("dist") {
             None => {
                 processor.upload(&UploadContext {
                     org: &org,

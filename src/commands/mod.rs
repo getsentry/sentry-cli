@@ -101,7 +101,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_base_url(url);
     }
 
-    if let Some(headers) = matches.values_of("headers") {
+    if let Some(headers) = matches.get_many::<String>("headers") {
         let headers = headers.map(|h| h.to_owned()).collect();
         config.set_headers(headers);
     }

@@ -329,7 +329,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut ids = HashSet::new();
 
     // which types should we consider?
-    if let Some(t) = matches.values_of("types") {
+    if let Some(t) = matches.get_many::<String>("types") {
         for ty in t {
             types.insert(ty.parse().unwrap());
         }
@@ -361,14 +361,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // extra paths
-    if let Some(p) = matches.values_of("paths") {
+    if let Some(p) = matches.get_many::<String>("paths") {
         for path in p {
             paths.insert(PathBuf::from(path));
         }
     }
 
     // which ids are we looking for?
-    if let Some(i) = matches.values_of("ids") {
+    if let Some(i) = matches.get_many::<String>("ids") {
         for id in i {
             ids.insert(id.parse().unwrap());
         }

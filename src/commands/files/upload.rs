@@ -111,7 +111,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let dist = matches.get_one::<String>("dist").map(String::as_str);
     let mut headers = vec![];
-    if let Some(header_list) = matches.values_of("file-headers") {
+    if let Some(header_list) = matches.get_many::<String>("file-headers") {
         for header in header_list {
             if !header.contains(':') {
                 bail!("Invalid header. Needs to be in key:value format");
@@ -138,11 +138,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .unwrap_or_default();
         let ignores = matches
-            .values_of("ignore")
+            .get_many::<String>("ignore")
             .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
             .unwrap_or_else(Vec::new);
         let extensions = matches
-            .values_of("extensions")
+            .get_many::<String>("extensions")
             .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
             .unwrap_or_else(Vec::new);
 

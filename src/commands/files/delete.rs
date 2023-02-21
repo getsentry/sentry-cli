@@ -39,7 +39,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    let files: HashSet<String> = match matches.values_of("names") {
+    let files: HashSet<String> = match matches.get_many::<String>("names") {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };

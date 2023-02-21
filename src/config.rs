@@ -310,8 +310,8 @@ impl Config {
 
     /// Given a match object from clap, this returns the projects from it.
     pub fn get_projects(&self, matches: &ArgMatches) -> Result<Vec<String>> {
-        if let Some(projects) = matches.values_of("project") {
-            Ok(projects.map(str::to_owned).collect())
+        if let Some(projects) = matches.get_many::<String>("project") {
+            Ok(projects.map(String::clone).collect())
         } else {
             Ok(vec![self.get_project_default()?])
         }

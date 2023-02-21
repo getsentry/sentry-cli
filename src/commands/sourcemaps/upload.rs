@@ -164,8 +164,8 @@ pub fn make_command(command: Command) -> Command {
 }
 
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
-    let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
-        Some(paths) => paths.collect(),
+    let mut prefixes: Vec<&str> = match matches.get_many::<String>("strip_prefix") {
+        Some(paths) => paths.map(String::as_str).collect(),
         None => vec![],
     };
     if matches.contains_id("strip_common_prefix") {
@@ -247,17 +247,17 @@ fn process_sources_from_paths(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let paths = matches.values_of("paths").unwrap();
+    let paths = matches.get_many::<String>("paths").unwrap();
     let ignore_file = matches
         .get_one::<String>("ignore_file")
         .map(String::as_str)
         .unwrap_or_default();
     let extensions = matches
-        .values_of("extensions")
+        .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
-        .values_of("ignore")
+        .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
 
