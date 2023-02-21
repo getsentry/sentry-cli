@@ -7,7 +7,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command, ArgAction};
+use clap::builder::PossibleValuesParser;
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use if_chain::if_chain;
 use proguard::ProguardMapping;
@@ -50,7 +51,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("TYPE")
                 .multiple_values(true)
                 .action(ArgAction::Append)
-                .possible_values(DifType::all_names())
+                .value_parser(PossibleValuesParser::new(DifType::all_names()))
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",

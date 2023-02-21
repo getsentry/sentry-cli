@@ -2,6 +2,7 @@ use std::io;
 use std::path::Path;
 
 use anyhow::Result;
+use clap::builder::PossibleValuesParser;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 
@@ -26,7 +27,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .possible_values(DifType::all_names())
+                .value_parser(PossibleValuesParser::new(DifType::all_names()))
                 .help(
                     "Explicitly set the type of the debug info file. \
                      This should not be needed as files are auto detected.",

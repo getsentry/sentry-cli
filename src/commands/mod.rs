@@ -167,7 +167,7 @@ fn app() -> Command<'static> {
             Arg::new("log_level")
                 .value_name("LOG_LEVEL")
                 .long("log-level")
-                .possible_values(["trace", "debug", "info", "warn", "error"])
+                .value_parser(["trace", "debug", "info", "warn", "error"])
                 .ignore_case(true)
                 .global(true)
                 .help("Set the log output verbosity."),

@@ -2,6 +2,7 @@ use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 
 use anyhow::{bail, format_err, Result};
+use clap::builder::PossibleValuesParser;
 use clap::{Arg, ArgMatches, Command, ArgAction};
 use console::style;
 use log::info;
@@ -41,7 +42,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("TYPE")
                 .multiple_values(true)
                 .action(ArgAction::Append)
-                .possible_values(types)
+                .value_parser(PossibleValuesParser::new(types))
                 .help(
                     "Only consider debug information files of the given \
                     type.  By default, all types are considered.",
