@@ -11,7 +11,9 @@ use uuid::Uuid;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
-const SOURCEMAP_DEBUG_ID_KEY: &str = "x_sentry_debug_id";
+const SOURCEMAP_DEBUGID_KEY: &str = "x_sentry_debug_id";
+const DEBUGID_COMMENT_PREFIX: &str = "//# sentryDebugId";
+const SOURCEMAP_URL_COMMENT_PREFIX: &str = "//# sourceMappingURL=";
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -61,12 +63,12 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
         for line in f.lines() {
             let line = line.context(format!("Failed to process {}", js_path.display()))?;
 
-            if line.starts_with("//# sentryDebugId") {
+            if line.starts_with(DEBUGID_COMMENT_PREFIX) {
                 debug!("File {} was previously processed", js_path.display());
                 continue 'paths;
             }
 
-            if let Some(url) = line.strip_prefix("//# sourceMappingURL=") {
+            if let Some(url) = line.strip_prefix(SOURCEMAP_URL_COMMENT_PREFIX) {
                 sourcemap_url = Some(PathBuf::from(url));
             }
         }
@@ -109,7 +111,7 @@ fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
         CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.hyphenated().to_string());
     writeln!(js_file)?;
     writeln!(js_file, "{to_inject}")?;
-    write!(js_file, "//# sentryDebugId={debug_id}")?;
+    write!(js_file, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
 
     Ok(())
 }
@@ -133,7 +135,7 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
         bail!("Invalid sourcemap");
     };
 
-    match map.get(SOURCEMAP_DEBUG_ID_KEY) {
+    match map.get(SOURCEMAP_DEBUGID_KEY) {
         Some(id) => {
             let debug_id = serde_json::from_value(id.clone())?;
             debug!("Sourcemap already has a debug id");
@@ -144,7 +146,7 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
             make_backup_copy(sourcemap_path)?;
             let debug_id = Uuid::new_v4();
             let id = serde_json::to_value(debug_id)?;
-            map.insert(SOURCEMAP_DEBUG_ID_KEY.to_string(), id);
+            map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
 
             serde_json::to_writer(&mut sourcemap_file, &sourcemap)?;
             Ok(debug_id)
