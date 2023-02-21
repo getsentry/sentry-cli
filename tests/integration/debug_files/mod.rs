@@ -1,6 +1,7 @@
 use crate::integration::register_test;
 
 mod check;
+mod print_sources;
 mod upload;
 
 #[test]

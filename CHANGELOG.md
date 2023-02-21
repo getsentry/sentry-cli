@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+## 2.13.0
+
+- feat: Added the `--raw` flag to `send-envelope` to allow sending envelopes without parsing or validation. (#1468)
+- feat: extract and upload embedded Portable PDB from PE (#1463)
+- ref(monitors): Drop passing `SENTRY_TRACE_ID` (#1472)
+- ref(monitors): Rename MonitorStatus -> MonitorCheckinStatus (#1471)
+- ref: Deduplicate artifacts upload using queried checksums (#1456)
+- ref: Add better debug message for malformed config files (#1450)
+
 ## 2.12.0
 
 ### Various fixes & improvements

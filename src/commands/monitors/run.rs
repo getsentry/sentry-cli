@@ -1,12 +1,12 @@
+use std::process;
 use std::time::Instant;
-use std::{env, process};
 
 use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use uuid::Uuid;
 
-use crate::api::{Api, CreateMonitorCheckIn, MonitorStatus, UpdateMonitorCheckIn};
+use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
 use crate::utils::args::validate_uuid;
 use crate::utils::system::{print_error, QuietExit};
 
@@ -49,7 +49,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let monitor_checkin = api.create_monitor_checkin(
         &monitor,
         &CreateMonitorCheckIn {
-            status: MonitorStatus::InProgress,
+            status: MonitorCheckinStatus::InProgress,
         },
     );
 
@@ -57,11 +57,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
     p.env("SENTRY_MONITOR_ID", monitor.to_string());
-
-    // Inherit outer SENTRY_TRACE_ID if present
-    let trace_id = env::var_os("SENTRY_TRACE_ID")
-        .unwrap_or_else(|| Uuid::new_v4().simple().to_string().into());
-    p.env("SENTRY_TRACE_ID", trace_id);
 
     let (success, code) = match p.status() {
         Ok(status) => (status.success(), status.code()),
@@ -83,9 +78,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 &checkin.id,
                 &UpdateMonitorCheckIn {
                     status: Some(if success {
-                        MonitorStatus::Ok
+                        MonitorCheckinStatus::Ok
                     } else {
-                        MonitorStatus::Error
+                        MonitorCheckinStatus::Error
                     }),
                     duration: Some({
                         let elapsed = started.elapsed();
