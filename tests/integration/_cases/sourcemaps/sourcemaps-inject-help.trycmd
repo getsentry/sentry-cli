@@ -1,7 +1,7 @@
 ```
 $ sentry-cli sourcemaps inject --help
 ? success
-sentry-cli[EXE]-sourcemaps-inject
+sentry-cli[EXE]-sourcemaps-inject 
 Fixes up JavaScript source files and sourcemaps with debug ids.{n}{n}For every JS source file that
 references a sourcemap, a debug id is generated and inserted into both files. If the referenced
 sourcemap already contains a debug id, that id is used instead.
@@ -26,7 +26,7 @@ OPTIONS:
 
         --log-level <LOG_LEVEL>
             Set the log output verbosity.
-
+            
             [possible values: trace, debug, info, warn, error]
 
     -o, --org <ORG>
@@ -38,7 +38,7 @@ OPTIONS:
         --quiet
             Do not print any output while preserving correct exit code. This flag is currently
             implemented only for selected subcommands.
-
+            
             [aliases: silent]
 
     -r, --release <RELEASE>
