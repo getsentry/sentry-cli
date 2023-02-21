@@ -126,7 +126,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         project: project.as_deref(),
         release: &release,
         dist,
-        wait: matches.is_present("wait"),
+        wait: matches.contains_id("wait"),
         ..Default::default()
     };
 
@@ -150,7 +150,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .ignore_file(ignore_file)
             .ignores(ignores)
             .extensions(extensions)
-            .decompress(matches.is_present("decompress"))
+            .decompress(matches.contains_id("decompress"))
             .collect_files()?;
 
         let url_suffix = matches
@@ -202,7 +202,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let mut contents = Vec::new();
         f.read_to_end(&mut contents)?;
 
-        if matches.is_present("decompress") && is_gzip_compressed(&contents) {
+        if matches.contains_id("decompress") && is_gzip_compressed(&contents) {
             contents = decompress_gzip_content(&contents).unwrap_or_else(|_| {
                 warn!("Could not decompress: {}", name);
                 contents

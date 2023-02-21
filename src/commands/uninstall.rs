@@ -58,7 +58,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    if !matches.is_present("confirm")
+    if !matches.contains_id("confirm")
         && !prompt_to_continue("Do you really want to uninstall sentry-cli?")?
     {
         println!("Aborted!");

@@ -32,7 +32,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let api = Api::current();
 
-    if matches.is_present("all") {
+    if matches.contains_id("all") {
         if api.delete_release_files(&org, project.as_deref(), &release)? {
             println!("All files deleted.");
         }

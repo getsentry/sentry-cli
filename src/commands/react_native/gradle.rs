@@ -118,7 +118,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             project: Some(&project),
             release: &release.version,
             dist: Some(dist),
-            wait: matches.is_present("wait"),
+            wait: matches.contains_id("wait"),
             ..Default::default()
         })?;
     }

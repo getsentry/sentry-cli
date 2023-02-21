@@ -99,7 +99,7 @@ fn find_node() -> String {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let should_wrap = matches.is_present("force")
+    let should_wrap = matches.contains_id("force")
         || match env::var("CONFIGURATION") {
             Ok(config) => !&config.contains("Debug"),
             Err(_) => bail!("Need to run this from Xcode"),
@@ -121,7 +121,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // to simulator mode.
     let fetch_url;
     if_chain! {
-        if matches.is_present("allow_fetch");
+        if matches.contains_id("allow_fetch");
         if let Ok(val) = env::var("PLATFORM_NAME");
         if val.ends_with("simulator");
         then {
@@ -165,7 +165,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // case we do indeed fetch it right from the running packager and then
         // store it in temporary files for later consumption.
         if let Some(url) = fetch_url {
-            if !matches.is_present("force_foreground") {
+            if !matches.contains_id("force_foreground") {
                 md.may_detach()?;
             }
             let api = Api::current();
@@ -220,7 +220,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .wait()?;
             propagate_exit_status(rv);
 
-            if !matches.is_present("force_foreground") {
+            if !matches.contains_id("force_foreground") {
                 md.may_detach()?;
             }
             let mut f = fs::File::open(report_file.path())?;
@@ -285,7 +285,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     project: Some(&project),
                     release: &release.version,
                     dist: Some(&dist),
-                    wait: matches.is_present("wait"),
+                    wait: matches.contains_id("wait"),
                     ..Default::default()
                 })?;
             }
@@ -296,7 +296,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         project: Some(&project),
                         release: &release.version,
                         dist: Some(dist),
-                        wait: matches.is_present("wait"),
+                        wait: matches.contains_id("wait"),
                         ..Default::default()
                     })?;
                 }

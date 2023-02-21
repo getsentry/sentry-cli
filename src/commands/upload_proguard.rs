@@ -199,7 +199,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    if mappings.is_empty() && matches.is_present("require_one") {
+    if mappings.is_empty() && matches.contains_id("require_one") {
         println!();
         eprintln!("{}", style("error: found no mapping files to upload").red());
         return Err(QuietExit(1).into());
@@ -227,7 +227,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         dump_proguard_uuids_as_properties(p, &uuids)?;
     }
 
-    if matches.is_present("no_upload") {
+    if matches.contains_id("no_upload") {
         println!("{} skipping upload.", style(">").dim());
         return Ok(());
     }
@@ -279,7 +279,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // If wanted trigger reprocessing
-    if !matches.is_present("no_reprocessing") && !matches.is_present("no_upload") {
+    if !matches.contains_id("no_reprocessing") && !matches.contains_id("no_upload") {
         if !api.trigger_reprocessing(&org, &project)? {
             println!(
                 "{} Server does not support reprocessing. Not triggering.",

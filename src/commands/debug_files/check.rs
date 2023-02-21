@@ -48,12 +48,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|t| t.parse().unwrap());
     let dif = DifFile::open_path(path, ty)?;
 
-    if matches.is_present("json") {
+    if matches.contains_id("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &dif)?;
         println!();
     }
 
-    if matches.is_present("json") || is_quiet_mode() {
+    if matches.contains_id("json") || is_quiet_mode() {
         return if dif.is_usable() {
             Ok(())
         } else {

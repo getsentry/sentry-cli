@@ -181,9 +181,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
-        .wait(matches.is_present("wait"))
+        .wait(matches.contains_id("wait"))
         .search_paths(matches.values_of("paths").unwrap_or_default())
-        .allow_zips(!matches.is_present("no_zips"))
+        .allow_zips(!matches.contains_id("no_zips"))
         .filter_ids(ids);
 
     // Restrict symbol types, if specified by the user
@@ -208,17 +208,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
         // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
         // we also upload all files with a public symbol table.
-        debug: !matches.is_present("no_debug"),
-        symtab: !matches.is_present("no_debug"),
+        debug: !matches.contains_id("no_debug"),
+        symtab: !matches.contains_id("no_debug"),
         // Allow executables and dynamic/shared libraries, but not object files.
         // They are guaranteed to contain unwind info, for instance `eh_frame`,
         // and may optionally contain debugging information such as DWARF.
-        unwind: !matches.is_present("no_unwind"),
-        sources: !matches.is_present("no_sources"),
+        unwind: !matches.contains_id("no_unwind"),
+        sources: !matches.contains_id("no_sources"),
     });
 
-    upload.include_sources(matches.is_present("include_sources"));
-    upload.il2cpp_mapping(matches.is_present("il2cpp_mapping"));
+    upload.include_sources(matches.contains_id("include_sources"));
+    upload.il2cpp_mapping(matches.contains_id("il2cpp_mapping"));
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.get_one::<String>("symbol_maps") {
@@ -228,7 +228,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // Add a path to XCode's DerivedData, if configured
-    if matches.is_present("derived_data") {
+    if matches.contains_id("derived_data") {
         let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA_FOLDER));
         if let Some(path) = derived_data {
             if path.is_dir() {
@@ -243,14 +243,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         None => InfoPlist::discover_from_env()?,
     };
 
-    if matches.is_present("no_upload") {
+    if matches.contains_id("no_upload") {
         println!("{} skipping upload.", style(">").dim());
         return Ok(());
     }
 
     MayDetach::wrap("Debug symbol upload", |handle| {
         // Optionally detach if run from Xcode
-        if !matches.is_present("force_foreground") {
+        if !matches.contains_id("force_foreground") {
             handle.may_detach()?;
         }
 
@@ -288,14 +288,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
 
         // Trigger reprocessing only if requested by user
-        if matches.is_present("no_reprocessing") {
+        if matches.contains_id("no_reprocessing") {
             println!("{} skipped reprocessing", style(">").dim());
         } else if !api.trigger_reprocessing(&org, &project)? {
             println!("{} Server does not support reprocessing.", style(">").dim());
         }
 
         // Did we miss explicitly requested symbols?
-        if matches.is_present("require_all") {
+        if matches.contains_id("require_all") {
             let required_ids: BTreeSet<_> = matches
                 .values_of("ids")
                 .unwrap_or_default()

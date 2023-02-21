@@ -387,7 +387,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         })?;
 
     if exception.raw_stacktrace.is_some() {
-        if matches.is_present("force") {
+        if matches.contains_id("force") {
             warning(
                 "Exception is already source mapped, however 'force' flag was used. Moving along.",
             );

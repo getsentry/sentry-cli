@@ -49,11 +49,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut table = Table::new();
     let title_row = table.title_row().add("Event ID").add("Date").add("Title");
 
-    if matches.is_present("show_user") {
+    if matches.contains_id("show_user") {
         title_row.add("User");
     }
 
-    if matches.is_present("show_tags") {
+    if matches.contains_id("show_tags") {
         title_row.add("Tags");
     }
 
@@ -69,7 +69,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .add(&event.date_created)
                 .add(&event.title);
 
-            if matches.is_present("show_user") {
+            if matches.contains_id("show_user") {
                 if let Some(user) = &event.user {
                     row.add(user);
                 } else {
@@ -77,7 +77,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 }
             }
 
-            if matches.is_present("show_tags") {
+            if matches.contains_id("show_tags") {
                 if let Some(tags) = &event.tags {
                     row.add(
                         tags.iter()

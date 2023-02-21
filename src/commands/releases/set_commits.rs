@@ -86,16 +86,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let heads = if repos.is_empty() {
         None
-    } else if matches.is_present("auto") {
+    } else if matches.contains_id("auto") {
         let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
             None
         } else {
             Some(commits)
         }
-    } else if matches.is_present("clear") {
+    } else if matches.contains_id("clear") {
         Some(vec![])
-    } else if matches.is_present("local") {
+    } else if matches.contains_id("local") {
         None
     } else {
         if let Some(commits) = matches.values_of("commits") {
@@ -161,7 +161,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .unwrap_or("20")
             .parse::<usize>()?;
 
-        if matches.is_present("auto") {
+        if matches.contains_id("auto") {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
         }
         // Get the commit of the most recent release.
@@ -176,7 +176,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Parse the git url.
         let remote = config.get_cached_vcs_remote();
         let parsed = get_repo_from_remote(&remote);
-        let ignore_missing = matches.is_present("ignore-missing");
+        let ignore_missing = matches.contains_id("ignore-missing");
         // Fetch all the commits upto the `prev_commit` or return the default (20).
         // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
         let (commit_log, prev_commit) =

@@ -41,7 +41,7 @@ fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
-    let raw = matches.is_present("raw");
+    let raw = matches.contains_id("raw");
 
     let path = matches.get_one::<String>("path").unwrap();
 

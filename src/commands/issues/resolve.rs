@@ -25,7 +25,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    if matches.is_present("next_release") {
+    if matches.contains_id("next_release") {
         changes.new_status = Some("resolvedInNextRelease".into());
     } else {
         changes.new_status = Some("resolved".into());

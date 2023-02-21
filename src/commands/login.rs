@@ -85,7 +85,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    let config_to_update = if matches.is_present("global") {
+    let config_to_update = if matches.contains_id("global") {
         Config::global()?
     } else {
         Config::from_cli_config()?

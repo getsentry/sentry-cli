@@ -38,7 +38,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             projects: config.get_projects(matches)?,
             url: matches.get_one::<String>("url").map(String::clone),
             date_started: Some(Utc::now()),
-            date_released: if matches.is_present("finalize") {
+            date_released: if matches.contains_id("finalize") {
                 Some(Utc::now())
             } else {
                 None

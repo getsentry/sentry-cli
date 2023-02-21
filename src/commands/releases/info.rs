@@ -50,11 +50,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             title_row.add("Last event");
         }
 
-        if matches.is_present("show_projects") {
+        if matches.contains_id("show_projects") {
             title_row.add("Projects");
         }
 
-        if matches.is_present("show_commits") {
+        if matches.contains_id("show_commits") {
             title_row.add("Commits");
         }
 
@@ -67,7 +67,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             data_row.add(last_event);
         }
 
-        if matches.is_present("show_projects") {
+        if matches.contains_id("show_projects") {
             let project_slugs = release
                 .projects
                 .into_iter()
@@ -80,7 +80,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         }
 
-        if matches.is_present("show_commits") {
+        if matches.contains_id("show_commits") {
             if let Ok(Some(commits)) = api.get_release_commits(&org, project.as_deref(), version) {
                 if !commits.is_empty() {
                     data_row.add(

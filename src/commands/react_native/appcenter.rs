@@ -103,7 +103,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(String::as_str)
         .unwrap_or("Staging");
     let api = Api::current();
-    let print_release_name = matches.is_present("print_release_name");
+    let print_release_name = matches.contains_id("print_release_name");
 
     info!(
         "Issuing a command for Organization: {} Project: {}",
@@ -184,7 +184,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 project: Some(&project),
                 release: &release.version,
                 dist: None,
-                wait: matches.is_present("wait"),
+                wait: matches.contains_id("wait"),
                 ..Default::default()
             })?;
         }
@@ -200,7 +200,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     project: Some(&project),
                     release: &release.version,
                     dist: Some(dist),
-                    wait: matches.is_present("wait"),
+                    wait: matches.contains_id("wait"),
                     ..Default::default()
                 })?;
             }

@@ -39,12 +39,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let releases = api.list_releases(&config.get_org(matches)?, project.as_deref())?;
 
-    if matches.is_present("raw") {
+    if matches.contains_id("raw") {
         let versions = releases
             .iter()
             .map(|release_info| release_info.version.clone())
             .collect::<Vec<_>>()
-            .join(matches.get_one::<String>("delimiter").map(String::as_str).unwrap_or("\n"));
+            .join(
+                matches
+                    .get_one::<String>("delimiter")
+                    .map(String::as_str)
+                    .unwrap_or("\n"),
+            );
 
         println!("{versions}");
         return Ok(());
@@ -53,7 +58,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut table = Table::new();
     let title_row = table.title_row();
     title_row.add("Released").add("Version");
-    if matches.is_present("show_projects") {
+    if matches.contains_id("show_projects") {
         title_row.add("Projects");
     }
     title_row.add("New Events").add("Last Event");
@@ -68,7 +73,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             row.add("(unreleased)");
         }
         row.add(&release_info.version);
-        if matches.is_present("show_projects") {
+        if matches.contains_id("show_projects") {
             let project_slugs = release_info
                 .projects
                 .into_iter()

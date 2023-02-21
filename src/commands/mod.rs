@@ -230,7 +230,7 @@ pub fn execute() -> Result<()> {
     app = add_commands(app);
     let matches = app.get_matches();
     configure_args(&mut config, &matches)?;
-    set_quiet_mode(matches.is_present("quiet"));
+    set_quiet_mode(matches.contains_id("quiet"));
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();

@@ -168,7 +168,7 @@ fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
         Some(paths) => paths.collect(),
         None => vec![],
     };
-    if matches.is_present("strip_common_prefix") {
+    if matches.contains_id("strip_common_prefix") {
         prefixes.push("~");
     }
     prefixes
@@ -277,7 +277,7 @@ fn process_sources_from_paths(
         };
 
         let mut search = ReleaseFileSearch::new(path.to_path_buf());
-        search.decompress(matches.is_present("decompress"));
+        search.decompress(matches.contains_id("decompress"));
 
         if check_ignore {
             search
@@ -308,16 +308,16 @@ fn process_sources_from_paths(
         }
     }
 
-    if !matches.is_present("no_rewrite") {
+    if !matches.contains_id("no_rewrite") {
         let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
     }
 
-    if !matches.is_present("no_sourcemap_reference") {
+    if !matches.contains_id("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
     }
 
-    if matches.is_present("validate") {
+    if matches.contains_id("validate") {
         processor.validate_all()?;
     }
 
@@ -331,7 +331,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
 
-    if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
+    if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
     } else {
         process_sources_from_paths(matches, &mut processor)?;
@@ -352,8 +352,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         project: Some(&project),
         release: &release.version,
         dist: matches.get_one::<String>("dist").map(String::as_str),
-        wait: matches.is_present("wait"),
-        dedupe: !matches.is_present("no_dedupe"),
+        wait: matches.contains_id("wait"),
+        dedupe: !matches.contains_id("no_dedupe"),
     })?;
 
     Ok(())

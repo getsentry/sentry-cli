@@ -337,8 +337,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         types.extend(DifType::all());
     }
 
-    let with_well_known = !matches.is_present("no_well_known");
-    let with_cwd = !matches.is_present("no_cwd");
+    let with_well_known = !matches.contains_id("no_well_known");
+    let with_cwd = !matches.contains_id("no_cwd");
 
     // start adding well known locations
     if_chain! {
@@ -376,7 +376,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
+    if !find_ids(&paths, &types, &ids, matches.contains_id("json"))? {
         return Err(QuietExit(1).into());
     }
 

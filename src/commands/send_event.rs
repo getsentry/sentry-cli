@@ -224,7 +224,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         event.tags.insert(key.into(), value.into());
     }
 
-    if !matches.is_present("no_environ") {
+    if !matches.contains_id("no_environ") {
         event.extra.insert(
             "environ".into(),
             Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
@@ -282,7 +282,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if let Some(logfile) = matches.get_one::<String>("logfile") {
-        attach_logfile(&mut event, logfile, matches.is_present("with_categories"))?;
+        attach_logfile(&mut event, logfile, matches.contains_id("with_categories"))?;
     }
 
     let id = send_raw_event(event, dsn);

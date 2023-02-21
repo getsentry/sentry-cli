@@ -43,7 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|x| x.parse::<Uuid>().unwrap())
         .unwrap();
 
-    let allow_failure = matches.is_present("allow_failure");
+    let allow_failure = matches.contains_id("allow_failure");
     let args: Vec<_> = matches.values_of("args").unwrap().collect();
 
     let monitor_checkin = api.create_monitor_checkin(
