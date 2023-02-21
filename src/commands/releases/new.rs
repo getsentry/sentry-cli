@@ -36,7 +36,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         &NewRelease {
             version: version.to_owned(),
             projects: config.get_projects(matches)?,
-            url: matches.get_one::<String>("url").map(String::clone),
+            url: matches.get_one::<String>("url").cloned(),
             date_started: Some(Utc::now()),
             date_released: if matches.contains_id("finalize") {
                 Some(Utc::now())

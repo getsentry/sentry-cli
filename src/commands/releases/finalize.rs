@@ -43,13 +43,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         version,
         &UpdatedRelease {
             projects: config.get_projects(matches).ok(),
-            url: matches.get_one::<String>("url").map(String::clone),
+            url: matches.get_one::<String>("url").cloned(),
             date_started: matches.get_one::<DateTime<Utc>>("started").copied(),
             date_released: Some(
                 matches
                     .get_one::<DateTime<Utc>>("released")
-                    .copied()
-                    .unwrap_or(Utc::now()),
+                    .map_or_else(Utc::now, |v| *v),
             ),
             ..Default::default()
         },

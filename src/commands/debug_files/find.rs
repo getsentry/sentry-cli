@@ -7,8 +7,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Result;
-use clap::builder::PossibleValuesParser;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use if_chain::if_chain;
 use proguard::ProguardMapping;

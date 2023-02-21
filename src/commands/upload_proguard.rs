@@ -273,7 +273,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 name: app_id.to_string(),
                 app_id: app_id.to_string(),
                 version: matches.get_one::<String>("version").unwrap().to_owned(),
-                build: matches.get_one::<String>("version_code").map(String::clone),
+                build: matches.get_one::<String>("version_code").cloned(),
             },
         )?;
     }

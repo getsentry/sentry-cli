@@ -2,8 +2,7 @@ use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 
 use anyhow::{bail, format_err, Result};
-use clap::builder::PossibleValuesParser;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use log::info;
 use symbolic::common::DebugId;
@@ -305,7 +304,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let required_ids: BTreeSet<DebugId> = matches
                 .get_many::<DebugId>("ids")
                 .unwrap_or_default()
-                .map(DebugId::clone)
+                .cloned()
                 .collect();
 
             let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();

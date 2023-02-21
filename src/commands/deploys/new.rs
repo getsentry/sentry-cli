@@ -69,8 +69,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let version = config.get_release_with_legacy_fallback(matches)?;
     let mut deploy = Deploy {
         env: matches.get_one::<String>("env").unwrap().to_string(),
-        name: matches.get_one::<String>("name").map(String::clone),
-        url: matches.get_one::<String>("url").map(String::clone),
+        name: matches.get_one::<String>("name").cloned(),
+        url: matches.get_one::<String>("url").cloned(),
         ..Default::default()
     };
 

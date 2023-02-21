@@ -275,7 +275,7 @@ impl Config {
     pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
         matches
             .get_one::<String>("org")
-            .map(String::clone)
+            .cloned()
             .or_else(|| env::var("SENTRY_ORG").ok())
             .or_else(|| {
                 self.ini
@@ -289,7 +289,7 @@ impl Config {
     pub fn get_release(&self, matches: &ArgMatches) -> Result<String> {
         matches
             .get_one::<String>("release")
-            .map(String::clone)
+            .cloned()
             .or_else(|| env::var("SENTRY_RELEASE").ok())
             .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
     }
@@ -311,7 +311,7 @@ impl Config {
     /// Given a match object from clap, this returns the projects from it.
     pub fn get_projects(&self, matches: &ArgMatches) -> Result<Vec<String>> {
         if let Some(projects) = matches.get_many::<String>("project") {
-            Ok(projects.map(String::clone).collect())
+            Ok(projects.cloned().collect())
         } else {
             Ok(vec![self.get_project_default()?])
         }

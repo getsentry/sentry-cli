@@ -2,8 +2,7 @@ use std::io;
 use std::path::Path;
 
 use anyhow::Result;
-use clap::builder::PossibleValuesParser;
-use clap::{Arg, ArgMatches, Command};
+use clap::{builder::PossibleValuesParser, Arg, ArgMatches, Command};
 use console::style;
 
 use crate::utils::dif::{DifFile, DifType};

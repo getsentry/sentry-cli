@@ -3,6 +3,7 @@ use std::env;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use anyhow::{format_err, Result};
 use chrono::{DateTime, Utc};
@@ -215,7 +216,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     if let Some(timestamp) = matches.get_one::<DateTime<Utc>>("timestamp") {
-        event.timestamp = (*timestamp).into();
+        event.timestamp = SystemTime::from(*timestamp);
     }
 
     for tag in matches.get_many::<String>("tags").unwrap_or_default() {
