@@ -49,7 +49,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .value_parser(PossibleValuesParser::new(DifType::all_names()))
                 .help(

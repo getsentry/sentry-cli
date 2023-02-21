@@ -3,7 +3,7 @@ use std::str::{self, FromStr};
 
 use anyhow::{bail, format_err, Result};
 use clap::builder::PossibleValuesParser;
-use clap::{Arg, ArgMatches, Command, ArgAction};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use log::info;
 use symbolic::common::DebugId;
@@ -40,7 +40,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .value_parser(PossibleValuesParser::new(types))
                 .help(
@@ -84,7 +83,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("id")
                 .help("Search for specific debug identifiers.")
                 .value_parser(DebugId::from_str)
-                .multiple_values(true)
                 .action(ArgAction::Append),
         )
         .arg(

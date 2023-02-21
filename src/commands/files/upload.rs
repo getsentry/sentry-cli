@@ -54,7 +54,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("file-header")
                 .short('H')
                 .value_name("KEY VALUE")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .help("Store a header with this file."),
         )
@@ -76,7 +75,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("ignore")
                 .short('i')
                 .value_name("IGNORE")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .help("Ignores all files and folders matching the given glob"),
         )
@@ -95,7 +93,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("ext")
                 .short('x')
                 .value_name("EXT")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .help(
                     "Set the file extensions that are considered for upload. \

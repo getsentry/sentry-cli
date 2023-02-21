@@ -48,11 +48,10 @@ pub fn make_command(mut command: Command) -> Command {
         )
         .arg(
             Arg::new("id")
-                .multiple_values(true)
-                .action(ArgAction::Append)
                 .long("id")
                 .short('i')
                 .value_name("ID")
+                .action(ArgAction::Append)
                 .global(true)
                 .help("Select the issue with the given ID."),
         );

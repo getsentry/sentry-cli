@@ -49,7 +49,6 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),

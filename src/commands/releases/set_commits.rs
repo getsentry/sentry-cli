@@ -47,7 +47,6 @@ pub fn make_command(command: Command) -> Command {
             .long("commit")
             .short('c')
             .value_name("SPEC")
-            .multiple_values(true)
             .action(ArgAction::Append)
             .help("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \

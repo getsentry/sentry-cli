@@ -5,7 +5,7 @@ use std::process;
 
 use anyhow::{bail, Result};
 use chrono::Duration;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -68,7 +68,6 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple_values(true)
                 .action(ArgAction::Append)
                 .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
