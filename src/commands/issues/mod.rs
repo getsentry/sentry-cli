@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 
 use crate::utils::args::ArgExt;
 
@@ -48,7 +48,8 @@ pub fn make_command(mut command: Command) -> Command {
         )
         .arg(
             Arg::new("id")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .long("id")
                 .short('i')
                 .value_name("ID")

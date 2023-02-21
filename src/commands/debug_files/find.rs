@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use console::style;
 use if_chain::if_chain;
 use proguard::ProguardMapping;
@@ -40,14 +40,16 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
                 .value_parser(DebugId::from_str)
-                .multiple_occurrences(true),
+                .multiple_values(true)
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("types")
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .possible_values(DifType::all_names())
                 .help(
                     "Only consider debug information files of the given \
@@ -69,7 +71,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("path")
                 .short('p')
                 .value_name("PATH")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Add a path to search recursively for debug info files."),
         )
         .arg(

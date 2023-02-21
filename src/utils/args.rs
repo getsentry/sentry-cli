@@ -1,6 +1,6 @@
 use anyhow::{bail, Result};
 use chrono::{DateTime, TimeZone, Utc};
-use clap::{Arg, Command};
+use clap::{Arg, ArgAction, Command};
 
 fn validate_org(v: &str) -> Result<String, String> {
     if v.contains('/') || v == "." || v == ".." || v.contains(' ') {
@@ -102,7 +102,11 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
                 .short('p')
                 .value_parser(validate_project)
                 .global(true)
-                .multiple_occurrences(multiple)
+                .action(if multiple {
+                    ArgAction::Append
+                } else {
+                    ArgAction::Set
+                })
                 .help("The project slug."),
         )
     }

@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 
 use anyhow::{bail, format_err, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use console::style;
 use log::info;
 use symbolic::common::DebugId;
@@ -31,14 +31,16 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .help("A path to search recursively for symbol files.")
-                .multiple_occurrences(true),
+                .multiple_values(true)
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("types")
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .possible_values(types)
                 .help(
                     "Only consider debug information files of the given \
@@ -81,7 +83,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("id")
                 .help("Search for specific debug identifiers.")
                 .value_parser(DebugId::from_str)
-                .multiple_occurrences(true),
+                .multiple_values(true)
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("require_all")

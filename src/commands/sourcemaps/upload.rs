@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 
@@ -22,7 +22,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .required_unless_present_any(["bundle", "bundle_sourcemap"])
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("The files to upload."),
         )
         .arg(
@@ -85,7 +86,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("strip_prefix")
                 .long("strip-prefix")
                 .value_name("PREFIX")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Strips the given prefix from all sources references inside the upload \
                     sourcemaps (paths used within the sourcemap content, to map minified code \
@@ -110,7 +111,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("ignore")
                 .short('i')
                 .value_name("IGNORE")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Ignores all files and folders matching the given glob"),
         )
         .arg(
@@ -149,7 +150,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("ext")
                 .short('x')
                 .value_name("EXT")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Set the file extensions that are considered for upload. \
                     This overrides the default extensions. To add an extension, all default \

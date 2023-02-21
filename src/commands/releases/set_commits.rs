@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
 
@@ -47,7 +47,8 @@ pub fn make_command(command: Command) -> Command {
             .long("commit")
             .short('c')
             .value_name("SPEC")
-            .multiple_occurrences(true)
+            .multiple_values(true)
+            .action(ArgAction::Append)
             .help("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
                     If no commit has been specified sentry-cli will attempt \

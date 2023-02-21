@@ -3,6 +3,7 @@ use std::io;
 use std::path::PathBuf;
 
 use anyhow::{bail, Error, Result};
+use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use log::{debug, info};
@@ -34,7 +35,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .help("The path to the mapping files.")
-                .multiple_occurrences(true),
+                .multiple_values(true)
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("version")

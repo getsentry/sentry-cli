@@ -4,6 +4,7 @@ use std::env;
 use std::process;
 
 use anyhow::{bail, Result};
+use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
@@ -143,7 +144,7 @@ fn app() -> Command<'static> {
             Arg::new("headers")
                 .long("header")
                 .value_name("KEY:VALUE")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .global(true)
                 .help(
                     "Custom headers that should be attached to all requests{n}in key:value format.",

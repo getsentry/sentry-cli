@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 use anyhow::{format_err, Result};
 use chrono::{DateTime, Utc};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
 use log::{debug, warn};
@@ -79,7 +79,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("MESSAGE")
                 .long("message")
                 .short('m')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("The event message."),
         )
         .arg(
@@ -87,7 +87,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("MESSAGE_ARG")
                 .long("message-arg")
                 .short('a')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Arguments for the event message."),
         )
         .arg(
@@ -102,7 +102,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("KEY:VALUE")
                 .long("tag")
                 .short('t')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Add a tag (key:value) to the event."),
         )
         .arg(
@@ -110,7 +110,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("KEY:VALUE")
                 .long("extra")
                 .short('e')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Add extra information (key:value) to the event."),
         )
         .arg(
@@ -118,7 +118,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("KEY:VALUE")
                 .long("user")
                 .short('u')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Add user information (key:value) to the event. \
                      [eg: id:42, username:foo]",
@@ -129,7 +129,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("FINGERPRINT")
                 .long("fingerprint")
                 .short('f')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Change the fingerprint of the event."),
         )
         .arg(

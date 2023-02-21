@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
@@ -44,7 +44,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .value_name("DISTRIBUTION")
                 .required(true)
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )

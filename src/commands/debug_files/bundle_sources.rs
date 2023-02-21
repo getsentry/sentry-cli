@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 
@@ -15,7 +15,8 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .required(true)
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("The path to the input debug info files."),
         )
         .arg(

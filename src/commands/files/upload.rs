@@ -4,7 +4,7 @@ use std::io::Read;
 use std::path::Path;
 
 use anyhow::{bail, format_err, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
@@ -54,7 +54,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("file-header")
                 .short('H')
                 .value_name("KEY VALUE")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("Store a header with this file."),
         )
         .arg(
@@ -75,7 +76,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("ignore")
                 .short('i')
                 .value_name("IGNORE")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("Ignores all files and folders matching the given glob"),
         )
         .arg(
@@ -93,7 +95,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("ext")
                 .short('x')
                 .value_name("EXT")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help(
                     "Set the file extensions that are considered for upload. \
                     This overrides the default extensions. To add an extension, all default \

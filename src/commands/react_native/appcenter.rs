@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::fs;
 
 use anyhow::{anyhow, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use console::style;
 use if_chain::if_chain;
 use log::info;
@@ -49,7 +49,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
@@ -81,7 +82,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .required(true)
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("A list of folders with assets that should be processed."),
         )
         .arg(
