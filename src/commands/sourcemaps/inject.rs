@@ -96,7 +96,6 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
 /// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
 /// placeholder.
 fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
-    make_backup_copy(js_path)?;
     let mut js_file = File::options().append(true).open(js_path)?;
     let to_inject =
         CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.hyphenated().to_string());
@@ -134,7 +133,6 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
         }
 
         None => {
-            make_backup_copy(sourcemap_path)?;
             let debug_id = Uuid::new_v4();
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
@@ -143,14 +141,4 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
             Ok(debug_id)
         }
     }
-}
-
-// Makes a backup copy of a file that has `.bak` appended to the path.
-fn make_backup_copy(path: &Path) -> Result<()> {
-    let mut file_name = path.file_name().unwrap_or_default().to_os_string();
-    file_name.push(".bak");
-    let backup_path = path.with_file_name(file_name);
-    std::fs::copy(path, backup_path).context("Failed to back up {path}")?;
-
-    Ok(())
 }
