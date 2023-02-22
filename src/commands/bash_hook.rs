@@ -6,9 +6,7 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 use anyhow::Result;
-use clap::ArgAction;
-use clap::Command;
-use clap::{Arg, ArgMatches};
+use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
@@ -51,7 +49,10 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("send_event")
                 .long("send-event")
                 .action(ArgAction::SetTrue)
-                .requires_all(["traceback", "log"])
+                .requires_ifs([
+                    (ArgPredicate::IsPresent, "traceback"),
+                    (ArgPredicate::IsPresent, "log"),
+                ])
                 .hide(true),
         )
         .arg(
