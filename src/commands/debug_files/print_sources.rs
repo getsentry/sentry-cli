@@ -66,7 +66,8 @@ fn print_object_sources(object: &Object) -> Result<()> {
             let file = file?;
             let abs_path = file.abs_path_str();
             println!("  {}", &abs_path);
-            match debug_session.source_by_path(abs_path.as_str())? {
+            let source = debug_session.source_by_path(abs_path.as_str())?;
+            match source.as_ref().and_then(|sd| sd.contents()) {
                 Some(source) => {
                     println!("    Embedded, {} bytes", source.len());
                 }

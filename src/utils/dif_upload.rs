@@ -1170,8 +1170,11 @@ fn create_source_bundles<'a>(
         // Resolve source files from the object and write their contents into the archive. Skip to
         // upload this bundle if no source could be written. This can happen if there is no file or
         // line information in the object file, or if none of the files could be resolved.
-        let written =
-            writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
+        let written = writer.write_object_with_filter(
+            object,
+            dif.file_name(),
+            |file, _source_descriptor| filter_bad_sources(file),
+        )?;
         if !written {
             debug!("No sources found for {}", name);
             continue;
