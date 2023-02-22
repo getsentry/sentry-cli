@@ -2,7 +2,7 @@ use std::io;
 use std::path::Path;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{builder::PossibleValuesParser, Arg, ArgMatches, Command};
 use console::style;
 
 use crate::utils::dif::{DifFile, DifType};
@@ -26,7 +26,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .possible_values(DifType::all_names())
+                .value_parser(PossibleValuesParser::new(DifType::all_names()))
                 .help(
                     "Explicitly set the type of the debug info file. \
                      This should not be needed as files are auto detected.",
@@ -40,18 +40,20 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = Path::new(matches.value_of("path").unwrap());
+    let path = Path::new(matches.get_one::<String>("path").unwrap());
 
     // which types should we consider?
-    let ty = matches.value_of("type").map(|t| t.parse().unwrap());
+    let ty = matches
+        .get_one::<String>("type")
+        .map(|t| t.parse().unwrap());
     let dif = DifFile::open_path(path, ty)?;
 
-    if matches.is_present("json") {
+    if matches.contains_id("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &dif)?;
         println!();
     }
 
-    if matches.is_present("json") || is_quiet_mode() {
+    if matches.contains_id("json") || is_quiet_mode() {
         return if dif.is_usable() {
             Ok(())
         } else {

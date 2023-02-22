@@ -171,11 +171,11 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    if matches.is_present("send_event") {
+    if matches.contains_id("send_event") {
         return send_event(
-            matches.value_of("traceback").unwrap(),
-            matches.value_of("log").unwrap(),
-            !matches.is_present("no_environ"),
+            matches.get_one::<String>("traceback").unwrap(),
+            matches.get_one::<String>("log").unwrap(),
+            !matches.contains_id("no_environ"),
         );
     }
 
@@ -192,22 +192,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
-    if matches.is_present("cli") {
-        script = script.replace("___SENTRY_CLI___", matches.value_of("cli").unwrap());
-    } else {
-        script = script.replace(
-            "___SENTRY_CLI___",
-            &env::current_exe().unwrap().display().to_string(),
-        );
-    }
+    script = script.replace(
+        "___SENTRY_CLI___",
+        matches
+            .get_one::<String>("cli")
+            .map_or_else(
+                || env::current_exe().unwrap().display().to_string(),
+                String::clone,
+            )
+            .as_str(),
+    );
 
-    if matches.is_present("no_environ") {
+    if matches.contains_id("no_environ") {
         script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
     } else {
         script = script.replace("___SENTRY_NO_ENVIRON___", "");
     }
 
-    if !matches.is_present("no_exit") {
+    if !matches.contains_id("no_exit") {
         script.insert_str(0, "set -e\n\n");
     }
     println!("{script}");

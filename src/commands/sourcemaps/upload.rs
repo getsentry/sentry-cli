@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 
@@ -22,7 +22,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .required_unless_present_any(["bundle", "bundle_sourcemap"])
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("The files to upload."),
         )
         .arg(
@@ -43,7 +44,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .short('d')
                 .value_name("DISTRIBUTION")
-                .validator(validate_distribution)
+                .value_parser(validate_distribution)
                 .help("Optional distribution identifier for the sourcemaps."),
         )
         .arg(
@@ -85,7 +86,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("strip_prefix")
                 .long("strip-prefix")
                 .value_name("PREFIX")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Strips the given prefix from all sources references inside the upload \
                     sourcemaps (paths used within the sourcemap content, to map minified code \
@@ -110,7 +111,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("ignore")
                 .short('i')
                 .value_name("IGNORE")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Ignores all files and folders matching the given glob"),
         )
         .arg(
@@ -149,7 +150,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("ext")
                 .short('x')
                 .value_name("EXT")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Set the file extensions that are considered for upload. \
                     This overrides the default extensions. To add an extension, all default \
@@ -164,11 +165,11 @@ pub fn make_command(command: Command) -> Command {
 }
 
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
-    let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
-        Some(paths) => paths.collect(),
+    let mut prefixes: Vec<&str> = match matches.get_many::<String>("strip_prefix") {
+        Some(paths) => paths.map(String::as_str).collect(),
         None => vec![],
     };
-    if matches.is_present("strip_common_prefix") {
+    if matches.contains_id("strip_common_prefix") {
         prefixes.push("~");
     }
     prefixes
@@ -178,14 +179,20 @@ fn process_sources_from_bundle(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-    let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+    let url_suffix = matches
+        .get_one::<String>("url_suffix")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let mut url_prefix = matches
+        .get_one::<String>("url_prefix")
+        .map(String::as_str)
+        .unwrap_or("~");
     // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
     if url_prefix.ends_with('/') {
         url_prefix = &url_prefix[..url_prefix.len() - 1];
     }
 
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
+    let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let bundle_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -193,7 +200,7 @@ fn process_sources_from_bundle(
         url_suffix
     );
 
-    let sourcemap_path = PathBuf::from(matches.value_of("bundle_sourcemap").unwrap());
+    let sourcemap_path = PathBuf::from(matches.get_one::<String>("bundle_sourcemap").unwrap());
     let sourcemap_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -241,14 +248,17 @@ fn process_sources_from_paths(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let paths = matches.values_of("paths").unwrap();
-    let ignore_file = matches.value_of("ignore_file").unwrap_or("");
+    let paths = matches.get_many::<String>("paths").unwrap();
+    let ignore_file = matches
+        .get_one::<String>("ignore_file")
+        .map(String::as_str)
+        .unwrap_or_default();
     let extensions = matches
-        .values_of("extensions")
+        .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
-        .values_of("ignore")
+        .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
 
@@ -268,7 +278,7 @@ fn process_sources_from_paths(
         };
 
         let mut search = ReleaseFileSearch::new(path.to_path_buf());
-        search.decompress(matches.is_present("decompress"));
+        search.decompress(matches.contains_id("decompress"));
 
         if check_ignore {
             search
@@ -279,8 +289,14 @@ fn process_sources_from_paths(
 
         let sources = search.collect_files()?;
 
-        let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-        let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+        let url_suffix = matches
+            .get_one::<String>("url_suffix")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let mut url_prefix = matches
+            .get_one::<String>("url_prefix")
+            .map(String::as_str)
+            .unwrap_or("~");
         // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
         if url_prefix.ends_with('/') {
             url_prefix = &url_prefix[..url_prefix.len() - 1];
@@ -293,16 +309,16 @@ fn process_sources_from_paths(
         }
     }
 
-    if !matches.is_present("no_rewrite") {
+    if !matches.contains_id("no_rewrite") {
         let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
     }
 
-    if !matches.is_present("no_sourcemap_reference") {
+    if !matches.contains_id("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
     }
 
-    if matches.is_present("validate") {
+    if matches.contains_id("validate") {
         processor.validate_all()?;
     }
 
@@ -316,7 +332,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
 
-    if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
+    if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
     } else {
         process_sources_from_paths(matches, &mut processor)?;
@@ -336,9 +352,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org: &org,
         project: Some(&project),
         release: &release.version,
-        dist: matches.value_of("dist"),
-        wait: matches.is_present("wait"),
-        dedupe: !matches.is_present("no_dedupe"),
+        dist: matches.get_one::<String>("dist").map(String::as_str),
+        wait: matches.contains_id("wait"),
+        dedupe: !matches.contains_id("no_dedupe"),
     })?;
 
     Ok(())

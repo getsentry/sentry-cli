@@ -362,7 +362,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let event_id = matches.value_of("event").unwrap();
+    let event_id = matches.get_one::<String>("event").unwrap();
 
     let event = fetch_event(&org, &project, event_id)?;
     let release = extract_release(&event)?;
@@ -387,7 +387,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         })?;
 
     if exception.raw_stacktrace.is_some() {
-        if matches.is_present("force") {
+        if matches.contains_id("force") {
             warning(
                 "Exception is already source mapped, however 'force' flag was used. Moving along.",
             );

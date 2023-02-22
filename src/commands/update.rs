@@ -43,7 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if update.is_latest_version() {
-        if matches.is_present("force") {
+        if matches.contains_id("force") {
             println!("Forcing update");
         } else {
             println!("Already up to date!");

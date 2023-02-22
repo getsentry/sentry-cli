@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::fs;
 
 use anyhow::{anyhow, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command, ArgAction};
 use console::style;
 use if_chain::if_chain;
 use log::info;
@@ -49,8 +49,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple_occurrences(true)
-                .validator(validate_distribution)
+                .action(ArgAction::Append)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
@@ -81,7 +81,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .required(true)
-                .multiple_occurrences(true)
+                .multiple_values(true)
+                .action(ArgAction::Append)
                 .help("A list of folders with assets that should be processed."),
         )
         .arg(
@@ -96,11 +97,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
     let (org, project) = config.get_org_and_project(matches)?;
-    let app = matches.value_of("app_name").unwrap();
-    let platform = matches.value_of("platform").unwrap();
-    let deployment = matches.value_of("deployment").unwrap_or("Staging");
+    let app = matches.get_one::<String>("app_name").unwrap();
+    let platform = matches.get_one::<String>("platform").unwrap();
+    let deployment = matches
+        .get_one::<String>("deployment")
+        .map(String::as_str)
+        .unwrap_or("Staging");
     let api = Api::current();
-    let print_release_name = matches.is_present("print_release_name");
+    let print_release_name = matches.contains_id("print_release_name");
 
     info!(
         "Issuing a command for Organization: {} Project: {}",
@@ -118,9 +122,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = get_react_native_appcenter_release(
         &package,
         platform,
-        matches.value_of("bundle_id"),
-        matches.value_of("version_name"),
-        matches.value_of("release_name"),
+        matches.get_one::<String>("bundle_id").map(String::as_str),
+        matches
+            .get_one::<String>("version_name")
+            .map(String::as_str),
+        matches
+            .get_one::<String>("release_name")
+            .map(String::as_str),
     )?;
     if print_release_name {
         println!("{release}");
@@ -134,7 +142,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mut processor = SourceMapProcessor::new();
 
-    for path in matches.values_of("paths").unwrap() {
+    for path in matches.get_many::<String>("paths").unwrap() {
         let entries = fs::read_dir(path)
             .map_err(|e| anyhow!(e).context(format!("Failed processing path: \"{}\"", &path)))?;
 
@@ -165,7 +173,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    match matches.values_of("dist") {
+    match matches.get_many::<String>("dist") {
         None => {
             println!(
                 "Uploading sourcemaps for release {} (no distribution value given; use --dist to set distribution value)",
@@ -177,7 +185,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 project: Some(&project),
                 release: &release.version,
                 dist: None,
-                wait: matches.is_present("wait"),
+                wait: matches.contains_id("wait"),
                 ..Default::default()
             })?;
         }
@@ -193,7 +201,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     project: Some(&project),
                     release: &release.version,
                     dist: Some(dist),
-                    wait: matches.is_present("wait"),
+                    wait: matches.contains_id("wait"),
                     ..Default::default()
                 })?;
             }

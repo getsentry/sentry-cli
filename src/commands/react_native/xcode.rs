@@ -5,7 +5,7 @@ use std::process;
 
 use anyhow::{bail, Result};
 use chrono::Duration;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
@@ -68,8 +68,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .multiple_occurrences(true)
-                .validator(validate_distribution)
+                .action(ArgAction::Append)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
@@ -99,13 +99,13 @@ fn find_node() -> String {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let should_wrap = matches.is_present("force")
+    let should_wrap = matches.contains_id("force")
         || match env::var("CONFIGURATION") {
             Ok(config) => !&config.contains("Debug"),
             Err(_) => bail!("Need to run this from Xcode"),
         };
     let base = env::current_dir()?;
-    let script = if let Some(path) = matches.value_of("build_script") {
+    let script = if let Some(path) = matches.get_one::<String>("build_script") {
         base.join(path)
     } else {
         base.join("../node_modules/react-native/scripts/react-native-xcode.sh")
@@ -121,11 +121,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // to simulator mode.
     let fetch_url;
     if_chain! {
-        if matches.is_present("allow_fetch");
+        if matches.contains_id("allow_fetch");
         if let Ok(val) = env::var("PLATFORM_NAME");
         if val.ends_with("simulator");
         then {
-            let url = matches.value_of("fetch_from").unwrap_or("http://127.0.0.1:8081/");
+            let url = matches.get_one::<String>("fetch_from").map(String::as_str).unwrap_or("http://127.0.0.1:8081/");
             info!("Fetching sourcemaps from {}", url);
             fetch_url = Some(url);
         } else {
@@ -165,7 +165,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // case we do indeed fetch it right from the running packager and then
         // store it in temporary files for later consumption.
         if let Some(url) = fetch_url {
-            if !matches.is_present("force_foreground") {
+            if !matches.contains_id("force_foreground") {
                 md.may_detach()?;
             }
             let api = Api::current();
@@ -220,7 +220,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .wait()?;
             propagate_exit_status(rv);
 
-            if !matches.is_present("force_foreground") {
+            if !matches.contains_id("force_foreground") {
                 md.may_detach()?;
             }
             let mut f = fs::File::open(report_file.path())?;
@@ -278,14 +278,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             },
         )?;
 
-        match matches.values_of("dist") {
+        match matches.get_many::<String>("dist") {
             None => {
                 processor.upload(&UploadContext {
                     org: &org,
                     project: Some(&project),
                     release: &release.version,
                     dist: Some(&dist),
-                    wait: matches.is_present("wait"),
+                    wait: matches.contains_id("wait"),
                     ..Default::default()
                 })?;
             }
@@ -296,7 +296,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         project: Some(&project),
                         release: &release.version,
                         dist: Some(dist),
-                        wait: matches.is_present("wait"),
+                        wait: matches.contains_id("wait"),
                         ..Default::default()
                     })?;
                 }

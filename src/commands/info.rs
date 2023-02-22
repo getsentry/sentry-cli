@@ -79,7 +79,7 @@ fn get_config_status_json() -> Result<()> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    if matches.is_present("config_status_json") {
+    if matches.contains_id("config_status_json") {
         return get_config_status_json();
     }
 
@@ -91,7 +91,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut errors = config.get_auth().is_none() || info_rv.is_err();
 
     // If `no-defaults` is present, only authentication should be verified.
-    if !matches.is_present("no_defaults") {
+    if !matches.contains_id("no_defaults") {
         errors = errors || project.is_none() || org.is_none();
     }
 
@@ -105,7 +105,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
 
-    if !matches.is_present("no_defaults") {
+    if !matches.contains_id("no_defaults") {
         println!(
             "Default Organization: {}",
             org.unwrap_or_else(|| "-".into())

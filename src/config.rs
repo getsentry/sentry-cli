@@ -274,8 +274,8 @@ impl Config {
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
         matches
-            .value_of("org")
-            .map(str::to_owned)
+            .get_one::<String>("org")
+            .cloned()
             .or_else(|| env::var("SENTRY_ORG").ok())
             .or_else(|| {
                 self.ini
@@ -288,15 +288,15 @@ impl Config {
     /// Given a match object from clap, this returns the release from it.
     pub fn get_release(&self, matches: &ArgMatches) -> Result<String> {
         matches
-            .value_of("release")
-            .map(str::to_owned)
+            .get_one::<String>("release")
+            .cloned()
             .or_else(|| env::var("SENTRY_RELEASE").ok())
             .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
     pub fn get_release_with_legacy_fallback(&self, matches: &ArgMatches) -> Result<String> {
-        if let Some(version) = matches.value_of("version") {
+        if let Some(version) = matches.get_one::<String>("version") {
             Ok(version.to_string())
         } else {
             self.get_release(matches)
@@ -310,8 +310,8 @@ impl Config {
 
     /// Given a match object from clap, this returns the projects from it.
     pub fn get_projects(&self, matches: &ArgMatches) -> Result<Vec<String>> {
-        if let Some(projects) = matches.values_of("project") {
-            Ok(projects.map(str::to_owned).collect())
+        if let Some(projects) = matches.get_many::<String>("project") {
+            Ok(projects.cloned().collect())
         } else {
             Ok(vec![self.get_project_default()?])
         }
@@ -443,7 +443,7 @@ impl Config {
     }
 
     pub fn get_allow_failure(&self, matches: &ArgMatches) -> bool {
-        matches.is_present("allow_failure")
+        matches.contains_id("allow_failure")
             || if let Ok(var) = env::var("SENTRY_ALLOW_FAILURE") {
                 &var == "1" || &var == "true"
             } else {

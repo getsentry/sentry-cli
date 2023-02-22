@@ -4,6 +4,7 @@ use std::env;
 use std::process;
 
 use anyhow::{bail, Result};
+use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
@@ -97,24 +98,24 @@ fn preexecute_hooks() -> Result<bool> {
 }
 
 fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
-    if let Some(url) = matches.value_of("url") {
+    if let Some(url) = matches.get_one::<String>("url") {
         config.set_base_url(url);
     }
 
-    if let Some(headers) = matches.values_of("headers") {
+    if let Some(headers) = matches.get_many::<String>("headers") {
         let headers = headers.map(|h| h.to_owned()).collect();
         config.set_headers(headers);
     }
 
-    if let Some(api_key) = matches.value_of("api_key") {
+    if let Some(api_key) = matches.get_one::<String>("api_key") {
         config.set_auth(Auth::Key(api_key.to_owned()));
     }
 
-    if let Some(auth_token) = matches.value_of("auth_token") {
+    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
         config.set_auth(Auth::Token(auth_token.to_owned()));
     }
 
-    if let Some(level_str) = matches.value_of("log_level") {
+    if let Some(level_str) = matches.get_one::<String>("log_level") {
         match level_str.parse() {
             Ok(level) => {
                 config.set_log_level(level);
@@ -143,7 +144,7 @@ fn app() -> Command<'static> {
             Arg::new("headers")
                 .long("header")
                 .value_name("KEY:VALUE")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .global(true)
                 .help(
                     "Custom headers that should be attached to all requests{n}in key:value format.",
@@ -166,7 +167,7 @@ fn app() -> Command<'static> {
             Arg::new("log_level")
                 .value_name("LOG_LEVEL")
                 .long("log-level")
-                .possible_values(["trace", "debug", "info", "warn", "error"])
+                .value_parser(["trace", "debug", "info", "warn", "error"])
                 .ignore_case(true)
                 .global(true)
                 .help("Set the log output verbosity."),
@@ -230,7 +231,7 @@ pub fn execute() -> Result<()> {
     app = add_commands(app);
     let matches = app.get_matches();
     configure_args(&mut config, &matches)?;
-    set_quiet_mode(matches.is_present("quiet"));
+    set_quiet_mode(matches.contains_id("quiet"));
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();

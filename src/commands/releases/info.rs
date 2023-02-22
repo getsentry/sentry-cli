@@ -29,7 +29,7 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
@@ -50,11 +50,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             title_row.add("Last event");
         }
 
-        if matches.is_present("show_projects") {
+        if matches.contains_id("show_projects") {
             title_row.add("Projects");
         }
 
-        if matches.is_present("show_commits") {
+        if matches.contains_id("show_commits") {
             title_row.add("Commits");
         }
 
@@ -67,7 +67,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             data_row.add(last_event);
         }
 
-        if matches.is_present("show_projects") {
+        if matches.contains_id("show_projects") {
             let project_slugs = release
                 .projects
                 .into_iter()
@@ -80,7 +80,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         }
 
-        if matches.is_present("show_commits") {
+        if matches.contains_id("show_commits") {
             if let Ok(Some(commits)) = api.get_release_commits(&org, project.as_deref(), version) {
                 if !commits.is_empty() {
                     data_row.add(
