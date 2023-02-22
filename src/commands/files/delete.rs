@@ -22,6 +22,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("all")
                 .short('A')
                 .long("all")
+                .action(ArgAction::SetTrue)
                 .help("Delete all files."),
         )
 }
@@ -33,7 +34,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let api = Api::current();
 
-    if matches.contains_id("all") {
+    if matches.get_flag("all") {
         if api.delete_release_files(&org, project.as_deref(), &release)? {
             println!("All files deleted.");
         }

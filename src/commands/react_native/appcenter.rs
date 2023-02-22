@@ -56,6 +56,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("print_release_name")
                 .long("print-release-name")
+                .action(ArgAction::SetTrue)
                 .help("Print the release name instead."),
         )
         .arg(
@@ -88,6 +89,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
@@ -104,7 +106,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(String::as_str)
         .unwrap_or("Staging");
     let api = Api::current();
-    let print_release_name = matches.contains_id("print_release_name");
+    let print_release_name = matches.get_flag("print_release_name");
 
     info!(
         "Issuing a command for Organization: {} Project: {}",
@@ -185,7 +187,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 project: Some(&project),
                 release: &release.version,
                 dist: None,
-                wait: matches.contains_id("wait"),
+                wait: matches.get_flag("wait"),
                 ..Default::default()
             })?;
         }
@@ -201,7 +203,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     project: Some(&project),
                     release: &release.version,
                     dist: Some(dist),
-                    wait: matches.contains_id("wait"),
+                    wait: matches.get_flag("wait"),
                     ..Default::default()
                 })?;
             }

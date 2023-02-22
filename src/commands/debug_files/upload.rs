@@ -50,6 +50,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("no_unwind")
                 .long("no-unwind")
                 .alias("no-bin")
+                .action(ArgAction::SetTrue)
                 .help(
                     "Do not scan for stack unwinding information. Specify \
                     this flag for builds with disabled FPO, or when \
@@ -62,6 +63,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_debug")
                 .long("no-debug")
+                .action(ArgAction::SetTrue)
                 .help(
                     "Do not scan for debugging information. This will \
                     usually exclude debug companion files. They might \
@@ -70,12 +72,17 @@ pub fn make_command(command: Command) -> Command {
                 )
                 .conflicts_with("no_unwind"),
         )
-        .arg(Arg::new("no_sources").long("no-sources").help(
-            "Do not scan for source information. This will \
-            usually exclude source bundle files. They might \
-            still be uploaded, if they contain additional \
-            processable information (see other flags).",
-        ))
+        .arg(
+            Arg::new("no_sources")
+                .long("no-sources")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Do not scan for source information. This will \
+                    usually exclude source bundle files. They might \
+                    still be uploaded, if they contain additional \
+                    processable information (see other flags).",
+                ),
+        )
         .arg(
             Arg::new("ids")
                 .value_name("ID")
@@ -87,6 +94,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("require_all")
                 .long("require-all")
+                .action(ArgAction::SetTrue)
                 .help("Errors if not all identifiers specified with --id could be found."),
         )
         .arg(
@@ -106,11 +114,13 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("derived_data")
                 .long("derived-data")
+                .action(ArgAction::SetTrue)
                 .help("Search for debug symbols in Xcode's derived data."),
         )
         .arg(
             Arg::new("no_zips")
                 .long("no-zips")
+                .action(ArgAction::SetTrue)
                 .help("Do not search in ZIP files."),
         )
         .arg(
@@ -128,41 +138,64 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_reprocessing")
                 .long("no-reprocessing")
+                .action(ArgAction::SetTrue)
                 .help("Do not trigger reprocessing after uploading."),
         )
-        .arg(Arg::new("no_upload").long("no-upload").help(
-            "Disable the actual upload.{n}This runs all steps for the \
-            processing but does not trigger the upload (this also \
-            automatically disables reprocessing).  This is useful if you \
-            just want to verify the setup or skip the upload in tests.",
-        ))
-        .arg(Arg::new("force_foreground").long("force-foreground").help(
-            "Wait for the process to finish.{n}\
-            By default, the upload process will detach and continue in the \
-            background when triggered from Xcode.  When an error happens, \
-            a dialog is shown.  If this parameter is passed Xcode will wait \
-            for the process to finish before the build finishes and output \
-            will be shown in the Xcode build output.",
-        ))
-        .arg(Arg::new("include_sources").long("include-sources").help(
-            "Include sources from the local file system and upload \
-            them as source bundles.",
-        ))
-        .arg(Arg::new("wait").long("wait").help(
-            "Wait for the server to fully process uploaded files. Errors \
-            can only be displayed if --wait is specified, but this will \
-            significantly slow down the upload process.",
-        ))
+        .arg(
+            Arg::new("no_upload")
+                .long("no-upload")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Disable the actual upload.{n}This runs all steps for the \
+                    processing but does not trigger the upload (this also \
+                    automatically disables reprocessing).  This is useful if you \
+                    just want to verify the setup or skip the upload in tests.",
+                ),
+        )
+        .arg(
+            Arg::new("force_foreground")
+                .long("force-foreground")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Wait for the process to finish.{n}\
+                    By default, the upload process will detach and continue in the \
+                    background when triggered from Xcode.  When an error happens, \
+                    a dialog is shown.  If this parameter is passed Xcode will wait \
+                    for the process to finish before the build finishes and output \
+                    will be shown in the Xcode build output.",
+                ),
+        )
+        .arg(
+            Arg::new("include_sources")
+                .long("include-sources")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Include sources from the local file system and upload them as source bundles.",
+                ),
+        )
+        .arg(
+            Arg::new("wait")
+                .long("wait")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Wait for the server to fully process uploaded files. Errors \
+                    can only be displayed if --wait is specified, but this will \
+                    significantly slow down the upload process.",
+                ),
+        )
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(
             Arg::new("upload_symbol_maps")
                 .long("upload-symbol-maps")
+                .action(ArgAction::SetTrue)
                 .hide(true),
         )
-        .arg(Arg::new("il2cpp_mapping").long("il2cpp-mapping").help(
-            "Compute il2cpp line mappings and upload \
-            them along with sources.",
-        ))
+        .arg(
+            Arg::new("il2cpp_mapping")
+                .long("il2cpp-mapping")
+                .action(ArgAction::SetTrue)
+                .help("Compute il2cpp line mappings and upload them along with sources."),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -182,9 +215,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
-        .wait(matches.contains_id("wait"))
+        .wait(matches.get_flag("wait"))
         .search_paths(matches.get_many::<String>("paths").unwrap_or_default())
-        .allow_zips(!matches.contains_id("no_zips"))
+        .allow_zips(!matches.get_flag("no_zips"))
         .filter_ids(ids);
 
     // Restrict symbol types, if specified by the user
@@ -213,17 +246,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Allow stripped debug symbols. These are dSYMs, ELF binaries generated
         // with `objcopy --only-keep-debug` or Breakpad symbols. As a fallback,
         // we also upload all files with a public symbol table.
-        debug: !matches.contains_id("no_debug"),
-        symtab: !matches.contains_id("no_debug"),
+        debug: !matches.get_flag("no_debug"),
+        symtab: !matches.get_flag("no_debug"),
         // Allow executables and dynamic/shared libraries, but not object files.
         // They are guaranteed to contain unwind info, for instance `eh_frame`,
         // and may optionally contain debugging information such as DWARF.
-        unwind: !matches.contains_id("no_unwind"),
-        sources: !matches.contains_id("no_sources"),
+        unwind: !matches.get_flag("no_unwind"),
+        sources: !matches.get_flag("no_sources"),
     });
 
-    upload.include_sources(matches.contains_id("include_sources"));
-    upload.il2cpp_mapping(matches.contains_id("il2cpp_mapping"));
+    upload.include_sources(matches.get_flag("include_sources"));
+    upload.il2cpp_mapping(matches.get_flag("il2cpp_mapping"));
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.get_one::<String>("symbol_maps") {
@@ -233,7 +266,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // Add a path to XCode's DerivedData, if configured
-    if matches.contains_id("derived_data") {
+    if matches.get_flag("derived_data") {
         let derived_data = dirs::home_dir().map(|x| x.join(DERIVED_DATA_FOLDER));
         if let Some(path) = derived_data {
             if path.is_dir() {
@@ -248,14 +281,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         None => InfoPlist::discover_from_env()?,
     };
 
-    if matches.contains_id("no_upload") {
+    if matches.get_flag("no_upload") {
         println!("{} skipping upload.", style(">").dim());
         return Ok(());
     }
 
     MayDetach::wrap("Debug symbol upload", |handle| {
         // Optionally detach if run from Xcode
-        if !matches.contains_id("force_foreground") {
+        if !matches.get_flag("force_foreground") {
             handle.may_detach()?;
         }
 
@@ -293,14 +326,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
 
         // Trigger reprocessing only if requested by user
-        if matches.contains_id("no_reprocessing") {
+        if matches.get_flag("no_reprocessing") {
             println!("{} skipped reprocessing", style(">").dim());
         } else if !api.trigger_reprocessing(&org, &project)? {
             println!("{} Server does not support reprocessing.", style(">").dim());
         }
 
         // Did we miss explicitly requested symbols?
-        if matches.contains_id("require_all") {
+        if matches.get_flag("require_all") {
             let required_ids: BTreeSet<DebugId> = matches
                 .get_many::<DebugId>("ids")
                 .unwrap_or_default()

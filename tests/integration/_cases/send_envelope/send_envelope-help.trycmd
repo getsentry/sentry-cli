@@ -14,7 +14,7 @@ Arguments:
           The path or glob to the file(s) in envelope format to send as envelope(s).
 
 Options:
-      --raw <raw>
+      --raw
           Send envelopes without attempting to parse their contents.
 
       --header <KEY:VALUE>
@@ -29,7 +29,7 @@ Options:
           
           [possible values: trace, debug, info, warn, error]
 
-      --quiet <quiet>
+      --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           

@@ -42,10 +42,10 @@ Options:
           
           [possible values: trace, debug, info, warn, error]
 
-      --no-environ <no_environ>
+      --no-environ
           Do not send environment variables along
 
-      --quiet <quiet>
+      --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           
@@ -75,7 +75,7 @@ Options:
       --logfile <PATH>
           Send a logfile as breadcrumbs with the event (last 100 records)
 
-      --with-categories <with_categories>
+      --with-categories
           When logfile is provided, this flag will try to assign correct level to extracted log
           breadcrumbs. It uses standard log format of "category: message". eg. "INFO: Something
           broke" will be parsed as a breadcrumb "{"level": "info", "message": "Something broke"}"

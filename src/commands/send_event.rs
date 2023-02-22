@@ -73,6 +73,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_environ")
                 .long("no-environ")
+                .action(ArgAction::SetTrue)
                 .help("Do not send environment variables along"),
         )
         .arg(
@@ -142,6 +143,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("with_categories")
                 .long("with-categories")
+                .action(ArgAction::SetTrue)
                 .help("Parses off a leading category for breadcrumbs from the logfile")
                 .long_help(
                     "When logfile is provided, this flag will try to assign correct level \
@@ -228,7 +230,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         event.tags.insert(key.into(), value.into());
     }
 
-    if !matches.contains_id("no_environ") {
+    if !matches.get_flag("no_environ") {
         event.extra.insert(
             "environ".into(),
             Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
@@ -286,7 +288,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if let Some(logfile) = matches.get_one::<String>("logfile") {
-        attach_logfile(&mut event, logfile, matches.contains_id("with_categories"))?;
+        attach_logfile(&mut event, logfile, matches.get_flag("with_categories"))?;
     }
 
     let id = send_raw_event(event, dsn);

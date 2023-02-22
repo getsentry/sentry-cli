@@ -6,13 +6,13 @@ Authenticate with the Sentry server.
 Usage: sentry-cli[EXE] login [OPTIONS]
 
 Options:
-  -g, --global <global>          Store authentication token globally rather than locally.
+  -g, --global                   Store authentication token globally rather than locally.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]
-      --quiet <quiet>            Do not print any output while preserving correct exit code. This
+      --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: silent]
   -h, --help                     Print help
