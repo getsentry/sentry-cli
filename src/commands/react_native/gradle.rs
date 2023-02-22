@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command, ArgAction};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
@@ -51,6 +51,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
@@ -118,7 +119,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             project: Some(&project),
             release: &release.version,
             dist: Some(dist),
-            wait: matches.contains_id("wait"),
+            wait: matches.get_flag("wait"),
             ..Default::default()
         })?;
     }

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Utc;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -20,6 +20,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("finalize")
                 .long("finalize")
+                .action(ArgAction::SetTrue)
                 .help("Immediately finalize the release. (sets it to released)"),
         )
         // Legacy flag that has no effect, left hidden for backward compatibility
@@ -38,7 +39,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             projects: config.get_projects(matches)?,
             url: matches.get_one::<String>("url").cloned(),
             date_started: Some(Utc::now()),
-            date_released: if matches.contains_id("finalize") {
+            date_released: if matches.get_flag("finalize") {
                 Some(Utc::now())
             } else {
                 None

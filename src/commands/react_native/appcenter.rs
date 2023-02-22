@@ -3,7 +3,7 @@ use std::ffi::OsStr;
 use std::fs;
 
 use anyhow::{anyhow, Result};
-use clap::{Arg, ArgMatches, Command, ArgAction};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use if_chain::if_chain;
 use log::info;
@@ -56,13 +56,14 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("print_release_name")
                 .long("print-release-name")
+                .action(ArgAction::SetTrue)
                 .help("Print the release name instead."),
         )
         .arg(
             Arg::new("release_name")
                 .value_name("RELEASE_NAME")
                 .long("release-name")
-                .conflicts_with_all(&["bundle_id", "version_name"])
+                .conflicts_with_all(["bundle_id", "version_name"])
                 .help("Override the entire release-name"),
         )
         .arg(
@@ -81,13 +82,14 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .required(true)
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append)
                 .help("A list of folders with assets that should be processed."),
         )
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
@@ -104,7 +106,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(String::as_str)
         .unwrap_or("Staging");
     let api = Api::current();
-    let print_release_name = matches.contains_id("print_release_name");
+    let print_release_name = matches.get_flag("print_release_name");
 
     info!(
         "Issuing a command for Organization: {} Project: {}",
@@ -185,7 +187,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 project: Some(&project),
                 release: &release.version,
                 dist: None,
-                wait: matches.contains_id("wait"),
+                wait: matches.get_flag("wait"),
                 ..Default::default()
             })?;
         }
@@ -201,7 +203,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     project: Some(&project),
                     release: &release.version,
                     dist: Some(dist),
-                    wait: matches.contains_id("wait"),
+                    wait: matches.get_flag("wait"),
                     ..Default::default()
                 })?;
             }

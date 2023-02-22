@@ -35,7 +35,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .help("The path to the mapping files.")
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .arg(
@@ -85,15 +85,21 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_reprocessing")
                 .long("no-reprocessing")
+                .action(ArgAction::SetTrue)
                 .help("Do not trigger reprocessing after upload."),
         )
-        .arg(Arg::new("no_upload").long("no-upload").help(
-            "Disable the actual upload.{n}This runs all steps for the \
-             processing but does not trigger the upload (this also \
-             automatically disables reprocessing).  This is useful if you \
-             just want to verify the mapping files and write the \
-             proguard UUIDs into a properties file.",
-        ))
+        .arg(
+            Arg::new("no_upload")
+                .long("no-upload")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Disable the actual upload.{n}This runs all steps for the \
+                    processing but does not trigger the upload (this also \
+                    automatically disables reprocessing).  This is useful if you \
+                    just want to verify the mapping files and write the \
+                    proguard UUIDs into a properties file.",
+                ),
+        )
         .arg(
             Arg::new("android_manifest")
                 .long("android-manifest")
@@ -113,6 +119,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("require_one")
                 .long("require-one")
+                .action(ArgAction::SetTrue)
                 .help("Requires at least one file to upload or the command will error."),
         )
         .arg(
@@ -199,7 +206,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    if mappings.is_empty() && matches.contains_id("require_one") {
+    if mappings.is_empty() && matches.get_flag("require_one") {
         println!();
         eprintln!("{}", style("error: found no mapping files to upload").red());
         return Err(QuietExit(1).into());
@@ -227,7 +234,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         dump_proguard_uuids_as_properties(p, &uuids)?;
     }
 
-    if matches.contains_id("no_upload") {
+    if matches.get_flag("no_upload") {
         println!("{} skipping upload.", style(">").dim());
         return Ok(());
     }
@@ -279,7 +286,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // If wanted trigger reprocessing
-    if !matches.contains_id("no_reprocessing") && !matches.contains_id("no_upload") {
+    if !matches.get_flag("no_reprocessing") && !matches.get_flag("no_upload") {
         if !api.trigger_reprocessing(&org, &project)? {
             println!(
                 "{} Server does not support reprocessing. Not triggering.",
