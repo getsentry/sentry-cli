@@ -28,8 +28,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("args")
                 .value_name("ARGS")
                 .required(true)
-                .takes_value(true)
-                .multiple_values(true)
+                .num_args(1..)
                 .last(true),
         )
 }

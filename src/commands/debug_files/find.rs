@@ -40,7 +40,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
                 .value_parser(DebugId::from_str)
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .arg(

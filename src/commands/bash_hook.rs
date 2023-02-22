@@ -47,7 +47,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("send_event")
                 .long("send-event")
-                .requires_all(&["traceback", "log"])
+                .requires_all(["traceback", "log"])
                 .hide(true),
         )
         .arg(

@@ -129,7 +129,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn app() -> Command<'static> {
+fn app() -> Command {
     Command::new("sentry-cli")
         .version(VERSION)
         .about(ABOUT)
@@ -192,7 +192,7 @@ fn add_commands(mut app: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
             let cmd =
-                $name::make_command(Command::new(stringify!($name).replace("_", "-").as_str()));
+                $name::make_command(Command::new(stringify!($name).replace("_", "-")));
             app = app.subcommand(cmd);
         }};
     }

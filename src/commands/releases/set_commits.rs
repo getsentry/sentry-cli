@@ -31,7 +31,7 @@ pub fn make_command(command: Command) -> Command {
                     will create a release with the default commits count (or the one specified with `--initial-depth`) \
                     instead of failing the command."))
         .arg(Arg::new("local")
-            .conflicts_with_all(&["auto", "clear", "commits", ])
+            .conflicts_with_all(["auto", "clear", "commits", ])
             .long("local")
             .help("Set commits of a release from local git.{n}\
                     This requires that the command is run from within a git repository.  \

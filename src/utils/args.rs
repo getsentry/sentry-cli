@@ -81,8 +81,8 @@ pub trait ArgExt: Sized {
     fn version_arg(self) -> Self;
 }
 
-impl<'a: 'b, 'b> ArgExt for Command<'a> {
-    fn org_arg(self) -> Command<'a> {
+impl<'a: 'b, 'b> ArgExt for Command {
+    fn org_arg(self) -> Command {
         self.arg(
             Arg::new("org")
                 .value_name("ORG")
@@ -94,7 +94,7 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn project_arg(self, multiple: bool) -> Command<'a> {
+    fn project_arg(self, multiple: bool) -> Command  {
         self.arg(
             Arg::new("project")
                 .value_name("PROJECT")
@@ -111,7 +111,7 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn release_arg(self) -> Command<'a> {
+    fn release_arg(self) -> Command {
         self.arg(
             Arg::new("release")
                 .value_name("RELEASE")
@@ -124,7 +124,7 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn version_arg(self) -> Command<'a> {
+    fn version_arg(self) -> Command {
         self.arg(
             Arg::new("version")
                 .value_name("VERSION")

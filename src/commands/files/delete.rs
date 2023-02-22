@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command, ArgAction};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -14,7 +14,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("names")
                 .value_name("NAMES")
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append)
                 .help("Filenames to delete."),
         )

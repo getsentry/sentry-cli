@@ -1,27 +1,28 @@
 ```
 $ sentry-cli info --help
 ? success
-sentry-cli[EXE]-info 
 Print information about the configuration and verify authentication.
 
-USAGE:
-    sentry-cli[EXE] info [OPTIONS]
+Usage: sentry-cli[EXE] info [OPTIONS]
 
-OPTIONS:
-        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
-        --config-status-json         Return the status of the config that sentry-cli loads as JSON
-                                     dump. This can be used by external tools to aid the user
-                                     towards configuration.
-    -h, --help                       Print help information
-        --header <KEY:VALUE>         Custom headers that should be attached to all requests
-                                     in key:value format.
-        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
-                                     info, warn, error]
-        --no-defaults                Skip default organization and project checks. This allows you
-                                     to verify your authentication method, without the need for
-                                     setting other defaults.
-        --quiet                      Do not print any output while preserving correct exit code.
-                                     This flag is currently implemented only for selected
-                                     subcommands. [aliases: silent]
+Options:
+      --config-status-json <config_status_json>
+          Return the status of the config that sentry-cli loads as JSON dump. This can be used by
+          external tools to aid the user towards configuration.
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+      --no-defaults <no_defaults>
+          Skip default organization and project checks. This allows you to verify your
+          authentication method, without the need for setting other defaults.
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --quiet <quiet>
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: silent]
+  -h, --help
+          Print help
 
 ```

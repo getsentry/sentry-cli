@@ -1,12 +1,11 @@
 ```
 $ sentry-cli sourcemaps upload
 ? failed
-error: The following required arguments were not provided:
-    <PATHS>...
+error: the following required arguments were not provided:
+  <PATHS>...
 
-USAGE:
-    sentry-cli[EXE] sourcemaps upload <PATHS>...
+Usage: sentry-cli[EXE] sourcemaps upload <PATHS>...
 
-For more information try --help
+For more information, try '--help'.
 
 ```

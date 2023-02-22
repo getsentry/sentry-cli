@@ -22,7 +22,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .required_unless_present_any(["bundle", "bundle_sourcemap"])
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append)
                 .help("The files to upload."),
         )
@@ -129,7 +129,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("bundle")
                 .value_name("BUNDLE")
                 .conflicts_with("paths")
-                .requires_all(&["bundle_sourcemap"])
+                .requires_all(["bundle_sourcemap"])
                 .help("Path to the application bundle (indexed, file, or regular)"),
         )
         .arg(
@@ -137,7 +137,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("bundle-sourcemap")
                 .value_name("BUNDLE_SOURCEMAP")
                 .conflicts_with("paths")
-                .requires_all(&["bundle"])
+                .requires_all(["bundle"])
                 .help("Path to the bundle sourcemap"),
         )
         .arg(Arg::new("no_dedupe").long("no-dedupe").help(

@@ -35,7 +35,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATH")
                 .help("The path to the mapping files.")
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append),
         )
         .arg(

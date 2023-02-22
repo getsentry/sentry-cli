@@ -25,7 +25,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("delimiter")
                 .short('D')
                 .long("delimiter")
-                .takes_value(true)
+                .num_args(1)
                 .requires("raw")
                 .help("Delimiter for the --raw flag"),
         )
