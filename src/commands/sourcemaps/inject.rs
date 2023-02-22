@@ -1,5 +1,5 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, Write};
+use std::fs::{self, File};
+use std::io::{Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
@@ -7,13 +7,13 @@ use clap::{Arg, ArgMatches, Command};
 use glob::glob;
 use log::{debug, warn};
 use serde_json::Value;
+use symbolic::debuginfo::js;
 use uuid::Uuid;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
-const SOURCEMAP_URL_COMMENT_PREFIX: &str = "//# sourceMappingURL=";
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -56,24 +56,15 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
 
         debug!("Processing js file {}", js_path.display());
 
-        let f = File::open(js_path).context(format!("Failed to open {}", js_path.display()))?;
-        let f = BufReader::new(f);
+        let file =
+            fs::read_to_string(js_path).context(format!("Failed to open {}", js_path.display()))?;
 
-        let mut sourcemap_url = None;
-        for line in f.lines() {
-            let line = line.context(format!("Failed to process {}", js_path.display()))?;
-
-            if line.starts_with(DEBUGID_COMMENT_PREFIX) {
-                debug!("File {} was previously processed", js_path.display());
-                continue 'paths;
-            }
-
-            if let Some(url) = line.strip_prefix(SOURCEMAP_URL_COMMENT_PREFIX) {
-                sourcemap_url = Some(PathBuf::from(url));
-            }
+        if js::discover_debug_id(&file).is_some() {
+            debug!("File {} was previously processed", js_path.display());
+            continue 'paths;
         }
 
-        let Some(sourcemap_url) = sourcemap_url else {
+        let Some(sourcemap_url) = js::discover_sourcemaps_location(&file) else {
             debug!("File {} does not contain a sourcemap url", js_path.display());
             continue;
         };
