@@ -51,7 +51,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 }
 
 fn fixup_files(paths: &[PathBuf]) -> Result<()> {
-    'paths: for path in paths {
+    for path in paths {
         let js_path = path.as_path();
 
         debug!("Processing js file {}", js_path.display());
@@ -61,7 +61,7 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
 
         if js::discover_debug_id(&file).is_some() {
             debug!("File {} was previously processed", js_path.display());
-            continue 'paths;
+            continue;
         }
 
         let Some(sourcemap_url) = js::discover_sourcemaps_location(&file) else {
