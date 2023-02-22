@@ -106,7 +106,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let written = writer.write_object_with_filter(
                 &object,
                 &filename.to_string_lossy(),
-                filter_bad_sources,
+                |file, _source_descriptor| filter_bad_sources(file),
             )?;
 
             if !written {
