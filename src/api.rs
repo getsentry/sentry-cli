@@ -2326,14 +2326,14 @@ impl IssueFilter {
     }
 
     pub fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter> {
-        if matches.is_present("all") {
+        if matches.get_flag("all") {
             return Ok(IssueFilter::All);
         }
-        if let Some(status) = matches.value_of("status") {
+        if let Some(status) = matches.get_one::<String>("status") {
             return Ok(IssueFilter::Status(status.into()));
         }
         let mut ids = vec![];
-        if let Some(values) = matches.values_of("id") {
+        if let Some(values) = matches.get_many::<String>("id") {
             for value in values {
                 ids.push(value.parse::<u64>().context("Invalid issue ID")?);
             }

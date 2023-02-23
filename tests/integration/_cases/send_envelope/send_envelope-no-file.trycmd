@@ -1,12 +1,11 @@
 ```
 $ sentry-cli send-envelope --log-level=debug
 ? failed
-error: The following required arguments were not provided:
-    <PATH>
+error: the following required arguments were not provided:
+  <PATH>
 
-USAGE:
-    sentry-cli[EXE] send-envelope --log-level <LOG_LEVEL> <PATH>
+Usage: sentry-cli[EXE] send-envelope --log-level <LOG_LEVEL> <PATH>
 
-For more information try --help
+For more information, try '--help'.
 
 ```

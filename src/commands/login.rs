@@ -1,7 +1,7 @@
 use std::env;
 
 use anyhow::{bail, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use url::Url;
 
 use crate::api::Api;
@@ -13,6 +13,7 @@ pub fn make_command(command: Command) -> Command {
         Arg::new("global")
             .short('g')
             .long("global")
+            .action(ArgAction::SetTrue)
             .help("Store authentication token globally rather than locally."),
     )
 }
@@ -27,7 +28,7 @@ fn update_config(config: &Config, token: &str) -> Result<()> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let token_url = format!("{}/api/", config.get_base_url()?);
-    let predefined_token = matches.value_of("auth_token");
+    let predefined_token = matches.get_one::<String>("auth_token");
     let has_predefined_token = predefined_token.is_some();
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
@@ -85,7 +86,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    let config_to_update = if matches.is_present("global") {
+    let config_to_update = if matches.get_flag("global") {
         Config::global()?
     } else {
         Config::from_cli_config()?

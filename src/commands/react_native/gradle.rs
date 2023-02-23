@@ -2,7 +2,7 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
@@ -44,13 +44,14 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .value_name("DISTRIBUTION")
                 .required(true)
-                .multiple_occurrences(true)
-                .validator(validate_distribution)
+                .action(ArgAction::Append)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
@@ -61,8 +62,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let base = env::current_dir()?;
 
-    let sourcemap_path = PathBuf::from(matches.value_of("sourcemap").unwrap());
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
+    let sourcemap_path = PathBuf::from(matches.get_one::<String>("sourcemap").unwrap());
+    let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let sourcemap_url = format!(
         "~/{}",
         sourcemap_path.file_name().unwrap().to_string_lossy()
@@ -101,13 +102,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = api.new_release(
         &org,
         &NewRelease {
-            version: matches.value_of("release").unwrap().to_string(),
+            version: matches.get_one::<String>("release").unwrap().to_string(),
             projects: vec![project.to_string()],
             ..Default::default()
         },
     )?;
 
-    for dist in matches.values_of("dist").unwrap() {
+    for dist in matches.get_many::<String>("dist").unwrap() {
         println!(
             "Uploading sourcemaps for release {} distribution {}",
             &release.version, dist
@@ -118,7 +119,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             project: Some(&project),
             release: &release.version,
             dist: Some(dist),
-            wait: matches.is_present("wait"),
+            wait: matches.get_flag("wait"),
             ..Default::default()
         })?;
     }

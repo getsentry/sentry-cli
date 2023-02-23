@@ -2,12 +2,11 @@ use std::process;
 use std::time::Instant;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use uuid::Uuid;
 
 use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
-use crate::utils::args::validate_uuid;
 use crate::utils::system::{print_error, QuietExit};
 
 pub fn make_command(command: Command) -> Command {
@@ -17,20 +16,20 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("monitor")
                 .help("The monitor ID")
                 .required(true)
-                .validator(validate_uuid),
+                .value_parser(Uuid::parse_str),
         )
         .arg(
             Arg::new("allow_failure")
                 .short('f')
                 .long("allow-failure")
+                .action(ArgAction::SetTrue)
                 .help("Run provided command even when Sentry reports an error."),
         )
         .arg(
             Arg::new("args")
                 .value_name("ARGS")
                 .required(true)
-                .takes_value(true)
-                .multiple_values(true)
+                .num_args(1..)
                 .last(true),
         )
 }
@@ -38,16 +37,13 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
-    let monitor = matches
-        .value_of("monitor")
-        .map(|x| x.parse::<Uuid>().unwrap())
-        .unwrap();
+    let monitor = matches.get_one::<Uuid>("monitor").unwrap();
 
-    let allow_failure = matches.is_present("allow_failure");
-    let args: Vec<_> = matches.values_of("args").unwrap().collect();
+    let allow_failure = matches.get_flag("allow_failure");
+    let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
     let monitor_checkin = api.create_monitor_checkin(
-        &monitor,
+        monitor,
         &CreateMonitorCheckIn {
             status: MonitorCheckinStatus::InProgress,
         },
@@ -74,7 +70,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     match monitor_checkin {
         Ok(checkin) => {
             api.update_monitor_checkin(
-                &monitor,
+                monitor,
                 &checkin.id,
                 &UpdateMonitorCheckIn {
                     status: Some(if success {

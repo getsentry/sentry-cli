@@ -1,10 +1,10 @@
 use anyhow::Result;
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, Utc};
 use clap::{Arg, ArgMatches, Command};
 
 use crate::api::{Api, Deploy};
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, validate_int, validate_timestamp};
+use crate::utils::args::get_timestamp;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -40,14 +40,14 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("started")
                 .long("started")
                 .value_name("TIMESTAMP")
-                .validator(validate_timestamp)
+                .value_parser(get_timestamp)
                 .help("Optional unix timestamp when the deployment started."),
         )
         .arg(
             Arg::new("finished")
                 .long("finished")
                 .value_name("TIMESTAMP")
-                .validator(validate_timestamp)
+                .value_parser(get_timestamp)
                 .help("Optional unix timestamp when the deployment finished."),
         )
         .arg(
@@ -55,7 +55,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("time")
                 .short('t')
                 .value_name("SECONDS")
-                .validator(validate_int)
+                .value_parser(clap::value_parser!(i64))
                 .help(
                     "Optional deployment duration in seconds.{n}\
                             This can be specified alternatively to `--started` and `--finished`.",
@@ -68,24 +68,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let version = config.get_release_with_legacy_fallback(matches)?;
     let mut deploy = Deploy {
-        env: matches.value_of("env").unwrap().to_string(),
-        name: matches.value_of("name").map(str::to_owned),
-        url: matches.value_of("url").map(str::to_owned),
+        env: matches.get_one::<String>("env").unwrap().to_string(),
+        name: matches.get_one::<String>("name").cloned(),
+        url: matches.get_one::<String>("url").cloned(),
         ..Default::default()
     };
 
-    if let Some(value) = matches.value_of("time") {
+    if let Some(value) = matches.get_one::<i64>("time") {
         let finished = Utc::now();
         deploy.finished = Some(finished);
-        deploy.started = Some(finished - Duration::seconds(value.parse().unwrap()));
+        deploy.started = Some(finished - Duration::seconds(*value));
     } else {
-        if let Some(finished_str) = matches.value_of("finished") {
-            deploy.finished = Some(get_timestamp(finished_str)?);
+        if let Some(finished) = matches.get_one::<DateTime<Utc>>("finished") {
+            deploy.finished = Some(*finished);
         } else {
             deploy.finished = Some(Utc::now());
         }
-        if let Some(started_str) = matches.value_of("started") {
-            deploy.started = Some(get_timestamp(started_str)?);
+        if let Some(started) = matches.get_one::<DateTime<Utc>>("started") {
+            deploy.started = Some(*started);
         }
     }
 

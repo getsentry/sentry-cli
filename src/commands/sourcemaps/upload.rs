@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 
@@ -22,7 +22,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .required_unless_present_any(["bundle", "bundle_sourcemap"])
-                .multiple_occurrences(true)
+                .num_args(1..)
+                .action(ArgAction::Append)
                 .help("The files to upload."),
         )
         .arg(
@@ -43,27 +44,31 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .short('d')
                 .value_name("DISTRIBUTION")
-                .validator(validate_distribution)
+                .value_parser(validate_distribution)
                 .help("Optional distribution identifier for the sourcemaps."),
         )
         .arg(
             Arg::new("validate")
                 .long("validate")
+                .action(ArgAction::SetTrue)
                 .help("Enable basic sourcemap validation."),
         )
         .arg(
             Arg::new("decompress")
                 .long("decompress")
+                .action(ArgAction::SetTrue)
                 .help("Enable files gzip decompression prior to upload."),
         )
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
         .arg(
             Arg::new("no_sourcemap_reference")
                 .long("no-sourcemap-reference")
+                .action(ArgAction::SetTrue)
                 .help(
                     "Disable emitting of automatic sourcemap references.{n}\
                     By default the tool will store a 'Sourcemap' header with \
@@ -72,20 +77,25 @@ pub fn make_command(command: Command) -> Command {
                     be disabled.",
                 ),
         )
-        .arg(Arg::new("no_rewrite").long("no-rewrite").help(
-            "Disables rewriting of matching sourcemaps. By default the tool \
-                will rewrite sources, so that indexed maps are flattened and missing \
-                sources are inlined if possible.{n}This fundamentally \
-                changes the upload process to be based on sourcemaps \
-                and minified files exclusively and comes in handy for \
-                setups like react-native that generate sourcemaps that \
-                would otherwise not work for sentry.",
-        ))
+        .arg(
+            Arg::new("no_rewrite")
+                .long("no-rewrite")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Disables rewriting of matching sourcemaps. By default the tool \
+                    will rewrite sources, so that indexed maps are flattened and missing \
+                    sources are inlined if possible.{n}This fundamentally \
+                    changes the upload process to be based on sourcemaps \
+                    and minified files exclusively and comes in handy for \
+                    setups like react-native that generate sourcemaps that \
+                    would otherwise not work for sentry.",
+                ),
+        )
         .arg(
             Arg::new("strip_prefix")
                 .long("strip-prefix")
                 .value_name("PREFIX")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Strips the given prefix from all sources references inside the upload \
                     sourcemaps (paths used within the sourcemap content, to map minified code \
@@ -99,6 +109,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("strip_common_prefix")
                 .long("strip-common-prefix")
+                .action(ArgAction::SetTrue)
                 .help(
                     "Similar to --strip-prefix but strips the most common \
                     prefix on all sources references.",
@@ -110,7 +121,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("ignore")
                 .short('i')
                 .value_name("IGNORE")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Ignores all files and folders matching the given glob"),
         )
         .arg(
@@ -128,7 +139,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("bundle")
                 .value_name("BUNDLE")
                 .conflicts_with("paths")
-                .requires_all(&["bundle_sourcemap"])
+                .requires("bundle_sourcemap")
                 .help("Path to the application bundle (indexed, file, or regular)"),
         )
         .arg(
@@ -136,20 +147,25 @@ pub fn make_command(command: Command) -> Command {
                 .long("bundle-sourcemap")
                 .value_name("BUNDLE_SOURCEMAP")
                 .conflicts_with("paths")
-                .requires_all(&["bundle"])
+                .requires("bundle")
                 .help("Path to the bundle sourcemap"),
         )
-        .arg(Arg::new("no_dedupe").long("no-dedupe").help(
-            "Skip artifacts deduplication prior to uploading. \
-                This will force all artifacts to be uploaded, \
-                no matter whether they are already present on the server.",
-        ))
+        .arg(
+            Arg::new("no_dedupe")
+                .long("no-dedupe")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Skip artifacts deduplication prior to uploading. \
+                    This will force all artifacts to be uploaded, \
+                    no matter whether they are already present on the server.",
+                ),
+        )
         .arg(
             Arg::new("extensions")
                 .long("ext")
                 .short('x')
                 .value_name("EXT")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Set the file extensions that are considered for upload. \
                     This overrides the default extensions. To add an extension, all default \
@@ -158,17 +174,28 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         // Legacy flag that has no effect, left hidden for backward compatibility
-        .arg(Arg::new("rewrite").long("rewrite").hide(true))
+        .arg(
+            Arg::new("rewrite")
+                .long("rewrite")
+                .action(ArgAction::SetTrue)
+                .hide(true),
+        )
         // Legacy flag that has no effect, left hidden for backward compatibility
-        .arg(Arg::new("verbose").long("verbose").short('v').hide(true))
+        .arg(
+            Arg::new("verbose")
+                .long("verbose")
+                .action(ArgAction::SetTrue)
+                .short('v')
+                .hide(true),
+        )
 }
 
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
-    let mut prefixes: Vec<&str> = match matches.values_of("strip_prefix") {
-        Some(paths) => paths.collect(),
+    let mut prefixes: Vec<&str> = match matches.get_many::<String>("strip_prefix") {
+        Some(paths) => paths.map(String::as_str).collect(),
         None => vec![],
     };
-    if matches.is_present("strip_common_prefix") {
+    if matches.get_flag("strip_common_prefix") {
         prefixes.push("~");
     }
     prefixes
@@ -178,14 +205,20 @@ fn process_sources_from_bundle(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-    let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+    let url_suffix = matches
+        .get_one::<String>("url_suffix")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let mut url_prefix = matches
+        .get_one::<String>("url_prefix")
+        .map(String::as_str)
+        .unwrap_or("~");
     // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
     if url_prefix.ends_with('/') {
         url_prefix = &url_prefix[..url_prefix.len() - 1];
     }
 
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
+    let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let bundle_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -193,7 +226,7 @@ fn process_sources_from_bundle(
         url_suffix
     );
 
-    let sourcemap_path = PathBuf::from(matches.value_of("bundle_sourcemap").unwrap());
+    let sourcemap_path = PathBuf::from(matches.get_one::<String>("bundle_sourcemap").unwrap());
     let sourcemap_url = format!(
         "{}/{}{}",
         url_prefix,
@@ -241,14 +274,17 @@ fn process_sources_from_paths(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,
 ) -> Result<()> {
-    let paths = matches.values_of("paths").unwrap();
-    let ignore_file = matches.value_of("ignore_file").unwrap_or("");
+    let paths = matches.get_many::<String>("paths").unwrap();
+    let ignore_file = matches
+        .get_one::<String>("ignore_file")
+        .map(String::as_str)
+        .unwrap_or_default();
     let extensions = matches
-        .values_of("extensions")
+        .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
     let ignores = matches
-        .values_of("ignore")
+        .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
 
@@ -268,7 +304,7 @@ fn process_sources_from_paths(
         };
 
         let mut search = ReleaseFileSearch::new(path.to_path_buf());
-        search.decompress(matches.is_present("decompress"));
+        search.decompress(matches.get_flag("decompress"));
 
         if check_ignore {
             search
@@ -279,8 +315,14 @@ fn process_sources_from_paths(
 
         let sources = search.collect_files()?;
 
-        let url_suffix = matches.value_of("url_suffix").unwrap_or("");
-        let mut url_prefix = matches.value_of("url_prefix").unwrap_or("~");
+        let url_suffix = matches
+            .get_one::<String>("url_suffix")
+            .map(String::as_str)
+            .unwrap_or_default();
+        let mut url_prefix = matches
+            .get_one::<String>("url_prefix")
+            .map(String::as_str)
+            .unwrap_or("~");
         // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
         if url_prefix.ends_with('/') {
             url_prefix = &url_prefix[..url_prefix.len() - 1];
@@ -293,16 +335,16 @@ fn process_sources_from_paths(
         }
     }
 
-    if !matches.is_present("no_rewrite") {
+    if !matches.get_flag("no_rewrite") {
         let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
     }
 
-    if !matches.is_present("no_sourcemap_reference") {
+    if !matches.get_flag("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
     }
 
-    if matches.is_present("validate") {
+    if matches.get_flag("validate") {
         processor.validate_all()?;
     }
 
@@ -316,7 +358,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
 
-    if matches.is_present("bundle") && matches.is_present("bundle_sourcemap") {
+    if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
     } else {
         process_sources_from_paths(matches, &mut processor)?;
@@ -336,9 +378,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org: &org,
         project: Some(&project),
         release: &release.version,
-        dist: matches.value_of("dist"),
-        wait: matches.is_present("wait"),
-        dedupe: !matches.is_present("no_dedupe"),
+        dist: matches.get_one::<String>("dist").map(String::as_str),
+        wait: matches.get_flag("wait"),
+        dedupe: !matches.get_flag("no_dedupe"),
     })?;
 
     Ok(())

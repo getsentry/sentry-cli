@@ -1,20 +1,16 @@
-use std::str::FromStr;
-
 use anyhow::{bail, Result};
 use chrono::{DateTime, TimeZone, Utc};
-use clap::{Arg, Command};
-use symbolic::common::DebugId;
-use uuid::Uuid;
+use clap::{Arg, ArgAction, Command};
 
-fn validate_org(v: &str) -> Result<(), String> {
+fn validate_org(v: &str) -> Result<String, String> {
     if v.contains('/') || v == "." || v == ".." || v.contains(' ') {
         Err("Invalid value for organization. Use the URL slug and not the name!".to_string())
     } else {
-        Ok(())
+        Ok(v.to_owned())
     }
 }
 
-pub fn validate_project(v: &str) -> Result<(), String> {
+pub fn validate_project(v: &str) -> Result<String, String> {
     if v.contains('/')
         || v == "."
         || v == ".."
@@ -25,11 +21,11 @@ pub fn validate_project(v: &str) -> Result<(), String> {
     {
         Err("Invalid value for project. Use the URL slug and not the name!".to_string())
     } else {
-        Ok(())
+        Ok(v.to_owned())
     }
 }
 
-fn validate_release(v: &str) -> Result<(), String> {
+fn validate_release(v: &str) -> Result<String, String> {
     if v.trim() != v {
         Err(
             "Invalid release version. Releases must not contain leading or trailing spaces."
@@ -46,11 +42,11 @@ fn validate_release(v: &str) -> Result<(), String> {
                 .to_string(),
         )
     } else {
-        Ok(())
+        Ok(v.to_owned())
     }
 }
 
-pub fn validate_distribution(v: &str) -> Result<(), String> {
+pub fn validate_distribution(v: &str) -> Result<String, String> {
     if v.trim() != v {
         Err(
             "Invalid distribution name. Distribution must not contain leading or trailing spaces."
@@ -62,39 +58,7 @@ pub fn validate_distribution(v: &str) -> Result<(), String> {
                 .to_string(),
         )
     } else {
-        Ok(())
-    }
-}
-
-pub fn validate_int(v: &str) -> Result<(), String> {
-    if v.parse::<i64>().is_ok() {
-        Ok(())
-    } else {
-        Err("Invalid number, integer required.".to_string())
-    }
-}
-
-pub fn validate_timestamp(v: &str) -> Result<(), String> {
-    if let Err(err) = get_timestamp(v) {
-        Err(err.to_string())
-    } else {
-        Ok(())
-    }
-}
-
-pub fn validate_uuid(s: &str) -> Result<(), String> {
-    if Uuid::parse_str(s).is_err() {
-        Err("Invalid UUID.".to_string())
-    } else {
-        Ok(())
-    }
-}
-
-pub fn validate_id(s: &str) -> Result<(), String> {
-    if DebugId::from_str(s).is_err() {
-        Err("Invalid ID.".to_string())
-    } else {
-        Ok(())
+        Ok(v.to_owned())
     }
 }
 
@@ -117,33 +81,37 @@ pub trait ArgExt: Sized {
     fn version_arg(self) -> Self;
 }
 
-impl<'a: 'b, 'b> ArgExt for Command<'a> {
-    fn org_arg(self) -> Command<'a> {
+impl<'a: 'b, 'b> ArgExt for Command {
+    fn org_arg(self) -> Command {
         self.arg(
             Arg::new("org")
                 .value_name("ORG")
                 .long("org")
                 .short('o')
-                .validator(validate_org)
+                .value_parser(validate_org)
                 .global(true)
                 .help("The organization slug"),
         )
     }
 
-    fn project_arg(self, multiple: bool) -> Command<'a> {
+    fn project_arg(self, multiple: bool) -> Command {
         self.arg(
             Arg::new("project")
                 .value_name("PROJECT")
                 .long("project")
                 .short('p')
-                .validator(validate_project)
+                .value_parser(validate_project)
                 .global(true)
-                .multiple_occurrences(multiple)
+                .action(if multiple {
+                    ArgAction::Append
+                } else {
+                    ArgAction::Set
+                })
                 .help("The project slug."),
         )
     }
 
-    fn release_arg(self) -> Command<'a> {
+    fn release_arg(self) -> Command {
         self.arg(
             Arg::new("release")
                 .value_name("RELEASE")
@@ -151,17 +119,17 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
                 .short('r')
                 .global(true)
                 .allow_hyphen_values(true)
-                .validator(validate_release)
+                .value_parser(validate_release)
                 .help("The release slug."),
         )
     }
 
-    fn version_arg(self) -> Command<'a> {
+    fn version_arg(self) -> Command {
         self.arg(
             Arg::new("version")
                 .value_name("VERSION")
                 .required(true)
-                .validator(validate_release)
+                .value_parser(validate_release)
                 .help("The version of the release"),
         )
     }

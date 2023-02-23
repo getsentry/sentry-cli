@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 use sentry::types::Dsn;
@@ -29,6 +29,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("raw")
                 .long("raw")
+                .action(ArgAction::SetTrue)
                 .help("Send envelopes without attempting to parse their contents."),
         )
 }
@@ -41,9 +42,9 @@ fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
-    let raw = matches.is_present("raw");
+    let raw = matches.get_flag("raw");
 
-    let path = matches.value_of("path").unwrap();
+    let path = matches.get_one::<String>("path").unwrap();
 
     let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
         .unwrap()

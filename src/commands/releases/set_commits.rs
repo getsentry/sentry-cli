@@ -1,11 +1,11 @@
 use anyhow::{bail, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::api::{Api, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, UpdatedRelease};
 use crate::config::Config;
-use crate::utils::args::{validate_int, ArgExt};
+use crate::utils::args::ArgExt;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
     find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,
@@ -18,21 +18,25 @@ pub fn make_command(command: Command) -> Command {
         .version_arg()
         .arg(Arg::new("clear")
             .long("clear")
+            .action(ArgAction::SetTrue)
             .help("Clear all current commits from the release."))
         .arg(Arg::new("auto")
             .long("auto")
+            .action(ArgAction::SetTrue)
             .help("Enable completely automated commit management.{n}\
                     This requires that the command is run from within a git repository.  \
                     sentry-cli will then automatically find remotely configured \
                     repositories and discover commits."))
         .arg(Arg::new("ignore-missing")
             .long("ignore-missing")
+            .action(ArgAction::SetTrue)
             .help("When the flag is set and the previous release commit was not found in the repository, \
                     will create a release with the default commits count (or the one specified with `--initial-depth`) \
                     instead of failing the command."))
         .arg(Arg::new("local")
-            .conflicts_with_all(&["auto", "clear", "commits", ])
+            .conflicts_with_all(["auto", "clear", "commits", ])
             .long("local")
+            .action(ArgAction::SetTrue)
             .help("Set commits of a release from local git.{n}\
                     This requires that the command is run from within a git repository.  \
                     sentry-cli will then automatically find remotely configured \
@@ -41,13 +45,13 @@ pub fn make_command(command: Command) -> Command {
             .conflicts_with("auto")
             .long("initial-depth")
             .value_name("INITIAL DEPTH")
-            .validator(validate_int)
+            .value_parser(clap::value_parser!(usize))
             .help("Set the number of commits of the initial release. The default is 20."))
         .arg(Arg::new("commits")
             .long("commit")
             .short('c')
             .value_name("SPEC")
-            .multiple_occurrences(true)
+            .action(ArgAction::Append)
             .help("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
                     If no commit has been specified sentry-cli will attempt \
@@ -63,7 +67,9 @@ pub fn make_command(command: Command) -> Command {
                     which will force the revision to a certain value."))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
-            .long("ignore-empty").hide(true))
+            .long("ignore-empty")
+            .action(ArgAction::SetTrue)
+            .hide(true))
 }
 
 fn strip_sha(sha: &str) -> &str {
@@ -79,26 +85,26 @@ fn strip_sha(sha: &str) -> &str {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
     let org = config.get_org(matches)?;
     let repos = api.list_organization_repos(&org)?;
     let mut commit_specs = vec![];
 
     let heads = if repos.is_empty() {
         None
-    } else if matches.is_present("auto") {
+    } else if matches.get_flag("auto") {
         let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
             None
         } else {
             Some(commits)
         }
-    } else if matches.is_present("clear") {
+    } else if matches.get_flag("clear") {
         Some(vec![])
-    } else if matches.is_present("local") {
+    } else if matches.get_flag("local") {
         None
     } else {
-        if let Some(commits) = matches.values_of("commits") {
+        if let Some(commits) = matches.get_many::<String>("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
                 if repos.iter().any(|r| r.name == commit_spec.repo) {
@@ -156,11 +162,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         api.set_release_refs(&org, version, heads)?;
     } else {
         let default_count = matches
-            .value_of("initial-depth")
-            .unwrap_or("20")
-            .parse::<usize>()?;
+            .get_one::<usize>("initial-depth")
+            .copied()
+            .unwrap_or(20);
 
-        if matches.is_present("auto") {
+        if matches.get_flag("auto") {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
         }
         // Get the commit of the most recent release.
@@ -175,7 +181,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Parse the git url.
         let remote = config.get_cached_vcs_remote();
         let parsed = get_repo_from_remote(&remote);
-        let ignore_missing = matches.is_present("ignore-missing");
+        let ignore_missing = matches.get_flag("ignore-missing");
         // Fetch all the commits upto the `prev_commit` or return the default (20).
         // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
         let (commit_log, prev_commit) =
