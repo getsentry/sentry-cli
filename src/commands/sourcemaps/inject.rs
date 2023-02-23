@@ -30,6 +30,7 @@ pub fn make_command(command: Command) -> Command {
                 .required(true)
                 .help("The path or glob to the javascript files."),
         )
+        .hide(true)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
