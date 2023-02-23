@@ -1,12 +1,12 @@
 ```
-$ sentry-cli sourcemaps inject --help
+$ sentry-cli[EXE] sourcemaps inject --help
 ? success
 Fixes up JavaScript source files and sourcemaps with debug ids.
 
 For every JS source file that references a sourcemap, a debug id is generated and inserted into both
 files. If the referenced sourcemap already contains a debug id, that id is used instead.
 
-Usage: sentry-cli sourcemaps inject [OPTIONS] <PATH>
+Usage: sentry-cli[EXE] sourcemaps inject [OPTIONS] <PATH>
 
 Arguments:
   <PATH>
