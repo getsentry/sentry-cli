@@ -18,7 +18,6 @@ const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 pub fn make_command(command: Command) -> Command {
     command
         .about("Fixes up JavaScript source files and sourcemaps with debug ids.")
-        // TODO: What are these {n}{n}s? They show up verbatim in the help output.
         .long_about(
             "Fixes up JavaScript source files and sourcemaps with debug ids.{n}{n}\
             For every JS source file that references a sourcemap, a debug id is generated and \
