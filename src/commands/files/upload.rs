@@ -12,7 +12,7 @@ use crate::api::{Api, ProgressBarMode};
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, UploadContext};
+use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
 use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
 
 pub fn make_command(command: Command) -> Command {
@@ -110,6 +110,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
     let api = Api::current();
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
     let dist = matches.get_one::<String>("dist").map(String::as_str);
     let mut headers = vec![];
@@ -129,7 +130,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         release: &release,
         dist,
         wait: matches.get_flag("wait"),
-        ..Default::default()
+        dedupe: false,
+        chunk_upload_options: chunk_upload_options.as_ref(),
     };
 
     let path = Path::new(matches.get_one::<String>("path").unwrap());
@@ -175,7 +177,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
                 (
                     url.to_string(),
-                    ReleaseFile {
+                    SourceFile {
                         url,
                         path: source.path.clone(),
                         contents: source.contents.clone(),
@@ -188,7 +190,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             })
             .collect();
 
-        ReleaseFileUpload::new(context).files(&files).upload()
+        FileUpload::new(context).files(&files).upload()
     }
     // Single file upload
     else {

@@ -17,7 +17,7 @@ use url::Url;
 use crate::api::Api;
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
-use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, ReleaseFiles, UploadContext};
+use crate::utils::file_upload::{FileUpload, SourceFile, SourceFiles, UploadContext};
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
 
@@ -74,16 +74,16 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     rv
 }
 
-pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+pub fn get_sourcemap_ref_from_headers(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
         .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
-pub fn get_sourcemap_ref_from_contents(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+pub fn get_sourcemap_ref_from_contents(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     sourcemap::locate_sourcemap_reference_slice(&file.contents).unwrap_or(None)
 }
 
-pub fn get_sourcemap_ref(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+pub fn get_sourcemap_ref(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     get_sourcemap_ref_from_headers(file).or_else(|| get_sourcemap_ref_from_contents(file))
 }
 
@@ -150,7 +150,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
-    sources: ReleaseFiles,
+    sources: SourceFiles,
 }
 
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
@@ -229,7 +229,7 @@ impl SourceMapProcessor {
 
             self.sources.insert(
                 url.clone(),
-                ReleaseFile {
+                SourceFile {
                     url: url.clone(),
                     path: file.path,
                     contents: file.contents,
@@ -302,7 +302,7 @@ impl SourceMapProcessor {
     pub fn validate_all(&mut self) -> Result<()> {
         self.flush_pending_sources();
         let source_urls = self.sources.keys().cloned().collect();
-        let sources: Vec<&mut ReleaseFile> = self.sources.values_mut().collect();
+        let sources: Vec<&mut SourceFile> = self.sources.values_mut().collect();
         let mut failed = false;
 
         println!("{} Validating sources", style(">").dim());
@@ -407,7 +407,7 @@ impl SourceMapProcessor {
             let source_url = join_url(bundle_source_url, &name)?;
             self.sources.insert(
                 source_url.clone(),
-                ReleaseFile {
+                SourceFile {
                     url: source_url.clone(),
                     path: PathBuf::from(name.clone()),
                     contents: sourceview.source().as_bytes().to_vec(),
@@ -425,7 +425,7 @@ impl SourceMapProcessor {
             sourcemap.to_writer(&mut sourcemap_content)?;
             self.sources.insert(
                 sourcemap_url.clone(),
-                ReleaseFile {
+                SourceFile {
                     url: sourcemap_url.clone(),
                     path: PathBuf::from(sourcemap_name),
                     contents: sourcemap_content,
@@ -582,7 +582,7 @@ impl SourceMapProcessor {
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
         self.flush_pending_sources();
         self.flag_uploaded_sources(context);
-        let mut uploader = ReleaseFileUpload::new(context);
+        let mut uploader = FileUpload::new(context);
         uploader.files(&self.sources);
         uploader.upload()?;
         self.dump_log("Source Map Upload Report");
@@ -590,7 +590,7 @@ impl SourceMapProcessor {
     }
 }
 
-fn validate_script(source: &mut ReleaseFile) -> Result<()> {
+fn validate_script(source: &mut SourceFile) -> Result<()> {
     if let Some(sm_ref) = get_sourcemap_ref(source) {
         if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
             source.warn("encountered a legacy reference".into());
@@ -616,7 +616,7 @@ fn validate_script(source: &mut ReleaseFile) -> Result<()> {
 
 fn validate_regular(
     source_urls: &HashSet<String>,
-    source: &mut ReleaseFile,
+    source: &mut SourceFile,
     sm: &sourcemap::SourceMap,
 ) {
     for idx in 0..sm.get_source_count() {
@@ -629,7 +629,7 @@ fn validate_regular(
     }
 }
 
-fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut ReleaseFile) -> Result<()> {
+fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut SourceFile) -> Result<()> {
     match sourcemap::decode_slice(&source.contents)? {
         sourcemap::DecodedMap::Hermes(smh) => validate_regular(source_urls, source, &smh),
         sourcemap::DecodedMap::Regular(sm) => validate_regular(source_urls, source, &sm),

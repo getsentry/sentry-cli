@@ -1133,7 +1133,7 @@ impl Api {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
-    pub fn assemble_artifacts(
+    pub fn assemble_release_artifacts(
         &self,
         org: &str,
         release: &str,
@@ -1147,7 +1147,38 @@ impl Api {
         );
 
         self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedArtifactRequest { checksum, chunks })?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects: Vec::new(),
+            })?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    pub fn assemble_artifact_bundle(
+        &self,
+        org: &str,
+        projects: Vec<String>,
+        checksum: Digest,
+        chunks: &[Digest],
+    ) -> ApiResult<AssembleArtifactsResponse> {
+        let url = format!("/organizations/{}/artifactbundle/assemble/", PathArg(org));
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects,
+            })?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
                 &[
@@ -2539,6 +2570,9 @@ pub enum ChunkUploadCapability {
     /// Chunked upload of release files
     ReleaseFiles,
 
+    /// Chunked upload of standalone artifact bundles
+    ArtifactBundles,
+
     /// Upload of PDBs and debug id overrides
     Pdbs,
 
@@ -2566,6 +2600,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
         Ok(match String::deserialize(deserializer)?.as_str() {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
+            "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
             "pdbs" => ChunkUploadCapability::Pdbs,
             "portablepdbs" => ChunkUploadCapability::PortablePdbs,
             "sources" => ChunkUploadCapability::Sources,
@@ -2660,6 +2695,8 @@ pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
 pub struct ChunkedArtifactRequest<'a> {
     pub checksum: Digest,
     pub chunks: &'a [Digest],
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub projects: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]

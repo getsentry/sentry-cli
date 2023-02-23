@@ -6,11 +6,11 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::{create_release_for_legacy_upload, UploadContext};
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
@@ -99,28 +99,29 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(
+    let version = matches.get_one::<String>("release").unwrap().to_string();
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    create_release_for_legacy_upload(
         &org,
-        &NewRelease {
-            version: matches.get_one::<String>("release").unwrap().to_string(),
-            projects: vec![project.to_string()],
-            ..Default::default()
-        },
+        chunk_upload_options.as_ref(),
+        version.clone(),
+        vec![project.to_string()],
     )?;
 
     for dist in matches.get_many::<String>("dist").unwrap() {
         println!(
             "Uploading sourcemaps for release {} distribution {}",
-            &release.version, dist
+            &version, dist
         );
 
         processor.upload(&UploadContext {
             org: &org,
             project: Some(&project),
-            release: &release.version,
+            release: &version,
             dist: Some(dist),
             wait: matches.get_flag("wait"),
-            ..Default::default()
+            dedupe: false,
+            chunk_upload_options: chunk_upload_options.as_ref(),
         })?;
     }
 

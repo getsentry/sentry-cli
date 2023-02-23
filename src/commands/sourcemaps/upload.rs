@@ -5,11 +5,11 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::{create_release_for_legacy_upload, UploadContext};
 use crate::utils::fs::path_as_url;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
@@ -357,6 +357,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
     if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
@@ -365,22 +366,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // make sure the release exists
-    let release = api.new_release(
+    create_release_for_legacy_upload(
         &org,
-        &NewRelease {
-            version,
-            projects: config.get_projects(matches)?,
-            ..Default::default()
-        },
+        chunk_upload_options.as_ref(),
+        version.clone(),
+        config.get_projects(matches)?,
     )?;
 
     processor.upload(&UploadContext {
         org: &org,
         project: Some(&project),
-        release: &release.version,
+        release: &version,
         dist: matches.get_one::<String>("dist").map(String::as_str),
         wait: matches.get_flag("wait"),
         dedupe: !matches.get_flag("no_dedupe"),
+        chunk_upload_options: chunk_upload_options.as_ref(),
     })?;
 
     Ok(())

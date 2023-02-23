@@ -17,7 +17,9 @@ use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
-use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
+use crate::api::{
+    Api, ChunkUploadCapability, ChunkUploadOptions, NewRelease, ProgressBarMode, ReleaseInfo,
+};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
@@ -26,7 +28,6 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
 
-#[derive(Default)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
@@ -34,6 +35,7 @@ pub struct UploadContext<'a> {
     pub dist: Option<&'a str>,
     pub wait: bool,
     pub dedupe: bool,
+    pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -52,7 +54,7 @@ impl fmt::Display for LogLevel {
 }
 
 #[derive(Clone, Debug)]
-pub struct ReleaseFile {
+pub struct SourceFile {
     pub url: String,
     pub path: PathBuf,
     pub contents: Vec<u8>,
@@ -62,7 +64,7 @@ pub struct ReleaseFile {
     pub already_uploaded: bool,
 }
 
-impl ReleaseFile {
+impl SourceFile {
     /// Calculates and returns the SHA1 checksum of the file.
     pub fn checksum(&self) -> Result<Digest> {
         get_sha1_checksum(&*self.contents)
@@ -81,22 +83,22 @@ impl ReleaseFile {
     }
 }
 
-pub type ReleaseFiles = HashMap<String, ReleaseFile>;
+pub type SourceFiles = HashMap<String, SourceFile>;
 
-pub struct ReleaseFileUpload<'a> {
+pub struct FileUpload<'a> {
     context: &'a UploadContext<'a>,
-    files: ReleaseFiles,
+    files: SourceFiles,
 }
 
-impl<'a> ReleaseFileUpload<'a> {
+impl<'a> FileUpload<'a> {
     pub fn new(context: &'a UploadContext) -> Self {
-        ReleaseFileUpload {
+        FileUpload {
             context,
             files: HashMap::new(),
         }
     }
 
-    pub fn files(&mut self, files: &ReleaseFiles) -> &mut Self {
+    pub fn files(&mut self, files: &SourceFiles) -> &mut Self {
         for (k, v) in files {
             if !v.already_uploaded {
                 self.files.insert(k.to_owned(), v.to_owned());
@@ -106,10 +108,7 @@ impl<'a> ReleaseFileUpload<'a> {
     }
 
     pub fn upload(&self) -> Result<()> {
-        let api = Api::current();
-
-        let chunk_options = api.get_chunk_upload_options(self.context.org)?;
-        if let Some(ref chunk_options) = chunk_options {
+        if let Some(chunk_options) = self.context.chunk_upload_options {
             if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
                 return upload_files_chunked(self.context, &self.files, chunk_options);
             }
@@ -125,14 +124,48 @@ impl<'a> ReleaseFileUpload<'a> {
             );
         }
 
-        let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
+        let concurrency = self
+            .context
+            .chunk_upload_options
+            .as_ref()
+            .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
         upload_files_parallel(self.context, &self.files, concurrency)
+    }
+}
+
+/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
+/// that those bundles are associated to a release.
+///
+/// This function checks if given chunk upload options about the server's capabilities
+/// and only creates a release if the server requires that.
+pub fn create_release_for_legacy_upload(
+    org: &str,
+    options: Option<&ChunkUploadOptions>,
+    version: String,
+    projects: Vec<String>,
+) -> Result<Option<ReleaseInfo>> {
+    // we can only use the new upload if we have support for standalone bundles and
+    // at least one project is known.
+    if options.map_or(true, |x| {
+        !x.supports(ChunkUploadCapability::ArtifactBundles) || projects.is_empty()
+    }) {
+        let api = Api::current();
+        Ok(Some(api.new_release(
+            org,
+            &NewRelease {
+                version,
+                projects,
+                ..Default::default()
+            },
+        )?))
+    } else {
+        Ok(None)
     }
 }
 
 fn upload_files_parallel(
     context: &UploadContext,
-    files: &ReleaseFiles,
+    files: &SourceFiles,
     num_threads: usize,
 ) -> Result<()> {
     let api = Api::current();
@@ -210,7 +243,7 @@ fn upload_files_parallel(
 
 fn upload_files_chunked(
     context: &UploadContext,
-    files: &ReleaseFiles,
+    files: &SourceFiles,
     options: &ChunkUploadOptions,
 ) -> Result<()> {
     let archive = build_artifact_bundle(context, files)?;
@@ -255,8 +288,19 @@ fn upload_files_chunked(
 
     let api = Api::current();
     let response = loop {
-        let response =
-            api.assemble_artifacts(context.org, context.release, checksum, &checksums)?;
+        // prefer standalone artifact bundle upload over legacy release based upload
+        let response = if options.supports(ChunkUploadCapability::ArtifactBundles)
+            && context.project.is_some()
+        {
+            api.assemble_artifact_bundle(
+                context.org,
+                vec![context.project.unwrap().to_string()],
+                checksum,
+                &checksums,
+            )?
+        } else {
+            api.assemble_release_artifacts(context.org, context.release, checksum, &checksums)?
+        };
 
         // Poll until there is a response, unless the user has specified to skip polling. In
         // that case, we return the potentially partial response from the server. This might
@@ -297,7 +341,7 @@ fn upload_files_chunked(
     Ok(())
 }
 
-fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Result<TempFile> {
+fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
