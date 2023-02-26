@@ -25,7 +25,7 @@ use sha1_smol::Digest;
 use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::pe::PeObject;
-use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
+use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileDescriptor};
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use symbolic::il2cpp::ObjectLineMapping;
 use walkdir::WalkDir;
@@ -1104,16 +1104,26 @@ fn extract_embedded_ppdb<'a>(pe: &PeObject, pe_name: &str) -> Result<Option<DifM
 }
 
 /// Default filter function to skip over bad sources we do not want to include.
-pub fn filter_bad_sources(entry: &FileEntry) -> bool {
+pub fn filter_bad_sources(
+    entry: &FileEntry,
+    embedded_source: &Option<SourceFileDescriptor>,
+) -> bool {
     let max_size = Config::current().get_max_dif_item_size();
     let path = &entry.abs_path_str();
 
-    if entry.name_str().ends_with(".pch") {
-        // always ignore pch files
+    // Ignore pch files.
+    if path.ends_with(".pch") {
         return false;
-    } else if let Ok(meta) = fs::metadata(path) {
+    }
+
+    // Ignore files embedded in the object itself.
+    if embedded_source.is_some() {
+        return false;
+    }
+
+    // Ignore files larger than limit (defaults to `DEFAULT_MAX_DIF_ITEM_SIZE`).
+    if let Ok(meta) = fs::metadata(path) {
         let item_size = meta.len();
-        // ignore files larger than limit (defaults to 1MB)
         if item_size > max_size {
             warn!(
                 "Source exceeded maximum item size limit ({}). {}",
@@ -1156,12 +1166,6 @@ fn create_source_bundles<'a>(
             Some(object) => object,
             None => continue,
         };
-        if object.has_sources() {
-            // Do not create standalone source bundles if the original object already contains
-            // source code. This would just store duplicate information in Sentry.
-            debug!("skipping {} because it already embeds sources", name);
-            continue;
-        }
 
         let temp_file = TempFile::create()?;
         let mut writer = SourceBundleWriter::start(BufWriter::new(temp_file.open()?))?;
@@ -1170,11 +1174,8 @@ fn create_source_bundles<'a>(
         // Resolve source files from the object and write their contents into the archive. Skip to
         // upload this bundle if no source could be written. This can happen if there is no file or
         // line information in the object file, or if none of the files could be resolved.
-        let written = writer.write_object_with_filter(
-            object,
-            dif.file_name(),
-            |file, _source_descriptor| filter_bad_sources(file),
-        )?;
+        let written =
+            writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
             debug!("No sources found for {}", name);
             continue;
