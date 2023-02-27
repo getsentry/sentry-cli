@@ -1118,6 +1118,7 @@ pub fn filter_bad_sources(
 
     // Ignore files embedded in the object itself.
     if embedded_source.is_some() {
+        debug!("Skipping embedded source file: {}", path);
         return false;
     }
 
@@ -1134,6 +1135,7 @@ pub fn filter_bad_sources(
     }
 
     // if a file metadata could not be read it will be skipped later.
+    debug!("Trying to add source file: {}", path);
     true
 }
 
