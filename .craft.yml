@@ -63,6 +63,9 @@ targets:
         checksums:
           - algorithm: sha256
             format: hex
+  - name: pypi
+  - name: sentry-pypi
+    internalPypiRepo: getsentry/pypi
 requireNames:
   - /^sentry-cli-Darwin-x86_64$/
   - /^sentry-cli-Darwin-arm64$/
@@ -73,3 +76,5 @@ requireNames:
   - /^sentry-cli-Linux-aarch64$/
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
+  - /^sentry_cli-.*.tar.gz$/
+  - /^sentry_cli-.*.whl$/
