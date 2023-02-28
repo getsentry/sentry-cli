@@ -127,7 +127,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let context = &UploadContext {
         org: &org,
         project: project.as_deref(),
-        release: &release,
+        release: Some(&release),
         dist,
         wait: matches.get_flag("wait"),
         dedupe: false,

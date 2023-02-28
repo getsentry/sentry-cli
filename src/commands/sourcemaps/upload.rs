@@ -9,7 +9,7 @@ use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{create_release_for_legacy_upload, UploadContext};
+use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::path_as_url;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
@@ -353,7 +353,7 @@ fn process_sources_from_paths(
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-    let version = config.get_release_with_legacy_fallback(matches)?;
+    let version = config.get_release_with_legacy_fallback(matches).ok();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
@@ -365,18 +365,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         process_sources_from_paths(matches, &mut processor)?;
     }
 
-    // make sure the release exists
-    create_release_for_legacy_upload(
-        &org,
-        chunk_upload_options.as_ref(),
-        version.clone(),
-        config.get_projects(matches)?,
-    )?;
-
     processor.upload(&UploadContext {
         org: &org,
         project: Some(&project),
-        release: &version,
+        release: version.as_deref(),
         dist: matches.get_one::<String>("dist").map(String::as_str),
         wait: matches.get_flag("wait"),
         dedupe: !matches.get_flag("no_dedupe"),

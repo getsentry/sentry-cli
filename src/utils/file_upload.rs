@@ -7,7 +7,7 @@ use std::str;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use console::style;
 use parking_lot::RwLock;
 use rayon::prelude::*;
@@ -17,9 +17,7 @@ use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
-use crate::api::{
-    Api, ChunkUploadCapability, ChunkUploadOptions, NewRelease, ProgressBarMode, ReleaseInfo,
-};
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
@@ -31,11 +29,18 @@ static DEFAULT_CONCURRENCY: usize = 4;
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
-    pub release: &'a str,
+    pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
     pub wait: bool,
     pub dedupe: bool,
     pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
+}
+
+impl<'a> UploadContext<'a> {
+    pub fn release(&self) -> Result<&str> {
+        self.release
+            .ok_or_else(|| anyhow!("A release slug is required (provide with --release)"))
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -133,47 +138,18 @@ impl<'a> FileUpload<'a> {
     }
 }
 
-/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
-/// that those bundles are associated to a release.
-///
-/// This function checks if given chunk upload options about the server's capabilities
-/// and only creates a release if the server requires that.
-pub fn create_release_for_legacy_upload(
-    org: &str,
-    options: Option<&ChunkUploadOptions>,
-    version: String,
-    projects: Vec<String>,
-) -> Result<Option<ReleaseInfo>> {
-    // we can only use the new upload if we have support for standalone bundles and
-    // at least one project is known.
-    if options.map_or(true, |x| {
-        !x.supports(ChunkUploadCapability::ArtifactBundles) || projects.is_empty()
-    }) {
-        let api = Api::current();
-        Ok(Some(api.new_release(
-            org,
-            &NewRelease {
-                version,
-                projects,
-                ..Default::default()
-            },
-        )?))
-    } else {
-        Ok(None)
-    }
-}
-
 fn upload_files_parallel(
     context: &UploadContext,
     files: &SourceFiles,
     num_threads: usize,
 ) -> Result<()> {
     let api = Api::current();
+    let release = context.release()?;
 
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
-        .list_release_files(context.org, context.project, context.release)?
+        .list_release_files(context.org, context.project, release)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
         .collect();
@@ -181,7 +157,7 @@ fn upload_files_parallel(
     println!(
         "{} Uploading source maps for release {}",
         style(">").dim(),
-        style(context.release).cyan()
+        style(release).cyan()
     );
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
@@ -217,7 +193,7 @@ fn upload_files_parallel(
                 if let Some(old_id) =
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
-                    api.delete_release_file(context.org, context.project, context.release, old_id)
+                    api.delete_release_file(context.org, context.project, release, old_id)
                         .ok();
                 }
 
@@ -299,7 +275,7 @@ fn upload_files_chunked(
                 &checksums,
             )?
         } else {
-            api.assemble_release_artifacts(context.org, context.release, checksum, &checksums)?
+            api.assemble_release_artifacts(context.org, context.release()?, checksum, &checksums)?
         };
 
         // Poll until there is a response, unless the user has specified to skip polling. In
@@ -358,7 +334,9 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
     if let Some(project) = context.project {
         bundle.set_attribute("project".to_owned(), project.to_owned());
     }
-    bundle.set_attribute("release".to_owned(), context.release.to_owned());
+    if let Some(release) = context.release {
+        bundle.set_attribute("release".to_owned(), release.to_owned());
+    }
     if let Some(dist) = context.dist {
         bundle.set_attribute("dist".to_owned(), dist.to_owned());
     }
@@ -429,11 +407,9 @@ fn print_upload_context_details(context: &UploadContext) {
         style("> Project:").dim(),
         style(context.project.unwrap_or("None")).yellow()
     );
-    println!(
-        "{} {}",
-        style("> Release:").dim(),
-        style(context.release).yellow()
-    );
+    if let Some(release) = context.release {
+        println!("{} {}", style("> Release:").dim(), style(release).yellow());
+    }
     println!(
         "{} {}",
         style("> Dist:").dim(),

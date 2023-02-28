@@ -706,18 +706,22 @@ impl Api {
         headers: Option<&[(String, String)]>,
         progress_bar_mode: ProgressBarMode,
     ) -> ApiResult<Option<Artifact>> {
+        let release = context
+            .release()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
+
         let path = if let Some(project) = context.project {
             format!(
                 "/projects/{}/{}/releases/{}/files/",
                 PathArg(context.org),
                 PathArg(project),
-                PathArg(context.release)
+                PathArg(release)
             )
         } else {
             format!(
                 "/organizations/{}/releases/{}/files/",
                 PathArg(context.org),
-                PathArg(context.release)
+                PathArg(release)
             )
         };
         let mut form = curl::easy::Form::new();

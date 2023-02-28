@@ -14,7 +14,6 @@ use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::create_release_for_legacy_upload;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::TempFile;
 use crate::utils::sourcemaps::SourceMapProcessor;
@@ -287,19 +286,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let api = Api::current();
         let chunk_upload_options = api.get_chunk_upload_options(&org)?;
-        create_release_for_legacy_upload(
-            &org,
-            chunk_upload_options.as_ref(),
-            release_name.clone(),
-            vec![project.to_string()],
-        )?;
 
         match matches.get_many::<String>("dist") {
             None => {
                 processor.upload(&UploadContext {
                     org: &org,
                     project: Some(&project),
-                    release: &release_name,
+                    release: Some(&release_name),
                     dist: Some(&dist),
                     wait: matches.get_flag("wait"),
                     dedupe: false,
@@ -311,7 +304,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     processor.upload(&UploadContext {
                         org: &org,
                         project: Some(&project),
-                        release: &release_name,
+                        release: Some(&release_name),
                         dist: Some(dist),
                         wait: matches.get_flag("wait"),
                         dedupe: false,

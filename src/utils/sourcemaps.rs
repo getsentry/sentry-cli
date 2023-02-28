@@ -14,7 +14,7 @@ use sha1_smol::Digest;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
-use crate::api::Api;
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, NewRelease};
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{FileUpload, SourceFile, SourceFiles, UploadContext};
@@ -151,6 +151,35 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
     sources: SourceFiles,
+}
+
+/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
+/// that those bundles are associated to a release.
+///
+/// This function checks if given chunk upload options about the server's capabilities
+/// and only creates a release if the server requires that.
+pub fn create_release_for_legacy_upload(
+    org: &str,
+    options: Option<&ChunkUploadOptions>,
+    version: &str,
+    project: Option<&str>,
+) -> Result<()> {
+    // we can only use the new upload if we have support for standalone bundles and
+    // at least one project is known.
+    if options.map_or(true, |x| {
+        !x.supports(ChunkUploadCapability::ArtifactBundles) || project.is_none()
+    }) {
+        let api = Api::current();
+        api.new_release(
+            org,
+            &NewRelease {
+                version: version.to_string(),
+                projects: project.map(|x| x.to_string()).into_iter().collect(),
+                ..Default::default()
+            },
+        )?;
+    }
+    Ok(())
 }
 
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
@@ -542,9 +571,14 @@ impl SourceMapProcessor {
     }
 
     fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) {
+        // TODO: this endpoint does not exist for non release based uploads
         if !context.dedupe {
             return;
         }
+        let release = match context.release {
+            Some(release) => release,
+            None => return,
+        };
 
         let mut sources_checksums: Vec<_> = self
             .sources
@@ -560,7 +594,7 @@ impl SourceMapProcessor {
         if let Ok(artifacts) = api.list_release_files_by_checksum(
             context.org,
             context.project,
-            context.release,
+            release,
             &sources_checksums,
         ) {
             let already_uploaded_checksums: Vec<_> = artifacts
@@ -580,6 +614,14 @@ impl SourceMapProcessor {
 
     /// Uploads all files
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
+        if let Some(version) = context.release {
+            create_release_for_legacy_upload(
+                context.org,
+                context.chunk_upload_options,
+                version,
+                context.project,
+            )?;
+        }
         self.flush_pending_sources();
         self.flag_uploaded_sources(context);
         let mut uploader = FileUpload::new(context);

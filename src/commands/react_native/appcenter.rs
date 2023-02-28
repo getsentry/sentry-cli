@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{create_release_for_legacy_upload, UploadContext};
+use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
@@ -167,12 +167,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.add_sourcemap_references()?;
 
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
-    create_release_for_legacy_upload(
-        &org,
-        chunk_upload_options.as_ref(),
-        (*release).to_string(),
-        vec![project.to_string()],
-    )?;
 
     match matches.get_many::<String>("dist") {
         None => {
@@ -184,7 +178,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             processor.upload(&UploadContext {
                 org: &org,
                 project: Some(&project),
-                release: &release,
+                release: Some(&release),
                 dist: None,
                 wait: matches.get_flag("wait"),
                 dedupe: false,
@@ -201,7 +195,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 processor.upload(&UploadContext {
                     org: &org,
                     project: Some(&project),
-                    release: &release,
+                    release: Some(&release),
                     dist: Some(dist),
                     wait: matches.get_flag("wait"),
                     dedupe: false,
