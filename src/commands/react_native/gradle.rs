@@ -114,6 +114,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             project: Some(&project),
             release: Some(&version),
             dist: Some(dist),
+            note: None,
             wait: matches.get_flag("wait"),
             dedupe: false,
             chunk_upload_options: chunk_upload_options.as_ref(),

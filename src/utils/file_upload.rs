@@ -33,6 +33,7 @@ pub struct UploadContext<'a> {
     pub project: Option<&'a str>,
     pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
+    pub note: Option<&'a str>,
     pub wait: bool,
     pub dedupe: bool,
     pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
@@ -334,6 +335,9 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
 
     // artifact bundles get a random UUID as debug id
     bundle.set_attribute("debug_id", DebugId::from_uuid(Uuid::new_v4()).to_string());
+    if let Some(note) = context.note {
+        bundle.set_attribute("note", note.to_owned());
+    }
 
     bundle.set_attribute("org".to_owned(), context.org.to_owned());
     if let Some(project) = context.project {

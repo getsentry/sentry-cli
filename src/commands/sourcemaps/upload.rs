@@ -48,6 +48,13 @@ pub fn make_command(command: Command) -> Command {
                 .help("Optional distribution identifier for the sourcemaps."),
         )
         .arg(
+            Arg::new("note")
+                .long("note")
+                .short('n')
+                .value_name("NOTE")
+                .help("Adds an optional note to the uploaded artifact bundle."),
+        )
+        .arg(
             Arg::new("validate")
                 .long("validate")
                 .action(ArgAction::SetTrue)
@@ -370,6 +377,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         project: Some(&project),
         release: version.as_deref(),
         dist: matches.get_one::<String>("dist").map(String::as_str),
+        note: matches.get_one::<String>("note").map(String::as_str),
         wait: matches.get_flag("wait"),
         dedupe: !matches.get_flag("no_dedupe"),
         chunk_upload_options: chunk_upload_options.as_ref(),

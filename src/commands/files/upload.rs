@@ -129,6 +129,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         project: project.as_deref(),
         release: Some(&release),
         dist,
+        note: None,
         wait: matches.get_flag("wait"),
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
