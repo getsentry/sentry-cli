@@ -12,10 +12,12 @@ use console::style;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
+use uuid::Uuid;
 
 use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
 use crate::constants::DEFAULT_MAX_WAIT;
@@ -329,6 +331,9 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
 
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
+
+    // artifact bundles get a random UUID as debug id
+    bundle.set_attribute("debug_id", DebugId::from_uuid(Uuid::new_v4()).to_string());
 
     bundle.set_attribute("org".to_owned(), context.org.to_owned());
     if let Some(project) = context.project {
