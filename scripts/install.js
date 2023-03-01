@@ -123,13 +123,17 @@ function createProgressBar(name, total) {
 }
 
 function npmCache() {
-  const env = process.env;
-  return (
-    env.npm_config_cache ||
-    env.npm_config_cache_folder ||
-    env.npm_config_yarn_offline_mirror ||
-    (env.APPDATA ? path.join(env.APPDATA, 'npm-cache') : path.join(os.homedir(), '.npm'))
-  );
+  const keys = ['npm_config_cache', 'npm_config_cache_folder', 'npm_config_yarn_offline_mirror'];
+
+  for (let key of [...keys, ...keys.map((k) => k.toUpperCase())]) {
+    if (process.env[key]) return process.env[key];
+  }
+
+  if (process.env.APPDATA) {
+    return path.join(process.env.APPDATA, 'npm-cache');
+  }
+
+  return path.join(os.homedir(), '.npm');
 }
 
 function getCachedPath(url) {
