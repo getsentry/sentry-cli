@@ -43,7 +43,6 @@ pub fn make_command(mut command: Command) -> Command {
             Arg::new("all")
                 .long("all")
                 .short('a')
-                .action(ArgAction::SetTrue)
                 .global(true)
                 .help("Select all issues (this might be limited)."),
         )

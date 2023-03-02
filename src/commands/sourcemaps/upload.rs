@@ -22,7 +22,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .required_unless_present_any(["bundle", "bundle_sourcemap"])
-                .num_args(1..)
+                .multiple_values(true)
                 .action(ArgAction::Append)
                 .help("The files to upload."),
         )
@@ -50,25 +50,21 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("validate")
                 .long("validate")
-                .action(ArgAction::SetTrue)
                 .help("Enable basic sourcemap validation."),
         )
         .arg(
             Arg::new("decompress")
                 .long("decompress")
-                .action(ArgAction::SetTrue)
                 .help("Enable files gzip decompression prior to upload."),
         )
         .arg(
             Arg::new("wait")
                 .long("wait")
-                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
         .arg(
             Arg::new("no_sourcemap_reference")
                 .long("no-sourcemap-reference")
-                .action(ArgAction::SetTrue)
                 .help(
                     "Disable emitting of automatic sourcemap references.{n}\
                     By default the tool will store a 'Sourcemap' header with \
@@ -77,20 +73,15 @@ pub fn make_command(command: Command) -> Command {
                     be disabled.",
                 ),
         )
-        .arg(
-            Arg::new("no_rewrite")
-                .long("no-rewrite")
-                .action(ArgAction::SetTrue)
-                .help(
-                    "Disables rewriting of matching sourcemaps. By default the tool \
-                    will rewrite sources, so that indexed maps are flattened and missing \
-                    sources are inlined if possible.{n}This fundamentally \
-                    changes the upload process to be based on sourcemaps \
-                    and minified files exclusively and comes in handy for \
-                    setups like react-native that generate sourcemaps that \
-                    would otherwise not work for sentry.",
-                ),
-        )
+        .arg(Arg::new("no_rewrite").long("no-rewrite").help(
+            "Disables rewriting of matching sourcemaps. By default the tool \
+                will rewrite sources, so that indexed maps are flattened and missing \
+                sources are inlined if possible.{n}This fundamentally \
+                changes the upload process to be based on sourcemaps \
+                and minified files exclusively and comes in handy for \
+                setups like react-native that generate sourcemaps that \
+                would otherwise not work for sentry.",
+        ))
         .arg(
             Arg::new("strip_prefix")
                 .long("strip-prefix")
@@ -109,7 +100,6 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("strip_common_prefix")
                 .long("strip-common-prefix")
-                .action(ArgAction::SetTrue)
                 .help(
                     "Similar to --strip-prefix but strips the most common \
                     prefix on all sources references.",
@@ -139,7 +129,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("bundle")
                 .value_name("BUNDLE")
                 .conflicts_with("paths")
-                .requires("bundle_sourcemap")
+                .requires_all(&["bundle_sourcemap"])
                 .help("Path to the application bundle (indexed, file, or regular)"),
         )
         .arg(
@@ -147,19 +137,14 @@ pub fn make_command(command: Command) -> Command {
                 .long("bundle-sourcemap")
                 .value_name("BUNDLE_SOURCEMAP")
                 .conflicts_with("paths")
-                .requires("bundle")
+                .requires_all(&["bundle"])
                 .help("Path to the bundle sourcemap"),
         )
-        .arg(
-            Arg::new("no_dedupe")
-                .long("no-dedupe")
-                .action(ArgAction::SetTrue)
-                .help(
-                    "Skip artifacts deduplication prior to uploading. \
-                    This will force all artifacts to be uploaded, \
-                    no matter whether they are already present on the server.",
-                ),
-        )
+        .arg(Arg::new("no_dedupe").long("no-dedupe").help(
+            "Skip artifacts deduplication prior to uploading. \
+                This will force all artifacts to be uploaded, \
+                no matter whether they are already present on the server.",
+        ))
         .arg(
             Arg::new("extensions")
                 .long("ext")
@@ -174,20 +159,9 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         // Legacy flag that has no effect, left hidden for backward compatibility
-        .arg(
-            Arg::new("rewrite")
-                .long("rewrite")
-                .action(ArgAction::SetTrue)
-                .hide(true),
-        )
+        .arg(Arg::new("rewrite").long("rewrite").hide(true))
         // Legacy flag that has no effect, left hidden for backward compatibility
-        .arg(
-            Arg::new("verbose")
-                .long("verbose")
-                .action(ArgAction::SetTrue)
-                .short('v')
-                .hide(true),
-        )
+        .arg(Arg::new("verbose").long("verbose").short('v').hide(true))
 }
 
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
@@ -195,7 +169,7 @@ fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
         Some(paths) => paths.map(String::as_str).collect(),
         None => vec![],
     };
-    if matches.get_flag("strip_common_prefix") {
+    if matches.contains_id("strip_common_prefix") {
         prefixes.push("~");
     }
     prefixes
@@ -304,7 +278,7 @@ fn process_sources_from_paths(
         };
 
         let mut search = ReleaseFileSearch::new(path.to_path_buf());
-        search.decompress(matches.get_flag("decompress"));
+        search.decompress(matches.contains_id("decompress"));
 
         if check_ignore {
             search
@@ -335,16 +309,16 @@ fn process_sources_from_paths(
         }
     }
 
-    if !matches.get_flag("no_rewrite") {
+    if !matches.contains_id("no_rewrite") {
         let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
     }
 
-    if !matches.get_flag("no_sourcemap_reference") {
+    if !matches.contains_id("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
     }
 
-    if matches.get_flag("validate") {
+    if matches.contains_id("validate") {
         processor.validate_all()?;
     }
 
@@ -379,8 +353,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         project: Some(&project),
         release: &release.version,
         dist: matches.get_one::<String>("dist").map(String::as_str),
-        wait: matches.get_flag("wait"),
-        dedupe: !matches.get_flag("no_dedupe"),
+        wait: matches.contains_id("wait"),
+        dedupe: !matches.contains_id("no_dedupe"),
     })?;
 
     Ok(())

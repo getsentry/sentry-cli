@@ -1,7 +1,7 @@
 use std::env;
 
 use anyhow::{bail, Result};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
 
@@ -10,7 +10,6 @@ pub fn make_command(command: Command) -> Command {
         Arg::new("force")
             .long("force")
             .short('f')
-            .action(ArgAction::SetTrue)
             .help("Force the update even if the latest version is already installed."),
     );
 
@@ -44,7 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if update.is_latest_version() {
-        if matches.get_flag("force") {
+        if matches.contains_id("force") {
             println!("Forcing update");
         } else {
             println!("Already up to date!");

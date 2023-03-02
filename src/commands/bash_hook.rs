@@ -6,7 +6,8 @@ use std::io::{BufRead, BufReader};
 use std::path::Path;
 
 use anyhow::Result;
-use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
+use clap::Command;
+use clap::{Arg, ArgMatches};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
@@ -30,13 +31,11 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_exit")
                 .long("no-exit")
-                .action(ArgAction::SetTrue)
                 .help("Do not turn on -e (exit immediately) flag automatically"),
         )
         .arg(
             Arg::new("no_environ")
                 .long("no-environ")
-                .action(ArgAction::SetTrue)
                 .help("Do not send environment variables along"),
         )
         .arg(
@@ -48,11 +47,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("send_event")
                 .long("send-event")
-                .action(ArgAction::SetTrue)
-                .requires_ifs([
-                    (ArgPredicate::IsPresent, "traceback"),
-                    (ArgPredicate::IsPresent, "log"),
-                ])
+                .requires_all(&["traceback", "log"])
                 .hide(true),
         )
         .arg(
@@ -176,11 +171,11 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    if matches.get_flag("send_event") {
+    if matches.contains_id("send_event") {
         return send_event(
             matches.get_one::<String>("traceback").unwrap(),
             matches.get_one::<String>("log").unwrap(),
-            !matches.get_flag("no_environ"),
+            !matches.contains_id("no_environ"),
         );
     }
 
@@ -208,13 +203,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .as_str(),
     );
 
-    if matches.get_flag("no_environ") {
+    if matches.contains_id("no_environ") {
         script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
     } else {
         script = script.replace("___SENTRY_NO_ENVIRON___", "");
     }
 
-    if !matches.get_flag("no_exit") {
+    if !matches.contains_id("no_exit") {
         script.insert_str(0, "set -e\n\n");
     }
     println!("{script}");

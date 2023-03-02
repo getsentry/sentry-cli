@@ -40,7 +40,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
                 .value_parser(DebugId::from_str)
-                .num_args(1..)
+                .multiple_values(true)
                 .action(ArgAction::Append),
         )
         .arg(
@@ -58,13 +58,11 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_well_known")
                 .long("no-well-known")
-                .action(ArgAction::SetTrue)
                 .help("Do not look for debug symbols in well known locations."),
         )
         .arg(
             Arg::new("no_cwd")
                 .long("no-cwd")
-                .action(ArgAction::SetTrue)
                 .help("Do not look for debug symbols in the current working directory."),
         )
         .arg(
@@ -78,7 +76,6 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("json")
                 .long("json")
-                .action(ArgAction::SetTrue)
                 .help("Format outputs as JSON."),
         )
 }
@@ -342,8 +339,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         types.extend(DifType::all());
     }
 
-    let with_well_known = !matches.get_flag("no_well_known");
-    let with_cwd = !matches.get_flag("no_cwd");
+    let with_well_known = !matches.contains_id("no_well_known");
+    let with_cwd = !matches.contains_id("no_cwd");
 
     // start adding well known locations
     if_chain! {
@@ -381,7 +378,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    if !find_ids(&paths, &types, &ids, matches.get_flag("json"))? {
+    if !find_ids(&paths, &types, &ids, matches.contains_id("json"))? {
         return Err(QuietExit(1).into());
     }
 

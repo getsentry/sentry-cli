@@ -1,7 +1,7 @@
 use std::env;
 
 use anyhow::{bail, Result};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use url::Url;
 
 use crate::api::Api;
@@ -13,7 +13,6 @@ pub fn make_command(command: Command) -> Command {
         Arg::new("global")
             .short('g')
             .long("global")
-            .action(ArgAction::SetTrue)
             .help("Store authentication token globally rather than locally."),
     )
 }
@@ -86,7 +85,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    let config_to_update = if matches.get_flag("global") {
+    let config_to_update = if matches.contains_id("global") {
         Config::global()?
     } else {
         Config::from_cli_config()?

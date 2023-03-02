@@ -2,7 +2,7 @@ use std::io;
 use std::path::Path;
 
 use anyhow::Result;
-use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
+use clap::{builder::PossibleValuesParser, Arg, ArgMatches, Command};
 use console::style;
 
 use crate::utils::dif::{DifFile, DifType};
@@ -35,7 +35,6 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("json")
                 .long("json")
-                .action(ArgAction::SetTrue)
                 .help("Format outputs as JSON."),
         )
 }
@@ -49,12 +48,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|t| t.parse().unwrap());
     let dif = DifFile::open_path(path, ty)?;
 
-    if matches.get_flag("json") {
+    if matches.contains_id("json") {
         serde_json::to_writer_pretty(&mut io::stdout(), &dif)?;
         println!();
     }
 
-    if matches.get_flag("json") || is_quiet_mode() {
+    if matches.contains_id("json") || is_quiet_mode() {
         return if dif.is_usable() {
             Ok(())
         } else {

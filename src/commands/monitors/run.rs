@@ -2,7 +2,7 @@ use std::process;
 use std::time::Instant;
 
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use uuid::Uuid;
 
@@ -22,14 +22,14 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("allow_failure")
                 .short('f')
                 .long("allow-failure")
-                .action(ArgAction::SetTrue)
                 .help("Run provided command even when Sentry reports an error."),
         )
         .arg(
             Arg::new("args")
                 .value_name("ARGS")
                 .required(true)
-                .num_args(1..)
+                .takes_value(true)
+                .multiple_values(true)
                 .last(true),
         )
 }
@@ -39,7 +39,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let monitor = matches.get_one::<Uuid>("monitor").unwrap();
 
-    let allow_failure = matches.get_flag("allow_failure");
+    let allow_failure = matches.contains_id("allow_failure");
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
     let monitor_checkin = api.create_monitor_checkin(

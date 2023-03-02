@@ -1,8 +1,8 @@
 ```
 $ sentry-cli monitors run xyz -- echo 123
 ? failed
-error: invalid value 'xyz' for '<monitor>': invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `x` at 1
+error: Invalid value "xyz" for '<monitor>': invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `x` at 1
 
-For more information, try '--help'.
+For more information try --help
 
 ```
