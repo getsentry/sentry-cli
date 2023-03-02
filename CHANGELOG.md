@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.14.1
+
+### Various fixes & improvements
+
+- fix: Revert clap-rs v4 update and add regression test for 'releases files upload-sourcemap' (#1496) by @vaind
+
 ## 2.14.0
 
 ### Various fixes & improvements
