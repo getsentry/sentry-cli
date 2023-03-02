@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.14.3
+
+### Various fixes & improvements
+
+- ref: fix macos wheel tags, add musllinux tags (#1497) by @asottile-sentry
+
 ## 2.14.2
 
 - No documented changes.
