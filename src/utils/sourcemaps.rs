@@ -11,6 +11,7 @@ use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
+use symbolic::debuginfo::js::{discover_debug_id, discover_sourcemap_embedded_debug_id};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
@@ -224,8 +225,11 @@ impl SourceMapProcessor {
         for (url, mut file) in self.pending_sources.drain() {
             pb.set_message(&url);
 
-            let ty = if sourcemap::is_sourcemap_slice(&file.contents) {
-                SourceFileType::SourceMap
+            let (ty, debug_id) = if sourcemap::is_sourcemap_slice(&file.contents) {
+                (
+                    SourceFileType::SourceMap,
+                    discover_sourcemap_embedded_debug_id(&String::from_utf8_lossy(&file.contents)),
+                )
             } else if file
                 .path
                 .file_name()
@@ -234,7 +238,7 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
             {
-                SourceFileType::IndexedRamBundle
+                (SourceFileType::IndexedRamBundle, None)
             } else if file
                 .path
                 .file_name()
@@ -243,7 +247,10 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 || is_likely_minified_js(&file.contents)
             {
-                SourceFileType::MinifiedSource
+                (
+                    SourceFileType::MinifiedSource,
+                    discover_debug_id(&String::from_utf8_lossy(&file.contents)),
+                )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
                 // For the react-native Hermes case, we skip uploading the bytecode bundle,
@@ -251,10 +258,16 @@ impl SourceMapProcessor {
                 // will get a SourceMap reference, and the server side processor
                 // should deal with it accordingly.
                 file.contents.clear();
-                SourceFileType::MinifiedSource
+                (SourceFileType::MinifiedSource, None)
             } else {
-                SourceFileType::Source
+                (SourceFileType::Source, None)
             };
+
+            // attach the debug id to the artifact bundle when it's detected
+            let mut headers = Vec::new();
+            if let Some(debug_id) = debug_id {
+                headers.push(("debug-id".to_string(), debug_id.to_string()));
+            }
 
             self.sources.insert(
                 url.clone(),
@@ -263,7 +276,7 @@ impl SourceMapProcessor {
                     path: file.path,
                     contents: file.contents,
                     ty,
-                    headers: vec![],
+                    headers,
                     messages: vec![],
                     already_uploaded: false,
                 },
