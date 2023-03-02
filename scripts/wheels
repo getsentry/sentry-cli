@@ -30,19 +30,19 @@ WHEELS = (
     ),
     Wheel(
         src='sentry-cli-Linux-aarch64',
-        plat='manylinux_2_17_aarch64.manylinux2014_aarch64',
+        plat='manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_2_aarch64',
     ),
     Wheel(
         src='sentry-cli-Linux-armv7',
-        plat='manylinux_2_17_armv7l.manylinux2014_armv7l',
+        plat='manylinux_2_17_armv7l.manylinux2014_armv7l.musllinux_1_2_armv7l',
     ),
     Wheel(
         src='sentry-cli-Linux-i686',
-        plat='manylinux_2_17_i686.manylinux2014_i686',
+        plat='manylinux_2_17_i686.manylinux2014_i686.musllinux_1_2_i686',
     ),
     Wheel(
         src='sentry-cli-Linux-x86_64',
-        plat='manylinux_2_17_x86_64.manylinux2014_x86_64',
+        plat='manylinux_2_17_x86_64.manylinux2014_x86_64.musllinux_1_2_x86_64',
     ),
     Wheel(
         src='sentry-cli-Windows-i686.exe',
