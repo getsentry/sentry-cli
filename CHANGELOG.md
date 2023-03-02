@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.14.2
+
+- No documented changes.
+
 ## 2.14.1
 
 ### Various fixes & improvements
