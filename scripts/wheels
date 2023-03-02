@@ -18,15 +18,15 @@ class Wheel(NamedTuple):
 WHEELS = (
     Wheel(
         src='sentry-cli-Darwin-arm64',
-        plat='macos_11_0_arm64',
+        plat='macosx_11_0_arm64',
     ),
     Wheel(
         src='sentry-cli-Darwin-universal',
-        plat='macos_11_0_universal2',
+        plat='macosx_11_0_universal2',
     ),
     Wheel(
         src='sentry-cli-Darwin-x86_64',
-        plat='macos_10_15_x86_64',
+        plat='macosx_10_15_x86_64',
     ),
     Wheel(
         src='sentry-cli-Linux-aarch64',
