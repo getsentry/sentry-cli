@@ -1,0 +1,16 @@
+```
+$ sentry-cli releases files wat-release upload-sourcemaps --url-prefix '~/assets' build/assets --rewrite
+? success
+> Rewriting sources
+> Adding source map references
+> Bundled 0 files for upload
+> Uploaded release files to Sentry
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Project: wat-project
+> Release: wat-release
+> Dist: None
+
+Source Map Upload Report
+
+```

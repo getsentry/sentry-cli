@@ -114,3 +114,17 @@ fn mock_common_upload_endpoints() -> Vec<Mock> {
         ),
     ]
 }
+
+#[test]
+fn command_releases_files_upload_sourcemap() {
+    let _upload_endpoints = mock_common_upload_endpoints();
+    let _files = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
+            200,
+        )
+        .with_response_body("[]"),
+    );
+    register_test("releases/releases-files-upload-sourcemaps.trycmd");
+}
