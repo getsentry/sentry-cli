@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 
 use crate::utils::fs::is_writable;
@@ -13,6 +13,7 @@ pub fn make_command(command: Command) -> Command {
     let command = command.about("Uninstall the sentry-cli executable.").arg(
         Arg::new("confirm")
             .long("confirm")
+            .action(ArgAction::SetTrue)
             .help("Skip uninstall confirmation prompt."),
     );
 
@@ -58,7 +59,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    if !matches.contains_id("confirm")
+    if !matches.get_flag("confirm")
         && !prompt_to_continue("Do you really want to uninstall sentry-cli?")?
     {
         println!("Aborted!");

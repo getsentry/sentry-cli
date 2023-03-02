@@ -2326,7 +2326,7 @@ impl IssueFilter {
     }
 
     pub fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter> {
-        if matches.contains_id("all") {
+        if matches.get_flag("all") {
             return Ok(IssueFilter::All);
         }
         if let Some(status) = matches.get_one::<String>("status") {

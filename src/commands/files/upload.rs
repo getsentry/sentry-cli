@@ -4,7 +4,7 @@ use std::io::Read;
 use std::path::Path;
 
 use anyhow::{bail, format_err, Result};
-use clap::{Arg, ArgMatches, Command, ArgAction};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
@@ -42,11 +42,13 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("decompress")
                 .long("decompress")
+                .action(ArgAction::SetTrue)
                 .help("Enable files gzip decompression prior to upload."),
         )
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
         .arg(
@@ -126,7 +128,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         project: project.as_deref(),
         release: &release,
         dist,
-        wait: matches.contains_id("wait"),
+        wait: matches.get_flag("wait"),
         ..Default::default()
     };
 
@@ -150,7 +152,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .ignore_file(ignore_file)
             .ignores(ignores)
             .extensions(extensions)
-            .decompress(matches.contains_id("decompress"))
+            .decompress(matches.get_flag("decompress"))
             .collect_files()?;
 
         let url_suffix = matches
@@ -202,7 +204,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let mut contents = Vec::new();
         f.read_to_end(&mut contents)?;
 
-        if matches.contains_id("decompress") && is_gzip_compressed(&contents) {
+        if matches.get_flag("decompress") && is_gzip_compressed(&contents) {
             contents = decompress_gzip_content(&contents).unwrap_or_else(|_| {
                 warn!("Could not decompress: {}", name);
                 contents
