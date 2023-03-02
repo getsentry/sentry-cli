@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -17,14 +17,12 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("show_projects")
                 .short('P')
                 .long("show-projects")
-                .action(ArgAction::SetTrue)
                 .help("Display the Projects column"),
         )
         .arg(
             Arg::new("show_commits")
                 .short('C')
                 .long("show-commits")
-                .action(ArgAction::SetTrue)
                 .help("Display the Commits column"),
         )
 }
@@ -52,11 +50,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             title_row.add("Last event");
         }
 
-        if matches.get_flag("show_projects") {
+        if matches.contains_id("show_projects") {
             title_row.add("Projects");
         }
 
-        if matches.get_flag("show_commits") {
+        if matches.contains_id("show_commits") {
             title_row.add("Commits");
         }
 
@@ -69,7 +67,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             data_row.add(last_event);
         }
 
-        if matches.get_flag("show_projects") {
+        if matches.contains_id("show_projects") {
             let project_slugs = release
                 .projects
                 .into_iter()
@@ -82,7 +80,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         }
 
-        if matches.get_flag("show_commits") {
+        if matches.contains_id("show_commits") {
             if let Ok(Some(commits)) = api.get_release_commits(&org, project.as_deref(), version) {
                 if !commits.is_empty() {
                     data_row.add(

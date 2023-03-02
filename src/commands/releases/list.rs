@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Utc;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -13,31 +13,24 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("show_projects")
                 .short('P')
                 .long("show-projects")
-                .action(ArgAction::SetTrue)
                 .help("Display the Projects column"),
         )
         .arg(
             Arg::new("raw")
                 .short('R')
                 .long("raw")
-                .action(ArgAction::SetTrue)
                 .help("Print raw, delimiter separated list of releases. [defaults to new line]"),
         )
         .arg(
             Arg::new("delimiter")
                 .short('D')
                 .long("delimiter")
-                .num_args(1)
+                .takes_value(true)
                 .requires("raw")
                 .help("Delimiter for the --raw flag"),
         )
         // Legacy flag that has no effect, left hidden for backward compatibility
-        .arg(
-            Arg::new("no_abbrev")
-                .long("no-abbrev")
-                .action(ArgAction::SetTrue)
-                .hide(true),
-        )
+        .arg(Arg::new("no_abbrev").long("no-abbrev").hide(true))
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -46,7 +39,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let releases = api.list_releases(&config.get_org(matches)?, project.as_deref())?;
 
-    if matches.get_flag("raw") {
+    if matches.contains_id("raw") {
         let versions = releases
             .iter()
             .map(|release_info| release_info.version.clone())
@@ -65,7 +58,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut table = Table::new();
     let title_row = table.title_row();
     title_row.add("Released").add("Version");
-    if matches.get_flag("show_projects") {
+    if matches.contains_id("show_projects") {
         title_row.add("Projects");
     }
     title_row.add("New Events").add("Last Event");
@@ -80,7 +73,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             row.add("(unreleased)");
         }
         row.add(&release_info.version);
-        if matches.get_flag("show_projects") {
+        if matches.contains_id("show_projects") {
             let project_slugs = release_info
                 .projects
                 .into_iter()

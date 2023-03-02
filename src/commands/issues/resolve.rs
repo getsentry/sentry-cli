@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use log::info;
 
 use crate::api::{Api, IssueChanges, IssueFilter};
@@ -10,7 +10,6 @@ pub fn make_command(command: Command) -> Command {
         Arg::new("next_release")
             .long("next-release")
             .short('n')
-            .action(ArgAction::SetTrue)
             .help("Only select issues in the next release."),
     )
 }
@@ -26,7 +25,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    if matches.get_flag("next_release") {
+    if matches.contains_id("next_release") {
         changes.new_status = Some("resolvedInNextRelease".into());
     } else {
         changes.new_status = Some("resolved".into());

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -12,14 +12,12 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("show_user")
                 .long("show-user")
                 .short('U')
-                .action(ArgAction::SetTrue)
                 .help("Display the Users column."),
         )
         .arg(
             Arg::new("show_tags")
                 .long("show-tags")
                 .short('T')
-                .action(ArgAction::SetTrue)
                 .help("Display the Tags column."),
         )
         .arg(
@@ -51,11 +49,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut table = Table::new();
     let title_row = table.title_row().add("Event ID").add("Date").add("Title");
 
-    if matches.get_flag("show_user") {
+    if matches.contains_id("show_user") {
         title_row.add("User");
     }
 
-    if matches.get_flag("show_tags") {
+    if matches.contains_id("show_tags") {
         title_row.add("Tags");
     }
 
@@ -71,7 +69,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .add(&event.date_created)
                 .add(&event.title);
 
-            if matches.get_flag("show_user") {
+            if matches.contains_id("show_user") {
                 if let Some(user) = &event.user {
                     row.add(user);
                 } else {
@@ -79,7 +77,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 }
             }
 
-            if matches.get_flag("show_tags") {
+            if matches.contains_id("show_tags") {
                 if let Some(tags) = &event.tags {
                     row.add(
                         tags.iter()
