@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.14.4
+
+### Various fixes & improvements
+
+- fix: Include sources referenced but not embedded by an object file (#1486)
+- chore: Reapply clap update to v4 and fix releases subcommands (#1500)
+- deps: Update rust-sourcemap to 6.2.3 (#1502)
+
 ## 2.14.3
 
 ### Various fixes & improvements
