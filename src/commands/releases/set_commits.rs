@@ -15,24 +15,28 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Set commits of a release.")
         .allow_hyphen_values(true)
-        .version_arg()
+        .version_arg(false)
         .arg(Arg::new("clear")
             .long("clear")
+            .action(ArgAction::SetTrue)
             .help("Clear all current commits from the release."))
         .arg(Arg::new("auto")
             .long("auto")
+            .action(ArgAction::SetTrue)
             .help("Enable completely automated commit management.{n}\
                     This requires that the command is run from within a git repository.  \
                     sentry-cli will then automatically find remotely configured \
                     repositories and discover commits."))
         .arg(Arg::new("ignore-missing")
             .long("ignore-missing")
+            .action(ArgAction::SetTrue)
             .help("When the flag is set and the previous release commit was not found in the repository, \
                     will create a release with the default commits count (or the one specified with `--initial-depth`) \
                     instead of failing the command."))
         .arg(Arg::new("local")
-            .conflicts_with_all(&["auto", "clear", "commits", ])
+            .conflicts_with_all(["auto", "clear", "commits", ])
             .long("local")
+            .action(ArgAction::SetTrue)
             .help("Set commits of a release from local git.{n}\
                     This requires that the command is run from within a git repository.  \
                     sentry-cli will then automatically find remotely configured \
@@ -63,7 +67,9 @@ pub fn make_command(command: Command) -> Command {
                     which will force the revision to a certain value."))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
-            .long("ignore-empty").hide(true))
+            .long("ignore-empty")
+            .action(ArgAction::SetTrue)
+            .hide(true))
 }
 
 fn strip_sha(sha: &str) -> &str {
@@ -86,16 +92,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let heads = if repos.is_empty() {
         None
-    } else if matches.contains_id("auto") {
+    } else if matches.get_flag("auto") {
         let commits = find_heads(None, &repos, Some(config.get_cached_vcs_remote()))?;
         if commits.is_empty() {
             None
         } else {
             Some(commits)
         }
-    } else if matches.contains_id("clear") {
+    } else if matches.get_flag("clear") {
         Some(vec![])
-    } else if matches.contains_id("local") {
+    } else if matches.get_flag("local") {
         None
     } else {
         if let Some(commits) = matches.get_many::<String>("commits") {
@@ -160,7 +166,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .copied()
             .unwrap_or(20);
 
-        if matches.contains_id("auto") {
+        if matches.get_flag("auto") {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
         }
         // Get the commit of the most recent release.
@@ -175,7 +181,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Parse the git url.
         let remote = config.get_cached_vcs_remote();
         let parsed = get_repo_from_remote(&remote);
-        let ignore_missing = matches.contains_id("ignore-missing");
+        let ignore_missing = matches.get_flag("ignore-missing");
         // Fetch all the commits upto the `prev_commit` or return the default (20).
         // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
         let (commit_log, prev_commit) =

@@ -78,11 +78,11 @@ pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
     fn project_arg(self, multiple: bool) -> Self;
     fn release_arg(self) -> Self;
-    fn version_arg(self) -> Self;
+    fn version_arg(self, global: bool) -> Self;
 }
 
-impl<'a: 'b, 'b> ArgExt for Command<'a> {
-    fn org_arg(self) -> Command<'a> {
+impl<'a: 'b, 'b> ArgExt for Command {
+    fn org_arg(self) -> Command {
         self.arg(
             Arg::new("org")
                 .value_name("ORG")
@@ -94,7 +94,7 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn project_arg(self, multiple: bool) -> Command<'a> {
+    fn project_arg(self, multiple: bool) -> Command {
         self.arg(
             Arg::new("project")
                 .value_name("PROJECT")
@@ -111,7 +111,7 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn release_arg(self) -> Command<'a> {
+    fn release_arg(self) -> Command {
         self.arg(
             Arg::new("release")
                 .value_name("RELEASE")
@@ -124,11 +124,13 @@ impl<'a: 'b, 'b> ArgExt for Command<'a> {
         )
     }
 
-    fn version_arg(self) -> Command<'a> {
+    fn version_arg(self, global: bool) -> Command {
         self.arg(
             Arg::new("version")
                 .value_name("VERSION")
-                .required(true)
+                // either specified for subcommands (global=true) or for this command (required=true)
+                .required(!global)
+                .global(global)
                 .value_parser(validate_release)
                 .help("The version of the release"),
         )

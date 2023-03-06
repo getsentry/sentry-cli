@@ -46,14 +46,14 @@ pub fn make_command(mut command: Command) -> Command {
         .subcommand(
             crate::commands::files::make_command(Command::new("files"))
                 .allow_hyphen_values(true)
-                .version_arg()
+                .version_arg(true)
                 .hide(true),
         )
         // Backward compatibility with `releases deploys <VERSION>` commands.
         .subcommand(
             crate::commands::deploys::make_command(Command::new("deploys"))
                 .allow_hyphen_values(true)
-                .version_arg()
+                .version_arg(true)
                 .hide(true),
         );
 

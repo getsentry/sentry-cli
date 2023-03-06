@@ -4,8 +4,7 @@ use std::env;
 use std::process;
 
 use anyhow::{bail, Result};
-use clap::ArgAction;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
@@ -129,7 +128,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn app() -> Command<'static> {
+fn app() -> Command {
     Command::new("sentry-cli")
         .version(VERSION)
         .about(ABOUT)
@@ -176,12 +175,14 @@ fn app() -> Command<'static> {
             Arg::new("quiet")
                 .long("quiet")
                 .visible_alias("silent")
+                .action(ArgAction::SetTrue)
                 .global(true)
                 .help("Do not print any output while preserving correct exit code. This flag is currently implemented only for selected subcommands."),
         )
         .arg(
           Arg::new("allow_failure")
               .long("allow-failure")
+              .action(ArgAction::SetTrue)
               .global(true)
               .hide(true)
               .help("Always return 0 exit code."),
@@ -191,8 +192,7 @@ fn app() -> Command<'static> {
 fn add_commands(mut app: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            let cmd =
-                $name::make_command(Command::new(stringify!($name).replace("_", "-").as_str()));
+            let cmd = $name::make_command(Command::new(stringify!($name).replace("_", "-")));
             app = app.subcommand(cmd);
         }};
     }
@@ -231,7 +231,7 @@ pub fn execute() -> Result<()> {
     app = add_commands(app);
     let matches = app.get_matches();
     configure_args(&mut config, &matches)?;
-    set_quiet_mode(matches.contains_id("quiet"));
+    set_quiet_mode(matches.get_flag("quiet"));
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();

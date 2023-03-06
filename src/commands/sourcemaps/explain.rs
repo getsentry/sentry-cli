@@ -2,7 +2,7 @@ use std::io::Read;
 use std::path::Path;
 
 use anyhow::{bail, format_err, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use sentry::protocol::{Frame, Stacktrace};
 use url::Url;
@@ -35,6 +35,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("force")
                 .long("force")
                 .short('f')
+                .action(ArgAction::SetTrue)
                 .help("Force full validation flow, even when event is already source mapped."),
         )
 }
@@ -387,7 +388,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         })?;
 
     if exception.raw_stacktrace.is_some() {
-        if matches.contains_id("force") {
+        if matches.get_flag("force") {
             warning(
                 "Exception is already source mapped, however 'force' flag was used. Moving along.",
             );

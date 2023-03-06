@@ -15,7 +15,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .required(true)
-                .multiple_values(true)
+                .num_args(1..)
                 .action(ArgAction::Append)
                 .help("The path to the input debug info files."),
         )

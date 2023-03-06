@@ -1,31 +1,29 @@
 ```
 $ sentry-cli sourcemaps explain --help
 ? success
-sentry-cli[EXE]-sourcemaps-explain 
 Explain why sourcemaps are not working for a given event.
 
-USAGE:
-    sentry-cli[EXE] sourcemaps explain [OPTIONS] <EVENT_ID>
+Usage: sentry-cli[EXE] sourcemaps explain [OPTIONS] <EVENT_ID>
 
-ARGS:
-    <EVENT_ID>    ID of an event to be explained.
+Arguments:
+  <EVENT_ID>  ID of an event to be explained.
 
-OPTIONS:
-        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
-    -f, --force                      Force full validation flow, even when event is already source
-                                     mapped.
-        --frame <frame>              Position of the frame that should be used for source map
-                                     resolution. [default: 0]
-    -h, --help                       Print help information
-        --header <KEY:VALUE>         Custom headers that should be attached to all requests
-                                     in key:value format.
-        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
-                                     info, warn, error]
-    -o, --org <ORG>                  The organization slug
-    -p, --project <PROJECT>          The project slug.
-        --quiet                      Do not print any output while preserving correct exit code.
-                                     This flag is currently implemented only for selected
-                                     subcommands. [aliases: silent]
-    -r, --release <RELEASE>          The release slug.
+Options:
+      --frame <frame>            Position of the frame that should be used for source map
+                                 resolution. [default: 0]
+  -o, --org <ORG>                The organization slug
+  -f, --force                    Force full validation flow, even when event is already source
+                                 mapped.
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+  -p, --project <PROJECT>        The project slug.
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+  -r, --release <RELEASE>        The release slug.
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: silent]
+  -h, --help                     Print help
 
 ```
