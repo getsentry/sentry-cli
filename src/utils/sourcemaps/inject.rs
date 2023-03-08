@@ -1,16 +1,15 @@
-use std::fmt;
-use std::fs::{self, File};
+use itertools::Itertools;
+use std::fs::File;
 use std::io::{BufRead, BufReader, Seek, Write};
 use std::path::{Path, PathBuf};
+use std::{fmt, fs};
 
 use anyhow::{bail, Context, Result};
-use clap::{Arg, ArgMatches, Command};
-use log::{debug, warn};
+use log::debug;
 use sentry::types::DebugId;
 use serde_json::Value;
 use symbolic::debuginfo::js;
 use uuid::Uuid;
-use walkdir::WalkDir;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
@@ -18,7 +17,7 @@ const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 #[derive(Debug, Clone, Default)]
-struct Report {
+pub struct InjectReport {
     injected: Vec<(PathBuf, DebugId)>,
     previously_injected: Vec<(PathBuf, DebugId)>,
     skipped: Vec<PathBuf>,
@@ -27,14 +26,14 @@ struct Report {
     skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
 }
 
-impl fmt::Display for Report {
+impl fmt::Display for InjectReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.injected.is_empty() {
             writeln!(
                 f,
                 "Modified: The following source files have been modified to have debug ids"
             )?;
-            for (path, debug_id) in &self.injected {
+            for (path, debug_id) in self.injected.iter().sorted_by_key(|x| &x.0) {
                 writeln!(f, "  - {debug_id} - {}", path.display())?;
             }
         }
@@ -44,7 +43,7 @@ impl fmt::Display for Report {
                 f,
                 "\nModified: The following sourcemap files have been modified to have debug ids"
             )?;
-            for (path, debug_id) in &self.sourcemaps {
+            for (path, debug_id) in self.sourcemaps.iter().sorted_by_key(|x| &x.0) {
                 writeln!(f, "  - {debug_id} - {}", path.display())?;
             }
         }
@@ -54,7 +53,7 @@ impl fmt::Display for Report {
                 f,
                 "\nIgnored: The following source files already have debug ids"
             )?;
-            for (path, debug_id) in &self.previously_injected {
+            for (path, debug_id) in self.previously_injected.iter().sorted_by_key(|x| &x.0) {
                 writeln!(f, "  - {debug_id} - {}", path.display())?;
             }
         }
@@ -64,7 +63,7 @@ impl fmt::Display for Report {
                 f,
                 "\nIgnored: The following sourcemap files already have debug ids"
             )?;
-            for (path, debug_id) in &self.skipped_sourcemaps {
+            for (path, debug_id) in self.skipped_sourcemaps.iter().sorted_by_key(|x| &x.0) {
                 writeln!(f, "  - {debug_id} - {}", path.display())?;
             }
         }
@@ -74,7 +73,7 @@ impl fmt::Display for Report {
                 f,
                 "\nIgnored: The following source files don't have sourcemap references "
             )?;
-            for path in &self.skipped {
+            for path in self.skipped.iter().sorted() {
                 writeln!(f, "  - {}", path.display())?;
             }
         }
@@ -84,7 +83,7 @@ impl fmt::Display for Report {
                 f,
                 "\nIgnored: The following source files refer to sourcemaps that couldn't be found"
             )?;
-            for path in &self.missing_sourcemaps {
+            for path in self.missing_sourcemaps.iter().sorted() {
                 writeln!(f, "  - {}", path.display())?;
             }
         }
@@ -93,102 +92,48 @@ impl fmt::Display for Report {
     }
 }
 
-pub fn make_command(command: Command) -> Command {
-    command
-        .about("Fixes up JavaScript source files and sourcemaps with debug ids.")
-        .long_about(
-            "Fixes up JavaScript source files and sourcemaps with debug ids.{n}{n}\
-            For every JS source file that references a sourcemap, a debug id is generated and \
-            inserted into both files. If the referenced sourcemap already contains a debug id, \
-            that id is used instead.",
-        )
-        .arg(
-            Arg::new("path")
-                .value_name("PATH")
-                .required(true)
-                .help("The path to the javascript files."),
-        )
-        .hide(true)
-}
+pub fn inject_file(js_path: &Path, report: &mut InjectReport) -> Result<()> {
+    debug!("Processing js file {}", js_path.display());
 
-pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = matches.get_one::<String>("path").unwrap();
+    let file =
+        fs::read_to_string(js_path).context(format!("Failed to open {}", js_path.display()))?;
 
-    let mut collected_paths = Vec::new();
-    for entry in WalkDir::new(path) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(ref e) => {
-                debug!("Skipping file: {e}");
-                continue;
-            }
-        };
-
-        if entry.path().extension().map_or(false, |ext| ext == "js") {
-            collected_paths.push(entry.path().to_owned());
-        }
-    }
-
-    if collected_paths.is_empty() {
-        warn!("Did not find any JavaScript files in path: {path}",);
+    if let Some(debug_id) = js::discover_debug_id(&file) {
+        debug!("File {} was previously processed", js_path.display());
+        report
+            .previously_injected
+            .push((js_path.to_path_buf(), debug_id));
         return Ok(());
     }
 
-    let report = fixup_files(&collected_paths)?;
-    println!("{report}");
-
-    Ok(())
-}
-
-fn fixup_files(paths: &[PathBuf]) -> Result<Report> {
-    let mut report = Report::default();
-
-    for path in paths {
-        let js_path = path.as_path();
-
-        debug!("Processing js file {}", js_path.display());
-
-        let file =
-            fs::read_to_string(js_path).context(format!("Failed to open {}", js_path.display()))?;
-
-        if let Some(debug_id) = js::discover_debug_id(&file) {
-            debug!("File {} was previously processed", js_path.display());
-            report.previously_injected.push((path.clone(), debug_id));
-            continue;
-        }
-
-        let Some(sourcemap_url) = js::discover_sourcemaps_location(&file) else {
+    let Some(sourcemap_url) = js::discover_sourcemaps_location(&file) else {
             debug!("File {} does not contain a sourcemap url", js_path.display());
-            report.skipped.push(path.clone());
-            continue;
+            report.skipped.push(js_path.to_path_buf());
+            return Ok(());
         };
 
-        let sourcemap_path = js_path.with_file_name(sourcemap_url);
+    let sourcemap_path = js_path.with_file_name(sourcemap_url);
 
-        if !sourcemap_path.exists() {
-            debug!("Sourcemap file {} not found", sourcemap_path.display());
-            report.missing_sourcemaps.push(path.clone());
-            continue;
-        }
-
-        let (debug_id, sourcemap_modified) = fixup_sourcemap(&sourcemap_path)
-            .context(format!("Failed to process {}", sourcemap_path.display()))?;
-
-        if sourcemap_modified {
-            report.sourcemaps.push((sourcemap_path.clone(), debug_id));
-        } else {
-            report
-                .skipped_sourcemaps
-                .push((sourcemap_path.clone(), debug_id));
-        }
-
-        fixup_js_file(js_path, debug_id)
-            .context(format!("Failed to process {}", js_path.display()))?;
-
-        report.injected.push((path.clone(), debug_id));
+    if !sourcemap_path.exists() {
+        debug!("Sourcemap file {} not found", sourcemap_path.display());
+        report.missing_sourcemaps.push(js_path.to_path_buf());
+        return Ok(());
     }
 
-    Ok(report)
+    let (debug_id, sourcemap_modified) = fixup_sourcemap(&sourcemap_path)
+        .context(format!("Failed to process {}", sourcemap_path.display()))?;
+
+    if sourcemap_modified {
+        report.sourcemaps.push((sourcemap_path, debug_id));
+    } else {
+        report.skipped_sourcemaps.push((sourcemap_path, debug_id));
+    }
+
+    fixup_js_file(js_path, debug_id).context(format!("Failed to process {}", js_path.display()))?;
+
+    report.injected.push((js_path.to_path_buf(), debug_id));
+
+    Ok(())
 }
 
 /// Appends the following text to a file:
@@ -233,10 +178,10 @@ fn fixup_js_file(js_path: &Path, debug_id: DebugId) -> Result<()> {
 
 /// Fixes up a sourcemap file with a debug id.
 ///
-/// If the file already contains a debug id under the `debugID` key, it is left unmodified.
+/// If the file already contains a debug id under the `debug_id` key, it is left unmodified.
 /// Otherwise, a fresh debug id is inserted under that key.
 ///
-/// In either case, the value of the `debugID` key is returned.
+/// In either case, the value of the `debug_id` key is returned.
 fn fixup_sourcemap(sourcemap_path: &Path) -> Result<(DebugId, bool)> {
     let mut sourcemap_file = File::options()
         .read(true)
