@@ -40,9 +40,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for entry in WalkDir::new(path) {
         let entry = match entry {
             Ok(entry) => entry,
-            Err(e) => {
-                debug!("skipping file {path}");
-                debug!("error: {e}");
+            Err(ref e) => {
+                debug!("Skipping file: {e}");
                 continue;
             }
         };
