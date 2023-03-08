@@ -11,11 +11,13 @@ use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
-use symbolic::debuginfo::js::{discover_debug_id, discover_sourcemap_embedded_debug_id};
+use symbolic::debuginfo::js::{
+    discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
+};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
-use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, NewRelease};
+use crate::api::{Api, ChunkUploadCapability, NewRelease};
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{FileUpload, SourceFile, SourceFiles, UploadContext};
@@ -23,6 +25,12 @@ use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
+    // if we have a debug id or source maps location reference, this is a minified file
+    if let Ok(code) = std::str::from_utf8(code) {
+        if discover_debug_id(code).is_some() || discover_sourcemaps_location(code).is_some() {
+            return true;
+        }
+    }
     if let Ok(code_str) = decode_unknown_string(code) {
         might_be_minified::analyze_str(&code_str).is_likely_minified()
     } else {
@@ -154,35 +162,6 @@ pub struct SourceMapProcessor {
     sources: SourceFiles,
 }
 
-/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
-/// that those bundles are associated to a release.
-///
-/// This function checks if given chunk upload options about the server's capabilities
-/// and only creates a release if the server requires that.
-pub fn create_release_for_legacy_upload(
-    org: &str,
-    options: Option<&ChunkUploadOptions>,
-    version: &str,
-    project: Option<&str>,
-) -> Result<()> {
-    // we can only use the new upload if we have support for standalone bundles and
-    // at least one project is known.
-    if options.map_or(true, |x| {
-        !x.supports(ChunkUploadCapability::ArtifactBundles) || project.is_none()
-    }) {
-        let api = Api::current();
-        api.new_release(
-            org,
-            &NewRelease {
-                version: version.to_string(),
-                projects: project.map(|x| x.to_string()).into_iter().collect(),
-                ..Default::default()
-            },
-        )?;
-    }
-    Ok(())
-}
-
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
     // The hermes bytecode format magic is defined here:
     // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
@@ -228,7 +207,9 @@ impl SourceMapProcessor {
             let (ty, debug_id) = if sourcemap::is_sourcemap_slice(&file.contents) {
                 (
                     SourceFileType::SourceMap,
-                    discover_sourcemap_embedded_debug_id(&String::from_utf8_lossy(&file.contents)),
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(|x| discover_sourcemap_embedded_debug_id(x)),
                 )
             } else if file
                 .path
@@ -249,7 +230,9 @@ impl SourceMapProcessor {
             {
                 (
                     SourceFileType::MinifiedSource,
-                    discover_debug_id(&String::from_utf8_lossy(&file.contents)),
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(|x| discover_debug_id(x)),
                 )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
@@ -323,15 +306,23 @@ impl SourceMapProcessor {
                 continue;
             }
 
+            let mut pieces = Vec::new();
+
             if source.ty == SourceFileType::MinifiedSource {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
-                    let url = sm_ref.get_url();
-                    println!("    {} (sourcemap at {})", &source.url, style(url).cyan());
+                    pieces.push(format!("sourcemap at {}", style(sm_ref.get_url()).cyan()));
                 } else {
-                    println!("    {} (no sourcemap ref)", &source.url);
+                    pieces.push("no sourcemap ref".into());
                 }
+            }
+            if let Some((_, debug_id)) = source.headers.iter().find(|x| x.0 == "debug-id") {
+                pieces.push(format!("debug id {}", style(debug_id).yellow()));
+            }
+
+            if pieces.is_empty() {
+                println!("    {}", source.url);
             } else {
-                println!("    {}", &source.url);
+                println!("    {} ({})", source.url, pieces.join(", "));
             }
 
             for msg in source.messages.iter() {
@@ -567,6 +558,17 @@ impl SourceMapProcessor {
             if source.ty != SourceFileType::MinifiedSource {
                 continue;
             }
+
+            // If there is already an embedded reference, use it.
+            if let Ok(ref contents) = std::str::from_utf8(&source.contents) {
+                if let Some(target_url) = discover_sourcemaps_location(contents) {
+                    source
+                        .headers
+                        .push(("Sourcemap".to_string(), target_url.to_string()));
+                    continue;
+                }
+            }
+
             // we silently ignore when we can't find a sourcemap. Maybe we should
             // log this.
             match guess_sourcemap_reference(&sourcemaps, &source.url) {
@@ -625,16 +627,57 @@ impl SourceMapProcessor {
         }
     }
 
+    /// Old versions of Sentry cannot assemble artifact bundles straight away, they require
+    /// that those bundles are associated to a release.
+    ///
+    /// This function checks if given chunk upload options about the server's capabilities
+    /// and only creates a release if the server requires that.
+    fn initialize_legacy_release_upload(&self, context: &UploadContext) -> Result<()> {
+        // if the remote sentry service supports artifact bundles, we don't
+        // need to do anything here.  Artifact bundles will also only work
+        // if a project is provided which is technically unnecessary for the
+        // legacy upload though it will rarely succeed.
+        if context.project.is_some()
+            && context.chunk_upload_options.map_or(false, |x| {
+                x.supports(ChunkUploadCapability::ArtifactBundles)
+            })
+        {
+            return Ok(());
+        }
+
+        // TODO: make this into an error later down the road
+        if context.project.is_none() {
+            eprintln!(
+                "{}",
+                style(
+                    "warning: no project specified. \
+                    While this upload will succeed it will be unlikely that \
+                    this is what you wanted. Future versions of sentry will \
+                    require a project to be set."
+                )
+                .red()
+            );
+        }
+
+        if let Some(version) = context.release {
+            let api = Api::current();
+            api.new_release(
+                context.org,
+                &NewRelease {
+                    version: version.to_string(),
+                    projects: context.project.map(|x| x.to_string()).into_iter().collect(),
+                    ..Default::default()
+                },
+            )?;
+        } else {
+            bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release)");
+        }
+        Ok(())
+    }
+
     /// Uploads all files
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
-        if let Some(version) = context.release {
-            create_release_for_legacy_upload(
-                context.org,
-                context.chunk_upload_options,
-                version,
-                context.project,
-            )?;
-        }
+        self.initialize_legacy_release_upload(context)?;
         self.flush_pending_sources();
         self.flag_uploaded_sources(context);
         let mut uploader = FileUpload::new(context);

@@ -424,6 +424,18 @@ fn print_upload_context_details(context: &UploadContext) {
         style("> Dist:").dim(),
         style(context.dist.unwrap_or("None")).yellow()
     );
+    let upload_type = match context.chunk_upload_options {
+        None => "single file",
+        Some(ref opts) if opts.supports(ChunkUploadCapability::ArtifactBundles) => {
+            "artifact bundle"
+        }
+        _ => "release bundle",
+    };
+    println!(
+        "{} {}",
+        style("> Upload type:").dim(),
+        style(upload_type).yellow()
+    );
 }
 
 #[test]
