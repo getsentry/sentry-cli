@@ -416,9 +416,11 @@ fn print_upload_context_details(context: &UploadContext) {
         style("> Project:").dim(),
         style(context.project.unwrap_or("None")).yellow()
     );
-    if let Some(release) = context.release {
-        println!("{} {}", style("> Release:").dim(), style(release).yellow());
-    }
+    println!(
+        "{} {}",
+        style("> Release:").dim(),
+        style(context.release.unwrap_or("None")).yellow()
+    );
     println!(
         "{} {}",
         style("> Dist:").dim(),
