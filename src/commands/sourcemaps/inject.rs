@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
-use log::{debug, error, warn};
+use log::{debug, warn};
 use serde_json::Value;
 use symbolic::debuginfo::js;
 use uuid::Uuid;
@@ -41,7 +41,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let entry = match entry {
             Ok(entry) => entry,
             Err(e) => {
-                error!("{e}");
+                debug!("skipping file {path}");
+                debug!("error: {e}");
                 continue;
             }
         };
