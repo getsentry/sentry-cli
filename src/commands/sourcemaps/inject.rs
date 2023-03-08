@@ -1,14 +1,15 @@
+use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
-use glob::glob;
 use log::{debug, warn};
 use serde_json::Value;
 use symbolic::debuginfo::js;
 use uuid::Uuid;
+use walkdir::WalkDir;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
@@ -28,22 +29,28 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("path")
                 .value_name("PATH")
                 .required(true)
-                .help("The path or glob to the javascript files."),
+                .help("The path to the javascript files."),
         )
         .hide(true)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = matches.get_one::<String>("path").unwrap();
+    let path = matches.get_one::<OsString>("path").unwrap();
 
-    let collected_paths: Vec<PathBuf> = glob(path)
-        .unwrap()
-        .flatten()
-        .filter(|path| path.extension().map_or(false, |ext| ext == "js"))
-        .collect();
+    let mut collected_paths = Vec::new();
+    for entry in WalkDir::new(path) {
+        let entry = entry.unwrap();
+
+        if entry.path().extension().map_or(false, |ext| ext == "js") {
+            collected_paths.push(entry.path().to_owned());
+        }
+    }
 
     if collected_paths.is_empty() {
-        warn!("Did not match any JavaScript files for pattern: {}", path);
+        warn!(
+            "Did not find any JavaScript files in path: {}",
+            path.to_string_lossy()
+        );
         return Ok(());
     }
 
