@@ -426,9 +426,7 @@ fn print_upload_context_details(context: &UploadContext) {
     );
     let upload_type = match context.chunk_upload_options {
         None => "single file",
-        Some(ref opts) if opts.supports(ChunkUploadCapability::ArtifactBundles) => {
-            "artifact bundle"
-        }
+        Some(opts) if opts.supports(ChunkUploadCapability::ArtifactBundles) => "artifact bundle",
         _ => "release bundle",
     };
     println!(

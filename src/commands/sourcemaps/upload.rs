@@ -50,7 +50,6 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("note")
                 .long("note")
-                .short('n')
                 .value_name("NOTE")
                 .help("Adds an optional note to the uploaded artifact bundle."),
         )

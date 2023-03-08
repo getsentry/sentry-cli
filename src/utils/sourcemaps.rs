@@ -209,7 +209,7 @@ impl SourceMapProcessor {
                     SourceFileType::SourceMap,
                     std::str::from_utf8(&file.contents)
                         .ok()
-                        .and_then(|x| discover_sourcemap_embedded_debug_id(x)),
+                        .and_then(discover_sourcemap_embedded_debug_id),
                 )
             } else if file
                 .path
@@ -232,7 +232,7 @@ impl SourceMapProcessor {
                     SourceFileType::MinifiedSource,
                     std::str::from_utf8(&file.contents)
                         .ok()
-                        .and_then(|x| discover_debug_id(x)),
+                        .and_then(discover_debug_id),
                 )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
@@ -560,7 +560,7 @@ impl SourceMapProcessor {
             }
 
             // If there is already an embedded reference, use it.
-            if let Ok(ref contents) = std::str::from_utf8(&source.contents) {
+            if let Ok(contents) = std::str::from_utf8(&source.contents) {
                 if let Some(target_url) = discover_sourcemaps_location(contents) {
                     source
                         .headers
