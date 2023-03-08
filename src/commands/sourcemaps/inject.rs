@@ -1,3 +1,4 @@
+use std::fmt;
 use std::fs::{self, File};
 use std::io::{BufRead, BufReader, Seek, Write};
 use std::path::{Path, PathBuf};
@@ -5,6 +6,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::{debug, warn};
+use sentry::types::DebugId;
 use serde_json::Value;
 use symbolic::debuginfo::js;
 use uuid::Uuid;
@@ -14,6 +16,32 @@ const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
+
+#[derive(Debug, Clone)]
+struct ReportFile {
+    path: PathBuf,
+    debug_id: Option<DebugId>,
+    modified: bool,
+}
+
+impl fmt::Display for ReportFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let modified = if self.modified { "*" } else { "-" };
+        write!(f, "{modified} {}", self.path.display())?;
+
+        if let Some(debug_id) = self.debug_id {
+            write!(f, " ({debug_id})")?;
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct Report {
+    source_files: Vec<ReportFile>,
+    sourcemap_files: Vec<ReportFile>,
+}
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -56,10 +84,33 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    fixup_files(&collected_paths)
+    let Report {
+        source_files,
+        sourcemap_files,
+    } = fixup_files(&collected_paths)?;
+
+    if !source_files.is_empty() {
+        println!("Minified source files:");
+
+        for file in &source_files {
+            println!("{file}");
+        }
+    }
+
+    if !sourcemap_files.is_empty() {
+        println!("\nReferenced sourcemap files:");
+
+        for file in &sourcemap_files {
+            println!("{file}");
+        }
+    }
+
+    Ok(())
 }
 
-fn fixup_files(paths: &[PathBuf]) -> Result<()> {
+fn fixup_files(paths: &[PathBuf]) -> Result<Report> {
+    let mut report = Report::default();
+
     for path in paths {
         let js_path = path.as_path();
 
@@ -68,8 +119,15 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
         let file =
             fs::read_to_string(js_path).context(format!("Failed to open {}", js_path.display()))?;
 
-        if js::discover_debug_id(&file).is_some() {
+        report.source_files.push(ReportFile {
+            path: path.clone(),
+            debug_id: None,
+            modified: false,
+        });
+
+        if let Some(debug_id) = js::discover_debug_id(&file) {
             debug!("File {} was previously processed", js_path.display());
+            report.source_files.last_mut().unwrap().debug_id = Some(debug_id);
             continue;
         }
 
@@ -85,14 +143,24 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
             continue;
         }
 
-        let debug_id = fixup_sourcemap(&sourcemap_path)
+        let (debug_id, sourcemap_modified) = fixup_sourcemap(&sourcemap_path)
             .context(format!("Failed to process {}", sourcemap_path.display()))?;
+
+        report.sourcemap_files.push(ReportFile {
+            path: sourcemap_path.clone(),
+            debug_id: Some(debug_id),
+            modified: sourcemap_modified,
+        });
 
         fixup_js_file(js_path, debug_id)
             .context(format!("Failed to process {}", js_path.display()))?;
+
+        let source_file = report.source_files.last_mut().unwrap();
+        source_file.debug_id = Some(debug_id);
+        source_file.modified = true;
     }
 
-    Ok(())
+    Ok(report)
 }
 
 /// Appends the following text to a file:
@@ -142,7 +210,7 @@ fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
 /// Otherwise, a fresh debug id is inserted under that key.
 ///
 /// In either case, the value of the `debugID` key is returned.
-fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
+fn fixup_sourcemap(sourcemap_path: &Path) -> Result<(DebugId, bool)> {
     let mut sourcemap_file = File::options()
         .read(true)
         .write(true)
@@ -159,16 +227,16 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<Uuid> {
         Some(id) => {
             let debug_id = serde_json::from_value(id.clone())?;
             debug!("Sourcemap already has a debug id");
-            Ok(debug_id)
+            Ok((debug_id, false))
         }
 
         None => {
-            let debug_id = Uuid::new_v4();
+            let debug_id = DebugId::from_uuid(Uuid::new_v4());
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
 
             serde_json::to_writer(&mut sourcemap_file, &sourcemap)?;
-            Ok(debug_id)
+            Ok((debug_id, true))
         }
     }
 }
