@@ -1,3 +1,4 @@
+use std::fmt;
 use std::path::Path;
 
 use anyhow::Result;
@@ -67,9 +68,15 @@ fn print_object_sources(object: &Object) -> Result<()> {
             let abs_path = file.abs_path_str();
             println!("  {}", &abs_path);
             let source = debug_session.source_by_path(abs_path.as_str())?;
-            match source.as_ref().and_then(|sd| sd.contents()) {
+            match source {
                 Some(source) => {
-                    println!("    Embedded, {} bytes", source.len());
+                    print_file_descriptor_detail(
+                        "Embedded",
+                        source.contents().map(|v| format!("{} bytes", v.len())),
+                    );
+                    print_file_descriptor_detail("Url", source.url());
+                    print_file_descriptor_detail("DebugId", source.debug_id());
+                    print_file_descriptor_detail("SourceMap Url", source.source_mapping_url());
                 }
                 None => {
                     if Path::new(&abs_path).exists() {
@@ -82,4 +89,10 @@ fn print_object_sources(object: &Object) -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn print_file_descriptor_detail<T: fmt::Display>(name: &str, value: Option<T>) {
+    if let Some(value) = value {
+        println!("    {name}: {value}");
+    }
 }

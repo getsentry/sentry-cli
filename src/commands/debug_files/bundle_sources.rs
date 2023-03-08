@@ -87,10 +87,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         for (index, object) in archive.get().objects().enumerate() {
             let object = object?;
-            if object.has_sources() {
-                eprintln!("skipped {orig_path} (no source info)");
-                continue;
-            }
 
             let mut out = output_path.unwrap_or(parent_path).join(filename);
             match index {
@@ -107,7 +103,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let written = writer.write_object_with_filter(
                 &object,
                 &filename.to_string_lossy(),
-                |file, _source_descriptor| filter_bad_sources(file),
+                filter_bad_sources,
             )?;
 
             if !written {

@@ -12,7 +12,7 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Print information about a release.")
         .allow_hyphen_values(true)
-        .version_arg()
+        .version_arg(false)
         .arg(
             Arg::new("show_projects")
                 .short('P')

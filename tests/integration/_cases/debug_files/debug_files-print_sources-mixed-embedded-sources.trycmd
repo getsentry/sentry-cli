@@ -1,0 +1,16 @@
+```
+$ sentry-cli debug-files print-sources tests/integration/_fixtures/SrcGenSampleApp.pdb
+? success
+portablepdb c02651ae-cd6f-492d-bc33-0b83111e7106-8d8e7c60 references sources:
+  /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/Program.cs
+    Not embedded nor available locally at the referenced path.
+  /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/SrcGenSampleApp.GlobalUsings.g.cs
+    Not embedded nor available locally at the referenced path.
+  /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/.NETCoreApp,Version=v6.0.AssemblyAttributes.cs
+    Not embedded nor available locally at the referenced path.
+  /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/SrcGenSampleApp.AssemblyInfo.cs
+    Not embedded nor available locally at the referenced path.
+  /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/MySourceGenerator/MySourceGenerator.HelloSourceGenerator/Program.g.cs
+    Embedded: 243 bytes
+
+```

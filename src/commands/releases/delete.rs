@@ -9,7 +9,7 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Delete a release.")
         .allow_hyphen_values(true)
-        .version_arg()
+        .version_arg(false)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

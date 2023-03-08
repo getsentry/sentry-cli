@@ -42,6 +42,14 @@ To verify it’s installed correctly you can bring up the help:
 
     sentry-cli --help
 
+### pip
+
+_New in 2.14.3_: `sentry-cli` can also be installed using `pip`:
+
+```bash
+pip install sentry-cli
+```
+
 ### Node
 
 Additionally you can also install this binary via npm:

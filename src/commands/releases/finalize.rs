@@ -10,7 +10,7 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Mark a release as finalized and released.")
         .allow_hyphen_values(true)
-        .version_arg()
+        .version_arg(false)
         .arg(
             Arg::new("url")
                 .long("url")

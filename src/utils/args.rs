@@ -78,7 +78,7 @@ pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
     fn project_arg(self, multiple: bool) -> Self;
     fn release_arg(self) -> Self;
-    fn version_arg(self) -> Self;
+    fn version_arg(self, global: bool) -> Self;
 }
 
 impl<'a: 'b, 'b> ArgExt for Command {
@@ -124,11 +124,13 @@ impl<'a: 'b, 'b> ArgExt for Command {
         )
     }
 
-    fn version_arg(self) -> Command {
+    fn version_arg(self, global: bool) -> Command {
         self.arg(
             Arg::new("version")
                 .value_name("VERSION")
-                .required(true)
+                // either specified for subcommands (global=true) or for this command (required=true)
+                .required(!global)
+                .global(global)
                 .value_parser(validate_release)
                 .help("The version of the release"),
         )

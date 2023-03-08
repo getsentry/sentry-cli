@@ -2,7 +2,41 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
-## Unreleased
+## 2.14.4
+
+### Various fixes & improvements
+
+- fix: Include sources referenced but not embedded by an object file (#1486)
+- chore: Reapply clap update to v4 and fix releases subcommands (#1500)
+- deps: Update rust-sourcemap to 6.2.3 (#1502)
+
+## 2.14.3
+
+### Various fixes & improvements
+
+- ref: fix macos wheel tags, add musllinux tags (#1497) by @asottile-sentry
+
+## 2.14.2
+
+- No documented changes.
+
+## 2.14.1
+
+### Various fixes & improvements
+
+- fix: Revert clap-rs v4 update and add regression test for 'releases files upload-sourcemap' (#1496) by @vaind
+
+## 2.14.0
+
+### Various fixes & improvements
+
+- ref: also distribute sentry-cli as a pip package (#1494) by @asottile-sentry
+- ref: Support lower and uppercased env vars for npm cache (#1493) by @kamilogorek
+- feat: Add sourcemaps inject command (#1469) by @loewenheim
+- chore: update clap to v4 (#1489) by @vaind
+- chore: update clap deprecations (#1487) by @vaind
+- deps: Update symbolic to 12.0.0 (#1488) by @loewenheim
+- feat: add new `debug-files print-sources` command (#1476) by @vaind
 
 ## 2.13.0
 

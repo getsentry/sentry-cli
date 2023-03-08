@@ -132,6 +132,42 @@ fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
 }
 
 #[test]
+fn command_debug_files_upload_mixed_embedded_sources() {
+    let _chunk_upload = mock_endpoint(
+        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            .with_response_file("debug_files/get-chunk-upload.json"),
+    );
+    let _assemble = mock_endpoint(
+        EndpointOptions::new(
+            "POST",
+            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+            200,
+        )
+        .with_response_body(
+            r#"{
+                "21b76b717dbbd8c89e42d92b29667ac87aa3c124": {
+                    "state": "ok",
+                    "missingChunks": []
+                }
+            }"#,
+        ),
+    );
+    let _reprocessing = mock_endpoint(
+        EndpointOptions::new(
+            "POST",
+            "/api/0/projects/wat-org/wat-project/reprocessing/",
+            200,
+        )
+        .with_response_body("[]"),
+    );
+    // TODO this isn't tested properly at the moment, because `indicatif` ProgressBar (at least at the current version)
+    //      swallows debug logs printed while the progress bar is active and the session is not attended.
+    //      See how it's supposed to look like `debug_files-bundle_sources-mixed-embedded-sources.trycmd` and try it out
+    //      after an update of `indicatif` to the latest version (currently it's blocked by some other issues).
+    register_test("debug_files/debug_files-upload-mixed-embedded-sources.trycmd");
+}
+
+#[test]
 fn command_debug_files_upload_no_upload() {
     let _chunk_upload = mock_endpoint(
         EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
