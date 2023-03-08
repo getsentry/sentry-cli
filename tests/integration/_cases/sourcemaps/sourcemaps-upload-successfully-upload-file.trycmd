@@ -12,6 +12,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map --r
 > Project: wat-project
 > Release: wat-release
 > Dist: None
+> Upload type: release bundle
 
 Source Map Upload Report
   Source Maps
