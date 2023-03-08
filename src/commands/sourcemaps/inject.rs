@@ -17,32 +17,14 @@ const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
-#[derive(Debug, Clone)]
-struct ReportFile {
-    path: PathBuf,
-    debug_id: Option<DebugId>,
-}
-
-impl fmt::Display for ReportFile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(debug_id) = self.debug_id {
-            write!(f, "{debug_id} - ")?;
-        }
-
-        write!(f, "{}", self.path.display())?;
-
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 struct Report {
-    injected: Vec<ReportFile>,
-    previously_injected: Vec<ReportFile>,
-    skipped: Vec<ReportFile>,
-    missing_sourcemaps: Vec<ReportFile>,
-    sourcemaps: Vec<ReportFile>,
-    skipped_sourcemaps: Vec<ReportFile>,
+    injected: Vec<(PathBuf, DebugId)>,
+    previously_injected: Vec<(PathBuf, DebugId)>,
+    skipped: Vec<PathBuf>,
+    missing_sourcemaps: Vec<PathBuf>,
+    sourcemaps: Vec<(PathBuf, DebugId)>,
+    skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
 }
 
 impl fmt::Display for Report {
@@ -51,8 +33,8 @@ impl fmt::Display for Report {
             writeln!(f, "Injected source files")?;
             writeln!(f, "---")?;
 
-            for file in &self.injected {
-                writeln!(f, "{file}")?;
+            for (path, debug_id) in &self.injected {
+                writeln!(f, "{debug_id} - {}", path.display())?;
             }
         }
 
@@ -60,8 +42,8 @@ impl fmt::Display for Report {
             writeln!(f, "\nSkipped: previously injected source files")?;
             writeln!(f, "---")?;
 
-            for file in &self.previously_injected {
-                writeln!(f, "{file}")?;
+            for (path, debug_id) in &self.previously_injected {
+                writeln!(f, "{debug_id} - {}", path.display())?;
             }
         }
 
@@ -69,8 +51,8 @@ impl fmt::Display for Report {
             writeln!(f, "\nSkipped: files without sourcemap references")?;
             writeln!(f, "---")?;
 
-            for file in &self.skipped {
-                writeln!(f, "{file}")?;
+            for path in &self.skipped {
+                writeln!(f, "{}", path.display())?;
             }
         }
 
@@ -78,8 +60,8 @@ impl fmt::Display for Report {
             writeln!(f, "\nSkipped: files whose sourcemaps could not be found")?;
             writeln!(f, "---")?;
 
-            for file in &self.missing_sourcemaps {
-                writeln!(f, "{file}")?;
+            for path in &self.missing_sourcemaps {
+                writeln!(f, "{}", path.display())?;
             }
         }
 
@@ -87,8 +69,8 @@ impl fmt::Display for Report {
             writeln!(f, "\nInjected sourcemap files")?;
             writeln!(f, "---")?;
 
-            for file in &self.sourcemaps {
-                writeln!(f, "{file}")?;
+            for (path, debug_id) in &self.sourcemaps {
+                writeln!(f, "{debug_id} - {}", path.display())?;
             }
         }
 
@@ -96,8 +78,8 @@ impl fmt::Display for Report {
             writeln!(f, "\nSkipped: sourcemap files with existing debug ids")?;
             writeln!(f, "---")?;
 
-            for file in &self.skipped_sourcemaps {
-                writeln!(f, "{file}")?;
+            for (path, debug_id) in &self.skipped_sourcemaps {
+                writeln!(f, "{debug_id} - {}", path.display())?;
             }
         }
 
@@ -165,19 +147,13 @@ fn fixup_files(paths: &[PathBuf]) -> Result<Report> {
 
         if let Some(debug_id) = js::discover_debug_id(&file) {
             debug!("File {} was previously processed", js_path.display());
-            report.previously_injected.push(ReportFile {
-                path: path.clone(),
-                debug_id: Some(debug_id),
-            });
+            report.previously_injected.push((path.clone(), debug_id));
             continue;
         }
 
         let Some(sourcemap_url) = js::discover_sourcemaps_location(&file) else {
             debug!("File {} does not contain a sourcemap url", js_path.display());
-            report.skipped.push(ReportFile {
-                path: path.clone(),
-                debug_id: None,
-            });
+            report.skipped.push(path.clone());
             continue;
         };
 
@@ -185,34 +161,25 @@ fn fixup_files(paths: &[PathBuf]) -> Result<Report> {
 
         if !sourcemap_path.exists() {
             warn!("Sourcemap file {} not found", sourcemap_path.display());
-            report.missing_sourcemaps.push(ReportFile {
-                path: path.clone(),
-                debug_id: None,
-            });
+            report.missing_sourcemaps.push(path.clone());
             continue;
         }
 
         let (debug_id, sourcemap_modified) = fixup_sourcemap(&sourcemap_path)
             .context(format!("Failed to process {}", sourcemap_path.display()))?;
 
-        let report_file = ReportFile {
-            path: sourcemap_path.clone(),
-            debug_id: Some(debug_id),
-        };
-
         if sourcemap_modified {
-            report.sourcemaps.push(report_file);
+            report.sourcemaps.push((sourcemap_path.clone(), debug_id));
         } else {
-            report.skipped_sourcemaps.push(report_file);
+            report
+                .skipped_sourcemaps
+                .push((sourcemap_path.clone(), debug_id));
         }
 
         fixup_js_file(js_path, debug_id)
             .context(format!("Failed to process {}", js_path.display()))?;
 
-        report.injected.push(ReportFile {
-            path: path.clone(),
-            debug_id: Some(debug_id),
-        });
+        report.injected.push((path.clone(), debug_id));
     }
 
     Ok(report)
