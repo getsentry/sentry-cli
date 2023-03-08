@@ -1,11 +1,10 @@
-use std::ffi::OsString;
 use std::fs::{self, File};
 use std::io::{Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
-use log::{debug, warn};
+use log::{debug, error, warn};
 use serde_json::Value;
 use symbolic::debuginfo::js;
 use uuid::Uuid;
@@ -35,11 +34,17 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = matches.get_one::<OsString>("path").unwrap();
+    let path = matches.get_one::<String>("path").unwrap();
 
     let mut collected_paths = Vec::new();
     for entry in WalkDir::new(path) {
-        let entry = entry.unwrap();
+        let entry = match entry {
+            Ok(entry) => entry,
+            Err(e) => {
+                error!("{e}");
+                continue;
+            }
+        };
 
         if entry.path().extension().map_or(false, |ext| ext == "js") {
             collected_paths.push(entry.path().to_owned());
@@ -47,10 +52,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if collected_paths.is_empty() {
-        warn!(
-            "Did not find any JavaScript files in path: {}",
-            path.to_string_lossy()
-        );
+        warn!("Did not find any JavaScript files in path: {path}",);
         return Ok(());
     }
 
