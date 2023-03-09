@@ -276,6 +276,8 @@ fn upload_files_chunked(
                 vec![context.project.unwrap().to_string()],
                 checksum,
                 &checksums,
+                context.release,
+                context.dist,
             )?
         } else {
             api.assemble_release_artifacts(context.org, context.release()?, checksum, &checksums)?

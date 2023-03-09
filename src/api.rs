@@ -1163,6 +1163,8 @@ impl Api {
                 checksum,
                 chunks,
                 projects: Vec::new(),
+                version: None,
+                dist: None,
             })?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
@@ -1182,6 +1184,8 @@ impl Api {
         projects: Vec<String>,
         checksum: Digest,
         chunks: &[Digest],
+        version: Option<&str>,
+        dist: Option<&str>,
     ) -> ApiResult<AssembleArtifactsResponse> {
         let url = format!("/organizations/{}/artifactbundle/assemble/", PathArg(org));
 
@@ -1190,6 +1194,8 @@ impl Api {
                 checksum,
                 chunks,
                 projects,
+                version,
+                dist,
             })?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
@@ -2709,6 +2715,10 @@ pub struct ChunkedArtifactRequest<'a> {
     pub chunks: &'a [Digest],
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub projects: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dist: Option<&'a str>,
 }
 
 #[derive(Debug, Deserialize)]
