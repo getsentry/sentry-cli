@@ -30,7 +30,10 @@ struct Report {
 impl fmt::Display for Report {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if !self.injected.is_empty() {
-            writeln!(f, "Injected source files")?;
+            writeln!(
+                f,
+                "Modified: The following source files have been modified to have debug ids"
+            )?;
             writeln!(f, "---")?;
 
             for (path, debug_id) in &self.injected {
@@ -39,7 +42,10 @@ impl fmt::Display for Report {
         }
 
         if !self.previously_injected.is_empty() {
-            writeln!(f, "\nSkipped: previously injected source files")?;
+            writeln!(
+                f,
+                "\nIgnored: The following source files already have debug ids"
+            )?;
             writeln!(f, "---")?;
 
             for (path, debug_id) in &self.previously_injected {
@@ -48,7 +54,10 @@ impl fmt::Display for Report {
         }
 
         if !self.skipped.is_empty() {
-            writeln!(f, "\nSkipped: files without sourcemap references")?;
+            writeln!(
+                f,
+                "\nIgnored: The following source files don't have sourcemap references "
+            )?;
             writeln!(f, "---")?;
 
             for path in &self.skipped {
@@ -57,7 +66,10 @@ impl fmt::Display for Report {
         }
 
         if !self.missing_sourcemaps.is_empty() {
-            writeln!(f, "\nSkipped: files whose sourcemaps could not be found")?;
+            writeln!(
+                f,
+                "\nIgnored: The following source files refer to sourcemaps that couldn't be found"
+            )?;
             writeln!(f, "---")?;
 
             for path in &self.missing_sourcemaps {
@@ -66,7 +78,10 @@ impl fmt::Display for Report {
         }
 
         if !self.sourcemaps.is_empty() {
-            writeln!(f, "\nInjected sourcemap files")?;
+            writeln!(
+                f,
+                "\nModified: The following sourcemap files have been modified to have debug ids"
+            )?;
             writeln!(f, "---")?;
 
             for (path, debug_id) in &self.sourcemaps {
@@ -75,7 +90,10 @@ impl fmt::Display for Report {
         }
 
         if !self.skipped_sourcemaps.is_empty() {
-            writeln!(f, "\nSkipped: sourcemap files with existing debug ids")?;
+            writeln!(
+                f,
+                "\nIgnored: The following sourcemap files already have debug ids"
+            )?;
             writeln!(f, "---")?;
 
             for (path, debug_id) in &self.skipped_sourcemaps {
