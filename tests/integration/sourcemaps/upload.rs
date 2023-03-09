@@ -13,7 +13,7 @@ fn command_sourcemaps_upload() {
 
 #[test]
 fn command_sourcemaps_upload_successfully_upload_file() {
-    let _upload_endpoints = mock_common_upload_endpoints();
+    let _upload_endpoints = mock_common_upload_endpoints_legacy();
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -28,7 +28,7 @@ fn command_sourcemaps_upload_successfully_upload_file() {
 
 #[test]
 fn command_sourcemaps_upload_skip_already_uploaded() {
-    let _upload_endpoints = mock_common_upload_endpoints();
+    let _upload_endpoints = mock_common_upload_endpoints_legacy();
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -52,7 +52,7 @@ fn command_sourcemaps_upload_skip_already_uploaded() {
 
 #[test]
 fn command_sourcemaps_upload_no_dedupe() {
-    let _upload_endpoints = mock_common_upload_endpoints();
+    let _upload_endpoints = mock_common_upload_endpoints_legacy();
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -74,8 +74,14 @@ fn command_sourcemaps_upload_no_dedupe() {
     register_test("sourcemaps/sourcemaps-upload-no-dedupe.trycmd");
 }
 
+#[test]
+fn command_sourcemaps_upload_modern() {
+    let _upload_endpoints = mock_common_upload_endpoints_modern();
+    register_test("sourcemaps/sourcemaps-upload-modern.trycmd");
+}
+
 // Endpoints need to be bound, as they need to live long enough for test to finish
-fn mock_common_upload_endpoints() -> Vec<Mock> {
+fn mock_common_upload_endpoints_legacy() -> Vec<Mock> {
     let chunk_upload_response = format!(
         "{{
             \"url\": \"{}/api/0/organizations/wat-org/chunk-upload/\",
@@ -115,9 +121,47 @@ fn mock_common_upload_endpoints() -> Vec<Mock> {
     ]
 }
 
+// Endpoints need to be bound, as they need to live long enough for test to finish
+fn mock_common_upload_endpoints_modern() -> Vec<Mock> {
+    let chunk_upload_response = format!(
+        "{{
+            \"url\": \"{}/api/0/organizations/wat-org/chunk-upload/\",
+            \"chunkSize\": 8388608,
+            \"chunksPerRequest\": 64,
+            \"maxRequestSize\": 33554432,
+            \"concurrency\": 8,
+            \"hashAlgorithm\": \"sha1\",
+            \"accept\": [
+              \"release_files\",
+              \"artifact_bundles\"
+            ]
+          }}",
+        server_url()
+    );
+
+    vec![
+        mock_endpoint(
+            EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_body(chunk_upload_response),
+        ),
+        mock_endpoint(
+            EndpointOptions::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_body("[]"),
+        ),
+        mock_endpoint(
+            EndpointOptions::new(
+                "POST",
+                "/api/0/organizations/wat-org/artifactbundle/assemble/",
+                200,
+            )
+            .with_response_body(r#"{"state":"created","missingChunks":[]}"#),
+        ),
+    ]
+}
+
 #[test]
 fn command_releases_files_upload_sourcemap() {
-    let _upload_endpoints = mock_common_upload_endpoints();
+    let _upload_endpoints = mock_common_upload_endpoints_legacy();
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
