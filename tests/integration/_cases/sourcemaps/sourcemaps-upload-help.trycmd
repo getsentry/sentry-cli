@@ -74,6 +74,8 @@ Options:
           extensions. To add an extension, all default extensions must be repeated. Specify once per
           extension.
           Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`
+      --no-inject
+          Skip injection of debug ids into source files and sourcemaps prior to uploading.
   -h, --help
           Print help
 
