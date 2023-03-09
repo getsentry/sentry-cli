@@ -636,7 +636,7 @@ impl SourceMapProcessor {
         // if the remote sentry service supports artifact bundles, we don't
         // need to do anything here.  Artifact bundles will also only work
         // if a project is provided which is technically unnecessary for the
-        // legacy upload though it will rarely succeed.
+        // legacy upload though it will unlikely to be what users want.
         if context.project.is_some()
             && context.chunk_upload_options.map_or(false, |x| {
                 x.supports(ChunkUploadCapability::ArtifactBundles)

@@ -135,7 +135,6 @@ impl<'a> FileUpload<'a> {
         let concurrency = self
             .context
             .chunk_upload_options
-            .as_ref()
             .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
         upload_files_parallel(self.context, &self.files, concurrency)
     }
