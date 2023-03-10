@@ -19,6 +19,7 @@ use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, Sour
 use url::Url;
 use uuid::Uuid;
 
+use crate::api::NewRelease;
 use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
@@ -27,6 +28,54 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
+
+/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
+/// that those bundles are associated to a release.
+///
+/// This function checks if given chunk upload options about the server's capabilities
+/// and only creates a release if the server requires that.
+pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
+    // if the remote sentry service supports artifact bundles, we don't
+    // need to do anything here.  Artifact bundles will also only work
+    // if a project is provided which is technically unnecessary for the
+    // legacy upload though it will unlikely to be what users want.
+    if context.project.is_some()
+        && context.chunk_upload_options.map_or(false, |x| {
+            x.supports(ChunkUploadCapability::ArtifactBundles)
+        })
+    {
+        return Ok(());
+    }
+
+    // TODO: make this into an error later down the road
+    if context.project.is_none() {
+        eprintln!(
+            "{}",
+            style(
+                "warning: no project specified. \
+                    While this upload will succeed it will be unlikely that \
+                    this is what you wanted. Future versions of sentry will \
+                    require a project to be set."
+            )
+            .red()
+        );
+    }
+
+    if let Some(version) = context.release {
+        let api = Api::current();
+        api.new_release(
+            context.org,
+            &NewRelease {
+                version: version.to_string(),
+                projects: context.project.map(|x| x.to_string()).into_iter().collect(),
+                ..Default::default()
+            },
+        )?;
+    } else {
+        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release)");
+    }
+    Ok(())
+}
 
 pub struct UploadContext<'a> {
     pub org: &'a str,
@@ -116,6 +165,8 @@ impl<'a> FileUpload<'a> {
     }
 
     pub fn upload(&self) -> Result<()> {
+        initialize_legacy_release_upload(self.context)?;
+
         if let Some(chunk_options) = self.context.chunk_upload_options {
             if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
                 return upload_files_chunked(self.context, &self.files, chunk_options);

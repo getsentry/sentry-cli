@@ -12,7 +12,9 @@ use crate::api::{Api, ProgressBarMode};
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
+use crate::utils::file_upload::{
+    initialize_legacy_release_upload, FileUpload, SourceFile, UploadContext,
+};
 use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
 
 pub fn make_command(command: Command) -> Command {
@@ -195,6 +197,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     // Single file upload
     else {
+        initialize_legacy_release_upload(&context)?;
+
         let name = match matches.get_one::<String>("name") {
             Some(name) => name,
             None => Path::new(path)
