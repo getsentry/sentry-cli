@@ -1,0 +1,3 @@
+```
+$ sentry-cli[EXE] sourcemaps inject $FIXTURES_PATH
+```
