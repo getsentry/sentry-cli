@@ -197,7 +197,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     // Single file upload
     else {
-        initialize_legacy_release_upload(&context)?;
+        initialize_legacy_release_upload(context)?;
 
         let name = match matches.get_one::<String>("name") {
             Some(name) => name,
