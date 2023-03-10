@@ -1,5 +1,5 @@
 use std::fs::{self, File};
-use std::io::{Seek, Write};
+use std::io::{BufRead, BufReader, Seek, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
@@ -105,12 +105,33 @@ fn fixup_files(paths: &[PathBuf]) -> Result<()> {
 /// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
 /// placeholder.
 fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
-    let mut js_file = File::options().append(true).open(js_path)?;
+    let js_lines = {
+        let js_file = File::open(js_path)?;
+        let js_file = BufReader::new(js_file);
+        let js_lines: Result<Vec<_>, _> = js_file.lines().collect();
+        js_lines?
+    };
+
+    let mut sourcemap_comment = None;
+    let mut js_file = File::options().write(true).open(js_path)?;
+
+    for line in js_lines.into_iter() {
+        if line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=") {
+            sourcemap_comment = Some(line);
+            continue;
+        }
+        writeln!(js_file, "{line}")?;
+    }
+
     let to_inject =
         CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.hyphenated().to_string());
     writeln!(js_file)?;
     writeln!(js_file, "{to_inject}")?;
-    write!(js_file, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+    writeln!(js_file, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+
+    if let Some(sourcemap_comment) = sourcemap_comment {
+        write!(js_file, "{sourcemap_comment}")?;
+    }
 
     Ok(())
 }
