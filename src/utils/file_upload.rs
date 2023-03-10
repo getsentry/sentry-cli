@@ -32,7 +32,7 @@ static DEFAULT_CONCURRENCY: usize = 4;
 /// Old versions of Sentry cannot assemble artifact bundles straight away, they require
 /// that those bundles are associated to a release.
 ///
-/// This function checks if given chunk upload options about the server's capabilities
+/// This function checks whether the configured server supports artifact bundles
 /// and only creates a release if the server requires that.
 pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     // if the remote sentry service supports artifact bundles, we don't

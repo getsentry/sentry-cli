@@ -58,7 +58,9 @@ fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
 }
 
 fn assert_endpoints(mocks: &[Mock]) {
-    mocks[0].assert();
+    for mock in mocks {
+        mock.assert();
+    }
 }
 
 #[test]
