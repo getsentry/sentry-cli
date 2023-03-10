@@ -8,7 +8,7 @@ use console::style;
 use if_chain::if_chain;
 use log::info;
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
 use crate::utils::args::{validate_distribution, ArgExt};
@@ -166,45 +166,42 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.rewrite(&[here_str])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(
-        &org,
-        &NewRelease {
-            version: (*release).to_string(),
-            projects: vec![project.to_string()],
-            ..Default::default()
-        },
-    )?;
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
     match matches.get_many::<String>("dist") {
         None => {
             println!(
                 "Uploading sourcemaps for release {} (no distribution value given; use --dist to set distribution value)",
-                &release.version
+                &release
             );
 
             processor.upload(&UploadContext {
                 org: &org,
                 project: Some(&project),
-                release: &release.version,
+                release: Some(&release),
                 dist: None,
+                note: None,
                 wait: matches.get_flag("wait"),
-                ..Default::default()
+                dedupe: false,
+                chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
         }
         Some(dists) => {
             for dist in dists {
                 println!(
                     "Uploading sourcemaps for release {} distribution {}",
-                    &release.version, dist
+                    &release, dist
                 );
 
                 processor.upload(&UploadContext {
                     org: &org,
                     project: Some(&project),
-                    release: &release.version,
+                    release: Some(&release),
                     dist: Some(dist),
+                    note: None,
                     wait: matches.get_flag("wait"),
-                    ..Default::default()
+                    dedupe: false,
+                    chunk_upload_options: chunk_upload_options.as_ref(),
                 })?;
             }
         }

@@ -706,18 +706,22 @@ impl Api {
         headers: Option<&[(String, String)]>,
         progress_bar_mode: ProgressBarMode,
     ) -> ApiResult<Option<Artifact>> {
+        let release = context
+            .release()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
+
         let path = if let Some(project) = context.project {
             format!(
                 "/projects/{}/{}/releases/{}/files/",
                 PathArg(context.org),
                 PathArg(project),
-                PathArg(context.release)
+                PathArg(release)
             )
         } else {
             format!(
                 "/organizations/{}/releases/{}/files/",
                 PathArg(context.org),
-                PathArg(context.release)
+                PathArg(release)
             )
         };
         let mut form = curl::easy::Form::new();
@@ -1093,9 +1097,17 @@ impl Api {
         let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
         match self
             .get(&url)?
-            .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
+            .convert_rnf::<ChunkUploadOptions>(ApiErrorKind::ChunkUploadNotSupported)
         {
-            Ok(options) => Ok(Some(options)),
+            Ok(mut options) => {
+                // TODO: remove this logic after we can trust the server responses
+                if !options.supports(ChunkUploadCapability::ArtifactBundles)
+                    && env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
+                {
+                    options.accept.push(ChunkUploadCapability::ArtifactBundles);
+                }
+                Ok(Some(options))
+            }
             Err(error) => {
                 if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
                     Ok(None)
@@ -1133,7 +1145,7 @@ impl Api {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
-    pub fn assemble_artifacts(
+    pub fn assemble_release_artifacts(
         &self,
         org: &str,
         release: &str,
@@ -1147,7 +1159,44 @@ impl Api {
         );
 
         self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedArtifactRequest { checksum, chunks })?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects: Vec::new(),
+                version: None,
+                dist: None,
+            })?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    pub fn assemble_artifact_bundle(
+        &self,
+        org: &str,
+        projects: Vec<String>,
+        checksum: Digest,
+        chunks: &[Digest],
+        version: Option<&str>,
+        dist: Option<&str>,
+    ) -> ApiResult<AssembleArtifactsResponse> {
+        let url = format!("/organizations/{}/artifactbundle/assemble/", PathArg(org));
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects,
+                version,
+                dist,
+            })?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
                 &[
@@ -2534,6 +2583,9 @@ pub enum ChunkUploadCapability {
     /// Chunked upload of release files
     ReleaseFiles,
 
+    /// Chunked upload of standalone artifact bundles
+    ArtifactBundles,
+
     /// Upload of PDBs and debug id overrides
     Pdbs,
 
@@ -2561,6 +2613,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
         Ok(match String::deserialize(deserializer)?.as_str() {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
+            "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
             "pdbs" => ChunkUploadCapability::Pdbs,
             "portablepdbs" => ChunkUploadCapability::PortablePdbs,
             "sources" => ChunkUploadCapability::Sources,
@@ -2655,6 +2708,12 @@ pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
 pub struct ChunkedArtifactRequest<'a> {
     pub checksum: Digest,
     pub chunks: &'a [Digest],
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub projects: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dist: Option<&'a str>,
 }
 
 #[derive(Debug, Deserialize)]

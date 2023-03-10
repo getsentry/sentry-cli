@@ -10,7 +10,7 @@ use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
@@ -285,24 +285,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ));
 
         let api = Api::current();
-        let release = api.new_release(
-            &org,
-            &NewRelease {
-                version: release_name,
-                projects: vec![project.to_string()],
-                ..Default::default()
-            },
-        )?;
+        let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
         match matches.get_many::<String>("dist") {
             None => {
                 processor.upload(&UploadContext {
                     org: &org,
                     project: Some(&project),
-                    release: &release.version,
+                    release: Some(&release_name),
                     dist: Some(&dist),
+                    note: None,
                     wait: matches.get_flag("wait"),
-                    ..Default::default()
+                    dedupe: false,
+                    chunk_upload_options: chunk_upload_options.as_ref(),
                 })?;
             }
             Some(dists) => {
@@ -310,10 +305,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     processor.upload(&UploadContext {
                         org: &org,
                         project: Some(&project),
-                        release: &release.version,
+                        release: Some(&release_name),
                         dist: Some(dist),
+                        note: None,
                         wait: matches.get_flag("wait"),
-                        ..Default::default()
+                        dedupe: false,
+                        chunk_upload_options: chunk_upload_options.as_ref(),
                     })?;
                 }
             }

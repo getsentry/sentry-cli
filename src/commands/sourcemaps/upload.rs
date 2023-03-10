@@ -5,7 +5,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
@@ -46,6 +46,12 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .value_parser(validate_distribution)
                 .help("Optional distribution identifier for the sourcemaps."),
+        )
+        .arg(
+            Arg::new("note")
+                .long("note")
+                .value_name("NOTE")
+                .help("Adds an optional note to the uploaded artifact bundle."),
         )
         .arg(
             Arg::new("validate")
@@ -353,10 +359,11 @@ fn process_sources_from_paths(
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-    let version = config.get_release_with_legacy_fallback(matches)?;
+    let version = config.get_release_with_legacy_fallback(matches).ok();
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
     if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
@@ -364,23 +371,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         process_sources_from_paths(matches, &mut processor)?;
     }
 
-    // make sure the release exists
-    let release = api.new_release(
-        &org,
-        &NewRelease {
-            version,
-            projects: config.get_projects(matches)?,
-            ..Default::default()
-        },
-    )?;
-
     processor.upload(&UploadContext {
         org: &org,
         project: Some(&project),
-        release: &release.version,
+        release: version.as_deref(),
         dist: matches.get_one::<String>("dist").map(String::as_str),
+        note: matches.get_one::<String>("note").map(String::as_str),
         wait: matches.get_flag("wait"),
         dedupe: !matches.get_flag("no_dedupe"),
+        chunk_upload_options: chunk_upload_options.as_ref(),
     })?;
 
     Ok(())

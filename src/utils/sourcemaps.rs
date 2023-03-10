@@ -11,17 +11,28 @@ use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
+use symbolic::debuginfo::js::{
+    discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
+};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
 use crate::api::Api;
 use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
-use crate::utils::file_upload::{ReleaseFile, ReleaseFileUpload, ReleaseFiles, UploadContext};
+use crate::utils::file_upload::{
+    initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
+};
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
+    // if we have a debug id or source maps location reference, this is a minified file
+    if let Ok(code) = std::str::from_utf8(code) {
+        if discover_debug_id(code).is_some() || discover_sourcemaps_location(code).is_some() {
+            return true;
+        }
+    }
     if let Ok(code_str) = decode_unknown_string(code) {
         might_be_minified::analyze_str(&code_str).is_likely_minified()
     } else {
@@ -74,16 +85,16 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     rv
 }
 
-pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+pub fn get_sourcemap_ref_from_headers(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
         .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
-pub fn get_sourcemap_ref_from_contents(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+pub fn get_sourcemap_ref_from_contents(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     sourcemap::locate_sourcemap_reference_slice(&file.contents).unwrap_or(None)
 }
 
-pub fn get_sourcemap_ref(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+pub fn get_sourcemap_ref(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     get_sourcemap_ref_from_headers(file).or_else(|| get_sourcemap_ref_from_contents(file))
 }
 
@@ -150,7 +161,7 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
-    sources: ReleaseFiles,
+    sources: SourceFiles,
 }
 
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
@@ -195,8 +206,13 @@ impl SourceMapProcessor {
         for (url, mut file) in self.pending_sources.drain() {
             pb.set_message(&url);
 
-            let ty = if sourcemap::is_sourcemap_slice(&file.contents) {
-                SourceFileType::SourceMap
+            let (ty, debug_id) = if sourcemap::is_sourcemap_slice(&file.contents) {
+                (
+                    SourceFileType::SourceMap,
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(discover_sourcemap_embedded_debug_id),
+                )
             } else if file
                 .path
                 .file_name()
@@ -205,7 +221,7 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
             {
-                SourceFileType::IndexedRamBundle
+                (SourceFileType::IndexedRamBundle, None)
             } else if file
                 .path
                 .file_name()
@@ -214,7 +230,12 @@ impl SourceMapProcessor {
                 .unwrap_or(false)
                 || is_likely_minified_js(&file.contents)
             {
-                SourceFileType::MinifiedSource
+                (
+                    SourceFileType::MinifiedSource,
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(discover_debug_id),
+                )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
                 // For the react-native Hermes case, we skip uploading the bytecode bundle,
@@ -222,19 +243,25 @@ impl SourceMapProcessor {
                 // will get a SourceMap reference, and the server side processor
                 // should deal with it accordingly.
                 file.contents.clear();
-                SourceFileType::MinifiedSource
+                (SourceFileType::MinifiedSource, None)
             } else {
-                SourceFileType::Source
+                (SourceFileType::Source, None)
             };
+
+            // attach the debug id to the artifact bundle when it's detected
+            let mut headers = Vec::new();
+            if let Some(debug_id) = debug_id {
+                headers.push(("debug-id".to_string(), debug_id.to_string()));
+            }
 
             self.sources.insert(
                 url.clone(),
-                ReleaseFile {
+                SourceFile {
                     url: url.clone(),
                     path: file.path,
                     contents: file.contents,
                     ty,
-                    headers: vec![],
+                    headers,
                     messages: vec![],
                     already_uploaded: false,
                 },
@@ -281,15 +308,23 @@ impl SourceMapProcessor {
                 continue;
             }
 
+            let mut pieces = Vec::new();
+
             if source.ty == SourceFileType::MinifiedSource {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
-                    let url = sm_ref.get_url();
-                    println!("    {} (sourcemap at {})", &source.url, style(url).cyan());
+                    pieces.push(format!("sourcemap at {}", style(sm_ref.get_url()).cyan()));
                 } else {
-                    println!("    {} (no sourcemap ref)", &source.url);
+                    pieces.push("no sourcemap ref".into());
                 }
+            }
+            if let Some((_, debug_id)) = source.headers.iter().find(|x| x.0 == "debug-id") {
+                pieces.push(format!("debug id {}", style(debug_id).yellow()));
+            }
+
+            if pieces.is_empty() {
+                println!("    {}", source.url);
             } else {
-                println!("    {}", &source.url);
+                println!("    {} ({})", source.url, pieces.join(", "));
             }
 
             for msg in source.messages.iter() {
@@ -302,7 +337,7 @@ impl SourceMapProcessor {
     pub fn validate_all(&mut self) -> Result<()> {
         self.flush_pending_sources();
         let source_urls = self.sources.keys().cloned().collect();
-        let sources: Vec<&mut ReleaseFile> = self.sources.values_mut().collect();
+        let sources: Vec<&mut SourceFile> = self.sources.values_mut().collect();
         let mut failed = false;
 
         println!("{} Validating sources", style(">").dim());
@@ -407,7 +442,7 @@ impl SourceMapProcessor {
             let source_url = join_url(bundle_source_url, &name)?;
             self.sources.insert(
                 source_url.clone(),
-                ReleaseFile {
+                SourceFile {
                     url: source_url.clone(),
                     path: PathBuf::from(name.clone()),
                     contents: sourceview.source().as_bytes().to_vec(),
@@ -425,7 +460,7 @@ impl SourceMapProcessor {
             sourcemap.to_writer(&mut sourcemap_content)?;
             self.sources.insert(
                 sourcemap_url.clone(),
-                ReleaseFile {
+                SourceFile {
                     url: sourcemap_url.clone(),
                     path: PathBuf::from(sourcemap_name),
                     contents: sourcemap_content,
@@ -525,6 +560,17 @@ impl SourceMapProcessor {
             if source.ty != SourceFileType::MinifiedSource {
                 continue;
             }
+
+            // If there is already an embedded reference, use it.
+            if let Ok(contents) = std::str::from_utf8(&source.contents) {
+                if let Some(target_url) = discover_sourcemaps_location(contents) {
+                    source
+                        .headers
+                        .push(("Sourcemap".to_string(), target_url.to_string()));
+                    continue;
+                }
+            }
+
             // we silently ignore when we can't find a sourcemap. Maybe we should
             // log this.
             match guess_sourcemap_reference(&sourcemaps, &source.url) {
@@ -542,9 +588,14 @@ impl SourceMapProcessor {
     }
 
     fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) {
+        // TODO: this endpoint does not exist for non release based uploads
         if !context.dedupe {
             return;
         }
+        let release = match context.release {
+            Some(release) => release,
+            None => return,
+        };
 
         let mut sources_checksums: Vec<_> = self
             .sources
@@ -560,7 +611,7 @@ impl SourceMapProcessor {
         if let Ok(artifacts) = api.list_release_files_by_checksum(
             context.org,
             context.project,
-            context.release,
+            release,
             &sources_checksums,
         ) {
             let already_uploaded_checksums: Vec<_> = artifacts
@@ -580,9 +631,10 @@ impl SourceMapProcessor {
 
     /// Uploads all files
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
+        initialize_legacy_release_upload(context)?;
         self.flush_pending_sources();
         self.flag_uploaded_sources(context);
-        let mut uploader = ReleaseFileUpload::new(context);
+        let mut uploader = FileUpload::new(context);
         uploader.files(&self.sources);
         uploader.upload()?;
         self.dump_log("Source Map Upload Report");
@@ -590,7 +642,7 @@ impl SourceMapProcessor {
     }
 }
 
-fn validate_script(source: &mut ReleaseFile) -> Result<()> {
+fn validate_script(source: &mut SourceFile) -> Result<()> {
     if let Some(sm_ref) = get_sourcemap_ref(source) {
         if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
             source.warn("encountered a legacy reference".into());
@@ -616,7 +668,7 @@ fn validate_script(source: &mut ReleaseFile) -> Result<()> {
 
 fn validate_regular(
     source_urls: &HashSet<String>,
-    source: &mut ReleaseFile,
+    source: &mut SourceFile,
     sm: &sourcemap::SourceMap,
 ) {
     for idx in 0..sm.get_source_count() {
@@ -629,7 +681,7 @@ fn validate_regular(
     }
 }
 
-fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut ReleaseFile) -> Result<()> {
+fn validate_sourcemap(source_urls: &HashSet<String>, source: &mut SourceFile) -> Result<()> {
     match sourcemap::decode_slice(&source.contents)? {
         sourcemap::DecodedMap::Hermes(smh) => validate_regular(source_urls, source, &smh),
         sourcemap::DecodedMap::Regular(sm) => validate_regular(source_urls, source, &sm),

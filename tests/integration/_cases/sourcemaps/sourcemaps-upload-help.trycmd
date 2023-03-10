@@ -28,13 +28,15 @@ Options:
           Optional distribution identifier for the sourcemaps.
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --note <NOTE>
+          Adds an optional note to the uploaded artifact bundle.
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: silent]
       --validate
           Enable basic sourcemap validation.
       --decompress
           Enable files gzip decompression prior to upload.
-      --quiet
-          Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: silent]
       --wait
           Wait for the server to fully process uploaded files.
       --no-sourcemap-reference

@@ -6,7 +6,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
@@ -99,28 +99,25 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(
-        &org,
-        &NewRelease {
-            version: matches.get_one::<String>("release").unwrap().to_string(),
-            projects: vec![project.to_string()],
-            ..Default::default()
-        },
-    )?;
+    // TODO: make this optional
+    let version = matches.get_one::<String>("release").unwrap().to_string();
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
     for dist in matches.get_many::<String>("dist").unwrap() {
         println!(
             "Uploading sourcemaps for release {} distribution {}",
-            &release.version, dist
+            &version, dist
         );
 
         processor.upload(&UploadContext {
             org: &org,
             project: Some(&project),
-            release: &release.version,
+            release: Some(&version),
             dist: Some(dist),
+            note: None,
             wait: matches.get_flag("wait"),
-            ..Default::default()
+            dedupe: false,
+            chunk_upload_options: chunk_upload_options.as_ref(),
         })?;
     }
 
