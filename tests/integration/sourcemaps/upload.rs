@@ -35,7 +35,6 @@ fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
     );
 
     vec![
-        // bad endpoint, bad endpoint
         mock_endpoint(
             EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
                 .with_response_file("releases/get-release.json"),
