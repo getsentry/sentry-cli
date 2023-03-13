@@ -1,6 +1,7 @@
 ```
 $ sentry-cli releases files wat-release upload-sourcemaps --url-prefix '~/assets' build/assets --rewrite
 ? success
+> Injecting debug ids
 > Rewriting sources
 > Adding source map references
 > Bundled 0 files for upload

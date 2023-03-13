@@ -13,6 +13,9 @@ Arguments:
           The path to the javascript files.
 
 Options:
+      --dry-run
+          Don't modify files on disk.
+
   -o, --org <ORG>
           The organization slug
 

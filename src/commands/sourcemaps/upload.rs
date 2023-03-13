@@ -11,7 +11,6 @@ use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::path_as_url;
-use crate::utils::sourcemaps::inject::{inject_file, InjectReport};
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
@@ -305,7 +304,6 @@ fn process_sources_from_paths(
         .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
-    let inject_files = !matches.get_flag("no_inject");
 
     let opts = MatchOptions::new();
     let collected_paths = paths.flat_map(|path| glob_with(path, opts).unwrap().flatten());
@@ -347,26 +345,15 @@ fn process_sources_from_paths(
             url_prefix = &url_prefix[..url_prefix.len() - 1];
         }
 
-        if inject_files {
-            let mut report = InjectReport::default();
-            for source in &sources {
-                if source
-                    .path
-                    .extension()
-                    .map_or(false, |ext| ext == "js" || ext == "cjs" || ext == "mjs")
-                {
-                    inject_file(&source.path, &mut report)?;
-                }
-            }
-
-            println!("{report}")
-        }
-
         for source in sources {
             let local_path = source.path.strip_prefix(base_path).unwrap();
             let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
             processor.add(&url, source)?;
         }
+    }
+
+    if !matches.get_flag("no_inject") {
+        processor.inject_debug_ids(false)?;
     }
 
     if !matches.get_flag("no_rewrite") {

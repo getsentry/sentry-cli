@@ -1,6 +1,9 @@
 ```
 $ sentry-cli sourcemaps inject .
 ? success
+> Found 19 release files
+> Analyzing 19 sources
+> Injecting debug ids
 Modified: The following source files have been modified to have debug ids
   - [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.js
   - [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.js
@@ -20,7 +23,6 @@ Ignored: The following sourcemap files already have debug ids
   - [..]-[..]-[..]-[..]-[..] - ./static/chunks/pages/asdf-05b39167abbe433b.js.map
 
 Ignored: The following source files don't have sourcemap references 
-  - ./server/chunks/flight-server-css-manifest.js
   - ./server/flight-manifest.js
   - ./static/chunks/app/client/layout-ba9c3036fc0dba78.js
   - ./static/chunks/app/head-172ad45600676c06.js
