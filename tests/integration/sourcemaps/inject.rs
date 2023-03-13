@@ -9,12 +9,11 @@ fn command_sourcemaps_inject_help() {
 
 #[test]
 fn command_sourcemaps_inject_output() {
-    remove_dir_all("tests/integration/_cases/sourcemaps/sourcemaps-inject.in/").unwrap();
-    copy_recursively(
-        "tests/integration/_fixtures/inject/",
-        "tests/integration/_cases/sourcemaps/sourcemaps-inject.in/",
-    )
-    .unwrap();
+    let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively("tests/integration/_fixtures/inject/", testcase_cwd_path).unwrap();
 
     register_test("sourcemaps/sourcemaps-inject.trycmd");
 }

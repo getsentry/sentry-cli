@@ -200,7 +200,7 @@ fn fixup_files(paths: &[PathBuf]) -> Result<Report> {
 /// where `<CODE_SNIPPET>[<debug_id>]`
 /// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
 /// placeholder.
-fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
+fn fixup_js_file(js_path: &Path, debug_id: DebugId) -> Result<()> {
     let js_lines = {
         let js_file = File::open(js_path)?;
         let js_file = BufReader::new(js_file);
@@ -219,8 +219,7 @@ fn fixup_js_file(js_path: &Path, debug_id: Uuid) -> Result<()> {
         writeln!(js_file, "{line}")?;
     }
 
-    let to_inject =
-        CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.hyphenated().to_string());
+    let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
     writeln!(js_file)?;
     writeln!(js_file, "{to_inject}")?;
     writeln!(js_file, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
