@@ -11,6 +11,7 @@ use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::path_as_url;
+use crate::utils::sourcemaps::inject::{inject_file, InjectReport};
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
@@ -194,6 +195,17 @@ pub fn make_command(command: Command) -> Command {
                 .short('v')
                 .hide(true),
         )
+        // NOTE: Hidden until we decide to expose it publicly
+        .arg(
+            Arg::new("no_inject")
+                .long("no-inject")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Skip injection of debug ids into source files \
+                    and sourcemaps prior to uploading.",
+                )
+                .hide(true),
+        )
 }
 
 fn get_prefixes_from_args(matches: &ArgMatches) -> Vec<&str> {
@@ -293,6 +305,7 @@ fn process_sources_from_paths(
         .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_else(Vec::new);
+    let inject_files = !matches.get_flag("no_inject");
 
     let opts = MatchOptions::new();
     let collected_paths = paths.flat_map(|path| glob_with(path, opts).unwrap().flatten());
@@ -332,6 +345,21 @@ fn process_sources_from_paths(
         // remove a single slash from the end.  so ~/ becomes ~ and app:/// becomes app://
         if url_prefix.ends_with('/') {
             url_prefix = &url_prefix[..url_prefix.len() - 1];
+        }
+
+        if inject_files {
+            let mut report = InjectReport::default();
+            for source in &sources {
+                if source
+                    .path
+                    .extension()
+                    .map_or(false, |ext| ext == "js" || ext == "cjs" || ext == "mjs")
+                {
+                    inject_file(&source.path, &mut report)?;
+                }
+            }
+
+            println!("{report}")
         }
 
         for source in sources {
