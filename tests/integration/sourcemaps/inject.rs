@@ -1,5 +1,6 @@
-use crate::integration::register_test;
-use assert_fs::prelude::*;
+use std::fs::remove_dir_all;
+
+use crate::integration::{copy_recursively, register_test};
 
 #[test]
 fn command_sourcemaps_inject_help() {
@@ -8,11 +9,12 @@ fn command_sourcemaps_inject_help() {
 
 #[test]
 fn command_sourcemaps_inject_output() {
-    let temp = assert_fs::TempDir::new().unwrap();
-    let fixtures_path = temp.as_os_str().to_str().unwrap().to_string();
-    temp.copy_from("tests/integration/_fixtures/inject", &["*"])
-        .unwrap();
+    remove_dir_all("tests/integration/_cases/sourcemaps/sourcemaps-inject.in/").unwrap();
+    copy_recursively(
+        "tests/integration/_fixtures/inject/",
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject.in/",
+    )
+    .unwrap();
 
-    let t = register_test("sourcemaps/sourcemaps-inject.trycmd");
-    t.env("FIXTURES_PATH", fixtures_path);
+    register_test("sourcemaps/sourcemaps-inject.trycmd");
 }

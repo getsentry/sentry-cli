@@ -34,46 +34,8 @@ impl fmt::Display for Report {
                 f,
                 "Modified: The following source files have been modified to have debug ids"
             )?;
-            writeln!(f, "---")?;
-
             for (path, debug_id) in &self.injected {
-                writeln!(f, "{debug_id} - {}", path.display())?;
-            }
-        }
-
-        if !self.previously_injected.is_empty() {
-            writeln!(
-                f,
-                "\nIgnored: The following source files already have debug ids"
-            )?;
-            writeln!(f, "---")?;
-
-            for (path, debug_id) in &self.previously_injected {
-                writeln!(f, "{debug_id} - {}", path.display())?;
-            }
-        }
-
-        if !self.skipped.is_empty() {
-            writeln!(
-                f,
-                "\nIgnored: The following source files don't have sourcemap references "
-            )?;
-            writeln!(f, "---")?;
-
-            for path in &self.skipped {
-                writeln!(f, "{}", path.display())?;
-            }
-        }
-
-        if !self.missing_sourcemaps.is_empty() {
-            writeln!(
-                f,
-                "\nIgnored: The following source files refer to sourcemaps that couldn't be found"
-            )?;
-            writeln!(f, "---")?;
-
-            for path in &self.missing_sourcemaps {
-                writeln!(f, "{}", path.display())?;
+                writeln!(f, "  - {debug_id} - {}", path.display())?;
             }
         }
 
@@ -82,10 +44,18 @@ impl fmt::Display for Report {
                 f,
                 "\nModified: The following sourcemap files have been modified to have debug ids"
             )?;
-            writeln!(f, "---")?;
-
             for (path, debug_id) in &self.sourcemaps {
-                writeln!(f, "{debug_id} - {}", path.display())?;
+                writeln!(f, "  - {debug_id} - {}", path.display())?;
+            }
+        }
+
+        if !self.previously_injected.is_empty() {
+            writeln!(
+                f,
+                "\nIgnored: The following source files already have debug ids"
+            )?;
+            for (path, debug_id) in &self.previously_injected {
+                writeln!(f, "  - {debug_id} - {}", path.display())?;
             }
         }
 
@@ -94,10 +64,28 @@ impl fmt::Display for Report {
                 f,
                 "\nIgnored: The following sourcemap files already have debug ids"
             )?;
-            writeln!(f, "---")?;
-
             for (path, debug_id) in &self.skipped_sourcemaps {
-                writeln!(f, "{debug_id} - {}", path.display())?;
+                writeln!(f, "  - {debug_id} - {}", path.display())?;
+            }
+        }
+
+        if !self.skipped.is_empty() {
+            writeln!(
+                f,
+                "\nIgnored: The following source files don't have sourcemap references "
+            )?;
+            for path in &self.skipped {
+                writeln!(f, "  - {}", path.display())?;
+            }
+        }
+
+        if !self.missing_sourcemaps.is_empty() {
+            writeln!(
+                f,
+                "\nIgnored: The following source files refer to sourcemaps that couldn't be found"
+            )?;
+            for path in &self.missing_sourcemaps {
+                writeln!(f, "  - {}", path.display())?;
             }
         }
 
@@ -178,7 +166,7 @@ fn fixup_files(paths: &[PathBuf]) -> Result<Report> {
         let sourcemap_path = js_path.with_file_name(sourcemap_url);
 
         if !sourcemap_path.exists() {
-            warn!("Sourcemap file {} not found", sourcemap_path.display());
+            debug!("Sourcemap file {} not found", sourcemap_path.display());
             report.missing_sourcemaps.push(path.clone());
             continue;
         }
