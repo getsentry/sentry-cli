@@ -1,5 +1,5 @@
 ```
-$ sentry-cli[EXE] sourcemaps inject --help
+$ sentry-cli sourcemaps inject --help
 ? success
 Fixes up JavaScript source files and sourcemaps with debug ids.
 
@@ -10,7 +10,7 @@ Usage: sentry-cli[EXE] sourcemaps inject [OPTIONS] <PATH>
 
 Arguments:
   <PATH>
-          The path or glob to the javascript files.
+          The path to the javascript files.
 
 Options:
   -o, --org <ORG>

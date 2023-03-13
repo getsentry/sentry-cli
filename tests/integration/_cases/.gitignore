@@ -1,0 +1,4 @@
+# *.in/ directories act as CWDs for the testcases with the same name
+# eg. sourcemaps/sourcemaps-inject.in => sourcemaps/sourcemaps-inject.trycmd
+# They are created on-demand by the test setup, using predefined fixtures.
+*.in/

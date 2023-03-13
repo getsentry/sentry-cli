@@ -26,6 +26,8 @@ use crate::utils::file_upload::{
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
 
+pub mod inject;
+
 fn is_likely_minified_js(code: &[u8]) -> bool {
     // if we have a debug id or source maps location reference, this is a minified file
     if let Ok(code) = std::str::from_utf8(code) {
