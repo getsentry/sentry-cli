@@ -684,12 +684,7 @@ impl SourceMapProcessor {
                 }
 
                 let sourcemap_url = match js::discover_sourcemaps_location(contents) {
-                    Some(url) => source
-                        .path
-                        .with_file_name(url)
-                        .into_os_string()
-                        .into_string()
-                        .unwrap(),
+                    Some(url) => url.to_string(),
                     None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
                         Ok(url) => url,
                         Err(_) => {
@@ -698,6 +693,13 @@ impl SourceMapProcessor {
                         }
                     },
                 };
+
+                let sourcemap_url = source
+                    .path
+                    .with_file_name(sourcemap_url)
+                    .into_os_string()
+                    .into_string()
+                    .unwrap();
 
                 sourcemap_refs.push((source.url.clone(), sourcemap_url));
             }
