@@ -13,7 +13,7 @@ use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
 use symbolic::debuginfo::js::{
-    self, discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
+    discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
 };
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
@@ -675,7 +675,7 @@ impl SourceMapProcessor {
             }
 
             if let Ok(contents) = std::str::from_utf8(&source.contents) {
-                if let Some(debug_id) = js::discover_debug_id(contents) {
+                if let Some(debug_id) = discover_debug_id(contents) {
                     debug!("File {} was previously processed", source.path.display());
                     report
                         .previously_injected
@@ -683,7 +683,7 @@ impl SourceMapProcessor {
                     continue;
                 }
 
-                let sourcemap_url = match js::discover_sourcemaps_location(contents) {
+                let sourcemap_url = match discover_sourcemaps_location(contents) {
                     Some(url) => url.to_string(),
                     None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
                         Ok(url) => url,
