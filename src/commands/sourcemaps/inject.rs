@@ -1,9 +1,11 @@
-use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
-use log::{debug, warn};
-use walkdir::WalkDir;
+use std::path::PathBuf;
 
-use crate::utils::sourcemaps::inject::{inject_file, InjectReport};
+use anyhow::Result;
+use clap::{Arg, ArgAction, ArgMatches, Command};
+
+use crate::utils::file_search::ReleaseFileSearch;
+use crate::utils::fs::path_as_url;
+use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -20,42 +22,27 @@ pub fn make_command(command: Command) -> Command {
                 .required(true)
                 .help("The path to the javascript files."),
         )
+        .arg(
+            Arg::new("dry_run")
+                .long("dry-run")
+                .action(ArgAction::SetTrue)
+                .help("Don't modify files on disk."),
+        )
         .hide(true)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = matches.get_one::<String>("path").unwrap();
+    let mut processor = SourceMapProcessor::new();
+    let path: PathBuf = matches.get_one::<String>("path").unwrap().into();
+    let dry_run = matches.get_flag("dry_run");
 
-    let mut collected_paths = Vec::new();
-    for entry in WalkDir::new(path) {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(ref e) => {
-                debug!("Skipping file: {e}");
-                continue;
-            }
-        };
-
-        if entry
-            .path()
-            .extension()
-            .map_or(false, |ext| ext == "js" || ext == "cjs" || ext == "mjs")
-        {
-            collected_paths.push(entry.path().to_owned());
-        }
+    let search = ReleaseFileSearch::new(path);
+    let sources = search.collect_files()?;
+    for source in sources {
+        let url = path_as_url(&source.path);
+        processor.add(&url, source)?;
     }
 
-    if collected_paths.is_empty() {
-        warn!("Did not find any JavaScript files in path: {path}",);
-        return Ok(());
-    }
-
-    let mut report = InjectReport::default();
-    for path in &collected_paths {
-        inject_file(path, &mut report)?;
-    }
-
-    println!("{report}");
-
+    processor.inject_debug_ids(dry_run)?;
     Ok(())
 }

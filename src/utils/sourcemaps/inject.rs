@@ -1,14 +1,13 @@
 use itertools::Itertools;
-use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, Write};
-use std::path::{Path, PathBuf};
-use std::{fmt, fs};
 
-use anyhow::{bail, Context, Result};
+use std::fmt;
+use std::io::{BufRead, Write};
+use std::path::PathBuf;
+
+use anyhow::{bail, Result};
 use log::debug;
 use sentry::types::DebugId;
 use serde_json::Value;
-use symbolic::debuginfo::js;
 use uuid::Uuid;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
@@ -18,12 +17,23 @@ const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 #[derive(Debug, Clone, Default)]
 pub struct InjectReport {
-    injected: Vec<(PathBuf, DebugId)>,
-    previously_injected: Vec<(PathBuf, DebugId)>,
-    skipped: Vec<PathBuf>,
-    missing_sourcemaps: Vec<PathBuf>,
-    sourcemaps: Vec<(PathBuf, DebugId)>,
-    skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
+    pub injected: Vec<(PathBuf, DebugId)>,
+    pub previously_injected: Vec<(PathBuf, DebugId)>,
+    pub skipped: Vec<PathBuf>,
+    pub missing_sourcemaps: Vec<PathBuf>,
+    pub sourcemaps: Vec<(PathBuf, DebugId)>,
+    pub skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
+}
+
+impl InjectReport {
+    pub fn is_empty(&self) -> bool {
+        self.injected.is_empty()
+            && self.previously_injected.is_empty()
+            && self.skipped.is_empty()
+            && self.missing_sourcemaps.is_empty()
+            && self.sourcemaps.is_empty()
+            && self.skipped_sourcemaps.is_empty()
+    }
 }
 
 impl fmt::Display for InjectReport {
@@ -92,50 +102,6 @@ impl fmt::Display for InjectReport {
     }
 }
 
-pub fn inject_file(js_path: &Path, report: &mut InjectReport) -> Result<()> {
-    debug!("Processing js file {}", js_path.display());
-
-    let file =
-        fs::read_to_string(js_path).context(format!("Failed to open {}", js_path.display()))?;
-
-    if let Some(debug_id) = js::discover_debug_id(&file) {
-        debug!("File {} was previously processed", js_path.display());
-        report
-            .previously_injected
-            .push((js_path.to_path_buf(), debug_id));
-        return Ok(());
-    }
-
-    let Some(sourcemap_url) = js::discover_sourcemaps_location(&file) else {
-            debug!("File {} does not contain a sourcemap url", js_path.display());
-            report.skipped.push(js_path.to_path_buf());
-            return Ok(());
-        };
-
-    let sourcemap_path = js_path.with_file_name(sourcemap_url);
-
-    if !sourcemap_path.exists() {
-        debug!("Sourcemap file {} not found", sourcemap_path.display());
-        report.missing_sourcemaps.push(js_path.to_path_buf());
-        return Ok(());
-    }
-
-    let (debug_id, sourcemap_modified) = fixup_sourcemap(&sourcemap_path)
-        .context(format!("Failed to process {}", sourcemap_path.display()))?;
-
-    if sourcemap_modified {
-        report.sourcemaps.push((sourcemap_path, debug_id));
-    } else {
-        report.skipped_sourcemaps.push((sourcemap_path, debug_id));
-    }
-
-    fixup_js_file(js_path, debug_id).context(format!("Failed to process {}", js_path.display()))?;
-
-    report.injected.push((js_path.to_path_buf(), debug_id));
-
-    Ok(())
-}
-
 /// Appends the following text to a file:
 /// ```
 ///
@@ -145,32 +111,29 @@ pub fn inject_file(js_path: &Path, report: &mut InjectReport) -> Result<()> {
 /// where `<CODE_SNIPPET>[<debug_id>]`
 /// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
 /// placeholder.
-fn fixup_js_file(js_path: &Path, debug_id: DebugId) -> Result<()> {
-    let js_lines = {
-        let js_file = File::open(js_path)?;
-        let js_file = BufReader::new(js_file);
-        let js_lines: Result<Vec<_>, _> = js_file.lines().collect();
-        js_lines?
-    };
+///
+/// Moreover, if a `sourceMappingURL` comment exists in the file, it is moved to the very end.
+pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
+    let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
 
     let mut sourcemap_comment = None;
-    let mut js_file = File::options().write(true).open(js_path)?;
+    js_contents.clear();
 
-    for line in js_lines.into_iter() {
+    for line in js_lines?.into_iter() {
         if line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=") {
             sourcemap_comment = Some(line);
             continue;
         }
-        writeln!(js_file, "{line}")?;
+        writeln!(js_contents, "{line}")?;
     }
 
     let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
-    writeln!(js_file)?;
-    writeln!(js_file, "{to_inject}")?;
-    writeln!(js_file, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+    writeln!(js_contents)?;
+    writeln!(js_contents, "{to_inject}")?;
+    writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
 
     if let Some(sourcemap_comment) = sourcemap_comment {
-        write!(js_file, "{sourcemap_comment}")?;
+        write!(js_contents, "{sourcemap_comment}")?;
     }
 
     Ok(())
@@ -182,14 +145,8 @@ fn fixup_js_file(js_path: &Path, debug_id: DebugId) -> Result<()> {
 /// Otherwise, a fresh debug id is inserted under that key.
 ///
 /// In either case, the value of the `debug_id` key is returned.
-fn fixup_sourcemap(sourcemap_path: &Path) -> Result<(DebugId, bool)> {
-    let mut sourcemap_file = File::options()
-        .read(true)
-        .write(true)
-        .open(sourcemap_path)?;
-    let mut sourcemap: Value = serde_json::from_reader(&sourcemap_file)?;
-
-    sourcemap_file.rewind()?;
+pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, bool)> {
+    let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
 
     let Some(map) = sourcemap.as_object_mut() else {
         bail!("Invalid sourcemap");
@@ -207,7 +164,7 @@ fn fixup_sourcemap(sourcemap_path: &Path) -> Result<(DebugId, bool)> {
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
 
-            serde_json::to_writer(&mut sourcemap_file, &sourcemap)?;
+            serde_json::to_writer(sourcemap_contents, &sourcemap)?;
             Ok((debug_id, true))
         }
     }

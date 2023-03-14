@@ -1,12 +1,13 @@
 //! Provides sourcemap validation functionality.
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
+use std::io::Write;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::str::FromStr;
 
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
@@ -25,6 +26,7 @@ use crate::utils::file_upload::{
 };
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
+use crate::utils::sourcemaps::inject::{fixup_js_file, InjectReport};
 
 pub mod inject;
 
@@ -640,6 +642,133 @@ impl SourceMapProcessor {
         uploader.files(&self.sources);
         uploader.upload()?;
         self.dump_log("Source Map Upload Report");
+        Ok(())
+    }
+
+    /// Injects debug ids into minified source files and sourcemaps.
+    ///
+    /// This iterates over contained minified source files and their referenced
+    /// sourcemaps and ties them together with debug ids (either freshly generated
+    /// or already contained in the sourcemap).
+    ///
+    /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
+    pub fn inject_debug_ids(&mut self, dry_run: bool) -> Result<()> {
+        self.flush_pending_sources();
+        let sourcemaps = self
+            .sources
+            .iter()
+            .filter_map(|(_, source)| {
+                (source.ty == SourceFileType::SourceMap).then(|| source.url.to_string())
+            })
+            .collect();
+
+        println!("{} Injecting debug ids", style(">").dim());
+
+        let mut report = InjectReport::default();
+
+        // Step 1: find all references from minified source files to sourcemaps
+        let mut sourcemap_refs = Vec::new();
+
+        for source in self.sources.values() {
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            if let Ok(contents) = std::str::from_utf8(&source.contents) {
+                if let Some(debug_id) = discover_debug_id(contents) {
+                    debug!("File {} was previously processed", source.path.display());
+                    report
+                        .previously_injected
+                        .push((source.path.clone(), debug_id));
+                    continue;
+                }
+
+                let sourcemap_url = match discover_sourcemaps_location(contents) {
+                    Some(url) => url.to_string(),
+                    None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
+                        Ok(url) => url,
+                        Err(_) => {
+                            report.skipped.push(source.path.clone());
+                            continue;
+                        }
+                    },
+                };
+
+                let sourcemap_url = source
+                    .url
+                    .rsplit_once('/')
+                    .map(|(base, _)| format!("{base}/{sourcemap_url}"))
+                    .unwrap_or(sourcemap_url);
+
+                sourcemap_refs.push((source.url.clone(), sourcemap_url));
+            }
+        }
+
+        // Step 2: Produce a debug id for each source file by either reading it from the
+        // sourcemap if its already there or generating a fresh one and writing it to the sourcemap
+        // if it isn't.
+        let mut debug_ids = Vec::new();
+
+        for (source_url, sourcemap_url) in sourcemap_refs {
+            let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
+                debug!("Sourcemap file {} not found", sourcemap_url);
+                report.missing_sourcemaps.push(source_url.into());
+                continue;
+            };
+
+            let (debug_id, sourcemap_modified) =
+                inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
+                    "Failed to process {}",
+                    sourcemap_file.path.display()
+                ))?;
+
+            if !dry_run && sourcemap_modified {
+                let mut file = std::fs::File::options()
+                    .write(true)
+                    .open(&sourcemap_file.path)?;
+                file.write_all(&sourcemap_file.contents).context(format!(
+                    "Failed to write sourcemap file {}",
+                    sourcemap_file.path.display()
+                ))?;
+            }
+
+            if sourcemap_modified {
+                report
+                    .sourcemaps
+                    .push((sourcemap_file.path.clone(), debug_id));
+            } else {
+                report
+                    .skipped_sourcemaps
+                    .push((sourcemap_file.path.clone(), debug_id));
+            }
+
+            debug_ids.push((source_url, debug_id));
+        }
+
+        // Step 3: Iterate over the minified sourcemaps again and inject the debug ids.
+        for (source_url, debug_id) in debug_ids {
+            let source_file = self.sources.get_mut(&source_url).unwrap();
+
+            fixup_js_file(&mut source_file.contents, debug_id)
+                .context(format!("Failed to process {}", source_file.path.display()))?;
+
+            if !dry_run {
+                let mut file = std::fs::File::options()
+                    .write(true)
+                    .open(&source_file.path)?;
+                file.write_all(&source_file.contents).context(format!(
+                    "Failed to write source file {}",
+                    source_file.path.display()
+                ))?;
+            }
+
+            report.injected.push((source_file.path.clone(), debug_id));
+        }
+
+        if !report.is_empty() {
+            println!("{report}");
+        }
+
         Ok(())
     }
 }
