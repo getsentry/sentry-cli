@@ -694,8 +694,11 @@ impl SourceMapProcessor {
                     },
                 };
 
-                let (base, _) = source.url.rsplit_once('/').unwrap_or((&source.url, ""));
-                let sourcemap_url = format!("{base}/{sourcemap_url}");
+                let sourcemap_url = source
+                    .url
+                    .rsplit_once('/')
+                    .map(|(base, _)| format!("{base}/{sourcemap_url}"))
+                    .unwrap_or(sourcemap_url);
 
                 sourcemap_refs.push((source.url.clone(), sourcemap_url));
             }
