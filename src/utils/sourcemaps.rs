@@ -657,9 +657,9 @@ impl SourceMapProcessor {
         let sourcemaps = self
             .sources
             .iter()
-            .map(|x| x.1)
-            .filter(|x| x.ty == SourceFileType::SourceMap)
-            .map(|x| x.url.to_string())
+            .filter_map(|(_, source)| {
+                (source.ty == SourceFileType::SourceMap).then(|| source.url.to_string())
+            })
             .collect();
 
         println!("{} Injecting debug ids", style(">").dim());

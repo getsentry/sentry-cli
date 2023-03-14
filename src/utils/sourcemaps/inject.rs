@@ -112,7 +112,7 @@ impl fmt::Display for InjectReport {
 /// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
 /// placeholder.
 ///
-/// Moreover, if a `sourceMappingURL` comment exists in the file, it is moved to the very end.,
+/// Moreover, if a `sourceMappingURL` comment exists in the file, it is moved to the very end.
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
     let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
 
