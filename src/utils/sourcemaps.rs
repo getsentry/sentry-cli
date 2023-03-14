@@ -694,12 +694,8 @@ impl SourceMapProcessor {
                     },
                 };
 
-                let sourcemap_url = source
-                    .path
-                    .with_file_name(sourcemap_url)
-                    .into_os_string()
-                    .into_string()
-                    .unwrap();
+                let (base, _) = source.url.rsplit_once('/').unwrap_or((&source.url, ""));
+                let sourcemap_url = format!("{base}/{sourcemap_url}");
 
                 sourcemap_refs.push((source.url.clone(), sourcemap_url));
             }
