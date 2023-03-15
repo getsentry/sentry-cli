@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.15.0
+
+### Various fixes & improvements
+
+- feat: Implement new chunk based upload for standalone artifact bundles (#1490)
+- feat: Inject sourcemap debug ids by default when performing `sourcemaps upload` and print injection report (#1513)
+- ref: Use recursive walk instead of globbing when looking for `sourcemaps inject` files (#1504)
+- ref: When injecting sourcemap debug ids, make sure that `sourceMappingURL` comment is always kept at the end of a file (#1511)
+
 ## 2.14.4
 
 ### Various fixes & improvements
