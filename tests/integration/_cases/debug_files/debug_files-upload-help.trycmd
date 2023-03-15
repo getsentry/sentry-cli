@@ -67,6 +67,7 @@ Options:
                                  only be displayed if --wait is specified, but this will
                                  significantly slow down the upload process.
       --il2cpp-mapping           Compute il2cpp line mappings and upload them along with sources.
+      --dartsymbols-mapping      Upload Dart symbols mapping files for deobfuscation.
   -h, --help                     Print help
 
 ```

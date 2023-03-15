@@ -81,6 +81,7 @@ enum ParsedDif<'a> {
     BcSymbolMap(BcSymbolMap<'a>),
     UuidMap(UuidMapping),
     Il2Cpp,
+    DartSymbols,
 }
 
 impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
@@ -184,6 +185,21 @@ impl<'data> DifMatch<'data> {
         })
     }
 
+    fn from_dartsymbols(uuid: DebugId, name: String, data: ByteView<'static>) -> Result<Self> {
+        // TODO(Nar): This was a guess, but I want to just read the data as JSON without modifications
+        let dif = SelfCell::try_new(data, |buf| {
+            serde_json::from_slice::<serde_json::Value>(unsafe { &*buf }).map(|_| ParsedDif::DartSymbols)
+        })?;
+
+        Ok(Self {
+            _backing: None,
+            dif,
+            name,
+            debug_id: Some(uuid),
+            attachments: None,
+        })
+    }
+
     /// Moves the specified temporary debug file to a safe location and assumes
     /// ownership. The file will be deleted in the file system when this
     /// `DifMatch` is dropped.
@@ -208,6 +224,7 @@ impl<'data> DifMatch<'data> {
             ParsedDif::BcSymbolMap(_) => None,
             ParsedDif::UuidMap(_) => None,
             ParsedDif::Il2Cpp => None,
+            ParsedDif::DartSymbols => None,
         }
     }
 
@@ -217,6 +234,7 @@ impl<'data> DifMatch<'data> {
             ParsedDif::BcSymbolMap(_) => DifFormat::BcSymbolMap,
             ParsedDif::UuidMap(_) => DifFormat::PList,
             ParsedDif::Il2Cpp => DifFormat::Il2Cpp,
+            ParsedDif::DartSymbols => DifFormat::DartSymbols,
         }
     }
 
@@ -227,6 +245,7 @@ impl<'data> DifMatch<'data> {
             ParsedDif::BcSymbolMap(_) => self.dif.owner(),
             ParsedDif::UuidMap(_) => self.dif.owner(),
             ParsedDif::Il2Cpp => self.dif.owner(),
+            ParsedDif::DartSymbols => self.dif.owner(),
         }
     }
 
@@ -707,6 +726,10 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::UuidMap) {
                     collected.push(dif);
                 }
+            } else if buffer.starts_with(b"[\"\",\"\",") {
+                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::DartSymbols) {
+                    collected.push(dif);
+                }
             };
 
             pb.set_prefix(&collected.len().to_string());
@@ -750,6 +773,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
 enum AuxDifKind {
     BcSymbolMap,
     UuidMap,
+    DartSymbols
 }
 
 impl Display for AuxDifKind {
@@ -757,11 +781,12 @@ impl Display for AuxDifKind {
         match self {
             AuxDifKind::BcSymbolMap => write!(f, "BCSymbolMap"),
             AuxDifKind::UuidMap => write!(f, "UuidMap"),
+            AuxDifKind::DartSymbols => write!(f, "DartSymbols"),
         }
     }
 }
 
-/// Collects a possible BCSymbolmap or PList into a [`DifMatch`].
+/// Collects a possible BCSymbolmap, PList, or DartSymbols map into a [`DifMatch`].
 ///
 /// The `name` is the relative path of the file processed, while `buffer` contains the
 /// actual data.
@@ -775,9 +800,13 @@ fn collect_auxdif<'a>(
         .file_stem()
         .map(|stem| stem.to_string_lossy())
         .unwrap_or_default();
+
+    // TODO(Nar): Can't seem to get past this parse call
     let uuid: DebugId = match file_stem.parse() {
         Ok(uuid) => uuid,
-        Err(_) => {
+        Err(e) => {
+            // TODO(Nar): Remove this, for debugging only.
+            warn!("Error parsing uuid: {}", e);
             if kind == AuxDifKind::BcSymbolMap {
                 // There are loads of plists in a normal XCode Archive that are not valid
                 // UUID mappings.  Warning for all these is pointless.
@@ -793,6 +822,7 @@ fn collect_auxdif<'a>(
     let dif_result = match kind {
         AuxDifKind::BcSymbolMap => DifMatch::from_bcsymbolmap(uuid, name.clone(), buffer),
         AuxDifKind::UuidMap => DifMatch::from_plist(uuid, name.clone(), buffer),
+        AuxDifKind::DartSymbols => DifMatch::from_dartsymbols(uuid, name.clone(), buffer),
     };
     let dif = match dif_result {
         Ok(dif) => dif,
@@ -1506,6 +1536,7 @@ fn poll_dif_assemble(
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::UuidMap(_) => String::from("uuidmap"),
                 ParsedDif::Il2Cpp => String::from("il2cpp"),
+                ParsedDif::DartSymbols => String::from("dartsymbols"),
             };
 
             println!(
@@ -1572,6 +1603,12 @@ fn upload_difs_chunked(
         let il2cpp_mappings = create_il2cpp_mappings(&processed)?;
         processed.extend(il2cpp_mappings);
     }
+
+    // TODO(nar): Do I only need this if I want to run pre-processing?
+    // if options.upload_dartsymbols_mappings {
+    //     let dartsymbols_mappings = create_dartsymbols_mappings(&processed)?;
+    //     processed.extend(dartsymbols_mappings);
+    // }
 
     // Resolve source code context if specified
     if options.include_sources {
@@ -1736,6 +1773,8 @@ pub enum DifFormat {
     PList,
     /// A Unity il2cpp line mapping file.
     Il2Cpp,
+    /// A dart symbols mapping file.
+    DartSymbols,
 }
 
 /// Searches, processes and uploads debug information files (DIFs).
@@ -1787,6 +1826,8 @@ pub struct DifUpload {
     wait: bool,
     upload_il2cpp_mappings: bool,
     il2cpp_mappings_allowed: bool,
+    upload_dartsymbols_mappings: bool,
+    dartsymbols_mappings_allowed: bool,
 }
 
 impl DifUpload {
@@ -1827,6 +1868,8 @@ impl DifUpload {
             wait: false,
             upload_il2cpp_mappings: false,
             il2cpp_mappings_allowed: false,
+            upload_dartsymbols_mappings: false,
+            dartsymbols_mappings_allowed: false,
         }
     }
 
@@ -1978,6 +2021,14 @@ impl DifUpload {
         self
     }
 
+    /// Set whether dartsymbols mappings should be uploaded.
+    ///
+    /// Defaults to `false`.
+    pub fn dartsymbols_mapping(&mut self, dartsymbols_mapping: bool) -> &mut Self {
+        self.upload_dartsymbols_mappings = dartsymbols_mapping;
+        self
+    }
+
     /// Performs the search for DIFs and uploads them.
     ///
     /// ```
@@ -2010,6 +2061,7 @@ impl DifUpload {
             self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
             self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
             self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
+            self.dartsymbols_mappings_allowed = chunk_options.supports(ChunkUploadCapability::DartSymbols);
 
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 self.validate_capabilities();
@@ -2063,6 +2115,10 @@ impl DifUpload {
 
         if self.upload_il2cpp_mappings && !self.il2cpp_mappings_allowed {
             warn!("il2cpp line mappings are not supported by the configured Sentry server");
+        }
+
+        if self.upload_dartsymbols_mappings && !self.dartsymbols_mappings_allowed {
+            warn!("dartsymbols mappings are not supported by the configured Sentry server");
         }
     }
 

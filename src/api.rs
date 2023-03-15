@@ -2601,6 +2601,9 @@ pub enum ChunkUploadCapability {
     /// Upload of il2cpp line mappings
     Il2Cpp,
 
+    /// Upload of dartsymbols obfuscation mappings
+    DartSymbols,
+
     /// Any other unsupported capability (ignored)
     Unknown,
 }
@@ -2619,6 +2622,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "sources" => ChunkUploadCapability::Sources,
             "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
             "il2cpp" => ChunkUploadCapability::Il2Cpp,
+            "dartsymbols" => ChunkUploadCapability::DartSymbols,
             _ => ChunkUploadCapability::Unknown,
         })
     }

@@ -196,6 +196,12 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Compute il2cpp line mappings and upload them along with sources."),
         )
+        .arg(
+            Arg::new("dartsymbols_mapping")
+                .long("dartsymbols-mapping")
+                .action(ArgAction::SetTrue)
+                .help("Upload Dart symbols mapping files for deobfuscation."),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -257,6 +263,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     upload.include_sources(matches.get_flag("include_sources"));
     upload.il2cpp_mapping(matches.get_flag("il2cpp_mapping"));
+    upload.dartsymbols_mapping(matches.get_flag("dartsymbols_mapping"));
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.get_one::<String>("symbol_maps") {
