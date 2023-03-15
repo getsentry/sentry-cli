@@ -6,11 +6,11 @@ Fixes up JavaScript source files and sourcemaps with debug ids.
 For every JS source file that references a sourcemap, a debug id is generated and inserted into both
 files. If the referenced sourcemap already contains a debug id, that id is used instead.
 
-Usage: sentry-cli[EXE] sourcemaps inject [OPTIONS] <PATH>
+Usage: sentry-cli[EXE] sourcemaps inject [OPTIONS] [PATHS]...
 
 Arguments:
-  <PATH>
-          The path to the javascript files.
+  [PATHS]...
+          Paths to the javascript files to inject.
 
 Options:
       --dry-run
