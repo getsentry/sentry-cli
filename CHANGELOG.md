@@ -7,9 +7,9 @@
 ### Various fixes & improvements
 
 - feat: Implement new chunk based upload for standalone artifact bundles (#1490)
-- feat: Inject sourcemap debug ids before upload and print inject report (#1513)
-- ref: Walk dir recursively instead of globbing (#1504)
-- ref: Always keep `sourceMappingURL` comment at end (#1511)
+- feat: Inject sourcemap debug ids by default when performing `sourcemaps upload` and print injection report (#1513)
+- ref: Use recursive walk instead of globbing when looking for `sourcemaps inject` files (#1504)
+- ref: When injecting sourcemap debug ids, make sure that `sourceMappingURL` comment is always kept at the end of a file (#1511)
 
 ## 2.14.4
 
