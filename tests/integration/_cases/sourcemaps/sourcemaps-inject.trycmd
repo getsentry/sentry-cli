@@ -1,7 +1,8 @@
 ```
-$ sentry-cli sourcemaps inject .
+$ sentry-cli sourcemaps inject ./server ./static
 ? success
-> Found 19 release files
+> Found 11 release files
+> Found 8 release files
 > Analyzing 19 sources
 > Injecting debug ids
 Modified: The following source files have been modified to have debug ids
