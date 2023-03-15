@@ -6,6 +6,7 @@
 
 ### Various fixes and improvements
  - fix: Properly overwrite the sourcemap when injecting (#1525)
+ - ref: Allow multiple paths in `sourcemaps inject` (#1523)
 
 ## 2.15.0
 
