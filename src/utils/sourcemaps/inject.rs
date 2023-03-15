@@ -164,8 +164,44 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
 
+            sourcemap_contents.clear();
             serde_json::to_writer(sourcemap_contents, &sourcemap)?;
             Ok((debug_id, true))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::fixup_sourcemap;
+
+    #[test]
+    fn test_fixup_sourcemap() {
+        for sourcemap_path in &[
+            "server/chunks/1.js.map",
+            "server/edge-runtime-webpack.js.map",
+            "server/pages/_document.js.map",
+            "server/pages/asdf.js.map",
+            "static/chunks/575-bb7d7e0e6de8d623.js.map",
+            "static/chunks/app/client/page-d5742c254d9533f8.js.map",
+            "static/chunks/pages/asdf-05b39167abbe433b.js.map",
+        ] {
+            let mut sourcemap_contents = std::fs::read(format!(
+                "tests/integration/_fixtures/inject/{sourcemap_path}"
+            ))
+            .unwrap();
+
+            assert!(
+                sourcemap::decode_slice(&sourcemap_contents).is_ok(),
+                "sourcemap is valid before injection"
+            );
+
+            fixup_sourcemap(&mut sourcemap_contents).unwrap();
+
+            assert!(
+                sourcemap::decode_slice(&sourcemap_contents).is_ok(),
+                "sourcemap is valid after injection"
+            );
         }
     }
 }
