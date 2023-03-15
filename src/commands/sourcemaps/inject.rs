@@ -21,7 +21,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATHS")
                 .num_args(1..)
                 .action(ArgAction::Append)
-                .help("Paths to the javascript files to inject."),
+                .help("A path to recursively search for javascript files that should be processed."),
         )
         .arg(
             Arg::new("dry_run")
