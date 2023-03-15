@@ -2,7 +2,7 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
-## Unreleased
+## 2.15.1
 
 ### Various fixes and improvements
  - fix: Properly overwrite the sourcemap when injecting (#1525)
