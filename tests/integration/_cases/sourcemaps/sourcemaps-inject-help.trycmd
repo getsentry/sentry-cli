@@ -10,7 +10,7 @@ Usage: sentry-cli[EXE] sourcemaps inject [OPTIONS] [PATHS]...
 
 Arguments:
   [PATHS]...
-          Paths to the javascript files to inject.
+          A path to recursively search for javascript files that should be processed.
 
 Options:
       --dry-run
