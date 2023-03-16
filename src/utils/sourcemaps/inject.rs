@@ -178,7 +178,7 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
 /// to `some/dir/path/to/source.min.js`, taking `..` and `.` path segments into account as well as absolute sourcemap URLs
 /// into account.
 ///
-/// A leading `./` segment will be preserved.
+/// Leading `./` segments will be preserved.
 pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String {
     let base_url = source_url
         .rsplit_once('/')
@@ -186,12 +186,12 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
         .unwrap_or("");
 
     let joined = join_path(base_url, sourcemap_url);
-    let cleaned = clean_path(&joined).to_string();
-    if joined.starts_with("./") {
-        format!("./{cleaned}")
-    } else {
-        cleaned
+    let mut cutoff = 0;
+    while joined[cutoff..].starts_with("./") {
+        cutoff += 2;
     }
+
+    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
 }
 
 #[cfg(test)]
@@ -256,8 +256,8 @@ mod tests {
         );
 
         assert_eq!(
-            normalize_sourcemap_url("./foo/bar/baz.js", "../quux/baz.js.map"),
-            "./foo/quux/baz.js.map"
+            normalize_sourcemap_url("././.foo/bar/baz.js", "../quux/baz.js.map"),
+            "././.foo/quux/baz.js.map"
         );
     }
 }
