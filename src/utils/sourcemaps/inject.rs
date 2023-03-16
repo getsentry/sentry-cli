@@ -175,7 +175,7 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
 /// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
 ///
 /// Roughly, this will combine a source URL of `some/dir/source.js` and a sourcemap URL of `path/to/source.min.js`
-/// to `some/dir/path/to/source.min.js`, taking `..` and `.` path segments into account as well as absolute sourcemap URLs
+/// to `some/dir/path/to/source.min.js`, taking `..` and `.` path segments as well as absolute sourcemap URLs
 /// into account.
 ///
 /// Leading `./` segments will be preserved.
