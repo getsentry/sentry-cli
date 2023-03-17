@@ -139,7 +139,7 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
     writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
 
     if let Some(sourcemap_comment) = sourcemap_comment {
-        write!(js_contents, "{sourcemap_comment}")?;
+        writeln!(js_contents, "{sourcemap_comment}")?;
     }
 
     Ok(())
