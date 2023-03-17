@@ -722,6 +722,10 @@ impl SourceMapProcessor {
                     sourcemap_file.path.display()
                 ))?;
 
+            sourcemap_file
+                .headers
+                .push(("debug-id".to_string(), debug_id.to_string()));
+
             if !dry_run && sourcemap_modified {
                 let mut file = std::fs::File::options()
                     .write(true)
@@ -751,6 +755,10 @@ impl SourceMapProcessor {
 
             fixup_js_file(&mut source_file.contents, debug_id)
                 .context(format!("Failed to process {}", source_file.path.display()))?;
+
+            source_file
+                .headers
+                .push(("debug-id".to_string(), debug_id.to_string()));
 
             if !dry_run {
                 let mut file = std::fs::File::options()
