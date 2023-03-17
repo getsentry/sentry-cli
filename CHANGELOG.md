@@ -2,6 +2,11 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+ - fix: Make sourcemap injection on upload opt-in (#1534)
+
 ## 2.15.1
 
 ### Various fixes and improvements
