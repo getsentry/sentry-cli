@@ -115,20 +115,26 @@ impl fmt::Display for InjectReport {
 /// Moreover, if a `sourceMappingURL` comment exists in the file, it is moved to the very end.
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
     let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
+    let mut js_lines = js_lines?;
 
-    let mut sourcemap_comment = None;
     js_contents.clear();
 
-    for line in js_lines?.into_iter() {
-        if line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=") {
-            sourcemap_comment = Some(line);
-            continue;
-        }
+    let sourcemap_comment_idx = js_lines
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_idx, line)| {
+            line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+        })
+        .map(|(idx, _)| idx);
+
+    let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
+
+    for line in js_lines.into_iter() {
         writeln!(js_contents, "{line}")?;
     }
 
     let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
-    writeln!(js_contents)?;
     writeln!(js_contents, "{to_inject}")?;
     writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
 
@@ -173,7 +179,9 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
 
 #[cfg(test)]
 mod tests {
-    use super::fixup_sourcemap;
+    use sentry::types::DebugId;
+
+    use super::{fixup_js_file, fixup_sourcemap};
 
     #[test]
     fn test_fixup_sourcemap() {
@@ -203,5 +211,30 @@ mod tests {
                 "sourcemap is valid after injection"
             );
         }
+    }
+
+    #[test]
+    fn test_fixup_js_file() {
+        let source = r#"//# sourceMappingURL=fake1
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let debug_id = DebugId::default();
+
+        let mut source = Vec::from(source);
+
+        fixup_js_file(&mut source, debug_id).unwrap();
+
+        let expected = r#"//# sourceMappingURL=fake1
+some line
+//# sourceMappingURL=fake2
+something else
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
+//# debugId=00000000-0000-0000-0000-000000000000
+//# sourceMappingURL=real"#;
+
+        assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
     }
 }
