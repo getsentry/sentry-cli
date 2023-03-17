@@ -3,7 +3,6 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map --r
 ? success
 > Found 1 release file
 > Analyzing 1 sources
-> Injecting debug ids
 > Rewriting sources
 > Adding source map references
 > Bundled 1 file for upload
