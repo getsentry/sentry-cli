@@ -160,7 +160,7 @@ fn app() -> Command {
             Arg::new("api_key")
                 .value_name("API_KEY")
                 .long("api-key")
-                .help("The given Sentry API key."),
+                .help("Use the given Sentry API key."),
         )
         .arg(
             Arg::new("log_level")
