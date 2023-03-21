@@ -1,5 +1,5 @@
 ```
-$ sentry-cli monitors run 85a34e5a-c0b6-11ec-9d64-0242ac120002 -- echo 123
+$ sentry-cli monitors run foo-monitor -- echo 123
 ? success
 123
 

@@ -1442,10 +1442,10 @@ impl Api {
     /// Create a new checkin for a monitor
     pub fn create_monitor_checkin(
         &self,
-        monitor: &Uuid,
+        monitor_slug: &String,
         checkin: &CreateMonitorCheckIn,
     ) -> ApiResult<MonitorCheckIn> {
-        let path = &format!("/monitors/{}/checkins/", PathArg(monitor),);
+        let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
         let resp = self.post(path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
@@ -1456,13 +1456,13 @@ impl Api {
     /// Update a checkin for a monitor
     pub fn update_monitor_checkin(
         &self,
-        monitor: &Uuid,
+        monitor_slug: &String,
         checkin_id: &Uuid,
         checkin: &UpdateMonitorCheckIn,
     ) -> ApiResult<MonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
-            PathArg(monitor),
+            PathArg(monitor_slug),
             PathArg(checkin_id),
         );
         let resp = self.put(path, checkin)?;
@@ -2442,6 +2442,7 @@ pub struct Project {
 #[derive(Debug, Deserialize)]
 pub struct Monitor {
     pub id: String,
+    pub slug: String,
     pub name: String,
     pub status: String,
 }

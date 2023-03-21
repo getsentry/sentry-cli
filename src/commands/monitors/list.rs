@@ -20,12 +20,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     monitors.sort_by_key(|p| (p.name.clone()));
 
     let mut table = Table::new();
-    table.title_row().add("ID").add("Name").add("Status");
+    table
+        .title_row()
+        .add("ID")
+        .add("Slug")
+        .add("Name")
+        .add("Status");
 
     for monitor in &monitors {
         table
             .add_row()
             .add(&monitor.id)
+            .add(&monitor.slug)
             .add(&monitor.name)
             .add(&monitor.status);
     }
