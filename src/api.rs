@@ -2463,7 +2463,7 @@ pub enum MonitorCheckinStatus {
 #[derive(Debug, Deserialize)]
 pub struct MonitorCheckIn {
     pub id: Uuid,
-    pub status: MonitorCheckinStatus,
+    pub status: Option<MonitorCheckinStatus>,
     pub duration: Option<u64>,
 }
 

@@ -1,0 +1,8 @@
+```
+$ unset SENTRY_AUTH_TOKEN
+$ SENTRY_DSN=abcd sentry-cli monitors run foo-monitor -- cmd.exe /C echo 123
+? success
+  WARN    [..] Token auth is dprecated for cron monitor checkins. Please use DSN auth.
+123
+
+```

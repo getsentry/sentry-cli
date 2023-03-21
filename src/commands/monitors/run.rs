@@ -1,3 +1,4 @@
+use log::warn;
 use std::process;
 use std::time::Instant;
 
@@ -6,6 +7,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 
 use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
+use crate::config::{Auth, Config};
 use crate::utils::system::{print_error, QuietExit};
 
 pub fn make_command(command: Command) -> Command {
@@ -35,6 +37,13 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
+    let config = Config::current();
+
+    // Token based auth is deprecated, prefer DSN style auth for monitor checkins. Using token
+    // based auth DOES NOT WORK when using slugs!!
+    if !matches!(config.get_auth(), Some(Auth::Dsn(_))) {
+        warn!("Token auth is dprecated for cron monitor checkins. Please use DSN auth.");
+    }
 
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
 
