@@ -1812,6 +1812,10 @@ impl ApiRequest {
                 debug!("using token authentication");
                 self.with_header("Authorization", &format!("Bearer {token}"))
             }
+            Auth::Dsn(ref public_key) => {
+                debug!("using dsn authentication");
+                self.with_header("Authorization", &format!("DSN {public_key}"))
+            }
         }
     }
 
