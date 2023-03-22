@@ -1,3 +1,4 @@
+use log::warn;
 use std::process;
 use std::time::Instant;
 
@@ -6,6 +7,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 
 use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
+use crate::config::Config;
 use crate::utils::system::{print_error, QuietExit};
 
 pub fn make_command(command: Command) -> Command {
@@ -35,6 +37,14 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
+    let config = Config::current();
+    let dsn = config.get_dsn().ok();
+
+    // Token based auth is deprecated, prefer DSN style auth for monitor checkins.
+    // Using token based auth *DOES NOT WORK* when using slugs.
+    if dsn.is_none() {
+        warn!("Token auth is deprecated for cron monitor checkins. Please use DSN auth.");
+    }
 
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
 
@@ -42,6 +52,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
     let monitor_checkin = api.create_monitor_checkin(
+        dsn.clone(),
         monitor_slug,
         &CreateMonitorCheckIn {
             status: MonitorCheckinStatus::InProgress,
@@ -69,6 +80,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     match monitor_checkin {
         Ok(checkin) => {
             api.update_monitor_checkin(
+                dsn,
                 monitor_slug,
                 &checkin.id,
                 &UpdateMonitorCheckIn {
