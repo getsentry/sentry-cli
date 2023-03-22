@@ -24,6 +24,7 @@ use crate::utils::http::is_absolute_url;
 pub enum Auth {
     Key(String),
     Token(String),
+    Dsn(String),
 }
 
 lazy_static! {
@@ -152,6 +153,9 @@ impl Config {
             Some(Auth::Key(ref val)) => {
                 self.ini
                     .set_to(Some("auth"), "api_key".into(), val.to_string());
+            }
+            Some(Auth::Dsn(ref val)) => {
+                self.ini.set_to(Some("auth"), "dsn".into(), val.to_string());
             }
             None => {}
         }
@@ -584,10 +588,14 @@ fn get_default_auth(ini: &Ini) -> Option<Auth> {
         Some(Auth::Token(val))
     } else if let Ok(val) = env::var("SENTRY_API_KEY") {
         Some(Auth::Key(val))
+    } else if let Ok(val) = env::var("SENTRY_DSN") {
+        Some(Auth::Dsn(val))
     } else if let Some(val) = ini.get_from(Some("auth"), "token") {
         Some(Auth::Token(val.to_owned()))
     } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
         Some(Auth::Key(val.to_owned()))
+    } else if let Some(val) = ini.get_from(Some("auth"), "dsn") {
+        Some(Auth::Dsn(val.to_owned()))
     } else {
         None
     }
