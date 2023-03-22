@@ -11,7 +11,7 @@ $ sentry-cli info --config-status-json
     "type": "token",
     "successful": true
   },
-  "have_dsn": true
+  "have_dsn": false
 }
 
 ```

@@ -1,8 +1,13 @@
-use crate::integration::register_test;
+use crate::integration::{register_test_with_opts, AuthMode, RegisterOptions};
 
 #[test]
 fn command_send_event_help() {
-    register_test("send_event/send_event-help.trycmd");
+    register_test_with_opts(
+        "send_event/send_event-help.trycmd",
+        RegisterOptions {
+            auth_mode: AuthMode::Dsn,
+        },
+    );
 }
 
 // I have no idea why this is timing out on Windows.
@@ -11,15 +16,30 @@ fn command_send_event_help() {
 #[cfg(not(windows))]
 #[test]
 fn command_send_event_raw() {
-    register_test("send_event/send_event-raw.trycmd");
+    register_test_with_opts(
+        "send_event/send_event-raw.trycmd",
+        RegisterOptions {
+            auth_mode: AuthMode::Dsn,
+        },
+    );
 }
 
 #[test]
 fn command_send_event_file() {
-    register_test("send_event/send_event-file.trycmd");
+    register_test_with_opts(
+        "send_event/send_event-file.trycmd",
+        RegisterOptions {
+            auth_mode: AuthMode::Dsn,
+        },
+    );
 }
 
 #[test]
 fn command_send_event_raw_fail() {
-    register_test("send_event/send_event-raw-fail.trycmd");
+    register_test_with_opts(
+        "send_event/send_event-raw-fail.trycmd",
+        RegisterOptions {
+            auth_mode: AuthMode::Dsn,
+        },
+    );
 }

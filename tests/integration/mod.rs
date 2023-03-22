@@ -27,20 +27,45 @@ use trycmd::TestCases;
 pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z"#;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[derive(Default)]
+pub enum AuthMode {
+    #[default]
+    Token,
+    Dsn,
+}
+
+#[derive(Default)]
+pub struct RegisterOptions {
+    pub auth_mode: AuthMode,
+}
+
 pub fn register_test(path: &str) -> TestCases {
+    register_test_with_opts(path, RegisterOptions::default())
+}
+
+pub fn register_test_with_opts(path: &str, opts: RegisterOptions) -> TestCases {
     let test_case = TestCases::new();
     test_case
         .env("SENTRY_INTEGRATION_TEST", "1")
         .env("SENTRY_DUMP_RESPONSES", "dump") // reused default directory of `trycmd` output dumps
         .env("SENTRY_URL", server_url())
-        .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
-        .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
         .case(format!("tests/integration/_cases/{path}"));
+
+    match opts.auth_mode {
+        AuthMode::Token => {
+            test_case.env("SENTRY_AUTH_TOKEN", "lolnope");
+        }
+        AuthMode::Dsn => {
+            test_case.env("SENTRY_DSN", format!("https://test@{}/1337", server_url()));
+        }
+    }
+
     test_case.insert_var("[VERSION]", VERSION).unwrap();
     test_case
 }
+
 pub struct EndpointOptions {
     pub method: String,
     pub endpoint: String,
