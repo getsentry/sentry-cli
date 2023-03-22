@@ -1,12 +1,14 @@
 [
   {
     "id": "85a34e5a-c0b6-11ec-9d64-0242ac120002",
-    "name": "foo-monitor",
+    "slug": "foo-monitor",
+    "name": "Foo Monitor",
     "status": "ok"
   },
   {
     "id": "72a34e5a-c0b6-11ec-9d64-0242ac120003",
-    "name": "bar-monitor",
+    "slug": "bar-monitor",
+    "name": "Bar Monitor",
     "status": "in_progress"
   }
 ]
