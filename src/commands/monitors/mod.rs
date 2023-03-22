@@ -24,7 +24,7 @@ pub fn make_command(mut command: Command) -> Command {
         .about("Manage monitors on Sentry.")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        // Legacy command, left hidden for backward compatibility
+        // Beta feature Left hidden while we iterate on this product
         .hide(true);
 
     each_subcommand!(add_subcommand);
