@@ -179,7 +179,11 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
+
     use sentry::types::DebugId;
+
+    use crate::utils::fs::TempFile;
 
     use super::{fixup_js_file, fixup_sourcemap};
 
@@ -237,5 +241,47 @@ something else
 "#;
 
         assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_fixup_js_file_fs_roundtrip() {
+        let source = r#"//# sourceMappingURL=fake1
+
+
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let temp_file = TempFile::create().unwrap();
+        {
+            let mut file = temp_file.open().unwrap();
+            write!(file, "{source}").unwrap();
+        }
+
+        let debug_id = DebugId::default();
+        let mut source = std::fs::read(temp_file.path()).unwrap();
+
+        fixup_js_file(&mut source, debug_id).unwrap();
+
+        {
+            let mut file = temp_file.open().unwrap();
+            file.write_all(&source).unwrap();
+        }
+
+        let result = std::fs::read_to_string(temp_file.path()).unwrap();
+        let expected = r#"//# sourceMappingURL=fake1
+
+
+some line
+//# sourceMappingURL=fake2
+something else
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
+//# debugId=00000000-0000-0000-0000-000000000000
+//# sourceMappingURL=real
+"#;
+
+        println!("{}", result);
+        assert_eq!(result, expected);
     }
 }
