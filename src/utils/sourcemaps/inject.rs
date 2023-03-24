@@ -1,4 +1,5 @@
 use itertools::Itertools;
+use symbolic::common::{clean_path, join_path};
 
 use std::fmt;
 use std::io::{BufRead, Write};
@@ -171,9 +172,31 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
     }
 }
 
+/// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
+///
+/// Roughly, this will combine a source URL of `some/dir/source.js` and a sourcemap URL of `path/to/source.min.js`
+/// to `some/dir/path/to/source.min.js`, taking `..` and `.` path segments as well as absolute sourcemap URLs
+/// into account.
+///
+/// Leading `./` segments will be preserved.
+pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String {
+    let base_url = source_url
+        .rsplit_once('/')
+        .map(|(base, _)| base)
+        .unwrap_or("");
+
+    let joined = join_path(base_url, sourcemap_url);
+    let mut cutoff = 0;
+    while joined[cutoff..].starts_with("./") {
+        cutoff += 2;
+    }
+
+    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
+}
+
 #[cfg(test)]
 mod tests {
-    use super::fixup_sourcemap;
+    use super::{fixup_sourcemap, normalize_sourcemap_url};
 
     #[test]
     fn test_fixup_sourcemap() {
@@ -203,5 +226,38 @@ mod tests {
                 "sourcemap is valid after injection"
             );
         }
+    }
+
+    #[test]
+    fn test_normalize_sourcemap_url() {
+        assert_eq!(
+            normalize_sourcemap_url("foo/bar/baz.js", "baz.js.map"),
+            "foo/bar/baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url("baz.js", "baz.js.map"),
+            "baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url("foo/bar/baz.js", ".././baz.js.map"),
+            "foo/baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url("baz.js", ".././baz.js.map"),
+            "../baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url("foo/bar/baz.js", "/quux/baz.js.map"),
+            "/quux/baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url("././.foo/bar/baz.js", "../quux/baz.js.map"),
+            "././.foo/quux/baz.js.map"
+        );
     }
 }
