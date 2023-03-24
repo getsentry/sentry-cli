@@ -434,6 +434,24 @@ impl Api {
         ApiRequest::create(handle, &method, &url, auth, env, headers)
     }
 
+    /// Convenience method that performs a request using DSN as authentication method.
+    pub fn request_with_dsn_auth(
+        &self,
+        method: Method,
+        url: &str,
+        dsn: Dsn,
+    ) -> ApiResult<ApiResponse> {
+        // We resolve an absolute URL to skip default authentication flow.
+        let url = self
+            .config
+            .get_api_endpoint(url)
+            .map_err(|err| ApiError::with_source(ApiErrorKind::BadApiUrl, err))?;
+
+        self.request(method, &url)?
+            .with_header("Authorization", &format!("DSN {dsn}"))?
+            .send()
+    }
+
     /// Convenience method that performs a `GET` request.
     pub fn get(&self, path: &str) -> ApiResult<ApiResponse> {
         self.request(Method::Get, path)?.send()
@@ -1449,9 +1467,7 @@ impl Api {
     ) -> ApiResult<MonitorCheckIn> {
         let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
         let resp = if let Some(dsn) = dsn {
-            self.request(Method::Post, path)?
-                .with_header("Authorization", &format!("DSN {dsn}"))?
-                .send()?
+            self.request_with_dsn_auth(Method::Post, path, dsn)?
         } else {
             self.post(path, checkin)?
         };
@@ -1475,9 +1491,7 @@ impl Api {
             PathArg(checkin_id),
         );
         let resp = if let Some(dsn) = dsn {
-            self.request(Method::Put, path)?
-                .with_header("Authorization", &format!("DSN {dsn}"))?
-                .send()?
+            self.request_with_dsn_auth(Method::Put, path, dsn)?
         } else {
             self.put(path, checkin)?
         };
