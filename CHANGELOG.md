@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.15.3
+
+### Various fixes & improvements
+
+- ref(crons): Prefer DSN based auth (#1545) by @kamilogorek
+- fix(inject): Improve fixup_js_file (#1533) by @loewenheim
+- feat(inject): Handle relative and absoule sourcemap URLs (#1530) by @loewenheim
+- ref(monitors): Prefer slugs over guids (#1540) by @evanpurkhiser
+- feat(auth): Support DSN auth for the API client (#1536) by @evanpurkhiser
+- ref(crons): monitors command is not legacy atm (#1538) by @evanpurkhiser
+- fix(help): Consistent wording for API keys (#1539) by @evanpurkhiser
+
 ## 2.15.2
 
 ### Various fixes and improvements
