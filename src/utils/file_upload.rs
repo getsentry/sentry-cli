@@ -410,7 +410,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
     // artifact bundles get a random UUID as debug id
-    bundle.set_attribute("debug_id", build_debug_id(&files).to_string());
+    bundle.set_attribute("debug_id", build_debug_id(files).to_string());
     if let Some(note) = context.note {
         bundle.set_attribute("note", note.to_owned());
     }
