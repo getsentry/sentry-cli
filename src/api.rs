@@ -28,6 +28,7 @@ use parking_lot::{Mutex, RwLock};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
 use sentry::protocol::{Exception, Values};
+use sentry::types::Dsn;
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
@@ -431,6 +432,24 @@ impl Api {
         let headers = self.config.get_headers();
 
         ApiRequest::create(handle, &method, &url, auth, env, headers)
+    }
+
+    /// Convenience method that performs a request using DSN as authentication method.
+    pub fn request_with_dsn_auth(
+        &self,
+        method: Method,
+        url: &str,
+        dsn: Dsn,
+    ) -> ApiResult<ApiResponse> {
+        // We resolve an absolute URL to skip default authentication flow.
+        let url = self
+            .config
+            .get_api_endpoint(url)
+            .map_err(|err| ApiError::with_source(ApiErrorKind::BadApiUrl, err))?;
+
+        self.request(method, &url)?
+            .with_header("Authorization", &format!("DSN {dsn}"))?
+            .send()
     }
 
     /// Convenience method that performs a `GET` request.
@@ -1442,11 +1461,16 @@ impl Api {
     /// Create a new checkin for a monitor
     pub fn create_monitor_checkin(
         &self,
+        dsn: Option<Dsn>,
         monitor_slug: &String,
         checkin: &CreateMonitorCheckIn,
     ) -> ApiResult<MonitorCheckIn> {
         let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
-        let resp = self.post(path, checkin)?;
+        let resp = if let Some(dsn) = dsn {
+            self.request_with_dsn_auth(Method::Post, path, dsn)?
+        } else {
+            self.post(path, checkin)?
+        };
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
@@ -1456,6 +1480,7 @@ impl Api {
     /// Update a checkin for a monitor
     pub fn update_monitor_checkin(
         &self,
+        dsn: Option<Dsn>,
         monitor_slug: &String,
         checkin_id: &Uuid,
         checkin: &UpdateMonitorCheckIn,
@@ -1465,7 +1490,12 @@ impl Api {
             PathArg(monitor_slug),
             PathArg(checkin_id),
         );
-        let resp = self.put(path, checkin)?;
+        let resp = if let Some(dsn) = dsn {
+            self.request_with_dsn_auth(Method::Put, path, dsn)?
+        } else {
+            self.put(path, checkin)?
+        };
+
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
@@ -1811,10 +1841,6 @@ impl ApiRequest {
             Auth::Token(ref token) => {
                 debug!("using token authentication");
                 self.with_header("Authorization", &format!("Bearer {token}"))
-            }
-            Auth::Dsn(ref public_key) => {
-                debug!("using dsn authentication");
-                self.with_header("Authorization", &format!("DSN {public_key}"))
             }
         }
     }
@@ -2463,7 +2489,7 @@ pub enum MonitorCheckinStatus {
 #[derive(Debug, Deserialize)]
 pub struct MonitorCheckIn {
     pub id: Uuid,
-    pub status: MonitorCheckinStatus,
+    pub status: Option<MonitorCheckinStatus>,
     pub duration: Option<u64>,
 }
 
