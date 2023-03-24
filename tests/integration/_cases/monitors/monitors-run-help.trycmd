@@ -3,11 +3,11 @@ $ sentry-cli monitors run --help
 ? success
 Wraps a command
 
-Usage: sentry-cli[EXE] monitors run [OPTIONS] <monitor> -- <ARGS>...
+Usage: sentry-cli[EXE] monitors run [OPTIONS] <monitor-slug> -- <ARGS>...
 
 Arguments:
-  <monitor>  The monitor ID
-  <ARGS>...  
+  <monitor-slug>  The monitor slug.
+  <ARGS>...       
 
 Options:
   -f, --allow-failure            Run provided command even when Sentry reports an error.

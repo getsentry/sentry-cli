@@ -4,7 +4,6 @@ use std::time::Instant;
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
-use uuid::Uuid;
 
 use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
 use crate::utils::system::{print_error, QuietExit};
@@ -13,10 +12,10 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Wraps a command")
         .arg(
-            Arg::new("monitor")
-                .help("The monitor ID")
-                .required(true)
-                .value_parser(Uuid::parse_str),
+            Arg::new("monitor_slug")
+                .value_name("monitor-slug")
+                .help("The monitor slug.")
+                .required(true),
         )
         .arg(
             Arg::new("allow_failure")
@@ -37,13 +36,13 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
-    let monitor = matches.get_one::<Uuid>("monitor").unwrap();
+    let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
 
     let allow_failure = matches.get_flag("allow_failure");
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
     let monitor_checkin = api.create_monitor_checkin(
-        monitor,
+        monitor_slug,
         &CreateMonitorCheckIn {
             status: MonitorCheckinStatus::InProgress,
         },
@@ -52,7 +51,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
-    p.env("SENTRY_MONITOR_ID", monitor.to_string());
+    p.env("SENTRY_MONITOR_SLUG", monitor_slug);
 
     let (success, code) = match p.status() {
         Ok(status) => (status.success(), status.code()),
@@ -70,7 +69,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     match monitor_checkin {
         Ok(checkin) => {
             api.update_monitor_checkin(
-                monitor,
+                monitor_slug,
                 &checkin.id,
                 &UpdateMonitorCheckIn {
                     status: Some(if success {

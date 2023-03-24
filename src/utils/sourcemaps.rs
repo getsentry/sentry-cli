@@ -26,7 +26,7 @@ use crate::utils::file_upload::{
 };
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
-use crate::utils::sourcemaps::inject::{fixup_js_file, InjectReport};
+use crate::utils::sourcemaps::inject::{fixup_js_file, normalize_sourcemap_url, InjectReport};
 
 pub mod inject;
 
@@ -694,11 +694,7 @@ impl SourceMapProcessor {
                     },
                 };
 
-                let sourcemap_url = source
-                    .url
-                    .rsplit_once('/')
-                    .map(|(base, _)| format!("{base}/{sourcemap_url}"))
-                    .unwrap_or(sourcemap_url);
+                let sourcemap_url = normalize_sourcemap_url(&source.url, &sourcemap_url);
 
                 sourcemap_refs.push((source.url.clone(), sourcemap_url));
             }

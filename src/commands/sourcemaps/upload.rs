@@ -1,3 +1,4 @@
+use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -352,7 +353,9 @@ fn process_sources_from_paths(
         }
     }
 
-    if !matches.get_flag("no_inject") {
+    if env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
+        && !matches.get_flag("no_inject")
+    {
         processor.inject_debug_ids(false)?;
     }
 

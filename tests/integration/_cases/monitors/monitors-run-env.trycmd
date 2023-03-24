@@ -1,6 +1,6 @@
 ```
-$ sentry-cli monitors run 85a34e5a-c0b6-11ec-9d64-0242ac120002 -- sh -c 'env | sort | grep -E "SENTRY_MONITOR_ID"'
+$ sentry-cli monitors run foo-monitor -- sh -c 'env | sort | grep -E "SENTRY_MONITOR_SLUG"'
 ? success
-SENTRY_MONITOR_ID=85a34e5a-c0b6-11ec-9d64-0242ac120002
+SENTRY_MONITOR_SLUG=foo-monitor
 
 ```
