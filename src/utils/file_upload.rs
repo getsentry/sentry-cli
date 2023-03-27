@@ -17,7 +17,6 @@ use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
-use uuid::Uuid;
 
 use crate::api::NewRelease;
 use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
@@ -372,6 +371,31 @@ fn upload_files_chunked(
     Ok(())
 }
 
+fn build_debug_id(files: &SourceFiles) -> DebugId {
+    let mut sorted_files = Vec::from_iter(files);
+    sorted_files.sort_by_key(|x| x.0);
+
+    let mut hash = sha1_smol::Sha1::new();
+    for (path, source_file) in sorted_files {
+        hash.update(path.as_bytes());
+        if let Some(debug_id) = source_file
+            .headers
+            .iter()
+            .filter_map(|(k, v)| (k == "debug_id").then_some(v))
+            .next()
+        {
+            hash.update(debug_id.as_bytes());
+        } else {
+            hash.update(&[0u8; 16]);
+        }
+        hash.update(&source_file.contents);
+    }
+
+    let mut sha1_bytes = [0u8; 16];
+    sha1_bytes.copy_from_slice(&hash.digest().bytes()[..16]);
+    DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
+}
+
 fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
@@ -386,7 +410,7 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
     // artifact bundles get a random UUID as debug id
-    bundle.set_attribute("debug_id", DebugId::from_uuid(Uuid::new_v4()).to_string());
+    bundle.set_attribute("debug_id", build_debug_id(files).to_string());
     if let Some(note) = context.note {
         bundle.set_attribute("note", note.to_owned());
     }
