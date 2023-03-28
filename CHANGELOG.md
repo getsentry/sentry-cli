@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.16.1
+
+### Various fixes & improvements
+
+- fix: Attach checkin payload to monitor requests (#1550) by @kamilogorek
+- Use a deterministic bundle ID (#1546) by @mitsuhiko
+
 ## 2.16.0
 
 ### Various fixes & improvements
