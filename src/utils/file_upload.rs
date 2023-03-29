@@ -188,6 +188,10 @@ impl<'a> FileUpload<'a> {
             .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
         upload_files_parallel(self.context, &self.files, concurrency)
     }
+
+    pub fn build_source_bundle(&self) -> Result<TempFile> {
+        return build_artifact_bundle(self.context, &self.files);
+    }
 }
 
 fn upload_files_parallel(
