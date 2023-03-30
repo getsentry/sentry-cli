@@ -146,8 +146,8 @@ fn command_sourcemaps_upload_modern() {
 }
 
 #[test]
-fn command_releases_files_upload_sourcemap() {
-    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
+fn command_sourcemaps_upload_empty() {
+    let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -157,5 +157,4 @@ fn command_releases_files_upload_sourcemap() {
         .with_response_body("[]"),
     );
     register_test("releases/releases-files-upload-sourcemaps.trycmd");
-    assert_endpoints(&upload_endpoints);
 }
