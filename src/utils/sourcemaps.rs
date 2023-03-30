@@ -648,10 +648,10 @@ impl SourceMapProcessor {
             let mut uploader = FileUpload::new(context);
             uploader.files(&self.sources);
             uploader.upload()?;
+            self.dump_log("Source Map Upload Report");
         } else {
             println!("{} Nothing to upload", style(">").dim());
         }
-        self.dump_log("Source Map Upload Report");
         Ok(())
     }
 
