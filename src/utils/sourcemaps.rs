@@ -591,14 +591,18 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) {
+    /// Flags the collected sources whether they have already been uploaded before
+    /// (based on their checksum), and returns the number of files that *do* need an upload.
+    fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) -> usize {
+        let mut files_needing_upload = self.sources.len();
+
         // TODO: this endpoint does not exist for non release based uploads
         if !context.dedupe {
-            return;
+            return files_needing_upload;
         }
         let release = match context.release {
             Some(release) => release,
-            None => return,
+            None => return files_needing_upload,
         };
 
         let mut sources_checksums: Vec<_> = self
@@ -618,8 +622,8 @@ impl SourceMapProcessor {
             release,
             &sources_checksums,
         ) {
-            let already_uploaded_checksums: Vec<_> = artifacts
-                .iter()
+            let already_uploaded_checksums: HashSet<_> = artifacts
+                .into_iter()
                 .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())
                 .collect();
 
@@ -627,20 +631,26 @@ impl SourceMapProcessor {
                 if let Ok(checksum) = source.checksum() {
                     if already_uploaded_checksums.contains(&checksum) {
                         source.already_uploaded = true;
+                        files_needing_upload -= 1;
                     }
                 }
             }
         }
+        files_needing_upload
     }
 
     /// Uploads all files
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
         initialize_legacy_release_upload(context)?;
         self.flush_pending_sources();
-        self.flag_uploaded_sources(context);
-        let mut uploader = FileUpload::new(context);
-        uploader.files(&self.sources);
-        uploader.upload()?;
+        let files_needing_upload = self.flag_uploaded_sources(context);
+        if files_needing_upload > 0 {
+            let mut uploader = FileUpload::new(context);
+            uploader.files(&self.sources);
+            uploader.upload()?;
+        } else {
+            println!("{} Nothing to upload", style(">").dim());
+        }
         self.dump_log("Source Map Upload Report");
         Ok(())
     }
