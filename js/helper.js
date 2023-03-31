@@ -15,6 +15,7 @@ function getBinaryPath() {
   const parts = [];
   parts.push(__dirname);
   parts.push('..');
+  parts.push('bin');
   parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
   return path.resolve(...parts);
 }
