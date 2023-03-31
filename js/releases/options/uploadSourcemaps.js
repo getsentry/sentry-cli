@@ -48,4 +48,8 @@ module.exports = {
     param: '--ext',
     type: 'array',
   },
+  useDebugIds: {
+    param: '--use-debug-ids',
+    type: 'boolean',
+  },
 };

@@ -1125,15 +1125,7 @@ impl Api {
             .get(&url)?
             .convert_rnf::<ChunkUploadOptions>(ApiErrorKind::ChunkUploadNotSupported)
         {
-            Ok(mut options) => {
-                // TODO: remove this logic after we can trust the server responses
-                if !options.supports(ChunkUploadCapability::ArtifactBundles)
-                    && env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
-                {
-                    options.accept.push(ChunkUploadCapability::ArtifactBundles);
-                }
-                Ok(Some(options))
-            }
+            Ok(options) => Ok(Some(options)),
             Err(error) => {
                 if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
                     Ok(None)
