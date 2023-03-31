@@ -1,3 +1,4 @@
+use console::style;
 use itertools::Itertools;
 use symbolic::common::{clean_path, join_path};
 
@@ -15,6 +16,34 @@ const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
+
+fn print_section_with_debugid(
+    f: &mut fmt::Formatter<'_>,
+    title: &str,
+    data: &[(PathBuf, DebugId)],
+) -> fmt::Result {
+    print_section_title(f, title)?;
+    for (path, debug_id) in data.iter().sorted_by_key(|x| &x.0) {
+        writeln!(f, "    {debug_id} - {}", path.display())?;
+    }
+    Ok(())
+}
+
+fn print_section_with_path(
+    f: &mut fmt::Formatter<'_>,
+    title: &str,
+    data: &[PathBuf],
+) -> fmt::Result {
+    print_section_title(f, title)?;
+    for path in data.iter().sorted() {
+        writeln!(f, "    {}", path.display())?;
+    }
+    Ok(())
+}
+
+fn print_section_title(f: &mut fmt::Formatter<'_>, title: &str) -> fmt::Result {
+    writeln!(f, "  {}", style(title).yellow().bold())
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct InjectReport {
@@ -39,64 +68,58 @@ impl InjectReport {
 
 impl fmt::Display for InjectReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "\n{}",
+            style("Source Map Debug ID Injection Report").dim().bold()
+        )?;
+
         if !self.injected.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "Modified: The following source files have been modified to have debug ids"
+                "Modified: The following source files have been modified to have debug ids",
+                &self.injected,
             )?;
-            for (path, debug_id) in self.injected.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.sourcemaps.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "\nModified: The following sourcemap files have been modified to have debug ids"
+                "Modified: The following sourcemap files have been modified to have debug ids",
+                &self.sourcemaps,
             )?;
-            for (path, debug_id) in self.sourcemaps.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.previously_injected.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "\nIgnored: The following source files already have debug ids"
+                "Ignored: The following source files already have debug ids",
+                &self.previously_injected,
             )?;
-            for (path, debug_id) in self.previously_injected.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.skipped_sourcemaps.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "\nIgnored: The following sourcemap files already have debug ids"
+                "Ignored: The following sourcemap files already have debug ids",
+                &self.skipped_sourcemaps,
             )?;
-            for (path, debug_id) in self.skipped_sourcemaps.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.skipped.is_empty() {
-            writeln!(
+            print_section_with_path(
                 f,
-                "\nIgnored: The following source files don't have sourcemap references "
+                "Ignored: The following source files don't have sourcemap references ",
+                &self.skipped,
             )?;
-            for path in self.skipped.iter().sorted() {
-                writeln!(f, "  - {}", path.display())?;
-            }
         }
 
         if !self.missing_sourcemaps.is_empty() {
-            writeln!(
+            print_section_with_path(
                 f,
-                "\nIgnored: The following source files refer to sourcemaps that couldn't be found"
+                "Ignored: The following source files refer to sourcemaps that couldn't be found",
+                &self.missing_sourcemaps,
             )?;
-            for path in self.missing_sourcemaps.iter().sorted() {
-                writeln!(f, "  - {}", path.display())?;
-            }
         }
 
         Ok(())
