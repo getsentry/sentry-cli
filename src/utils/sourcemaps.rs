@@ -781,6 +781,8 @@ impl SourceMapProcessor {
 
         if !report.is_empty() {
             println!("{report}");
+        } else {
+            println!("> Nothing to inject")
         }
 
         Ok(())

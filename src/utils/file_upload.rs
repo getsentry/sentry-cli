@@ -294,13 +294,13 @@ fn upload_files_chunked(
     pb.finish_with_duration("Optimizing");
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
-        "{} Uploading release files...\
+        "{} Uploading files...\
        \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
         style(">").dim(),
     ));
 
     upload_chunks(&chunks, options, progress_style)?;
-    println!("{} Uploaded release files to Sentry", style(">").dim());
+    println!("{} Uploaded files to Sentry", style(">").dim());
 
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 

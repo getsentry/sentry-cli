@@ -110,7 +110,7 @@ impl ReleaseFileSearch {
 
     pub fn collect_files(&self) -> Result<Vec<ReleaseFileMatch>> {
         let progress_style = ProgressStyle::default_spinner().template(
-            "{spinner} Searching for release files...\
+            "{spinner} Searching for files...\
         \n  found {prefix:.yellow} {msg:.dim}",
         );
 
@@ -186,7 +186,7 @@ impl ReleaseFileSearch {
 
         pb.finish_and_clear();
         println!(
-            "{} Found {} release {}",
+            "{} Found {} {}",
             style(">").dim(),
             style(collected.len()).yellow(),
             match collected.len() {
