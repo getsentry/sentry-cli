@@ -1,7 +1,7 @@
 ```
 $ sentry-cli sourcemaps inject ./nonexisting
 ? success
-> Found 0 release files
+> Found 0 files
 > Injecting debug ids
 > Nothing to inject
 

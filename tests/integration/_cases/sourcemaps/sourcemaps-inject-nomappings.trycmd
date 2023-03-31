@@ -1,8 +1,8 @@
 ```
 $ sentry-cli sourcemaps inject ./server ./static
 ? success
-> Found 11 release files
-> Found 8 release files
+> Found 11 files
+> Found 8 files
 > Analyzing 19 sources
 > Injecting debug ids
 
