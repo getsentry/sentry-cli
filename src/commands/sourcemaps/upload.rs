@@ -1,3 +1,4 @@
+use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
@@ -376,7 +377,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut processor = SourceMapProcessor::new();
     let mut chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-    if matches.get_flag("use_debug_ids") {
+    if matches.get_flag("use_debug_ids")
+        || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
+    {
         if let Some(ref mut options) = chunk_upload_options {
             if !options.supports(ChunkUploadCapability::ArtifactBundles) {
                 options.accept.push(ChunkUploadCapability::ArtifactBundles);
