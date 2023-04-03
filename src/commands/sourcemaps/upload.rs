@@ -186,7 +186,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("use-debug-ids")
                 .action(ArgAction::SetTrue)
                 .help(
-                    "Use new Artifact Bundles upload, that enables use of Debug ID \
+                    "Use new Artifact Bundles upload, that enables the use of Debug IDs \
                     for Source Maps discovery.",
                 )
                 .hide(true),
