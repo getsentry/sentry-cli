@@ -64,21 +64,19 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("tags")
                 .value_name("KEY:VALUE")
-                .long("tag")
-                .multiple_occurrences(true)
-                .help("Add a tag (key:value) to the event."),
-        )
-        .arg(
-            Arg::new("contexts")
-                .value_name("KEY:VALUE")
-                .long("context")
-                .multiple_occurrences(true)
-                .help("Add a context (key:value) to the event.")
+                .long("tags")
+                .num_args(0..)
+                .help("Add tags (key:value key:value) to the event."),
         )
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(traceback: &str, logfile: &str, tags: clap::Values<'_>, contexts: clap::Values<'_>, environ: bool) -> Result<()> {
+fn send_event(
+        traceback: &str,
+        logfile: &str,
+        tags: clap::parser::ValuesRef<String>,
+        environ: bool
+    ) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
@@ -98,13 +96,6 @@ fn send_event(traceback: &str, logfile: &str, tags: clap::Values<'_>, contexts: 
         let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
         let value = split.next().ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
-    }
-
-    for context in contexts {
-        let mut split = context.splitn(2, ':');
-        let key = split.next().ok_or_else(|| format_err!("missing context key"))?;
-        let value = split.next().ok_or_else(|| format_err!("missing context value"))?;
-        event.contexts.insert(key.into(), value.into());
     }
 
     if environ {
@@ -204,15 +195,13 @@ fn send_event(traceback: &str, logfile: &str, tags: clap::Values<'_>, contexts: 
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let tags = matches.values_of("tags").unwrap_or_default();
-    let contexts = matches.values_of("contexts").unwrap_or_default();
+    let tags = matches.get_many("tags").unwrap_or_default();
 
     if matches.get_flag("send_event") {
         return send_event(
             matches.get_one::<String>("traceback").unwrap(),
             matches.get_one::<String>("log").unwrap(),
             tags,
-            contexts,
             !matches.get_flag("no_environ"),
         );
     }
@@ -230,11 +219,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
-    let mut hook_tags: Vec<char> = tags.into_iter().map(|t| format!("\"{}\"", t.to_string())).join(" ");
-    script = script.replace("___SENTRY_TAGS___", &hook_tags);
-
-    let mut hook_contexts: Vec<char> = contexts.into_iter().map(|c| format!("\"{}\"", c.to_string())).join(" ");
-    script = script.replace("___SENTRY_CONTEXTS___", &hook_contexts);
+    let mut hook_tags = "".to_string();
+    for tag in tags {
+        hook_tags.push_str(&" -t ");
+        let tag_value = format!("\"{}\"", tag);
+        hook_tags.push_str(&tag_value.to_string());
+    }
+    script = script.replace(" ___SENTRY_TAGS___", &hook_tags);
 
     script = script.replace(
         "___SENTRY_CLI___",
