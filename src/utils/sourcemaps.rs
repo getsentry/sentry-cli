@@ -11,12 +11,14 @@ use anyhow::{bail, Context, Error, Result};
 use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
+use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::debuginfo::js::{
     discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
 };
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
+use uuid::Uuid;
 
 use crate::api::Api;
 use crate::utils::enc::decode_unknown_string;
@@ -29,6 +31,11 @@ use crate::utils::progress::ProgressBar;
 use crate::utils::sourcemaps::inject::{fixup_js_file, normalize_sourcemap_url, InjectReport};
 
 pub mod inject;
+
+/// The string prefix denoting a data URL.
+///
+/// Data URLs are used to embed sourcemaps directly in javascript source files.
+const DATA_PREAMBLE: &str = "data:application/json;base64,";
 
 fn is_likely_minified_js(code: &[u8]) -> bool {
     // if we have a debug id or source maps location reference, this is a minified file
@@ -677,7 +684,10 @@ impl SourceMapProcessor {
         let mut report = InjectReport::default();
 
         // Step 1: find all references from minified source files to sourcemaps
+        // We also collect source files with embedded sourcemaps separately
+        // since we also want to inject debug ids into them.
         let mut sourcemap_refs = Vec::new();
+        let mut embedded_sourcemaps = Vec::new();
 
         for source in self.sources.values() {
             if source.ty != SourceFileType::MinifiedSource {
@@ -704,15 +714,20 @@ impl SourceMapProcessor {
                     },
                 };
 
-                let sourcemap_url = normalize_sourcemap_url(&source.url, &sourcemap_url);
+                if sourcemap_url.starts_with(DATA_PREAMBLE) {
+                    embedded_sourcemaps.push(source.url.clone());
+                } else {
+                    let sourcemap_url = normalize_sourcemap_url(&source.url, &sourcemap_url);
 
-                sourcemap_refs.push((source.url.clone(), sourcemap_url));
+                    sourcemap_refs.push((source.url.clone(), sourcemap_url));
+                }
             }
         }
 
         // Step 2: Produce a debug id for each source file by either reading it from the
         // sourcemap if its already there or generating a fresh one and writing it to the sourcemap
         // if it isn't.
+        // For files with embedded sourcmaps, we also generate fresh debug ids.
         let mut debug_ids = Vec::new();
 
         for (source_url, sourcemap_url) in sourcemap_refs {
@@ -753,6 +768,10 @@ impl SourceMapProcessor {
             }
 
             debug_ids.push((source_url, debug_id));
+        }
+
+        for source_url in embedded_sourcemaps {
+            debug_ids.push((source_url, DebugId::from_uuid(Uuid::new_v4())));
         }
 
         // Step 3: Iterate over the minified sourcemaps again and inject the debug ids.
