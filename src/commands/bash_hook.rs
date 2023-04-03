@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -230,33 +230,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
-    let mut hook_tags = "".to_string();
-    for tag in tags {
-        hook_tags.push_str(&"-t ");
-        hook_tags.push_str(format!("\"{}\"", tag.to_string()));
-    }
-    if hook_tags.is_empty() {
-        script = script.replace("___SENTRY_TAGS___", &"")
-    } else {
-        script = script.replace(
-            "___SENTRY_TAGS___",
-            &hook_tags.to_string(),
-        );
-    }
+    let mut hook_tags: Vec<char> = tags.into_iter().map(|t| format!("\"{}\"", t.to_string())).join(" ");
+    script = script.replace("___SENTRY_TAGS___", &hook_tags);
 
-    let mut hook_contexts = "".to_string();
-    for context in contexts {
-        hook_contexts.push_str(&"--extra ");
-        hook_contexts.push_str(format!("\"{}\"", context.to_string()));
-    }
-    if hook_contexts.is_empty() {
-        script = script.replace("___SENTRY_TAGS___", &"")
-    } else {
-        script = script.replace(
-            "___SENTRY_CONTEXTS___",
-            &hook_contexts.to_string(),
-        );
-    }
+    let mut hook_contexts: Vec<char> = contexts.into_iter().map(|c| format!("\"{}\"", c.to_string())).join(" ");
+    script = script.replace("___SENTRY_CONTEXTS___", &hook_contexts);
 
     script = script.replace(
         "___SENTRY_CLI___",
