@@ -48,8 +48,8 @@ module.exports = {
     param: '--ext',
     type: 'array',
   },
-  useDebugIds: {
-    param: '--use-debug-ids',
+  useArtifactBundle: {
+    param: '--use-artifact-bundle',
     type: 'boolean',
   },
 };

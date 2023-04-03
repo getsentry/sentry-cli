@@ -126,7 +126,7 @@ declare module '@sentry/cli' {
     /**
      * Use new Artifact Bundles upload, that enables use of Debug ID for Source Maps discovery.
      */
-    useDebugIds?: boolean;
+    useArtifactBundle?: boolean;
   }
 
   export interface SentryCliNewDeployOptions {

@@ -182,8 +182,8 @@ pub fn make_command(command: Command) -> Command {
         )
         // NOTE: Hidden until we decide to expose it publicly
         .arg(
-            Arg::new("use_debug_ids")
-                .long("use-debug-ids")
+            Arg::new("use_artifact_bundle")
+                .long("use-artifact-bundle")
                 .action(ArgAction::SetTrue)
                 .help(
                     "Use new Artifact Bundles upload, that enables the use of Debug IDs \
@@ -377,7 +377,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut processor = SourceMapProcessor::new();
     let mut chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-    if matches.get_flag("use_debug_ids")
+    if matches.get_flag("use_artifact_bundle")
         || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
     {
         if let Some(ref mut options) = chunk_upload_options {
