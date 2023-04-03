@@ -1,5 +1,5 @@
 //! Provides sourcemap validation functionality.
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::io::Write;
 use std::mem;
@@ -677,6 +677,40 @@ impl SourceMapProcessor {
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
         initialize_legacy_release_upload(context)?;
         self.flush_pending_sources();
+
+        // If there is no release, we have to check that the files at least
+        // contain debug ids.
+        if context.release.is_none() {
+            let mut files_without_debug_id = BTreeSet::new();
+            let mut files_with_debug_id = false;
+
+            for (source_url, sourcemap_url) in &self.sourcemap_references {
+                if sourcemap_url.is_none() {
+                    continue;
+                }
+
+                if self.debug_ids.contains_key(source_url) {
+                    files_with_debug_id = true;
+                } else {
+                    files_without_debug_id.insert(source_url.clone());
+                }
+            }
+
+            // No debug ids on any files -> can't upload
+            if !files_without_debug_id.is_empty() && !files_with_debug_id {
+                bail!("Cannot upload: No release or debug ids provided");
+            }
+
+            // At least some files don't have debug ids -> print a warning
+            if !files_without_debug_id.is_empty() {
+                warn!("Some source files don't have debug ids: ");
+
+                for file in files_without_debug_id {
+                    warn!("- {file}");
+                }
+            }
+        }
+
         let files_needing_upload = self.flag_uploaded_sources(context);
         if files_needing_upload > 0 {
             let mut uploader = FileUpload::new(context);
