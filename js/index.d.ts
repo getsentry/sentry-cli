@@ -43,12 +43,6 @@ declare module '@sentry/cli' {
      */
     silent?: boolean;
     /**
-     * Whether to use the debug ID method of uploading source maps.
-     * This value will update `SENTRY_FORCE_ARTIFACT_BUNDLES` env variable.
-     * @experimental
-     */
-    forceArtifactBundles?: string;
-    /**
      * A header added to every outgoing network request.
      * This value will update `CUSTOM_HEADER` env variable.
      */
@@ -129,6 +123,10 @@ declare module '@sentry/cli' {
      * Usually your build number.
      */
     dist?: string;
+    /**
+     * Use new Artifact Bundles upload, that enables use of Debug ID for Source Maps discovery.
+     */
+    useDebugIds?: boolean;
   }
 
   export interface SentryCliNewDeployOptions {

@@ -170,9 +170,6 @@ async function execute(args, live, silent, configFile, config = {}) {
   if (config.vcsRemote) {
     env.SENTRY_VCS_REMOTE = config.vcsRemote;
   }
-  if (config.forceArtifactBundles) {
-    env.SENTRY_FORCE_ARTIFACT_BUNDLES = config.forceArtifactBundles;
-  }
   if (config.customHeader) {
     env.CUSTOM_HEADER = config.customHeader;
   } else if (config.headers) {
