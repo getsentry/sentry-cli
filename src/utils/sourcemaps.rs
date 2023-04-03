@@ -173,6 +173,8 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
     sources: SourceFiles,
+    sourcemap_references: HashMap<String, Option<String>>,
+    debug_ids: HashMap<String, DebugId>,
 }
 
 fn is_hermes_bytecode(slice: &[u8]) -> bool {
@@ -188,6 +190,8 @@ impl SourceMapProcessor {
         SourceMapProcessor {
             pending_sources: HashSet::new(),
             sources: HashMap::new(),
+            sourcemap_references: HashMap::new(),
+            debug_ids: HashMap::new(),
         }
     }
 
@@ -263,6 +267,7 @@ impl SourceMapProcessor {
             let mut headers = Vec::new();
             if let Some(debug_id) = debug_id {
                 headers.push(("debug-id".to_string(), debug_id.to_string()));
+                self.debug_ids.insert(url.clone(), debug_id);
             }
 
             self.sources.insert(
@@ -280,7 +285,53 @@ impl SourceMapProcessor {
             pb.inc(1);
         }
 
+        self.collect_sourcemap_references();
+
         pb.finish_with_duration("Analyzing");
+    }
+
+    /// Collect references to sourcemaps in minified source files
+    /// and saves them in `self.sourcemap_references`.
+    fn collect_sourcemap_references(&mut self) {
+        let sourcemaps = self
+            .sources
+            .iter()
+            .map(|x| x.1)
+            .filter(|x| x.ty == SourceFileType::SourceMap)
+            .map(|x| x.url.to_string())
+            .collect();
+
+        for source in self.sources.values_mut() {
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            if self.sourcemap_references.contains_key(&source.url) {
+                continue;
+            }
+
+            let Ok(contents) = std::str::from_utf8(&source.contents) else {
+                continue;
+            };
+
+            let sourcemap_url = match discover_sourcemaps_location(contents) {
+                Some(url) => url.to_string(),
+                None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
+                    Ok(target_url) => target_url.to_string(),
+                    Err(err) => {
+                        source.warn(format!(
+                            "could not determine a source map reference ({err})"
+                        ));
+                        self.sourcemap_references
+                            .insert(source.url.to_string(), None);
+                        continue;
+                    }
+                },
+            };
+
+            self.sourcemap_references
+                .insert(source.url.to_string(), Some(sourcemap_url));
+        }
     }
 
     pub fn dump_log(&self, title: &str) {
@@ -558,13 +609,6 @@ impl SourceMapProcessor {
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
-        let sourcemaps = self
-            .sources
-            .iter()
-            .map(|x| x.1)
-            .filter(|x| x.ty == SourceFileType::SourceMap)
-            .map(|x| x.url.to_string())
-            .collect();
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
@@ -572,27 +616,10 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            // If there is already an embedded reference, use it.
-            if let Ok(contents) = std::str::from_utf8(&source.contents) {
-                if let Some(target_url) = discover_sourcemaps_location(contents) {
-                    source
-                        .headers
-                        .push(("Sourcemap".to_string(), target_url.to_string()));
-                    continue;
-                }
-            }
-
-            // we silently ignore when we can't find a sourcemap. Maybe we should
-            // log this.
-            match guess_sourcemap_reference(&sourcemaps, &source.url) {
-                Ok(target_url) => {
-                    source.headers.push(("Sourcemap".to_string(), target_url));
-                }
-                Err(err) => {
-                    source.warn(format!(
-                        "could not determine a source map reference ({err})"
-                    ));
-                }
+            if let Some(Some(sourcemap_url)) = self.sourcemap_references.get(&source.url) {
+                source
+                    .headers
+                    .push(("Sourcemap".to_string(), sourcemap_url.to_string()));
             }
         }
         Ok(())
@@ -671,112 +698,73 @@ impl SourceMapProcessor {
     /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
     pub fn inject_debug_ids(&mut self, dry_run: bool) -> Result<()> {
         self.flush_pending_sources();
-        let sourcemaps = self
-            .sources
-            .iter()
-            .filter_map(|(_, source)| {
-                (source.ty == SourceFileType::SourceMap).then(|| source.url.to_string())
-            })
-            .collect();
-
         println!("{} Injecting debug ids", style(">").dim());
 
         let mut report = InjectReport::default();
 
-        // Step 1: find all references from minified source files to sourcemaps
-        // We also collect source files with embedded sourcemaps separately
-        // since we also want to inject debug ids into them.
-        let mut sourcemap_refs = Vec::new();
-        let mut embedded_sourcemaps = Vec::new();
-
-        for source in self.sources.values() {
-            if source.ty != SourceFileType::MinifiedSource {
-                continue;
-            }
-
-            if let Ok(contents) = std::str::from_utf8(&source.contents) {
-                if let Some(debug_id) = discover_debug_id(contents) {
-                    debug!("File {} was previously processed", source.path.display());
-                    report
-                        .previously_injected
-                        .push((source.path.clone(), debug_id));
-                    continue;
-                }
-
-                let sourcemap_url = match discover_sourcemaps_location(contents) {
-                    Some(url) => url.to_string(),
-                    None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
-                        Ok(url) => url,
-                        Err(_) => {
-                            report.skipped.push(source.path.clone());
-                            continue;
-                        }
-                    },
-                };
-
-                if sourcemap_url.starts_with(DATA_PREAMBLE) {
-                    embedded_sourcemaps.push(source.url.clone());
-                } else {
-                    let sourcemap_url = normalize_sourcemap_url(&source.url, &sourcemap_url);
-
-                    sourcemap_refs.push((source.url.clone(), sourcemap_url));
-                }
-            }
-        }
-
-        // Step 2: Produce a debug id for each source file by either reading it from the
+        // Step 1: Produce a debug id for each source file by either reading it from the
         // sourcemap if its already there or generating a fresh one and writing it to the sourcemap
         // if it isn't.
         // For files with embedded sourcmaps, we also generate fresh debug ids.
         let mut debug_ids = Vec::new();
 
-        for (source_url, sourcemap_url) in sourcemap_refs {
-            let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
+        for (source_url, sourcemap_url) in self.sourcemap_references.iter() {
+            let Some(sourcemap_url) = sourcemap_url else {
+                report.skipped.push(source_url.into());
+                continue;
+            };
+
+            if let Some(debug_id) = self.debug_ids.get(source_url) {
+                report
+                    .previously_injected
+                    .push((source_url.into(), *debug_id));
+            } else if sourcemap_url.starts_with(DATA_PREAMBLE) {
+                debug_ids.push((source_url, DebugId::from_uuid(Uuid::new_v4())));
+            } else {
+                let sourcemap_url = normalize_sourcemap_url(source_url, sourcemap_url);
+                let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
                 debug!("Sourcemap file {} not found", sourcemap_url);
                 report.missing_sourcemaps.push(source_url.into());
                 continue;
             };
 
-            let (debug_id, sourcemap_modified) =
-                inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
-                    "Failed to process {}",
-                    sourcemap_file.path.display()
-                ))?;
+                let (debug_id, sourcemap_modified) =
+                    inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
+                        "Failed to process {}",
+                        sourcemap_file.path.display()
+                    ))?;
 
-            sourcemap_file
-                .headers
-                .push(("debug-id".to_string(), debug_id.to_string()));
+                sourcemap_file
+                    .headers
+                    .push(("debug-id".to_string(), debug_id.to_string()));
 
-            if !dry_run && sourcemap_modified {
-                let mut file = std::fs::File::options()
-                    .write(true)
-                    .open(&sourcemap_file.path)?;
-                file.write_all(&sourcemap_file.contents).context(format!(
-                    "Failed to write sourcemap file {}",
-                    sourcemap_file.path.display()
-                ))?;
+                if !dry_run && sourcemap_modified {
+                    let mut file = std::fs::File::options()
+                        .write(true)
+                        .open(&sourcemap_file.path)?;
+                    file.write_all(&sourcemap_file.contents).context(format!(
+                        "Failed to write sourcemap file {}",
+                        sourcemap_file.path.display()
+                    ))?;
+                }
+
+                if sourcemap_modified {
+                    report
+                        .sourcemaps
+                        .push((sourcemap_file.path.clone(), debug_id));
+                } else {
+                    report
+                        .skipped_sourcemaps
+                        .push((sourcemap_file.path.clone(), debug_id));
+                }
+
+                debug_ids.push((source_url, debug_id));
             }
-
-            if sourcemap_modified {
-                report
-                    .sourcemaps
-                    .push((sourcemap_file.path.clone(), debug_id));
-            } else {
-                report
-                    .skipped_sourcemaps
-                    .push((sourcemap_file.path.clone(), debug_id));
-            }
-
-            debug_ids.push((source_url, debug_id));
         }
 
-        for source_url in embedded_sourcemaps {
-            debug_ids.push((source_url, DebugId::from_uuid(Uuid::new_v4())));
-        }
-
-        // Step 3: Iterate over the minified sourcemaps again and inject the debug ids.
+        // Step 2: Iterate over the minified source files and inject the debug ids.
         for (source_url, debug_id) in debug_ids {
-            let source_file = self.sources.get_mut(&source_url).unwrap();
+            let source_file = self.sources.get_mut(source_url).unwrap();
 
             fixup_js_file(&mut source_file.contents, debug_id)
                 .context(format!("Failed to process {}", source_file.path.display()))?;
@@ -784,6 +772,7 @@ impl SourceMapProcessor {
             source_file
                 .headers
                 .push(("debug-id".to_string(), debug_id.to_string()));
+            self.debug_ids.insert(source_url.clone(), debug_id);
 
             if !dry_run {
                 let mut file = std::fs::File::options()
