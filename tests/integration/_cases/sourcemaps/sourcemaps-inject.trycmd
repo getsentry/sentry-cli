@@ -1,14 +1,15 @@
 ```
 $ sentry-cli sourcemaps inject ./server ./static
 ? success
-> Found 11 files
+> Found 12 files
 > Found 8 files
-> Analyzing 19 sources
+> Analyzing 20 sources
 > Injecting debug ids
 
 Source Map Debug ID Injection Report
   Modified: The following source files have been modified to have debug ids
     [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.js
+    [..]-[..]-[..]-[..]-[..] - ./server/dummy_embedded.js
     [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.js
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/575-bb7d7e0e6de8d623.js
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/pages/asdf-05b39167abbe433b.js
