@@ -32,7 +32,7 @@ _sentry_err_trap() {
   echo "@exit_code:${_exit_code}" >> "$_SENTRY_TRACEBACK_FILE"
 
   : >> "$_SENTRY_LOG_FILE"
-  export SENTRY_LAST_EVENT=$(___SENTRY_CLI___ bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --log "$_SENTRY_LOG_FILE" ___SENTRY_NO_ENVIRON___)
+  export SENTRY_LAST_EVENT=$(___SENTRY_CLI___ bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" ___SENTRY_TAGS___ ___SENTRY_CONTEXTS___ --log "$_SENTRY_LOG_FILE" ___SENTRY_NO_ENVIRON___)
   rm -f "$_SENTRY_TRACEBACK_FILE" "$_SENTRY_LOG_FILE"
 }
 
