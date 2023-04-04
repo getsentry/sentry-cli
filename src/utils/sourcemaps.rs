@@ -698,7 +698,7 @@ impl SourceMapProcessor {
 
             // No debug ids on any files -> can't upload
             if !files_without_debug_id.is_empty() && !files_with_debug_id {
-                bail!("Cannot upload: No release or debug ids provided");
+                bail!("Cannot upload: You must either specify a release or have debug ids injected into your sources");
             }
 
             // At least some files don't have debug ids -> print a warning
