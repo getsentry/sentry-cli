@@ -1,0 +1,1 @@
+self.__RSC_CSS_MANIFEST={"__entry_css_mods__":{"/workspaces/sentry-nextjs-vercel-testproject/app/client/page":[],"/workspaces/sentry-nextjs-vercel-testproject/app/error/page":[],"/workspaces/sentry-nextjs-vercel-testproject/app/page":[]}}

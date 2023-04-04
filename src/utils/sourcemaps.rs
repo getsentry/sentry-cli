@@ -703,7 +703,7 @@ impl SourceMapProcessor {
 
             // At least some files don't have debug ids -> print a warning
             if !files_without_debug_id.is_empty() {
-                warn!("Some source files don't have debug ids: ");
+                warn!("Some source files don't have debug ids:");
 
                 for file in files_without_debug_id {
                     warn!("- {file}");
