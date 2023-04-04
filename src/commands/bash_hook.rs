@@ -221,7 +221,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mut hook_tags = "".to_string();
     for tag in tags {
-        hook_tags.push_str(&" -t ");
+        hook_tags.push_str(" -t ");
         let tag_value = format!("\"{}\"", tag);
         hook_tags.push_str(&tag_value.to_string());
     }
