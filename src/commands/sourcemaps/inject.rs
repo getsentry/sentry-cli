@@ -12,8 +12,11 @@ pub fn make_command(command: Command) -> Command {
         .about("Fixes up JavaScript source files and sourcemaps with debug ids.")
         .long_about(
             "Fixes up JavaScript source files and sourcemaps with debug ids.{n}{n}\
-            For every JS source file that references a sourcemap, a debug id is generated and \
-            inserted into both files. If the referenced sourcemap already contains a debug id, \
+            For every minified JS source file, a debug id is generated and \
+            inserted into the file. If the source file references a \
+            sourcemap and that sourcemap is locally available, \
+            the debug id will be injected into it as well. \
+            If the referenced sourcemap already contains a debug id, \
             that id is used instead.",
         )
         .arg(
@@ -21,7 +24,9 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATHS")
                 .num_args(1..)
                 .action(ArgAction::Append)
-                .help("A path to recursively search for javascript files that should be processed."),
+                .help(
+                    "A path to recursively search for javascript files that should be processed.",
+                ),
         )
         .arg(
             Arg::new("dry_run")

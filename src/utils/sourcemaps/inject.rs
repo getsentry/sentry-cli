@@ -29,18 +29,6 @@ fn print_section_with_debugid(
     Ok(())
 }
 
-fn print_section_with_path(
-    f: &mut fmt::Formatter<'_>,
-    title: &str,
-    data: &[PathBuf],
-) -> fmt::Result {
-    print_section_title(f, title)?;
-    for path in data.iter().sorted() {
-        writeln!(f, "    {}", path.display())?;
-    }
-    Ok(())
-}
-
 fn print_section_title(f: &mut fmt::Formatter<'_>, title: &str) -> fmt::Result {
     writeln!(f, "  {}", style(title).yellow().bold())
 }
@@ -49,8 +37,6 @@ fn print_section_title(f: &mut fmt::Formatter<'_>, title: &str) -> fmt::Result {
 pub struct InjectReport {
     pub injected: Vec<(PathBuf, DebugId)>,
     pub previously_injected: Vec<(PathBuf, DebugId)>,
-    pub skipped: Vec<PathBuf>,
-    pub missing_sourcemaps: Vec<PathBuf>,
     pub sourcemaps: Vec<(PathBuf, DebugId)>,
     pub skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
 }
@@ -59,8 +45,6 @@ impl InjectReport {
     pub fn is_empty(&self) -> bool {
         self.injected.is_empty()
             && self.previously_injected.is_empty()
-            && self.skipped.is_empty()
-            && self.missing_sourcemaps.is_empty()
             && self.sourcemaps.is_empty()
             && self.skipped_sourcemaps.is_empty()
     }
@@ -103,22 +87,6 @@ impl fmt::Display for InjectReport {
                 f,
                 "Ignored: The following sourcemap files already have debug ids",
                 &self.skipped_sourcemaps,
-            )?;
-        }
-
-        if !self.skipped.is_empty() {
-            print_section_with_path(
-                f,
-                "Ignored: The following source files don't have sourcemap references ",
-                &self.skipped,
-            )?;
-        }
-
-        if !self.missing_sourcemaps.is_empty() {
-            print_section_with_path(
-                f,
-                "Ignored: The following source files refer to sourcemaps that couldn't be found",
-                &self.missing_sourcemaps,
             )?;
         }
 
