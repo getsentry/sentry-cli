@@ -725,9 +725,13 @@ impl SourceMapProcessor {
 
     /// Injects debug ids into minified source files and sourcemaps.
     ///
-    /// This iterates over contained minified source files and their referenced
-    /// sourcemaps and ties them together with debug ids (either freshly generated
-    /// or already contained in the sourcemap).
+    /// This iterates over contained minified source files and adds debug ids
+    /// to them. Files already containing debug ids will be untouched.
+    ///
+    /// If a source file refers to a sourcemap and that sourcemap is locally
+    /// available, the debug id will be injected there as well so as to tie
+    /// them together. If for whatever reason the sourcemap already contains
+    /// a debug id, it will be reused for the source file.
     ///
     /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
     pub fn inject_debug_ids(&mut self, dry_run: bool) -> Result<()> {
@@ -737,28 +741,29 @@ impl SourceMapProcessor {
         let mut report = InjectReport::default();
 
         // Step 1: Produce a debug id for each source file by either reading it from the
-        // sourcemap if its already there or generating a fresh one and writing it to the sourcemap
-        // if it isn't.
-        // For files with embedded sourcmaps, we also generate fresh debug ids.
+        // sourcemap if available or else generating a fresh one.
         let mut debug_ids = Vec::new();
 
-        for (source_url, sourcemap_url) in self.sourcemap_references.iter() {
-            let Some(sourcemap_url) = sourcemap_url else {
-                report.skipped.push(source_url.into());
-                continue;
-            };
-
+        for (source_url, sourcemap_url) in &self.sourcemap_references {
             if let Some(debug_id) = self.debug_ids.get(source_url) {
                 report
                     .previously_injected
                     .push((source_url.into(), *debug_id));
-            } else if sourcemap_url.starts_with(DATA_PREAMBLE) {
-                debug_ids.push((source_url, DebugId::from_uuid(Uuid::new_v4())));
+                continue;
+            }
+
+            let Some(sourcemap_url) = sourcemap_url else {
+                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
+                continue;
+            };
+
+            if sourcemap_url.starts_with(DATA_PREAMBLE) {
+                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
             } else {
                 let sourcemap_url = normalize_sourcemap_url(source_url, sourcemap_url);
                 let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
                 debug!("Sourcemap file {} not found", sourcemap_url);
-                report.missing_sourcemaps.push(source_url.into());
+                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
                 continue;
             };
 
@@ -790,13 +795,13 @@ impl SourceMapProcessor {
                         .push((sourcemap_file.path.clone(), debug_id));
                 }
 
-                debug_ids.push((source_url, debug_id));
+                debug_ids.push((source_url.clone(), debug_id));
             }
         }
 
         // Step 2: Iterate over the minified source files and inject the debug ids.
         for (source_url, debug_id) in debug_ids {
-            let source_file = self.sources.get_mut(source_url).unwrap();
+            let source_file = self.sources.get_mut(&source_url).unwrap();
 
             fixup_js_file(&mut source_file.contents, debug_id)
                 .context(format!("Failed to process {}", source_file.path.display()))?;
