@@ -748,9 +748,7 @@ impl SourceMapProcessor {
                 .push(("debug-id".to_string(), debug_id.to_string()));
 
             if !dry_run && sourcemap_modified {
-                let mut file = std::fs::File::options()
-                    .write(true)
-                    .open(&sourcemap_file.path)?;
+                let mut file = std::fs::File::create(&sourcemap_file.path)?;
                 file.write_all(&sourcemap_file.contents).context(format!(
                     "Failed to write sourcemap file {}",
                     sourcemap_file.path.display()
@@ -786,9 +784,7 @@ impl SourceMapProcessor {
                 .push(("debug-id".to_string(), debug_id.to_string()));
 
             if !dry_run {
-                let mut file = std::fs::File::options()
-                    .write(true)
-                    .open(&source_file.path)?;
+                let mut file = std::fs::File::create(&source_file.path)?;
                 file.write_all(&source_file.contents).context(format!(
                     "Failed to write source file {}",
                     source_file.path.display()
