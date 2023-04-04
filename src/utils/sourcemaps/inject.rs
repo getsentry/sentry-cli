@@ -291,11 +291,23 @@ something else
 
     #[test]
     fn test_fixup_js_file_fs_roundtrip() {
-        let source = r#"//# sourceMappingURL=fake1
+        let source = r#"//# sourceMappingURL=fake
 
 
 some line
-//# sourceMappingURL=fake2
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
 //# sourceMappingURL=real
 something else"#;
 
@@ -316,11 +328,23 @@ something else"#;
         }
 
         let result = std::fs::read_to_string(temp_file.path()).unwrap();
-        let expected = r#"//# sourceMappingURL=fake1
+        let expected = r#"//# sourceMappingURL=fake
 
 
 some line
-//# sourceMappingURL=fake2
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
 something else
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 //# debugId=00000000-0000-0000-0000-000000000000
