@@ -64,19 +64,14 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("tags")
                 .value_name("KEY:VALUE")
-                .long("tags")
-                .num_args(0..)
-                .help("Add tags (key:value key:value) to the event."),
+                .long("tag")
+                .action(ArgAction::Append)
+                .help("Add tags (key:value) to the event."),
         )
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(
-        traceback: &str,
-        logfile: &str,
-        tags: clap::parser::ValuesRef<String>,
-        environ: bool
-    ) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str, tags: &[&String], environ: bool) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
@@ -94,7 +89,9 @@ fn send_event(
     for tag in tags {
         let mut split = tag.splitn(2, ':');
         let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
-        let value = split.next().ok_or_else(|| format_err!("missing tag value"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
     }
 
@@ -195,13 +192,16 @@ fn send_event(
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let tags = matches.get_many("tags").unwrap_or_default();
+    let tags = matches
+        .get_many::<String>("tags")
+        .map(|v| v.collect())
+        .unwrap_or_else(Vec::new);
 
     if matches.get_flag("send_event") {
         return send_event(
             matches.get_one::<String>("traceback").unwrap(),
             matches.get_one::<String>("log").unwrap(),
-            tags,
+            &tags,
             !matches.get_flag("no_environ"),
         );
     }
@@ -219,13 +219,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
-    let mut hook_tags = "".to_string();
-    for tag in tags {
-        hook_tags.push_str(" -t ");
-        let tag_value = format!("\"{}\"", tag);
-        hook_tags.push_str(&tag_value.to_string());
-    }
-    script = script.replace(" ___SENTRY_TAGS___", &hook_tags);
+    script = script.replace(
+        " ___SENTRY_TAGS___",
+        &tags
+            .iter()
+            .map(|tag| format!(" --tag \"{}\"", tag))
+            .collect::<Vec<_>>()
+            .join(""),
+    );
 
     script = script.replace(
         "___SENTRY_CLI___",
