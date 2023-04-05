@@ -664,9 +664,13 @@ impl SourceMapProcessor {
 
     /// Injects debug ids into minified source files and sourcemaps.
     ///
-    /// This iterates over contained minified source files and their referenced
-    /// sourcemaps and ties them together with debug ids (either freshly generated
-    /// or already contained in the sourcemap).
+    /// This iterates over contained minified source files and adds debug ids
+    /// to them. Files already containing debug ids will be untouched.
+    ///
+    /// If a source file refers to a sourcemap and that sourcemap is locally
+    /// available, the debug id will be injected there as well so as to tie
+    /// them together. If for whatever reason the sourcemap already contains
+    /// a debug id, it will be reused for the source file.
     ///
     /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
     pub fn inject_debug_ids(&mut self, dry_run: bool) -> Result<()> {
@@ -687,7 +691,7 @@ impl SourceMapProcessor {
         // We also collect source files with embedded sourcemaps separately
         // since we also want to inject debug ids into them.
         let mut sourcemap_refs = Vec::new();
-        let mut embedded_sourcemaps = Vec::new();
+        let mut source_files_without_external_sourcemaps = Vec::new();
 
         for source in self.sources.values() {
             if source.ty != SourceFileType::MinifiedSource {
@@ -708,18 +712,23 @@ impl SourceMapProcessor {
                     None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
                         Ok(url) => url,
                         Err(_) => {
-                            report.skipped.push(source.path.clone());
+                            source_files_without_external_sourcemaps.push(source.url.clone());
                             continue;
                         }
                     },
                 };
 
                 if sourcemap_url.starts_with(DATA_PREAMBLE) {
-                    embedded_sourcemaps.push(source.url.clone());
+                    source_files_without_external_sourcemaps.push(source.url.clone());
                 } else {
                     let sourcemap_url = normalize_sourcemap_url(&source.url, &sourcemap_url);
 
-                    sourcemap_refs.push((source.url.clone(), sourcemap_url));
+                    if self.sources.contains_key(&sourcemap_url) {
+                        sourcemap_refs.push((source.url.clone(), sourcemap_url));
+                    } else {
+                        debug!("Sourcemap file {} not found", sourcemap_url);
+                        source_files_without_external_sourcemaps.push(source.url.clone());
+                    };
                 }
             }
         }
@@ -732,8 +741,6 @@ impl SourceMapProcessor {
 
         for (source_url, sourcemap_url) in sourcemap_refs {
             let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
-                debug!("Sourcemap file {} not found", sourcemap_url);
-                report.missing_sourcemaps.push(source_url.into());
                 continue;
             };
 
@@ -768,7 +775,7 @@ impl SourceMapProcessor {
             debug_ids.push((source_url, debug_id));
         }
 
-        for source_url in embedded_sourcemaps {
+        for source_url in source_files_without_external_sourcemaps {
             debug_ids.push((source_url, DebugId::from_uuid(Uuid::new_v4())));
         }
 
