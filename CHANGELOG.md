@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.0
+
+### Various fixes & improvements
+
+- feat(bash-hook): Add ability to specify tags for bash hook script (#1560)
+- feat(sourcemaps): Add `--use-artifact-bundle` flag to force Artifact Bundles usage (#1557) (#1559)
+- ref(sourcemaps): Check for release or debug ids before upload (#1561)
+- ref(sourcemaps): Skip empty bundle uploads (#1552)
+- ref(inject): Inject files with embedded sourcemaps (#1558)
+- ref(inject): Inject regardless of whether a sourcemap is present (#1563)
+- fix(inject): Use `File::create` to make sure files are truncated (#1562)
+
 ## 2.16.1
 
 ### Various fixes & improvements
