@@ -5,7 +5,7 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -61,10 +61,17 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .hide(true),
         )
+        .arg(
+            Arg::new("tags")
+                .value_name("KEY:VALUE")
+                .long("tag")
+                .action(ArgAction::Append)
+                .help("Add tags (key:value) to the event."),
+        )
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str, tags: &[&String], environ: bool) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
@@ -78,6 +85,15 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
         }),
         ..Event::default()
     };
+
+    for tag in tags {
+        let mut split = tag.splitn(2, ':');
+        let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing tag value"))?;
+        event.tags.insert(key.into(), value.into());
+    }
 
     if environ {
         event.extra.insert(
@@ -176,10 +192,16 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let tags = matches
+        .get_many::<String>("tags")
+        .map(|v| v.collect())
+        .unwrap_or_else(Vec::new);
+
     if matches.get_flag("send_event") {
         return send_event(
             matches.get_one::<String>("traceback").unwrap(),
             matches.get_one::<String>("log").unwrap(),
+            &tags,
             !matches.get_flag("no_environ"),
         );
     }
@@ -196,6 +218,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             &traceback.display().to_string(),
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
+
+    script = script.replace(
+        " ___SENTRY_TAGS___",
+        &tags
+            .iter()
+            .map(|tag| format!(" --tag \"{}\"", tag))
+            .collect::<Vec<_>>()
+            .join(""),
+    );
 
     script = script.replace(
         "___SENTRY_CLI___",
