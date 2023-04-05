@@ -409,7 +409,7 @@ something else"#;
         let expected = r#"//# sourceMappingURL=fake1
 
   // some other comment
- "use strict"; 
+ "use strict";
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 'use strict';
 some line
