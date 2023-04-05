@@ -158,3 +158,16 @@ fn command_sourcemaps_upload_empty() {
     );
     register_test("releases/releases-files-upload-sourcemaps.trycmd");
 }
+
+#[test]
+fn command_sourcemaps_upload_some_debugids() {
+    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern);
+    register_test("sourcemaps/sourcemaps-upload-some-debugids.trycmd");
+    assert_endpoints(&upload_endpoints);
+}
+
+#[test]
+fn command_sourcemaps_upload_no_debugids() {
+    let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern);
+    register_test("sourcemaps/sourcemaps-upload-no-debugids.trycmd");
+}
