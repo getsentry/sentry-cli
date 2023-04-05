@@ -94,23 +94,67 @@ impl fmt::Display for InjectReport {
     }
 }
 
-/// Appends the following text to a file:
+/// Fixes up a minified JS source file with a debug id.
+///
+/// This changes the source file in several ways:
+/// 1. The source code snippet
+/// `<CODE_SNIPPET>[<debug_id>]`
+/// is inserted at the earliest possible position, which is after an initial
+/// block of comments and empty lines and an optional
+/// `"use strict";` or `'use strict';` statement.
+/// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
+/// 3. The last source mapping comment (a comment starting with
+/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
+/// the very end of the file, after the debug id comment from 2.
+/// # Example
 /// ```
+/// let file = "
+/// // a
+/// // comment
+/// // block
 ///
-/// <CODE_SNIPPET>[<debug_id>]
-/// //# sentryDebugId=<debug_id>
-///```
-/// where `<CODE_SNIPPET>[<debug_id>]`
-/// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
-/// placeholder.
+/// // another
+/// // comment
+/// // block
 ///
-/// Moreover, if a `sourceMappingURL` comment exists in the file, it is moved to the very end.
+/// 'use strict';
+/// function t(t) {
+///   return '[object Object]' === Object.prototype.toString.call(t);
+/// }
+/// //# sourceMappingURL=/path/to/sourcemap
+/// ";
+///
+/// let mut file = file.as_bytes().to_vec();
+/// fixup_js_file(&mut file, DebugId::default()).unwrap();
+///
+/// assert_eq!(
+///     std::str::from_utf8(&file).unwrap(),
+///     r#"
+/// // a
+/// // comment
+/// // block
+///
+/// // another
+/// // comment
+/// // block
+///
+/// 'use strict';
+/// !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
+/// function t(t) {
+///   return '[object Object]' === Object.prototype.toString.call(t);
+/// }
+/// //# debugId=00000000-0000-0000-0000-000000000000
+/// //# sourceMappingURL=/path/to/sourcemap
+/// "#
+/// );
+/// ```
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
     let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
     let mut js_lines = js_lines?;
 
     js_contents.clear();
 
+    // Find the last source mapping URL comment, it's the only one that counts
     let sourcemap_comment_idx = js_lines
         .iter()
         .enumerate()
@@ -122,14 +166,35 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
 
     let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
 
-    for line in js_lines.into_iter() {
+    let mut js_lines = js_lines.into_iter().peekable();
+
+    // Write comments and empty lines at the start back to the file
+    while let Some(comment_or_empty) =
+        js_lines.next_if(|line| line.trim().is_empty() || line.trim().starts_with("//"))
+    {
+        writeln!(js_contents, "{comment_or_empty}")?;
+    }
+
+    // Write one "use strict" statement back to the file, if there is one
+    if let Some(use_strict) =
+        js_lines.next_if(|line| line.trim() == "\"use strict\";" || line.trim() == "'use strict';")
+    {
+        writeln!(js_contents, "{use_strict}")?;
+    }
+
+    // Inject the code snippet
+    let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
+    writeln!(js_contents, "{to_inject}")?;
+
+    // Write other lines
+    for line in js_lines {
         writeln!(js_contents, "{line}")?;
     }
 
-    let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
-    writeln!(js_contents, "{to_inject}")?;
+    // Write the debug id comment
     writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
 
+    // Lastly, write the source mapping URL comment, if there was one
     if let Some(sourcemap_comment) = sourcemap_comment {
         writeln!(js_contents, "{sourcemap_comment}")?;
     }
@@ -246,10 +311,10 @@ something else"#;
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"//# sourceMappingURL=fake1
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 some line
 //# sourceMappingURL=fake2
 something else
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 //# debugId=00000000-0000-0000-0000-000000000000
 //# sourceMappingURL=real
 "#;
@@ -299,6 +364,7 @@ something else"#;
         let expected = r#"//# sourceMappingURL=fake
 
 
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 some line
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
@@ -314,13 +380,46 @@ some line
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
 something else
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 //# debugId=00000000-0000-0000-0000-000000000000
 //# sourceMappingURL=real
 "#;
 
         println!("{}", result);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_fixup_js_file_use_strict() {
+        let source = r#"//# sourceMappingURL=fake1
+
+  // some other comment
+ "use strict";
+'use strict';
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let debug_id = DebugId::default();
+
+        let mut source = Vec::from(source);
+
+        fixup_js_file(&mut source, debug_id).unwrap();
+
+        let expected = r#"//# sourceMappingURL=fake1
+
+  // some other comment
+ "use strict"; 
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
+'use strict';
+some line
+//# sourceMappingURL=fake2
+something else
+//# debugId=00000000-0000-0000-0000-000000000000
+//# sourceMappingURL=real
+"#;
+
+        assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
     }
 
     #[test]
