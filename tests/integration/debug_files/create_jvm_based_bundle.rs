@@ -18,7 +18,7 @@ fn command_create_jvm_based_bundle_fails_out_not_found() {
     register_test("debug_files/debug_files-create-jvm-based-bundle-output-not-found.trycmd");
     #[cfg(windows)]
     register_test(
-        "debug_files/debug_files-create-jvm-based-bundle-output-not-found-windows.trycmd"
+        "debug_files/debug_files-create-jvm-based-bundle-output-not-found-windows.trycmd",
     );
 }
 
