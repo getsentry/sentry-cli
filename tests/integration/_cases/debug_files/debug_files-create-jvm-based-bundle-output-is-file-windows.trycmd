@@ -1,5 +1,5 @@
 ```
-$ sentry-cli debug-files create-jvm-based-bundle --output ./file.txt --debug-id D384DC3B-AB2F-4DC7-903D-2C851E27E094 ./io
+$ sentry-cli debug-files create-jvm-based-bundle --output ./file.txt --debug-id D384DC3B-AB2F-4DC7-903D-2C851E27E094 io
 ? failed
 > Found 2 files
 > Bundled 2 files for upload
