@@ -2,9 +2,9 @@ use crate::integration::register_test;
 
 mod bundle_sources;
 mod check;
+mod create_jvm_based_bundle;
 mod print_sources;
 mod upload;
-mod create_jvm_based_bundle;
 
 #[test]
 fn command_debug_files_help() {

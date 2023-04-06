@@ -1,5 +1,7 @@
+use crate::integration::{
+    copy_recursively, mock_common_upload_endpoints, register_test, ServerBehavior,
+};
 use std::fs::{create_dir, remove_dir_all, write};
-use crate::integration::{copy_recursively, mock_common_upload_endpoints, register_test, ServerBehavior};
 
 #[test]
 fn command_create_jvm_based_bundle_help() {
@@ -58,7 +60,8 @@ fn command_create_jvm_based_bundle_fails_invalid_uuid() {
 
 #[test]
 fn command_create_jvm_based_bundle() {
-    let testcase_cwd_path = "tests/integration/_cases/debug_files/debug_files-create-jvm-based-bundle.in/";
+    let testcase_cwd_path =
+        "tests/integration/_cases/debug_files/debug_files-create-jvm-based-bundle.in/";
     if std::path::Path::new(testcase_cwd_path).exists() {
         remove_dir_all(testcase_cwd_path).unwrap();
     }

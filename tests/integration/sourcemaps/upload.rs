@@ -1,4 +1,7 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions, mock_common_upload_endpoints, ServerBehavior, assert_endpoints};
+use crate::integration::{
+    assert_endpoints, mock_common_upload_endpoints, mock_endpoint, register_test, EndpointOptions,
+    ServerBehavior,
+};
 
 #[test]
 fn command_sourcemaps_upload_help() {
