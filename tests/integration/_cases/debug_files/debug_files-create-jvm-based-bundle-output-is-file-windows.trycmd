@@ -1,9 +1,9 @@
 ```
-$ sentry-cli debug-files create-jvm-based-bundle --output ./file.txt --debug-id D384DC3B-AB2F-4DC7-903D-2C851E27E094 .
+$ sentry-cli debug-files create-jvm-based-bundle --output ./file.txt --debug-id D384DC3B-AB2F-4DC7-903D-2C851E27E094 tests/integration/_fixtures/jvmbased/
 ? failed
 > Found 2 files
 > Bundled 2 files for upload
-error: Unable to write source bundle: Not a directory (os error 20)
+error: Unable to write source bundle: The system cannot find the path specified. (os error 3)
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
 Please attach the full debug log to all bug reports.
