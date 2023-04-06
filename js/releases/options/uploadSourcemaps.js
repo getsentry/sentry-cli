@@ -48,4 +48,8 @@ module.exports = {
     param: '--ext',
     type: 'array',
   },
+  useArtifactBundle: {
+    param: '--use-artifact-bundle',
+    type: 'boolean',
+  },
 };

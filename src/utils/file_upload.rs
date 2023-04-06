@@ -298,13 +298,13 @@ fn upload_files_chunked(
     pb.finish_with_duration("Optimizing");
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
-        "{} Uploading release files...\
+        "{} Uploading files...\
        \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
         style(">").dim(),
     ));
 
     upload_chunks(&chunks, options, progress_style)?;
-    println!("{} Uploaded release files to Sentry", style(">").dim(),);
+    println!("{} Uploaded files to Sentry", style(">").dim());
 
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
@@ -452,6 +452,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles, debug_id:
 
     bundle.finish()?;
 
+    pb.finish_with_duration("Bundling");
+
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),
@@ -461,8 +463,6 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles, debug_id:
             _ => "files",
         }
     );
-
-    pb.finish_with_duration("Bundling");
 
     Ok(archive)
 }

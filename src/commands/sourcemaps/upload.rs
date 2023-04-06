@@ -6,7 +6,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 
-use crate::api::Api;
+use crate::api::{Api, ChunkUploadCapability};
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
@@ -180,6 +180,17 @@ pub fn make_command(command: Command) -> Command {
                     Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`",
                 ),
         )
+        // NOTE: Hidden until we decide to expose it publicly
+        .arg(
+            Arg::new("use_artifact_bundle")
+                .long("use-artifact-bundle")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Use new Artifact Bundles upload, that enables the use of Debug IDs \
+                    for Source Maps discovery.",
+                )
+                .hide(true),
+        )
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(
             Arg::new("rewrite")
@@ -193,17 +204,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("verbose")
                 .action(ArgAction::SetTrue)
                 .short('v')
-                .hide(true),
-        )
-        // NOTE: Hidden until we decide to expose it publicly
-        .arg(
-            Arg::new("no_inject")
-                .long("no-inject")
-                .action(ArgAction::SetTrue)
-                .help(
-                    "Skip injection of debug ids into source files \
-                    and sourcemaps prior to uploading.",
-                )
                 .hide(true),
         )
 }
@@ -353,12 +353,6 @@ fn process_sources_from_paths(
         }
     }
 
-    if env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
-        && !matches.get_flag("no_inject")
-    {
-        processor.inject_debug_ids(false)?;
-    }
-
     if !matches.get_flag("no_rewrite") {
         let prefixes = get_prefixes_from_args(matches);
         processor.rewrite(&prefixes)?;
@@ -381,7 +375,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
-    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    let mut chunk_upload_options = api.get_chunk_upload_options(&org)?;
+
+    if matches.get_flag("use_artifact_bundle")
+        || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
+    {
+        if let Some(ref mut options) = chunk_upload_options {
+            if !options.supports(ChunkUploadCapability::ArtifactBundles) {
+                options.accept.push(ChunkUploadCapability::ArtifactBundles);
+            }
+        }
+    }
 
     if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;

@@ -1,3 +1,4 @@
+use console::style;
 use itertools::Itertools;
 use symbolic::common::{clean_path, join_path};
 
@@ -16,12 +17,26 @@ const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
+fn print_section_with_debugid(
+    f: &mut fmt::Formatter<'_>,
+    title: &str,
+    data: &[(PathBuf, DebugId)],
+) -> fmt::Result {
+    print_section_title(f, title)?;
+    for (path, debug_id) in data.iter().sorted_by_key(|x| &x.0) {
+        writeln!(f, "    {debug_id} - {}", path.display())?;
+    }
+    Ok(())
+}
+
+fn print_section_title(f: &mut fmt::Formatter<'_>, title: &str) -> fmt::Result {
+    writeln!(f, "  {}", style(title).yellow().bold())
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct InjectReport {
     pub injected: Vec<(PathBuf, DebugId)>,
     pub previously_injected: Vec<(PathBuf, DebugId)>,
-    pub skipped: Vec<PathBuf>,
-    pub missing_sourcemaps: Vec<PathBuf>,
     pub sourcemaps: Vec<(PathBuf, DebugId)>,
     pub skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
 }
@@ -30,8 +45,6 @@ impl InjectReport {
     pub fn is_empty(&self) -> bool {
         self.injected.is_empty()
             && self.previously_injected.is_empty()
-            && self.skipped.is_empty()
-            && self.missing_sourcemaps.is_empty()
             && self.sourcemaps.is_empty()
             && self.skipped_sourcemaps.is_empty()
     }
@@ -39,64 +52,42 @@ impl InjectReport {
 
 impl fmt::Display for InjectReport {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "\n{}",
+            style("Source Map Debug ID Injection Report").dim().bold()
+        )?;
+
         if !self.injected.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "Modified: The following source files have been modified to have debug ids"
+                "Modified: The following source files have been modified to have debug ids",
+                &self.injected,
             )?;
-            for (path, debug_id) in self.injected.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.sourcemaps.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "\nModified: The following sourcemap files have been modified to have debug ids"
+                "Modified: The following sourcemap files have been modified to have debug ids",
+                &self.sourcemaps,
             )?;
-            for (path, debug_id) in self.sourcemaps.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.previously_injected.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "\nIgnored: The following source files already have debug ids"
+                "Ignored: The following source files already have debug ids",
+                &self.previously_injected,
             )?;
-            for (path, debug_id) in self.previously_injected.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
         }
 
         if !self.skipped_sourcemaps.is_empty() {
-            writeln!(
+            print_section_with_debugid(
                 f,
-                "\nIgnored: The following sourcemap files already have debug ids"
+                "Ignored: The following sourcemap files already have debug ids",
+                &self.skipped_sourcemaps,
             )?;
-            for (path, debug_id) in self.skipped_sourcemaps.iter().sorted_by_key(|x| &x.0) {
-                writeln!(f, "  - {debug_id} - {}", path.display())?;
-            }
-        }
-
-        if !self.skipped.is_empty() {
-            writeln!(
-                f,
-                "\nIgnored: The following source files don't have sourcemap references "
-            )?;
-            for path in self.skipped.iter().sorted() {
-                writeln!(f, "  - {}", path.display())?;
-            }
-        }
-
-        if !self.missing_sourcemaps.is_empty() {
-            writeln!(
-                f,
-                "\nIgnored: The following source files refer to sourcemaps that couldn't be found"
-            )?;
-            for path in self.missing_sourcemaps.iter().sorted() {
-                writeln!(f, "  - {}", path.display())?;
-            }
         }
 
         Ok(())
@@ -268,11 +259,23 @@ something else
 
     #[test]
     fn test_fixup_js_file_fs_roundtrip() {
-        let source = r#"//# sourceMappingURL=fake1
+        let source = r#"//# sourceMappingURL=fake
 
 
 some line
-//# sourceMappingURL=fake2
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
 //# sourceMappingURL=real
 something else"#;
 
@@ -293,11 +296,23 @@ something else"#;
         }
 
         let result = std::fs::read_to_string(temp_file.path()).unwrap();
-        let expected = r#"//# sourceMappingURL=fake1
+        let expected = r#"//# sourceMappingURL=fake
 
 
 some line
-//# sourceMappingURL=fake2
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
+//# sourceMappingURL=fake
 something else
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 //# debugId=00000000-0000-0000-0000-000000000000
