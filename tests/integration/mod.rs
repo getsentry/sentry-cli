@@ -115,3 +115,64 @@ pub fn copy_recursively(source: impl AsRef<Path>, destination: impl AsRef<Path>)
     }
     Ok(())
 }
+
+pub enum ServerBehavior {
+    Legacy,
+    Modern,
+}
+
+// Endpoints need to be bound, as they need to live long enough for test to finish
+pub fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
+    let (accept, release_request_count, assemble_endpoint) = match behavior {
+        ServerBehavior::Legacy => (
+            "\"release_files\"",
+            2,
+            "/api/0/organizations/wat-org/releases/wat-release/assemble/",
+        ),
+        ServerBehavior::Modern => (
+            "\"release_files\", \"artifact_bundles\"",
+            0,
+            "/api/0/organizations/wat-org/artifactbundle/assemble/",
+        ),
+    };
+    let chunk_upload_response = format!(
+        "{{
+            \"url\": \"{}/api/0/organizations/wat-org/chunk-upload/\",
+            \"chunkSize\": 8388608,
+            \"chunksPerRequest\": 64,
+            \"maxRequestSize\": 33554432,
+            \"concurrency\": 8,
+            \"hashAlgorithm\": \"sha1\",
+            \"accept\": [{}]
+          }}",
+        server_url(),
+        accept,
+    );
+
+    vec![
+        mock_endpoint(
+            EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+                .with_response_file("releases/get-release.json"),
+        )
+            .expect_at_least(release_request_count)
+            .expect_at_most(release_request_count),
+        mock_endpoint(
+            EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_body(chunk_upload_response),
+        ),
+        mock_endpoint(
+            EndpointOptions::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_body("[]"),
+        ),
+        mock_endpoint(
+            EndpointOptions::new("POST", assemble_endpoint, 200)
+                .with_response_body(r#"{"state":"created","missingChunks":[]}"#),
+        ),
+    ]
+}
+
+pub fn assert_endpoints(mocks: &[Mock]) {
+    for mock in mocks {
+        mock.assert();
+    }
+}

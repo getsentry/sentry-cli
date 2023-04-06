@@ -1,0 +1,9 @@
+```
+$ sentry-cli debug-files create-jvm-based-bundle --output . --debug-id not-a-valid-uuid io
+? failed
+error: Given debug_id is invalid: not-a-valid-uuid
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

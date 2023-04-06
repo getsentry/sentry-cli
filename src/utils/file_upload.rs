@@ -189,8 +189,8 @@ impl<'a> FileUpload<'a> {
         upload_files_parallel(self.context, &self.files, concurrency)
     }
 
-    pub fn build_source_bundle(&self) -> Result<TempFile> {
-        return build_artifact_bundle(self.context, &self.files);
+    pub fn build_jvm_based_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
+        return build_artifact_bundle(self.context, &self.files, debug_id);
     }
 }
 
@@ -278,7 +278,7 @@ fn upload_files_chunked(
     files: &SourceFiles,
     options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let archive = build_artifact_bundle(context, files)?;
+    let archive = build_artifact_bundle(context, files, None)?;
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
@@ -400,7 +400,7 @@ fn build_debug_id(files: &SourceFiles) -> DebugId {
     DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
 }
 
-fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result<TempFile> {
+fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles, debug_id: Option<DebugId>) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
@@ -413,8 +413,13 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
-    // artifact bundles get a random UUID as debug id
-    bundle.set_attribute("debug_id", build_debug_id(files).to_string());
+    match debug_id {
+        Some(id) => bundle.set_attribute("debug_id", id.to_string()),
+        None => {
+            // artifact bundles get a random UUID as debug id
+            bundle.set_attribute("debug_id", build_debug_id(files).to_string())
+        },
+    };
     if let Some(note) = context.note {
         bundle.set_attribute("note", note.to_owned());
     }

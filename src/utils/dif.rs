@@ -21,6 +21,7 @@ pub enum DifType {
     Pdb,
     PortablePdb,
     Wasm,
+    JvmBased,
 }
 
 impl DifType {
@@ -35,6 +36,7 @@ impl DifType {
             DifType::Breakpad => "breakpad",
             DifType::Proguard => "proguard",
             DifType::Wasm => "wasm",
+            DifType::JvmBased => "jvmbased",
         }
     }
 
@@ -49,6 +51,7 @@ impl DifType {
             DifType::Breakpad,
             DifType::Proguard,
             DifType::Wasm,
+            DifType::JvmBased,
         ]
     }
 
@@ -63,6 +66,7 @@ impl DifType {
             "breakpad",
             "proguard",
             "wasm",
+            "jvmbased",
         ]
     }
 }
@@ -87,6 +91,7 @@ impl str::FromStr for DifType {
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
             "wasm" => Ok(DifType::Wasm),
+            "jvmbased" => Ok(DifType::JvmBased),
             _ => bail!("Invalid debug info file type"),
         }
     }
@@ -251,6 +256,7 @@ impl DifFile<'static> {
             Some(DifType::Wasm) => DifFile::open_object(path, FileFormat::Wasm),
             Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
+            Some(DifType::JvmBased) => DifFile::open_object(path, FileFormat::SourceBundle),
             None => DifFile::try_open(path),
         }
     }

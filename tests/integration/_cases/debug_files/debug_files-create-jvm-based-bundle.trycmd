@@ -1,0 +1,8 @@
+```
+$ sentry-cli debug-files create-jvm-based-bundle --output . --debug-id a4368a48-0880-40d7-9a26-c9ef5a84d156 ./io
+? success
+> Found 2 release files
+> Bundled 2 files for upload
+Created ./a4368a48-0880-40d7-9a26-c9ef5a84d156.zip
+
+```
