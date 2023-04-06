@@ -1,0 +1,11 @@
+```
+$ sentry-cli debug-files create-jvm-based-bundle --output i-do-not-exist --debug-id 0B693ABA-531C-4EB6-99E4-B7320C3C85DA tests/integration/_fixtures/jvmbased
+? failed
+> Found 2 files
+> Bundled 2 files for upload
+error: Unable to write source bundle: The system cannot find the path specified. (os error 3)
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
