@@ -1,7 +1,7 @@
 ```
 $ sentry-cli debug-files create-jvm-based-bundle --output i-do-not-exist --debug-id 0B693ABA-531C-4EB6-99E4-B7320C3C85DA tests/integration/_fixtures/jvmbased
 ? failed
-> Found 2 release files
+> Found 2 files
 > Bundled 2 files for upload
 error: Unable to write source bundle: No such file or directory (os error 2)
 
