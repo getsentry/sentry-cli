@@ -66,7 +66,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         bail!("Given debug_id is invalid: {}", debug_id_arg)
     }
     let debug_id = DebugId::from_uuid(debug_id_uuid.unwrap());
-    let mut debug_id_string = debug_id.to_string().to_owned();
+    let mut debug_id_string = debug_id.to_string();
     debug_id_string.push_str(".zip");
     let out = output_path.join(Path::new(&debug_id_string));
 

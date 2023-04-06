@@ -190,7 +190,7 @@ impl<'a> FileUpload<'a> {
     }
 
     pub fn build_jvm_based_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
-        return build_artifact_bundle(self.context, &self.files, debug_id);
+        build_artifact_bundle(self.context, &self.files, debug_id)
     }
 }
 
