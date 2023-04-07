@@ -417,13 +417,10 @@ fn build_artifact_bundle(
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
-    match debug_id {
-        Some(id) => bundle.set_attribute("debug_id", id.to_string()),
-        None => {
-            // artifact bundles get a random UUID as debug id
-            bundle.set_attribute("debug_id", build_debug_id(files).to_string())
-        }
-    };
+    // artifact bundles get a random UUID as debug id
+    let debug_id = debug_id.unwrap_or_else(|| build_debug_id(files));
+    bundle.set_attribute("debug_id", debug_id.to_string());
+
     if let Some(note) = context.note {
         bundle.set_attribute("note", note.to_owned());
     }

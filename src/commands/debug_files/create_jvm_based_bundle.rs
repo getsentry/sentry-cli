@@ -60,15 +60,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
     let path = Path::new(matches.get_one::<String>("path").unwrap());
     let output_path = Path::new(matches.get_one::<String>("output").unwrap());
-    let debug_id_arg = matches.get_one::<String>("debug_id").unwrap();
-    let debug_id_uuid = Uuid::parse_str(debug_id_arg);
-    if debug_id_uuid.is_err() {
-        bail!("Given debug_id is invalid: {}", debug_id_arg)
-    }
-    let debug_id = DebugId::from_uuid(debug_id_uuid.unwrap());
-    let mut debug_id_string = debug_id.to_string();
-    debug_id_string.push_str(".zip");
-    let out = output_path.join(Path::new(&debug_id_string));
+    let debug_id = matches.get_one::<String>("debug_id").unwrap();
+    let debug_id = debug_id
+        .parse()
+        .context(format!("Given debug_id is invalid: {debug_id}"))?;
+    let out = output_path.join(format!("{debug_id}.zip"));
 
     if !path.exists() {
         bail!("Given path does not exist: {}", path.to_string_lossy())
@@ -81,7 +77,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(|source| {
                 let local_path = source.path.strip_prefix(&source.base_path).unwrap();
                 let local_path_jvm_ext = local_path.with_extension("jvm");
-                let url = format!("{}/{}", "~", path_as_url(&local_path_jvm_ext));
+                let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
                 (
                     url.to_string(),
                     SourceFile {
@@ -97,14 +93,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             })
             .collect();
 
-        let copy_result = match FileUpload::new(context).files(&files).build_jvm_based_bundle(Some(debug_id)) {
-            Ok(tempfile) => fs::copy(tempfile.path(), &out),
-            Err(e) => bail!("Unable to create source bundle: {}", e),
-        };
-        match copy_result {
-            Ok(_) => println!("Created {}", out.to_string_lossy()),
-            Err(e) => bail!("Unable to write source bundle: {}", e)
-        }
+        let tempfile = FileUpload::new(context)
+            .files(&files)
+            .build_jvm_based_bundle(Some(debug_id))
+            .context("Unable to create source bundle")?;
+
+        fs::copy(tempfile.path(), &out).context("Unable to write source bundle")?;
+        println!("Created {}", out.to_string_lossy());
+
         Ok(())
     } else {
         bail!("Given path is not a directory: {}", path.to_string_lossy())
