@@ -1,10 +1,8 @@
 use std::fs;
 use std::path::{Path};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
-use sentry::types::DebugId;
 use symbolic::debuginfo::sourcebundle::{SourceFileType};
-use uuid::{Uuid};
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::ArgExt;
