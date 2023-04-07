@@ -5,10 +5,7 @@ use std::fs::{create_dir, remove_dir_all, write};
 
 #[test]
 fn command_create_jvm_based_bundle_help() {
-    #[cfg(not(windows))]
     register_test("debug_files/debug_files-create-jvm-based-bundle-help.trycmd");
-    #[cfg(windows)]
-    register_test("debug_files/debug_files-create-jvm-based-bundle-help-windows.trycmd");
 }
 
 #[test]

@@ -3,7 +3,7 @@ $ sentry-cli debug-files create-jvm-based-bundle --help
 ? success
 Create a source bundle for the given JVM based source files (e.g. Java, Kotlin, ...)
 
-Usage: sentry-cli debug-files create-jvm-based-bundle [OPTIONS] --output <PATH> --debug-id <UUID> <PATH>
+Usage: sentry-cli[EXE] debug-files create-jvm-based-bundle [OPTIONS] --output <PATH> --debug-id <UUID> <PATH>
 
 Arguments:
   <PATH>  The directory containing source files to bundle.
