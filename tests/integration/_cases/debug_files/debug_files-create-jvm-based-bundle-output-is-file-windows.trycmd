@@ -3,7 +3,8 @@ $ sentry-cli debug-files create-jvm-based-bundle --output ./file.txt --debug-id 
 ? failed
 > Found 2 files
 > Bundled 2 files for upload
-error: Unable to write source bundle: The system cannot find the path specified. (os error 3)
+error: Unable to write source bundle
+  caused by: The system cannot find the path specified. (os error 3)
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
 Please attach the full debug log to all bug reports.
