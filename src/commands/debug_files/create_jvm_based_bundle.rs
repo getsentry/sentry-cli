@@ -68,6 +68,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         bail!("Given path does not exist: {}", path.to_string_lossy())
     }
 
+    if !output_path.exists() {
+        fs::create_dir_all(output_path).context(format!("Failed to create output directory {}", output_path.to_string_lossy()))?;
+    }
+
     if path.is_dir() {
         let sources = ReleaseFileSearch::new(path.to_path_buf()).collect_files()?;
         let files = sources
