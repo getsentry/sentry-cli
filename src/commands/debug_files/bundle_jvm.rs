@@ -100,7 +100,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let tempfile = FileUpload::new(context)
         .files(&files)
-        .build_jvm_based_bundle(Some(*debug_id))
+        .build_jvm_bundle(Some(*debug_id))
         .context("Unable to create source bundle")?;
 
     fs::copy(tempfile.path(), &out).context("Unable to write source bundle")?;

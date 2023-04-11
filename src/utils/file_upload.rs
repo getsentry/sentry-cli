@@ -189,7 +189,7 @@ impl<'a> FileUpload<'a> {
         upload_files_parallel(self.context, &self.files, concurrency)
     }
 
-    pub fn build_jvm_based_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
+    pub fn build_jvm_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
         build_artifact_bundle(self.context, &self.files, debug_id)
     }
 }

@@ -2,7 +2,7 @@ use crate::integration::register_test;
 
 mod bundle_sources;
 mod check;
-mod create_jvm_based_bundle;
+mod bundle_jvm;
 mod print_sources;
 mod upload;
 
