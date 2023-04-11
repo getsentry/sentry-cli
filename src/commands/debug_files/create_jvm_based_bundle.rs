@@ -24,7 +24,6 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(
             Arg::new("output")
-                // .short('o')
                 .long("output")
                 .value_name("PATH")
                 .required(true)
@@ -32,7 +31,6 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(
             Arg::new("debug_id")
-                // .short('d')
                 .long("debug-id")
                 .value_name("UUID")
                 .required(true)
