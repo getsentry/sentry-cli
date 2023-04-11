@@ -15,7 +15,7 @@ Options:
   -p, --project <PROJECT>        The project slug.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
       --output <PATH>            The path to the output folder.
-      --debug-id <UUID>          Debug ID to use for the source bundle.
+      --debug-id <UUID>          Debug ID (UUID) to use for the source bundle.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]
       --quiet                    Do not print any output while preserving correct exit code. This

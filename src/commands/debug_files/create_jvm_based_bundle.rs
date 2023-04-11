@@ -1,7 +1,9 @@
 use std::fs;
-use std::path::{Path};
+use std::path::{PathBuf};
+use std::str::FromStr;
 use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
+use sentry::types::DebugId;
 use symbolic::debuginfo::sourcebundle::{SourceFileType};
 use crate::api::Api;
 use crate::config::Config;
@@ -20,6 +22,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("path")
                 .value_name("PATH")
                 .required(true)
+                .value_parser(clap::builder::PathBufValueParser::new())
                 .help("The directory containing source files to bundle."),
         )
         .arg(
@@ -27,6 +30,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("output")
                 .value_name("PATH")
                 .required(true)
+                .value_parser(clap::builder::PathBufValueParser::new())
                 .help("The path to the output folder."),
         )
         .arg(
@@ -34,7 +38,8 @@ pub fn make_command(command: Command) -> Command {
                 .long("debug-id")
                 .value_name("UUID")
                 .required(true)
-                .help("Debug ID to use for the source bundle."),
+                .value_parser(DebugId::from_str)
+                .help("Debug ID (UUID) to use for the source bundle."),
         )
 }
 
@@ -54,55 +59,52 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
     };
-    let path = Path::new(matches.get_one::<String>("path").unwrap());
-    let output_path = Path::new(matches.get_one::<String>("output").unwrap());
-    let debug_id = matches.get_one::<String>("debug_id").unwrap();
-    let debug_id = debug_id
-        .parse()
-        .context(format!("Given debug_id is invalid: {debug_id}"))?;
+    let path = matches.get_one::<PathBuf>("path").unwrap();
+    let output_path = matches.get_one::<PathBuf>("output").unwrap();
+    let debug_id = matches.get_one::<DebugId>("debug_id").unwrap();
     let out = output_path.join(format!("{debug_id}.zip"));
 
     if !path.exists() {
-        bail!("Given path does not exist: {}", path.to_string_lossy())
+        bail!("Given path does not exist: {}", path.display())
+    }
+
+    if !path.is_dir() {
+        bail!("Given path is not a directory: {}", path.display())
     }
 
     if !output_path.exists() {
-        fs::create_dir_all(output_path).context(format!("Failed to create output directory {}", output_path.to_string_lossy()))?;
+        fs::create_dir_all(output_path).context(format!("Failed to create output directory {}", output_path.display()))?;
     }
 
-    if path.is_dir() {
-        let sources = ReleaseFileSearch::new(path.to_path_buf()).collect_files()?;
-        let files = sources
-            .iter()
-            .map(|source| {
-                let local_path = source.path.strip_prefix(&source.base_path).unwrap();
-                let local_path_jvm_ext = local_path.with_extension("jvm");
-                let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
-                (
-                    url.to_string(),
-                    SourceFile {
-                        url,
-                        path: source.path.clone(),
-                        contents: source.contents.clone(),
-                        ty: SourceFileType::Source,
-                        headers: vec![],
-                        messages: vec![],
-                        already_uploaded: false,
-                    },
-                )
-            })
-            .collect();
+    let sources = ReleaseFileSearch::new(path.to_path_buf()).collect_files()?;
+    let files = sources
+        .iter()
+        .map(|source| {
+            let local_path = source.path.strip_prefix(&source.base_path).unwrap();
+            let local_path_jvm_ext = local_path.with_extension("jvm");
+            let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
+            (
+                url.to_string(),
+                SourceFile {
+                    url,
+                    path: source.path.clone(),
+                    contents: source.contents.clone(),
+                    ty: SourceFileType::Source,
+                    headers: vec![],
+                    messages: vec![],
+                    already_uploaded: false,
+                },
+            )
+        })
+        .collect();
 
-        let tempfile = FileUpload::new(context)
-            .files(&files)
-            .build_jvm_based_bundle(Some(debug_id))
-            .context("Unable to create source bundle")?;
+    let tempfile = FileUpload::new(context)
+        .files(&files)
+        .build_jvm_based_bundle(Some(*debug_id))
+        .context("Unable to create source bundle")?;
 
-        fs::copy(tempfile.path(), &out).context("Unable to write source bundle")?;
-        println!("Created {}", out.to_string_lossy());
+    fs::copy(tempfile.path(), &out).context("Unable to write source bundle")?;
+    println!("Created {}", out.display());
 
-        Ok(())
-    } else {
-        bail!("Given path is not a directory: {}", path.to_string_lossy())
-    }
+    Ok(())
 }
