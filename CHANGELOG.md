@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.1
+
+### Various fixes & improvements
+
+- fix(build) Hotfix allowing extra binaries during wheel build (#1575) by @ashwoods
+- fix(inject): Don't inject non-js files (#1572) by @loewenheim
+
 ## 2.17.0
 
 ### Various fixes & improvements
