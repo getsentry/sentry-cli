@@ -753,7 +753,10 @@ impl SourceMapProcessor {
             }
 
             let Some(sourcemap_url) = sourcemap_url else {
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
+                // If there is no sourcemap, inject .js files anyway so they have a debug id.
+                if source_url.ends_with(".js") {
+                    debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
+                }
                 continue;
             };
 
