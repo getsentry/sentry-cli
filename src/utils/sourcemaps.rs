@@ -302,7 +302,7 @@ impl SourceMapProcessor {
             .collect();
 
         for source in self.sources.values_mut() {
-            if source.ty != SourceFileType::MinifiedSource || !source.url.ends_with("js") {
+            if source.ty != SourceFileType::MinifiedSource || !source.url.ends_with(".js") {
                 continue;
             }
 
