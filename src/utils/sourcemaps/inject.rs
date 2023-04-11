@@ -10,7 +10,6 @@ use anyhow::{bail, Result};
 use log::debug;
 use sentry::types::DebugId;
 use serde_json::Value;
-use uuid::Uuid;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
@@ -159,7 +158,7 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
 
         None => {
             let mut hash = sha1_smol::Sha1::new();
-            hash.update(&sourcemap_contents);
+            hash.update(sourcemap_contents);
             let mut sha1_bytes = [0u8; 16];
             sha1_bytes.copy_from_slice(&hash.digest().bytes()[..16]);
             let debug_id =
