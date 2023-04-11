@@ -176,9 +176,9 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
     }
 
     // Write one "use strict" statement back to the file, if there is one
-    if let Some(use_strict) =
-        js_lines.next_if(|line| line.trim() == "\"use strict\";" || line.trim() == "'use strict';")
-    {
+    if let Some(use_strict) = js_lines.next_if(|line| {
+        line.trim().starts_with("\"use strict\";") || line.trim().starts_with("'use strict';")
+    }) {
         writeln!(js_contents, "{use_strict}")?;
     }
 
@@ -393,7 +393,7 @@ something else
         let source = r#"//# sourceMappingURL=fake1
 
   // some other comment
- "use strict";
+ "use strict"; rest of the line
 'use strict';
 some line
 //# sourceMappingURL=fake2
@@ -409,7 +409,7 @@ something else"#;
         let expected = r#"//# sourceMappingURL=fake1
 
   // some other comment
- "use strict";
+ "use strict"; rest of the line
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 'use strict';
 some line
