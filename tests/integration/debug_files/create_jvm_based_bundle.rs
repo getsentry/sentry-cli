@@ -14,7 +14,6 @@ fn command_create_jvm_based_bundle_out_not_found_creates_dir() {
     register_test("debug_files/debug_files-create-jvm-based-bundle-output-not-found.trycmd");
 }
 
-#[cfg(not(windows))]
 #[test]
 fn command_create_jvm_based_bundle_fails_out_is_file() {
     let testcase_cwd = "tests/integration/_cases/debug_files/debug_files-create-jvm-based-bundle-output-is-file.in/";
@@ -27,21 +26,6 @@ fn command_create_jvm_based_bundle_fails_out_is_file() {
     let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
 
     register_test("debug_files/debug_files-create-jvm-based-bundle-output-is-file.trycmd");
-}
-
-#[cfg(windows)]
-#[test]
-fn command_create_jvm_based_bundle_fails_out_is_file_windows() {
-    let testcase_cwd = "tests/integration/_cases/debug_files/debug_files-create-jvm-based-bundle-output-is-file-windows.in/";
-    let testcase_cwd_path = std::path::Path::new(testcase_cwd);
-    if testcase_cwd_path.exists() {
-        remove_dir_all(testcase_cwd_path).unwrap();
-    }
-    copy_recursively("tests/integration/_fixtures/jvmbased/", testcase_cwd_path).unwrap();
-    write(testcase_cwd_path.join("file.txt"), "some file content").unwrap();
-    let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
-
-    register_test("debug_files/debug_files-create-jvm-based-bundle-output-is-file-windows.trycmd");
 }
 
 #[test]
