@@ -90,7 +90,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(Vec::new);
     if extensions.is_empty() {
-        extensions.push("js".into());
+        extensions.push("js");
     }
 
     for path in paths {
