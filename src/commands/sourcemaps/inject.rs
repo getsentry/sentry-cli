@@ -53,7 +53,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("EXT")
                 .action(ArgAction::Append)
                 .help(
-                    "Set the file extensions that are considered for upload. \
+                    "Set the file extensions that are considered for injection. \
                     This overrides the default extensions. To add an extension, all default \
                     extensions must be repeated. Specify once per extension.",
                 ),
