@@ -302,7 +302,7 @@ impl SourceMapProcessor {
             .collect();
 
         for source in self.sources.values_mut() {
-            if source.ty != SourceFileType::MinifiedSource {
+            if source.ty != SourceFileType::MinifiedSource || !source.url.ends_with("js") {
                 continue;
             }
 
@@ -753,10 +753,7 @@ impl SourceMapProcessor {
             }
 
             let Some(sourcemap_url) = sourcemap_url else {
-                // If there is no sourcemap, inject .js files anyway so they have a debug id.
-                if source_url.ends_with(".js") {
-                    debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
-                }
+                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
                 continue;
             };
 
