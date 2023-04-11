@@ -149,7 +149,7 @@ fn find_ids(
                 DifType::SourceBundle => find_ids_for_sourcebundle(&dirent, &remaining),
                 DifType::Breakpad => find_ids_for_breakpad(&dirent, &remaining),
                 DifType::Proguard => find_ids_for_proguard(&dirent, &proguard_uuids),
-                DifType::JvmBased => find_ids_for_sourcebundle(&dirent, &remaining),
+                DifType::Jvm => find_ids_for_sourcebundle(&dirent, &remaining),
                 DifType::Wasm => None,
             })
             .flatten()
