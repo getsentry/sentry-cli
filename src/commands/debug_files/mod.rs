@@ -1,9 +1,9 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
+pub mod bundle_jvm;
 pub mod bundle_sources;
 pub mod check;
-pub mod bundle_jvm;
 pub mod find;
 pub mod print_sources;
 pub mod upload;
