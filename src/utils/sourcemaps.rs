@@ -302,8 +302,7 @@ impl SourceMapProcessor {
             .collect();
 
         for source in self.sources.values_mut() {
-            // Skip everything but minified JS files.
-            if source.ty != SourceFileType::MinifiedSource || !source.url.ends_with(".js") {
+            if source.ty != SourceFileType::MinifiedSource {
                 continue;
             }
 
