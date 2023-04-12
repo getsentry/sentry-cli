@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.2
+
+### Various fixes & improvements
+
+- feat(debug_id): More determinism for JS debug IDs (#1577) by @mitsuhiko
+- fix: inject only injects into js files (#1571) by @mitsuhiko
+- feat: Add deterministic debug IDs for minified JS files (#1570) by @mitsuhiko
+
 ## 2.17.1
 
 ### Various fixes & improvements
