@@ -54,9 +54,9 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append)
                 .help(
                     "Set the file extensions of JavaScript files that are considered \
-                    for injection.  This overrides the default extensions (js).  To add \
-                    an extension, all default extensions must be repeated. Specify once \
-                    per extension.  Source maps are discovered via those files.",
+                    for injection.  This overrides the default extensions (js, cjs, mjs). \
+                    To add an extension, all default extensions must be repeated. Specify \
+                    once per extension.  Source maps are discovered via those files.",
                 ),
         )
         .arg(
@@ -92,6 +92,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .unwrap_or_else(Vec::new);
     if extensions.is_empty() {
         extensions.push("js");
+        extensions.push("cjs");
+        extensions.push("mjs");
     }
 
     for path in paths {
