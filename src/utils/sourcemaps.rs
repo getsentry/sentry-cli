@@ -773,20 +773,41 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            let Some(sourcemap_url) = sourcemap_url else {
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
-                continue;
+            let sourcemap_url = match sourcemap_url {
+                Some(sourcemap_url) => sourcemap_url,
+                None => {
+                    // no source map at all, try a deterministic debug id from the contents
+                    let debug_id = self
+                        .sources
+                        .get(source_url)
+                        .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
+                        .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
+                    debug_ids.push((source_url.clone(), debug_id));
+                    continue;
+                }
             };
 
             if sourcemap_url.starts_with(DATA_PREAMBLE) {
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
+                // source map is a url, hash the source map url for the debug id
+                let debug_id = inject::debug_id_from_bytes_hashed(sourcemap_url.as_bytes());
+                debug_ids.push((source_url.clone(), debug_id));
             } else {
                 let sourcemap_url = normalize_sourcemap_url(source_url, sourcemap_url);
-                let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
-                debug!("Sourcemap file {} not found", sourcemap_url);
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
-                continue;
-            };
+                let sourcemap_file = match self.sources.get_mut(&sourcemap_url) {
+                    Some(sourcemap_file) => sourcemap_file,
+                    None => {
+                        debug!("Sourcemap file {} not found", sourcemap_url);
+                        // source map cannot be found, fall back to hashing the contents if
+                        // available.  The v4 fallback should not happen.
+                        let debug_id = self
+                            .sources
+                            .get(source_url)
+                            .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
+                            .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
+                        debug_ids.push((source_url.clone(), debug_id));
+                        continue;
+                    }
+                };
 
                 let (debug_id, sourcemap_modified) =
                     inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
