@@ -14,8 +14,8 @@ Arguments:
           A path to recursively search for javascript files that should be processed.
 
 Options:
-      --dry-run
-          Don't modify files on disk.
+  -i, --ignore <IGNORE>
+          Ignores all files and folders matching the given glob
 
   -o, --org <ORG>
           The organization slug
@@ -23,6 +23,9 @@ Options:
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
           in key:value format.
+
+  -I, --ignore-file <IGNORE_FILE>
+          Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
 
   -p, --project <PROJECT>
           The project slug.
@@ -32,6 +35,15 @@ Options:
 
   -r, --release <RELEASE>
           The release slug.
+
+  -x, --ext <EXT>
+          Set the file extensions of JavaScript files that are considered for injection.  This
+          overrides the default extensions (js, cjs, mjs).  To add an extension, all default
+          extensions must be repeated.  Specify once per extension.  Source maps are discovered via
+          those files.
+
+      --dry-run
+          Don't modify files on disk.
 
       --log-level <LOG_LEVEL>
           Set the log output verbosity.

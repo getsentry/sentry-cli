@@ -1,0 +1,6 @@
+<svg width="50" height="50">
+  <circle cx="25" cy="25" r="20" fill="yellow" />
+  <circle cx="15" cy="18" r="2" fill="black" />
+  <circle cx="35" cy="18" r="2" fill="black" />
+  <path d="M20 30 Q25 35 30 30" stroke="black" stroke-width="2" fill="none" />
+</svg>

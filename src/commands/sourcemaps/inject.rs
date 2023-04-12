@@ -29,6 +29,37 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
+            Arg::new("ignore")
+                .long("ignore")
+                .short('i')
+                .value_name("IGNORE")
+                .action(ArgAction::Append)
+                .help("Ignores all files and folders matching the given glob"),
+        )
+        .arg(
+            Arg::new("ignore_file")
+                .long("ignore-file")
+                .short('I')
+                .value_name("IGNORE_FILE")
+                .help(
+                    "Ignore all files and folders specified in the given \
+                    ignore file, e.g. .gitignore.",
+                ),
+        )
+        .arg(
+            Arg::new("extensions")
+                .long("ext")
+                .short('x')
+                .value_name("EXT")
+                .action(ArgAction::Append)
+                .help(
+                    "Set the file extensions of JavaScript files that are considered \
+                    for injection.  This overrides the default extensions (js, cjs, mjs).  \
+                    To add an extension, all default extensions must be repeated.  Specify \
+                    once per extension.  Source maps are discovered via those files.",
+                ),
+        )
+        .arg(
             Arg::new("dry_run")
                 .long("dry-run")
                 .action(ArgAction::SetTrue)
@@ -46,15 +77,37 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(PathBuf::from);
     let dry_run = matches.get_flag("dry_run");
 
+    let ignore_file = matches
+        .get_one::<String>("ignore_file")
+        .map(String::as_str)
+        .unwrap_or_default();
+    let ignores = matches
+        .get_many::<String>("ignore")
+        .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
+        .unwrap_or_else(Vec::new);
+
+    let mut extensions = matches
+        .get_many::<String>("extensions")
+        .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
+        .unwrap_or_else(Vec::new);
+    if extensions.is_empty() {
+        extensions.push("js");
+        extensions.push("cjs");
+        extensions.push("mjs");
+    }
+
     for path in paths {
-        let search = ReleaseFileSearch::new(path);
-        let sources = search.collect_files()?;
+        println!("> Searching {}", path.display());
+        let sources = ReleaseFileSearch::new(path)
+            .ignore_file(ignore_file)
+            .ignores(&ignores)
+            .collect_files()?;
         for source in sources {
             let url = path_as_url(&source.path);
             processor.add(&url, source)?;
         }
     }
 
-    processor.inject_debug_ids(dry_run)?;
+    processor.inject_debug_ids(dry_run, &extensions)?;
     Ok(())
 }
