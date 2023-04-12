@@ -166,11 +166,9 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
         }
 
         None => {
-            let debug_id = debug_id_from_bytes_hashed(&sourcemap_contents);
-
+            let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
-
             sourcemap_contents.clear();
             serde_json::to_writer(sourcemap_contents, &sourcemap)?;
             Ok((debug_id, true))
