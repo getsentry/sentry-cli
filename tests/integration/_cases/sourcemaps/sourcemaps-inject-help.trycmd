@@ -38,8 +38,9 @@ Options:
 
   -x, --ext <EXT>
           Set the file extensions of JavaScript files that are considered for injection.  This
-          overrides the default extensions (js).  To add an extension, all default extensions must
-          be repeated. Specify once per extension.  Source maps are discovered via those files.
+          overrides the default extensions (js, cjs, mjs).  To add an extension, all default
+          extensions must be repeated.  Specify once per extension.  Source maps are discovered via
+          those files.
 
       --dry-run
           Don't modify files on disk.

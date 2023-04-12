@@ -54,8 +54,8 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append)
                 .help(
                     "Set the file extensions of JavaScript files that are considered \
-                    for injection.  This overrides the default extensions (js, cjs, mjs). \
-                    To add an extension, all default extensions must be repeated. Specify \
+                    for injection.  This overrides the default extensions (js, cjs, mjs).  \
+                    To add an extension, all default extensions must be repeated.  Specify \
                     once per extension.  Source maps are discovered via those files.",
                 ),
         )

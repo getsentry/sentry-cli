@@ -190,7 +190,13 @@ fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
     }
     url.rsplit('/')
         .next()
-        .and_then(|filename| filename.rsplit('.').next())
+        .and_then(|filename| {
+            let mut splitter = filename.rsplit('.');
+            let rv = splitter.next();
+            // need another segment
+            splitter.next()?;
+            rv
+        })
         .map(|ext| extensions.contains(&ext))
         .unwrap_or(false)
 }
@@ -954,4 +960,12 @@ fn test_join() {
         &join_url("https://example.com/", "foo.html").unwrap(),
         "https://example.com/foo.html"
     );
+}
+
+#[test]
+fn test_url_matches_extension() {
+    assert!(url_matches_extension("foo.js", &["js"][..]));
+    assert!(!url_matches_extension("foo.mjs", &["js"][..]));
+    assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
+    assert!(!url_matches_extension("js", &["js"][..]));
 }
