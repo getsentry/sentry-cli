@@ -53,9 +53,10 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("EXT")
                 .action(ArgAction::Append)
                 .help(
-                    "Set the file extensions that are considered for injection. \
-                    This overrides the default extensions. To add an extension, all default \
-                    extensions must be repeated. Specify once per extension.",
+                    "Set the file extensions of JavaScript files that are considered \
+                    for injection.  This overrides the default extensions (js).  To add \
+                    an extension, all default extensions must be repeated. Specify once \
+                    per extension.  Source maps are discovered via those files.",
                 ),
         )
         .arg(
@@ -94,10 +95,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     for path in paths {
+        println!("> Searching {}", path.display());
         let sources = ReleaseFileSearch::new(path)
             .ignore_file(ignore_file)
             .ignores(&ignores)
-            .extensions(extensions.iter().cloned())
             .collect_files()?;
         for source in sources {
             let url = path_as_url(&source.path);
@@ -105,6 +106,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    processor.inject_debug_ids(dry_run)?;
+    processor.inject_debug_ids(dry_run, &extensions)?;
     Ok(())
 }

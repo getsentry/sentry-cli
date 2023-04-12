@@ -184,6 +184,17 @@ fn is_hermes_bytecode(slice: &[u8]) -> bool {
     slice.starts_with(&HERMES_MAGIC)
 }
 
+fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
+    if extensions.is_empty() {
+        return true;
+    }
+    url.rsplit('/')
+        .next()
+        .and_then(|filename| filename.rsplit('.').next())
+        .map(|ext| extensions.contains(&ext))
+        .unwrap_or(false)
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -734,7 +745,10 @@ impl SourceMapProcessor {
     /// a debug id, it will be reused for the source file.
     ///
     /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
-    pub fn inject_debug_ids(&mut self, dry_run: bool) -> Result<()> {
+    ///
+    /// The `js_extensions` is a list of file extensions that should be considered
+    /// for JavaScript files.
+    pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str]) -> Result<()> {
         self.flush_pending_sources();
         println!("{} Injecting debug ids", style(">").dim());
 
@@ -801,6 +815,15 @@ impl SourceMapProcessor {
 
         // Step 2: Iterate over the minified source files and inject the debug ids.
         for (source_url, debug_id) in debug_ids {
+            // We only allow injection into files that match the extension
+            if !url_matches_extension(&source_url, js_extensions) {
+                debug!(
+                    "skipping potential js file {} because it does not match extension",
+                    source_url
+                );
+                continue;
+            }
+
             let source_file = self.sources.get_mut(&source_url).unwrap();
 
             fixup_js_file(&mut source_file.contents, debug_id)
