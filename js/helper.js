@@ -61,7 +61,7 @@ function mockBinaryPath(mockPath) {
 function serializeOptions(schema, options) {
   return Object.keys(schema).reduce((newOptions, option) => {
     const paramValue = options[option];
-    if (paramValue === undefined) {
+    if (paramValue === undefined || paramValue === null) {
       return newOptions;
     }
 
