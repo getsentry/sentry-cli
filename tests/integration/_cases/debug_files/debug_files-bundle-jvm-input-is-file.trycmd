@@ -1,0 +1,9 @@
+```
+$ sentry-cli debug-files bundle-jvm --output `cwd` --debug-id 59144E0E-52C4-41F8-9111-0D6F8F14905B tests/integration/_fixtures/jvm/io/sentry/sample/MainActivity.java
+? failed
+error: Given path is not a directory: tests/integration/_fixtures/jvm/io/sentry/sample/MainActivity.java
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
