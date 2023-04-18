@@ -34,7 +34,7 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
+pub fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
     debug!("{:?}", envelope);
     with_sentry_client(dsn, |c| c.send_envelope(envelope));
 }

@@ -13,9 +13,11 @@ use itertools::Itertools;
 use log::{debug, warn};
 use sentry::protocol::{Event, Level, LogEntry, User};
 use sentry::types::{Dsn, Uuid};
+use sentry::Envelope;
 use serde_json::Value;
 use username::get_user_name;
 
+use crate::commands::send_envelope::send_raw_envelope;
 use crate::config::Config;
 use crate::utils::args::{get_timestamp, validate_distribution};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
@@ -35,6 +37,12 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .required(false)
                 .help("The path or glob to the file(s) in JSON format to send as event(s). When provided, all other arguments are ignored."),
+        )
+        .arg(
+            Arg::new("raw")
+                .long("raw")
+                .action(ArgAction::SetTrue)
+                .help("Send events using an envelope without attempting to parse their contents."),
         )
         .arg(
             Arg::new("level")
@@ -161,6 +169,7 @@ fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
+    let raw = matches.get_flag("raw");
 
     if let Some(path) = matches.get_one::<String>("path") {
         let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
@@ -174,12 +183,33 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
 
         for path in collected_paths {
-            let p = path.as_path();
-            let file = File::open(p)?;
-            let reader = BufReader::new(file);
-            let event: Event = serde_json::from_reader(reader)?;
-            let id = send_raw_event(event, dsn.clone());
-            println!("Event from file {} dispatched: {}", p.display(), id);
+            let raw_event = std::fs::read(&path)?;
+
+            let id = if raw {
+                use std::io::Write;
+
+                // Its a bit unfortunate that we still need to parse the whole JSON,
+                // but envelopes need an `event_id`, which we also want to report.
+                let json: Value = serde_json::from_slice(&raw_event)?;
+                let id = json
+                    .as_object()
+                    .and_then(|event| event.get("event_id"))
+                    .and_then(|val| val.as_str())
+                    .and_then(|id| Uuid::parse_str(id).ok())
+                    .unwrap_or_default();
+                let mut buf = Vec::new();
+                writeln!(buf, r#"{{"event_id":"{id}"}}"#)?;
+                writeln!(buf, r#"{{"type":"event","length":{}}}"#, raw_event.len())?;
+                buf.extend(raw_event);
+                let envelope = Envelope::from_bytes_raw(buf)?;
+                send_raw_envelope(envelope, dsn);
+                id
+            } else {
+                let event: Event = serde_json::from_slice(&raw_event)?;
+                send_raw_event(event, dsn.clone())
+            };
+
+            println!("Event from file {} dispatched: {}", path.display(), id);
         }
 
         return Ok(());
