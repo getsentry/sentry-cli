@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.3
+
+### Various fixes & improvements
+
+- feat(js): Skip null as option same as undefined (#1579) by @mitsuhiko
+- Add command `sentry-cli debug-files bundle-jvm` for bundling Java (and other JVM based languages) sources (#1551) by @adinauer
+
 ## 2.17.2
 
 ### Various fixes & improvements
