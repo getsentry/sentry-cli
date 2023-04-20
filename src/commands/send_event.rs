@@ -1,7 +1,5 @@
 use std::borrow::Cow;
 use std::env;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
@@ -202,7 +200,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 writeln!(buf, r#"{{"type":"event","length":{}}}"#, raw_event.len())?;
                 buf.extend(raw_event);
                 let envelope = Envelope::from_bytes_raw(buf)?;
-                send_raw_envelope(envelope, dsn);
+                send_raw_envelope(envelope, dsn.clone());
                 id
             } else {
                 let event: Event = serde_json::from_slice(&raw_event)?;
