@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.4
+
+### Various fixes & improvements
+
+- Add ability to send an Event as Raw Envelope (#1582) by @Swatinem
+
 ## 2.17.3
 
 ### Various fixes & improvements
