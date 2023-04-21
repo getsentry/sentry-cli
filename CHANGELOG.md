@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+- feat(backport): Update `sourcemap` to 6.2.3 to make a sourcemap fix available in v1. (#1586)
+
 ## 1.75.0
 
 - feat(backport): Replace `npmlog` dependency in order to avoid vulnerability (#1445)
