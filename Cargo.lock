@@ -126,15 +126,6 @@ dependencies = [
 
 [[package]]
 name = "base64"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b25d992356d2eb0ed82172f5248873db5560c4721f564b13cb5193bda5e668e"
-dependencies = [
- "byteorder",
-]
-
-[[package]]
-name = "base64"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "904dfeac50f3cdaba28fc6f57fdcddb75f49ed61346676a78c4ffe55877802fd"
@@ -474,6 +465,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "data-encoding"
+version = "2.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23d8666cb01533c39dde32bcbab8e227b4ed6679b2c925eba05feabea39508fb"
+
+[[package]]
 name = "debugid"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -705,9 +702,9 @@ version = "0.1.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa4da3c766cd7a0db8242e326e9e4e081edd567072893ed320008189715366a4"
 dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
+ "proc-macro2",
+ "quote",
+ "syn",
  "synstructure",
 ]
 
@@ -778,7 +775,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5fc25a87fa4fd2094bffb06925852034d90a17f0d1e05197d4956d3555752191"
 dependencies = [
  "matches",
- "percent-encoding 2.1.0",
+ "percent-encoding",
 ]
 
 [[package]]
@@ -827,7 +824,7 @@ dependencies = [
  "libc",
  "libgit2-sys",
  "log",
- "url 2.2.2",
+ "url",
 ]
 
 [[package]]
@@ -923,17 +920,6 @@ dependencies = [
 
 [[package]]
 name = "idna"
-version = "0.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "38f09e0f0b1fb55fdee1f17470ad800da77af5186a1a76c026b679358b7e844e"
-dependencies = [
- "matches",
- "unicode-bidi",
- "unicode-normalization",
-]
-
-[[package]]
-name = "idna"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "418a0a6fab821475f634efe3ccc45c013f742efe03d853e8d3355d5cb850ecf8"
@@ -942,12 +928,6 @@ dependencies = [
  "unicode-bidi",
  "unicode-normalization",
 ]
-
-[[package]]
-name = "if_chain"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4bac95d9aa0624e7b78187d6fb8ab012b41d9f6f54b1bcb61e61c4845f8357ec"
 
 [[package]]
 name = "if_chain"
@@ -1522,12 +1502,6 @@ dependencies = [
 
 [[package]]
 name = "percent-encoding"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31010dd2e1ac33d5b46a5b413495239882813e0369f8ed8a5e266f173602f831"
-
-[[package]]
-name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d4fd5641d01c8f18a23da7b6fe29298ff4b55afcccdf78973b24cf3175fee32e"
@@ -1559,9 +1533,9 @@ checksum = "99b8db626e31e5b81787b9783425769681b347011cc59471e33ea46d2ea0cf55"
 dependencies = [
  "pest",
  "pest_meta",
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1608,7 +1582,7 @@ version = "1.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bd39bc6cdc9355ad1dc5eeedefee696bb35c34caf21768741e81826c0bbd7225"
 dependencies = [
- "base64 0.13.0",
+ "base64",
  "indexmap",
  "line-wrap",
  "serde",
@@ -1664,20 +1638,11 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "0.4.30"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf3d2011ab5c909338f7887f4fc896d35932e29146c12c8d01da6b22a80ba759"
-dependencies = [
- "unicode-xid 0.1.0",
-]
-
-[[package]]
-name = "proc-macro2"
 version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c7342d5883fbccae1cc37a2353b09c87c9b0f3afd73f5fb9bba687a1f733b029"
 dependencies = [
- "unicode-xid 0.2.2",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -1692,20 +1657,11 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "0.6.13"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ce23b6b870e8f94f81fb0a363d65d86675884b34a09043c81e5562f11c1f8e1"
-dependencies = [
- "proc-macro2 0.4.30",
-]
-
-[[package]]
-name = "quote"
 version = "1.0.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "864d3e96a899863136fc6e99f3d7cae289dafe43bf2c5ac19b70df7210c0a145"
 dependencies = [
- "proc-macro2 1.0.36",
+ "proc-macro2",
 ]
 
 [[package]]
@@ -1944,19 +1900,12 @@ checksum = "d29ab0c6d3fc0ee92fe66e2d99f700eab17a8d57d1c1d3b748380fb20baa78cd"
 
 [[package]]
 name = "scroll"
-version = "0.9.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f84d114ef17fd144153d608fba7c446b0145d038985e7a8cc5d08bb0ce20383"
-dependencies = [
- "rustc_version",
- "scroll_derive 0.9.5",
-]
-
-[[package]]
-name = "scroll"
 version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fda28d4b4830b807a8b43f7b0e6b5df875311b3e7621d84577188c175b6ec1ec"
+dependencies = [
+ "scroll_derive 0.10.5",
+]
 
 [[package]]
 name = "scroll"
@@ -1969,13 +1918,13 @@ dependencies = [
 
 [[package]]
 name = "scroll_derive"
-version = "0.9.5"
+version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f1aa96c45e7f5a91cb7fabe7b279f02fea7126239fc40b732316e8b6a2d0fcb"
+checksum = "aaaae8f38bb311444cfb7f1979af0bc9240d95795f75f9ceddf6a59b79ceffa0"
 dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
- "syn 0.15.44",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1984,9 +1933,9 @@ version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bdbda6ac5cd1321e724fa9cee216f3a61885889b896f073b8f82322789c5250e"
 dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2046,7 +1995,7 @@ dependencies = [
  "flate2",
  "git2",
  "glob",
- "if_chain 1.0.2",
+ "if_chain",
  "ignore",
  "indicatif",
  "insta",
@@ -2062,7 +2011,7 @@ dependencies = [
  "openssl-probe",
  "osascript",
  "parking_lot 0.11.2",
- "percent-encoding 2.1.0",
+ "percent-encoding",
  "plist",
  "predicates",
  "prettytable-rs",
@@ -2083,7 +2032,7 @@ dependencies = [
  "tempfile",
  "trycmd",
  "unix-daemonize",
- "url 2.2.2",
+ "url",
  "username",
  "uuid",
  "walkdir",
@@ -2117,7 +2066,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "url 2.2.2",
+ "url",
  "uuid",
 ]
 
@@ -2136,9 +2085,9 @@ version = "1.0.136"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08597e7152fcd306f41838ed3e37be9eaeed2b61c42e2117266a554fab4662f9"
 dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2297,19 +2246,18 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "5.0.0"
+version = "6.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fd57aa9e5cea41b4a3c26a61039fad5585e2154ffe057a2656540a21b03a2d2"
+checksum = "eed16231c92d0a6f0388f56e0ab2be24ecff1173f8e22f0ea5e074d0525631cb"
 dependencies = [
- "base64 0.10.1",
- "if_chain 0.1.3",
- "lazy_static",
- "regex",
+ "data-encoding",
+ "if_chain",
  "rustc_version",
- "scroll 0.9.2",
+ "scroll 0.10.2",
  "serde",
  "serde_json",
- "url 1.7.2",
+ "unicode-id",
+ "url",
 ]
 
 [[package]]
@@ -2393,24 +2341,13 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "0.15.44"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9ca4b3b69a77cbe1ffc9e198781b7acb0c7365a883670e8f1c1bc66fba79a5c5"
-dependencies = [
- "proc-macro2 0.4.30",
- "quote 0.6.13",
- "unicode-xid 0.1.0",
-]
-
-[[package]]
-name = "syn"
 version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a65b3f4ffa0092e9887669db0eae07941f023991ab58ea44da8fe8e2d511c6b"
 dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "unicode-xid 0.2.2",
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -2419,10 +2356,10 @@ version = "0.12.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f36bdaa60a83aca3921b5259d5400cbf5e90fc51931376a9bd4a0eb79aa7210f"
 dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
- "unicode-xid 0.2.2",
+ "proc-macro2",
+ "quote",
+ "syn",
+ "unicode-xid",
 ]
 
 [[package]]
@@ -2501,9 +2438,9 @@ version = "1.0.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "aa32fd3f627f367fe16f893e2597ae3c05020f8bba2666a4e6ea73d377e5714b"
 dependencies = [
- "proc-macro2 1.0.36",
- "quote 1.0.15",
- "syn 1.0.86",
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -2609,6 +2546,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a01404663e3db436ed2746d9fefef640d868edae3cceb81c3b8d5732fda678f"
 
 [[package]]
+name = "unicode-id"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d70b6494226b36008c8366c288d77190b3fad2eb4c10533139c1c1f461127f1a"
+
+[[package]]
 name = "unicode-normalization"
 version = "0.1.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2622,12 +2565,6 @@ name = "unicode-width"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3ed742d4ea2bd1176e236172c8429aaf54486e7ac098db29ffe6529e0ce50973"
-
-[[package]]
-name = "unicode-xid"
-version = "0.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fc72304796d0818e357ead4e000d19c9c174ab23dc11093ac919054d20a6a7fc"
 
 [[package]]
 name = "unicode-xid"
@@ -2646,25 +2583,14 @@ dependencies = [
 
 [[package]]
 name = "url"
-version = "1.7.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dd4e7c0d531266369519a4aa4f399d748bd37043b00bde1e4ff1f60a120b355a"
-dependencies = [
- "idna 0.1.5",
- "matches",
- "percent-encoding 1.0.1",
-]
-
-[[package]]
-name = "url"
 version = "2.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a507c383b2d33b5fc35d1861e77e6b383d158b2da5e14fe51b83dfedf6fd578c"
 dependencies = [
  "form_urlencoded",
- "idna 0.2.3",
+ "idna",
  "matches",
- "percent-encoding 2.1.0",
+ "percent-encoding",
  "serde",
 ]
 

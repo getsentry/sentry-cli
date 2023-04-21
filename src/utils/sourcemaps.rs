@@ -7,7 +7,6 @@ use std::str;
 
 use console::style;
 use failure::{bail, Error};
-use if_chain::if_chain;
 use log::{debug, info, warn};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
@@ -70,29 +69,17 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
     rv
 }
 
-pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> sourcemap::SourceMapRef {
-    if let Some(sm_ref) =
-        get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
-    {
-        sourcemap::SourceMapRef::Ref(sm_ref.to_string())
-    } else {
-        sourcemap::SourceMapRef::Missing
-    }
+pub fn get_sourcemap_ref_from_headers(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+    get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
+        .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
-pub fn get_sourcemap_ref_from_contents(file: &ReleaseFile) -> sourcemap::SourceMapRef {
-    sourcemap::locate_sourcemap_reference_slice(&file.contents)
-        .unwrap_or(sourcemap::SourceMapRef::Missing)
+pub fn get_sourcemap_ref_from_contents(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+    sourcemap::locate_sourcemap_reference_slice(&file.contents).unwrap_or(None)
 }
 
-pub fn get_sourcemap_ref(file: &ReleaseFile) -> sourcemap::SourceMapRef {
-    match get_sourcemap_ref_from_headers(file) {
-        sourcemap::SourceMapRef::Missing => {}
-        other => {
-            return other;
-        }
-    }
-    get_sourcemap_ref_from_contents(file)
+pub fn get_sourcemap_ref(file: &ReleaseFile) -> Option<sourcemap::SourceMapRef> {
+    get_sourcemap_ref_from_headers(file).or_else(|| get_sourcemap_ref_from_contents(file))
 }
 
 pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, &'a String)>>(
@@ -274,16 +261,11 @@ impl SourceMapProcessor {
             }
 
             if source.ty == SourceFileType::MinifiedSource {
-                let sm_ref = get_sourcemap_ref(source);
-                if_chain! {
-                    if sm_ref != sourcemap::SourceMapRef::Missing;
-                    if let Some(url) = sm_ref.get_url();
-                    then {
-                        println!("    {} (sourcemap at {})",
-                                 &source.url, style(url).cyan());
-                    } else {
-                        println!("    {} (no sourcemap ref)", &source.url);
-                    }
+                if let Some(sm_ref) = get_sourcemap_ref(source) {
+                    let url = sm_ref.get_url();
+                    println!("    {} (sourcemap at {})", &source.url, style(url).cyan());
+                } else {
+                    println!("    {} (no sourcemap ref)", &source.url);
                 }
             } else {
                 println!("    {}", &source.url);
@@ -535,16 +517,17 @@ impl SourceMapProcessor {
 }
 
 fn validate_script(source: &mut ReleaseFile) -> Result<(), Error> {
-    let sm_ref = get_sourcemap_ref(source);
-    if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
-        source.warn("encountered a legacy reference".into());
-    }
-    if let Some(url) = sm_ref.get_url() {
+    if let Some(sm_ref) = get_sourcemap_ref(source) {
+        if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
+            source.warn("encountered a legacy reference".into());
+        }
+        let url = sm_ref.get_url();
         let full_url = join_url(&source.url, url)?;
         info!("found sourcemap for {} at {}", &source.url, full_url);
     } else if source.ty == SourceFileType::MinifiedSource {
         source.error("missing sourcemap!".into());
     }
+
     Ok(())
 }
 

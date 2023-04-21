@@ -2300,9 +2300,10 @@ pub enum ChunkHashAlgorithm {
     Sha1,
 }
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub enum ChunkCompression {
     /// No compression should be applied
+    #[default]
     Uncompressed = 0,
     /// GZIP compression (including header)
     Gzip = 10,
@@ -2317,12 +2318,6 @@ impl ChunkCompression {
             ChunkCompression::Gzip => "file_gzip",
             ChunkCompression::Brotli => "file_brotli",
         }
-    }
-}
-
-impl Default for ChunkCompression {
-    fn default() -> Self {
-        ChunkCompression::Uncompressed
     }
 }
 
