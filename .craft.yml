@@ -76,5 +76,3 @@ requireNames:
   - /^sentry-cli-Linux-aarch64$/
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
-  - /^sentry_cli-.*.tar.gz$/
-  - /^sentry_cli-.*.whl$/
