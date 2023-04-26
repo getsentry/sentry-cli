@@ -14,6 +14,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/575-bb7d7e0e6de8d623.js
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/pages/asdf-05b39167abbe433b.js
 > Bundled 20 files for upload
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
 > Organization: wat-org

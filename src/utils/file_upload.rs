@@ -465,6 +465,12 @@ fn build_artifact_bundle(
         }
     );
 
+    println!(
+        "{} Bundle ID: {}",
+        style(">").dim(),
+        style(debug_id).yellow(),
+    );
+
     Ok(archive)
 }
 
