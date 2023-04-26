@@ -392,7 +392,12 @@ impl SourceMapProcessor {
 
             if source.ty == SourceFileType::MinifiedSource {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
-                    pieces.push(format!("sourcemap at {}", style(sm_ref.get_url()).cyan()));
+                    let sm_url = sm_ref.get_url();
+                    if sm_url.starts_with("data:") {
+                        pieces.push("embedded sourcemap".to_string());
+                    } else {
+                        pieces.push(format!("sourcemap at {}", style(sm_url).cyan()));
+                    };
                 } else {
                     pieces.push("no sourcemap ref".into());
                 }
