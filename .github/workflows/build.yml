@@ -163,6 +163,6 @@ jobs:
         with:
           name: ${{ github.sha }}
           path: |
-            '*.tgz'
+            *.tgz
             sentry_cli-placeholder.tar.gz
             sentry_cli-placeholder.whl
