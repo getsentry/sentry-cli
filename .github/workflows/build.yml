@@ -162,4 +162,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: ${{ github.sha }}
-          path: '*.tgz'
+          path: |
+            '*.tgz'
+            sentry_cli-placeholder.tar.gz
+            sentry_cli-placeholder.whl
