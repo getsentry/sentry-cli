@@ -2,9 +2,9 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
-## Unreleased
+## 1.75.1
 
-- feat(backport): Update `sourcemap` to 6.2.3 to make a sourcemap fix available in v1. (#1586)
+- feat(backport): Update `sourcemap` to 6.2.3 to correctly handle protocol-only `sourceRoot` (#1586)
 
 ## 1.75.0
 
