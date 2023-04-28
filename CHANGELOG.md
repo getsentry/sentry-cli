@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+- This release fixes the checksum mismatch from 1.75.1.
+  
 ## 1.75.1
 
 - feat(backport): Update `sourcemap` to 6.2.3 to correctly handle protocol-only `sourceRoot` (#1586)
