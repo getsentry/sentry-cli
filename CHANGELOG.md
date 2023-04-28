@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.5
+
+### Various fixes & improvements
+
+- feat: Print bundle id after artifact bundle creation (#1593) by @loewenheim
+- ref: Use 'embedded sourcemap' label for upload log (#1595) by @kamilogorek
+
 ## 2.17.4
 
 ### Various fixes & improvements
