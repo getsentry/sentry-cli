@@ -21,11 +21,9 @@ pub fn make_command(mut command: Command) -> Command {
     }
 
     command = command
-        .about("Manage monitors on Sentry.")
+        .about("Manage monitors on Sentry [beta].")
         .subcommand_required(true)
-        .arg_required_else_help(true)
-        // Beta feature Left hidden while we iterate on this product
-        .hide(true);
+        .arg_required_else_help(true);
 
     each_subcommand!(add_subcommand);
     command

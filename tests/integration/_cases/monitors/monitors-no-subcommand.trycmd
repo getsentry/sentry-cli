@@ -1,7 +1,7 @@
 ```
 $ sentry-cli monitors
 ? failed
-Manage monitors on Sentry.
+Manage monitors on Sentry [beta].
 
 Usage: sentry-cli[EXE] monitors [OPTIONS] <COMMAND>
 
