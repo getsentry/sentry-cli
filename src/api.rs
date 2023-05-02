@@ -2490,11 +2490,13 @@ pub struct MonitorCheckIn {
     pub id: Uuid,
     pub status: Option<MonitorCheckinStatus>,
     pub duration: Option<u64>,
+    pub environment: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct CreateMonitorCheckIn {
     pub status: MonitorCheckinStatus,
+    pub environment: String,
 }
 
 #[derive(Debug, Serialize, Default)]
@@ -2503,6 +2505,8 @@ pub struct UpdateMonitorCheckIn {
     pub status: Option<MonitorCheckinStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
