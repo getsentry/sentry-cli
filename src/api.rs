@@ -1631,6 +1631,31 @@ impl Api {
             resp.convert()
         }
     }
+
+    pub fn get_sourcemap_processing_issues(
+        &self,
+        org: &str,
+        project: &str,
+        event_id: &str,
+        frame_idx: usize,
+        exception_idx: usize,
+    ) -> ApiResult<Option<Vec<SourceMapProcessingIssue>>> {
+        let path = 
+            format!(
+                "/projects/{}/{}/events/{}/source-map-debug/?frame_idx={frame_idx}&exception_idx={exception_idx}",
+                PathArg(org),
+                PathArg(project),
+                PathArg(event_id)
+            );
+
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            let resp: SourceMapProcessingIssueResponse = resp.convert()?;
+            Ok(Some(resp.errors))
+        }
+    }
 }
 
 fn send_req<W: Write>(
@@ -2840,4 +2865,73 @@ impl fmt::Display for ProcessedEventTag {
         write!(f, "{}: {}", &self.key, &self.value)?;
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+pub enum SourceMapProcessingIssueKind {
+    UnknownError,
+    #[serde(rename = "no_release_on_event")]
+    MissingRelease,
+    #[serde(rename = "no_user_agent_on_release")]
+    MissingUserAgent,
+    #[serde(rename = "no_sourcemaps_on_release")]
+    MissingSourcemaps,
+    UrlNotValid,
+    NoUrlMatch,
+    PartialMatch,
+    DistMismatch,
+    SourcemapNotFound,
+}
+
+impl fmt::Display for SourceMapProcessingIssueKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::UnknownError => f.write_str("Unknown error"),
+            Self::MissingRelease => f.write_str("The event is missing a release"),
+            Self::MissingUserAgent => f.write_str("The release is missing a user agent"),
+            Self::MissingSourcemaps => f.write_str("The release is missing source maps"),
+            Self::UrlNotValid => f.write_str("The absolute path url is not valid"),
+            Self::NoUrlMatch => f.write_str("The absolute path url does not match any source maps"),
+            Self::PartialMatch => f.write_str("The absolute path url is a partial match"),
+            Self::DistMismatch => f.write_str("The dist values do not match"),
+            Self::SourcemapNotFound => f.write_str("The sourcemap could not be found"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SourceMapProcessingIssue {
+    #[serde(rename = "type")]
+    pub kind: SourceMapProcessingIssueKind,
+    pub message: String,
+    #[serde(default)]
+    pub data: HashMap<String, String>,
+}
+
+impl fmt::Display for SourceMapProcessingIssue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}.", self.message)?;
+            match self.kind {
+            SourceMapProcessingIssueKind::UnknownError => todo!(),
+            SourceMapProcessingIssueKind::MissingRelease => {},
+            SourceMapProcessingIssueKind::MissingUserAgent => todo!(),
+            SourceMapProcessingIssueKind::MissingSourcemaps => todo!(),
+            SourceMapProcessingIssueKind::UrlNotValid => todo!(),
+            SourceMapProcessingIssueKind::NoUrlMatch => todo!(),
+            SourceMapProcessingIssueKind::PartialMatch => todo!(),
+            SourceMapProcessingIssueKind::DistMismatch => {
+                let event_dist = self.data.get("eventDist").map(|x| x.as_str()).unwrap_or("[none]");
+                let artifact_dist = self.data.get("artifactDist").map(|x| x.as_str()).unwrap_or("[none]");
+                write!(f, " Event: {event_dist}, Artifact: {artifact_dist}")?;
+            }
+            SourceMapProcessingIssueKind::SourcemapNotFound => todo!(),
+        }
+
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
+struct SourceMapProcessingIssueResponse {
+    errors: Vec<SourceMapProcessingIssue>
 }

@@ -1,3 +1,4 @@
+use std::fmt;
 use std::io::Read;
 use std::path::Path;
 
@@ -5,9 +6,12 @@ use anyhow::{bail, format_err, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use sentry::protocol::{Frame, Stacktrace};
+use serde::Deserialize;
 use url::Url;
 
-use crate::api::{Api, Artifact, ProcessedEvent};
+use crate::api::{
+    Api, Artifact, ProcessedEvent, SourceMapProcessingIssue, SourceMapProcessingIssueKind,
+};
 use crate::config::Config;
 use crate::utils::fs::TempFile;
 use crate::utils::system::QuietExit;
@@ -73,6 +77,32 @@ fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEven
         Some(event) => {
             success(format!("Fetched data for event: {event_id}"));
             Ok(event)
+        }
+        None => {
+            error(format!("Could not retrieve event {event_id}"));
+            tip("Make sure that event ID you used is valid.");
+            Err(QuietExit(1).into())
+        }
+    }
+}
+
+fn fetch_sourcemap_processing_issues(
+    org: &str,
+    project: &str,
+    event_id: &str,
+    frame_idx: usize,
+    exception_idx: usize,
+) -> Result<Vec<SourceMapProcessingIssue>> {
+    match Api::current().get_sourcemap_processing_issues(
+        org,
+        project,
+        event_id,
+        frame_idx,
+        exception_idx,
+    )? {
+        Some(issues) => {
+            success(format!("Fetched data for event: {event_id}"));
+            Ok(issues)
         }
         None => {
             error(format!("Could not retrieve event {event_id}"));
@@ -364,93 +394,133 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
     let event_id = matches.get_one::<String>("event").unwrap();
+    let frame_idx = *matches.get_one::<usize>("frame").unwrap();
 
-    let event = fetch_event(&org, &project, event_id)?;
-    let release = extract_release(&event)?;
+    let issues = fetch_sourcemap_processing_issues(&org, &project, event_id, frame_idx, 0)?;
 
-    if event.exception.values.is_empty() {
-        warning("Event has no exception captured, there is no use for source maps");
-        return Err(QuietExit(0).into());
+    dbg!(&issues);
+
+    if issues.is_empty() {
+        success("Source Maps should be working fine. Have you tried turning it off and on again?");
+        return Ok(());
     }
-    success("Event has a valid exception present");
 
-    let exception = &event.exception.values[0];
-    let stacktrace = exception.stacktrace.as_ref().ok_or_else(|| {
-        error("Event exception has no stacktrace available");
-        QuietExit(1)
-    })?;
-    success("Event has a valid stacktrace present");
-
-    let mut frame = extract_nth_frame(stacktrace, *matches.get_one::<usize>("frame").unwrap())
-        .map_err(|err| {
-            error(err);
-            QuietExit(1)
-        })?;
-
-    if exception.raw_stacktrace.is_some() {
-        if matches.get_flag("force") {
-            warning(
-                "Exception is already source mapped, however 'force' flag was used. Moving along.",
-            );
-            let raw_stacktrace = exception.raw_stacktrace.as_ref().unwrap();
-            frame = extract_nth_frame(raw_stacktrace, *matches.get_one::<usize>("frame").unwrap())
-                .map_err(|err| {
-                    error(err);
-                    QuietExit(1)
-                })?;
-        } else {
-            warning("Exception is already source mapped and first resolved frame points to:\n");
-            if let Some(frame) = extract_in_app_frames(stacktrace)
-                .iter()
-                .rev()
-                .find(|f| f.context_line.is_some())
-            {
-                print_mapped_frame(frame);
-            } else {
-                println!("{}", style("> [missing context line]").yellow());
+    for (i, issue) in issues.iter().enumerate() {
+        println!("Issue {i:>2} of {:>2}", issues.len());
+        match issue.kind {
+            SourceMapProcessingIssueKind::UnknownError => error(issue),
+            SourceMapProcessingIssueKind::MissingRelease => {
+                error(issue);
+                tip("Configure 'release' option in the SDK.\n  \
+            https://docs.sentry.io/platforms/javascript/configuration/options/#release\n  \
+            https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-a-release-is-configured-in-your-sdk");
             }
-            return Err(QuietExit(0).into());
+            SourceMapProcessingIssueKind::MissingUserAgent => error(issue),
+            SourceMapProcessingIssueKind::MissingSourcemaps => error(issue),
+            SourceMapProcessingIssueKind::UrlNotValid => error(issue),
+            SourceMapProcessingIssueKind::NoUrlMatch => error(issue),
+            SourceMapProcessingIssueKind::PartialMatch => {
+                tip(format!(
+                    "Found entry with partially matching filename: {}. \
+                Make sure that that --url-prefix is set correctly.",
+                    issue.data["partialMatchPath"],
+                ));
+            }
+            SourceMapProcessingIssueKind::DistMismatch => {
+                error(issue);
+                tip("Configure 'dist' option in the SDK to match the one used during artifacts upload.\n  \
+            https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifact-distribution-value-matches-value-configured-in-your-sdk");
+            }
+            SourceMapProcessingIssueKind::SourcemapNotFound => error(issue),
         }
     }
 
-    let abs_path = frame.abs_path.as_ref().expect("Incorrect abs_path value");
-    let artifacts = fetch_release_artifacts(&org, &project, &release)?;
-    let matched_artifact = find_matching_artifact(&artifacts, &unify_artifact_url(abs_path)?)?;
+    // let event = fetch_event(&org, &project, event_id)?;
+    // let release = extract_release(&event)?;
 
-    verify_dists_matches(&matched_artifact, event.dist.as_deref())?;
+    // if event.exception.values.is_empty() {
+    //     warning("Event has no exception captured, there is no use for source maps");
+    //     return Err(QuietExit(0).into());
+    // }
+    // success("Event has a valid exception present");
 
-    let sourcemap_location =
-        discover_sourcemaps_location(&org, &project, &release, &matched_artifact).map_err(
-            |err| {
-                error(err);
-                QuietExit(1)
-            },
-        )?;
-    success(format!(
-        "Found source map location: {}",
-        &sourcemap_location
-    ));
+    // let exception = &event.exception.values[0];
+    // let stacktrace = exception.stacktrace.as_ref().ok_or_else(|| {
+    //     error("Event exception has no stacktrace available");
+    //     QuietExit(1)
+    // })?;
+    // success("Event has a valid stacktrace present");
 
-    let sourcemap_url = unify_artifact_url(&resolve_sourcemap_url(abs_path, &sourcemap_location)?)?;
-    success(format!("Resolved source map url: {}", &sourcemap_url));
+    // let mut frame = extract_nth_frame(stacktrace, *matches.get_one::<usize>("frame").unwrap())
+    //     .map_err(|err| {
+    //         error(err);
+    //         QuietExit(1)
+    //     })?;
 
-    let sourcemap_artifact = find_matching_artifact(&artifacts, &sourcemap_url)?;
-    verify_dists_matches(&sourcemap_artifact, event.dist.as_deref())?;
+    // if exception.raw_stacktrace.is_some() {
+    //     if matches.get_flag("force") {
+    //         warning(
+    //             "Exception is already source mapped, however 'force' flag was used. Moving along.",
+    //         );
+    //         let raw_stacktrace = exception.raw_stacktrace.as_ref().unwrap();
+    //         frame = extract_nth_frame(raw_stacktrace, *matches.get_one::<usize>("frame").unwrap())
+    //             .map_err(|err| {
+    //                 error(err);
+    //                 QuietExit(1)
+    //             })?;
+    //     } else {
+    //         warning("Exception is already source mapped and first resolved frame points to:\n");
+    //         if let Some(frame) = extract_in_app_frames(stacktrace)
+    //             .iter()
+    //             .rev()
+    //             .find(|f| f.context_line.is_some())
+    //         {
+    //             print_mapped_frame(frame);
+    //         } else {
+    //             println!("{}", style("> [missing context line]").yellow());
+    //         }
+    //         return Err(QuietExit(0).into());
+    //     }
+    // }
 
-    let sourcemap_file =
-        fetch_release_artifact_file(&org, &project, &release, &sourcemap_artifact)?;
+    // let abs_path = frame.abs_path.as_ref().expect("Incorrect abs_path value");
+    // let artifacts = fetch_release_artifacts(&org, &project, &release)?;
+    // let matched_artifact = find_matching_artifact(&artifacts, &unify_artifact_url(abs_path)?)?;
 
-    print_sourcemap(
-        &sourcemap_file,
-        frame.lineno.expect("Event frame is missing line number") as u32 - 1,
-        frame.colno.expect("Event frame is missing column number") as u32 - 1,
-    )
-    .map_err(|err| {
-        error(err);
-        QuietExit(1)
-    })?;
+    // verify_dists_matches(&matched_artifact, event.dist.as_deref())?;
 
-    success("Source Maps should be working fine. Have you tried turning it off and on again?");
+    // let sourcemap_location =
+    //     discover_sourcemaps_location(&org, &project, &release, &matched_artifact).map_err(
+    //         |err| {
+    //             error(err);
+    //             QuietExit(1)
+    //         },
+    //     )?;
+    // success(format!(
+    //     "Found source map location: {}",
+    //     &sourcemap_location
+    // ));
+
+    // let sourcemap_url = unify_artifact_url(&resolve_sourcemap_url(abs_path, &sourcemap_location)?)?;
+    // success(format!("Resolved source map url: {}", &sourcemap_url));
+
+    // let sourcemap_artifact = find_matching_artifact(&artifacts, &sourcemap_url)?;
+    // verify_dists_matches(&sourcemap_artifact, event.dist.as_deref())?;
+
+    // let sourcemap_file =
+    //     fetch_release_artifact_file(&org, &project, &release, &sourcemap_artifact)?;
+
+    // print_sourcemap(
+    //     &sourcemap_file,
+    //     frame.lineno.expect("Event frame is missing line number") as u32 - 1,
+    //     frame.colno.expect("Event frame is missing column number") as u32 - 1,
+    // )
+    // .map_err(|err| {
+    //     error(err);
+    //     QuietExit(1)
+    // })?;
+
+    // success("Source Maps should be working fine. Have you tried turning it off and on again?");
     Ok(())
 }
 
