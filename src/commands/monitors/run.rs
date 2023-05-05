@@ -20,6 +20,12 @@ pub fn make_command(command: Command) -> Command {
                 .required(true),
         )
         .arg(
+            Arg::new("environment")
+                .short('e')
+                .default_value("production")
+                .help("Specify the environment of the monitor."),
+        )
+        .arg(
             Arg::new("allow_failure")
                 .short('f')
                 .long("allow-failure")
@@ -47,6 +53,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
+    let environment = matches.get_one::<String>("environment").unwrap();
 
     let allow_failure = matches.get_flag("allow_failure");
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
@@ -56,6 +63,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         monitor_slug,
         &CreateMonitorCheckIn {
             status: MonitorCheckinStatus::InProgress,
+            environment: environment.to_string(),
         },
     );
 
@@ -93,6 +101,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         let elapsed = started.elapsed();
                         elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis())
                     }),
+                    environment: Some(environment.to_string()),
                 },
             )
             .ok();
