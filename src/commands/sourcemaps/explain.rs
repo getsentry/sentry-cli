@@ -1,4 +1,3 @@
-use std::fmt;
 use std::io::Read;
 use std::path::Path;
 
@@ -6,10 +5,9 @@ use anyhow::{bail, format_err, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use sentry::protocol::{Frame, Stacktrace};
-use serde::Deserialize;
 use url::Url;
 
-use crate::api::{Api, Artifact, ProcessedEvent, SourceMapProcessingIssueKind};
+use crate::api::{Api, Artifact, ProcessedEvent, SourceMapProcessingIssue};
 use crate::config::Config;
 use crate::utils::fs::TempFile;
 use crate::utils::system::QuietExit;
@@ -70,17 +68,22 @@ where
     println!("{}", style(format!("✖ {msg}")).red());
 }
 
-fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEvent> {
-    match Api::current().get_event(org, Some(project), event_id)? {
-        Some(event) => {
-            success(format!("Fetched data for event: {event_id}"));
-            Ok(event)
-        }
-        None => {
-            error(format!("Could not retrieve event {event_id}"));
-            tip("Make sure that event ID you used is valid.");
-            Err(QuietExit(1).into())
-        }
+fn help(issue: &SourceMapProcessingIssue) {
+    match issue {
+        SourceMapProcessingIssue::MissingRelease => tip(
+            "Configure 'release' option in the SDK.\n  \
+            https://docs.sentry.io/platforms/javascript/configuration/options/#release\n  \
+            https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-a-release-is-configured-in-your-sdk"
+        ),
+        SourceMapProcessingIssue::PartialMatch { partial_match_path } => tip(format!(
+            "Found entry with partially matching filename: {partial_match_path}. \
+            Make sure that that --url-prefix is set correctly.",
+        )),
+        SourceMapProcessingIssue::DistMismatch {..} => tip(
+            "Configure 'dist' option in the SDK to match the one used during artifacts upload.\n  \
+            https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifact-distribution-value-matches-value-configured-in-your-sdk"
+        ),
+        _ => {},
     }
 }
 
@@ -90,7 +93,7 @@ fn fetch_sourcemap_processing_issues(
     event_id: &str,
     frame_idx: usize,
     exception_idx: usize,
-) -> Result<Vec<SourceMapProcessingIssueKind>> {
+) -> Result<Vec<SourceMapProcessingIssue>> {
     match Api::current().get_sourcemap_processing_issues(
         org,
         project,
@@ -104,7 +107,7 @@ fn fetch_sourcemap_processing_issues(
         }
         None => {
             error(format!("Could not retrieve event {event_id}"));
-            tip("Make sure that event ID you used is valid.");
+            tip("Make sure the event ID you used is valid.");
             Err(QuietExit(1).into())
         }
     }
@@ -404,31 +407,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (i, issue) in issues.iter().enumerate() {
         println!("Issue {:>2} of {:>2}:", i + 1, issues.len());
         error(issue);
-        //     match issue.kind {
-        //         SourceMapProcessingIssueKind::UnknownError => error(issue),
-        //         SourceMapProcessingIssueKind::MissingRelease => {
-        //             error(issue);
-        //             tip("Configure 'release' option in the SDK.\n  \
-        //         https://docs.sentry.io/platforms/javascript/configuration/options/#release\n  \
-        //         https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-a-release-is-configured-in-your-sdk");
-        //         }
-        //         SourceMapProcessingIssueKind::MissingUserAgent => error(issue),
-        //         SourceMapProcessingIssueKind::MissingSourcemaps => error(issue),
-        //         SourceMapProcessingIssueKind::UrlNotValid => error(issue),
-        //         SourceMapProcessingIssueKind::NoUrlMatch => error(issue),
-        //         SourceMapProcessingIssueKind::PartialMatch => {
-        //             tip(format!(
-        //                 "Found entry with partially matching filename: {}. \
-        //             Make sure that that --url-prefix is set correctly.",
-        //                 issue.data["partialMatchPath"],
-        //             ));
-        //         }
-        //         SourceMapProcessingIssueKind::DistMismatch => {
-        //             error(issue);
-        //             tip("Configure 'dist' option in the SDK to match the one used during artifacts upload.\n  \
-        //         https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifact-distribution-value-matches-value-configured-in-your-sdk");
-        //         }
-        //         SourceMapProcessingIssueKind::SourcemapNotFound => error(issue),
+        help(issue);
     }
 
     // let event = fetch_event(&org, &project, event_id)?;

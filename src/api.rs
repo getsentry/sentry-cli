@@ -1639,14 +1639,13 @@ impl Api {
         event_id: &str,
         frame_idx: usize,
         exception_idx: usize,
-    ) -> ApiResult<Option<Vec<SourceMapProcessingIssueKind>>> {
-        let path = 
-            format!(
-                "/projects/{}/{}/events/{}/source-map-debug/?frame_idx={frame_idx}&exception_idx={exception_idx}",
-                PathArg(org),
-                PathArg(project),
-                PathArg(event_id)
-            );
+    ) -> ApiResult<Option<Vec<SourceMapProcessingIssue>>> {
+        let path = format!(
+            "/projects/{}/{}/events/{}/source-map-debug/?frame_idx={frame_idx}&exception_idx={exception_idx}",
+            PathArg(org),
+            PathArg(project),
+            PathArg(event_id)
+        );
 
         let resp = self.get(&path)?;
         if resp.status() == 404 {
@@ -2869,7 +2868,7 @@ impl fmt::Display for ProcessedEventTag {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(tag = "type", content = "data")]
-pub enum SourceMapProcessingIssueKind {
+pub enum SourceMapProcessingIssue {
     UnknownError,
     #[serde(rename = "no_release_on_event")]
     MissingRelease,
@@ -2886,11 +2885,12 @@ pub enum SourceMapProcessingIssueKind {
     #[serde(rename_all = "camelCase")]
     DistMismatch {
         event_dist: String,
-        artifact_dist: Option<String>},
+        artifact_dist: Option<String>,
+    },
     SourcemapNotFound,
 }
 
-impl fmt::Display for SourceMapProcessingIssueKind {
+impl fmt::Display for SourceMapProcessingIssue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::UnknownError => f.write_str("Unknown error."),
@@ -2898,10 +2898,18 @@ impl fmt::Display for SourceMapProcessingIssueKind {
             Self::MissingUserAgent => f.write_str("The release is missing a user agent."),
             Self::MissingSourcemaps => f.write_str("The release is missing source maps."),
             Self::UrlNotValid => f.write_str("The absolute path url is not valid."),
-            Self::NoUrlMatch => f.write_str("The absolute path url does not match any source maps."),
-            Self::PartialMatch{..} => f.write_str("The absolute path url is a partial match."),
-            Self::DistMismatch {event_dist, artifact_dist}=> {
-                write!(f, "The dist values do not match. Event: {event_dist}, Artifact: ")?;
+            Self::NoUrlMatch => {
+                f.write_str("The absolute path url does not match any source maps.")
+            }
+            Self::PartialMatch { .. } => f.write_str("The absolute path url is a partial match."),
+            Self::DistMismatch {
+                event_dist,
+                artifact_dist,
+            } => {
+                write!(
+                    f,
+                    "The dist values do not match. Event: {event_dist}, Artifact: "
+                )?;
                 if let Some(dist) = artifact_dist {
                     write!(f, "{dist}")
                 } else {
@@ -2915,5 +2923,5 @@ impl fmt::Display for SourceMapProcessingIssueKind {
 
 #[derive(Debug, Clone, Deserialize)]
 struct SourceMapProcessingIssueResponse {
-    errors: Vec<SourceMapProcessingIssueKind>
+    errors: Vec<SourceMapProcessingIssue>,
 }
