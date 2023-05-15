@@ -207,6 +207,9 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
 /// If the file already contains a debug id under the `debug_id` key, it is left unmodified.
 /// Otherwise, a fresh debug id is inserted under that key.
 ///
+/// This also adds an empty mapping at the beginning to account for the fact that the minified
+/// source file has a line added to it at or near the top.
+///
 /// In either case, the value of the `debug_id` key is returned.
 pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, bool)> {
     let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
@@ -215,11 +218,22 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
         bail!("Invalid sourcemap");
     };
 
-    match map.get(SOURCEMAP_DEBUGID_KEY) {
+    let Some(mappings) = map.get_mut("mappings") else {
+        bail!("Invalid sourcemap");
+    };
+
+    let Value::String(mappings) = mappings else {
+        bail!("Invalid sourcemap");
+    };
+
+    // Insert empty mapping at the start
+    *mappings = format!(";{mappings}");
+
+    let (debug_id, modified) = match map.get(SOURCEMAP_DEBUGID_KEY) {
         Some(id) => {
             let debug_id = serde_json::from_value(id.clone())?;
             debug!("Sourcemap already has a debug id");
-            Ok((debug_id, false))
+            (debug_id, false)
         }
 
         None => {
@@ -227,11 +241,14 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
 
-            sourcemap_contents.clear();
-            serde_json::to_writer(sourcemap_contents, &sourcemap)?;
-            Ok((debug_id, true))
+            (debug_id, true)
         }
-    }
+    };
+
+    sourcemap_contents.clear();
+    serde_json::to_writer(sourcemap_contents, &sourcemap)?;
+
+    Ok((debug_id, modified))
 }
 
 /// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
