@@ -66,7 +66,7 @@ def main() -> int:
 
     expected = {wheel.src for wheel in WHEELS}
     received = set(os.listdir(args.binaries))
-    if expected != received:
+    if expected < received:
         raise SystemExit(
             f'Unexpected binaries:\n\n'
             f'- extra: {", ".join(sorted(received - expected))}\n'

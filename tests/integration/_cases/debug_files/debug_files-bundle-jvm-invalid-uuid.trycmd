@@ -1,0 +1,8 @@
+```
+$ sentry-cli debug-files bundle-jvm --output . --debug-id not-a-valid-uuid io
+? failed
+error: invalid value 'not-a-valid-uuid' for '--debug-id <UUID>': invalid debug identifier
+
+For more information, try '--help'.
+
+```

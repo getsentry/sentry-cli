@@ -14,6 +14,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/575-bb7d7e0e6de8d623.js
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/pages/asdf-05b39167abbe433b.js
 > Bundled 20 files for upload
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
 > Organization: wat-org
@@ -28,7 +29,7 @@ Source Map Upload Report
   Minified Scripts
     ~/server/app/page.js (sourcemap at page.js.map)
     ~/server/chunks/1.js (sourcemap at 1.js.map)
-    ~/server/dummy_embedded.js (sourcemap at data:application/json;base64,pretend this is an embedded sourcemap)
+    ~/server/dummy_embedded.js (embedded sourcemap)
     ~/server/edge-runtime-webpack.js (sourcemap at edge-runtime-webpack.js.map, debug id 2297b93d-928d-421e-8910-127c786382dd)
     ~/server/flight-manifest.js (no sourcemap ref)
       - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for ~/server/flight-manifest.js)

@@ -1,0 +1,9 @@
+```
+$ sentry-cli debug-files bundle-jvm --output `cwd` --debug-id 7A575F05-0585-4DB0-95DE-D0C032D7C707 tests/integration/_fixtures/i-do-not-exist
+? failed
+error: Given path does not exist: tests/integration/_fixtures/i-do-not-exist
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

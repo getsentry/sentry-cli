@@ -17,7 +17,7 @@ Options:
   -t, --type <TYPE>              Only consider debug information files of the given type.  By
                                  default, all types are considered. [possible values: bcsymbolmap,
                                  dsym, elf, pe, pdb, portablepdb, sourcebundle, breakpad, proguard,
-                                 wasm]
+                                 wasm, jvm]
       --no-unwind                Do not scan for stack unwinding information. Specify this flag for
                                  builds with disabled FPO, or when stackwalking occurs on the
                                  device. This usually excludes executables and dynamic libraries.

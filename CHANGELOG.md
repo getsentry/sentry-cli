@@ -2,6 +2,41 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.17.5
+
+### Various fixes & improvements
+
+- feat: Print bundle id after artifact bundle creation (#1593) by @loewenheim
+- ref: Use 'embedded sourcemap' label for upload log (#1595) by @kamilogorek
+
+## 2.17.4
+
+### Various fixes & improvements
+
+- Add ability to send an Event as Raw Envelope (#1582) by @Swatinem
+
+## 2.17.3
+
+### Various fixes & improvements
+
+- feat(js): Skip null as option same as undefined (#1579) by @mitsuhiko
+- Add command `sentry-cli debug-files bundle-jvm` for bundling Java (and other JVM based languages) sources (#1551) by @adinauer
+
+## 2.17.2
+
+### Various fixes & improvements
+
+- feat(debug_id): More determinism for JS debug IDs (#1577) by @mitsuhiko
+- fix: inject only injects into js files (#1571) by @mitsuhiko
+- feat: Add deterministic debug IDs for minified JS files (#1570) by @mitsuhiko
+
+## 2.17.1
+
+### Various fixes & improvements
+
+- fix(build) Hotfix allowing extra binaries during wheel build (#1575) by @ashwoods
+- fix(inject): Don't inject non-js files (#1572) by @loewenheim
+
 ## 2.17.0
 
 ### Various fixes & improvements

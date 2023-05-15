@@ -184,6 +184,23 @@ fn is_hermes_bytecode(slice: &[u8]) -> bool {
     slice.starts_with(&HERMES_MAGIC)
 }
 
+fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
+    if extensions.is_empty() {
+        return true;
+    }
+    url.rsplit('/')
+        .next()
+        .and_then(|filename| {
+            let mut splitter = filename.rsplit('.');
+            let rv = splitter.next();
+            // need another segment
+            splitter.next()?;
+            rv
+        })
+        .map(|ext| extensions.contains(&ext))
+        .unwrap_or(false)
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -302,6 +319,7 @@ impl SourceMapProcessor {
             .collect();
 
         for source in self.sources.values_mut() {
+            // Skip everything but minified JS files.
             if source.ty != SourceFileType::MinifiedSource {
                 continue;
             }
@@ -374,7 +392,12 @@ impl SourceMapProcessor {
 
             if source.ty == SourceFileType::MinifiedSource {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
-                    pieces.push(format!("sourcemap at {}", style(sm_ref.get_url()).cyan()));
+                    let sm_url = sm_ref.get_url();
+                    if sm_url.starts_with("data:") {
+                        pieces.push("embedded sourcemap".to_string());
+                    } else {
+                        pieces.push(format!("sourcemap at {}", style(sm_url).cyan()));
+                    };
                 } else {
                     pieces.push("no sourcemap ref".into());
                 }
@@ -734,7 +757,10 @@ impl SourceMapProcessor {
     /// a debug id, it will be reused for the source file.
     ///
     /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
-    pub fn inject_debug_ids(&mut self, dry_run: bool) -> Result<()> {
+    ///
+    /// The `js_extensions` is a list of file extensions that should be considered
+    /// for JavaScript files.
+    pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str]) -> Result<()> {
         self.flush_pending_sources();
         println!("{} Injecting debug ids", style(">").dim());
 
@@ -752,20 +778,41 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            let Some(sourcemap_url) = sourcemap_url else {
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
-                continue;
+            let sourcemap_url = match sourcemap_url {
+                Some(sourcemap_url) => sourcemap_url,
+                None => {
+                    // no source map at all, try a deterministic debug id from the contents
+                    let debug_id = self
+                        .sources
+                        .get(source_url)
+                        .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
+                        .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
+                    debug_ids.push((source_url.clone(), debug_id));
+                    continue;
+                }
             };
 
             if sourcemap_url.starts_with(DATA_PREAMBLE) {
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
+                // source map is a url, hash the source map url for the debug id
+                let debug_id = inject::debug_id_from_bytes_hashed(sourcemap_url.as_bytes());
+                debug_ids.push((source_url.clone(), debug_id));
             } else {
                 let sourcemap_url = normalize_sourcemap_url(source_url, sourcemap_url);
-                let Some(sourcemap_file) = self.sources.get_mut(&sourcemap_url) else {
-                debug!("Sourcemap file {} not found", sourcemap_url);
-                debug_ids.push((source_url.clone(), DebugId::from_uuid(Uuid::new_v4())));
-                continue;
-            };
+                let sourcemap_file = match self.sources.get_mut(&sourcemap_url) {
+                    Some(sourcemap_file) => sourcemap_file,
+                    None => {
+                        debug!("Sourcemap file {} not found", sourcemap_url);
+                        // source map cannot be found, fall back to hashing the contents if
+                        // available.  The v4 fallback should not happen.
+                        let debug_id = self
+                            .sources
+                            .get(source_url)
+                            .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
+                            .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
+                        debug_ids.push((source_url.clone(), debug_id));
+                        continue;
+                    }
+                };
 
                 let (debug_id, sourcemap_modified) =
                     inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
@@ -801,6 +848,15 @@ impl SourceMapProcessor {
 
         // Step 2: Iterate over the minified source files and inject the debug ids.
         for (source_url, debug_id) in debug_ids {
+            // We only allow injection into files that match the extension
+            if !url_matches_extension(&source_url, js_extensions) {
+                debug!(
+                    "skipping potential js file {} because it does not match extension",
+                    source_url
+                );
+                continue;
+            }
+
             let source_file = self.sources.get_mut(&source_url).unwrap();
 
             fixup_js_file(&mut source_file.contents, debug_id)
@@ -930,4 +986,12 @@ fn test_join() {
         &join_url("https://example.com/", "foo.html").unwrap(),
         "https://example.com/foo.html"
     );
+}
+
+#[test]
+fn test_url_matches_extension() {
+    assert!(url_matches_extension("foo.js", &["js"][..]));
+    assert!(!url_matches_extension("foo.mjs", &["js"][..]));
+    assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
+    assert!(!url_matches_extension("js", &["js"][..]));
 }

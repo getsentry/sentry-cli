@@ -188,6 +188,10 @@ impl<'a> FileUpload<'a> {
             .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
         upload_files_parallel(self.context, &self.files, concurrency)
     }
+
+    pub fn build_jvm_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
+        build_artifact_bundle(self.context, &self.files, debug_id)
+    }
 }
 
 fn upload_files_parallel(
@@ -274,7 +278,7 @@ fn upload_files_chunked(
     files: &SourceFiles,
     options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let archive = build_artifact_bundle(context, files)?;
+    let archive = build_artifact_bundle(context, files, None)?;
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
@@ -396,7 +400,11 @@ fn build_debug_id(files: &SourceFiles) -> DebugId {
     DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
 }
 
-fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result<TempFile> {
+fn build_artifact_bundle(
+    context: &UploadContext,
+    files: &SourceFiles,
+    debug_id: Option<DebugId>,
+) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
@@ -410,7 +418,9 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
     // artifact bundles get a random UUID as debug id
-    bundle.set_attribute("debug_id", build_debug_id(files).to_string());
+    let debug_id = debug_id.unwrap_or_else(|| build_debug_id(files));
+    bundle.set_attribute("debug_id", debug_id.to_string());
+
     if let Some(note) = context.note {
         bundle.set_attribute("note", note.to_owned());
     }
@@ -453,6 +463,12 @@ fn build_artifact_bundle(context: &UploadContext, files: &SourceFiles) -> Result
             1 => "file",
             _ => "files",
         }
+    );
+
+    println!(
+        "{} Bundle ID: {}",
+        style(">").dim(),
+        style(debug_id).yellow(),
     );
 
     Ok(archive)

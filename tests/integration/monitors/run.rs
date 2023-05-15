@@ -28,12 +28,21 @@ fn command_monitors_run_token_auth() {
 }
 
 #[test]
-fn command_monitors_run_env() {
+fn command_monitors_run_osenv() {
     let _server = mock_endpoint(
         EndpointOptions::new("POST", "/api/0/monitors/foo-monitor/checkins/", 200)
             .with_response_file("monitors/post-monitors.json"),
     );
-    register_test("monitors/monitors-run-env.trycmd");
+    register_test("monitors/monitors-run-osenv.trycmd");
+}
+
+#[test]
+fn command_monitors_run_environment() {
+    let _server = mock_endpoint(
+        EndpointOptions::new("POST", "/api/0/monitors/foo-monitor/checkins/", 200)
+            .with_response_file("monitors/post-monitors-environment.json"),
+    );
+    register_test("monitors/monitors-run-environment.trycmd");
 }
 
 #[test]
