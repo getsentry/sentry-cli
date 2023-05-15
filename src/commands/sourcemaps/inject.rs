@@ -96,11 +96,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         extensions.push("mjs");
     }
 
+    // Sourcemaps should be discovered regardless of which JavaScript extensions have been selected.
+    extensions.push("map");
+
     for path in paths {
         println!("> Searching {}", path.display());
         let sources = ReleaseFileSearch::new(path)
             .ignore_file(ignore_file)
             .ignores(&ignores)
+            .extensions(extensions.clone())
             .collect_files()?;
         for source in sources {
             let url = path_as_url(&source.path);
