@@ -500,9 +500,22 @@ fn load_global_config_file() -> Result<(PathBuf, Ini)> {
 }
 
 fn load_cli_config() -> Result<(PathBuf, Ini)> {
-    let (global_filename, mut rv) = load_global_config_file()?;
+    let mut rv = Ini::new();
+    let path: PathBuf;
 
-    let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
+    match env::var("SENTRY_SKIP_GLOBAL_CONFIG") {
+        Ok(_) => {
+            path = find_project_config_file()
+                .ok_or_else(|| Error::msg("Failed to find project config file"))?;
+        }
+        Err(_) => {
+            let (global_filename, global_rv) = load_global_config_file()?;
+            path = global_filename;
+            rv = global_rv;
+        }
+    }
+
+    if let Some(project_config_path) = find_project_config_file() {
         let file_desc = format!(
             "{} file from project path ({})",
             CONFIG_RC_FILE_NAME,
@@ -516,10 +529,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                 rv.set_to(section, key.to_string(), value.to_owned());
             }
         }
-        (project_config_path, rv)
-    } else {
-        (global_filename, rv)
-    };
+    }
 
     if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
         match fs::File::open(&prop_path) {
