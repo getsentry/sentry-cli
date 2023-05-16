@@ -153,7 +153,7 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
 
     js_contents.clear();
 
-    // Find the last source mapping URL comment, it's the only one that counts
+    // Find the last source mapping URL comment, it's the only one that matters
     let sourcemap_comment_idx = js_lines
         .iter()
         .enumerate()
