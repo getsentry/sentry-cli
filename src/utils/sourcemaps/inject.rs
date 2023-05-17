@@ -1,5 +1,6 @@
 use console::style;
 use itertools::Itertools;
+use regex::Regex;
 use symbolic::common::{clean_path, join_path};
 
 use std::fmt;
@@ -7,6 +8,7 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
+use lazy_static::lazy_static;
 use log::debug;
 use sentry::types::DebugId;
 use serde_json::Value;
@@ -15,6 +17,10 @@ const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
+
+lazy_static! {
+    static ref USE_PRAGMA_RE: Regex = Regex::new(r#""use \w+";|'use \w+';"#).unwrap();
+}
 
 fn print_section_with_debugid(
     f: &mut fmt::Formatter<'_>,
@@ -174,10 +180,8 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
         writeln!(js_contents, "{comment_or_empty}")?;
     }
 
-    // Write one "use strict" statement back to the file, if there is one
-    if let Some(use_strict) = js_lines.next_if(|line| {
-        line.trim().starts_with("\"use strict\";") || line.trim().starts_with("'use strict';")
-    }) {
+    // Write use statements back to the file
+    while let Some(use_strict) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
         writeln!(js_contents, "{use_strict}")?;
     }
 
@@ -434,8 +438,8 @@ something else"#;
 
   // some other comment
  "use strict"; rest of the line
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 'use strict';
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 some line
 //# sourceMappingURL=fake2
 something else
