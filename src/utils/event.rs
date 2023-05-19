@@ -81,6 +81,8 @@ where
     let client = Client::from_config((
         dsn,
         apply_defaults(ClientOptions {
+            // TODO: do we want to eventually set `debug` based on the CLI log-level?
+            // debug: true,
             user_agent: USER_AGENT.into(),
             ..Default::default()
         }),
