@@ -1,14 +1,17 @@
 use log::warn;
 use std::process;
 use std::time::Instant;
+use uuid::Uuid;
 
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 
-use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
+use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus};
+
 use crate::config::Config;
-use crate::utils::system::{print_error, QuietExit};
+use crate::utils::event::with_sentry_client;
+use crate::utils::system::QuietExit;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -26,13 +29,6 @@ pub fn make_command(command: Command) -> Command {
                 .help("Specify the environment of the monitor."),
         )
         .arg(
-            Arg::new("allow_failure")
-                .short('f')
-                .long("allow-failure")
-                .action(ArgAction::SetTrue)
-                .help("Run provided command even when Sentry reports an error."),
-        )
-        .arg(
             Arg::new("args")
                 .value_name("ARGS")
                 .required(true)
@@ -42,35 +38,40 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let api = Api::current();
     let config = Config::current();
-    let dsn = config.get_dsn().ok();
 
-    // Token based auth is deprecated, prefer DSN style auth for monitor checkins.
-    // Using token based auth *DOES NOT WORK* when using slugs.
-    if dsn.is_none() {
-        warn!("Token auth is deprecated for cron monitor checkins. Please use DSN auth.");
-    }
+    let dsn = match config.get_dsn() {
+        Ok(dsn) => dsn,
+        Err(_) => {
+            warn!("DSN auth is required for monitor execution");
+            return Err(QuietExit(1).into());
+        }
+    };
 
-    let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
-    let environment = matches.get_one::<String>("environment").unwrap();
-
-    let allow_failure = matches.get_flag("allow_failure");
+    let monitor_slug = matches
+        .get_one::<String>("monitor_slug")
+        .unwrap()
+        .to_owned();
+    let environment = matches.get_one::<String>("environment").unwrap().to_owned();
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
-    let monitor_checkin = api.create_monitor_checkin(
-        dsn.clone(),
-        monitor_slug,
-        &CreateMonitorCheckIn {
-            status: MonitorCheckinStatus::InProgress,
-            environment: environment.to_string(),
-        },
-    );
+    let check_in_id = Uuid::new_v4();
+
+    let open_checkin = MonitorCheckIn {
+        check_in_id,
+        monitor_slug: monitor_slug.clone(),
+        status: MonitorCheckInStatus::InProgress,
+        duration: None,
+        environment: Some(environment.clone()),
+        monitor_config: None,
+    };
+
+    with_sentry_client(dsn.clone(), |c| c.send_envelope(open_checkin.into()));
 
     let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
-    p.env("SENTRY_MONITOR_SLUG", monitor_slug);
+    p.env("SENTRY_MONITOR_SLUG", monitor_slug.clone());
 
     let (success, code) = match p.status() {
         Ok(status) => (status.success(), status.code()),
@@ -85,35 +86,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     };
 
-    match monitor_checkin {
-        Ok(checkin) => {
-            api.update_monitor_checkin(
-                dsn,
-                monitor_slug,
-                &checkin.id,
-                &UpdateMonitorCheckIn {
-                    status: Some(if success {
-                        MonitorCheckinStatus::Ok
-                    } else {
-                        MonitorCheckinStatus::Error
-                    }),
-                    duration: Some({
-                        let elapsed = started.elapsed();
-                        elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis())
-                    }),
-                    environment: Some(environment.to_string()),
-                },
-            )
-            .ok();
-        }
-        Err(e) => {
-            if allow_failure {
-                print_error(&anyhow::Error::from(e));
-            } else {
-                return Err(e.into());
-            }
-        }
-    }
+    let status = if success {
+        MonitorCheckInStatus::Ok
+    } else {
+        MonitorCheckInStatus::Error
+    };
+
+    let duration = Some(started.elapsed().as_secs_f64());
+
+    let close_checkin = MonitorCheckIn {
+        check_in_id,
+        monitor_slug,
+        status,
+        duration,
+        environment: Some(environment),
+        monitor_config: None,
+    };
+
+    with_sentry_client(dsn, |c| c.send_envelope(close_checkin.into()));
 
     if !success {
         if let Some(code) = code {
