@@ -4,6 +4,7 @@ use std::str::{self, FromStr};
 use anyhow::{bail, format_err, Result};
 use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
+use itertools::Itertools;
 use log::info;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::FileFormat;
@@ -20,8 +21,12 @@ use crate::utils::xcode::{InfoPlist, MayDetach};
 static DERIVED_DATA_FOLDER: &str = "Library/Developer/Xcode/DerivedData";
 
 pub fn make_command(command: Command) -> Command {
-    let mut types = vec!["bcsymbolmap"];
-    types.extend(DifType::all_names());
+    let types = DifType::all_names()
+        .iter()
+        .filter(|&name| name != &"proguard")
+        .chain(&["bcsymbolmap"])
+        .sorted_by(|a, b| Ord::cmp(&a, &b))
+        .collect::<Vec<_>>();
 
     command
         .about("Upload debugging information files.")
