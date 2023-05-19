@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.18.0
+
+### Various fixes & improvements
+
+- ci: Use macos-latest to run build workflow (#1617) by @kamilogorek
+- Update `sentry` SDK to fix sending raw envelopes (#1616) by @Swatinem
+- misc: Add custom issues templates (#1613) by @kamilogorek
+- ref: Remove proguard from debug-files upload types (#1615) by @kamilogorek
+- ref(inject): Constrain file search by extensions (#1608) by @loewenheim
+- feat(crons): Allow specifying checkin environment (#1599) by @evanpurkhiser
+- chore(crons): Make monitors command visible (#1600) by @evanpurkhiser
+
 ## 2.17.5
 
 ### Various fixes & improvements
