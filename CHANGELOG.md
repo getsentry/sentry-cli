@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.18.1
+
+### Various fixes & improvements
+
+- ref(types): Add dedupe to available TS types (#1619) by @kamilogorek
+- ref(debug-files): Polish after-upload message output (#1620) by @kamilogorek
+
 ## 2.18.0
 
 ### Various fixes & improvements
