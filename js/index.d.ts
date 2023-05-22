@@ -88,6 +88,11 @@ declare module '@sentry/cli' {
      */
     sourceMapReference?: boolean;
     /**
+     * Enable artifacts deduplication prior to uploading. This will skip uploading
+     * any artifacts that are already present on the server. Defaults to `true`.
+     */
+    dedupe?: boolean;
+    /**
      * When paired with the rewrite option this will remove a prefix from uploaded files.
      * For instance you can use this to remove a path that is build machine specific.
      */
