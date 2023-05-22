@@ -111,6 +111,9 @@ impl fmt::Display for InjectReport {
 /// 3. The last source mapping comment (a comment starting with
 /// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
 /// the very end of the file, after the debug id comment from 2.
+///
+/// This function will naturally mess with the correspondence between a source file
+/// and its sourcemap. Use [`insert_empty_mapping`] on the sourcemap to fix this.
 /// # Example
 /// ```
 /// let file = "
@@ -249,9 +252,6 @@ pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
 /// If the file already contains a debug id under the `debug_id` key, it is left unmodified.
 /// Otherwise, a fresh debug id is inserted under that key.
 ///
-/// This also adds an empty mapping at the beginning to account for the fact that the minified
-/// source file has a line added to it at or near the top.
-///
 /// In either case, the value of the `debug_id` key is returned.
 pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, bool)> {
     let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
@@ -279,6 +279,10 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
     }
 }
 
+/// This adds an empty mapping at the start of a sourcemap.
+///
+/// This is used to adjust a sourcemap when the corresponding source file has a
+/// new line injected near the top (see [`fixup_js_file`]).
 pub fn insert_empty_mapping(sourcemap_contents: &mut Vec<u8>) -> Result<()> {
     let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
 
