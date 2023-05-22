@@ -205,6 +205,36 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
     Ok(())
 }
 
+/// Replaces a JS file's source mapping url with a new one.
+///
+/// Only the bottommost source mapping url comment will be updated. If there
+/// are no source mapping url comments in the file, this is a no-op.
+pub fn replace_sourcemap_url(js_contents: &mut Vec<u8>, new_url: &str) -> Result<()> {
+    let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
+    let js_lines = js_lines?;
+
+    let sourcemap_comment_idx = match js_lines.iter().enumerate().rev().find(|(_idx, line)| {
+        line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+    }) {
+        Some((idx, _)) => idx,
+        None => return Ok(()),
+    };
+
+    js_contents.clear();
+
+    for line in &js_lines[0..sourcemap_comment_idx] {
+        writeln!(js_contents, "{line}")?;
+    }
+
+    writeln!(js_contents, "//# sourceMappingURL={new_url}")?;
+
+    for line in &js_lines[sourcemap_comment_idx + 1..] {
+        writeln!(js_contents, "{line}")?;
+    }
+
+    Ok(())
+}
+
 /// Generates a debug ID from bytes.
 pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
     let mut hash = sha1_smol::Sha1::new();
@@ -230,6 +260,32 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
         bail!("Invalid sourcemap");
     };
 
+    match map.get(SOURCEMAP_DEBUGID_KEY) {
+        Some(id) => {
+            let debug_id = serde_json::from_value(id.clone())?;
+            debug!("Sourcemap already has a debug id");
+            Ok((debug_id, false))
+        }
+
+        None => {
+            let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
+            let id = serde_json::to_value(debug_id)?;
+            map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
+
+            sourcemap_contents.clear();
+            serde_json::to_writer(sourcemap_contents, &sourcemap)?;
+            Ok((debug_id, true))
+        }
+    }
+}
+
+pub fn insert_empty_mapping(sourcemap_contents: &mut Vec<u8>) -> Result<()> {
+    let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
+
+    let Some(map) = sourcemap.as_object_mut() else {
+        bail!("Invalid sourcemap");
+    };
+
     let Some(mappings) = map.get_mut("mappings") else {
         bail!("Invalid sourcemap");
     };
@@ -241,25 +297,10 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
     // Insert empty mapping at the start
     *mappings = format!(";{mappings}");
 
-    let (debug_id, modified) = match map.get(SOURCEMAP_DEBUGID_KEY) {
-        Some(id) => {
-            let debug_id = serde_json::from_value(id.clone())?;
-            debug!("Sourcemap already has a debug id");
-            (debug_id, false)
-        }
-
-        None => {
-            let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
-            let id = serde_json::to_value(debug_id)?;
-            map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
-            (debug_id, true)
-        }
-    };
-
     sourcemap_contents.clear();
     serde_json::to_writer(sourcemap_contents, &sourcemap)?;
 
-    Ok((debug_id, modified))
+    Ok(())
 }
 
 /// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
@@ -292,7 +333,7 @@ mod tests {
 
     use crate::utils::fs::TempFile;
 
-    use super::{fixup_js_file, fixup_sourcemap, normalize_sourcemap_url};
+    use super::{fixup_js_file, fixup_sourcemap, normalize_sourcemap_url, replace_sourcemap_url};
 
     #[test]
     fn test_fixup_sourcemap() {
@@ -481,5 +522,28 @@ something else
             normalize_sourcemap_url("././.foo/bar/baz.js", "../quux/baz.js.map"),
             "././.foo/quux/baz.js.map"
         );
+    }
+
+    #[test]
+    fn test_replace_sourcemap_url() {
+        let js_contents = r#"
+//# sourceMappingURL=not this one
+some text
+//@ sourceMappingURL=not this one either
+//# sourceMappingURL=this one
+more text
+"#;
+        let mut js_contents = Vec::from(js_contents);
+
+        replace_sourcemap_url(&mut js_contents, "new url").unwrap();
+
+        let expected = r#"
+//# sourceMappingURL=not this one
+some text
+//@ sourceMappingURL=not this one either
+//# sourceMappingURL=new url
+more text
+"#;
+        assert_eq!(std::str::from_utf8(&js_contents).unwrap(), expected);
     }
 }

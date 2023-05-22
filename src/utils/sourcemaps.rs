@@ -28,7 +28,7 @@ use crate::utils::file_upload::{
 };
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
-use crate::utils::sourcemaps::inject::{fixup_js_file, normalize_sourcemap_url, InjectReport};
+use crate::utils::sourcemaps::inject::InjectReport;
 
 pub mod inject;
 
@@ -770,7 +770,16 @@ impl SourceMapProcessor {
         // sourcemap if available or else generating a fresh one.
         let mut debug_ids = Vec::new();
 
-        for (source_url, sourcemap_url) in &self.sourcemap_references {
+        for (source_url, sourcemap_url) in self.sourcemap_references.iter_mut() {
+            // We only allow injection into files that match the extension
+            if !url_matches_extension(source_url, js_extensions) {
+                debug!(
+                    "skipping potential js file {} because it does not match extension",
+                    source_url
+                );
+                continue;
+            }
+
             if let Some(debug_id) = self.debug_ids.get(source_url) {
                 report
                     .previously_injected
@@ -792,12 +801,28 @@ impl SourceMapProcessor {
                 }
             };
 
-            if sourcemap_url.starts_with(DATA_PREAMBLE) {
+            // Handle embedded sourcemaps
+            if let Some(encoded) = sourcemap_url.strip_prefix(DATA_PREAMBLE) {
                 // source map is a url, hash the source map url for the debug id
                 let debug_id = inject::debug_id_from_bytes_hashed(sourcemap_url.as_bytes());
+
+                // Update the embedded sourcemap and write it back to the source file
+                let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes()) else {
+                    bail!("Invalid embedded sourcemap in source file {source_url}");
+                };
+
+                inject::insert_empty_mapping(&mut decoded)?;
+                let encoded = data_encoding::BASE64.encode(&decoded);
+                let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
+
+                let source_file = self.sources.get_mut(source_url).unwrap();
+
+                inject::replace_sourcemap_url(&mut source_file.contents, &new_sourcemap_url)?;
+                *sourcemap_url = new_sourcemap_url;
+
                 debug_ids.push((source_url.clone(), debug_id));
             } else {
-                let sourcemap_url = normalize_sourcemap_url(source_url, sourcemap_url);
+                let sourcemap_url = inject::normalize_sourcemap_url(source_url, sourcemap_url);
                 let sourcemap_file = match self.sources.get_mut(&sourcemap_url) {
                     Some(sourcemap_file) => sourcemap_file,
                     None => {
@@ -814,6 +839,11 @@ impl SourceMapProcessor {
                     }
                 };
 
+                inject::insert_empty_mapping(&mut sourcemap_file.contents).context(format!(
+                    "Failed to process {}",
+                    sourcemap_file.path.display()
+                ))?;
+
                 let (debug_id, sourcemap_modified) =
                     inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
                         "Failed to process {}",
@@ -824,7 +854,7 @@ impl SourceMapProcessor {
                     .headers
                     .push(("debug-id".to_string(), debug_id.to_string()));
 
-                if !dry_run && sourcemap_modified {
+                if !dry_run {
                     let mut file = std::fs::File::create(&sourcemap_file.path)?;
                     file.write_all(&sourcemap_file.contents).context(format!(
                         "Failed to write sourcemap file {}",
@@ -848,18 +878,9 @@ impl SourceMapProcessor {
 
         // Step 2: Iterate over the minified source files and inject the debug ids.
         for (source_url, debug_id) in debug_ids {
-            // We only allow injection into files that match the extension
-            if !url_matches_extension(&source_url, js_extensions) {
-                debug!(
-                    "skipping potential js file {} because it does not match extension",
-                    source_url
-                );
-                continue;
-            }
-
             let source_file = self.sources.get_mut(&source_url).unwrap();
 
-            fixup_js_file(&mut source_file.contents, debug_id)
+            inject::fixup_js_file(&mut source_file.contents, debug_id)
                 .context(format!("Failed to process {}", source_file.path.display()))?;
 
             source_file

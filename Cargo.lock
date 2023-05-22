@@ -2209,6 +2209,7 @@ dependencies = [
  "console",
  "crossbeam-channel",
  "curl",
+ "data-encoding",
  "dirs",
  "dotenv",
  "elementtree",
