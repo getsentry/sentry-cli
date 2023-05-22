@@ -24,6 +24,10 @@ module.exports = {
     invertedParam: '--no-sourcemap-reference',
     type: 'boolean',
   },
+  dedupe: {
+    invertedParam: '--no-dedupe',
+    type: 'boolean',
+  },
   stripPrefix: {
     param: '--strip-prefix',
     type: 'array',
