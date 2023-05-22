@@ -10,6 +10,17 @@ fn command_bundle_jvm_help() {
 
 #[test]
 fn command_bundle_jvm_out_not_found_creates_dir() {
+    let testcase_cwd =
+        "tests/integration/_cases/debug_files/debug_files-bundle-jvm-output-not-found.in/";
+    let testcase_cwd_path = std::path::Path::new(testcase_cwd);
+    if testcase_cwd_path.exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/jvm",
+        testcase_cwd_path.join("jvm"),
+    )
+    .unwrap();
     let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
     register_test("debug_files/debug_files-bundle-jvm-output-not-found.trycmd");
 }

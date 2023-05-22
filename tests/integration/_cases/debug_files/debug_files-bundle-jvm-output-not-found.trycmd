@@ -1,5 +1,5 @@
 ```
-$ sentry-cli debug-files bundle-jvm --output i-do-not-exist --debug-id 0B693ABA-531C-4EB6-99E4-B7320C3C85DA tests/integration/_fixtures/jvm
+$ sentry-cli debug-files bundle-jvm --output i-do-not-exist --debug-id 0B693ABA-531C-4EB6-99E4-B7320C3C85DA jvm
 ? success
 > Found 2 files
 > Bundled 2 files for upload
