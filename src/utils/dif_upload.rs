@@ -22,7 +22,7 @@ use console::style;
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
-use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
+use symbolic::common::{Arch, AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::pe::PeObject;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileDescriptor};
@@ -1509,13 +1509,18 @@ fn poll_dif_assemble(
             };
 
             println!(
-                "  {:>7} {} ({}; {}{})",
-                style("PENDING").yellow(),
+                "  {:>8} {} ({}; {}{})",
+                style("UPLOADED").yellow(),
                 style(dif.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
                 dif.name,
                 dif.object()
-                    .map(|object| object.arch())
-                    .map(|arch| arch.to_string())
+                    .map(|object| {
+                        let arch = object.arch();
+                        match arch {
+                            Arch::Unknown => String::new(),
+                            _ => arch.to_string(),
+                        }
+                    })
                     .unwrap_or_default(),
                 kind,
             );
