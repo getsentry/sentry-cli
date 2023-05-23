@@ -768,6 +768,12 @@ impl SourceMapProcessor {
 
         // Step 1: Produce a debug id for each source file by either reading it from the
         // sourcemap if available or else generating a fresh one.
+
+        // This vector contains tuples of
+        // * a source file name
+        // * the debug id to inject into it
+        // * whether it is safe to inject the code snippet into the file at the start.
+        //   This is determined by whether we are able to adjust the file's sourcemap.
         let mut debug_ids = Vec::new();
 
         for (source_url, sourcemap_url) in self.sourcemap_references.iter_mut() {
@@ -796,7 +802,7 @@ impl SourceMapProcessor {
                         .get(source_url)
                         .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
                         .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                    debug_ids.push((source_url.clone(), debug_id));
+                    debug_ids.push((source_url.clone(), debug_id, false));
                     continue;
                 }
             };
@@ -820,7 +826,7 @@ impl SourceMapProcessor {
                 inject::replace_sourcemap_url(&mut source_file.contents, &new_sourcemap_url)?;
                 *sourcemap_url = new_sourcemap_url;
 
-                debug_ids.push((source_url.clone(), debug_id));
+                debug_ids.push((source_url.clone(), debug_id, true));
             } else {
                 let sourcemap_url = inject::normalize_sourcemap_url(source_url, sourcemap_url);
                 let sourcemap_file = match self.sources.get_mut(&sourcemap_url) {
@@ -834,7 +840,7 @@ impl SourceMapProcessor {
                             .get(source_url)
                             .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
                             .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                        debug_ids.push((source_url.clone(), debug_id));
+                        debug_ids.push((source_url.clone(), debug_id, false));
                         continue;
                     }
                 };
@@ -872,16 +878,21 @@ impl SourceMapProcessor {
                         .push((sourcemap_file.path.clone(), debug_id));
                 }
 
-                debug_ids.push((source_url.clone(), debug_id));
+                debug_ids.push((source_url.clone(), debug_id, true));
             }
         }
 
         // Step 2: Iterate over the minified source files and inject the debug ids.
-        for (source_url, debug_id) in debug_ids {
+        for (source_url, debug_id, safe_to_inject_at_start) in debug_ids {
             let source_file = self.sources.get_mut(&source_url).unwrap();
 
-            inject::fixup_js_file(&mut source_file.contents, debug_id)
-                .context(format!("Failed to process {}", source_file.path.display()))?;
+            if safe_to_inject_at_start {
+                inject::fixup_js_file(&mut source_file.contents, debug_id)
+                    .context(format!("Failed to process {}", source_file.path.display()))?;
+            } else {
+                inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                    .context(format!("Failed to process {}", source_file.path.display()))?;
+            }
 
             source_file
                 .headers

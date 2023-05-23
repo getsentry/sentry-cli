@@ -212,6 +212,52 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
     Ok(())
 }
 
+/// Fixes up a minified JS source file with a debug id without messing with mappings.
+///
+/// This changes the source file in several ways:
+/// 1. The source code snippet
+/// `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
+/// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
+/// 3. The last source mapping comment (a comment starting with
+/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
+/// the very end of the file, after the debug id comment from 2.
+///
+/// This function is useful in cases where a source file's corresponding sourcemap is
+/// not available. In such a case, [`fixup_js_file`] might mess up the mappings by inserting
+/// a line, with no opportunity to adjust the sourcemap accordingly. However, in general
+/// it is desirable to insert the code snippet as early as possible to make sure it runs
+/// even when an error is raised in the file.
+pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
+    let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
+
+    js_contents.clear();
+
+    let sourcemap_comment_idx = js_lines
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_idx, line)| {
+            line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+        })
+        .map(|(idx, _)| idx);
+
+    let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
+
+    for line in js_lines.into_iter() {
+        writeln!(js_contents, "{line}")?;
+    }
+
+    let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
+    writeln!(js_contents, "{to_inject}")?;
+    writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+
+    if let Some(sourcemap_comment) = sourcemap_comment {
+        writeln!(js_contents, "{sourcemap_comment}")?;
+    }
+
+    Ok(())
+}
+
 /// Replaces a JS file's source mapping url with a new one.
 ///
 /// Only the bottommost source mapping url comment will be updated. If there
