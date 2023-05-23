@@ -22,7 +22,7 @@ clap = { version = "4.1.6", default-features = false, features = [
   "string",
   "help",
   "usage",
-  "error-context",
+  "error-context"
 ] }
 console = "0.15.5"
 curl = { version = "0.4.44", features = ["static-curl", "static-ssl"] }
@@ -57,7 +57,7 @@ regex = "1.7.1"
 runas = "1.0.0"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.31.2", default-features = false, features = [
+sentry = { version = "0.31.1", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",

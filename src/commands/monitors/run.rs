@@ -1,16 +1,14 @@
+use log::warn;
 use std::process;
 use std::time::Instant;
-use uuid::Uuid;
 
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 
-use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus};
-
+use crate::api::{Api, CreateMonitorCheckIn, MonitorCheckinStatus, UpdateMonitorCheckIn};
 use crate::config::Config;
-use crate::utils::event::with_sentry_client;
-use crate::utils::system::QuietExit;
+use crate::utils::system::{print_error, QuietExit};
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -32,8 +30,7 @@ pub fn make_command(command: Command) -> Command {
                 .short('f')
                 .long("allow-failure")
                 .action(ArgAction::SetTrue)
-                .help("Run provided command even when Sentry reports an error.")
-                .hide(true),
+                .help("Run provided command even when Sentry reports an error."),
         )
         .arg(
             Arg::new("args")
@@ -45,31 +42,35 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let api = Api::current();
     let config = Config::current();
-    let dsn = config
-        .get_dsn()
-        .expect("DSN auth is required for monitor execution");
+    let dsn = config.get_dsn().ok();
+
+    // Token based auth is deprecated, prefer DSN style auth for monitor checkins.
+    // Using token based auth *DOES NOT WORK* when using slugs.
+    if dsn.is_none() {
+        warn!("Token auth is deprecated for cron monitor checkins. Please use DSN auth.");
+    }
+
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
     let environment = matches.get_one::<String>("environment").unwrap();
+
+    let allow_failure = matches.get_flag("allow_failure");
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
-    let check_in_id = Uuid::new_v4();
-
-    let open_checkin = MonitorCheckIn {
-        check_in_id,
-        monitor_slug: monitor_slug.to_string(),
-        status: MonitorCheckInStatus::InProgress,
-        duration: None,
-        environment: Some(environment.to_string()),
-        monitor_config: None,
-    };
-
-    with_sentry_client(dsn.clone(), |c| c.send_envelope(open_checkin.into()));
+    let monitor_checkin = api.create_monitor_checkin(
+        dsn.clone(),
+        monitor_slug,
+        &CreateMonitorCheckIn {
+            status: MonitorCheckinStatus::InProgress,
+            environment: environment.to_string(),
+        },
+    );
 
     let started = Instant::now();
     let mut p = process::Command::new(args[0]);
     p.args(&args[1..]);
-    p.env("SENTRY_MONITOR_SLUG", monitor_slug.clone());
+    p.env("SENTRY_MONITOR_SLUG", monitor_slug);
 
     let (success, code) = match p.status() {
         Ok(status) => (status.success(), status.code()),
@@ -84,28 +85,43 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     };
 
-    let status = if success {
-        MonitorCheckInStatus::Ok
-    } else {
-        MonitorCheckInStatus::Error
-    };
-
-    let duration = Some(started.elapsed().as_secs_f64());
-
-    let close_checkin = MonitorCheckIn {
-        check_in_id,
-        monitor_slug: monitor_slug.to_string(),
-        status,
-        duration,
-        environment: Some(environment.to_string()),
-        monitor_config: None,
-    };
-
-    with_sentry_client(dsn, |c| c.send_envelope(close_checkin.into()));
-
-    if !success {
-        return Err(QuietExit(code.unwrap_or(1)).into());
+    match monitor_checkin {
+        Ok(checkin) => {
+            api.update_monitor_checkin(
+                dsn,
+                monitor_slug,
+                &checkin.id,
+                &UpdateMonitorCheckIn {
+                    status: Some(if success {
+                        MonitorCheckinStatus::Ok
+                    } else {
+                        MonitorCheckinStatus::Error
+                    }),
+                    duration: Some({
+                        let elapsed = started.elapsed();
+                        elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis())
+                    }),
+                    environment: Some(environment.to_string()),
+                },
+            )
+            .ok();
+        }
+        Err(e) => {
+            if allow_failure {
+                print_error(&anyhow::Error::from(e));
+            } else {
+                return Err(e.into());
+            }
+        }
     }
 
-    Ok(())
+    if !success {
+        if let Some(code) = code {
+            Err(QuietExit(code).into())
+        } else {
+            Err(QuietExit(1).into())
+        }
+    } else {
+        Ok(())
+    }
 }

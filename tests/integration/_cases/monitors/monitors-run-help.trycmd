@@ -11,6 +11,7 @@ Arguments:
 
 Options:
   -e <environment>               Specify the environment of the monitor. [default: production]
+  -f, --allow-failure            Run provided command even when Sentry reports an error.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
