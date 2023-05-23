@@ -104,7 +104,8 @@ impl fmt::Display for InjectReport {
 /// This changes the source file in several ways:
 /// 1. The source code snippet
 /// `<CODE_SNIPPET>[<debug_id>]`
-/// is inserted at the earliest possible position, which is after an initial
+/// is inserted at the earliest possible position, which is after an
+/// optional hashbang, followed by a
 /// block of comments, empty lines, and `"use […]";` or `'use […]';` pragmas.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
 /// 3. The last source mapping comment (a comment starting with
@@ -174,6 +175,11 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
     let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
 
     let mut js_lines = js_lines.into_iter().peekable();
+
+    // Handle initial hashbang
+    if let Some(hashbang) = js_lines.next_if(|line| line.trim().starts_with("#!")) {
+        writeln!(js_contents, "{hashbang}")?;
+    }
 
     // Write comments and empty lines at the start back to the file
     while let Some(comment_or_empty) =
@@ -462,7 +468,8 @@ something else
 
     #[test]
     fn test_fixup_js_file_use_strict() {
-        let source = r#"//# sourceMappingURL=fake1
+        let source = r#"#!/bin/node
+//# sourceMappingURL=fake1
 
   // some other comment
  "use strict"; rest of the line
@@ -478,7 +485,8 @@ something else"#;
 
         fixup_js_file(&mut source, debug_id).unwrap();
 
-        let expected = r#"//# sourceMappingURL=fake1
+        let expected = r#"#!/bin/node
+//# sourceMappingURL=fake1
 
   // some other comment
  "use strict"; rest of the line
