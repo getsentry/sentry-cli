@@ -1,10 +1,9 @@
-use log::warn;
 use std::process;
 use std::time::Instant;
 use uuid::Uuid;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 
 use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus};
@@ -29,6 +28,14 @@ pub fn make_command(command: Command) -> Command {
                 .help("Specify the environment of the monitor."),
         )
         .arg(
+            Arg::new("allow_failure")
+                .short('f')
+                .long("allow-failure")
+                .action(ArgAction::SetTrue)
+                .help("Run provided command even when Sentry reports an error.")
+                .hide(true),
+        )
+        .arg(
             Arg::new("args")
                 .value_name("ARGS")
                 .required(true)
@@ -39,30 +46,21 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-
-    let dsn = match config.get_dsn() {
-        Ok(dsn) => dsn,
-        Err(_) => {
-            warn!("DSN auth is required for monitor execution");
-            return Err(QuietExit(1).into());
-        }
-    };
-
-    let monitor_slug = matches
-        .get_one::<String>("monitor_slug")
-        .unwrap()
-        .to_owned();
-    let environment = matches.get_one::<String>("environment").unwrap().to_owned();
+    let dsn = config
+        .get_dsn()
+        .expect("DSN auth is required for monitor execution");
+    let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
+    let environment = matches.get_one::<String>("environment").unwrap();
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
 
     let check_in_id = Uuid::new_v4();
 
     let open_checkin = MonitorCheckIn {
         check_in_id,
-        monitor_slug: monitor_slug.clone(),
+        monitor_slug: monitor_slug.to_string(),
         status: MonitorCheckInStatus::InProgress,
         duration: None,
-        environment: Some(environment.clone()),
+        environment: Some(environment.to_string()),
         monitor_config: None,
     };
 
@@ -96,22 +94,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let close_checkin = MonitorCheckIn {
         check_in_id,
-        monitor_slug,
+        monitor_slug: monitor_slug.to_string(),
         status,
         duration,
-        environment: Some(environment),
+        environment: Some(environment.to_string()),
         monitor_config: None,
     };
 
     with_sentry_client(dsn, |c| c.send_envelope(close_checkin.into()));
 
     if !success {
-        if let Some(code) = code {
-            Err(QuietExit(code).into())
-        } else {
-            Err(QuietExit(1).into())
-        }
-    } else {
-        Ok(())
+        return Err(QuietExit(code.unwrap_or(1)).into());
     }
+
+    Ok(())
 }
