@@ -803,9 +803,6 @@ impl SourceMapProcessor {
 
             // Handle embedded sourcemaps
             if let Some(encoded) = sourcemap_url.strip_prefix(DATA_PREAMBLE) {
-                // source map is a url, hash the source map url for the debug id
-                let debug_id = inject::debug_id_from_bytes_hashed(sourcemap_url.as_bytes());
-
                 // Update the embedded sourcemap and write it back to the source file
                 let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes()) else {
                     bail!("Invalid embedded sourcemap in source file {source_url}");
@@ -816,6 +813,9 @@ impl SourceMapProcessor {
                 let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
 
                 let source_file = self.sources.get_mut(source_url).unwrap();
+
+                // hash the new source map url for the debug id
+                let debug_id = inject::debug_id_from_bytes_hashed(new_sourcemap_url.as_bytes());
 
                 inject::replace_sourcemap_url(&mut source_file.contents, &new_sourcemap_url)?;
                 *sourcemap_url = new_sourcemap_url;
