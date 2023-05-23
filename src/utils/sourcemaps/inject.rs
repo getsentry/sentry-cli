@@ -157,8 +157,7 @@ impl fmt::Display for InjectReport {
 /// );
 /// ```
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
-    let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
-    let mut js_lines = js_lines?;
+    let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
 
     js_contents.clear();
 
@@ -189,8 +188,8 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
     }
 
     // Write use statements back to the file
-    while let Some(use_strict) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
-        writeln!(js_contents, "{use_strict}")?;
+    while let Some(use_pragma) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
+        writeln!(js_contents, "{use_pragma}")?;
     }
 
     // Inject the code snippet
@@ -218,8 +217,7 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
 /// Only the bottommost source mapping url comment will be updated. If there
 /// are no source mapping url comments in the file, this is a no-op.
 pub fn replace_sourcemap_url(js_contents: &mut Vec<u8>, new_url: &str) -> Result<()> {
-    let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
-    let js_lines = js_lines?;
+    let js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
 
     let sourcemap_comment_idx = match js_lines.iter().enumerate().rev().find(|(_idx, line)| {
         line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
