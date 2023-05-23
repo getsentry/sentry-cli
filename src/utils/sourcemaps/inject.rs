@@ -105,8 +105,7 @@ impl fmt::Display for InjectReport {
 /// 1. The source code snippet
 /// `<CODE_SNIPPET>[<debug_id>]`
 /// is inserted at the earliest possible position, which is after an initial
-/// block of comments and empty lines and an optional
-/// `"use strict";` or `'use strict';` statement.
+/// block of comments, empty lines, and `"use […]";` or `'use […]';` pragmas.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
 /// 3. The last source mapping comment (a comment starting with
 /// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
