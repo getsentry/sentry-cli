@@ -65,7 +65,6 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Don't modify files on disk."),
         )
-        .hide(true)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
