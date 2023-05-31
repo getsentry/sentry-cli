@@ -1,0 +1,8 @@
+```
+$ sentry-cli monitors run foo-monitor -- cmd.exe /C echo 123
+? success
+  WARN    [..] Token auth is deprecated for cron monitor checkins and will be removed in the next major version.
+  WARN    [..] Please use DSN auth.
+123
+
+```
