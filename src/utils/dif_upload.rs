@@ -508,14 +508,18 @@ where
 {
     for index in 0..zip.len() {
         let (name, buffer) = {
-            let zip_file = zip.by_index(index)?;
+            let mut zip_file = zip.by_index(index)?;
             let name = zip_file.name().to_string();
 
             if !options.valid_extension(Path::new(&name).extension()) {
                 continue;
             }
 
-            (name, ByteView::read(zip_file).map_err(Error::new)?)
+            let tmp_file = TempFile::create()?;
+            let mut tmp_fh = tmp_file.open()?;
+            std::io::copy(&mut zip_file, &mut tmp_fh)?;
+
+            (name, ByteView::map_file(tmp_fh).map_err(Error::new)?)
         };
 
         func(DifSource::Zip(&mut zip, &name), name.clone(), buffer)?;
