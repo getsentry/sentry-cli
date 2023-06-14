@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.19.0
+
+### Various fixes & improvements
+
+- ref(debug-files): Use temp file handle instead of keeping zips in memory (#1641) by @kamilogorek
+- feat(crons): Bring back legacy token-auth checkin API (#1634) by @evanpurkhiser
+- ref: Unhide sourcemaps inject command as its already GA (#1631) by @kamilogorek
+- ref: Match case-insensitive value when finding repo by name (#1629) by @maxnowack
+- ref(inject): Inject code snippet at the start (#1567) by @loewenheim
+- feat(crons): Replace API checkins w/ send_envelope (#1618) by @evanpurkhiser
+
 ## 2.18.1
 
 ### Various fixes & improvements
