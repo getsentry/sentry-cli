@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.19.1
+
+### Various fixes & improvements
+
+- fix(inject): Add semicolon at the end of inject snippet (#1643) by @kamilogorek
+
 ## 2.19.0
 
 ### Various fixes & improvements
