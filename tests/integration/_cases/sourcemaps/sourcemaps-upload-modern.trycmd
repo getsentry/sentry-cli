@@ -8,13 +8,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tes
 > Adding source map references
 > Bundled 2 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
-> Uploaded files to Sentry
-> File upload complete (processing pending on server)
-> Organization: wat-org
-> Project: wat-project
-> Release: None
-> Dist: None
-> Upload type: artifact bundle
+> Nothing to upload, all files are on the server
 
 Source Map Upload Report
   Source Maps

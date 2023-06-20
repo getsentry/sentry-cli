@@ -15,13 +15,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/pages/asdf-05b39167abbe433b.js
 > Bundled 20 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
-> Uploaded files to Sentry
-> File upload complete (processing pending on server)
-> Organization: wat-org
-> Project: wat-project
-> Release: None
-> Dist: None
-> Upload type: artifact bundle
+> Nothing to upload, all files are on the server
 
 Source Map Upload Report
   Scripts

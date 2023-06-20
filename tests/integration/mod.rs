@@ -161,10 +161,6 @@ pub fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
                 .with_response_body(chunk_upload_response),
         ),
         mock_endpoint(
-            EndpointOptions::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
-                .with_response_body("[]"),
-        ),
-        mock_endpoint(
             EndpointOptions::new("POST", assemble_endpoint, 200)
                 .with_response_body(r#"{"state":"created","missingChunks":[]}"#),
         ),
