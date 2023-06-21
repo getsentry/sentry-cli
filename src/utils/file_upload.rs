@@ -437,7 +437,10 @@ fn build_artifact_bundle(
         bundle.set_attribute("dist".to_owned(), dist.to_owned());
     }
 
-    for file in files.values() {
+    let mut files_sorted = files.values().collect::<Vec<_>>();
+    files_sorted.sort_by_key(|file| file.url.clone());
+
+    for file in files_sorted {
         pb.inc(1);
         pb.set_message(&file.url);
 
