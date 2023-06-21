@@ -76,6 +76,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
@@ -530,27 +531,73 @@ fn print_upload_context_details(context: &UploadContext) {
     );
 }
 
-#[test]
-fn test_url_to_bundle_path() {
-    assert_eq!(url_to_bundle_path("~/bar").unwrap(), "_/_/bar");
-    assert_eq!(url_to_bundle_path("~/foo/bar").unwrap(), "_/_/foo/bar");
-    assert_eq!(
-        url_to_bundle_path("~/dist/js/bundle.js.map").unwrap(),
-        "_/_/dist/js/bundle.js.map"
-    );
-    assert_eq!(
-        url_to_bundle_path("~/babel.config.js").unwrap(),
-        "_/_/babel.config.js"
-    );
+#[cfg(test)]
+mod tests {
+    use sha1_smol::Sha1;
 
-    assert_eq!(url_to_bundle_path("~/#/bar").unwrap(), "_/_/#/bar");
-    assert_eq!(url_to_bundle_path("~/foo/#/bar").unwrap(), "_/_/foo/#/bar");
-    assert_eq!(
-        url_to_bundle_path("~/dist/#js/bundle.js.map").unwrap(),
-        "_/_/dist/#js/bundle.js.map"
-    );
-    assert_eq!(
-        url_to_bundle_path("~/#foo/babel.config.js").unwrap(),
-        "_/_/#foo/babel.config.js"
-    );
+    use super::*;
+
+    #[test]
+    fn test_url_to_bundle_path() {
+        assert_eq!(url_to_bundle_path("~/bar").unwrap(), "_/_/bar");
+        assert_eq!(url_to_bundle_path("~/foo/bar").unwrap(), "_/_/foo/bar");
+        assert_eq!(
+            url_to_bundle_path("~/dist/js/bundle.js.map").unwrap(),
+            "_/_/dist/js/bundle.js.map"
+        );
+        assert_eq!(
+            url_to_bundle_path("~/babel.config.js").unwrap(),
+            "_/_/babel.config.js"
+        );
+
+        assert_eq!(url_to_bundle_path("~/#/bar").unwrap(), "_/_/#/bar");
+        assert_eq!(url_to_bundle_path("~/foo/#/bar").unwrap(), "_/_/foo/#/bar");
+        assert_eq!(
+            url_to_bundle_path("~/dist/#js/bundle.js.map").unwrap(),
+            "_/_/dist/#js/bundle.js.map"
+        );
+        assert_eq!(
+            url_to_bundle_path("~/#foo/babel.config.js").unwrap(),
+            "_/_/#foo/babel.config.js"
+        );
+    }
+
+    #[test]
+    fn build_artifact_bundle_deterministic() {
+        let context = UploadContext {
+            org: "wat-org",
+            project: Some("wat-project"),
+            release: None,
+            dist: None,
+            note: None,
+            wait: false,
+            dedupe: true,
+            chunk_upload_options: None,
+        };
+
+        let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
+            .into_iter()
+            .map(|name| {
+                let file = SourceFile {
+                    url: format!("~/{name}"),
+                    path: format!("tests/integration/_fixtures/{name}").into(),
+                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}")).unwrap(),
+                    ty: SourceFileType::SourceMap,
+                    headers: Default::default(),
+                    messages: Default::default(),
+                    already_uploaded: false,
+                };
+                (format!("~/{name}"), file)
+            })
+            .collect();
+
+        let file = build_artifact_bundle(&context, &source_files, None).unwrap();
+
+        let buf = std::fs::read(file.path()).unwrap();
+        let hash = Sha1::from(&buf);
+        assert_eq!(
+            hash.digest().to_string(),
+            "3f1ae634a707ec4bc01cf227589e24e4deac4a19"
+        );
+    }
 }
