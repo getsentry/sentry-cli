@@ -379,12 +379,11 @@ fn upload_files_chunked(
         style(">").dim(),
     ));
 
-    let use_artifact_bundle =
-        options.supports(ChunkUploadCapability::ArtifactBundles) && context.project.is_some();
-
     let missing_chunks = {
         let api = Api::current();
-        let response = if use_artifact_bundle {
+        let response = if options.supports(ChunkUploadCapability::ArtifactBundles)
+            && context.project.is_some()
+        {
             api.assemble_artifact_bundle(
                 context.org,
                 vec![context.project.unwrap().to_string()],
