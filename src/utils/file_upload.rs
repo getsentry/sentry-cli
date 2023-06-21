@@ -597,7 +597,7 @@ mod tests {
         let file = build_artifact_bundle(&context, &source_files, None).unwrap();
 
         let buf = std::fs::read(file.path()).unwrap();
-        let hash = Sha1::from(&buf);
+        let hash = Sha1::from(buf);
         assert_eq!(
             hash.digest().to_string(),
             "3f1ae634a707ec4bc01cf227589e24e4deac4a19"
