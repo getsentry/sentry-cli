@@ -293,11 +293,11 @@ fn poll_assemble(
     };
 
     let api = Api::current();
+    let use_artifact_bundle =
+        options.supports(ChunkUploadCapability::ArtifactBundles) && context.project.is_some();
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
-        let response = if options.supports(ChunkUploadCapability::ArtifactBundles)
-            && context.project.is_some()
-        {
+        let response = if use_artifact_bundle {
             api.assemble_artifact_bundle(
                 context.org,
                 vec![context.project.unwrap().to_string()],
