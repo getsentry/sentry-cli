@@ -379,30 +379,25 @@ fn upload_files_chunked(
         style(">").dim(),
     ));
 
-    let missing_chunks = {
+    // Filter out chunks that are already on the server. This only matters if we're in the
+    // `assemble_artifact_bundle` case; `assemble_release_artifacts` always returns `missing_chunks: []`,
+    // so there's no point querying the endpoint.
+    if options.supports(ChunkUploadCapability::ArtifactBundles) && context.project.is_some() {
         let api = Api::current();
-        let response = if options.supports(ChunkUploadCapability::ArtifactBundles)
-            && context.project.is_some()
-        {
-            api.assemble_artifact_bundle(
-                context.org,
-                vec![context.project.unwrap().to_string()],
-                checksum,
-                &checksums,
-                context.release,
-                context.dist,
-            )?
-        } else {
-            api.assemble_release_artifacts(context.org, context.release()?, checksum, &checksums)?
-        };
-
-        response.missing_chunks
+        let response = api.assemble_artifact_bundle(
+            context.org,
+            vec![context.project.unwrap().to_string()],
+            checksum,
+            &checksums,
+            context.release,
+            context.dist,
+        )?;
+        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
     };
 
-    chunks.retain(|Chunk((digest, _))| missing_chunks.contains(digest));
     upload_chunks(&chunks, options, progress_style)?;
 
-    if !missing_chunks.is_empty() {
+    if !chunks.is_empty() {
         println!("{} Uploaded files to Sentry", style(">").dim());
         poll_assemble(checksum, &checksums, context, options)
     } else {
