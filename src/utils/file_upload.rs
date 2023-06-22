@@ -438,7 +438,7 @@ fn build_artifact_bundle(
     }
 
     let mut files_sorted = files.values().collect::<Vec<_>>();
-    files_sorted.sort_by_key(|file| file.url.clone());
+    files_sorted.sort_by_key(|file| &file.url[..]);
 
     for file in files_sorted {
         pb.inc(1);
