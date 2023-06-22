@@ -122,7 +122,12 @@ pub enum ServerBehavior {
 }
 
 // Endpoints need to be bound, as they need to live long enough for test to finish
-pub fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
+pub fn mock_common_upload_endpoints(
+    behavior: ServerBehavior,
+    missing_chunks: Vec<String>,
+    chunk_size: Option<usize>,
+) -> Vec<Mock> {
+    let chunk_size = chunk_size.unwrap_or(8388608);
     let (accept, release_request_count, assemble_endpoint) = match behavior {
         ServerBehavior::Legacy => (
             "\"release_files\"",
@@ -138,7 +143,7 @@ pub fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
     let chunk_upload_response = format!(
         "{{
             \"url\": \"{}/api/0/organizations/wat-org/chunk-upload/\",
-            \"chunkSize\": 8388608,
+            \"chunkSize\": {chunk_size},
             \"chunksPerRequest\": 64,
             \"maxRequestSize\": 33554432,
             \"concurrency\": 8,
@@ -165,9 +170,12 @@ pub fn mock_common_upload_endpoints(behavior: ServerBehavior) -> Vec<Mock> {
                 .with_response_body("[]"),
         ),
         mock_endpoint(
-            EndpointOptions::new("POST", assemble_endpoint, 200)
-                .with_response_body(r#"{"state":"created","missingChunks":[]}"#),
-        ),
+            EndpointOptions::new("POST", assemble_endpoint, 200).with_response_body(format!(
+                r#"{{"state":"created","missingChunks":{}}}"#,
+                serde_json::to_string(&missing_chunks).unwrap()
+            )),
+        )
+        .expect_at_least(1),
     ]
 }
 
