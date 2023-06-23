@@ -121,13 +121,30 @@ pub enum ServerBehavior {
     Modern,
 }
 
+#[derive(Debug)]
+pub struct ChunkOptions {
+    chunk_size: usize,
+    missing_chunks: Vec<String>,
+}
+
+impl Default for ChunkOptions {
+    fn default() -> Self {
+        Self {
+            chunk_size: 8388608,
+            missing_chunks: vec![],
+        }
+    }
+}
+
 // Endpoints need to be bound, as they need to live long enough for test to finish
 pub fn mock_common_upload_endpoints(
     behavior: ServerBehavior,
-    missing_chunks: Vec<String>,
-    chunk_size: Option<usize>,
+    chunk_options: ChunkOptions,
 ) -> Vec<Mock> {
-    let chunk_size = chunk_size.unwrap_or(8388608);
+    let ChunkOptions {
+        chunk_size,
+        missing_chunks,
+    } = chunk_options;
     let (accept, release_request_count, assemble_endpoint) = match behavior {
         ServerBehavior::Legacy => (
             "\"release_files\"",
