@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- fix: Make artifact bundle creation deterministic (#1652) 
+- feat: Don't upload chunks that are already on the server (#1651)  
+
 ## 2.19.1
 
 ### Various fixes & improvements
