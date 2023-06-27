@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- Revert "feat: Don't upload chunks that are already on the server (#1651)"
+
 ## 2.19.2
 
 ### Various fixes and improvements
