@@ -6,7 +6,7 @@
 
 ### Various fixes and improvements
 
-- feat: Don't upload chunks that are already on the server (fixed version) (#1654)
+- feat: Don't upload chunks that are already on the server (fixed version) (#1660)
 
 ## 2.19.2
 
