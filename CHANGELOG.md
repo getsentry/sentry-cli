@@ -8,6 +8,12 @@
 
 - feat: Don't upload chunks that are already on the server (fixed version) (#1660)
 
+## 2.19.3
+
+### Various fixes and improvements
+
+- Revert "feat: Don't upload chunks that are already on the server (#1651)"
+
 ## 2.19.2
 
 ### Various fixes and improvements
