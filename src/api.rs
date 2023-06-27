@@ -2610,6 +2610,10 @@ pub enum ChunkUploadCapability {
     /// Chunked upload of standalone artifact bundles
     ArtifactBundles,
 
+    /// Like `ArtifactBundles`, but with deduplicated chunk
+    /// upload.
+    ArtifactBundlesV2,
+
     /// Upload of PDBs and debug id overrides
     Pdbs,
 
@@ -2638,6 +2642,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
             "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
+            "artifact_bundles_v2" => ChunkUploadCapability::ArtifactBundlesV2,
             "pdbs" => ChunkUploadCapability::Pdbs,
             "portablepdbs" => ChunkUploadCapability::PortablePdbs,
             "sources" => ChunkUploadCapability::Sources,
