@@ -274,12 +274,39 @@ fn upload_files_parallel(
     Ok(())
 }
 
-fn poll_assemble(
-    checksum: Digest,
-    chunks: &[Digest],
+fn upload_files_chunked(
     context: &UploadContext,
+    files: &SourceFiles,
     options: &ChunkUploadOptions,
 ) -> Result<()> {
+    let archive = build_artifact_bundle(context, files, None)?;
+
+    let progress_style =
+        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
+
+    let view = ByteView::open(archive.path())?;
+    let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
+    let chunks = view
+        .chunks(options.chunk_size as usize)
+        .zip(checksums.iter())
+        .map(|(data, checksum)| Chunk((*checksum, data)))
+        .collect::<Vec<_>>();
+
+    pb.finish_with_duration("Optimizing");
+
+    let progress_style = ProgressStyle::default_bar().template(&format!(
+        "{} Uploading files...\
+       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+        style(">").dim(),
+    ));
+
+    upload_chunks(&chunks, options, progress_style)?;
+    println!("{} Uploaded files to Sentry", style(">").dim());
+
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
     let pb = ProgressBar::new_spinner();
@@ -293,21 +320,21 @@ fn poll_assemble(
     };
 
     let api = Api::current();
-    let use_artifact_bundle =
-        options.supports(ChunkUploadCapability::ArtifactBundles) && context.project.is_some();
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
-        let response = if use_artifact_bundle {
+        let response = if options.supports(ChunkUploadCapability::ArtifactBundles)
+            && context.project.is_some()
+        {
             api.assemble_artifact_bundle(
                 context.org,
                 vec![context.project.unwrap().to_string()],
                 checksum,
-                chunks,
+                &checksums,
                 context.release,
                 context.dist,
             )?
         } else {
-            api.assemble_release_artifacts(context.org, context.release()?, checksum, chunks)?
+            api.assemble_release_artifacts(context.org, context.release()?, checksum, &checksums)?
         };
 
         // Poll until there is a response, unless the user has specified to skip polling. In
@@ -347,66 +374,6 @@ fn poll_assemble(
     print_upload_context_details(context);
 
     Ok(())
-}
-
-fn upload_files_chunked(
-    context: &UploadContext,
-    files: &SourceFiles,
-    options: &ChunkUploadOptions,
-) -> Result<()> {
-    let archive = build_artifact_bundle(context, files, None)?;
-
-    let progress_style =
-        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
-
-    let pb = ProgressBar::new_spinner();
-    pb.enable_steady_tick(100);
-    pb.set_style(progress_style);
-
-    let view = ByteView::open(archive.path())?;
-    let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
-    let mut chunks = view
-        .chunks(options.chunk_size as usize)
-        .zip(checksums.iter())
-        .map(|(data, checksum)| Chunk((*checksum, data)))
-        .collect::<Vec<_>>();
-
-    pb.finish_with_duration("Optimizing");
-
-    let progress_style = ProgressStyle::default_bar().template(&format!(
-        "{} Uploading files...\
-       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-        style(">").dim(),
-    ));
-
-    // Filter out chunks that are already on the server. This only matters if we're in the
-    // `assemble_artifact_bundle` case; `assemble_release_artifacts` always returns `missing_chunks: []`,
-    // so there's no point querying the endpoint.
-    if options.supports(ChunkUploadCapability::ArtifactBundles) && context.project.is_some() {
-        let api = Api::current();
-        let response = api.assemble_artifact_bundle(
-            context.org,
-            vec![context.project.unwrap().to_string()],
-            checksum,
-            &checksums,
-            context.release,
-            context.dist,
-        )?;
-        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
-    };
-
-    upload_chunks(&chunks, options, progress_style)?;
-
-    if !chunks.is_empty() {
-        println!("{} Uploaded files to Sentry", style(">").dim());
-        poll_assemble(checksum, &checksums, context, options)
-    } else {
-        println!(
-            "{} Nothing to upload, all files are on the server",
-            style(">").dim()
-        );
-        Ok(())
-    }
 }
 
 fn build_debug_id(files: &SourceFiles) -> DebugId {
