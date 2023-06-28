@@ -23,6 +23,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .num_args(1..)
+                .required(true)
                 .action(ArgAction::Append)
                 .help(
                     "A path to recursively search for javascript files that should be processed.",
