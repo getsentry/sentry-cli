@@ -378,6 +378,59 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
     format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
 }
 
+/// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
+/// at most one segment (modulo `.` segments).
+///
+/// If `expected_path` occurs among the `candidate_paths`, no other paths will be returned since
+/// that is considered a unique best match.
+///
+/// The intedend usecase is finding sourcemaps even if they reside in a different directory; see
+/// the `test_find_matching_paths_sourcemaps` test for a minimal example.
+pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> Vec<String> {
+    let mut matches = Vec::new();
+    for candidate in candidate_paths {
+        let candidate_segments = candidate
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .collect::<Vec<_>>();
+        let expected_segments = expected_path
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .collect::<Vec<_>>();
+
+        // If there is a candidate that is exactly equal to the goal path,
+        // return only that one.
+        if candidate_segments == expected_segments {
+            return vec![candidate.clone()];
+        }
+
+        let mut candidate_segments = candidate_segments.into_iter().peekable();
+        let mut expected_segments = expected_segments.into_iter().peekable();
+
+        while candidate_segments
+            .peek()
+            .zip(expected_segments.peek())
+            .map_or(false, |(x, y)| x == y)
+        {
+            candidate_segments.next();
+            expected_segments.next();
+        }
+
+        if candidate_segments.next().is_none() || expected_segments.next().is_none() {
+            continue;
+        }
+
+        let candidate_stem = candidate_segments.collect::<Vec<_>>();
+        let expected_stem = expected_segments.collect::<Vec<_>>();
+
+        if candidate_stem == expected_stem {
+            matches.push(candidate.clone());
+        }
+    }
+
+    matches
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -386,7 +439,7 @@ mod tests {
 
     use crate::utils::fs::TempFile;
 
-    use super::{fixup_js_file, fixup_sourcemap, normalize_sourcemap_url, replace_sourcemap_url};
+    use super::*;
 
     #[test]
     fn test_fixup_sourcemap() {
@@ -600,5 +653,56 @@ some text
 more text
 "#;
         assert_eq!(std::str::from_utf8(&js_contents).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_find_matching_paths_unique() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &[
+            "./foo/baz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ][..];
+
+        assert_eq!(
+            find_matching_paths(candidates, expected),
+            vec!["foo/baar/baz/quux"]
+        );
+
+        let candidates = &[
+            "./foo/baz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+            "./foo/bar/baz/quux".to_string(),
+        ][..];
+
+        assert_eq!(find_matching_paths(candidates, expected), vec![expected]);
+    }
+
+    #[test]
+    fn test_find_matching_paths_ambiguous() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &[
+            "./foo/bar/baaz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ][..];
+
+        assert_eq!(find_matching_paths(candidates, expected), candidates,);
+    }
+
+    #[test]
+    fn test_find_matching_paths_sourcemaps() {
+        let candidates = &[
+            "./project/maps/index.js.map".to_string(),
+            "./project/maps/page/index.js.map".to_string(),
+        ][..];
+
+        assert_eq!(
+            find_matching_paths(candidates, "project/code/index.js.map"),
+            &["./project/maps/index.js.map"]
+        );
+
+        assert_eq!(
+            find_matching_paths(candidates, "project/code/page/index.js.map"),
+            &["./project/maps/page/index.js.map"]
+        );
     }
 }
