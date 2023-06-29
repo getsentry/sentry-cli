@@ -826,8 +826,29 @@ impl SourceMapProcessor {
                         } else {
                             // Handle external sourcemaps
 
-                            let sourcemap_url =
+                            let normalized =
                                 inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                            let sourcemaps = self
+                                .sources
+                                .values()
+                                .filter_map(|s| {
+                                    (s.ty == SourceFileType::SourceMap).then_some(&s.url[..])
+                                })
+                                .collect::<Vec<_>>();
+                            let matches = find_matching_paths(&sourcemaps[..], &normalized);
+
+                            let sourcemap_url = match &matches[..] {
+                                [] => normalized,
+                                [x] => x.to_string(),
+                                _ => {
+                                    warn!("Ambiguous matches for sourcemap path {normalized}:");
+                                    for path in matches {
+                                        warn!("{path}");
+                                    }
+                                    normalized
+                                }
+                            };
+
                             match self.sources.get_mut(&sourcemap_url) {
                                 None => {
                                     debug!("Sourcemap file {} not found", sourcemap_url);
@@ -923,6 +944,59 @@ impl SourceMapProcessor {
     }
 }
 
+/// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
+/// at most one segment (modulo `.` segments).
+///
+/// If `expected_path` occurs among the `candidate_paths`, no other paths will be returned since
+/// that is considered a unique best match.
+///
+/// The intedend usecase is finding sourcemaps even if they reside in a different directory; see
+/// the `test_find_matching_paths_sourcemaps` test for a minimal example.
+fn find_matching_paths<'a>(candidate_paths: &[&'a str], expected_path: &str) -> Vec<&'a str> {
+    let mut matches = Vec::new();
+    for &candidate in candidate_paths {
+        let candidate_segments = candidate
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .collect::<Vec<_>>();
+        let expected_segments = expected_path
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .collect::<Vec<_>>();
+
+        // If there is a candidate that is exactly equal to the goal path,
+        // return only that one.
+        if candidate_segments == expected_segments {
+            return vec![candidate];
+        }
+
+        let mut candidate_segments = candidate_segments.into_iter().peekable();
+        let mut expected_segments = expected_segments.into_iter().peekable();
+
+        while candidate_segments
+            .peek()
+            .zip(expected_segments.peek())
+            .map_or(false, |(x, y)| x == y)
+        {
+            candidate_segments.next();
+            expected_segments.next();
+        }
+
+        if candidate_segments.next().is_none() || expected_segments.next().is_none() {
+            continue;
+        }
+
+        let candidate_stem = candidate_segments.collect::<Vec<_>>();
+        let expected_stem = expected_segments.collect::<Vec<_>>();
+
+        if candidate_stem == expected_stem {
+            matches.push(candidate);
+        }
+    }
+
+    matches
+}
+
 fn validate_script(source: &mut SourceFile) -> Result<()> {
     if let Some(sm_ref) = get_sourcemap_ref(source) {
         if let sourcemap::SourceMapRef::LegacyRef(_) = sm_ref {
@@ -979,54 +1053,100 @@ impl Default for SourceMapProcessor {
     }
 }
 
-#[test]
-fn test_split_url() {
-    assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
-    assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
-    assert_eq!(split_url("foo"), (None, "foo", None));
-    assert_eq!(split_url("/foo"), (Some(""), "foo", None));
-    assert_eq!(
-        split_url("/foo.deadbeef0123.js"),
-        (Some(""), "foo", Some("deadbeef0123.js"))
-    );
-    assert_eq!(
-        split_url("/foo/bar/baz.js"),
-        (Some("/foo/bar"), "baz", Some("js"))
-    );
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_unsplit_url() {
-    assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
-    assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
-    assert_eq!(&unsplit_url(None, "foo", None), "foo");
-    assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
-}
+    #[test]
+    fn test_split_url() {
+        assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
+        assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
+        assert_eq!(split_url("foo"), (None, "foo", None));
+        assert_eq!(split_url("/foo"), (Some(""), "foo", None));
+        assert_eq!(
+            split_url("/foo.deadbeef0123.js"),
+            (Some(""), "foo", Some("deadbeef0123.js"))
+        );
+        assert_eq!(
+            split_url("/foo/bar/baz.js"),
+            (Some("/foo/bar"), "baz", Some("js"))
+        );
+    }
 
-#[test]
-fn test_join() {
-    assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
-    assert_eq!(
-        &join_url("app:///", "/foo.html").unwrap(),
-        "app:///foo.html"
-    );
-    assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(
-        &join_url("https:///example.com/", "foo.html").unwrap(),
-        "https://example.com/foo.html"
-    );
-    assert_eq!(
-        &join_url("https://example.com/", "foo.html").unwrap(),
-        "https://example.com/foo.html"
-    );
-}
+    #[test]
+    fn test_unsplit_url() {
+        assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
+        assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
+        assert_eq!(&unsplit_url(None, "foo", None), "foo");
+        assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
+    }
 
-#[test]
-fn test_url_matches_extension() {
-    assert!(url_matches_extension("foo.js", &["js"][..]));
-    assert!(!url_matches_extension("foo.mjs", &["js"][..]));
-    assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
-    assert!(!url_matches_extension("js", &["js"][..]));
+    #[test]
+    fn test_join() {
+        assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
+        assert_eq!(
+            &join_url("app:///", "/foo.html").unwrap(),
+            "app:///foo.html"
+        );
+        assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(
+            &join_url("https:///example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+        assert_eq!(
+            &join_url("https://example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+    }
+
+    #[test]
+    fn test_url_matches_extension() {
+        assert!(url_matches_extension("foo.js", &["js"][..]));
+        assert!(!url_matches_extension("foo.mjs", &["js"][..]));
+        assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
+        assert!(!url_matches_extension("js", &["js"][..]));
+    }
+
+    #[test]
+    fn test_find_matching_paths_unique() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &["./foo/baz/quux", "foo/baar/baz/quux"][..];
+
+        assert_eq!(
+            find_matching_paths(candidates, expected),
+            vec!["foo/baar/baz/quux"]
+        );
+
+        let candidates = &["./foo/baz/quux", "foo/baar/baz/quux", "./foo/bar/baz/quux"][..];
+
+        assert_eq!(find_matching_paths(candidates, expected), vec![expected]);
+    }
+
+    #[test]
+    fn test_find_matching_paths_ambiguous() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &["./foo/bar/baaz/quux", "foo/baar/baz/quux"][..];
+
+        assert_eq!(find_matching_paths(candidates, expected), candidates,);
+    }
+
+    #[test]
+    fn test_find_matching_paths_sourcemaps() {
+        let candidates = &[
+            "./project/maps/index.js.map",
+            "./project/maps/page/index.js.map",
+        ][..];
+
+        assert_eq!(
+            find_matching_paths(candidates, "project/code/index.js.map"),
+            &["./project/maps/index.js.map"]
+        );
+
+        assert_eq!(
+            find_matching_paths(candidates, "project/code/page/index.js.map"),
+            &["./project/maps/page/index.js.map"]
+        );
+    }
 }
