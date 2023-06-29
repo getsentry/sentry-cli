@@ -766,6 +766,13 @@ impl SourceMapProcessor {
 
         let mut report = InjectReport::default();
 
+        let mut sourcemaps = self
+            .sources
+            .values()
+            .filter_map(|s| (s.ty == SourceFileType::SourceMap).then_some(s.url.clone()))
+            .collect::<Vec<_>>();
+        sourcemaps.sort();
+
         for (source_url, sourcemap_url) in self.sourcemap_references.iter_mut() {
             // We only allow injection into files that match the extension
             if !url_matches_extension(source_url, js_extensions) {
@@ -828,13 +835,6 @@ impl SourceMapProcessor {
 
                             let normalized =
                                 inject::normalize_sourcemap_url(source_url, sourcemap_url);
-                            let sourcemaps = self
-                                .sources
-                                .values()
-                                .filter_map(|s| {
-                                    (s.ty == SourceFileType::SourceMap).then_some(&s.url[..])
-                                })
-                                .collect::<Vec<_>>();
                             let matches = find_matching_paths(&sourcemaps[..], &normalized);
 
                             let sourcemap_url = match &matches[..] {
@@ -952,9 +952,9 @@ impl SourceMapProcessor {
 ///
 /// The intedend usecase is finding sourcemaps even if they reside in a different directory; see
 /// the `test_find_matching_paths_sourcemaps` test for a minimal example.
-fn find_matching_paths<'a>(candidate_paths: &[&'a str], expected_path: &str) -> Vec<&'a str> {
+fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> Vec<String> {
     let mut matches = Vec::new();
-    for &candidate in candidate_paths {
+    for candidate in candidate_paths {
         let candidate_segments = candidate
             .split('/')
             .filter(|&segment| segment != ".")
@@ -967,7 +967,7 @@ fn find_matching_paths<'a>(candidate_paths: &[&'a str], expected_path: &str) -> 
         // If there is a candidate that is exactly equal to the goal path,
         // return only that one.
         if candidate_segments == expected_segments {
-            return vec![candidate];
+            return vec![candidate.clone()];
         }
 
         let mut candidate_segments = candidate_segments.into_iter().peekable();
@@ -990,7 +990,7 @@ fn find_matching_paths<'a>(candidate_paths: &[&'a str], expected_path: &str) -> 
         let expected_stem = expected_segments.collect::<Vec<_>>();
 
         if candidate_stem == expected_stem {
-            matches.push(candidate);
+            matches.push(candidate.clone());
         }
     }
 
@@ -1112,14 +1112,21 @@ mod tests {
     #[test]
     fn test_find_matching_paths_unique() {
         let expected = "./foo/bar/baz/quux";
-        let candidates = &["./foo/baz/quux", "foo/baar/baz/quux"][..];
+        let candidates = &[
+            "./foo/baz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ][..];
 
         assert_eq!(
             find_matching_paths(candidates, expected),
             vec!["foo/baar/baz/quux"]
         );
 
-        let candidates = &["./foo/baz/quux", "foo/baar/baz/quux", "./foo/bar/baz/quux"][..];
+        let candidates = &[
+            "./foo/baz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+            "./foo/bar/baz/quux".to_string(),
+        ][..];
 
         assert_eq!(find_matching_paths(candidates, expected), vec![expected]);
     }
@@ -1127,7 +1134,10 @@ mod tests {
     #[test]
     fn test_find_matching_paths_ambiguous() {
         let expected = "./foo/bar/baz/quux";
-        let candidates = &["./foo/bar/baaz/quux", "foo/baar/baz/quux"][..];
+        let candidates = &[
+            "./foo/bar/baaz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ][..];
 
         assert_eq!(find_matching_paths(candidates, expected), candidates,);
     }
@@ -1135,8 +1145,8 @@ mod tests {
     #[test]
     fn test_find_matching_paths_sourcemaps() {
         let candidates = &[
-            "./project/maps/index.js.map",
-            "./project/maps/page/index.js.map",
+            "./project/maps/index.js.map".to_string(),
+            "./project/maps/page/index.js.map".to_string(),
         ][..];
 
         assert_eq!(
