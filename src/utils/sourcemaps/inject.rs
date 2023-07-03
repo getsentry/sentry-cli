@@ -381,6 +381,8 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
 /// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
 /// at most one segment (modulo `.` segments).
 ///
+/// The differing segment cannot be the last one (i.e., the filename).
+///
 /// If `expected_path` occurs among the `candidate_paths`, no other paths will be returned since
 /// that is considered a unique best match.
 ///
@@ -407,6 +409,7 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
         let mut candidate_segments = candidate_segments.iter().peekable();
         let mut expected_segments = expected_segments.iter().peekable();
 
+        // Iterate through both paths and discard segments so long as they are equal.
         while candidate_segments
             .peek()
             .zip(expected_segments.peek())
@@ -416,14 +419,16 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
             expected_segments.next();
         }
 
-        if candidate_segments.next().is_none() || expected_segments.next().is_none() {
-            continue;
-        }
+        // The next segments (if there are any left) must be where the paths disagree.
+        candidate_segments.next();
+        expected_segments.next();
 
         let candidate_stem = candidate_segments.collect::<Vec<_>>();
         let expected_stem = expected_segments.collect::<Vec<_>>();
 
-        if candidate_stem == expected_stem {
+        // The rest of both paths must agree and be nonempty, so at least the filenames definitely
+        // must agree.
+        if !candidate_stem.is_empty() && candidate_stem == expected_stem {
             matches.push(candidate.clone());
         }
     }
