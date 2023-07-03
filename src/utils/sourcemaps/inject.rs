@@ -388,12 +388,12 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
 /// the `test_find_matching_paths_sourcemaps` test for a minimal example.
 pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> Vec<String> {
     let mut matches = Vec::new();
+    let expected_segments = expected_path
+        .split('/')
+        .filter(|&segment| segment != ".")
+        .collect::<Vec<_>>();
     for candidate in candidate_paths {
         let candidate_segments = candidate
-            .split('/')
-            .filter(|&segment| segment != ".")
-            .collect::<Vec<_>>();
-        let expected_segments = expected_path
             .split('/')
             .filter(|&segment| segment != ".")
             .collect::<Vec<_>>();
@@ -404,8 +404,8 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
             return vec![candidate.clone()];
         }
 
-        let mut candidate_segments = candidate_segments.into_iter().peekable();
-        let mut expected_segments = expected_segments.into_iter().peekable();
+        let mut candidate_segments = candidate_segments.iter().peekable();
+        let mut expected_segments = expected_segments.iter().peekable();
 
         while candidate_segments
             .peek()

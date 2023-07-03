@@ -835,7 +835,7 @@ impl SourceMapProcessor {
 
                             let normalized =
                                 inject::normalize_sourcemap_url(source_url, sourcemap_url);
-                            let matches = inject::find_matching_paths(&sourcemaps[..], &normalized);
+                            let matches = inject::find_matching_paths(&sourcemaps, &normalized);
 
                             let sourcemap_url = match &matches[..] {
                                 [] => normalized,
