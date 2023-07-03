@@ -404,8 +404,8 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
             return vec![candidate.clone()];
         }
 
-        let mut candidate_segments = candidate_segments.into_iter().peekable();
-        let mut expected_segments = expected_segments.into_iter().peekable();
+        let mut candidate_segments = candidate_segments.iter().peekable();
+        let mut expected_segments = expected_segments.iter().peekable();
 
         while candidate_segments
             .peek()
