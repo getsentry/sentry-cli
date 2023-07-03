@@ -384,7 +384,7 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
 /// If `expected_path` occurs among the `candidate_paths`, no other paths will be returned since
 /// that is considered a unique best match.
 ///
-/// The intedend usecase is finding sourcemaps even if they reside in a different directory; see
+/// The intended usecase is finding sourcemaps even if they reside in a different directory; see
 /// the `test_find_matching_paths_sourcemaps` test for a minimal example.
 pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> Vec<String> {
     let mut matches = Vec::new();
