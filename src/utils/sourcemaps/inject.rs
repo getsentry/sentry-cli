@@ -661,7 +661,7 @@ more text
         let candidates = &[
             "./foo/baz/quux".to_string(),
             "foo/baar/baz/quux".to_string(),
-        ][..];
+        ];
 
         assert_eq!(
             find_matching_paths(candidates, expected),
@@ -672,7 +672,7 @@ more text
             "./foo/baz/quux".to_string(),
             "foo/baar/baz/quux".to_string(),
             "./foo/bar/baz/quux".to_string(),
-        ][..];
+        ];
 
         assert_eq!(find_matching_paths(candidates, expected), vec![expected]);
     }
@@ -683,9 +683,23 @@ more text
         let candidates = &[
             "./foo/bar/baaz/quux".to_string(),
             "foo/baar/baz/quux".to_string(),
-        ][..];
+        ];
 
         assert_eq!(find_matching_paths(candidates, expected), candidates,);
+    }
+
+    #[test]
+    fn test_find_matching_paths_filename() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &[
+            "./foo/bar/baz/nop".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ];
+
+        assert_eq!(
+            find_matching_paths(candidates, expected),
+            ["foo/baar/baz/quux".to_string()]
+        );
     }
 
     #[test]
@@ -693,7 +707,7 @@ more text
         let candidates = &[
             "./project/maps/index.js.map".to_string(),
             "./project/maps/page/index.js.map".to_string(),
-        ][..];
+        ];
 
         assert_eq!(
             find_matching_paths(candidates, "project/code/index.js.map"),
