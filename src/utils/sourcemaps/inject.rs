@@ -390,24 +390,21 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
 /// the `test_find_matching_paths_sourcemaps` test for a minimal example.
 pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> Vec<String> {
     let mut matches = Vec::new();
-    let expected_segments = expected_path
-        .split('/')
-        .filter(|&segment| segment != ".")
-        .collect::<Vec<_>>();
     for candidate in candidate_paths {
-        let candidate_segments = candidate
+        let mut expected_segments = expected_path
             .split('/')
             .filter(|&segment| segment != ".")
-            .collect::<Vec<_>>();
+            .peekable();
+        let mut candidate_segments = candidate
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .peekable();
 
         // If there is a candidate that is exactly equal to the goal path,
         // return only that one.
-        if candidate_segments == expected_segments {
+        if Iterator::eq(candidate_segments.clone(), expected_segments.clone()) {
             return vec![candidate.clone()];
         }
-
-        let mut candidate_segments = candidate_segments.iter().peekable();
-        let mut expected_segments = expected_segments.iter().peekable();
 
         // Iterate through both paths and discard segments so long as they are equal.
         while candidate_segments
@@ -423,12 +420,11 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
         candidate_segments.next();
         expected_segments.next();
 
-        let candidate_stem = candidate_segments.collect::<Vec<_>>();
-        let expected_stem = expected_segments.collect::<Vec<_>>();
-
         // The rest of both paths must agree and be nonempty, so at least the filenames definitely
         // must agree.
-        if !candidate_stem.is_empty() && candidate_stem == expected_stem {
+        if candidate_segments.peek().is_some()
+            && Iterator::eq(candidate_segments, expected_segments)
+        {
             matches.push(candidate.clone());
         }
     }
