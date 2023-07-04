@@ -36,14 +36,12 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("release")
                 .long("release")
                 .value_name("RELEASE")
-                .required(true)
                 .help("The name of the release to publish."),
         )
         .arg(
             Arg::new("dist")
                 .long("dist")
                 .value_name("DISTRIBUTION")
-                .required(true)
                 .action(ArgAction::Append)
                 .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
@@ -98,22 +96,37 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
+    processor.add_debug_id_reference(&sourcemap_url)?;
 
     // TODO: make this optional
-    let version = matches.get_one::<String>("release").unwrap().to_string();
+    let version = matches.get_one::<String>("release");
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-    for dist in matches.get_many::<String>("dist").unwrap() {
-        println!(
-            "Uploading sourcemaps for release {} distribution {}",
-            &version, dist
-        );
+    if !version.is_none() {
+        for dist in matches.get_many::<String>("dist").unwrap() {
+            println!(
+                "Uploading sourcemaps for release {} distribution {}",
+                &version.unwrap().to_string(), dist
+            );
 
+            processor.upload(&UploadContext {
+                org: &org,
+                project: Some(&project),
+                release: Some(&version.unwrap().to_string()),
+                dist: Some(dist),
+                note: None,
+                wait: matches.get_flag("wait"),
+                dedupe: false,
+                chunk_upload_options: chunk_upload_options.as_ref(),
+            })?;
+        }
+    } else {
+        // Debug Id Upload
         processor.upload(&UploadContext {
             org: &org,
             project: Some(&project),
-            release: Some(&version),
-            dist: Some(dist),
+            release: None,
+            dist: None,
             note: None,
             wait: matches.get_flag("wait"),
             dedupe: false,

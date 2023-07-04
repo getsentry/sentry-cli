@@ -648,6 +648,26 @@ impl SourceMapProcessor {
         Ok(())
     }
 
+    pub fn add_debug_id_reference(&mut self, sourcemap_url: &str) -> Result<()> {
+        self.flush_pending_sources();
+
+        println!("{} Adding debug id from {}", style(">").dim(), sourcemap_url);
+        if !self.debug_ids.contains_key(sourcemap_url) {
+            println!("{} No debug id found for {} to reference", style(">").dim(), sourcemap_url);
+            return Ok(());
+        }
+
+        for source in self.sources.values_mut() {
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            source.headers.push(("debug-id".to_string(), self.debug_ids[sourcemap_url].to_string()));
+            self.debug_ids.insert(source.url.clone(), self.debug_ids[sourcemap_url].clone());
+        }
+        Ok(())
+    }
+
     /// Flags the collected sources whether they have already been uploaded before
     /// (based on their checksum), and returns the number of files that *do* need an upload.
     fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) -> usize {
