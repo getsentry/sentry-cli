@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- feat: Sourcemap discovery during injection is now more general (#1663)
+
 ## 2.19.4
 
 ### Various fixes and improvements
