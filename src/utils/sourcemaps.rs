@@ -766,6 +766,13 @@ impl SourceMapProcessor {
 
         let mut report = InjectReport::default();
 
+        let mut sourcemaps = self
+            .sources
+            .values()
+            .filter_map(|s| (s.ty == SourceFileType::SourceMap).then_some(s.url.clone()))
+            .collect::<Vec<_>>();
+        sourcemaps.sort();
+
         for (source_url, sourcemap_url) in self.sourcemap_references.iter_mut() {
             // We only allow injection into files that match the extension
             if !url_matches_extension(source_url, js_extensions) {
@@ -826,8 +833,22 @@ impl SourceMapProcessor {
                         } else {
                             // Handle external sourcemaps
 
-                            let sourcemap_url =
+                            let normalized =
                                 inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                            let matches = inject::find_matching_paths(&sourcemaps, &normalized);
+
+                            let sourcemap_url = match &matches[..] {
+                                [] => normalized,
+                                [x] => x.to_string(),
+                                _ => {
+                                    warn!("Ambiguous matches for sourcemap path {normalized}:");
+                                    for path in matches {
+                                        warn!("{path}");
+                                    }
+                                    normalized
+                                }
+                            };
+
                             match self.sources.get_mut(&sourcemap_url) {
                                 None => {
                                     debug!("Sourcemap file {} not found", sourcemap_url);
@@ -979,54 +1000,59 @@ impl Default for SourceMapProcessor {
     }
 }
 
-#[test]
-fn test_split_url() {
-    assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
-    assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
-    assert_eq!(split_url("foo"), (None, "foo", None));
-    assert_eq!(split_url("/foo"), (Some(""), "foo", None));
-    assert_eq!(
-        split_url("/foo.deadbeef0123.js"),
-        (Some(""), "foo", Some("deadbeef0123.js"))
-    );
-    assert_eq!(
-        split_url("/foo/bar/baz.js"),
-        (Some("/foo/bar"), "baz", Some("js"))
-    );
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_unsplit_url() {
-    assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
-    assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
-    assert_eq!(&unsplit_url(None, "foo", None), "foo");
-    assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
-}
+    #[test]
+    fn test_split_url() {
+        assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
+        assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
+        assert_eq!(split_url("foo"), (None, "foo", None));
+        assert_eq!(split_url("/foo"), (Some(""), "foo", None));
+        assert_eq!(
+            split_url("/foo.deadbeef0123.js"),
+            (Some(""), "foo", Some("deadbeef0123.js"))
+        );
+        assert_eq!(
+            split_url("/foo/bar/baz.js"),
+            (Some("/foo/bar"), "baz", Some("js"))
+        );
+    }
 
-#[test]
-fn test_join() {
-    assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
-    assert_eq!(
-        &join_url("app:///", "/foo.html").unwrap(),
-        "app:///foo.html"
-    );
-    assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(
-        &join_url("https:///example.com/", "foo.html").unwrap(),
-        "https://example.com/foo.html"
-    );
-    assert_eq!(
-        &join_url("https://example.com/", "foo.html").unwrap(),
-        "https://example.com/foo.html"
-    );
-}
+    #[test]
+    fn test_unsplit_url() {
+        assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
+        assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
+        assert_eq!(&unsplit_url(None, "foo", None), "foo");
+        assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
+    }
 
-#[test]
-fn test_url_matches_extension() {
-    assert!(url_matches_extension("foo.js", &["js"][..]));
-    assert!(!url_matches_extension("foo.mjs", &["js"][..]));
-    assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
-    assert!(!url_matches_extension("js", &["js"][..]));
+    #[test]
+    fn test_join() {
+        assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
+        assert_eq!(
+            &join_url("app:///", "/foo.html").unwrap(),
+            "app:///foo.html"
+        );
+        assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(
+            &join_url("https:///example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+        assert_eq!(
+            &join_url("https://example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+    }
+
+    #[test]
+    fn test_url_matches_extension() {
+        assert!(url_matches_extension("foo.js", &["js"][..]));
+        assert!(!url_matches_extension("foo.mjs", &["js"][..]));
+        assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
+        assert!(!url_matches_extension("js", &["js"][..]));
+    }
 }

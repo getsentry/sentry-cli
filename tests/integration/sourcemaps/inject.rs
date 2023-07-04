@@ -86,3 +86,34 @@ fn command_sourcemaps_inject_output_embedded() {
     let parsed: serde_json::Value = serde_json::from_slice(&decoded).unwrap();
     assert_eq!(parsed["mappings"], ";;;;");
 }
+
+#[test]
+fn command_sourcemaps_inject_output_split() {
+    let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject-split.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_split/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    register_test("sourcemaps/sourcemaps-inject-split.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_inject_output_split_ambiguous() {
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-split-ambiguous.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_split_ambiguous/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    register_test("sourcemaps/sourcemaps-inject-split-ambiguous.trycmd");
+}
