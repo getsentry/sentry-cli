@@ -653,9 +653,17 @@ impl SourceMapProcessor {
     pub fn add_debug_id_reference(&mut self, sourcemap_url: &str) -> Result<()> {
         self.flush_pending_sources();
 
-        println!("{} Adding debug id reference from {}", style(">").dim(), sourcemap_url);
+        println!(
+            "{} Adding debug id reference from {}",
+            style(">").dim(),
+            sourcemap_url
+        );
         if !self.debug_ids.contains_key(sourcemap_url) {
-            println!("{} No debug id found for {} to reference", style(">").dim(), sourcemap_url);
+            println!(
+                "{} No debug id found for {} to reference",
+                style(">").dim(),
+                sourcemap_url
+            );
             return Ok(());
         }
 
@@ -664,9 +672,16 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            let debug_id_header = ("debug-id".to_string(), self.debug_ids[sourcemap_url].to_string());
+            let debug_id_header = (
+                "debug-id".to_string(),
+                self.debug_ids[sourcemap_url].to_string(),
+            );
             if source.headers.contains(&debug_id_header) {
-                debug!("{} {} already has a debug id reference", style(">").dim(), source.url);
+                debug!(
+                    "{} {} already has a debug id reference",
+                    style(">").dim(),
+                    source.url
+                );
                 continue;
             }
 
@@ -675,9 +690,15 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            debug!("{} Adding debug id {} reference to {}", style(">").dim(), self.debug_ids[sourcemap_url].to_string(), source.url);
+            debug!(
+                "{} Adding debug id {} reference to {}",
+                style(">").dim(),
+                self.debug_ids[sourcemap_url].to_string(),
+                source.url
+            );
             source.headers.push(debug_id_header);
-            self.debug_ids.insert(source.url.clone(), self.debug_ids[sourcemap_url].clone());
+            self.debug_ids
+                .insert(source.url.clone(), self.debug_ids[sourcemap_url].clone());
         }
         Ok(())
     }
