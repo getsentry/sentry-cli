@@ -96,7 +96,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
-    processor.add_debug_id_reference(&sourcemap_url)?;
+    processor.add_debug_id_references()?;
 
     // TODO: make this optional
     let version = matches.get_one::<String>("release");

@@ -85,6 +85,18 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
+          Arg::new("no_debug_id_reference")
+              .long("no-debug_id-reference")
+              .action(ArgAction::SetTrue)
+              .help(
+                  "Disable emitting of automatic debug id references.{n}\
+                  By default the tool will store a 'debug-is' header with \
+                  binary files so that debug ida are located automatically \
+                  if the tool can detect it. If this causes issues it can \
+                  be disabled.",
+              ),
+        )
+        .arg(
             Arg::new("no_rewrite")
                 .long("no-rewrite")
                 .action(ArgAction::SetTrue)
@@ -284,6 +296,7 @@ fn process_sources_from_bundle(
 
     processor.rewrite(&prefixes)?;
     processor.add_sourcemap_references()?;
+    processor.add_debug_id_references()?;
 
     Ok(())
 }
@@ -360,6 +373,10 @@ fn process_sources_from_paths(
 
     if !matches.get_flag("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
+    }
+
+    if !matches.get_flag("no_debug_id_reference"){
+        processor.add_debug_id_references()?;
     }
 
     if matches.get_flag("validate") {
