@@ -19,7 +19,7 @@ const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 lazy_static! {
-    static ref USE_PRAGMA_RE: Regex = Regex::new(r#""use \w+";|'use \w+';"#).unwrap();
+    static ref USE_PRAGMA_RE: Regex = Regex::new(r#"^"use \w+";|^'use \w+';"#).unwrap();
 }
 
 fn print_section_with_debugid(
@@ -570,7 +570,7 @@ something else
 //# sourceMappingURL=fake1
 
   // some other comment
- "use strict"; rest of the line
+"use strict"; rest of the line
 'use strict';
 some line
 //# sourceMappingURL=fake2
@@ -587,9 +587,45 @@ something else"#;
 //# sourceMappingURL=fake1
 
   // some other comment
- "use strict"; rest of the line
+"use strict"; rest of the line
 'use strict';
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+some line
+//# sourceMappingURL=fake2
+something else
+//# debugId=00000000-0000-0000-0000-000000000000
+//# sourceMappingURL=real
+"#;
+
+        assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_fixup_js_file_fake_use_strict() {
+        let source = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+"use strict"; rest of the line
+(this.foo=this.bar||[]).push([[2],[function(e,t,n){"use strict"; […] }
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let debug_id = DebugId::default();
+
+        let mut source = Vec::from(source);
+
+        fixup_js_file(&mut source, debug_id).unwrap();
+
+        let expected = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+"use strict"; rest of the line
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+(this.foo=this.bar||[]).push([[2],[function(e,t,n){"use strict"; […] }
 some line
 //# sourceMappingURL=fake2
 something else
