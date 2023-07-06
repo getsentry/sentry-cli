@@ -320,6 +320,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let api = Api::current();
         let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
+        // TODO: ignore release and dist if debug id present
         match matches.get_many::<String>("dist") {
             None => {
                 processor.upload(&UploadContext {
