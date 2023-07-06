@@ -105,6 +105,12 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
+        .arg(
+            Arg::new("no_auto_release")
+                .long("no-auto-release")
+                .action(ArgAction::SetTrue)
+                .help("Don't try to automatically read release from Xcode project files."),
+        )
 }
 
 fn find_node() -> String {
@@ -309,43 +315,58 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         processor.add_sourcemap_references()?;
         processor.add_debug_id_reference(&sourcemap_url)?;
 
-        let dist = env::var("SENTRY_DIST").unwrap_or_else(|_| plist.build().to_string());
-        let release_name = env::var("SENTRY_RELEASE").unwrap_or(format!(
-            "{}@{}+{}",
-            plist.bundle_id(),
-            plist.version(),
-            dist
-        ));
-
         let api = Api::current();
         let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-        // TODO: ignore release and dist if debug id present
-        match matches.get_many::<String>("dist") {
-            None => {
-                processor.upload(&UploadContext {
-                    org: &org,
-                    project: Some(&project),
-                    release: Some(&release_name),
-                    dist: Some(&dist),
-                    note: None,
-                    wait: matches.get_flag("wait"),
-                    dedupe: false,
-                    chunk_upload_options: chunk_upload_options.as_ref(),
-                })?;
-            }
-            Some(dists) => {
-                for dist in dists {
+        let dist_from_env = env::var("SENTRY_DIST");
+        let release_from_env = env::var("SENTRY_RELEASE");
+
+        if dist_from_env.is_err() && dist_from_env.is_err() && matches.get_flag("no_auto_release") {
+            processor.upload(&UploadContext {
+                org: &org,
+                project: Some(&project),
+                release: None,
+                dist: None,
+                note: None,
+                wait: matches.get_flag("wait"),
+                dedupe: false,
+                chunk_upload_options: chunk_upload_options.as_ref(),
+            })?;
+        } else {
+            let dist = dist_from_env.unwrap_or_else(|_| plist.build().to_string());
+            let release_name = release_from_env.unwrap_or(format!(
+                "{}@{}+{}",
+                plist.bundle_id(),
+                plist.version(),
+                dist
+            ));
+
+            match matches.get_many::<String>("dist") {
+                None => {
                     processor.upload(&UploadContext {
                         org: &org,
                         project: Some(&project),
                         release: Some(&release_name),
-                        dist: Some(dist),
+                        dist: Some(&dist),
                         note: None,
                         wait: matches.get_flag("wait"),
                         dedupe: false,
                         chunk_upload_options: chunk_upload_options.as_ref(),
                     })?;
+                }
+                Some(dists) => {
+                    for dist in dists {
+                        processor.upload(&UploadContext {
+                            org: &org,
+                            project: Some(&project),
+                            release: Some(&release_name),
+                            dist: Some(dist),
+                            note: None,
+                            wait: matches.get_flag("wait"),
+                            dedupe: false,
+                            chunk_upload_options: chunk_upload_options.as_ref(),
+                        })?;
+                    }
                 }
             }
         }
