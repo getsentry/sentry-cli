@@ -102,7 +102,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let version = matches.get_one::<String>("release");
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-    if !version.is_none() {
+    if version.is_some() {
         for dist in matches.get_many::<String>("dist").unwrap() {
             println!(
                 "Uploading sourcemaps for release {} distribution {}",

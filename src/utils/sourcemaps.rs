@@ -698,7 +698,7 @@ impl SourceMapProcessor {
             );
             source.headers.push(debug_id_header);
             self.debug_ids
-                .insert(source.url.clone(), self.debug_ids[sourcemap_url].clone());
+                .insert(source.url.clone(), self.debug_ids[sourcemap_url]);
         }
         Ok(())
     }
