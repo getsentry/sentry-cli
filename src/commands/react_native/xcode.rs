@@ -114,6 +114,17 @@ fn find_node() -> String {
     "node".into()
 }
 
+fn find_hermesc() -> String {
+    if let Ok(path) = env::var("HERMES_CLI_PATH") {
+        if !path.is_empty() {
+            return path;
+        }
+    }
+
+    let pods_root_path = env::var("PODS_ROOT").unwrap_or("".to_string());
+    format!("{}/hermes-engine/destroot/bin/hermesc", pods_root_path)
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
@@ -170,6 +181,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let report_file = TempFile::create()?;
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
+    let hermesc = find_hermesc();
+    info!("Using hermesc interpreter '{}'", &hermesc);
 
     MayDetach::wrap("React native symbol handling", |md| {
         let bundle_path;
@@ -233,7 +246,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
                 .env("SENTRY_RN_REAL_NODE_BINARY", &node)
                 .env("HERMES_CLI_PATH", env::current_exe()?.to_str().unwrap())
-                .env("SENTRY_RN_REAL_HERMES_CLI_PATH", "TODO:")
+                .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc)
                 .env(
                     "SENTRY_RN_SOURCEMAP_REPORT",
                     report_file.path().to_str().unwrap(),
@@ -259,11 +272,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 return Ok(());
             }
 
-            // TODO: Update the logic to pick hermes bundle and map if hermes without debug info
-            // or packager bundle and map if hermes with debug info.
-            bundle_path = report.packager_bundle_path.unwrap();
+            // If Hermes emitted source map we have to use it
+            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) = (&report.hermes_bundle_path, &report.hermes_sourcemap_path) {
+                bundle_path = hermes_bundle_path.clone();
+                sourcemap_path = hermes_sourcemap_path.clone();
+                println!("Using Hermes bundle and combined source map.");
+
+            // If Hermes emitted only bundle or Hermes was disabled use packager bundle and source map
+            } else {
+                bundle_path = report.packager_bundle_path.unwrap();
+                sourcemap_path = report.packager_sourcemap_path.unwrap();
+                println!("Using React Native Packager bundle and combined source map.");
+            }
             bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
-            sourcemap_path = report.packager_sourcemap_path.unwrap();
             sourcemap_url = format!(
                 "~/{}",
                 sourcemap_path.file_name().unwrap().to_string_lossy()
@@ -333,7 +354,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 }
 
 pub fn wrap_call() -> Result<()> {
-    println!("Sentry: wrapping react-native call");
+    let mut execute_hermes_compiler = false;
     let mut args: Vec<_> = env::args().skip(1).collect();
     let mut bundle_path = None;
     let mut sourcemap_path = None;
@@ -372,17 +393,12 @@ pub fn wrap_call() -> Result<()> {
 
         sourcemap_report.packager_bundle_path = bundle_path.map(PathBuf::from);
 
-        let rv = process::Command::new(env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap())
-            .args(args)
-            .spawn()?
-            .wait()?;
-        propagate_exit_status(rv);
-
     // Hermes Compiler
     // -emit-binary doesn't have to be first in order but all
     // supported RN 0.65 to 0.72 have it as first argument
     // and users can't change it
     } else if args.len() > 1 && args[0] == "-emit-binary" {
+        execute_hermes_compiler = true;
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "-out" {
@@ -407,6 +423,16 @@ pub fn wrap_call() -> Result<()> {
 
         sourcemap_report.hermes_sourcemap_path = sourcemap_path.map(PathBuf::from);
     }
+
+    let mut executable = env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap();
+    if execute_hermes_compiler {
+        executable = env::var("SENTRY_RN_REAL_HERMES_CLI_PATH").unwrap()
+    }
+    let rv = process::Command::new(executable)
+        .args(args)
+        .spawn()?
+        .wait()?;
+    propagate_exit_status(rv);
 
     f = fs::File::create(&report_file_path)?;
     serde_json::to_writer(&mut f, &sourcemap_report)?;
