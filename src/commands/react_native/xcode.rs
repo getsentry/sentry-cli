@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -9,6 +10,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::api::Api;
 use crate::config::Config;
@@ -291,8 +293,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             );
         }
 
-        // TODO: Copy debug id from bundle source map to hermes source map
-
         // now that we have all the data, we can now process and upload the
         // sourcemaps.
         println!("Processing react-native sourcemaps for Sentry upload.");
@@ -355,6 +355,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
 pub fn wrap_call() -> Result<()> {
     let mut execute_hermes_compiler = false;
+    let mut should_copy_debug_id = false;
     let mut args: Vec<_> = env::args().skip(1).collect();
     let mut bundle_path = None;
     let mut sourcemap_path = None;
@@ -422,6 +423,7 @@ pub fn wrap_call() -> Result<()> {
         }
 
         sourcemap_report.hermes_sourcemap_path = sourcemap_path.map(PathBuf::from);
+        should_copy_debug_id = true;
     }
 
     let mut executable = env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap();
@@ -433,6 +435,48 @@ pub fn wrap_call() -> Result<()> {
         .spawn()?
         .wait()?;
     propagate_exit_status(rv);
+
+    if should_copy_debug_id {
+        // Copy debug id to the combined source map
+        // We have to copy the debug id from the packager source map
+        // because the combine source map doesn't copy it over
+        // We have to do it while pretending being the script because of the clean up afterwards
+        let packager_sourcemap_path = sourcemap_report.packager_sourcemap_path.clone().unwrap();
+        let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path.clone())?;
+        let packager_sourcemap: HashMap<String, Value> = serde_json::from_reader(&mut packager_sourcemap_file).unwrap_or_else(|_| {
+            let format_err = format!(
+                "React Native Packager source map {} doesn't contain a valid JSON data.",
+                packager_sourcemap_path.as_path().display()
+            );
+            panic!("{}", format_err);
+        });
+        let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.clone().unwrap();
+        let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path.clone())?;
+        let mut hermes_sourcemap: HashMap<String, Value> = serde_json::from_reader(&mut hermes_sourcemap_file).unwrap_or_else(|_| {
+            let format_err = format!(
+                "React Native Packager source map {} doesn't contain a valid JSON data.",
+                hermes_sourcemap_path.as_path().display()
+            );
+            panic!("{}", format_err);
+        });
+
+        if hermes_sourcemap.get("debugId").is_none() && hermes_sourcemap.get("debug_id").is_none() {
+            if let Some(debug_id) = packager_sourcemap.get("debugId") {
+                hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
+                hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
+            } else if let Some(debug_id) = packager_sourcemap.get("debug_id") {
+                hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
+                hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
+            } else {
+                println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
+            }
+
+            hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
+            serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
+        } else {
+            println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
+        }
+    }
 
     f = fs::File::create(&report_file_path)?;
     serde_json::to_writer(&mut f, &sourcemap_report)?;
