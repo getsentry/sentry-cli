@@ -19,7 +19,15 @@ const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 lazy_static! {
+<<<<<<< Updated upstream
     static ref USE_PRAGMA_RE: Regex = Regex::new(r#"^"use \w+";|^'use \w+';"#).unwrap();
+=======
+    static ref USE_PRAGMA_RE: Regex = Regex::new(r#""use \w+";|'use \w+';"#).unwrap();
+    static ref TEST_RE: Regex = Regex::new(
+        r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';)?"#
+    )
+    .unwrap();
+>>>>>>> Stashed changes
 }
 
 fn print_section_with_debugid(
@@ -157,12 +165,26 @@ impl fmt::Display for InjectReport {
 /// );
 /// ```
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
-    let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
-
+    let contents = String::from_utf8(js_contents.clone())?;
     js_contents.clear();
 
+    let m = TEST_RE
+        .find(&contents)
+        .expect("regex is infallible")
+        .range();
+
+    dbg!(&contents);
+
+    write!(js_contents, "{}", &contents[m.clone()])?;
+    if ![b'\n', b'\r'].contains(&js_contents[js_contents.len() - 1]) {
+        writeln!(js_contents)?;
+    }
+
+    let rest = &contents[m.end..];
+    let mut rest_lines = rest.lines().map(String::from).collect::<Vec<_>>();
+
     // Find the last source mapping URL comment, it's the only one that matters
-    let sourcemap_comment_idx = js_lines
+    let sourcemap_comment_idx = rest_lines
         .iter()
         .enumerate()
         .rev()
@@ -171,45 +193,70 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
         })
         .map(|(idx, _)| idx);
 
-    let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
+    let sourcemap_comment = sourcemap_comment_idx.map(|idx| rest_lines.remove(idx));
 
-    let mut js_lines = js_lines.into_iter().peekable();
+    dbg!(&sourcemap_comment);
 
-    // Handle initial hashbang
-    if let Some(hashbang) = js_lines.next_if(|line| line.trim().starts_with("#!")) {
-        writeln!(js_contents, "{hashbang}")?;
-    }
-
-    // Write comments and empty lines at the start back to the file
-    while let Some(comment_or_empty) =
-        js_lines.next_if(|line| line.trim().is_empty() || line.trim().starts_with("//"))
-    {
-        writeln!(js_contents, "{comment_or_empty}")?;
-    }
-
-    // Write use statements back to the file
-    while let Some(use_pragma) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
-        writeln!(js_contents, "{use_pragma}")?;
-    }
-
+    println!("{}", std::str::from_utf8(js_contents).unwrap());
     // Inject the code snippet
     let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
     writeln!(js_contents, "{to_inject}")?;
+    println!("{}", std::str::from_utf8(js_contents).unwrap());
 
-    // Write other lines
-    for line in js_lines {
+    for line in rest_lines {
         writeln!(js_contents, "{line}")?;
     }
+    println!("{}", std::str::from_utf8(js_contents).unwrap());
 
     // Write the debug id comment
     writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+    println!("{}", std::str::from_utf8(js_contents).unwrap());
 
     // Lastly, write the source mapping URL comment, if there was one
     if let Some(sourcemap_comment) = sourcemap_comment {
         writeln!(js_contents, "{sourcemap_comment}")?;
+        println!("{}", std::str::from_utf8(js_contents).unwrap());
     }
 
     Ok(())
+
+    // let mut js_lines = js_lines.into_iter().peekable();
+
+    // // Handle initial hashbang
+    // if let Some(hashbang) = js_lines.next_if(|line| line.trim().starts_with("#!")) {
+    //     writeln!(js_contents, "{hashbang}")?;
+    // }
+
+    // // Write comments and empty lines at the start back to the file
+    // while let Some(comment_or_empty) =
+    //     js_lines.next_if(|line| line.trim().is_empty() || line.trim().starts_with("//"))
+    // {
+    //     writeln!(js_contents, "{comment_or_empty}")?;
+    // }
+
+    // // Write use statements back to the file
+    // while let Some(use_pragma) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
+    //     writeln!(js_contents, "{use_pragma}")?;
+    // }
+
+    // // Inject the code snippet
+    // let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
+    // writeln!(js_contents, "{to_inject}")?;
+
+    // // Write other lines
+    // for line in js_lines {
+    //     writeln!(js_contents, "{line}")?;
+    // }
+
+    // // Write the debug id comment
+    // writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+
+    // // Lastly, write the source mapping URL comment, if there was one
+    // if let Some(sourcemap_comment) = sourcemap_comment {
+    //     writeln!(js_contents, "{sourcemap_comment}")?;
+    // }
+
+    // Ok(())
 }
 
 /// Fixes up a minified JS source file with a debug id without messing with mappings.
@@ -755,5 +802,22 @@ more text
             find_matching_paths(candidates, "project/code/page/index.js.map"),
             &["./project/maps/page/index.js.map"]
         );
+    }
+
+    #[test]
+    fn test_regex() {
+        let source = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+ "use strict"; rest of the line
+'use strict';
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let m = TEST_RE.find(source).unwrap();
+        dbg!(&source[m.range()]);
     }
 }
