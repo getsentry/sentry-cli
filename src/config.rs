@@ -33,17 +33,21 @@ struct TokenData {
     url: String,
 }
 
-fn decode_token_data(token: &str) -> Result<Option<TokenData>> {
-    const ORG_TOKEN_PREFIX: &str = "sntrys_";
+impl TokenData {
+    fn decode(token: &str) -> Result<Option<Self>> {
+        const ORG_TOKEN_PREFIX: &str = "sntrys_";
 
-    let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
+        let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
         return Ok(None);
     };
-    let Some((encoded, _)) = rest.split_once('_') else {
+        let Some((encoded, _)) = rest.split_once('_') else {
         bail!("missing trailing _");
     };
-    let json = data_encoding::BASE64.decode(encoded.as_bytes())?;
-    Ok(serde_json::from_slice(&json)?)
+        let json = data_encoding::BASE64
+            .decode(encoded.as_bytes())
+            .context("invalid base64 data")?;
+        Ok(serde_json::from_slice(&json)?)
+    }
 }
 
 lazy_static! {
@@ -168,7 +172,7 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.token_embedded_data = decode_token_data(val)?;
+                self.token_embedded_data = TokenData::decode(val)?;
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }
@@ -195,20 +199,19 @@ impl Config {
     }
 
     /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) {
+    pub fn set_base_url(&mut self, url: &str) -> Result<()> {
         if let Some(ref org_token) = self.token_embedded_data {
             if url != org_token.url {
-                warn!(
-                    "Two different url values supplied: `{}` (from token), `{url}`. Proceeding with `{}`.",
-                    org_token.url,
+                bail!(
+                    "Two different url values supplied: `{}` (from token), `{url}`.",
                     org_token.url,
                 );
-                return;
             }
         }
         self.cached_base_url = url.to_owned();
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+        Ok(())
     }
 
     /// Sets headers that should be attached to all requests
@@ -329,10 +332,9 @@ impl Config {
                 if *org1 == org2 {
                     Ok(org2)
                 } else {
-                    warn!(
-                        "Two different org values supplied: `{org1}` (from token), `{org2}`. Proceeding with `{org1}`."
-                    );
-                    Ok(org1.to_string())
+                    Err(format_err!(
+                        "Two different org values supplied: `{org1}` (from token), `{org2}`."
+                    ))
                 }
             }
         }
@@ -701,13 +703,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_decode_org_token() {
-        let token = "sntrys_eyJpYXQiOjE2ODg3MzYxNjAuODMzNSwidXJsIjoiaHR0cHM6Ly9zZW50cnkuaW8iLCJyZWdpb25fdXJsIjoiaHR0cHM6Ly91cy5zZW50cnkuaW8iLCJvcmciOiJmcmFuY2VzY29zLW9yZ2FuaXphdGlvbiJ9_CJtUZXhud0T6ZFdsMxyvEg6uN4es96sCMNwnkVj1";
+    fn test_decode_token_data() {
+        let token = "sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_foobarthisdoesntmatter";
 
         assert_eq!(
-            decode_token_data(token).unwrap().unwrap(),
+            TokenData::decode(token).unwrap().unwrap(),
             TokenData {
-                org: "francescos-organization".to_string(),
+                org: "test-org".to_string(),
                 url: "https://sentry.io".to_string(),
             }
         );

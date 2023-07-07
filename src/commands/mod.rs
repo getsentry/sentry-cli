@@ -97,13 +97,12 @@ fn preexecute_hooks() -> Result<bool> {
 }
 
 fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
-    bail!("Test");
     if let Some(auth_token) = matches.get_one::<String>("auth_token") {
         config.set_auth(Auth::Token(auth_token.to_owned()))?;
     }
 
     if let Some(url) = matches.get_one::<String>("url") {
-        config.set_base_url(url);
+        config.set_base_url(url)?;
     }
 
     if let Some(headers) = matches.get_many::<String>("headers") {
