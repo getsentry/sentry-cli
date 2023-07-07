@@ -13,6 +13,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
 use sentry::types::Dsn;
+use serde::Deserialize;
 
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
@@ -24,6 +25,25 @@ use crate::utils::http::is_absolute_url;
 pub enum Auth {
     Key(String),
     Token(String),
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct TokenData {
+    org: String,
+    url: String,
+}
+
+fn decode_token_data(token: &str) -> Result<Option<TokenData>> {
+    const ORG_TOKEN_PREFIX: &str = "sntrys_";
+
+    let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
+        return Ok(None);
+    };
+    let Some((encoded, _)) = rest.split_once('_') else {
+        bail!("missing trailing _");
+    };
+    let json = data_encoding::BASE64.decode(encoded.as_bytes())?;
+    Ok(serde_json::from_slice(&json)?)
 }
 
 lazy_static! {
@@ -40,6 +60,7 @@ pub struct Config {
     cached_headers: Option<Vec<String>>,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
+    token_embedded_data: Option<TokenData>,
 }
 
 impl Config {
@@ -60,6 +81,7 @@ impl Config {
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
+            token_embedded_data: None,
         })
     }
 
@@ -139,13 +161,14 @@ impl Config {
     }
 
     /// Updates the auth info
-    pub fn set_auth(&mut self, auth: Auth) {
+    pub fn set_auth(&mut self, auth: Auth) -> Result<()> {
         self.cached_auth = Some(auth);
 
         self.ini.delete_from(Some("auth"), "api_key");
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
+                self.token_embedded_data = decode_token_data(val)?;
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }
@@ -155,6 +178,8 @@ impl Config {
             }
             None => {}
         }
+
+        Ok(())
     }
 
     /// Returns the base url (without trailing slashes)
@@ -171,6 +196,16 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) {
+        if let Some(ref org_token) = self.token_embedded_data {
+            if url != org_token.url {
+                warn!(
+                    "Two different url values supplied: `{}` (from token), `{url}`. Proceeding with `{}`.",
+                    org_token.url,
+                    org_token.url,
+                );
+                return;
+            }
+        }
         self.cached_base_url = url.to_owned();
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
@@ -273,16 +308,34 @@ impl Config {
 
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
-        matches
+        let org_from_token = self.token_embedded_data.as_ref().map(|t| &t.org);
+
+        let org_from_cli = matches
             .get_one::<String>("org")
             .cloned()
-            .or_else(|| env::var("SENTRY_ORG").ok())
-            .or_else(|| {
-                self.ini
-                    .get_from(Some("defaults"), "org")
-                    .map(str::to_owned)
-            })
-            .ok_or_else(|| format_err!("An organization slug is required (provide with --org)"))
+            .or_else(|| env::var("SENTRY_ORG").ok());
+
+        match (org_from_token, org_from_cli) {
+            (None, None) => self
+                .ini
+                .get_from(Some("defaults"), "org")
+                .map(str::to_owned)
+                .ok_or_else(|| {
+                    format_err!("An organization slug is required (provide with --org)")
+                }),
+            (None, Some(org)) => Ok(org),
+            (Some(org), None) => Ok(org.to_string()),
+            (Some(org1), Some(org2)) => {
+                if *org1 == org2 {
+                    Ok(org2)
+                } else {
+                    warn!(
+                        "Two different org values supplied: `{org1}` (from token), `{org2}`. Proceeding with `{org1}`."
+                    );
+                    Ok(org1.to_string())
+                }
+            }
+        }
     }
 
     /// Given a match object from clap, this returns the release from it.
@@ -574,6 +627,7 @@ impl Clone for Config {
             cached_headers: self.cached_headers.clone(),
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
+            token_embedded_data: self.token_embedded_data.clone(),
         }
     }
 }
@@ -639,5 +693,23 @@ fn get_default_vcs_remote(ini: &Ini) -> String {
         remote.to_string()
     } else {
         "origin".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_org_token() {
+        let token = "sntrys_eyJpYXQiOjE2ODg3MzYxNjAuODMzNSwidXJsIjoiaHR0cHM6Ly9zZW50cnkuaW8iLCJyZWdpb25fdXJsIjoiaHR0cHM6Ly91cy5zZW50cnkuaW8iLCJvcmciOiJmcmFuY2VzY29zLW9yZ2FuaXphdGlvbiJ9_CJtUZXhud0T6ZFdsMxyvEg6uN4es96sCMNwnkVj1";
+
+        assert_eq!(
+            decode_token_data(token).unwrap().unwrap(),
+            TokenData {
+                org: "francescos-organization".to_string(),
+                url: "https://sentry.io".to_string(),
+            }
+        );
     }
 }
