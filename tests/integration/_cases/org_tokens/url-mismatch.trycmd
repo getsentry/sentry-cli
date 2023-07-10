@@ -1,6 +1,9 @@
 ```
 $ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_ --url http://exaample.com sourcemaps upload test_path
 ? failed
-error: Two different url values supplied: `https://sentry.io` (from token), `http://example.com`.
+error: Two different url values supplied: `https://sentry.io` (from token), `http://exaample.com`.
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
 
 ```
