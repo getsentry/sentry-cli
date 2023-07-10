@@ -64,7 +64,7 @@ pub struct Config {
     cached_headers: Option<Vec<String>>,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
-    token_embedded_data: Option<TokenData>,
+    cached_token_data: Option<TokenData>,
 }
 
 impl Config {
@@ -76,16 +76,37 @@ impl Config {
 
     /// Creates Config based on provided config file.
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
+        let auth = get_default_auth(&ini);
+        let token_embedded_data = match auth {
+            Some(Auth::Token(ref token)) => {
+                TokenData::decode(token).context("Failed to parse org auth token {token}")?
+            }
+            _ => None,
+        };
+
+        let mut url = get_default_url(&ini);
+
+        if let Some(ref token_embedded_data) = token_embedded_data {
+            if url == DEFAULT_URL {
+                url = token_embedded_data.url.clone();
+            } else if url != token_embedded_data.url {
+                bail!(
+                    "Two different url values supplied: `{}` (from token), `{url}`.",
+                    token_embedded_data.url,
+                );
+            }
+        }
+
         Ok(Config {
             filename,
             process_bound: false,
-            cached_auth: get_default_auth(&ini),
-            cached_base_url: get_default_url(&ini),
+            cached_auth: auth,
+            cached_base_url: url,
             cached_headers: get_default_headers(&ini),
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
-            token_embedded_data: None,
+            cached_token_data: token_embedded_data,
         })
     }
 
@@ -172,7 +193,8 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.token_embedded_data = TokenData::decode(val)?;
+                self.cached_token_data =
+                    TokenData::decode(val).context("Failed to parse org auth token {token}")?;
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }
@@ -200,7 +222,7 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) -> Result<()> {
-        if let Some(ref org_token) = self.token_embedded_data {
+        if let Some(ref org_token) = self.cached_token_data {
             if url != org_token.url {
                 bail!(
                     "Two different url values supplied: `{}` (from token), `{url}`.",
@@ -311,7 +333,7 @@ impl Config {
 
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
-        let org_from_token = self.token_embedded_data.as_ref().map(|t| &t.org);
+        let org_from_token = self.cached_token_data.as_ref().map(|t| &t.org);
 
         let org_from_cli = matches
             .get_one::<String>("org")
@@ -629,7 +651,7 @@ impl Clone for Config {
             cached_headers: self.cached_headers.clone(),
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
-            token_embedded_data: self.token_embedded_data.clone(),
+            cached_token_data: self.cached_token_data.clone(),
         }
     }
 }
