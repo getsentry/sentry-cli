@@ -27,25 +27,39 @@ pub enum Auth {
     Token(String),
 }
 
+/// Data parsed from an "org auth token".
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 struct TokenData {
+    /// An org slug.
     org: String,
+    /// A base Sentry URL.
     url: String,
 }
 
 impl TokenData {
+    /// Attempt to extract data from an "org auth token".
+    ///
+    /// Org auth tokens start with `sntrys` and contain BASE64-encoded
+    /// data between two underscores.
+    ///
+    /// Attempting to decode a valid org auth token results in `Ok(Some(data))`.
+    /// Attempting to decode an org auth token that contains invalid data returns an error.
+    /// Attempting to decode any other token returns Ok(None).
     fn decode(token: &str) -> Result<Option<Self>> {
         const ORG_TOKEN_PREFIX: &str = "sntrys_";
 
         let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
-        return Ok(None);
-    };
+            return Ok(None);
+        };
+
         let Some((encoded, _)) = rest.split_once('_') else {
-        bail!("missing trailing _");
-    };
+            bail!("no closing _");
+        };
+
         let json = data_encoding::BASE64
             .decode(encoded.as_bytes())
             .context("invalid base64 data")?;
+
         Ok(serde_json::from_slice(&json)?)
     }
 }
