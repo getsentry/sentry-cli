@@ -6,6 +6,7 @@ mod help;
 mod info;
 mod login;
 mod monitors;
+mod org_tokens;
 mod organizations;
 mod projects;
 mod releases;
