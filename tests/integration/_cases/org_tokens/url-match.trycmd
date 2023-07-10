@@ -1,0 +1,11 @@
+```
+$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_ --url http://sentry.io sourcemaps upload
+? failed
+error: the following required arguments were not provided:
+  <PATHS>...
+
+Usage: sentry-cli[EXE] sourcemaps upload <PATHS>...
+
+For more information, try '--help'.
+
+```

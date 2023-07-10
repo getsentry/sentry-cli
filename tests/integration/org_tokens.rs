@@ -9,3 +9,13 @@ fn org_token_url_mismatch() {
 fn org_token_org_mismatch() {
     register_test("org_tokens/org-mismatch.trycmd");
 }
+
+#[test]
+fn org_token_url_match() {
+    register_test("org_tokens/url-match.trycmd");
+}
+
+#[test]
+fn org_token_org_match() {
+    register_test("org_tokens/org-match.trycmd");
+}
