@@ -209,6 +209,11 @@ impl Config {
             Some(Auth::Token(ref val)) => {
                 self.cached_token_data =
                     TokenData::decode(val).context("Failed to parse org auth token {token}")?;
+
+                if let Some(ref data) = self.cached_token_data {
+                    self.cached_base_url = data.url.clone();
+                }
+
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }

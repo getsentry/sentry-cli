@@ -19,3 +19,8 @@ fn org_token_url_match() {
 fn org_token_org_match() {
     register_test("org_tokens/org-match.trycmd");
 }
+
+#[test]
+fn org_token_url_works() {
+    register_test("org_tokens/url-works.trycmd");
+}
