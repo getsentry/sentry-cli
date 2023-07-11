@@ -101,7 +101,7 @@ impl Config {
         let mut url = get_default_url(&ini);
 
         if let Some(ref token_embedded_data) = token_embedded_data {
-            if url == DEFAULT_URL {
+            if url == DEFAULT_URL || url.is_empty() {
                 url = token_embedded_data.url.clone();
             } else if url != token_embedded_data.url {
                 bail!(
@@ -362,16 +362,18 @@ impl Config {
                 .ok_or_else(|| {
                     format_err!("An organization slug is required (provide with --org)")
                 }),
-            (None, Some(org)) => Ok(org),
-            (Some(org), None) => Ok(org.to_string()),
-            (Some(org1), Some(org2)) => {
-                if *org1 == org2 {
-                    Ok(org2)
-                } else {
-                    Err(format_err!(
-                        "Two different org values supplied: `{org1}` (from token), `{org2}`."
-                    ))
+            (None, Some(cli_org)) => Ok(cli_org),
+            (Some(token_org), None) => Ok(token_org.to_string()),
+            (Some(token_org), Some(cli_org)) => {
+                if cli_org.is_empty() {
+                    return Ok(token_org.to_owned());
                 }
+                if cli_org != *token_org {
+                    return Err(format_err!(
+                        "Two different org values supplied: `{token_org}` (from token), `{cli_org}`."
+                    ));
+                }
+                Ok(cli_org)
             }
         }
     }

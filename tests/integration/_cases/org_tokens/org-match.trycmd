@@ -1,5 +1,5 @@
 ```
-$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_ sourcemaps upload --org test-org
+$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS10b2tlbml6ZWQuaW8iLCJvcmciOiJ0ZXN0LW9yZy10b2tlbml6ZWQifQ==_ sourcemaps upload --org test-org
 ? failed
 error: the following required arguments were not provided:
   <PATHS>...
