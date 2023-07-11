@@ -556,8 +556,15 @@ impl Api {
                 )
             };
 
+            let mut checkums_qs = String::new();
             for checksum in checksums.iter() {
-                path.push_str(&format!("&checksum={}", QueryArg(checksum)));
+                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+            }
+            // We have a 16kb buffer for reach request configured in nginx,
+            // so do not even bother trying if it's too long.
+            // (16_384 limit still leaves us with 384 bytes for the url itself).
+            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
+                path.push_str(&checkums_qs);
             }
 
             let resp = self.get(&path)?;
