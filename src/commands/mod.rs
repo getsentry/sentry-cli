@@ -110,17 +110,17 @@ fn preexecute_hooks() -> Result<bool, Error> {
     }
 }
 
-fn configure_args(config: &mut Config, matches: &ArgMatches<'_>) -> Result<(), Error> {
-    if let Some(url) = matches.value_of("url") {
-        config.set_base_url(url);
-    }
-
+fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<(), Error> {
     if let Some(api_key) = matches.value_of("api_key") {
-        config.set_auth(Auth::Key(api_key.to_owned()));
+        config.set_auth(Auth::Key(api_key.to_owned()))?;
     }
 
     if let Some(auth_token) = matches.value_of("auth_token") {
-        config.set_auth(Auth::Token(auth_token.to_owned()));
+        config.set_auth(Auth::Token(auth_token.to_owned()))?;
+    }
+
+    if let Some(url) = matches.value_of("url") {
+        config.set_base_url(url)?;
     }
 
     if let Some(level_str) = matches.value_of("log_level") {

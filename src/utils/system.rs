@@ -129,7 +129,9 @@ pub fn print_error(err: &Error) {
         }
     }
 
-    if Config::current().get_log_level() < log::LevelFilter::Info {
+    if Config::current_opt().map_or(true, |config| {
+        config.get_log_level() < log::LevelFilter::Info
+    }) {
         eprintln!();
         eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
         eprintln!(

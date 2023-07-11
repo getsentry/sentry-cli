@@ -18,14 +18,17 @@ pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
 
 fn update_config(config: &Config, token: &str) -> Result<(), Error> {
     let mut new_cfg = config.clone();
-    new_cfg.set_auth(Auth::Token(token.to_string()));
+    new_cfg.set_auth(Auth::Token(token.to_string()))?;
     new_cfg.save()?;
     Ok(())
 }
 
 pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
     let config = Config::current();
-    let token_url = format!("{}/api/", config.get_base_url()?);
+    let token_url = format!(
+        "{}/orgredirect/organizations/:orgslug/settings/auth-tokens/",
+        config.get_base_url()?
+    );
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
     println!("If you do not yet have a token ready we can bring up a browser for you");
@@ -47,14 +50,22 @@ pub fn execute(matches: &ArgMatches<'_>) -> Result<(), Error> {
         token = prompt("Enter your token")?;
 
         let test_cfg = config.make_copy(|cfg| {
-            cfg.set_auth(Auth::Token(token.to_string()));
+            cfg.set_auth(Auth::Token(token.to_string()))?;
             Ok(())
         })?;
+
         match Api::with_config(test_cfg).get_auth_info() {
             Ok(info) => {
-                // we can unwrap here somewhat safely because we do not permit
-                // signing in with legacy non user bound api keys here.
-                println!("Valid token for user {}", info.user.unwrap().email);
+                match info.user {
+                    Some(user) => {
+                        // Old school user auth token
+                        println!("Valid token for user {}", user.email);
+                    }
+                    None => {
+                        // New org auth token
+                        println!("Valid org token");
+                    }
+                }
                 break;
             }
             Err(err) => {

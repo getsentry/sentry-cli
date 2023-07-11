@@ -12,6 +12,7 @@ use ini::Ini;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 use sentry::types::Dsn;
+use serde::Deserialize;
 
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
@@ -24,6 +25,43 @@ use crate::utils::logging::set_max_level;
 pub enum Auth {
     Key(String),
     Token(String),
+}
+
+/// Data parsed from an "org auth token".
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct TokenData {
+    /// An org slug.
+    org: String,
+    /// A base Sentry URL.
+    url: Option<String>,
+}
+
+impl TokenData {
+    /// Attempt to extract data from an "org auth token".
+    ///
+    /// Org auth tokens start with `sntrys` and contain BASE64-encoded
+    /// data between two underscores.
+    ///
+    /// Attempting to decode a valid org auth token results in `Ok(Some(data))`.
+    /// Attempting to decode an org auth token that contains invalid data returns an error.
+    /// Attempting to decode any other token returns Ok(None).
+    fn decode(token: &str) -> Result<Option<Self>, Error> {
+        const ORG_TOKEN_PREFIX: &str = "sntrys_";
+
+        let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
+            return Ok(None);
+        };
+
+        let Some((encoded, _)) = rest.split_once('_') else {
+            bail!("no closing _");
+        };
+
+        let json = data_encoding::BASE64
+            .decode(encoded.as_bytes())
+            .context("invalid base64 data")?;
+
+        Ok(serde_json::from_slice(&json)?)
+    }
 }
 
 pub fn prepare_environment() {
@@ -43,6 +81,7 @@ pub struct Config {
     cached_base_url: String,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
+    cached_token_data: Option<TokenData>,
 }
 
 impl Config {
@@ -54,14 +93,36 @@ impl Config {
 
     /// Creates Config based on provided config file.
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config, Error> {
+        let auth = get_default_auth(&ini);
+        let token_embedded_data = match auth {
+            Some(Auth::Token(ref token)) => TokenData::decode(token)
+                .context(format!("Failed to parse org auth token {token}"))?,
+            _ => None,
+        };
+
+        let mut url = get_default_url(&ini);
+
+        if let Some(token_url) = token_embedded_data.as_ref().and_then(|td| td.url.as_ref()) {
+            if url == DEFAULT_URL || url.is_empty() {
+                url = token_url.clone();
+            } else if url != *token_url {
+                bail!(
+                    "Two different url values supplied: `{}` (from token), `{}`.",
+                    token_url,
+                    url,
+                );
+            }
+        }
+
         Ok(Config {
             filename,
             process_bound: false,
-            cached_auth: get_default_auth(&ini),
-            cached_base_url: get_default_url(&ini),
+            cached_auth: auth,
+            cached_base_url: url,
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
+            cached_token_data: token_embedded_data,
         })
     }
 
@@ -147,13 +208,24 @@ impl Config {
     }
 
     /// Updates the auth info
-    pub fn set_auth(&mut self, auth: Auth) {
+    pub fn set_auth(&mut self, auth: Auth) -> Result<(), Error> {
         self.cached_auth = Some(auth);
 
         self.ini.delete_from(Some("auth"), "api_key");
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
+                self.cached_token_data = TokenData::decode(val)
+                    .context(format!("Failed to parse org auth token {val}"))?;
+
+                if let Some(token_url) = self
+                    .cached_token_data
+                    .as_ref()
+                    .and_then(|td| td.url.as_ref())
+                {
+                    self.cached_base_url = token_url.clone();
+                }
+
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }
@@ -163,6 +235,8 @@ impl Config {
             }
             None => {}
         }
+
+        Ok(())
     }
 
     /// Returns the base url (without trailing slashes)
@@ -178,10 +252,24 @@ impl Config {
     }
 
     /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) {
+    pub fn set_base_url(&mut self, url: &str) -> Result<(), Error> {
+        if let Some(token_url) = self
+            .cached_token_data
+            .as_ref()
+            .and_then(|td| td.url.as_ref())
+        {
+            if url != token_url {
+                bail!(
+                    "Two different url values supplied: `{}` (from token), `{}`.",
+                    token_url,
+                    url,
+                );
+            }
+        }
         self.cached_base_url = url.to_owned();
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+        Ok(())
     }
 
     /// Returns the API URL for a path
@@ -270,17 +358,34 @@ impl Config {
     }
 
     /// Given a match object from clap, this returns the org from it.
-    pub fn get_org(&self, matches: &ArgMatches<'_>) -> Result<String, Error> {
-        matches
+    pub fn get_org(&self, matches: &ArgMatches) -> Result<String, Error> {
+        let org_from_token = self.cached_token_data.as_ref().map(|t| &t.org);
+
+        let org_from_cli = matches
             .value_of("org")
             .map(str::to_owned)
-            .or_else(|| env::var("SENTRY_ORG").ok())
-            .or_else(|| {
-                self.ini
-                    .get_from(Some("defaults"), "org")
-                    .map(str::to_owned)
-            })
-            .ok_or_else(|| err_msg("An organization slug is required (provide with --org)"))
+            .or_else(|| env::var("SENTRY_ORG").ok());
+
+        match (org_from_token, org_from_cli) {
+            (None, None) => self
+                .ini
+                .get_from(Some("defaults"), "org")
+                .map(str::to_owned)
+                .ok_or_else(|| err_msg("An organization slug is required (provide with --org)")),
+            (None, Some(cli_org)) => Ok(cli_org),
+            (Some(token_org), None) => Ok(token_org.to_string()),
+            (Some(token_org), Some(cli_org)) => {
+                if cli_org.is_empty() {
+                    return Ok(token_org.to_owned());
+                }
+                if cli_org != *token_org {
+                    return Err(err_msg(format!(
+                        "Two different org values supplied: `{token_org}` (from token), `{cli_org}`."
+                    )));
+                }
+                Ok(cli_org)
+            }
+        }
     }
 
     /// Given a match object from clap, this returns a tuple in the
@@ -549,6 +654,7 @@ impl Clone for Config {
             cached_base_url: self.cached_base_url.clone(),
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
+            cached_token_data: self.cached_token_data.clone(),
         }
     }
 }
@@ -605,5 +711,23 @@ fn get_default_vcs_remote(ini: &Ini) -> String {
         remote.to_string()
     } else {
         "origin".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_token_data() {
+        let token = "sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_foobarthisdoesntmatter";
+
+        assert_eq!(
+            TokenData::decode(token).unwrap().unwrap(),
+            TokenData {
+                org: "test-org".to_string(),
+                url: Some("https://sentry.io".to_string()),
+            }
+        );
     }
 }
