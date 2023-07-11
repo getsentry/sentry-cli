@@ -1,0 +1,12 @@
+```
+$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS10b2tlbml6ZWQuaW8iLCJvcmciOiJ0ZXN0LW9yZy10b2tlbml6ZWQifQ==_ info
+? failed
+Sentry Server: https://sentry-tokenized.io
+Default Organization: wat-org
+Default Project: wat-project
+
+Authentication Info:
+  Method: Auth Token
+  (failure on authentication: API request failed)
+
+```

@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- feat: The server URL and org slug can now be extracted from Org Auth Tokens (#1673)
+
 ## 2.19.4
 
 ### Various fixes and improvements
