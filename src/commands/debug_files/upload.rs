@@ -240,6 +240,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             "sourcebundle" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
             "portablepdb" => upload.filter_format(DifFormat::Object(FileFormat::PortablePdb)),
             "jvm" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
+            "wasm" => upload.filter_format(DifFormat::Object(FileFormat::Wasm)),
             "bcsymbolmap" => {
                 upload.filter_format(DifFormat::BcSymbolMap);
                 upload.filter_format(DifFormat::PList)
