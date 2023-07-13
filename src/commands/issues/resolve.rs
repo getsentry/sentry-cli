@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::info;
 
 use crate::api::{Api, IssueChanges, IssueFilter};
@@ -10,6 +10,7 @@ pub fn make_command(command: Command) -> Command {
         Arg::new("next_release")
             .long("next-release")
             .short('n')
+            .action(ArgAction::SetTrue)
             .help("Only select issues in the next release."),
     )
 }
@@ -25,7 +26,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    if matches.is_present("next_release") {
+    if matches.get_flag("next_release") {
         changes.new_status = Some("resolvedInNextRelease".into());
     } else {
         changes.new_status = Some("resolved".into());
@@ -34,7 +35,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if Api::current().bulk_update_issue(&org, &project, &filter, &changes)? {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
-            println!("  new status: {}", status);
+            println!("  new status: {status}");
         }
     } else {
         println!("No changes requested.");

@@ -1,0 +1,62 @@
+```
+$ sentry-cli sourcemaps inject --help
+? success
+Fixes up JavaScript source files and sourcemaps with debug ids.
+
+For every minified JS source file, a debug id is generated and inserted into the file. If the source
+file references a sourcemap and that sourcemap is locally available, the debug id will be injected
+into it as well. If the referenced sourcemap already contains a debug id, that id is used instead.
+
+Usage: sentry-cli[EXE] sourcemaps inject [OPTIONS] <PATHS>...
+
+Arguments:
+  <PATHS>...
+          A path to recursively search for javascript files that should be processed.
+
+Options:
+  -i, --ignore <IGNORE>
+          Ignores all files and folders matching the given glob
+
+  -o, --org <ORG>
+          The organization slug
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+  -I, --ignore-file <IGNORE_FILE>
+          Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
+
+  -p, --project <PROJECT>
+          The project slug.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+  -r, --release <RELEASE>
+          The release slug.
+
+  -x, --ext <EXT>
+          Set the file extensions of JavaScript files that are considered for injection.  This
+          overrides the default extensions (js, cjs, mjs).  To add an extension, all default
+          extensions must be repeated.  Specify once per extension.  Source maps are discovered via
+          those files.
+
+      --dry-run
+          Don't modify files on disk.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity.
+          
+          [possible values: trace, debug, info, warn, error]
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: silent]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

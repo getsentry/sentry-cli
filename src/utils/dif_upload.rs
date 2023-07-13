@@ -6,7 +6,7 @@ use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
 use std::fmt::{self, Display};
 use std::fs::{self, File};
-use std::io::{BufReader, BufWriter, Read, Seek, SeekFrom, Write};
+use std::io::{BufReader, BufWriter, Read, Seek, Write};
 use std::iter::IntoIterator;
 use std::mem::transmute;
 use std::ops::Deref;
@@ -22,9 +22,10 @@ use console::style;
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
-use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
+use symbolic::common::{Arch, AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
-use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
+use symbolic::debuginfo::pe::PeObject;
+use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileDescriptor};
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use symbolic::il2cpp::ObjectLineMapping;
 use walkdir::WalkDir;
@@ -114,7 +115,7 @@ struct DifMatch<'data> {
 }
 
 impl<'data> DifMatch<'data> {
-    fn from_temp_object<S>(temp_file: TempFile, name: S) -> Result<Self>
+    fn from_temp_object<S>(temp_file: TempFile, name: S, debug_id: Option<DebugId>) -> Result<Self>
     where
         S: Into<String>,
     {
@@ -123,14 +124,11 @@ impl<'data> DifMatch<'data> {
             Object::parse(unsafe { &*b }).map(|object| ParsedDif::Object(Box::new(object)))
         })?;
 
-        // Even though we could supply the debug_id here from the object we do not, the
-        // server will do the same anyway and we actually have control over the version of
-        // the code running there so can fix bugs more reliably.
         Ok(DifMatch {
             _backing: Some(DifBacking::Temp(temp_file)),
             dif,
             name: name.into(),
-            debug_id: None,
+            debug_id,
             attachments: None,
         })
     }
@@ -196,8 +194,11 @@ impl<'data> DifMatch<'data> {
         P: AsRef<Path>,
         S: Into<String>,
     {
+        // Even though we could supply the debug_id here from the object we do not, the
+        // server will do the same anyway and we actually have control over the version of
+        // the code running there so can fix bugs more reliably.
         let temp_file = TempFile::take(path)?;
-        Self::from_temp_object(temp_file, name)
+        Self::from_temp_object(temp_file, name, None)
     }
 
     /// Returns the parsed [`Object`] of this DIF.
@@ -463,7 +464,7 @@ impl<'a> DifSource<'a> {
     {
         match *self {
             DifSource::FileSystem(base) => Self::get_relative_fs(base, path.as_ref()),
-            DifSource::Zip(ref mut zip, name) => Self::get_relative_zip(*zip, name, path.as_ref()),
+            DifSource::Zip(ref mut zip, name) => Self::get_relative_zip(zip, name, path.as_ref()),
         }
     }
 }
@@ -488,7 +489,7 @@ where
         return Ok(None);
     }
 
-    file.seek(SeekFrom::Start(0))?;
+    file.rewind()?;
     Ok(match &magic {
         b"PK" => Some(ZipArchive::new(BufReader::new(file))?),
         _ => None,
@@ -507,14 +508,18 @@ where
 {
     for index in 0..zip.len() {
         let (name, buffer) = {
-            let zip_file = zip.by_index(index)?;
+            let mut zip_file = zip.by_index(index)?;
             let name = zip_file.name().to_string();
 
             if !options.valid_extension(Path::new(&name).extension()) {
                 continue;
             }
 
-            (name, ByteView::read(zip_file).map_err(Error::new)?)
+            let tmp_file = TempFile::create()?;
+            let mut tmp_fh = tmp_file.open()?;
+            std::io::copy(&mut zip_file, &mut tmp_fh)?;
+
+            (name, ByteView::map_file(tmp_fh).map_err(Error::new)?)
         };
 
         func(DifSource::Zip(&mut zip, &name), name.clone(), buffer)?;
@@ -718,7 +723,8 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
     }
 
     pb.finish_and_clear();
-    println!(
+
+    print!(
         "{} Found {} debug information {}",
         style(">").dim(),
         style(collected.len()).yellow(),
@@ -727,6 +733,19 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
             _ => "files",
         }
     );
+
+    let count_with_sources = collected
+        .iter()
+        .filter(|dif| match dif.object() {
+            Some(object) => object.has_sources(),
+            None => false,
+        })
+        .count();
+
+    match count_with_sources {
+        0 => println!(),
+        _ => println!(" ({count_with_sources} with embedded sources)"),
+    }
 
     Ok(collected)
 }
@@ -836,7 +855,7 @@ fn collect_object_dif<'a>(
 
     // Each `FatObject` might contain multiple matching objects, each of
     // which needs to retain a reference to the original fat file. We
-    // create a shared instance here and clone it into `DifMatche`s
+    // create a shared instance here and clone it into `DifMatch`es
     // below.
     for object in archive.objects() {
         // Silently skip all objects that we cannot process. This can
@@ -854,6 +873,15 @@ fn collect_object_dif<'a>(
         if id.is_nil() {
             continue;
         }
+
+        // If this is a PE file with an embedded Portable PDB, we extract and process the PPDB separately.
+        if let Object::Pe(pe) = &object {
+            if let Ok(Some(ppdb_dif)) = extract_embedded_ppdb(pe, name.as_str()) {
+                if options.validate_dif(&ppdb_dif) {
+                    collected.push(ppdb_dif);
+                }
+            }
+        };
 
         // Store a mapping of "age" values for all encountered PE files,
         // regardless of whether they will be uploaded. This is used later
@@ -1060,20 +1088,50 @@ fn process_symbol_maps<'a>(
     Ok(without_hidden)
 }
 
+/// Checks whether the `PeObject` contains an embedded Portable PDB and extracts it as a separate  `DifMatch`.
+fn extract_embedded_ppdb<'a>(pe: &PeObject, pe_name: &str) -> Result<Option<DifMatch<'a>>> {
+    if let Some(embedded_ppdb) = pe.embedded_ppdb()? {
+        let temp_file = TempFile::create()?;
+        temp_file
+            .open()
+            .map(|f| embedded_ppdb.decompress_to(BufWriter::new(f)))??;
+
+        let dif = DifMatch::from_temp_object(
+            temp_file,
+            Path::new(pe_name).with_extension("pdb").to_string_lossy(),
+            Some(pe.debug_id()),
+        )?;
+        Ok(Some(dif))
+    } else {
+        Ok(None)
+    }
+}
+
 /// Default filter function to skip over bad sources we do not want to include.
-pub fn filter_bad_sources(entry: &FileEntry) -> bool {
+pub fn filter_bad_sources(
+    entry: &FileEntry,
+    embedded_source: &Option<SourceFileDescriptor>,
+) -> bool {
     let max_size = Config::current().get_max_dif_item_size();
     let path = &entry.abs_path_str();
 
-    if entry.name_str().ends_with(".pch") {
-        // always ignore pch files
+    // Ignore pch files.
+    if path.ends_with(".pch") {
         return false;
-    } else if let Ok(meta) = fs::metadata(path) {
+    }
+
+    // Ignore files embedded in the object itself.
+    if embedded_source.is_some() {
+        debug!("Skipping embedded source file: {}", path);
+        return false;
+    }
+
+    // Ignore files larger than limit (defaults to `DEFAULT_MAX_DIF_ITEM_SIZE`).
+    if let Ok(meta) = fs::metadata(path) {
         let item_size = meta.len();
-        // ignore files larger than limit (defaults to 1MB)
         if item_size > max_size {
             warn!(
-                "Source exceded maximum item size limit ({}). {}",
+                "Source exceeded maximum item size limit ({}). {}",
                 item_size, path
             );
             return false;
@@ -1081,6 +1139,7 @@ pub fn filter_bad_sources(entry: &FileEntry) -> bool {
     }
 
     // if a file metadata could not be read it will be skipped later.
+    debug!("Trying to add source file: {}", path);
     true
 }
 
@@ -1104,18 +1163,15 @@ fn create_source_bundles<'a>(
     pb.set_prefix(">");
 
     for dif in difs {
+        let name = dif.path();
         pb.inc(1);
-        pb.set_message(dif.path());
+        pb.set_message(name);
+        debug!("trying to collect sources for {}", name);
 
         let object = match dif.object() {
             Some(object) => object,
             None => continue,
         };
-        if object.has_sources() {
-            // Do not create standalone source bundles if the original object already contains
-            // source code. This would just store duplicate information in Sentry.
-            continue;
-        }
 
         let temp_file = TempFile::create()?;
         let mut writer = SourceBundleWriter::start(BufWriter::new(temp_file.open()?))?;
@@ -1127,12 +1183,11 @@ fn create_source_bundles<'a>(
         let written =
             writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
+            debug!("No sources found for {}", name);
             continue;
         }
 
-        let mut source_bundle = DifMatch::from_temp_object(temp_file, dif.path())?;
-        source_bundle.debug_id = dif.debug_id;
-        source_bundles.push(source_bundle);
+        source_bundles.push(DifMatch::from_temp_object(temp_file, name, dif.debug_id)?);
     }
 
     let len = source_bundles.len();
@@ -1287,7 +1342,7 @@ fn upload_missing_chunks(
     missing_info: &MissingDifsInfo<'_, '_>,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let &(ref difs, ref chunks) = missing_info;
+    let (difs, chunks) = missing_info;
 
     // Chunks might be empty if errors occurred in a previous upload. We do
     // not need to render a progress bar or perform an upload in this case.
@@ -1412,11 +1467,11 @@ fn poll_dif_assemble(
 
     let (errors, mut successes): (Vec<_>, _) = response
         .into_iter()
-        .partition(|&(_, ref r)| r.state.is_err() || options.wait && r.state.is_pending());
+        .partition(|(_, r)| r.state.is_err() || options.wait && r.state.is_pending());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
-    successes.sort_by_key(|&(_, ref success)| {
+    successes.sort_by_key(|(_, success)| {
         success
             .dif
             .as_ref()
@@ -1439,10 +1494,7 @@ fn poll_dif_assemble(
                 style(&dif.id()).dim(),
                 dif.object_name,
                 dif.cpu_name,
-                dif.data
-                    .kind
-                    .map(|c| format!(" {:#}", c))
-                    .unwrap_or_default()
+                dif.data.kind.map(|c| format!(" {c:#}")).unwrap_or_default()
             );
 
             render_detail(&success.detail, None);
@@ -1453,7 +1505,7 @@ fn poll_dif_assemble(
             let kind = match dif.dif.get() {
                 ParsedDif::Object(ref object) => match object.kind() {
                     symbolic::debuginfo::ObjectKind::None => String::new(),
-                    k => format!(" {:#}", k),
+                    k => format!(" {k:#}"),
                 },
                 ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
                 ParsedDif::UuidMap(_) => String::from("uuidmap"),
@@ -1461,13 +1513,18 @@ fn poll_dif_assemble(
             };
 
             println!(
-                "  {:>7} {} ({}; {}{})",
-                style("PENDING").yellow(),
+                "  {:>8} {} ({}; {}{})",
+                style("UPLOADED").yellow(),
                 style(dif.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
                 dif.name,
                 dif.object()
-                    .map(|object| object.arch())
-                    .map(|arch| arch.to_string())
+                    .map(|object| {
+                        let arch = object.arch();
+                        match arch {
+                            Arch::Unknown => String::new(),
+                            _ => arch.to_string(),
+                        }
+                    })
                     .unwrap_or_default(),
                 kind,
             );
@@ -1732,6 +1789,7 @@ pub struct DifUpload {
     max_file_size: u64,
     max_wait: Duration,
     pdbs_allowed: bool,
+    portablepdbs_allowed: bool,
     sources_allowed: bool,
     include_sources: bool,
     bcsymbolmaps_allowed: bool,
@@ -1771,6 +1829,7 @@ impl DifUpload {
             max_file_size: DEFAULT_MAX_DIF_SIZE,
             max_wait: DEFAULT_MAX_WAIT,
             pdbs_allowed: false,
+            portablepdbs_allowed: false,
             sources_allowed: false,
             include_sources: false,
             bcsymbolmaps_allowed: false,
@@ -1956,6 +2015,7 @@ impl DifUpload {
             }
 
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
+            self.portablepdbs_allowed = chunk_options.supports(ChunkUploadCapability::PortablePdbs);
             self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
             self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
             self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
@@ -1992,6 +2052,16 @@ impl DifUpload {
             // This is validated additionally in .valid_format()
         }
 
+        // Checks whether Portable PDBs were *explicitly* requested on the command line.
+        if self
+            .formats
+            .contains(&DifFormat::Object(FileFormat::PortablePdb))
+            && !self.portablepdbs_allowed
+        {
+            warn!("Portable PDBs are not supported by the configured Sentry server");
+            // This is validated additionally in .valid_format()
+        }
+
         // Checks whether BCSymbolMaps and PLists are **explicitly** requested on the command line.
         if (self.formats.contains(&DifFormat::BcSymbolMap)
             || self.formats.contains(&DifFormat::PList))
@@ -2022,6 +2092,7 @@ impl DifUpload {
             DifFormat::Object(FileFormat::Pdb) if !self.pdbs_allowed => false,
             DifFormat::Object(FileFormat::Pe) if !self.pdbs_allowed => false,
             DifFormat::Object(FileFormat::SourceBundle) if !self.sources_allowed => false,
+            DifFormat::Object(FileFormat::PortablePdb) if !self.portablepdbs_allowed => false,
             DifFormat::BcSymbolMap | DifFormat::PList if !self.bcsymbolmaps_allowed => false,
             format => self.formats.is_empty() || self.formats.contains(&format),
         }

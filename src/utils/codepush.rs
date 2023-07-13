@@ -74,7 +74,7 @@ pub fn get_codepush_deployments(app: &str) -> Result<Vec<CodePushDeployment>> {
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
-            let format_err = format!("Command `{} deployment ls {} --format json` failed to produce a valid JSON output.", codepush_bin, app);
+            let format_err = format!("Command `{codepush_bin} deployment ls {app} --format json` failed to produce a valid JSON output.");
             panic!("{}", format_err);
         }))
     } else {
@@ -113,7 +113,7 @@ pub fn get_react_native_codepush_release(
         let mut opts = MatchOptions::new();
         opts.case_sensitive = false;
         for entry in (glob_with("ios/*.xcodeproj", opts)?).flatten() {
-            let pi = XcodeProjectInfo::from_path(&entry)?;
+            let pi = XcodeProjectInfo::from_path(entry)?;
             if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                 if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
                     return Ok(format!("{}+codepush:{}", release_name, package.label));

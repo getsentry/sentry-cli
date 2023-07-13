@@ -1,8 +1,0 @@
-```
-$ sentry-cli monitors run xyz -- echo 123
-? failed
-error: Invalid value "xyz" for '<monitor>': Invalid UUID.
-
-For more information try --help
-
-```

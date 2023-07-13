@@ -23,7 +23,7 @@ where
     }
 
     let (tx, rx) = crossbeam_channel::bounded(100);
-    let mut signals = signal_hook::iterator::Signals::new(&[
+    let mut signals = signal_hook::iterator::Signals::new([
         signal_hook::consts::SIGTERM,
         signal_hook::consts::SIGINT,
     ])
@@ -53,7 +53,7 @@ where
 #[cfg(windows)]
 pub fn run_or_interrupt<F>(f: F)
 where
-    F: FnOnce() -> (),
+    F: FnOnce(),
     F: Send + 'static,
 {
     f();
@@ -127,7 +127,9 @@ pub fn print_error(err: &Error) {
         .skip(1)
         .for_each(|cause| eprintln!("  {} {}", style("caused by:").dim(), cause));
 
-    if Config::current().get_log_level() < log::LevelFilter::Info {
+    if Config::current_opt().map_or(true, |config| {
+        config.get_log_level() < log::LevelFilter::Info
+    }) {
         eprintln!();
         eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
         eprintln!(
@@ -164,7 +166,7 @@ pub fn init_backtrace() {
                     backtrace
                 );
             }
-            None => eprintln!("thread '{}' panicked at '{}'{:?}", thread, msg, backtrace),
+            None => eprintln!("thread '{thread}' panicked at '{msg}'{backtrace:?}"),
         }
     }));
 }

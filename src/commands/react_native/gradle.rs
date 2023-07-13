@@ -2,13 +2,13 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, info};
 use sourcemap::ram_bundle::RamBundle;
 
-use crate::api::{Api, NewRelease};
+use crate::api::Api;
 use crate::config::Config;
-use crate::utils::args::ArgExt;
+use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
@@ -44,12 +44,14 @@ pub fn make_command(command: Command) -> Command {
                 .long("dist")
                 .value_name("DISTRIBUTION")
                 .required(true)
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
+                .value_parser(validate_distribution)
                 .help("The names of the distributions to publish. Can be supplied multiple times."),
         )
         .arg(
             Arg::new("wait")
                 .long("wait")
+                .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
 }
@@ -60,8 +62,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let base = env::current_dir()?;
 
-    let sourcemap_path = PathBuf::from(matches.value_of("sourcemap").unwrap());
-    let bundle_path = PathBuf::from(matches.value_of("bundle").unwrap());
+    let sourcemap_path = PathBuf::from(matches.get_one::<String>("sourcemap").unwrap());
+    let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let sourcemap_url = format!(
         "~/{}",
         sourcemap_path.file_name().unwrap().to_string_lossy()
@@ -97,27 +99,25 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.rewrite(&[base.to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
 
-    let release = api.new_release(
-        &org,
-        &NewRelease {
-            version: matches.value_of("release").unwrap().to_string(),
-            projects: vec![project.to_string()],
-            ..Default::default()
-        },
-    )?;
+    // TODO: make this optional
+    let version = matches.get_one::<String>("release").unwrap().to_string();
+    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-    for dist in matches.values_of("dist").unwrap() {
+    for dist in matches.get_many::<String>("dist").unwrap() {
         println!(
             "Uploading sourcemaps for release {} distribution {}",
-            &release.version, dist
+            &version, dist
         );
 
         processor.upload(&UploadContext {
             org: &org,
             project: Some(&project),
-            release: &release.version,
+            release: Some(&version),
             dist: Some(dist),
-            wait: matches.is_present("wait"),
+            note: None,
+            wait: matches.get_flag("wait"),
+            dedupe: false,
+            chunk_upload_options: chunk_upload_options.as_ref(),
         })?;
     }
 

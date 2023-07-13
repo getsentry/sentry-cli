@@ -11,6 +11,10 @@ module.exports = {
     param: '--dist',
     type: 'string',
   },
+  decompress: {
+    param: '--decompress',
+    type: 'boolean',
+  },
   rewrite: {
     param: '--rewrite',
     invertedParam: '--no-rewrite',
@@ -18,6 +22,10 @@ module.exports = {
   },
   sourceMapReference: {
     invertedParam: '--no-sourcemap-reference',
+    type: 'boolean',
+  },
+  dedupe: {
+    invertedParam: '--no-dedupe',
     type: 'boolean',
   },
   stripPrefix: {
@@ -43,5 +51,9 @@ module.exports = {
   ext: {
     param: '--ext',
     type: 'array',
+  },
+  useArtifactBundle: {
+    param: '--use-artifact-bundle',
+    type: 'boolean',
   },
 };

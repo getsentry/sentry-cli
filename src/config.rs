@@ -13,6 +13,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
 use sentry::types::Dsn;
+use serde::Deserialize;
 
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
@@ -24,6 +25,43 @@ use crate::utils::http::is_absolute_url;
 pub enum Auth {
     Key(String),
     Token(String),
+}
+
+/// Data parsed from an "org auth token".
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct TokenData {
+    /// An org slug.
+    org: String,
+    /// A base Sentry URL.
+    url: String,
+}
+
+impl TokenData {
+    /// Attempt to extract data from an "org auth token".
+    ///
+    /// Org auth tokens start with `sntrys` and contain BASE64-encoded
+    /// data between two underscores.
+    ///
+    /// Attempting to decode a valid org auth token results in `Ok(Some(data))`.
+    /// Attempting to decode an org auth token that contains invalid data returns an error.
+    /// Attempting to decode any other token returns Ok(None).
+    fn decode(token: &str) -> Result<Option<Self>> {
+        const ORG_TOKEN_PREFIX: &str = "sntrys_";
+
+        let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
+            return Ok(None);
+        };
+
+        let Some((encoded, _)) = rest.split_once('_') else {
+            bail!("no closing _");
+        };
+
+        let json = data_encoding::BASE64
+            .decode(encoded.as_bytes())
+            .context("invalid base64 data")?;
+
+        Ok(serde_json::from_slice(&json)?)
+    }
 }
 
 lazy_static! {
@@ -40,6 +78,7 @@ pub struct Config {
     cached_headers: Option<Vec<String>>,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
+    cached_token_data: Option<TokenData>,
 }
 
 impl Config {
@@ -51,15 +90,37 @@ impl Config {
 
     /// Creates Config based on provided config file.
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
+        let auth = get_default_auth(&ini);
+        let token_embedded_data = match auth {
+            Some(Auth::Token(ref token)) => {
+                TokenData::decode(token).context("Failed to parse org auth token {token}")?
+            }
+            _ => None,
+        };
+
+        let mut url = get_default_url(&ini);
+
+        if let Some(ref token_embedded_data) = token_embedded_data {
+            if url == DEFAULT_URL || url.is_empty() {
+                url = token_embedded_data.url.clone();
+            } else if url != token_embedded_data.url {
+                bail!(
+                    "Two different url values supplied: `{}` (from token), `{url}`.",
+                    token_embedded_data.url,
+                );
+            }
+        }
+
         Ok(Config {
             filename,
             process_bound: false,
-            cached_auth: get_default_auth(&ini),
-            cached_base_url: get_default_url(&ini),
+            cached_auth: auth,
+            cached_base_url: url,
             cached_headers: get_default_headers(&ini),
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
+            cached_token_data: token_embedded_data,
         })
     }
 
@@ -139,13 +200,20 @@ impl Config {
     }
 
     /// Updates the auth info
-    pub fn set_auth(&mut self, auth: Auth) {
+    pub fn set_auth(&mut self, auth: Auth) -> Result<()> {
         self.cached_auth = Some(auth);
 
         self.ini.delete_from(Some("auth"), "api_key");
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
+                self.cached_token_data =
+                    TokenData::decode(val).context("Failed to parse org auth token {token}")?;
+
+                if let Some(ref data) = self.cached_token_data {
+                    self.cached_base_url = data.url.clone();
+                }
+
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }
@@ -155,6 +223,8 @@ impl Config {
             }
             None => {}
         }
+
+        Ok(())
     }
 
     /// Returns the base url (without trailing slashes)
@@ -170,10 +240,19 @@ impl Config {
     }
 
     /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) {
+    pub fn set_base_url(&mut self, url: &str) -> Result<()> {
+        if let Some(ref org_token) = self.cached_token_data {
+            if url != org_token.url {
+                bail!(
+                    "Two different url values supplied: `{}` (from token), `{url}`.",
+                    org_token.url,
+                );
+            }
+        }
         self.cached_base_url = url.to_owned();
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
+        Ok(())
     }
 
     /// Sets headers that should be attached to all requests
@@ -273,30 +352,49 @@ impl Config {
 
     /// Given a match object from clap, this returns the org from it.
     pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
-        matches
-            .value_of("org")
-            .map(str::to_owned)
-            .or_else(|| env::var("SENTRY_ORG").ok())
-            .or_else(|| {
-                self.ini
-                    .get_from(Some("defaults"), "org")
-                    .map(str::to_owned)
-            })
-            .ok_or_else(|| format_err!("An organization slug is required (provide with --org)"))
+        let org_from_token = self.cached_token_data.as_ref().map(|t| &t.org);
+
+        let org_from_cli = matches
+            .get_one::<String>("org")
+            .cloned()
+            .or_else(|| env::var("SENTRY_ORG").ok());
+
+        match (org_from_token, org_from_cli) {
+            (None, None) => self
+                .ini
+                .get_from(Some("defaults"), "org")
+                .map(str::to_owned)
+                .ok_or_else(|| {
+                    format_err!("An organization slug is required (provide with --org)")
+                }),
+            (None, Some(cli_org)) => Ok(cli_org),
+            (Some(token_org), None) => Ok(token_org.to_string()),
+            (Some(token_org), Some(cli_org)) => {
+                if cli_org.is_empty() {
+                    return Ok(token_org.to_owned());
+                }
+                if cli_org != *token_org {
+                    return Err(format_err!(
+                        "Two different org values supplied: `{token_org}` (from token), `{cli_org}`."
+                    ));
+                }
+                Ok(cli_org)
+            }
+        }
     }
 
     /// Given a match object from clap, this returns the release from it.
     pub fn get_release(&self, matches: &ArgMatches) -> Result<String> {
         matches
-            .value_of("release")
-            .map(str::to_owned)
+            .get_one::<String>("release")
+            .cloned()
             .or_else(|| env::var("SENTRY_RELEASE").ok())
             .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
     pub fn get_release_with_legacy_fallback(&self, matches: &ArgMatches) -> Result<String> {
-        if let Some(version) = matches.value_of("version") {
+        if let Some(version) = matches.get_one::<String>("version") {
             Ok(version.to_string())
         } else {
             self.get_release(matches)
@@ -310,8 +408,8 @@ impl Config {
 
     /// Given a match object from clap, this returns the projects from it.
     pub fn get_projects(&self, matches: &ArgMatches) -> Result<Vec<String>> {
-        if let Some(projects) = matches.values_of("project") {
-            Ok(projects.map(str::to_owned).collect())
+        if let Some(projects) = matches.get_many::<String>("project") {
+            Ok(projects.cloned().collect())
         } else {
             Ok(vec![self.get_project_default()?])
         }
@@ -443,7 +541,7 @@ impl Config {
     }
 
     pub fn get_allow_failure(&self, matches: &ArgMatches) -> bool {
-        matches.is_present("allow_failure")
+        matches.get_flag("allow_failure")
             || if let Ok(var) = env::var("SENTRY_ALLOW_FAILURE") {
                 &var == "1" || &var == "true"
             } else {
@@ -483,14 +581,17 @@ fn load_global_config_file() -> Result<(PathBuf, Ini)> {
     match fs::File::open(&filename) {
         Ok(mut file) => match Ini::read_from(&mut file) {
             Ok(ini) => Ok((filename, ini)),
-            Err(err) => Err(Error::from(err)),
+            Err(err) => Err(Error::from(err).context(format!(
+                "Failed to parse {CONFIG_RC_FILE_NAME} file from the home folder."
+            ))),
         },
         Err(err) => {
             if err.kind() == io::ErrorKind::NotFound {
                 Ok((filename, Ini::new()))
             } else {
-                Err(Error::from(err)
-                    .context("Failed to load .sentryclirc file from the home folder."))
+                Err(Error::from(err).context(format!(
+                    "Failed to load {CONFIG_RC_FILE_NAME} file from the home folder."
+                )))
             }
         }
     }
@@ -500,14 +601,14 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let (global_filename, mut rv) = load_global_config_file()?;
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let mut f = fs::File::open(&project_config_path).with_context(|| {
-            format!(
-                "Failed to load {} file from project path ({})",
-                CONFIG_RC_FILE_NAME,
-                project_config_path.display()
-            )
-        })?;
-        let ini = Ini::read_from(&mut f)?;
+        let file_desc = format!(
+            "{} file from project path ({})",
+            CONFIG_RC_FILE_NAME,
+            project_config_path.display()
+        );
+        let mut f =
+            fs::File::open(&project_config_path).context(format!("Failed to load {file_desc}"))?;
+        let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
         for (section, props) in ini.iter() {
             for (key, value) in props.iter() {
                 rv.set_to(section, key.to_string(), value.to_owned());
@@ -571,6 +672,7 @@ impl Clone for Config {
             cached_headers: self.cached_headers.clone(),
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
+            cached_token_data: self.cached_token_data.clone(),
         }
     }
 }
@@ -636,5 +738,23 @@ fn get_default_vcs_remote(ini: &Ini) -> String {
         remote.to_string()
     } else {
         "origin".to_string()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_decode_token_data() {
+        let token = "sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_foobarthisdoesntmatter";
+
+        assert_eq!(
+            TokenData::decode(token).unwrap().unwrap(),
+            TokenData {
+                org: "test-org".to_string(),
+                url: "https://sentry.io".to_string(),
+            }
+        );
     }
 }

@@ -1,6 +1,9 @@
 use crate::integration::register_test;
 
+mod bundle_jvm;
+mod bundle_sources;
 mod check;
+mod print_sources;
 mod upload;
 
 #[test]

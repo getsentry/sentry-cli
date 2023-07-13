@@ -81,22 +81,37 @@ describe('SentryCli helper', () => {
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { sourceMapReference: true })
       ).toEqual(['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null']);
 
-      expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: true })).toEqual([
+      expect(
+        helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { decompress: true, rewrite: true })
+      ).toEqual([
         'releases',
         'files',
         'release',
         'upload-sourcemaps',
         '/dev/null',
+        '--decompress',
         '--rewrite',
       ]);
 
-      expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: false })).toEqual([
+      expect(
+        helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: false, dedupe: false })
+      ).toEqual([
         'releases',
         'files',
         'release',
         'upload-sourcemaps',
         '/dev/null',
         '--no-rewrite',
+        '--no-dedupe',
+      ]);
+
+      // Only `invertedParam` registered for `dedupe` in `uploadSourcemaps`, so it should not add anything for positive boolean.
+      expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { dedupe: true })).toEqual([
+        'releases',
+        'files',
+        'release',
+        'upload-sourcemaps',
+        '/dev/null',
       ]);
 
       expect(() => {
@@ -137,6 +152,15 @@ describe('SentryCli helper', () => {
         '/dev/null',
         '--url-suffix',
         '?hash=1337',
+      ]);
+
+      expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { decompress: true })).toEqual([
+        'releases',
+        'files',
+        'release',
+        'upload-sourcemaps',
+        '/dev/null',
+        '--decompress',
       ]);
 
       expect(

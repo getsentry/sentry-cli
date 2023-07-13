@@ -199,7 +199,7 @@ impl InfoPlist {
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
                 let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
-                Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+                Ok(Some(InfoPlist::load_and_process(path, &vars)?))
             } else if let Ok(default_plist) = InfoPlist::from_env_vars(&vars) {
                 Ok(Some(default_plist))
             } else {
@@ -236,7 +236,7 @@ impl InfoPlist {
                     let base = vars.get("PROJECT_DIR").map(Path::new)
                         .unwrap_or_else(|| pi.base_path());
                     let path = base.join(path);
-                    return Ok(Some(InfoPlist::load_and_process(&path, &vars)?))
+                    return Ok(Some(InfoPlist::load_and_process(path, &vars)?))
                 }
             }
         }
@@ -249,7 +249,7 @@ impl InfoPlist {
         vars: &HashMap<String, String>,
     ) -> Result<InfoPlist> {
         // do we want to preprocess the plist file?
-        if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
+        let plist = if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
             let mut c = process::Command::new("cc");
             c.arg("-xc").arg("-P").arg("-E");
             if let Some(defs) = vars.get("INFOPLIST_OTHER_PREPROCESSOR_FLAGS") {
@@ -259,57 +259,56 @@ impl InfoPlist {
             }
             if let Some(defs) = vars.get("INFOPLIST_PREPROCESSOR_DEFINITIONS") {
                 for token in defs.split_whitespace() {
-                    c.arg(format!("-D{}", token));
+                    c.arg(format!("-D{token}"));
                 }
             }
             c.arg(path.as_ref());
             let p = c.output()?;
-            let mut plist = InfoPlist::from_reader(&mut Cursor::new(&p.stdout[..]))?;
+            InfoPlist::from_reader(Cursor::new(&p.stdout[..]))
+        } else {
+            InfoPlist::from_path(path).or_else(|err| {
+                /*
+                This is sort of an edge-case, as XCode is not producing an `Info.plist` file
+                by default anymore. However, it still does so for some templates.
 
-            // expand xcodevars here
-            plist.name = expand_xcodevars(&plist.name, vars);
-            plist.bundle_id = expand_xcodevars(&plist.bundle_id, vars);
-            plist.version = expand_xcodevars(&plist.version, vars);
-            plist.build = expand_xcodevars(&plist.build, vars);
+                For example iOS Storyboard template will produce a partial `Info.plist` file,
+                with a content only related to the Storyboard itself, but not the project as a whole. eg.
 
-            return Ok(plist);
-        }
-
-        InfoPlist::from_path(path).or_else(|err| {
-            /*
-            This is sort of an edge-case, as XCode is not producing an `Info.plist` file
-            by default anymore. However, it still does so for some templates.
-
-            For example iOS Storyboard template will produce a partial `Info.plist` file,
-            with a content only related to the Storyboard itself, but not the project as a whole. eg.
-
-            <?xml version="1.0" encoding="UTF-8"?>
-            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-            <plist version="1.0">
-            <dict>
-                <key>UIApplicationSceneManifest</key>
+                <?xml version="1.0" encoding="UTF-8"?>
+                <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                <plist version="1.0">
                 <dict>
-                    <key>UISceneConfigurations</key>
+                    <key>UIApplicationSceneManifest</key>
                     <dict>
-                        <key>UIWindowSceneSessionRoleApplication</key>
-                        <array>
-                            <dict>
-                                <key>UISceneStoryboardFile</key>
-                                <string>Main</string>
-                            </dict>
-                        </array>
+                        <key>UISceneConfigurations</key>
+                        <dict>
+                            <key>UIWindowSceneSessionRoleApplication</key>
+                            <array>
+                                <dict>
+                                    <key>UISceneStoryboardFile</key>
+                                    <string>Main</string>
+                                </dict>
+                            </array>
+                        </dict>
                     </dict>
                 </dict>
-            </dict>
-            </plist>
+                </plist>
 
-            This causes a sort of false-positive, as `INFOPLIST_FILE` is present, yet it contains
-            no data required by the CLI to correctly produce a `InfoPlist` struct.
+                This causes a sort of false-positive, as `INFOPLIST_FILE` is present, yet it contains
+                no data required by the CLI to correctly produce a `InfoPlist` struct.
 
-            In the case like that, we try to fallback to env variables collected either by `xcodebuild` binary,
-            or directly through `env` if we were called from within XCode itself.
-            */
-            InfoPlist::from_env_vars(vars).map_err(|e| e.context(err))
+                In the case like that, we try to fallback to env variables collected either by `xcodebuild` binary,
+                or directly through `env` if we were called from within XCode itself.
+                */
+                InfoPlist::from_env_vars(vars).map_err(|e| e.context(err))
+            })
+        };
+
+        plist.map(|raw| InfoPlist {
+            name: expand_xcodevars(&raw.name, vars),
+            bundle_id: expand_xcodevars(&raw.bundle_id, vars),
+            version: expand_xcodevars(&raw.version, vars),
+            build: expand_xcodevars(&raw.build, vars),
         })
     }
 
@@ -442,7 +441,7 @@ impl<'a> MayDetach<'a> {
                 if let Some(ref output_file) = md.output_file {
                     crate::utils::system::print_error(&err);
                     if md.show_critical_info()? {
-                        open::that(&output_file.path())?;
+                        open::that(output_file.path())?;
                         std::thread::sleep(Duration::from_millis(5000));
                     }
                 }

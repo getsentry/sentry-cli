@@ -74,7 +74,7 @@ impl TempFile {
             .create(true)
             .open(&self.path)?;
 
-        f.seek(SeekFrom::Start(0)).ok();
+        f.rewind().ok();
         Ok(f)
     }
 
@@ -204,7 +204,7 @@ pub fn decompress_gzip_content(slice: &[u8]) -> Result<Vec<u8>> {
 
 #[cfg(windows)]
 pub fn path_as_url(path: &Path) -> String {
-    path.display().to_string().replace("\\", "/")
+    path.display().to_string().replace('\\', "/")
 }
 
 #[cfg(not(windows))]

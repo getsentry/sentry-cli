@@ -1,0 +1,6 @@
+```
+$ sentry-cli monitors run foo-monitor -- cmd.exe /C echo 123
+? success
+123
+
+```

@@ -15,11 +15,13 @@ const fetch = require('node-fetch');
 const HttpsProxyAgent = require('https-proxy-agent');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
-const npmLog = require('npmlog');
 const which = require('which');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
+const Logger = require('../js/logger');
+
+const logger = new Logger(getLogStream('stderr'));
 
 const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
@@ -121,13 +123,17 @@ function createProgressBar(name, total) {
 }
 
 function npmCache() {
-  const env = process.env;
-  return (
-    env.npm_config_cache ||
-    env.npm_config_cache_folder ||
-    env.npm_config_yarn_offline_mirror ||
-    (env.APPDATA ? path.join(env.APPDATA, 'npm-cache') : path.join(os.homedir(), '.npm'))
-  );
+  const keys = ['npm_config_cache', 'npm_config_cache_folder', 'npm_config_yarn_offline_mirror'];
+
+  for (let key of [...keys, ...keys.map((k) => k.toUpperCase())]) {
+    if (process.env[key]) return process.env[key];
+  }
+
+  if (process.env.APPDATA) {
+    return path.join(process.env.APPDATA, 'npm-cache');
+  }
+
+  return path.join(os.homedir(), '.npm');
 }
 
 function getCachedPath(url) {
@@ -157,14 +163,14 @@ function validateChecksum(tempPath, name) {
       }
     }
   } catch (e) {
-    npmLog.info(
+    logger.log(
       'Checksums are generated when the package is published to npm. They are not available directly in the source repository. Skipping validation.'
     );
     return;
   }
 
   if (!storedHash) {
-    npmLog.info(`Checksum for ${name} not found, skipping validation.`);
+    logger.log(`Checksum for ${name} not found, skipping validation.`);
     return;
   }
 
@@ -176,7 +182,7 @@ function validateChecksum(tempPath, name) {
       `Checksum validation for ${name} failed.\nExpected: ${storedHash}\nReceived: ${currentHash}`
     );
   } else {
-    npmLog.info('Checksum validation passed.');
+    logger.log('Checksum validation passed.');
   }
 }
 
@@ -188,7 +194,7 @@ async function downloadBinary() {
   if (process.env.SENTRYCLI_USE_LOCAL === '1') {
     try {
       const binPath = which.sync('sentry-cli');
-      npmLog.info('sentry-cli', `Using local binary: ${binPath}`);
+      logger.log(`Using local binary: ${binPath}`);
       fs.copyFileSync(binPath, outputPath);
       return Promise.resolve();
     } catch (e) {
@@ -206,7 +212,7 @@ async function downloadBinary() {
 
   const cachedPath = getCachedPath(downloadUrl);
   if (fs.existsSync(cachedPath)) {
-    npmLog.info('sentry-cli', `Using cached binary: ${cachedPath}`);
+    logger.log(`Using cached binary: ${cachedPath}`);
     fs.copyFileSync(cachedPath, outputPath);
     return;
   }
@@ -214,10 +220,10 @@ async function downloadBinary() {
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
   const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
 
-  npmLog.info('sentry-cli', `Downloading from ${downloadUrl}`);
+  logger.log(`Downloading from ${downloadUrl}`);
 
   if (proxyUrl) {
-    npmLog.info('sentry-cli', `Using proxy URL: ${proxyUrl}`);
+    logger.log(`Using proxy URL: ${proxyUrl}`);
   }
 
   let response;
@@ -258,19 +264,29 @@ async function downloadBinary() {
     decompressor = new stream.PassThrough();
   }
   const name = downloadUrl.match(/.*\/(.*?)$/)[1];
-  const total = parseInt(response.headers.get('content-length'), 10);
-  const progressBar = createProgressBar(name, total);
+  let downloadedBytes = 0;
+  const totalBytes = parseInt(response.headers.get('content-length'), 10);
+  const progressBar = createProgressBar(name, totalBytes);
   const tempPath = getTempFile(cachedPath);
   fs.mkdirSync(path.dirname(tempPath), { recursive: true });
 
   await new Promise((resolve, reject) => {
     response.body
       .on('error', (e) => reject(e))
-      .on('data', (chunk) => progressBar.tick(chunk.length))
+      .on('data', (chunk) => {
+        downloadedBytes += chunk.length;
+        progressBar.tick(chunk.length);
+      })
       .pipe(decompressor)
       .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
       .on('error', (e) => reject(e))
-      .on('close', () => resolve());
+      .on('close', () => {
+        if (downloadedBytes >= totalBytes) {
+          resolve();
+        } else {
+          reject(new Error('connection interrupted'));
+        }
+      });
   });
 
   if (process.env.SENTRYCLI_SKIP_CHECKSUM_VALIDATION !== '1') {
@@ -306,10 +322,8 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
   process.on('exit', () => server.close());
 }
 
-npmLog.stream = getLogStream('stderr');
-
 if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
-  npmLog.info('sentry-cli', `Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
+  logger.log(`Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
   process.exit(0);
 }
 

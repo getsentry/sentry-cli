@@ -1,26 +1,26 @@
 ```
-$ sentry-cli[EXE] releases new -h
+$ sentry-cli releases new -h
 ? success
-sentry-cli[EXE]-releases-new 
 Create a new release.
 
-USAGE:
-    sentry-cli releases new [OPTIONS] <VERSION>
+Usage: sentry-cli[EXE] releases new [OPTIONS] <VERSION>
 
-ARGS:
-    <VERSION>    The version of the release
+Arguments:
+  <VERSION>  The version of the release
 
-OPTIONS:
-        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
-        --finalize                   Immediately finalize the release. (sets it to released)
-    -h, --help                       Print help information
-        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
-                                     info, warn, error]
-    -o, --org <ORG>                  The organization slug
-    -p, --project <PROJECT>          The project slug.
-        --quiet                      Do not print any output while preserving correct exit code.
-                                     This flag is currently implemented only for selected
-                                     subcommands. [aliases: silent]
-        --url <URL>                  Optional URL to the release for information purposes.
+Options:
+  -o, --org <ORG>                The organization slug
+      --url <URL>                Optional URL to the release for information purposes.
+      --finalize                 Immediately finalize the release. (sets it to released)
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+  -p, --project <PROJECT>        The project slug.
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: silent]
+  -h, --help                     Print help
 
 ```

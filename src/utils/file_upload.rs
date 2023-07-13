@@ -7,16 +7,18 @@ use std::str;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use console::style;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
+use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
 use url::Url;
 
+use crate::api::NewRelease;
 use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
@@ -26,12 +28,72 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
 
+/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
+/// that those bundles are associated to a release.
+///
+/// This function checks whether the configured server supports artifact bundles
+/// and only creates a release if the server requires that.
+pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
+    // if the remote sentry service supports artifact bundles, we don't
+    // need to do anything here.  Artifact bundles will also only work
+    // if a project is provided which is technically unnecessary for the
+    // legacy upload though it will unlikely to be what users want.
+    if context.project.is_some()
+        && context.chunk_upload_options.map_or(false, |x| {
+            x.supports(ChunkUploadCapability::ArtifactBundles)
+                || x.supports(ChunkUploadCapability::ArtifactBundlesV2)
+        })
+    {
+        return Ok(());
+    }
+
+    // TODO: make this into an error later down the road
+    if context.project.is_none() {
+        eprintln!(
+            "{}",
+            style(
+                "warning: no project specified. \
+                    While this upload will succeed it will be unlikely that \
+                    this is what you wanted. Future versions of sentry will \
+                    require a project to be set."
+            )
+            .red()
+        );
+    }
+
+    if let Some(version) = context.release {
+        let api = Api::current();
+        api.new_release(
+            context.org,
+            &NewRelease {
+                version: version.to_string(),
+                projects: context.project.map(|x| x.to_string()).into_iter().collect(),
+                ..Default::default()
+            },
+        )?;
+    } else {
+        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release)");
+    }
+    Ok(())
+}
+
+#[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
     pub project: Option<&'a str>,
-    pub release: &'a str,
+    pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
+    pub note: Option<&'a str>,
     pub wait: bool,
+    pub dedupe: bool,
+    pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
+}
+
+impl<'a> UploadContext<'a> {
+    pub fn release(&self) -> Result<&str> {
+        self.release
+            .ok_or_else(|| anyhow!("A release slug is required (provide with --release)"))
+    }
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
@@ -50,7 +112,7 @@ impl fmt::Display for LogLevel {
 }
 
 #[derive(Clone, Debug)]
-pub struct ReleaseFile {
+pub struct SourceFile {
     pub url: String,
     pub path: PathBuf,
     pub contents: Vec<u8>,
@@ -60,7 +122,7 @@ pub struct ReleaseFile {
     pub already_uploaded: bool,
 }
 
-impl ReleaseFile {
+impl SourceFile {
     /// Calculates and returns the SHA1 checksum of the file.
     pub fn checksum(&self) -> Result<Digest> {
         get_sha1_checksum(&*self.contents)
@@ -79,33 +141,34 @@ impl ReleaseFile {
     }
 }
 
-pub type ReleaseFiles = HashMap<String, ReleaseFile>;
+pub type SourceFiles = HashMap<String, SourceFile>;
 
-pub struct ReleaseFileUpload<'a> {
+pub struct FileUpload<'a> {
     context: &'a UploadContext<'a>,
-    files: ReleaseFiles,
+    files: SourceFiles,
 }
 
-impl<'a> ReleaseFileUpload<'a> {
+impl<'a> FileUpload<'a> {
     pub fn new(context: &'a UploadContext) -> Self {
-        ReleaseFileUpload {
+        FileUpload {
             context,
             files: HashMap::new(),
         }
     }
 
-    pub fn files(&mut self, files: &ReleaseFiles) -> &mut Self {
+    pub fn files(&mut self, files: &SourceFiles) -> &mut Self {
         for (k, v) in files {
-            self.files.insert(k.to_owned(), v.to_owned());
+            if !v.already_uploaded {
+                self.files.insert(k.to_owned(), v.to_owned());
+            }
         }
         self
     }
 
     pub fn upload(&self) -> Result<()> {
-        let api = Api::current();
+        initialize_legacy_release_upload(self.context)?;
 
-        let chunk_options = api.get_chunk_upload_options(self.context.org)?;
-        if let Some(ref chunk_options) = chunk_options {
+        if let Some(chunk_options) = self.context.chunk_upload_options {
             if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
                 return upload_files_chunked(self.context, &self.files, chunk_options);
             }
@@ -121,22 +184,30 @@ impl<'a> ReleaseFileUpload<'a> {
             );
         }
 
-        let concurrency = chunk_options.map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
+        let concurrency = self
+            .context
+            .chunk_upload_options
+            .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
         upload_files_parallel(self.context, &self.files, concurrency)
+    }
+
+    pub fn build_jvm_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
+        build_artifact_bundle(self.context, &self.files, debug_id)
     }
 }
 
 fn upload_files_parallel(
     context: &UploadContext,
-    files: &ReleaseFiles,
+    files: &SourceFiles,
     num_threads: usize,
 ) -> Result<()> {
     let api = Api::current();
+    let release = context.release()?;
 
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
-        .list_release_files(context.org, context.project, context.release)?
+        .list_release_files(context.org, context.project, release)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
         .collect();
@@ -144,7 +215,7 @@ fn upload_files_parallel(
     println!(
         "{} Uploading source maps for release {}",
         style(">").dim(),
-        style(context.release).cyan()
+        style(release).cyan()
     );
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
@@ -180,7 +251,7 @@ fn upload_files_parallel(
                 if let Some(old_id) =
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
-                    api.delete_release_file(context.org, context.project, context.release, old_id)
+                    api.delete_release_file(context.org, context.project, release, old_id)
                         .ok();
                 }
 
@@ -204,39 +275,12 @@ fn upload_files_parallel(
     Ok(())
 }
 
-fn upload_files_chunked(
+fn poll_assemble(
+    checksum: Digest,
+    chunks: &[Digest],
     context: &UploadContext,
-    files: &ReleaseFiles,
     options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let archive = build_artifact_bundle(context, files)?;
-
-    let progress_style =
-        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
-
-    let pb = ProgressBar::new_spinner();
-    pb.enable_steady_tick(100);
-    pb.set_style(progress_style);
-
-    let view = ByteView::open(archive.path())?;
-    let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
-    let chunks = view
-        .chunks(options.chunk_size as usize)
-        .zip(checksums.iter())
-        .map(|(data, checksum)| Chunk((*checksum, data)))
-        .collect::<Vec<_>>();
-
-    pb.finish_with_duration("Optimizing");
-
-    let progress_style = ProgressStyle::default_bar().template(&format!(
-        "{} Uploading release files...\
-       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-        style(">").dim(),
-    ));
-
-    upload_chunks(&chunks, options, progress_style)?;
-    println!("{} Uploaded release files to Sentry", style(">").dim(),);
-
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
     let pb = ProgressBar::new_spinner();
@@ -250,9 +294,23 @@ fn upload_files_chunked(
     };
 
     let api = Api::current();
+    let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
+        || options.supports(ChunkUploadCapability::ArtifactBundlesV2))
+        && context.project.is_some();
     let response = loop {
-        let response =
-            api.assemble_artifacts(context.org, context.release, checksum, &checksums)?;
+        // prefer standalone artifact bundle upload over legacy release based upload
+        let response = if use_artifact_bundle {
+            api.assemble_artifact_bundle(
+                context.org,
+                vec![context.project.unwrap().to_string()],
+                checksum,
+                chunks,
+                context.release,
+                context.dist,
+            )?
+        } else {
+            api.assemble_release_artifacts(context.org, context.release()?, checksum, chunks)?
+        };
 
         // Poll until there is a response, unless the user has specified to skip polling. In
         // that case, we return the potentially partial response from the server. This might
@@ -293,7 +351,95 @@ fn upload_files_chunked(
     Ok(())
 }
 
-fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Result<TempFile> {
+fn upload_files_chunked(
+    context: &UploadContext,
+    files: &SourceFiles,
+    options: &ChunkUploadOptions,
+) -> Result<()> {
+    let archive = build_artifact_bundle(context, files, None)?;
+
+    let progress_style =
+        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
+
+    let view = ByteView::open(archive.path())?;
+    let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size)?;
+    let mut chunks = view
+        .chunks(options.chunk_size as usize)
+        .zip(checksums.iter())
+        .map(|(data, checksum)| Chunk((*checksum, data)))
+        .collect::<Vec<_>>();
+
+    pb.finish_with_duration("Optimizing");
+
+    let progress_style = ProgressStyle::default_bar().template(&format!(
+        "{} Uploading files...\
+       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+        style(">").dim(),
+    ));
+
+    // Filter out chunks that are already on the server. This only matters if the server supports
+    // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
+    if options.supports(ChunkUploadCapability::ArtifactBundlesV2) && context.project.is_some() {
+        let api = Api::current();
+        let response = api.assemble_artifact_bundle(
+            context.org,
+            vec![context.project.unwrap().to_string()],
+            checksum,
+            &checksums,
+            context.release,
+            context.dist,
+        )?;
+        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+    };
+
+    upload_chunks(&chunks, options, progress_style)?;
+
+    if !chunks.is_empty() {
+        println!("{} Uploaded files to Sentry", style(">").dim());
+        poll_assemble(checksum, &checksums, context, options)
+    } else {
+        println!(
+            "{} Nothing to upload, all files are on the server",
+            style(">").dim()
+        );
+        Ok(())
+    }
+}
+
+fn build_debug_id(files: &SourceFiles) -> DebugId {
+    let mut sorted_files = Vec::from_iter(files);
+    sorted_files.sort_by_key(|x| x.0);
+
+    let mut hash = sha1_smol::Sha1::new();
+    for (path, source_file) in sorted_files {
+        hash.update(path.as_bytes());
+        if let Some(debug_id) = source_file
+            .headers
+            .iter()
+            .filter_map(|(k, v)| (k == "debug_id").then_some(v))
+            .next()
+        {
+            hash.update(debug_id.as_bytes());
+        } else {
+            hash.update(&[0u8; 16]);
+        }
+        hash.update(&source_file.contents);
+    }
+
+    let mut sha1_bytes = [0u8; 16];
+    sha1_bytes.copy_from_slice(&hash.digest().bytes()[..16]);
+    DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
+}
+
+fn build_artifact_bundle(
+    context: &UploadContext,
+    files: &SourceFiles,
+    debug_id: Option<DebugId>,
+) -> Result<TempFile> {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
@@ -306,16 +452,29 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
     let archive = TempFile::create()?;
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
+    // artifact bundles get a random UUID as debug id
+    let debug_id = debug_id.unwrap_or_else(|| build_debug_id(files));
+    bundle.set_attribute("debug_id", debug_id.to_string());
+
+    if let Some(note) = context.note {
+        bundle.set_attribute("note", note.to_owned());
+    }
+
     bundle.set_attribute("org".to_owned(), context.org.to_owned());
     if let Some(project) = context.project {
         bundle.set_attribute("project".to_owned(), project.to_owned());
     }
-    bundle.set_attribute("release".to_owned(), context.release.to_owned());
+    if let Some(release) = context.release {
+        bundle.set_attribute("release".to_owned(), release.to_owned());
+    }
     if let Some(dist) = context.dist {
         bundle.set_attribute("dist".to_owned(), dist.to_owned());
     }
 
-    for file in files.values() {
+    let mut files_sorted = files.values().collect::<Vec<_>>();
+    files_sorted.sort_by_key(|file| &file.url[..]);
+
+    for file in files_sorted {
         pb.inc(1);
         pb.set_message(&file.url);
 
@@ -332,6 +491,8 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
 
     bundle.finish()?;
 
+    pb.finish_with_duration("Bundling");
+
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),
@@ -342,7 +503,11 @@ fn build_artifact_bundle(context: &UploadContext, files: &ReleaseFiles) -> Resul
         }
     );
 
-    pb.finish_with_duration("Bundling");
+    println!(
+        "{} Bundle ID: {}",
+        style(">").dim(),
+        style(debug_id).yellow(),
+    );
 
     Ok(archive)
 }
@@ -357,14 +522,14 @@ fn url_to_bundle_path(url: &str) -> Result<String> {
 
     let mut path = url.path().to_string();
     if let Some(fragment) = url.fragment() {
-        path = format!("{}#{}", path, fragment);
+        path = format!("{path}#{fragment}");
     }
     if path.starts_with('/') {
         path.remove(0);
     }
 
     Ok(match url.host_str() {
-        Some("~") => format!("_/_/{}", path),
+        Some("~") => format!("_/_/{path}"),
         Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
         None => format!("{}/_/{}", url.scheme(), path),
     })
@@ -384,36 +549,97 @@ fn print_upload_context_details(context: &UploadContext) {
     println!(
         "{} {}",
         style("> Release:").dim(),
-        style(context.release).yellow()
+        style(context.release.unwrap_or("None")).yellow()
     );
     println!(
         "{} {}",
         style("> Dist:").dim(),
         style(context.dist.unwrap_or("None")).yellow()
     );
+    let upload_type = match context.chunk_upload_options {
+        None => "single file",
+        Some(opts)
+            if opts.supports(ChunkUploadCapability::ArtifactBundles)
+                || opts.supports(ChunkUploadCapability::ArtifactBundlesV2) =>
+        {
+            "artifact bundle"
+        }
+        _ => "release bundle",
+    };
+    println!(
+        "{} {}",
+        style("> Upload type:").dim(),
+        style(upload_type).yellow()
+    );
 }
 
-#[test]
-fn test_url_to_bundle_path() {
-    assert_eq!(url_to_bundle_path("~/bar").unwrap(), "_/_/bar");
-    assert_eq!(url_to_bundle_path("~/foo/bar").unwrap(), "_/_/foo/bar");
-    assert_eq!(
-        url_to_bundle_path("~/dist/js/bundle.js.map").unwrap(),
-        "_/_/dist/js/bundle.js.map"
-    );
-    assert_eq!(
-        url_to_bundle_path("~/babel.config.js").unwrap(),
-        "_/_/babel.config.js"
-    );
+#[cfg(test)]
+mod tests {
+    use sha1_smol::Sha1;
 
-    assert_eq!(url_to_bundle_path("~/#/bar").unwrap(), "_/_/#/bar");
-    assert_eq!(url_to_bundle_path("~/foo/#/bar").unwrap(), "_/_/foo/#/bar");
-    assert_eq!(
-        url_to_bundle_path("~/dist/#js/bundle.js.map").unwrap(),
-        "_/_/dist/#js/bundle.js.map"
-    );
-    assert_eq!(
-        url_to_bundle_path("~/#foo/babel.config.js").unwrap(),
-        "_/_/#foo/babel.config.js"
-    );
+    use super::*;
+
+    #[test]
+    fn test_url_to_bundle_path() {
+        assert_eq!(url_to_bundle_path("~/bar").unwrap(), "_/_/bar");
+        assert_eq!(url_to_bundle_path("~/foo/bar").unwrap(), "_/_/foo/bar");
+        assert_eq!(
+            url_to_bundle_path("~/dist/js/bundle.js.map").unwrap(),
+            "_/_/dist/js/bundle.js.map"
+        );
+        assert_eq!(
+            url_to_bundle_path("~/babel.config.js").unwrap(),
+            "_/_/babel.config.js"
+        );
+
+        assert_eq!(url_to_bundle_path("~/#/bar").unwrap(), "_/_/#/bar");
+        assert_eq!(url_to_bundle_path("~/foo/#/bar").unwrap(), "_/_/foo/#/bar");
+        assert_eq!(
+            url_to_bundle_path("~/dist/#js/bundle.js.map").unwrap(),
+            "_/_/dist/#js/bundle.js.map"
+        );
+        assert_eq!(
+            url_to_bundle_path("~/#foo/babel.config.js").unwrap(),
+            "_/_/#foo/babel.config.js"
+        );
+    }
+
+    #[test]
+    fn build_artifact_bundle_deterministic() {
+        let context = UploadContext {
+            org: "wat-org",
+            project: Some("wat-project"),
+            release: None,
+            dist: None,
+            note: None,
+            wait: false,
+            dedupe: true,
+            chunk_upload_options: None,
+        };
+
+        let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
+            .into_iter()
+            .map(|name| {
+                let file = SourceFile {
+                    url: format!("~/{name}"),
+                    path: format!("tests/integration/_fixtures/{name}").into(),
+                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}")).unwrap(),
+                    ty: SourceFileType::SourceMap,
+                    headers: Default::default(),
+                    messages: Default::default(),
+                    already_uploaded: false,
+                };
+                (format!("~/{name}"), file)
+            })
+            .collect();
+
+        let file = build_artifact_bundle(&context, &source_files, None).unwrap();
+
+        let buf = std::fs::read(file.path()).unwrap();
+        let hash = Sha1::from(buf);
+        assert_eq!(
+            hash.digest().to_string(),
+            "3f1ae634a707ec4bc01cf227589e24e4deac4a19"
+        );
+    }
 }

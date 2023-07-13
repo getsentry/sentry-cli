@@ -110,7 +110,7 @@ impl ReleaseFileSearch {
 
     pub fn collect_files(&self) -> Result<Vec<ReleaseFileMatch>> {
         let progress_style = ProgressStyle::default_spinner().template(
-            "{spinner} Searching for release files...\
+            "{spinner} Searching for files...\
         \n  found {prefix:.yellow} {msg:.dim}",
         );
 
@@ -131,7 +131,7 @@ impl ReleaseFileSearch {
             let mut types_builder = TypesBuilder::new();
             for ext in &self.extensions {
                 let ext_name = ext.replace('.', "__");
-                types_builder.add(&ext_name, &format!("*.{}", ext))?;
+                types_builder.add(&ext_name, &format!("*.{ext}"))?;
             }
             builder.types(types_builder.select("all").build()?);
         }
@@ -186,7 +186,7 @@ impl ReleaseFileSearch {
 
         pb.finish_and_clear();
         println!(
-            "{} Found {} release {}",
+            "{} Found {} {}",
             style(">").dim(),
             style(collected.len()).yellow(),
             match collected.len() {

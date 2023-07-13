@@ -2,7 +2,7 @@ use std::io::Read;
 use std::path::Path;
 
 use anyhow::{bail, format_err, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use sentry::protocol::{Frame, Stacktrace};
 use url::Url;
@@ -35,6 +35,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("force")
                 .long("force")
                 .short('f')
+                .action(ArgAction::SetTrue)
                 .help("Force full validation flow, even when event is already source mapped."),
         )
 }
@@ -43,38 +44,38 @@ fn tip<S>(msg: S)
 where
     S: std::fmt::Display,
 {
-    println!("{}", style(format!("ℹ {}", msg)).blue());
+    println!("{}", style(format!("ℹ {msg}")).blue());
 }
 
 fn success<S>(msg: S)
 where
     S: std::fmt::Display,
 {
-    println!("{}", style(format!("✔ {}", msg)).green());
+    println!("{}", style(format!("✔ {msg}")).green());
 }
 
 fn warning<S>(msg: S)
 where
     S: std::fmt::Display,
 {
-    println!("{}", style(format!("⚠ {}", msg)).yellow());
+    println!("{}", style(format!("⚠ {msg}")).yellow());
 }
 
 fn error<S>(msg: S)
 where
     S: std::fmt::Display,
 {
-    println!("{}", style(format!("✖ {}", msg)).red());
+    println!("{}", style(format!("✖ {msg}")).red());
 }
 
 fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEvent> {
     match Api::current().get_event(org, Some(project), event_id)? {
         Some(event) => {
-            success(format!("Fetched data for event: {}", event_id));
+            success(format!("Fetched data for event: {event_id}"));
             Ok(event)
         }
         None => {
-            error(format!("Could not retrieve event {}", event_id));
+            error(format!("Could not retrieve event {event_id}"));
             tip("Make sure that event ID you used is valid.");
             Err(QuietExit(1).into())
         }
@@ -139,7 +140,7 @@ fn find_matching_artifact(artifacts: &[Artifact], path: &str) -> Result<Artifact
         .find(|a| a.name.ends_with(path.split('/').last().unwrap()));
 
     if full_match.is_none() {
-        error(format!("Uploaded artifacts do not include entry: {}", path));
+        error(format!("Uploaded artifacts do not include entry: {path}"));
 
         if let Some(pm) = partial_match {
             tip(format!(
@@ -152,7 +153,7 @@ fn find_matching_artifact(artifacts: &[Artifact], path: &str) -> Result<Artifact
         return Err(QuietExit(1).into());
     }
 
-    success(format!("Artifact {} found.", path));
+    success(format!("Artifact {path} found."));
     Ok(full_match.cloned().unwrap())
 }
 
@@ -294,7 +295,7 @@ fn print_mapped_frame(frame: &Frame) {
             frame
                 .pre_context
                 .iter()
-                .map(|l| format!("  {}", l))
+                .map(|l| format!("  {l}"))
                 .collect::<Vec<String>>()
                 .join("\n")
         )
@@ -310,7 +311,7 @@ fn print_mapped_frame(frame: &Frame) {
             frame
                 .post_context
                 .iter()
-                .map(|l| format!("  {}", l))
+                .map(|l| format!("  {l}"))
                 .collect::<Vec<String>>()
                 .join("\n")
         )
@@ -320,7 +321,7 @@ fn print_mapped_frame(frame: &Frame) {
 
 fn extract_release(event: &ProcessedEvent) -> Result<String> {
     if let Some(release) = event.release.as_ref() {
-        success(format!("Event has release name: {}", release));
+        success(format!("Event has release name: {release}"));
         Ok(release.to_string())
     } else {
         error("Event is missing a release name");
@@ -362,7 +363,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let event_id = matches.value_of("event").unwrap();
+    let event_id = matches.get_one::<String>("event").unwrap();
 
     let event = fetch_event(&org, &project, event_id)?;
     let release = extract_release(&event)?;
@@ -387,7 +388,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         })?;
 
     if exception.raw_stacktrace.is_some() {
-        if matches.is_present("force") {
+        if matches.get_flag("force") {
             warning(
                 "Exception is already source mapped, however 'force' flag was used. Moving along.",
             );

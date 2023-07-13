@@ -1,11 +1,13 @@
 use std::collections::HashSet;
 use std::env;
 use std::ffi::OsStr;
+use std::fmt::Debug;
 use std::io;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use if_chain::if_chain;
 use proguard::ProguardMapping;
@@ -14,7 +16,6 @@ use symbolic::common::{ByteView, DebugId};
 use uuid::{Uuid, Version as UuidVersion};
 use walkdir::{DirEntry, WalkDir};
 
-use crate::utils::args::validate_id;
 use crate::utils::dif::{DifFile, DifType};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
@@ -38,24 +39,17 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("ids")
                 .value_name("ID")
                 .help("The debug identifiers of the files to search for.")
-                .validator(validate_id)
-                .multiple_occurrences(true),
+                .value_parser(DebugId::from_str)
+                .num_args(1..)
+                .action(ArgAction::Append),
         )
         .arg(
             Arg::new("types")
                 .long("type")
                 .short('t')
                 .value_name("TYPE")
-                .multiple_occurrences(true)
-                .possible_values(&[
-                    "dsym",
-                    "elf",
-                    "pe",
-                    "pdb",
-                    "proguard",
-                    "breakpad",
-                    "sourcebundle",
-                ])
+                .action(ArgAction::Append)
+                .value_parser(PossibleValuesParser::new(DifType::all_names()))
                 .help(
                     "Only consider debug information files of the given \
                      type.  By default all types are considered.",
@@ -64,11 +58,13 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_well_known")
                 .long("no-well-known")
+                .action(ArgAction::SetTrue)
                 .help("Do not look for debug symbols in well known locations."),
         )
         .arg(
             Arg::new("no_cwd")
                 .long("no-cwd")
+                .action(ArgAction::SetTrue)
                 .help("Do not look for debug symbols in the current working directory."),
         )
         .arg(
@@ -76,12 +72,13 @@ pub fn make_command(command: Command) -> Command {
                 .long("path")
                 .short('p')
                 .value_name("PATH")
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Add a path to search recursively for debug info files."),
         )
         .arg(
             Arg::new("json")
                 .long("json")
+                .action(ArgAction::SetTrue)
                 .help("Format outputs as JSON."),
         )
 }
@@ -148,9 +145,11 @@ fn find_ids(
                 DifType::Elf => find_ids_for_elf(&dirent, &remaining),
                 DifType::Pe => find_ids_for_pe(&dirent, &remaining),
                 DifType::Pdb => find_ids_for_pdb(&dirent, &remaining),
+                DifType::PortablePdb => find_ids_for_portablepdb(&dirent, &remaining),
                 DifType::SourceBundle => find_ids_for_sourcebundle(&dirent, &remaining),
                 DifType::Breakpad => find_ids_for_breakpad(&dirent, &remaining),
                 DifType::Proguard => find_ids_for_proguard(&dirent, &proguard_uuids),
+                DifType::Jvm => find_ids_for_sourcebundle(&dirent, &remaining),
                 DifType::Wasm => None,
             })
             .flatten()
@@ -273,6 +272,20 @@ fn find_ids_for_pdb(
     None
 }
 
+fn find_ids_for_portablepdb(
+    dirent: &DirEntry,
+    remaining: &HashSet<DebugId>,
+) -> Option<Vec<(DebugId, DifType)>> {
+    if_chain! {
+        if dirent.path().extension() == Some(OsStr::new("pdb"));
+        if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::PortablePdb));
+        then {
+            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::PortablePdb))
+        }
+    }
+    None
+}
+
 fn find_ids_for_sourcebundle(
     dirent: &DirEntry,
     remaining: &HashSet<DebugId>,
@@ -322,21 +335,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut ids = HashSet::new();
 
     // which types should we consider?
-    if let Some(t) = matches.values_of("types") {
+    if let Some(t) = matches.get_many::<String>("types") {
         for ty in t {
             types.insert(ty.parse().unwrap());
         }
     } else {
-        types.insert(DifType::Dsym);
-        types.insert(DifType::Pdb);
-        types.insert(DifType::Pe);
-        types.insert(DifType::Proguard);
-        types.insert(DifType::SourceBundle);
-        types.insert(DifType::Breakpad);
+        types.extend(DifType::all());
     }
 
-    let with_well_known = !matches.is_present("no_well_known");
-    let with_cwd = !matches.is_present("no_cwd");
+    let with_well_known = !matches.get_flag("no_well_known");
+    let with_cwd = !matches.get_flag("no_cwd");
 
     // start adding well known locations
     if_chain! {
@@ -359,22 +367,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // extra paths
-    if let Some(p) = matches.values_of("paths") {
+    if let Some(p) = matches.get_many::<String>("paths") {
         for path in p {
             paths.insert(PathBuf::from(path));
         }
     }
 
     // which ids are we looking for?
-    if let Some(i) = matches.values_of("ids") {
+    if let Some(i) = matches.get_many::<DebugId>("ids") {
         for id in i {
-            ids.insert(id.parse().unwrap());
+            ids.insert(*id);
         }
     } else {
         return Ok(());
     }
 
-    if !find_ids(&paths, &types, &ids, matches.is_present("json"))? {
+    if !find_ids(&paths, &types, &ids, matches.get_flag("json"))? {
         return Err(QuietExit(1).into());
     }
 

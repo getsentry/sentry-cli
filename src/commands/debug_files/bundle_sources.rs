@@ -2,7 +2,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 
@@ -15,7 +15,8 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .required(true)
-                .multiple_occurrences(true)
+                .num_args(1..)
+                .action(ArgAction::Append)
                 .help("The path to the input debug info files."),
         )
         .arg(
@@ -67,9 +68,9 @@ fn get_canonical_path<P: AsRef<Path>>(path: P) -> Result<PathBuf> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let output_path = matches.value_of("output").map(Path::new);
+    let output_path = matches.get_one::<String>("output").map(Path::new);
 
-    for orig_path in matches.values_of("paths").unwrap() {
+    for orig_path in matches.get_many::<String>("paths").unwrap() {
         let canonical_path = get_canonical_path(orig_path)?;
 
         let archive = match DifFile::open_path(&canonical_path, None)? {
@@ -86,15 +87,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         for (index, object) in archive.get().objects().enumerate() {
             let object = object?;
-            if object.has_sources() {
-                eprintln!("skipped {} (no source info)", orig_path);
-                continue;
-            }
 
             let mut out = output_path.unwrap_or(parent_path).join(filename);
             match index {
                 0 => out.set_extension("src.zip"),
-                index => out.set_extension(&format!("{}.src.zip", index)),
+                index => out.set_extension(&format!("{index}.src.zip")),
             };
 
             fs::create_dir_all(out.parent().unwrap())?;
@@ -110,7 +107,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             )?;
 
             if !written {
-                eprintln!("skipped {} (no files found)", orig_path);
+                eprintln!("skipped {orig_path} (no files found)");
                 fs::remove_file(&out)?;
                 continue;
             } else {

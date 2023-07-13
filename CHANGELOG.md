@@ -2,6 +2,247 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- feat: The server URL and org slug can now be extracted from Org Auth Tokens (#1673)
+
+## 2.19.4
+
+### Various fixes and improvements
+
+- feat: Don't upload chunks that are already on the server (fixed version) (#1660)
+
+## 2.19.3
+
+### Various fixes and improvements
+
+- Revert "feat: Don't upload chunks that are already on the server (#1651)"
+
+## 2.19.2
+
+### Various fixes and improvements
+
+- fix: Make artifact bundle creation deterministic (#1652) 
+- feat: Don't upload chunks that are already on the server (#1651)
+
+## 2.19.1
+
+### Various fixes & improvements
+
+- fix(inject): Add semicolon at the end of inject snippet (#1643) by @kamilogorek
+
+## 2.19.0
+
+### Various fixes & improvements
+
+- ref(debug-files): Use temp file handle instead of keeping zips in memory (#1641) by @kamilogorek
+- feat(crons): Bring back legacy token-auth checkin API (#1634) by @evanpurkhiser
+- ref: Unhide sourcemaps inject command as its already GA (#1631) by @kamilogorek
+- ref: Match case-insensitive value when finding repo by name (#1629) by @maxnowack
+- ref(inject): Inject code snippet at the start (#1567) by @loewenheim
+- feat(crons): Replace API checkins w/ send_envelope (#1618) by @evanpurkhiser
+
+## 2.18.1
+
+### Various fixes & improvements
+
+- ref(types): Add dedupe to available TS types (#1619) by @kamilogorek
+- ref(debug-files): Polish after-upload message output (#1620) by @kamilogorek
+
+## 2.18.0
+
+### Various fixes & improvements
+
+- ci: Use macos-latest to run build workflow (#1617) by @kamilogorek
+- Update `sentry` SDK to fix sending raw envelopes (#1616) by @Swatinem
+- misc: Add custom issues templates (#1613) by @kamilogorek
+- ref: Remove proguard from debug-files upload types (#1615) by @kamilogorek
+- ref(inject): Constrain file search by extensions (#1608) by @loewenheim
+- feat(crons): Allow specifying checkin environment (#1599) by @evanpurkhiser
+- chore(crons): Make monitors command visible (#1600) by @evanpurkhiser
+
+## 2.17.5
+
+### Various fixes & improvements
+
+- feat: Print bundle id after artifact bundle creation (#1593) by @loewenheim
+- ref: Use 'embedded sourcemap' label for upload log (#1595) by @kamilogorek
+
+## 2.17.4
+
+### Various fixes & improvements
+
+- Add ability to send an Event as Raw Envelope (#1582) by @Swatinem
+
+## 2.17.3
+
+### Various fixes & improvements
+
+- feat(js): Skip null as option same as undefined (#1579) by @mitsuhiko
+- Add command `sentry-cli debug-files bundle-jvm` for bundling Java (and other JVM based languages) sources (#1551) by @adinauer
+
+## 2.17.2
+
+### Various fixes & improvements
+
+- feat(debug_id): More determinism for JS debug IDs (#1577) by @mitsuhiko
+- fix: inject only injects into js files (#1571) by @mitsuhiko
+- feat: Add deterministic debug IDs for minified JS files (#1570) by @mitsuhiko
+
+## 2.17.1
+
+### Various fixes & improvements
+
+- fix(build) Hotfix allowing extra binaries during wheel build (#1575) by @ashwoods
+- fix(inject): Don't inject non-js files (#1572) by @loewenheim
+
+## 2.17.0
+
+### Various fixes & improvements
+
+- feat(bash-hook): Add ability to specify tags for bash hook script (#1560)
+- feat(sourcemaps): Add `--use-artifact-bundle` flag to force Artifact Bundles usage (#1557) (#1559)
+- ref(sourcemaps): Check for release or debug ids before upload (#1561)
+- ref(sourcemaps): Skip empty bundle uploads (#1552)
+- ref(inject): Inject files with embedded sourcemaps (#1558)
+- ref(inject): Inject regardless of whether a sourcemap is present (#1563)
+- fix(inject): Use `File::create` to make sure files are truncated (#1562)
+
+## 2.16.1
+
+### Various fixes & improvements
+
+- fix: Attach checkin payload to monitor requests (#1550) by @kamilogorek
+- Use a deterministic bundle ID (#1546) by @mitsuhiko
+
+## 2.16.0
+
+### Various fixes & improvements
+
+- ref(crons): Prefer DSN based auth (#1545) by @kamilogorek
+- fix(inject): Improve fixup_js_file (#1533) by @loewenheim
+- feat(inject): Handle relative and absoule sourcemap URLs (#1530) by @loewenheim
+- ref(monitors): Prefer slugs over guids (#1540) by @evanpurkhiser
+- feat(auth): Support DSN auth for the API client (#1536) by @evanpurkhiser
+- ref(crons): monitors command is not legacy atm (#1538) by @evanpurkhiser
+- fix(help): Consistent wording for API keys (#1539) by @evanpurkhiser
+
+## 2.15.2
+
+### Various fixes and improvements
+ - fix: Make sourcemap injection on upload opt-in (#1534)
+
+## 2.15.1
+
+### Various fixes and improvements
+ - fix: Properly overwrite the sourcemap when injecting (#1525)
+ - ref: Allow multiple paths in `sourcemaps inject` (#1523)
+
+## 2.15.0
+
+### Various fixes & improvements
+
+- feat: Implement new chunk based upload for standalone artifact bundles (#1490)
+- feat: Inject sourcemap debug ids by default when performing `sourcemaps upload` and print injection report (#1513)
+- ref: Use recursive walk instead of globbing when looking for `sourcemaps inject` files (#1504)
+- ref: When injecting sourcemap debug ids, make sure that `sourceMappingURL` comment is always kept at the end of a file (#1511)
+
+## 2.14.4
+
+### Various fixes & improvements
+
+- fix: Include sources referenced but not embedded by an object file (#1486)
+- chore: Reapply clap update to v4 and fix releases subcommands (#1500)
+- deps: Update rust-sourcemap to 6.2.3 (#1502)
+
+## 2.14.3
+
+### Various fixes & improvements
+
+- ref: fix macos wheel tags, add musllinux tags (#1497) by @asottile-sentry
+
+## 2.14.2
+
+- No documented changes.
+
+## 2.14.1
+
+### Various fixes & improvements
+
+- fix: Revert clap-rs v4 update and add regression test for 'releases files upload-sourcemap' (#1496) by @vaind
+
+## 2.14.0
+
+### Various fixes & improvements
+
+- ref: also distribute sentry-cli as a pip package (#1494) by @asottile-sentry
+- ref: Support lower and uppercased env vars for npm cache (#1493) by @kamilogorek
+- feat: Add sourcemaps inject command (#1469) by @loewenheim
+- chore: update clap to v4 (#1489) by @vaind
+- chore: update clap deprecations (#1487) by @vaind
+- deps: Update symbolic to 12.0.0 (#1488) by @loewenheim
+- feat: add new `debug-files print-sources` command (#1476) by @vaind
+
+## 2.13.0
+
+- feat: Added the `--raw` flag to `send-envelope` to allow sending envelopes without parsing or validation. (#1468)
+- feat: extract and upload embedded Portable PDB from PE (#1463)
+- ref(monitors): Drop passing `SENTRY_TRACE_ID` (#1472)
+- ref(monitors): Rename MonitorStatus -> MonitorCheckinStatus (#1471)
+- ref: Deduplicate artifacts upload using queried checksums (#1456)
+- ref: Add better debug message for malformed config files (#1450)
+
+## 2.12.0
+
+### Various fixes & improvements
+
+- feat: Enable portable PDB debug-files upload via Symbolic v11 (#1440)
+- feat: Add support for Cloudflare Pages when detecting a release name (#1419)
+- feat: Pass `SENTRY_TRACE_ID` to executed process in `monitors` (#1441)
+- feat: Pass `SENTRY_MONITOR_ID` to executed process in `monitors` (#1438)
+- fix: Prevent Sentry from attempting to access unbound variables in `bash-hook` (#1415)
+
+## 2.11.0
+
+### Various fixes & improvements
+
+- feat: Report spawn failures for monitors by @mitsuhiko
+- fix: Allow for path based sourcemaps in validation report @kamilogorek
+
+## 2.10.0
+
+### Various fixes & improvements
+
+- feat: Add `--decompress` option to JS types (#1402) by @FSchieber
+- fix: Always expand Plist vars during XCode upload (#1403) by @krystofwoldrich
+
+## 2.9.0
+
+### Various fixes & improvements
+
+- feat: Replace `npmlog` dependency and restore support for Node v10 (#1392) by @mydea
+- fix: Handle closed connection when fetching `sentry-cli` binary via JS script (#1389) by @kamilogorek
+- fix: Re-add `server_name` in events via `contexts` sentry-rust feature (#1383) by @bengentil
+- ref: Add length limit validation to `org` arguments (#1386) by @olksdr
+
+## 2.8.1
+
+### Various fixes & improvements
+
+- fix: Replace usage of eval to obfuscate binary path from bundlers (#1374) by @timfish
+
+## 2.8.0
+
+### Various fixes & improvements
+
+- fix: Use forward slash for Windows binary location path (#1369) by @timfish
+- fix: Add + to reserved query characters in url encoding (#1365) by @kamilogorek
+- feat: Add `headers` option to the JavaScript API (#1355) by @thibmeu
+- fix: Add % and / to reserved path characters in url encoding (#1364) by @kamilogorek
+- feat: Add support for Portable PDB debug files (#1345) by @Swatinem
+
 ## 2.7.0
 
 ### Various fixes & improvements

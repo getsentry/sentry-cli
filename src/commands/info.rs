@@ -1,7 +1,7 @@
 use std::io;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use serde::Serialize;
 
 use crate::api::Api;
@@ -36,17 +36,23 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("config_status_json")
                 .long("config-status-json")
+                .action(ArgAction::SetTrue)
                 .help(
                     "Return the status of the config that sentry-cli loads \
                      as JSON dump. This can be used by external tools to aid \
                      the user towards configuration.",
                 ),
         )
-        .arg(Arg::new("no_defaults").long("no-defaults").help(
-            "Skip default organization and project checks. \
-             This allows you to verify your authentication method, \
-             without the need for setting other defaults.",
-        ))
+        .arg(
+            Arg::new("no_defaults")
+                .long("no-defaults")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Skip default organization and project checks. \
+                    This allows you to verify your authentication method, \
+                    without the need for setting other defaults.",
+                ),
+        )
 }
 
 fn describe_auth(auth: Option<&Auth>) -> &str {
@@ -79,7 +85,7 @@ fn get_config_status_json() -> Result<()> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    if matches.is_present("config_status_json") {
+    if matches.get_flag("config_status_json") {
         return get_config_status_json();
     }
 
@@ -91,7 +97,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut errors = config.get_auth().is_none() || info_rv.is_err();
 
     // If `no-defaults` is present, only authentication should be verified.
-    if !matches.is_present("no_defaults") {
+    if !matches.get_flag("no_defaults") {
         errors = errors || project.is_none() || org.is_none();
     }
 
@@ -105,7 +111,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     println!("Sentry Server: {}", config.get_base_url().unwrap_or("-"));
 
-    if !matches.is_present("no_defaults") {
+    if !matches.get_flag("no_defaults") {
         println!(
             "Default Organization: {}",
             org.unwrap_or_else(|| "-".into())
@@ -124,12 +130,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             if let Some(ref auth) = info.auth {
                 println!("  Scopes:");
                 for scope in &auth.scopes {
-                    println!("    - {}", scope);
+                    println!("    - {scope}");
                 }
             }
         }
         Err(err) => {
-            println!("  (failure on authentication: {})", err);
+            println!("  (failure on authentication: {err})");
         }
     }
 

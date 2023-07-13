@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -9,15 +9,17 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("List all events in your organization.")
         .arg(
-            Arg::with_name("show_user")
+            Arg::new("show_user")
                 .long("show-user")
                 .short('U')
+                .action(ArgAction::SetTrue)
                 .help("Display the Users column."),
         )
         .arg(
-            Arg::with_name("show_tags")
+            Arg::new("show_tags")
                 .long("show-tags")
                 .short('T')
+                .action(ArgAction::SetTrue)
                 .help("Display the Tags column."),
         )
         .arg(
@@ -49,11 +51,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut table = Table::new();
     let title_row = table.title_row().add("Event ID").add("Date").add("Title");
 
-    if matches.is_present("show_user") {
+    if matches.get_flag("show_user") {
         title_row.add("User");
     }
 
-    if matches.is_present("show_tags") {
+    if matches.get_flag("show_tags") {
         title_row.add("Tags");
     }
 
@@ -65,11 +67,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if let Some(events) = events.get(..max_rows) {
         for event in events {
             let row = table.add_row();
-            row.add(&event.event_id)
+            row.add(event.event_id)
                 .add(&event.date_created)
                 .add(&event.title);
 
-            if matches.is_present("show_user") {
+            if matches.get_flag("show_user") {
                 if let Some(user) = &event.user {
                     row.add(user);
                 } else {
@@ -77,7 +79,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 }
             }
 
-            if matches.is_present("show_tags") {
+            if matches.get_flag("show_tags") {
                 if let Some(tags) = &event.tags {
                     row.add(
                         tags.iter()

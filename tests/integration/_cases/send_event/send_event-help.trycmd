@@ -1,89 +1,89 @@
 ```
 $ sentry-cli send-event --help
 ? success
-sentry-cli[EXE]-send-event 
-Send a manual event to Sentry.{n}{n}This command will validate input parameters and attempt to send
-an event to Sentry. Due to network errors, rate limits or sampling the event is not guaranteed to
-actually arrive. Check debug output for transmission errors by passing --log-level=debug or setting
-`SENTRY_LOG_LEVEL=debug`.
+Send a manual event to Sentry.
 
-USAGE:
-    sentry-cli[EXE] send-event [OPTIONS] [PATH]
+This command will validate input parameters and attempt to send an event to Sentry. Due to network
+errors, rate limits or sampling the event is not guaranteed to actually arrive. Check debug output
+for transmission errors by passing --log-level=debug or setting `SENTRY_LOG_LEVEL=debug`.
 
-ARGS:
-    <PATH>
-            The path or glob to the file(s) in JSON format to send as event(s). When provided, all
-            other arguments are ignored.
+Usage: sentry-cli[EXE] send-event [OPTIONS] [PATH]
 
-OPTIONS:
-    -a, --message-arg <MESSAGE_ARG>
-            Arguments for the event message.
+Arguments:
+  [PATH]
+          The path or glob to the file(s) in JSON format to send as event(s). When provided, all
+          other arguments are ignored.
 
-        --auth-token <AUTH_TOKEN>
-            Use the given Sentry auth token.
+Options:
+      --raw
+          Send events using an envelope without attempting to parse their contents.
 
-    -d, --dist <DISTRIBUTION>
-            Set the distribution.
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
 
-    -e, --extra <KEY:VALUE>
-            Add extra information (key:value) to the event.
+  -l, --level <LEVEL>
+          Optional event severity/log level. (debug|info|warning|error|fatal) [defaults to 'error']
 
-    -E, --env <ENVIRONMENT>
-            Send with a specific environment.
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
 
-    -f, --fingerprint <FINGERPRINT>
-            Change the fingerprint of the event.
+      --timestamp <TIMESTAMP>
+          Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or RFC3339.
 
-    -h, --help
-            Print help information
+  -r, --release <RELEASE>
+          Optional identifier of the release.
 
-        --header <KEY:VALUE>
-            Custom headers that should be attached to all requests
-            in key:value format.
+  -d, --dist <DISTRIBUTION>
+          Set the distribution.
 
-    -l, --level <LEVEL>
-            Optional event severity/log level. (debug|info|warning|error|fatal) [defaults to
-            'error']
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity.
+          
+          [possible values: trace, debug, info, warn, error]
 
-        --log-level <LOG_LEVEL>
-            Set the log output verbosity.
-            
-            [possible values: trace, debug, info, warn, error]
+  -E, --env <ENVIRONMENT>
+          Send with a specific environment.
 
-        --logfile <PATH>
-            Send a logfile as breadcrumbs with the event (last 100 records)
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: silent]
 
-    -m, --message <MESSAGE>
-            The event message.
+      --no-environ
+          Do not send environment variables along
 
-        --no-environ
-            Do not send environment variables along
+  -m, --message <MESSAGE>
+          The event message.
 
-    -p, --platform <PLATFORM>
-            Override the default 'other' platform specifier.
+  -a, --message-arg <MESSAGE_ARG>
+          Arguments for the event message.
 
-        --quiet
-            Do not print any output while preserving correct exit code. This flag is currently
-            implemented only for selected subcommands.
-            
-            [aliases: silent]
+  -p, --platform <PLATFORM>
+          Override the default 'other' platform specifier.
 
-    -r, --release <RELEASE>
-            Optional identifier of the release.
+  -t, --tag <KEY:VALUE>
+          Add a tag (key:value) to the event.
 
-    -t, --tag <KEY:VALUE>
-            Add a tag (key:value) to the event.
+  -e, --extra <KEY:VALUE>
+          Add extra information (key:value) to the event.
 
-        --timestamp <TIMESTAMP>
-            Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or
-            RFC3339.
+  -u, --user <KEY:VALUE>
+          Add user information (key:value) to the event. [eg: id:42, username:foo]
 
-    -u, --user <KEY:VALUE>
-            Add user information (key:value) to the event. [eg: id:42, username:foo]
+  -f, --fingerprint <FINGERPRINT>
+          Change the fingerprint of the event.
 
-        --with-categories
-            When logfile is provided, this flag will try to assign correct level to extracted log
-            breadcrumbs. It uses standard log format of "category: message". eg. "INFO: Something
-            broke" will be parsed as a breadcrumb "{"level": "info", "message": "Something broke"}"
+      --logfile <PATH>
+          Send a logfile as breadcrumbs with the event (last 100 records)
+
+      --with-categories
+          When logfile is provided, this flag will try to assign correct level to extracted log
+          breadcrumbs. It uses standard log format of "category: message". eg. "INFO: Something
+          broke" will be parsed as a breadcrumb "{"level": "info", "message": "Something broke"}"
+
+  -h, --help
+          Print help (see a summary with '-h')
 
 ```

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use chrono::Utc;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::api::{Api, NewRelease};
 use crate::config::Config;
@@ -10,7 +10,7 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Create a new release.")
         .allow_hyphen_values(true)
-        .version_arg()
+        .version_arg(false)
         .arg(
             Arg::new("url")
                 .long("url")
@@ -20,6 +20,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("finalize")
                 .long("finalize")
+                .action(ArgAction::SetTrue)
                 .help("Immediately finalize the release. (sets it to released)"),
         )
         // Legacy flag that has no effect, left hidden for backward compatibility
@@ -29,16 +30,16 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
-    let version = matches.value_of("version").unwrap();
+    let version = matches.get_one::<String>("version").unwrap();
 
     api.new_release(
         &config.get_org(matches)?,
         &NewRelease {
             version: version.to_owned(),
             projects: config.get_projects(matches)?,
-            url: matches.value_of("url").map(str::to_owned),
+            url: matches.get_one::<String>("url").cloned(),
             date_started: Some(Utc::now()),
-            date_released: if matches.is_present("finalize") {
+            date_released: if matches.get_flag("finalize") {
                 Some(Utc::now())
             } else {
                 None
@@ -46,6 +47,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         },
     )?;
 
-    println!("Created release {}", version);
+    println!("Created release {version}");
     Ok(())
 }

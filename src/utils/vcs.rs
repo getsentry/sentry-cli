@@ -20,8 +20,8 @@ pub enum GitReference<'a> {
 impl<'a> fmt::Display for GitReference<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            GitReference::Commit(ref c) => write!(f, "{}", c),
-            GitReference::Symbolic(ref s) => write!(f, "{}", s),
+            GitReference::Commit(ref c) => write!(f, "{c}"),
+            GitReference::Symbolic(ref s) => write!(f, "{s}"),
         }
     }
 }
@@ -478,8 +478,7 @@ pub fn get_commits_from_git<'a>(
                 // Create a new release with default count if `--ignore-missing` is present
                 if ignore_missing {
                     println!(
-                        "Could not find the SHA of the previous release in the git history. Skipping previous release and creating a new one with {} commits.",
-                        default_count
+                        "Could not find the SHA of the previous release in the git history. Skipping previous release and creating a new one with {default_count} commits."
                     );
                     return get_default_commits_from_git(repo, default_count);
                 // Or throw an error and point to the right solution otherwise.
@@ -497,8 +496,7 @@ pub fn get_commits_from_git<'a>(
         Err(_) => {
             // If there is no previous commit, return the default number of commits
             println!(
-                "Could not find the previous commit. Creating a release with {} commits.",
-                default_count
+                "Could not find the previous commit. Creating a release with {default_count} commits."
             );
             get_default_commits_from_git(repo, default_count)
         }
@@ -571,7 +569,11 @@ pub fn generate_patch_set(
 }
 
 pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
-    FixedOffset::east(time.offset_minutes() * 60).timestamp(time.seconds(), 0)
+    FixedOffset::east_opt(time.offset_minutes() * 60)
+        .unwrap()
+        .timestamp_opt(time.seconds(), 0)
+        .single()
+        .unwrap()
 }
 
 #[cfg(test)]
@@ -854,7 +856,7 @@ fn test_url_normalization() {
 #[cfg(test)]
 fn git_initialize_repo(dir: &Path) {
     Command::new("git")
-        .args(&["init", "--quiet"])
+        .args(["init", "--quiet"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git init`.")
@@ -862,7 +864,7 @@ fn git_initialize_repo(dir: &Path) {
         .expect("Failed to wait on git init.");
 
     Command::new("git")
-        .args(&["config", "--local", "user.name", "test"])
+        .args(["config", "--local", "user.name", "test"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git config`.")
@@ -870,7 +872,7 @@ fn git_initialize_repo(dir: &Path) {
         .expect("Failed to wait on git config.");
 
     Command::new("git")
-        .args(&["config", "--local", "user.email", "test@example.com"])
+        .args(["config", "--local", "user.email", "test@example.com"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git config`.")
@@ -878,7 +880,7 @@ fn git_initialize_repo(dir: &Path) {
         .expect("Failed to wait on git config.");
 
     Command::new("git")
-        .args(&[
+        .args([
             "remote",
             "add",
             "origin",
@@ -898,7 +900,7 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
     file.write_all(content).expect("Failed to execute.");
 
     let mut add = Command::new("git")
-        .args(&["add", "-A"])
+        .args(["add", "-A"])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git add .`");
@@ -906,7 +908,7 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
     add.wait().expect("Failed to wait on git add.");
 
     let mut commit = Command::new("git")
-        .args(&[
+        .args([
             "commit",
             "-am",
             commit_message,
@@ -935,15 +937,15 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
         .args(tag_cmd)
         .current_dir(dir)
         .spawn()
-        .unwrap_or_else(|_| panic!("Failed to execute `git tag {}`", tag_name));
+        .unwrap_or_else(|_| panic!("Failed to execute `git tag {tag_name}`"));
 
     tag.wait().expect("Failed to wait on git tag.");
 
     let hash = Command::new("git")
-        .args(&["rev-list", "-n", "1", tag_name])
+        .args(["rev-list", "-n", "1", tag_name])
         .current_dir(dir)
         .output()
-        .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {}`.", tag_name));
+        .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {tag_name}`."));
 
     String::from_utf8(hash.stdout)
         .map(|s| s.trim().to_string())
@@ -1088,7 +1090,7 @@ fn test_generate_patch_default_twenty() {
     );
 
     for n in 0..20 {
-        let file = format!("foo{}.js", n);
+        let file = format!("foo{n}.js");
         git_create_commit(
             dir.path(),
             &file,
@@ -1128,7 +1130,7 @@ fn test_generate_patch_ignore_missing() {
     );
 
     for n in 0..5 {
-        let file = format!("foo{}.js", n);
+        let file = format!("foo{n}.js");
         git_create_commit(
             dir.path(),
             &file,

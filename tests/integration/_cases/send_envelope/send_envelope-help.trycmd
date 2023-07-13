@@ -1,39 +1,41 @@
 ```
 $ sentry-cli send-envelope --help
 ? success
-sentry-cli[EXE]-send-envelope 
-Send a stored envelope to Sentry.{n}{n}This command will validate and attempt to send an envelope to
-Sentry. Due to network errors, rate limits or sampling the envelope is not guaranteed to actually
-arrive. Check debug output for transmission errors by passing --log-level=debug or setting
-`SENTRY_LOG_LEVEL=debug`.
+Send a stored envelope to Sentry.
 
-USAGE:
-    sentry-cli[EXE] send-envelope [OPTIONS] <PATH>
+This command will validate and attempt to send an envelope to Sentry. Due to network errors, rate
+limits or sampling the envelope is not guaranteed to actually arrive. Check debug output for
+transmission errors by passing --log-level=debug or setting `SENTRY_LOG_LEVEL=debug`.
 
-ARGS:
-    <PATH>
-            The path or glob to the file(s) in envelope format to send as envelope(s).
+Usage: sentry-cli[EXE] send-envelope [OPTIONS] <PATH>
 
-OPTIONS:
-        --auth-token <AUTH_TOKEN>
-            Use the given Sentry auth token.
+Arguments:
+  <PATH>
+          The path or glob to the file(s) in envelope format to send as envelope(s).
 
-    -h, --help
-            Print help information
+Options:
+      --raw
+          Send envelopes without attempting to parse their contents.
 
-        --header <KEY:VALUE>
-            Custom headers that should be attached to all requests
-            in key:value format.
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
 
-        --log-level <LOG_LEVEL>
-            Set the log output verbosity.
-            
-            [possible values: trace, debug, info, warn, error]
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
 
-        --quiet
-            Do not print any output while preserving correct exit code. This flag is currently
-            implemented only for selected subcommands.
-            
-            [aliases: silent]
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity.
+          
+          [possible values: trace, debug, info, warn, error]
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: silent]
+
+  -h, --help
+          Print help (see a summary with '-h')
 
 ```

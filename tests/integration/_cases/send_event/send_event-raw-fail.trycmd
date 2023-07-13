@@ -1,0 +1,21 @@
+```
+$ sentry-cli send-event --log-level=debug
+> --level debug
+> --timestamp 1649335000929
+> --release my-release
+> --dist 11111111111111111111111111111111111111111111111111111111111111111
+> --env production
+> --message hello
+> --platform prod
+> --tag "hello:there"
+> --extra "hello:there"
+> --user "id:42"
+> --fingerprint custom-fingerprint
+> --no-environ
+? 2
+error: invalid value '11111111111111111111111111111111111111111111111111111111111111111' for '--dist <DISTRIBUTION>': Invalid distribution name. Distribution name must not be longer than 64 characters.
+
+For more information, try '--help'.
+
+```
+

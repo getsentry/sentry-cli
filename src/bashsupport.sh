@@ -21,10 +21,10 @@ _sentry_exit_trap() {
 _sentry_err_trap() {
   local _exit_code="$?"
   local _command="${BASH_COMMAND:-unknown}"
-  if [ "x$1" != x ]; then
+  if [ $# -ge 1 ] && [ "x$1" != x ]; then
     _command="$1"
   fi
-  if [ "x$2" != x ]; then
+  if [ $# -ge 2 ] && [ "x$2" != x ]; then
     _exit_code="$2"
   fi
   _sentry_traceback 1
@@ -32,7 +32,7 @@ _sentry_err_trap() {
   echo "@exit_code:${_exit_code}" >> "$_SENTRY_TRACEBACK_FILE"
 
   : >> "$_SENTRY_LOG_FILE"
-  export SENTRY_LAST_EVENT=$(___SENTRY_CLI___ bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --log "$_SENTRY_LOG_FILE" ___SENTRY_NO_ENVIRON___)
+  export SENTRY_LAST_EVENT=$(___SENTRY_CLI___ bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" ___SENTRY_TAGS___ --log "$_SENTRY_LOG_FILE" ___SENTRY_NO_ENVIRON___)
   rm -f "$_SENTRY_TRACEBACK_FILE" "$_SENTRY_LOG_FILE"
 }
 

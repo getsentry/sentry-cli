@@ -2,7 +2,7 @@ use std::env;
 use std::fs;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 
 use crate::utils::fs::is_writable;
@@ -13,6 +13,7 @@ pub fn make_command(command: Command) -> Command {
     let command = command.about("Uninstall the sentry-cli executable.").arg(
         Arg::new("confirm")
             .long("confirm")
+            .action(ArgAction::SetTrue)
             .help("Skip uninstall confirmation prompt."),
     );
 
@@ -58,7 +59,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    if !matches.is_present("confirm")
+    if !matches.get_flag("confirm")
         && !prompt_to_continue("Do you really want to uninstall sentry-cli?")?
     {
         println!("Aborted!");
@@ -67,7 +68,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     if !is_writable(&exe) {
         println!("Need to sudo to uninstall {}", exe.display());
-        runas::Command::new("rm").arg("-f").arg(&exe).status()?;
+        runas::Command::new("rm").arg("-f").arg(exe).status()?;
     } else {
         fs::remove_file(&exe)?;
     }

@@ -5,9 +5,8 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 
-use anyhow::Result;
-use clap::Command;
-use clap::{Arg, ArgMatches};
+use anyhow::{format_err, Result};
+use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
@@ -31,11 +30,13 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_exit")
                 .long("no-exit")
+                .action(ArgAction::SetTrue)
                 .help("Do not turn on -e (exit immediately) flag automatically"),
         )
         .arg(
             Arg::new("no_environ")
                 .long("no-environ")
+                .action(ArgAction::SetTrue)
                 .help("Do not send environment variables along"),
         )
         .arg(
@@ -47,7 +48,11 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("send_event")
                 .long("send-event")
-                .requires_all(&["traceback", "log"])
+                .action(ArgAction::SetTrue)
+                .requires_ifs([
+                    (ArgPredicate::IsPresent, "traceback"),
+                    (ArgPredicate::IsPresent, "log"),
+                ])
                 .hide(true),
         )
         .arg(
@@ -56,10 +61,17 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .hide(true),
         )
+        .arg(
+            Arg::new("tags")
+                .value_name("KEY:VALUE")
+                .long("tag")
+                .action(ArgAction::Append)
+                .help("Add tags (key:value) to the event."),
+        )
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
+fn send_event(traceback: &str, logfile: &str, tags: &[&String], environ: bool) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
@@ -73,6 +85,15 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
         }),
         ..Event::default()
     };
+
+    for tag in tags {
+        let mut split = tag.splitn(2, ':');
+        let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
+        let value = split
+            .next()
+            .ok_or_else(|| format_err!("missing tag value"))?;
+        event.tags.insert(key.into(), value.into());
+    }
 
     if environ {
         event.extra.insert(
@@ -156,7 +177,7 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
 
     event.exception.values.push(Exception {
         ty: "BashError".into(),
-        value: Some(format!("command {} exited with status {}", cmd, exit_code)),
+        value: Some(format!("command {cmd} exited with status {exit_code}")),
         stacktrace: Some(Stacktrace {
             frames,
             ..Default::default()
@@ -165,23 +186,29 @@ fn send_event(traceback: &str, logfile: &str, environ: bool) -> Result<()> {
     });
 
     let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
-    println!("{}", id);
+    println!("{id}");
 
     Ok(())
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    if matches.is_present("send_event") {
+    let tags = matches
+        .get_many::<String>("tags")
+        .map(|v| v.collect())
+        .unwrap_or_else(Vec::new);
+
+    if matches.get_flag("send_event") {
         return send_event(
-            matches.value_of("traceback").unwrap(),
-            matches.value_of("log").unwrap(),
-            !matches.is_present("no_environ"),
+            matches.get_one::<String>("traceback").unwrap(),
+            matches.get_one::<String>("log").unwrap(),
+            &tags,
+            !matches.get_flag("no_environ"),
         );
     }
 
     let path = env::temp_dir();
-    let log = path.join(&format!(".sentry-{}.out", Uuid::new_v4().as_hyphenated()));
-    let traceback = path.join(&format!(
+    let log = path.join(format!(".sentry-{}.out", Uuid::new_v4().as_hyphenated()));
+    let traceback = path.join(format!(
         ".sentry-{}.traceback",
         Uuid::new_v4().as_hyphenated()
     ));
@@ -192,24 +219,35 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         )
         .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
 
-    if matches.is_present("cli") {
-        script = script.replace("___SENTRY_CLI___", matches.value_of("cli").unwrap());
-    } else {
-        script = script.replace(
-            "___SENTRY_CLI___",
-            &env::current_exe().unwrap().display().to_string(),
-        );
-    }
+    script = script.replace(
+        " ___SENTRY_TAGS___",
+        &tags
+            .iter()
+            .map(|tag| format!(" --tag \"{}\"", tag))
+            .collect::<Vec<_>>()
+            .join(""),
+    );
 
-    if matches.is_present("no_environ") {
+    script = script.replace(
+        "___SENTRY_CLI___",
+        matches
+            .get_one::<String>("cli")
+            .map_or_else(
+                || env::current_exe().unwrap().display().to_string(),
+                String::clone,
+            )
+            .as_str(),
+    );
+
+    if matches.get_flag("no_environ") {
         script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
     } else {
         script = script.replace("___SENTRY_NO_ENVIRON___", "");
     }
 
-    if !matches.is_present("no_exit") {
+    if !matches.get_flag("no_exit") {
         script.insert_str(0, "set -e\n\n");
     }
-    println!("{}", script);
+    println!("{script}");
     Ok(())
 }

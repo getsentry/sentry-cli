@@ -1,21 +1,29 @@
 'use strict';
 
+const path = require('path');
 const childProcess = require('child_process');
+
+/**
+ * This convoluted function resolves the path to the `sentry-cli` binary in a
+ * way that can't be analysed by @vercel/nft.
+ *
+ * Without this, the binary can be detected as an asset and included by bundlers
+ * that use @vercel/nft.
+ * @returns {string} The path to the sentry-cli binary
+ */
+function getBinaryPath() {
+  const parts = [];
+  parts.push(__dirname);
+  parts.push('..');
+  parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
+  return path.resolve(...parts);
+}
 
 /**
  * Absolute path to the sentry-cli binary (platform dependent).
  * @type {string}
  */
-let binaryPath = eval(
-  "require('path').resolve(__dirname, require('os').platform() === 'win32' ? '..\\sentry-cli.exe' : '../sentry-cli')"
-);
-
-/**
- * NOTE: `eval` usage is a workaround for @vercel/nft detecting the binary itself as the hard dependency
- *       and effectively always including it in the bundle, which is not what we want.
- * ref: https://github.com/getsentry/sentry-javascript/issues/3865
- * ref: https://github.com/vercel/nft/issues/203
- */
+let binaryPath = getBinaryPath();
 
 /**
  * Overrides the default binary path with a mock value, useful for testing.
@@ -53,7 +61,7 @@ function mockBinaryPath(mockPath) {
 function serializeOptions(schema, options) {
   return Object.keys(schema).reduce((newOptions, option) => {
     const paramValue = options[option];
-    if (paramValue === undefined) {
+    if (paramValue === undefined || paramValue === null) {
       return newOptions;
     }
 
@@ -164,6 +172,12 @@ async function execute(args, live, silent, configFile, config = {}) {
   }
   if (config.customHeader) {
     env.CUSTOM_HEADER = config.customHeader;
+  } else if (config.headers) {
+    const headers = Object.entries(config.headers).flatMap(([key, value]) => [
+      '--header',
+      `${key}:${value}`,
+    ]);
+    args = [...headers, ...args];
   }
   return new Promise((resolve, reject) => {
     if (live === true) {

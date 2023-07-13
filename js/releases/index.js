@@ -140,13 +140,15 @@ class Releases {
    *   ignoreFile: null,          // path to a file with ignore rules
    *   rewrite: false,            // preprocess sourcemaps before uploading
    *   sourceMapReference: true,  // add a source map reference to source files
+   *   dedupe: true,              // deduplicate already uploaded files
    *   stripPrefix: [],           // remove certain prefices from filenames
    *   stripCommonPrefix: false,  // guess common prefices to remove from filenames
    *   validate: false,           // validate source maps and cancel the upload on error
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
    *   urlSuffix: '',             // add a suffix source map urls after stripping them
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
-   *   projects: ['node']        // provide a list of projects
+   *   projects: ['node'],        // provide a list of projects
+   *   decompress: false          // decompress gzip files before uploading
    * });
    *
    * @param {string} release Unique name of the release.

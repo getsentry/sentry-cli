@@ -1,0 +1,26 @@
+```
+$ sentry-cli debug-files bundle-jvm --help
+? success
+Create a source bundle for the given JVM based source files (e.g. Java, Kotlin, ...)
+
+Usage: sentry-cli[EXE] debug-files bundle-jvm [OPTIONS] --output <PATH> --debug-id <UUID> <PATH>
+
+Arguments:
+  <PATH>  The directory containing source files to bundle.
+
+Options:
+  -o, --org <ORG>                The organization slug
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+  -p, --project <PROJECT>        The project slug.
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+      --output <PATH>            The path to the output folder.
+      --debug-id <UUID>          Debug ID (UUID) to use for the source bundle.
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: silent]
+  -h, --help                     Print help
+
+```

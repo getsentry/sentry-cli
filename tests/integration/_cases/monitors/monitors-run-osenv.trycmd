@@ -1,0 +1,6 @@
+```
+$ sentry-cli monitors run foo-monitor -- sh -c 'env | sort | grep -E "SENTRY_MONITOR_SLUG"'
+? success
+SENTRY_MONITOR_SLUG=foo-monitor
+
+```

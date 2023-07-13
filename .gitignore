@@ -5,6 +5,7 @@ target
 node_modules
 coverage
 dist
+dump
 checksums.txt
 
 /sentry-cli

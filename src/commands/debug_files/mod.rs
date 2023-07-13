@@ -1,16 +1,20 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
+pub mod bundle_jvm;
 pub mod bundle_sources;
 pub mod check;
 pub mod find;
+pub mod print_sources;
 pub mod upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bundle_sources);
         $mac!(check);
+        $mac!(bundle_jvm);
         $mac!(find);
+        $mac!(print_sources);
         $mac!(upload);
     };
 }

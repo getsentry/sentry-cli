@@ -1,0 +1,33 @@
+```
+$ sentry-cli sourcemaps inject ./server ./static
+? success
+> Searching ./server
+> Found 11 files
+> Searching ./static
+> Found 8 files
+> Analyzing 19 sources
+> Injecting debug ids
+
+Source Map Debug ID Injection Report
+  Modified: The following source files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./server/app/page.min.js
+    [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.min.js
+    [..]-[..]-[..]-[..]-[..] - ./server/flight-manifest.js
+    [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.min.js
+    [..]-[..]-[..]-[..]-[..] - ./server/pages/api/hello.min.js
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/575-bb7d7e0e6de8d623.min.js
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/app/client/layout-ba9c3036fc0dba78.js
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/app/head-172ad45600676c06.js
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/pages/asdf-05b39167abbe433b.min.js
+  Modified: The following sourcemap files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.js.map
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/575-bb7d7e0e6de8d623.js.map
+  Ignored: The following source files already have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./server/edge-runtime-webpack.min.js
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/app/client/page-d5742c254d9533f8.min.js
+  Ignored: The following sourcemap files already have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.js.map
+    [..]-[..]-[..]-[..]-[..] - ./static/chunks/pages/asdf-05b39167abbe433b.js.map
+
+
+```

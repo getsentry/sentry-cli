@@ -42,6 +42,14 @@ To verify it’s installed correctly you can bring up the help:
 
     sentry-cli --help
 
+### pip
+
+_New in 2.14.3_: `sentry-cli` can also be installed using `pip`:
+
+```bash
+pip install sentry-cli
+```
+
 ### Node
 
 Additionally you can also install this binary via npm:
@@ -96,6 +104,15 @@ we recommend you to use the `latest` tag. To use it, run:
 docker pull getsentry/sentry-cli
 docker run --rm -v $(pwd):/work getsentry/sentry-cli --help
 ```
+
+Starting version _`2.8.0`_, in case you see `"error: config value 'safe.directory' was not found;"` message,
+you also need to correctly set UID and GID of mounted volumes like so:
+
+```sh
+docker run --rm -u "$(id -u):$(id -g)" -v $(pwd):/work getsentry/sentry-cli --help
+```
+
+This is required due to security issue in older `git` implementations. See [here](https://github.blog/2022-04-12-git-security-vulnerability-announced/) for more details.
 
 ## Compiling
 

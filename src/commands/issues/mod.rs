@@ -1,5 +1,5 @@
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::utils::args::ArgExt;
 
@@ -38,22 +38,23 @@ pub fn make_command(mut command: Command) -> Command {
                 .short('s')
                 .value_name("STATUS")
                 .global(true)
-                .possible_values(&["resolved", "muted", "unresolved"])
+                .value_parser(["resolved", "muted", "unresolved"])
                 .help("Select all issues matching a given status."),
         )
         .arg(
             Arg::new("all")
                 .long("all")
                 .short('a')
+                .action(ArgAction::SetTrue)
                 .global(true)
                 .help("Select all issues (this might be limited)."),
         )
         .arg(
             Arg::new("id")
-                .multiple_occurrences(true)
                 .long("id")
                 .short('i')
                 .value_name("ID")
+                .action(ArgAction::Append)
                 .global(true)
                 .help("Select the issue with the given ID."),
         );

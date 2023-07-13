@@ -19,7 +19,9 @@ pub enum DifType {
     SourceBundle,
     Pe,
     Pdb,
+    PortablePdb,
     Wasm,
+    Jvm,
 }
 
 impl DifType {
@@ -29,11 +31,43 @@ impl DifType {
             DifType::Elf => "elf",
             DifType::Pe => "pe",
             DifType::Pdb => "pdb",
+            DifType::PortablePdb => "portablepdb",
             DifType::SourceBundle => "sourcebundle",
             DifType::Breakpad => "breakpad",
             DifType::Proguard => "proguard",
             DifType::Wasm => "wasm",
+            DifType::Jvm => "jvm",
         }
+    }
+
+    pub fn all() -> &'static [DifType] {
+        &[
+            DifType::Dsym,
+            DifType::Elf,
+            DifType::Pe,
+            DifType::Pdb,
+            DifType::PortablePdb,
+            DifType::SourceBundle,
+            DifType::Breakpad,
+            DifType::Proguard,
+            DifType::Wasm,
+            DifType::Jvm,
+        ]
+    }
+
+    pub fn all_names() -> &'static [&'static str] {
+        &[
+            "dsym",
+            "elf",
+            "pe",
+            "pdb",
+            "portablepdb",
+            "sourcebundle",
+            "breakpad",
+            "proguard",
+            "wasm",
+            "jvm",
+        ]
     }
 }
 
@@ -52,10 +86,12 @@ impl str::FromStr for DifType {
             "elf" => Ok(DifType::Elf),
             "pe" => Ok(DifType::Pe),
             "pdb" => Ok(DifType::Pdb),
+            "portablepdb" => Ok(DifType::PortablePdb),
             "sourcebundle" => Ok(DifType::SourceBundle),
             "breakpad" => Ok(DifType::Breakpad),
             "proguard" => Ok(DifType::Proguard),
             "wasm" => Ok(DifType::Wasm),
+            "jvm" => Ok(DifType::Jvm),
             _ => bail!("Invalid debug info file type"),
         }
     }
@@ -191,6 +227,7 @@ impl DifFile<'static> {
                 | FileFormat::Elf
                 | FileFormat::Pe
                 | FileFormat::Pdb
+                | FileFormat::PortablePdb
                 | FileFormat::Breakpad
                 | FileFormat::Wasm
                 | FileFormat::SourceBundle => return DifFile::from_archive(archive),
@@ -214,10 +251,12 @@ impl DifFile<'static> {
             Some(DifType::Elf) => DifFile::open_object(path, FileFormat::Elf),
             Some(DifType::Pe) => DifFile::open_object(path, FileFormat::Pe),
             Some(DifType::Pdb) => DifFile::open_object(path, FileFormat::Pdb),
+            Some(DifType::PortablePdb) => DifFile::open_object(path, FileFormat::PortablePdb),
             Some(DifType::SourceBundle) => DifFile::open_object(path, FileFormat::SourceBundle),
             Some(DifType::Wasm) => DifFile::open_object(path, FileFormat::Wasm),
             Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(path),
+            Some(DifType::Jvm) => DifFile::open_object(path, FileFormat::SourceBundle),
             None => DifFile::try_open(path),
         }
     }
@@ -246,6 +285,7 @@ impl<'a> DifFile<'a> {
                 FileFormat::Breakpad => DifType::Breakpad,
                 FileFormat::Elf => DifType::Elf,
                 FileFormat::Pdb => DifType::Pdb,
+                FileFormat::PortablePdb => DifType::PortablePdb,
                 FileFormat::Pe => DifType::Pe,
                 FileFormat::Wasm => DifType::Wasm,
                 FileFormat::SourceBundle => DifType::SourceBundle,
@@ -301,11 +341,30 @@ impl<'a> DifFile<'a> {
         match self {
             DifFile::Archive(archive) => {
                 let mut features = ObjectDifFeatures::none();
-                for object in archive.get().objects().filter_map(Result::ok) {
+
+                let mut add_object_features = |object: &Object| {
                     features.symtab = features.symtab || object.has_symbols();
                     features.debug = features.debug || object.has_debug_info();
                     features.unwind = features.unwind || object.has_unwind_info();
                     features.sources = features.sources || object.has_sources();
+                };
+
+                for object in archive.get().objects().filter_map(Result::ok) {
+                    add_object_features(&object);
+
+                    // Combine features with an embedded Portable PDB, if any to show up correctly in `dif check` cmd.
+                    // Note: this is intentionally different than `DifUpload.valid_features()` because we don't want to
+                    // upload the PE file separately, unless it has features we need. The PPDB is extracted instead.
+                    if let Ok(Some(Object::Pe(pe))) = archive.get().object_by_index(0) {
+                        if let Ok(Some(ppdb_data)) = pe.embedded_ppdb() {
+                            let mut buf = Vec::new();
+                            if ppdb_data.decompress_to(&mut buf).is_ok() {
+                                if let Ok(ppdb) = Object::parse(&buf) {
+                                    add_object_features(&ppdb);
+                                }
+                            }
+                        }
+                    }
                 }
                 features
             }

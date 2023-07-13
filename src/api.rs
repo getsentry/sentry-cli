@@ -28,6 +28,7 @@ use parking_lot::{Mutex, RwLock};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
 use sentry::protocol::{Exception, Values};
+use sentry::types::Dsn;
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
@@ -47,8 +48,23 @@ use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 use crate::utils::xcode::InfoPlist;
 
-const QUERY_ENCODE_SET: AsciiSet = CONTROLS.add(b' ').add(b'"').add(b'#').add(b'<').add(b'>');
-const DEFAULT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET.add(b'`').add(b'?').add(b'{').add(b'}');
+// Based on https://docs.rs/percent-encoding/1.0.1/src/percent_encoding/lib.rs.html#104
+// WHATWG Spec: https://url.spec.whatwg.org/#percent-encoded-bytes
+// RFC3986 Reserved Characters: https://www.rfc-editor.org/rfc/rfc3986#section-2.2
+const QUERY_ENCODE_SET: AsciiSet = CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'<')
+    .add(b'>')
+    .add(b'+');
+const PATH_SEGMENT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET
+    .add(b'`')
+    .add(b'?')
+    .add(b'{')
+    .add(b'}')
+    .add(b'%')
+    .add(b'/');
 
 /// Wrapper that escapes arguments for URL path segments.
 pub struct PathArg<A: fmt::Display>(A);
@@ -136,7 +152,7 @@ impl<A: fmt::Display> fmt::Display for PathArg<A> {
         if val == ".." || val == "." {
             val = "\u{fffd}".into();
         }
-        utf8_percent_encode(&val, &DEFAULT_ENCODE_SET).fmt(f)
+        utf8_percent_encode(&val, &PATH_SEGMENT_ENCODE_SET).fmt(f)
     }
 }
 
@@ -201,7 +217,7 @@ impl fmt::Display for SentryError {
             self.status
         )?;
         if let Some(ref extra) = self.extra {
-            write!(f, "\n  {:?}", extra)?;
+            write!(f, "\n  {extra:?}")?;
         }
         Ok(())
     }
@@ -418,6 +434,31 @@ impl Api {
         ApiRequest::create(handle, &method, &url, auth, env, headers)
     }
 
+    /// Convenience method that performs a request using DSN as authentication method.
+    pub fn request_with_dsn_auth<S: Serialize>(
+        &self,
+        method: Method,
+        url: &str,
+        dsn: Dsn,
+        body: Option<&S>,
+    ) -> ApiResult<ApiResponse> {
+        // We resolve an absolute URL to skip default authentication flow.
+        let url = self
+            .config
+            .get_api_endpoint(url)
+            .map_err(|err| ApiError::with_source(ApiErrorKind::BadApiUrl, err))?;
+
+        let mut request = self
+            .request(method, &url)?
+            .with_header("Authorization", &format!("DSN {dsn}"))?;
+
+        if let Some(body) = body {
+            request = request.with_json_body(body)?;
+        }
+
+        request.send()
+    }
+
     /// Convenience method that performs a `GET` request.
     pub fn get(&self, path: &str) -> ApiResult<ApiResponse> {
         self.request(Method::Get, path)?.send()
@@ -486,17 +527,19 @@ impl Api {
         self.get("/")?.convert()
     }
 
-    /// Lists all the release file for the given `release`.
-    pub fn list_release_files(
+    /// Lists release files for the given `release`, filtered by a set of checksums.
+    /// When empty checksums list is provided, fetches all possible artifacts.
+    pub fn list_release_files_by_checksum(
         &self,
         org: &str,
         project: Option<&str>,
         release: &str,
+        checksums: &[String],
     ) -> ApiResult<Vec<Artifact>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
         loop {
-            let path = if let Some(project) = project {
+            let mut path = if let Some(project) = project {
                 format!(
                     "/projects/{}/{}/releases/{}/files/?cursor={}",
                     PathArg(org),
@@ -513,11 +556,17 @@ impl Api {
                 )
             };
 
-            // TODO(kamil): Instead of breaking out of the loop here when we reach the limit
-            // (200 pages of 100 items, for a total of 20_000 files), we should send a list of hashes
-            // to the server, perform an intersection there, and change the upload mechanism
-            // to leave out only those files that were gave back to us by the server.
-            // This would also limit number of API requests for deduping from `N=[1:200]` to 1.
+            let mut checkums_qs = String::new();
+            for checksum in checksums.iter() {
+                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+            }
+            // We have a 16kb buffer for reach request configured in nginx,
+            // so do not even bother trying if it's too long.
+            // (16_384 limit still leaves us with 384 bytes for the url itself).
+            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
+                path.push_str(&checkums_qs);
+            }
+
             let resp = self.get(&path)?;
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
@@ -536,6 +585,16 @@ impl Api {
             }
         }
         Ok(rv)
+    }
+
+    /// Lists all the release files for the given `release`.
+    pub fn list_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+    ) -> ApiResult<Vec<Artifact>> {
+        self.list_release_files_by_checksum(org, project, release, &[])
     }
 
     /// Get a single release file and store it inside provided descriptor.
@@ -680,18 +739,22 @@ impl Api {
         headers: Option<&[(String, String)]>,
         progress_bar_mode: ProgressBarMode,
     ) -> ApiResult<Option<Artifact>> {
+        let release = context
+            .release()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
+
         let path = if let Some(project) = context.project {
             format!(
                 "/projects/{}/{}/releases/{}/files/",
                 PathArg(context.org),
                 PathArg(project),
-                PathArg(context.release)
+                PathArg(release)
             )
         } else {
             format!(
                 "/organizations/{}/releases/{}/files/",
                 PathArg(context.org),
-                PathArg(context.release)
+                PathArg(release)
             )
         };
         let mut form = curl::easy::Form::new();
@@ -709,9 +772,9 @@ impl Api {
         }
 
         if let Some(headers) = headers {
-            for &(ref key, ref value) in headers {
+            for (key, value) in headers {
                 form.part("header")
-                    .contents(format!("{}:{}", key, value).as_bytes())
+                    .contents(format!("{key}:{value}").as_bytes())
                     .add()?;
             }
         }
@@ -1067,7 +1130,7 @@ impl Api {
         let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
         match self
             .get(&url)?
-            .convert_rnf(ApiErrorKind::ChunkUploadNotSupported)
+            .convert_rnf::<ChunkUploadOptions>(ApiErrorKind::ChunkUploadNotSupported)
         {
             Ok(options) => Ok(Some(options)),
             Err(error) => {
@@ -1107,7 +1170,7 @@ impl Api {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
-    pub fn assemble_artifacts(
+    pub fn assemble_release_artifacts(
         &self,
         org: &str,
         release: &str,
@@ -1121,7 +1184,44 @@ impl Api {
         );
 
         self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedArtifactRequest { checksum, chunks })?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects: Vec::new(),
+                version: None,
+                dist: None,
+            })?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    pub fn assemble_artifact_bundle(
+        &self,
+        org: &str,
+        projects: Vec<String>,
+        checksum: Digest,
+        chunks: &[Digest],
+        version: Option<&str>,
+        dist: Option<&str>,
+    ) -> ApiResult<AssembleArtifactsResponse> {
+        let url = format!("/organizations/{}/artifactbundle/assemble/", PathArg(org));
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects,
+                version,
+                dist,
+            })?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
                 &[
@@ -1367,10 +1467,10 @@ impl Api {
     /// Create a new checkin for a monitor
     pub fn create_monitor_checkin(
         &self,
-        monitor: &Uuid,
-        checkin: &CreateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
-        let path = &format!("/monitors/{}/checkins/", PathArg(monitor),);
+        monitor_slug: &String,
+        checkin: &ApiCreateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
+        let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
         let resp = self.post(path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
@@ -1381,16 +1481,17 @@ impl Api {
     /// Update a checkin for a monitor
     pub fn update_monitor_checkin(
         &self,
-        monitor: &Uuid,
+        monitor_slug: &String,
         checkin_id: &Uuid,
-        checkin: &UpdateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
+        checkin: &ApiUpdateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
-            PathArg(monitor),
+            PathArg(monitor_slug),
             PathArg(checkin_id),
         );
         let resp = self.put(path, checkin)?;
+
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
@@ -1729,12 +1830,12 @@ impl ApiRequest {
             Some(env) => {
                 debug!("pipeline: {}", env);
                 headers
-                    .append(&format!("User-Agent: sentry-cli/{} {}", VERSION, env))
+                    .append(&format!("User-Agent: sentry-cli/{VERSION} {env}"))
                     .ok();
             }
             None => {
                 headers
-                    .append(&format!("User-Agent: sentry-cli/{}", VERSION))
+                    .append(&format!("User-Agent: sentry-cli/{VERSION}"))
                     .ok();
             }
         }
@@ -1783,7 +1884,7 @@ impl ApiRequest {
             }
             Auth::Token(ref token) => {
                 debug!("using token authentication");
-                self.with_header("Authorization", &format!("Bearer {}", token))
+                self.with_header("Authorization", &format!("Bearer {token}"))
             }
         }
     }
@@ -1791,7 +1892,7 @@ impl ApiRequest {
     /// adds a specific header to the request
     pub fn with_header(mut self, key: &str, value: &str) -> ApiResult<Self> {
         let value = value.trim().lines().next().unwrap_or("");
-        self.headers.append(&format!("{}: {}", key, value))?;
+        self.headers.append(&format!("{key}: {value}"))?;
         Ok(self)
     }
 
@@ -2125,7 +2226,7 @@ pub struct Artifact {
 }
 
 impl Artifact {
-    pub fn get_header<'a, 'b>(&'a self, key: &'b str) -> Option<&'a str> {
+    pub fn get_header<'a>(&'a self, key: &str) -> Option<&'a str> {
         let ikey = key.to_lowercase();
         for (k, v) in &self.headers {
             if k.to_lowercase() == ikey {
@@ -2337,25 +2438,25 @@ impl IssueFilter {
                     return None;
                 }
                 for id in ids {
-                    rv.push(format!("id={}", id));
+                    rv.push(format!("id={id}"));
                 }
             }
             IssueFilter::Status(ref status) => {
-                rv.push(format!("status={}", status));
+                rv.push(format!("status={status}"));
             }
         }
         Some(rv.join("&"))
     }
 
     pub fn get_filter_from_matches(matches: &ArgMatches) -> Result<IssueFilter> {
-        if matches.is_present("all") {
+        if matches.get_flag("all") {
             return Ok(IssueFilter::All);
         }
-        if let Some(status) = matches.value_of("status") {
+        if let Some(status) = matches.get_one::<String>("status") {
             return Ok(IssueFilter::Status(status.into()));
         }
         let mut ids = vec![];
-        if let Some(values) = matches.values_of("id") {
+        if let Some(values) = matches.get_many::<String>("id") {
             for value in values {
                 ids.push(value.parse::<u64>().context("Invalid issue ID")?);
             }
@@ -2415,13 +2516,14 @@ pub struct Project {
 #[derive(Debug, Deserialize)]
 pub struct Monitor {
     pub id: String,
+    pub slug: String,
     pub name: String,
     pub status: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum MonitorStatus {
+pub enum ApiMonitorCheckInStatus {
     Unknown,
     Ok,
     InProgress,
@@ -2429,23 +2531,27 @@ pub enum MonitorStatus {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MonitorCheckIn {
+pub struct ApiMonitorCheckIn {
     pub id: Uuid,
-    pub status: MonitorStatus,
+    pub status: Option<ApiMonitorCheckInStatus>,
     pub duration: Option<u64>,
+    pub environment: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct CreateMonitorCheckIn {
-    pub status: MonitorStatus,
+pub struct ApiCreateMonitorCheckIn {
+    pub status: ApiMonitorCheckInStatus,
+    pub environment: String,
 }
 
 #[derive(Debug, Serialize, Default)]
-pub struct UpdateMonitorCheckIn {
+pub struct ApiUpdateMonitorCheckIn {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<MonitorStatus>,
+    pub status: Option<ApiMonitorCheckInStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -2469,7 +2575,7 @@ impl fmt::Display for Repo {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}:{}", &self.provider.id, &self.id)?;
         if let Some(ref url) = self.url {
-            write!(f, " ({})", url)?;
+            write!(f, " ({url})")?;
         }
         Ok(())
     }
@@ -2503,9 +2609,10 @@ pub enum ChunkHashAlgorithm {
     Sha1,
 }
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
 pub enum ChunkCompression {
     /// No compression should be applied
+    #[default]
     Uncompressed = 0,
     /// GZIP compression (including header)
     Gzip = 10,
@@ -2520,12 +2627,6 @@ impl ChunkCompression {
             ChunkCompression::Gzip => "file_gzip",
             ChunkCompression::Brotli => "file_brotli",
         }
-    }
-}
-
-impl Default for ChunkCompression {
-    fn default() -> Self {
-        ChunkCompression::Uncompressed
     }
 }
 
@@ -2561,8 +2662,18 @@ pub enum ChunkUploadCapability {
     /// Chunked upload of release files
     ReleaseFiles,
 
+    /// Chunked upload of standalone artifact bundles
+    ArtifactBundles,
+
+    /// Like `ArtifactBundles`, but with deduplicated chunk
+    /// upload.
+    ArtifactBundlesV2,
+
     /// Upload of PDBs and debug id overrides
     Pdbs,
+
+    /// Upload of Portable PDBs
+    PortablePdbs,
 
     /// Uploads of source archives
     Sources,
@@ -2585,7 +2696,10 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
         Ok(match String::deserialize(deserializer)?.as_str() {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
+            "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
+            "artifact_bundles_v2" => ChunkUploadCapability::ArtifactBundlesV2,
             "pdbs" => ChunkUploadCapability::Pdbs,
+            "portablepdbs" => ChunkUploadCapability::PortablePdbs,
             "sources" => ChunkUploadCapability::Sources,
             "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
             "il2cpp" => ChunkUploadCapability::Il2Cpp,
@@ -2678,6 +2792,12 @@ pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
 pub struct ChunkedArtifactRequest<'a> {
     pub checksum: Digest,
     pub chunks: &'a [Digest],
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub projects: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dist: Option<&'a str>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -2756,19 +2876,19 @@ pub struct Issue {
 impl fmt::Display for ProcessedEventUser {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         if let Some(id) = &self.id {
-            write!(f, "ID: {}", id)?;
+            write!(f, "ID: {id}")?;
         }
 
         if let Some(username) = &self.username {
-            write!(f, "Username: {}", username)?;
+            write!(f, "Username: {username}")?;
         }
 
         if let Some(email) = &self.email {
-            write!(f, "Email: {}", email)?;
+            write!(f, "Email: {email}")?;
         }
 
         if let Some(ip_address) = &self.ip_address {
-            write!(f, "IP: {}", ip_address)?;
+            write!(f, "IP: {ip_address}")?;
         }
 
         Ok(())

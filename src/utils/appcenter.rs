@@ -126,7 +126,7 @@ pub fn get_appcenter_deployment_history(
 
     if output.status.success() {
         Ok(serde_json::from_slice(&output.stdout).unwrap_or_else(|_| {
-            let format_err = format!("Command `{} codepush deployment history {} --app {} --output json` failed to produce a valid JSON output.", appcenter_bin, deployment, app);
+            let format_err = format!("Command `{appcenter_bin} codepush deployment history {deployment} --app {app} --output json` failed to produce a valid JSON output.");
             panic!("{}", format_err);
         }))
     } else {
@@ -174,7 +174,7 @@ pub fn get_react_native_appcenter_release(
         opts.case_sensitive = false;
 
         for entry in (glob_with("ios/*.xcodeproj", opts)?).flatten() {
-            let pi = XcodeProjectInfo::from_path(&entry)?;
+            let pi = XcodeProjectInfo::from_path(entry)?;
             if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
                 if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
                     let vec: Vec<&str> = release_name.split('@').collect();

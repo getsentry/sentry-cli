@@ -47,6 +47,11 @@ declare module '@sentry/cli' {
      * This value will update `CUSTOM_HEADER` env variable.
      */
     customHeader?: string;
+    /**
+     * Headers added to every outgoing network request.
+     * This value does not set any env variable, and is overridden by `customHeader`.
+     */
+    headers?: Record<string, string>;
   }
 
   /**
@@ -54,7 +59,9 @@ declare module '@sentry/cli' {
    * case `paths` takes the place of `include` in the options so as to make it
    * clear that this is not recursive.
    */
-  export type SourceMapsPathDescriptor = Omit<SentryCliUploadSourceMapsOptions, 'include'> & { paths: string[] }
+  export type SourceMapsPathDescriptor = Omit<SentryCliUploadSourceMapsOptions, 'include'> & {
+    paths: string[];
+  };
 
   export interface SentryCliUploadSourceMapsOptions {
     /**
@@ -80,6 +87,11 @@ declare module '@sentry/cli' {
      * This prevents the automatic detection of sourcemap references.
      */
     sourceMapReference?: boolean;
+    /**
+     * Enable artifacts deduplication prior to uploading. This will skip uploading
+     * any artifacts that are already present on the server. Defaults to `true`.
+     */
+    dedupe?: boolean;
     /**
      * When paired with the rewrite option this will remove a prefix from uploaded files.
      * For instance you can use this to remove a path that is build machine specific.
@@ -116,6 +128,10 @@ declare module '@sentry/cli' {
      * Usually your build number.
      */
     dist?: string;
+    /**
+     * Use new Artifact Bundles upload, that enables use of Debug ID for Source Maps discovery.
+     */
+    useArtifactBundle?: boolean;
   }
 
   export interface SentryCliNewDeployOptions {
@@ -176,31 +192,19 @@ declare module '@sentry/cli' {
   }
 
   export interface SentryCliReleases {
-    ['new'](
-      release: string,
-      options?: { projects: string[] } | string[]
-    ): Promise<string>;
+    ['new'](release: string, options?: { projects: string[] } | string[]): Promise<string>;
 
-    setCommits(
-      release: string,
-      options: SentryCliCommitsOptions
-    ): Promise<string>;
+    setCommits(release: string, options: SentryCliCommitsOptions): Promise<string>;
 
-    finalize(release: string): Promise<string>
+    finalize(release: string): Promise<string>;
 
-    proposeVersion(): Promise<string>
+    proposeVersion(): Promise<string>;
 
-    uploadSourceMaps(
-      release: string,
-      options: SentryCliUploadSourceMapsOptions
-    ): Promise<string>
+    uploadSourceMaps(release: string, options: SentryCliUploadSourceMapsOptions): Promise<string>;
 
     listDeploys(release: string): Promise<string>;
 
-    newDeploy(
-      release: string,
-      options: SentryCliNewDeployOptions
-    ): Promise<string>
+    newDeploy(release: string, options: SentryCliNewDeployOptions): Promise<string>;
 
     execute(args: string[], live: boolean): Promise<string>;
   }
@@ -214,14 +218,14 @@ declare module '@sentry/cli' {
      * This value will update `SENTRY_PROPERTIES` env variable.
      * @param options {@link SentryCliOptions}
      */
-    constructor(configFile?: string | null, options?: SentryCliOptions)
+    constructor(configFile?: string | null, options?: SentryCliOptions);
 
     public configFile?: string;
     public options?: SentryCliOptions;
-    public releases: SentryCliReleases
+    public releases: SentryCliReleases;
 
-    public static getVersion(): string
-    public static getPath(): string
-    public execute(args: string[], live: boolean): Promise<string>
+    public static getVersion(): string;
+    public static getPath(): string;
+    public execute(args: string[], live: boolean): Promise<string>;
   }
 }

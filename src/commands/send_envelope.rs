@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Result;
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use log::{debug, warn};
 use sentry::types::Dsn;
@@ -26,9 +26,15 @@ pub fn make_command(command: Command) -> Command {
                 .required(true)
                 .help("The path or glob to the file(s) in envelope format to send as envelope(s)."),
         )
+        .arg(
+            Arg::new("raw")
+                .long("raw")
+                .action(ArgAction::SetTrue)
+                .help("Send envelopes without attempting to parse their contents."),
+        )
 }
 
-fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
+pub fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
     debug!("{:?}", envelope);
     with_sentry_client(dsn, |c| c.send_envelope(envelope));
 }
@@ -36,8 +42,9 @@ fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
+    let raw = matches.get_flag("raw");
 
-    let path = matches.value_of("path").unwrap();
+    let path = matches.get_one::<String>("path").unwrap();
 
     let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
         .unwrap()
@@ -51,7 +58,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     for path in collected_paths {
         let p = path.as_path();
-        let envelope: Envelope = Envelope::from_path(p)?;
+        let envelope: Envelope = if raw {
+            Envelope::from_path_raw(p)
+        } else {
+            Envelope::from_path(p)
+        }?;
         send_raw_envelope(envelope, dsn.clone());
         println!("Envelope from file {} dispatched", p.display());
     }

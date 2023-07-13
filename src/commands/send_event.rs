@@ -1,21 +1,23 @@
 use std::borrow::Cow;
 use std::env;
-use std::fs::File;
-use std::io::BufReader;
 use std::path::PathBuf;
+use std::time::SystemTime;
 
 use anyhow::{format_err, Result};
-use clap::{Arg, ArgMatches, Command};
+use chrono::{DateTime, Utc};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
 use log::{debug, warn};
 use sentry::protocol::{Event, Level, LogEntry, User};
 use sentry::types::{Dsn, Uuid};
+use sentry::Envelope;
 use serde_json::Value;
 use username::get_user_name;
 
+use crate::commands::send_envelope::send_raw_envelope;
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, validate_timestamp};
+use crate::utils::args::{get_timestamp, validate_distribution};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
 use crate::utils::releases::detect_release_name;
 
@@ -35,6 +37,12 @@ pub fn make_command(command: Command) -> Command {
                 .help("The path or glob to the file(s) in JSON format to send as event(s). When provided, all other arguments are ignored."),
         )
         .arg(
+            Arg::new("raw")
+                .long("raw")
+                .action(ArgAction::SetTrue)
+                .help("Send events using an envelope without attempting to parse their contents."),
+        )
+        .arg(
             Arg::new("level")
                 .value_name("LEVEL")
                 .long("level")
@@ -43,7 +51,7 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(Arg::new("timestamp")
                  .long("timestamp")
-                 .validator(validate_timestamp)
+                 .value_parser(get_timestamp)
                  .value_name("TIMESTAMP")
                  .help("Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or RFC3339."))
         .arg(
@@ -58,6 +66,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("DISTRIBUTION")
                 .long("dist")
                 .short('d')
+                .value_parser(validate_distribution)
                 .help("Set the distribution."),
         )
         .arg(
@@ -70,6 +79,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_environ")
                 .long("no-environ")
+                .action(ArgAction::SetTrue)
                 .help("Do not send environment variables along"),
         )
         .arg(
@@ -77,7 +87,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("MESSAGE")
                 .long("message")
                 .short('m')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("The event message."),
         )
         .arg(
@@ -85,7 +95,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("MESSAGE_ARG")
                 .long("message-arg")
                 .short('a')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Arguments for the event message."),
         )
         .arg(
@@ -100,7 +110,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("KEY:VALUE")
                 .long("tag")
                 .short('t')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Add a tag (key:value) to the event."),
         )
         .arg(
@@ -108,7 +118,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("KEY:VALUE")
                 .long("extra")
                 .short('e')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Add extra information (key:value) to the event."),
         )
         .arg(
@@ -116,7 +126,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("KEY:VALUE")
                 .long("user")
                 .short('u')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help(
                     "Add user information (key:value) to the event. \
                      [eg: id:42, username:foo]",
@@ -127,7 +137,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("FINGERPRINT")
                 .long("fingerprint")
                 .short('f')
-                .multiple_occurrences(true)
+                .action(ArgAction::Append)
                 .help("Change the fingerprint of the event."),
         )
         .arg(
@@ -139,6 +149,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("with_categories")
                 .long("with-categories")
+                .action(ArgAction::SetTrue)
                 .help("Parses off a leading category for breadcrumbs from the logfile")
                 .long_help(
                     "When logfile is provided, this flag will try to assign correct level \
@@ -156,8 +167,9 @@ fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let dsn = config.get_dsn()?;
+    let raw = matches.get_flag("raw");
 
-    if let Some(path) = matches.value_of("path") {
+    if let Some(path) = matches.get_one::<String>("path") {
         let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
             .unwrap()
             .flatten()
@@ -169,12 +181,33 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
 
         for path in collected_paths {
-            let p = path.as_path();
-            let file = File::open(p)?;
-            let reader = BufReader::new(file);
-            let event: Event = serde_json::from_reader(reader)?;
-            let id = send_raw_event(event, dsn.clone());
-            println!("Event from file {} dispatched: {}", p.display(), id);
+            let raw_event = std::fs::read(&path)?;
+
+            let id = if raw {
+                use std::io::Write;
+
+                // Its a bit unfortunate that we still need to parse the whole JSON,
+                // but envelopes need an `event_id`, which we also want to report.
+                let json: Value = serde_json::from_slice(&raw_event)?;
+                let id = json
+                    .as_object()
+                    .and_then(|event| event.get("event_id"))
+                    .and_then(|val| val.as_str())
+                    .and_then(|id| Uuid::parse_str(id).ok())
+                    .unwrap_or_default();
+                let mut buf = Vec::new();
+                writeln!(buf, r#"{{"event_id":"{id}"}}"#)?;
+                writeln!(buf, r#"{{"type":"event","length":{}}}"#, raw_event.len())?;
+                buf.extend(raw_event);
+                let envelope = Envelope::from_bytes_raw(buf)?;
+                send_raw_envelope(envelope, dsn.clone());
+                id
+            } else {
+                let event: Event = serde_json::from_slice(&raw_event)?;
+                send_raw_event(event, dsn.clone())
+            };
+
+            println!("Event from file {} dispatched: {}", path.display(), id);
         }
 
         return Ok(());
@@ -183,38 +216,40 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut event = Event {
         sdk: Some(get_sdk_info()),
         level: matches
-            .value_of("level")
+            .get_one::<String>("level")
             .and_then(|l| l.parse().ok())
             .unwrap_or(Level::Error),
         release: matches
-            .value_of("release")
-            .map(str::to_owned)
-            .or_else(|| detect_release_name().ok())
-            .map(Cow::from),
-        dist: matches.value_of("dist").map(|x| x.to_string().into()),
+            .get_one::<String>("release")
+            .map(|s| Cow::Owned(s.clone()))
+            .or_else(|| detect_release_name().ok().map(Cow::from)),
+        dist: matches
+            .get_one::<String>("dist")
+            .map(|s| Cow::Owned(s.clone())),
         platform: matches
-            .value_of("platform")
-            .unwrap_or("other")
-            .to_string()
-            .into(),
+            .get_one::<String>("platform")
+            .map(|s| Cow::Owned(s.clone()))
+            .unwrap_or(Cow::from("other")),
         environment: matches
-            .value_of("environment")
-            .map(|x| x.to_string().into()),
-        logentry: matches.values_of("message").map(|mut lines| LogEntry {
-            message: lines.join("\n"),
-            params: matches
-                .values_of("message_args")
-                .map(|args| args.map(|x| x.into()).collect())
-                .unwrap_or_default(),
-        }),
+            .get_one::<String>("environment")
+            .map(|s| Cow::Owned(s.clone())),
+        logentry: matches
+            .get_many::<String>("message")
+            .map(|mut lines| LogEntry {
+                message: lines.join("\n"),
+                params: matches
+                    .get_many::<String>("message_args")
+                    .map(|args| args.map(|x| x.as_str().into()).collect())
+                    .unwrap_or_default(),
+            }),
         ..Event::default()
     };
 
-    if let Some(timestamp) = matches.value_of("timestamp") {
-        event.timestamp = get_timestamp(timestamp).map(|t| t.into())?;
+    if let Some(timestamp) = matches.get_one::<DateTime<Utc>>("timestamp") {
+        event.timestamp = SystemTime::from(*timestamp);
     }
 
-    for tag in matches.values_of("tags").unwrap_or_default() {
+    for tag in matches.get_many::<String>("tags").unwrap_or_default() {
         let mut split = tag.splitn(2, ':');
         let key = split.next().ok_or_else(|| format_err!("missing tag key"))?;
         let value = split
@@ -223,14 +258,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         event.tags.insert(key.into(), value.into());
     }
 
-    if !matches.is_present("no_environ") {
+    if !matches.get_flag("no_environ") {
         event.extra.insert(
             "environ".into(),
             Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
         );
     }
 
-    for pair in matches.values_of("extra").unwrap_or_default() {
+    for pair in matches.get_many::<String>("extra").unwrap_or_default() {
         let mut split = pair.splitn(2, ':');
         let key = split
             .next()
@@ -241,7 +276,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         event.extra.insert(key.into(), Value::String(value.into()));
     }
 
-    if let Some(user_data) = matches.values_of("user_data") {
+    if let Some(user_data) = matches.get_many::<String>("user_data") {
         let mut user = User::default();
         for pair in user_data {
             let mut split = pair.splitn(2, ':');
@@ -273,19 +308,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         });
     }
 
-    if let Some(fingerprint) = matches.values_of("fingerprint") {
+    if let Some(fingerprint) = matches.get_many::<String>("fingerprint") {
         event.fingerprint = fingerprint
             .map(|x| x.to_string().into())
             .collect::<Vec<_>>()
             .into();
     }
 
-    if let Some(logfile) = matches.value_of("logfile") {
-        attach_logfile(&mut event, logfile, matches.is_present("with_categories"))?;
+    if let Some(logfile) = matches.get_one::<String>("logfile") {
+        attach_logfile(&mut event, logfile, matches.get_flag("with_categories"))?;
     }
 
     let id = send_raw_event(event, dsn);
-    println!("Event dispatched: {}", id);
+    println!("Event dispatched: {id}");
 
     Ok(())
 }
