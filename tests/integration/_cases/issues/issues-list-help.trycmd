@@ -3,7 +3,7 @@ $ sentry-cli issues list --help
 ? success
 List all issues in your organization.
 
-Usage: sentry-cli issues list [OPTIONS]
+Usage: sentry-cli[EXE] issues list [OPTIONS]
 
 Options:
       --max-rows <MAX_ROWS>      Maximum number of rows to print.

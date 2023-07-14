@@ -4,7 +4,7 @@ $ sentry-cli issues --help
 ? success
 Manage issues in Sentry.
 
-Usage: sentry-cli issues [OPTIONS] <COMMAND>
+Usage: sentry-cli[EXE] issues [OPTIONS] <COMMAND>
 
 Commands:
   list       List all issues in your organization.
