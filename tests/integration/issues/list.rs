@@ -1,4 +1,6 @@
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use mockito::Matcher;
+use serde_json::json;
 
 #[test]
 fn command_issues_list_help() {
@@ -16,4 +18,33 @@ fn doesnt_fail_with_empty_response() {
         .with_response_body("[]"),
     );
     register_test("issues/issues-list-empty.trycmd");
+}
+
+#[test]
+fn display_issues() {
+    let _server = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/issues/?query=&cursor=",
+            200,
+        )
+        .with_response_file("issues/get-issues.json"),
+    );
+    register_test("issues/issues-display.trycmd");
+}
+
+#[test]
+fn display_resolved_issues() {
+    let _server = mock_endpoint(
+        EndpointOptions::new(
+            "GET",
+            "/api/0/projects/wat-org/wat-project/issues/?cursor=",
+            200,
+        )
+        .with_response_file("issues/get-issues.json")
+        .with_matcher(Matcher::PartialJson(json!({
+            "query": "is:resolved",
+        }))),
+    );
+    register_test("issues/issues-display-with-query.trycmd");
 }
