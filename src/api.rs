@@ -2404,6 +2404,17 @@ struct MissingChecksumsResponse {
     missing: HashSet<Digest>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Issue {
+    pub id: String,
+    pub short_id: String,
+    pub title: String,
+    pub last_seen: String,
+    pub status: String,
+    pub level: String,
+}
+
 /// Change information for issue bulk updates.
 #[derive(Serialize, Default)]
 pub struct IssueChanges {
@@ -2859,17 +2870,6 @@ pub struct ProcessedEventUser {
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ip_address: Option<String>,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Issue {
-    pub id: String,
-    pub short_id: String,
-    pub title: String,
-    pub last_seen: String,
-    pub status: String,
-    pub level: String,
 }
 
 impl fmt::Display for ProcessedEventUser {
