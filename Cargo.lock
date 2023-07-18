@@ -2469,10 +2469,9 @@ dependencies = [
 [[package]]
 name = "sourcemap"
 version = "6.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eed16231c92d0a6f0388f56e0ab2be24ecff1173f8e22f0ea5e074d0525631cb"
 dependencies = [
  "data-encoding",
+ "debugid",
  "if_chain",
  "rustc_version 0.2.3",
  "scroll 0.10.2",

@@ -127,7 +127,7 @@ fn command_sourcemaps_upload_some_debugids_v2() {
     let upload_endpoints = mock_common_upload_endpoints(
         ServerBehavior::ModernV2,
         ChunkOptions {
-            missing_chunks: vec!["5e102ab3da27af9d1095a9c847d4e92a57fe01af".to_string()],
+            missing_chunks: vec!["ff16e0ac593a74b454cc34814f6249f45a1a2dfe".to_string()],
             chunk_size: 524288,
         },
     );
