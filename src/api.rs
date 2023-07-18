@@ -2862,12 +2862,11 @@ pub struct ProcessedEventUser {
 }
 
 #[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Issue {
     pub id: String,
-    #[serde(alias = "shortId")]
     pub short_id: String,
     pub title: String,
-    #[serde(default, alias = "lastSeen")]
     pub last_seen: String,
     pub status: String,
     pub level: String,
