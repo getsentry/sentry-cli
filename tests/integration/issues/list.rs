@@ -1,6 +1,4 @@
 use crate::integration::{mock_endpoint, register_test, EndpointOptions};
-use mockito::Matcher;
-use serde_json::json;
 
 #[test]
 fn command_issues_list_help() {
@@ -38,13 +36,10 @@ fn display_resolved_issues() {
     let _server = mock_endpoint(
         EndpointOptions::new(
             "GET",
-            "/api/0/projects/wat-org/wat-project/issues/?cursor=",
+            "/api/0/projects/wat-org/wat-project/issues/?query=is:resolved&cursor=",
             200,
         )
-        .with_response_file("issues/get-issues.json")
-        .with_matcher(Matcher::PartialJson(json!({
-            "query": "is:resolved",
-        }))),
+        .with_response_file("issues/get-issues.json"),
     );
     register_test("issues/issues-display-with-query.trycmd");
 }
