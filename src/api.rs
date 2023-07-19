@@ -20,6 +20,7 @@ use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
 use clap::ArgMatches;
+use console::style;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
@@ -1354,6 +1355,28 @@ impl Api {
         )
     }
 
+    pub fn associate_proguard_mappings(
+        &self,
+        org: &str,
+        project: &str,
+        data: &AssociateProguard,
+    ) -> ApiResult<()> {
+        let path = format!(
+            "/projects/{}/{}/files/proguard-artifact-releases",
+            PathArg(org),
+            PathArg(project)
+        );
+        let resp: ApiResponse = self
+            .request(Method::Post, &path)?
+            .with_json_body(data)?
+            .send()?;
+        if resp.status() == 404 || resp.status() == 201 {
+            Ok(())
+        } else {
+            resp.convert()
+        }
+    }
+
     /// Associate arbitrary debug symbols with a build
     pub fn associate_dsyms(
         &self,
@@ -2354,6 +2377,16 @@ pub struct AssociateDsyms {
     pub build: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct AssociateProguard {
+    pub release_name: String,
+    pub proguard_uuid: String,
+    #[serde(rename = "appId")]
+    pub app_id: String,
+    pub version: String,
+    pub build: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct MissingChecksumsResponse {
     missing: HashSet<Digest>,
@@ -2430,6 +2463,9 @@ pub struct AssociateDsymsResponse {
     #[serde(rename = "associatedDsymFiles")]
     pub associated_dsyms: Vec<DebugInfoFile>,
 }
+
+#[derive(Deserialize)]
+pub struct AssociateProguardResponse {}
 
 #[derive(Deserialize, Debug)]
 pub struct Organization {
