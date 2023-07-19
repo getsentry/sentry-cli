@@ -39,7 +39,7 @@ fn display_resolved_issues() {
             "/api/0/projects/wat-org/wat-project/issues/?query=is:resolved&cursor=",
             200,
         )
-        .with_response_file("issues/get-issues.json"),
+        .with_response_file("issues/get-resolved-issues.json"),
     );
     register_test("issues/issues-display-with-query.trycmd");
 }
