@@ -271,16 +271,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
         for mapping in &mappings {
-            let mut uuid = mapping.uuid.to_string();
-            if forced_uuid.is_some() {
-                uuid = forced_uuid.unwrap().to_string();
-            }
+            let uuid = forced_uuid.unwrap_or_else(|| &mapping.uuid);
             api.associate_proguard_mappings(
                 &org,
                 &project,
                 &AssociateProguard {
                     release_name: app_id.to_owned(),
-                    proguard_uuid: uuid,
+                    proguard_uuid: uuid.to_string(),
                     app_id: app_id.to_owned(),
                     version: version.clone(),
                     build: build.clone(),
