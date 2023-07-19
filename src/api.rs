@@ -20,7 +20,6 @@ use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
 use chrono::{DateTime, Duration, FixedOffset, Utc};
 use clap::ArgMatches;
-use console::style;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
@@ -2463,9 +2462,6 @@ pub struct AssociateDsymsResponse {
     #[serde(rename = "associatedDsymFiles")]
     pub associated_dsyms: Vec<DebugInfoFile>,
 }
-
-#[derive(Deserialize)]
-pub struct AssociateProguardResponse {}
 
 #[derive(Deserialize, Debug)]
 pub struct Organization {

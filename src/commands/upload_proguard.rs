@@ -218,7 +218,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     {
         let mut zip = zip::ZipWriter::new(tf.open()?);
         for mapping in &mappings {
-            println!("{}", mapping.uuid);
             let pb = make_byte_progress_bar(mapping.size);
             zip.start_file(
                 format!("proguard/{}.txt", mapping.uuid),
