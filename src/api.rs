@@ -1484,8 +1484,8 @@ impl Api {
         &self,
         dsn: Option<Dsn>,
         monitor_slug: &String,
-        checkin: &CreateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
+        checkin: &ApiCreateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
         let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
         let resp = if let Some(dsn) = dsn {
             self.request_with_dsn_auth(Method::Post, path, dsn, Some(checkin))?
@@ -1504,8 +1504,8 @@ impl Api {
         dsn: Option<Dsn>,
         monitor_slug: &String,
         checkin_id: &Uuid,
-        checkin: &UpdateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
+        checkin: &ApiUpdateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
             PathArg(monitor_slug),
@@ -2510,7 +2510,7 @@ pub struct Monitor {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum MonitorCheckinStatus {
+pub enum ApiMonitorCheckinStatus {
     Unknown,
     Ok,
     InProgress,
@@ -2518,21 +2518,21 @@ pub enum MonitorCheckinStatus {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MonitorCheckIn {
+pub struct ApiMonitorCheckIn {
     pub id: Uuid,
-    pub status: Option<MonitorCheckinStatus>,
+    pub status: Option<ApiMonitorCheckinStatus>,
     pub duration: Option<u64>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct CreateMonitorCheckIn {
-    pub status: MonitorCheckinStatus,
+pub struct ApiCreateMonitorCheckIn {
+    pub status: ApiMonitorCheckinStatus,
 }
 
 #[derive(Debug, Serialize, Default)]
-pub struct UpdateMonitorCheckIn {
+pub struct ApiUpdateMonitorCheckIn {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<MonitorCheckinStatus>,
+    pub status: Option<ApiMonitorCheckinStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<u64>,
 }
