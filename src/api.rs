@@ -1578,22 +1578,27 @@ impl Api {
         org: &str,
         project: &str,
         max_pages: usize,
-        query: String,
+        query: Option<String>,
     ) -> ApiResult<Vec<Issue>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
         let mut requests_no = 0;
 
-        loop {
-            requests_no += 1;
-
-            let resp = self.get(&format!(
-                "/projects/{}/{}/issues/?query={}&cursor={}",
+        let url = if let Some(query) = query {
+            format!(
+                "/projects/{}/{}/issues/?query={}&",
                 PathArg(org),
                 PathArg(project),
                 QueryArg(&query),
-                QueryArg(&cursor)
-            ))?;
+            )
+        } else {
+            format!("/projects/{}/{}/issues/?", PathArg(org), PathArg(project),)
+        };
+
+        loop {
+            requests_no += 1;
+
+            let resp = self.get(&format!("{}cursor={}", url, QueryArg(&cursor)))?;
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {

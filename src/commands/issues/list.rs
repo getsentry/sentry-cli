@@ -37,10 +37,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches)?;
     let pages = *matches.get_one("pages").unwrap();
-    let query = match matches.get_one::<String>("query") {
-        Some(query) => query.clone(),
-        None => String::new(),
-    };
+    let query = matches.get_one::<String>("query").cloned();
     let api = Api::current();
 
     let issues = api.list_organization_project_issues(&org, &project, pages, query)?;
