@@ -16,8 +16,7 @@ Options:
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
   -t, --type <TYPE>              Only consider debug information files of the given type.  By
                                  default, all types are considered. [possible values: bcsymbolmap,
-                                 dsym, elf, pe, pdb, portablepdb, sourcebundle, breakpad, proguard,
-                                 wasm, jvm]
+                                 breakpad, dsym, elf, jvm, pdb, pe, portablepdb, sourcebundle, wasm]
       --no-unwind                Do not scan for stack unwinding information. Specify this flag for
                                  builds with disabled FPO, or when stackwalking occurs on the
                                  device. This usually excludes executables and dynamic libraries.

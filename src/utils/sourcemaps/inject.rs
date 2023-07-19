@@ -1,5 +1,6 @@
 use console::style;
 use itertools::Itertools;
+use regex::Regex;
 use symbolic::common::{clean_path, join_path};
 
 use std::fmt;
@@ -7,14 +8,19 @@ use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
 use anyhow::{bail, Result};
+use lazy_static::lazy_static;
 use log::debug;
 use sentry::types::DebugId;
 use serde_json::Value;
 
-const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}()"#;
+const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}();"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
+
+lazy_static! {
+    static ref USE_PRAGMA_RE: Regex = Regex::new(r#"^"use \w+";|^'use \w+';"#).unwrap();
+}
 
 fn print_section_with_debugid(
     f: &mut fmt::Formatter<'_>,
@@ -93,20 +99,136 @@ impl fmt::Display for InjectReport {
     }
 }
 
-/// Appends the following text to a file:
+/// Fixes up a minified JS source file with a debug id.
+///
+/// This changes the source file in several ways:
+/// 1. The source code snippet
+/// `<CODE_SNIPPET>[<debug_id>]`
+/// is inserted at the earliest possible position, which is after an
+/// optional hashbang, followed by a
+/// block of comments, empty lines, and `"use […]";` or `'use […]';` pragmas.
+/// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
+/// 3. The last source mapping comment (a comment starting with
+/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
+/// the very end of the file, after the debug id comment from 2.
+///
+/// This function will naturally mess with the correspondence between a source file
+/// and its sourcemap. Use [`insert_empty_mapping`] on the sourcemap to fix this.
+/// # Example
 /// ```
+/// let file = "
+/// // a
+/// // comment
+/// // block
 ///
-/// <CODE_SNIPPET>[<debug_id>]
-/// //# sentryDebugId=<debug_id>
-///```
-/// where `<CODE_SNIPPET>[<debug_id>]`
-/// is `CODE_SNIPPET_TEMPLATE` with `debug_id` substituted for the `__SENTRY_DEBUG_ID__`
-/// placeholder.
+/// // another
+/// // comment
+/// // block
 ///
-/// Moreover, if a `sourceMappingURL` comment exists in the file, it is moved to the very end.
+/// 'use strict';
+/// function t(t) {
+///   return '[object Object]' === Object.prototype.toString.call(t);
+/// }
+/// //# sourceMappingURL=/path/to/sourcemap
+/// ";
+///
+/// let mut file = file.as_bytes().to_vec();
+/// fixup_js_file(&mut file, DebugId::default()).unwrap();
+///
+/// assert_eq!(
+///     std::str::from_utf8(&file).unwrap(),
+///     r#"
+/// // a
+/// // comment
+/// // block
+///
+/// // another
+/// // comment
+/// // block
+///
+/// 'use strict';
+/// !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+/// function t(t) {
+///   return '[object Object]' === Object.prototype.toString.call(t);
+/// }
+/// //# debugId=00000000-0000-0000-0000-000000000000
+/// //# sourceMappingURL=/path/to/sourcemap
+/// "#
+/// );
+/// ```
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
-    let js_lines: Result<Vec<String>, _> = js_contents.lines().collect();
-    let mut js_lines = js_lines?;
+    let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
+
+    js_contents.clear();
+
+    // Find the last source mapping URL comment, it's the only one that matters
+    let sourcemap_comment_idx = js_lines
+        .iter()
+        .enumerate()
+        .rev()
+        .find(|(_idx, line)| {
+            line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+        })
+        .map(|(idx, _)| idx);
+
+    let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
+
+    let mut js_lines = js_lines.into_iter().peekable();
+
+    // Handle initial hashbang
+    if let Some(hashbang) = js_lines.next_if(|line| line.trim().starts_with("#!")) {
+        writeln!(js_contents, "{hashbang}")?;
+    }
+
+    // Write comments and empty lines at the start back to the file
+    while let Some(comment_or_empty) =
+        js_lines.next_if(|line| line.trim().is_empty() || line.trim().starts_with("//"))
+    {
+        writeln!(js_contents, "{comment_or_empty}")?;
+    }
+
+    // Write use statements back to the file
+    while let Some(use_pragma) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
+        writeln!(js_contents, "{use_pragma}")?;
+    }
+
+    // Inject the code snippet
+    let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
+    writeln!(js_contents, "{to_inject}")?;
+
+    // Write other lines
+    for line in js_lines {
+        writeln!(js_contents, "{line}")?;
+    }
+
+    // Write the debug id comment
+    writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
+
+    // Lastly, write the source mapping URL comment, if there was one
+    if let Some(sourcemap_comment) = sourcemap_comment {
+        writeln!(js_contents, "{sourcemap_comment}")?;
+    }
+
+    Ok(())
+}
+
+/// Fixes up a minified JS source file with a debug id without messing with mappings.
+///
+/// This changes the source file in several ways:
+/// 1. The source code snippet
+/// `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
+/// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
+/// 3. The last source mapping comment (a comment starting with
+/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
+/// the very end of the file, after the debug id comment from 2.
+///
+/// This function is useful in cases where a source file's corresponding sourcemap is
+/// not available. In such a case, [`fixup_js_file`] might mess up the mappings by inserting
+/// a line, with no opportunity to adjust the sourcemap accordingly. However, in general
+/// it is desirable to insert the code snippet as early as possible to make sure it runs
+/// even when an error is raised in the file.
+pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
+    let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
 
     js_contents.clear();
 
@@ -131,6 +253,35 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
 
     if let Some(sourcemap_comment) = sourcemap_comment {
         writeln!(js_contents, "{sourcemap_comment}")?;
+    }
+
+    Ok(())
+}
+
+/// Replaces a JS file's source mapping url with a new one.
+///
+/// Only the bottommost source mapping url comment will be updated. If there
+/// are no source mapping url comments in the file, this is a no-op.
+pub fn replace_sourcemap_url(js_contents: &mut Vec<u8>, new_url: &str) -> Result<()> {
+    let js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
+
+    let sourcemap_comment_idx = match js_lines.iter().enumerate().rev().find(|(_idx, line)| {
+        line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+    }) {
+        Some((idx, _)) => idx,
+        None => return Ok(()),
+    };
+
+    js_contents.clear();
+
+    for line in &js_lines[0..sourcemap_comment_idx] {
+        writeln!(js_contents, "{line}")?;
+    }
+
+    writeln!(js_contents, "//# sourceMappingURL={new_url}")?;
+
+    for line in &js_lines[sourcemap_comment_idx + 1..] {
+        writeln!(js_contents, "{line}")?;
     }
 
     Ok(())
@@ -169,11 +320,40 @@ pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, boo
             let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
             let id = serde_json::to_value(debug_id)?;
             map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
+
             sourcemap_contents.clear();
             serde_json::to_writer(sourcemap_contents, &sourcemap)?;
             Ok((debug_id, true))
         }
     }
+}
+
+/// This adds an empty mapping at the start of a sourcemap.
+///
+/// This is used to adjust a sourcemap when the corresponding source file has a
+/// new line injected near the top (see [`fixup_js_file`]).
+pub fn insert_empty_mapping(sourcemap_contents: &mut Vec<u8>) -> Result<()> {
+    let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
+
+    let Some(map) = sourcemap.as_object_mut() else {
+        bail!("Invalid sourcemap");
+    };
+
+    let Some(mappings) = map.get_mut("mappings") else {
+        bail!("Invalid sourcemap");
+    };
+
+    let Value::String(mappings) = mappings else {
+        bail!("Invalid sourcemap");
+    };
+
+    // Insert empty mapping at the start
+    *mappings = format!(";{mappings}");
+
+    sourcemap_contents.clear();
+    serde_json::to_writer(sourcemap_contents, &sourcemap)?;
+
+    Ok(())
 }
 
 /// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
@@ -198,6 +378,60 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
     format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
 }
 
+/// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
+/// at most one segment (modulo `.` segments).
+///
+/// The differing segment cannot be the last one (i.e., the filename).
+///
+/// If `expected_path` occurs among the `candidate_paths`, no other paths will be returned since
+/// that is considered a unique best match.
+///
+/// The intended usecase is finding sourcemaps even if they reside in a different directory; see
+/// the `test_find_matching_paths_sourcemaps` test for a minimal example.
+pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> Vec<String> {
+    let mut matches = Vec::new();
+    for candidate in candidate_paths {
+        let mut expected_segments = expected_path
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .peekable();
+        let mut candidate_segments = candidate
+            .split('/')
+            .filter(|&segment| segment != ".")
+            .peekable();
+
+        // If there is a candidate that is exactly equal to the goal path,
+        // return only that one.
+        if Iterator::eq(candidate_segments.clone(), expected_segments.clone()) {
+            return vec![candidate.clone()];
+        }
+
+        // Iterate through both paths and discard segments so long as they are equal.
+        while candidate_segments
+            .peek()
+            .zip(expected_segments.peek())
+            .map_or(false, |(x, y)| x == y)
+        {
+            candidate_segments.next();
+            expected_segments.next();
+        }
+
+        // The next segments (if there are any left) must be where the paths disagree.
+        candidate_segments.next();
+        expected_segments.next();
+
+        // The rest of both paths must agree and be nonempty, so at least the filenames definitely
+        // must agree.
+        if candidate_segments.peek().is_some()
+            && Iterator::eq(candidate_segments, expected_segments)
+        {
+            matches.push(candidate.clone());
+        }
+    }
+
+    matches
+}
+
 #[cfg(test)]
 mod tests {
     use std::io::Write;
@@ -206,7 +440,7 @@ mod tests {
 
     use crate::utils::fs::TempFile;
 
-    use super::{fixup_js_file, fixup_sourcemap, normalize_sourcemap_url};
+    use super::*;
 
     #[test]
     fn test_fixup_sourcemap() {
@@ -253,10 +487,10 @@ something else"#;
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"//# sourceMappingURL=fake1
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
 some line
 //# sourceMappingURL=fake2
 something else
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 //# debugId=00000000-0000-0000-0000-000000000000
 //# sourceMappingURL=real
 "#;
@@ -306,6 +540,7 @@ something else"#;
         let expected = r#"//# sourceMappingURL=fake
 
 
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
 some line
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
@@ -321,13 +556,84 @@ some line
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
 something else
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}()
 //# debugId=00000000-0000-0000-0000-000000000000
 //# sourceMappingURL=real
 "#;
 
         println!("{}", result);
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_fixup_js_file_use_strict() {
+        let source = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+"use strict"; rest of the line
+'use strict';
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let debug_id = DebugId::default();
+
+        let mut source = Vec::from(source);
+
+        fixup_js_file(&mut source, debug_id).unwrap();
+
+        let expected = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+"use strict"; rest of the line
+'use strict';
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+some line
+//# sourceMappingURL=fake2
+something else
+//# debugId=00000000-0000-0000-0000-000000000000
+//# sourceMappingURL=real
+"#;
+
+        assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_fixup_js_file_fake_use_strict() {
+        let source = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+"use strict"; rest of the line
+(this.foo=this.bar||[]).push([[2],[function(e,t,n){"use strict"; […] }
+some line
+//# sourceMappingURL=fake2
+//# sourceMappingURL=real
+something else"#;
+
+        let debug_id = DebugId::default();
+
+        let mut source = Vec::from(source);
+
+        fixup_js_file(&mut source, debug_id).unwrap();
+
+        let expected = r#"#!/bin/node
+//# sourceMappingURL=fake1
+
+  // some other comment
+"use strict"; rest of the line
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+(this.foo=this.bar||[]).push([[2],[function(e,t,n){"use strict"; […] }
+some line
+//# sourceMappingURL=fake2
+something else
+//# debugId=00000000-0000-0000-0000-000000000000
+//# sourceMappingURL=real
+"#;
+
+        assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
     }
 
     #[test]
@@ -360,6 +666,94 @@ something else
         assert_eq!(
             normalize_sourcemap_url("././.foo/bar/baz.js", "../quux/baz.js.map"),
             "././.foo/quux/baz.js.map"
+        );
+    }
+
+    #[test]
+    fn test_replace_sourcemap_url() {
+        let js_contents = r#"
+//# sourceMappingURL=not this one
+some text
+//@ sourceMappingURL=not this one either
+//# sourceMappingURL=this one
+more text
+"#;
+        let mut js_contents = Vec::from(js_contents);
+
+        replace_sourcemap_url(&mut js_contents, "new url").unwrap();
+
+        let expected = r#"
+//# sourceMappingURL=not this one
+some text
+//@ sourceMappingURL=not this one either
+//# sourceMappingURL=new url
+more text
+"#;
+        assert_eq!(std::str::from_utf8(&js_contents).unwrap(), expected);
+    }
+
+    #[test]
+    fn test_find_matching_paths_unique() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &[
+            "./foo/baz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ];
+
+        assert_eq!(
+            find_matching_paths(candidates, expected),
+            vec!["foo/baar/baz/quux"]
+        );
+
+        let candidates = &[
+            "./foo/baz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+            "./foo/bar/baz/quux".to_string(),
+        ];
+
+        assert_eq!(find_matching_paths(candidates, expected), vec![expected]);
+    }
+
+    #[test]
+    fn test_find_matching_paths_ambiguous() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &[
+            "./foo/bar/baaz/quux".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ];
+
+        assert_eq!(find_matching_paths(candidates, expected), candidates,);
+    }
+
+    #[test]
+    fn test_find_matching_paths_filename() {
+        let expected = "./foo/bar/baz/quux";
+        let candidates = &[
+            "./foo/bar/baz/nop".to_string(),
+            "foo/baar/baz/quux".to_string(),
+        ];
+
+        assert_eq!(
+            find_matching_paths(candidates, expected),
+            ["foo/baar/baz/quux".to_string()]
+        );
+    }
+
+    #[test]
+    fn test_find_matching_paths_sourcemaps() {
+        let candidates = &[
+            "./project/maps/index.js.map".to_string(),
+            "./project/maps/page/index.js.map".to_string(),
+        ];
+
+        assert_eq!(
+            find_matching_paths(candidates, "project/code/index.js.map"),
+            &["./project/maps/index.js.map"]
+        );
+
+        assert_eq!(
+            find_matching_paths(candidates, "project/code/page/index.js.map"),
+            &["./project/maps/page/index.js.map"]
         );
     }
 }

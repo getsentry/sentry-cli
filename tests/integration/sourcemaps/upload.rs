@@ -1,6 +1,6 @@
 use crate::integration::{
-    assert_endpoints, mock_common_upload_endpoints, mock_endpoint, register_test, EndpointOptions,
-    ServerBehavior,
+    assert_endpoints, mock_common_upload_endpoints, mock_endpoint, register_test, ChunkOptions,
+    EndpointOptions, ServerBehavior,
 };
 
 #[test]
@@ -15,7 +15,7 @@ fn command_sourcemaps_upload() {
 
 #[test]
 fn command_sourcemaps_upload_successfully_upload_file() {
-    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
+    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -31,7 +31,7 @@ fn command_sourcemaps_upload_successfully_upload_file() {
 
 #[test]
 fn command_sourcemaps_upload_skip_already_uploaded() {
-    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
+    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -56,7 +56,7 @@ fn command_sourcemaps_upload_skip_already_uploaded() {
 
 #[test]
 fn command_sourcemaps_upload_no_dedupe() {
-    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
+    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -81,14 +81,29 @@ fn command_sourcemaps_upload_no_dedupe() {
 
 #[test]
 fn command_sourcemaps_upload_modern() {
-    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern);
+    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-modern.trycmd");
+    assert_endpoints(&upload_endpoints);
+}
+
+#[test]
+fn command_sourcemaps_upload_modern_v2() {
+    let upload_endpoints = mock_common_upload_endpoints(
+        ServerBehavior::ModernV2,
+        ChunkOptions {
+            missing_chunks: vec!["ec8450a9db19805703a27a2545c18b7b27ba0d7d".to_string()],
+            // Set the chunk size so the bundle will be split into two chunks
+            chunk_size: 512,
+        },
+    );
     register_test("sourcemaps/sourcemaps-upload-modern.trycmd");
     assert_endpoints(&upload_endpoints);
 }
 
 #[test]
 fn command_sourcemaps_upload_empty() {
-    let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy);
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
         EndpointOptions::new(
             "GET",
@@ -102,13 +117,27 @@ fn command_sourcemaps_upload_empty() {
 
 #[test]
 fn command_sourcemaps_upload_some_debugids() {
-    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern);
+    let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-some-debugids.trycmd");
+    assert_endpoints(&upload_endpoints);
+}
+
+#[test]
+fn command_sourcemaps_upload_some_debugids_v2() {
+    let upload_endpoints = mock_common_upload_endpoints(
+        ServerBehavior::ModernV2,
+        ChunkOptions {
+            missing_chunks: vec!["5e102ab3da27af9d1095a9c847d4e92a57fe01af".to_string()],
+            chunk_size: 524288,
+        },
+    );
     register_test("sourcemaps/sourcemaps-upload-some-debugids.trycmd");
     assert_endpoints(&upload_endpoints);
 }
 
 #[test]
 fn command_sourcemaps_upload_no_debugids() {
-    let _upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Modern);
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
     register_test("sourcemaps/sourcemaps-upload-no-debugids.trycmd");
 }

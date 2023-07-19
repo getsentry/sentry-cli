@@ -140,6 +140,7 @@ class Releases {
    *   ignoreFile: null,          // path to a file with ignore rules
    *   rewrite: false,            // preprocess sourcemaps before uploading
    *   sourceMapReference: true,  // add a source map reference to source files
+   *   dedupe: true,              // deduplicate already uploaded files
    *   stripPrefix: [],           // remove certain prefices from filenames
    *   stripCommonPrefix: false,  // guess common prefices to remove from filenames
    *   validate: false,           // validate source maps and cancel the upload on error

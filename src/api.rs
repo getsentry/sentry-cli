@@ -557,8 +557,15 @@ impl Api {
                 )
             };
 
+            let mut checkums_qs = String::new();
             for checksum in checksums.iter() {
-                path.push_str(&format!("&checksum={}", QueryArg(checksum)));
+                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+            }
+            // We have a 16kb buffer for reach request configured in nginx,
+            // so do not even bother trying if it's too long.
+            // (16_384 limit still leaves us with 384 bytes for the url itself).
+            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
+                path.push_str(&checkums_qs);
             }
 
             let resp = self.get(&path)?;
@@ -1483,16 +1490,11 @@ impl Api {
     /// Create a new checkin for a monitor
     pub fn create_monitor_checkin(
         &self,
-        dsn: Option<Dsn>,
         monitor_slug: &String,
-        checkin: &CreateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
+        checkin: &ApiCreateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
         let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
-        let resp = if let Some(dsn) = dsn {
-            self.request_with_dsn_auth(Method::Post, path, dsn, Some(checkin))?
-        } else {
-            self.post(path, checkin)?
-        };
+        let resp = self.post(path, checkin)?;
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
@@ -1502,21 +1504,16 @@ impl Api {
     /// Update a checkin for a monitor
     pub fn update_monitor_checkin(
         &self,
-        dsn: Option<Dsn>,
         monitor_slug: &String,
         checkin_id: &Uuid,
-        checkin: &UpdateMonitorCheckIn,
-    ) -> ApiResult<MonitorCheckIn> {
+        checkin: &ApiUpdateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
         let path = &format!(
             "/monitors/{}/checkins/{}/",
             PathArg(monitor_slug),
             PathArg(checkin_id),
         );
-        let resp = if let Some(dsn) = dsn {
-            self.request_with_dsn_auth(Method::Put, path, dsn, Some(checkin))?
-        } else {
-            self.put(path, checkin)?
-        };
+        let resp = self.put(path, checkin)?;
 
         if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
@@ -2514,7 +2511,7 @@ pub struct Monitor {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum MonitorCheckinStatus {
+pub enum ApiMonitorCheckInStatus {
     Unknown,
     Ok,
     InProgress,
@@ -2522,23 +2519,27 @@ pub enum MonitorCheckinStatus {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct MonitorCheckIn {
+pub struct ApiMonitorCheckIn {
     pub id: Uuid,
-    pub status: Option<MonitorCheckinStatus>,
+    pub status: Option<ApiMonitorCheckInStatus>,
     pub duration: Option<u64>,
+    pub environment: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
-pub struct CreateMonitorCheckIn {
-    pub status: MonitorCheckinStatus,
+pub struct ApiCreateMonitorCheckIn {
+    pub status: ApiMonitorCheckInStatus,
+    pub environment: String,
 }
 
 #[derive(Debug, Serialize, Default)]
-pub struct UpdateMonitorCheckIn {
+pub struct ApiUpdateMonitorCheckIn {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<MonitorCheckinStatus>,
+    pub status: Option<ApiMonitorCheckInStatus>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub environment: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -2652,6 +2653,10 @@ pub enum ChunkUploadCapability {
     /// Chunked upload of standalone artifact bundles
     ArtifactBundles,
 
+    /// Like `ArtifactBundles`, but with deduplicated chunk
+    /// upload.
+    ArtifactBundlesV2,
+
     /// Upload of PDBs and debug id overrides
     Pdbs,
 
@@ -2680,6 +2685,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "debug_files" => ChunkUploadCapability::DebugFiles,
             "release_files" => ChunkUploadCapability::ReleaseFiles,
             "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
+            "artifact_bundles_v2" => ChunkUploadCapability::ArtifactBundlesV2,
             "pdbs" => ChunkUploadCapability::Pdbs,
             "portablepdbs" => ChunkUploadCapability::PortablePdbs,
             "sources" => ChunkUploadCapability::Sources,

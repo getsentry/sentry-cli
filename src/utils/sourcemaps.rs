@@ -28,7 +28,7 @@ use crate::utils::file_upload::{
 };
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
-use crate::utils::sourcemaps::inject::{fixup_js_file, normalize_sourcemap_url, InjectReport};
+use crate::utils::sourcemaps::inject::InjectReport;
 
 pub mod inject;
 
@@ -766,90 +766,16 @@ impl SourceMapProcessor {
 
         let mut report = InjectReport::default();
 
-        // Step 1: Produce a debug id for each source file by either reading it from the
-        // sourcemap if available or else generating a fresh one.
-        let mut debug_ids = Vec::new();
+        let mut sourcemaps = self
+            .sources
+            .values()
+            .filter_map(|s| (s.ty == SourceFileType::SourceMap).then_some(s.url.clone()))
+            .collect::<Vec<_>>();
+        sourcemaps.sort();
 
-        for (source_url, sourcemap_url) in &self.sourcemap_references {
-            if let Some(debug_id) = self.debug_ids.get(source_url) {
-                report
-                    .previously_injected
-                    .push((source_url.into(), *debug_id));
-                continue;
-            }
-
-            let sourcemap_url = match sourcemap_url {
-                Some(sourcemap_url) => sourcemap_url,
-                None => {
-                    // no source map at all, try a deterministic debug id from the contents
-                    let debug_id = self
-                        .sources
-                        .get(source_url)
-                        .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
-                        .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                    debug_ids.push((source_url.clone(), debug_id));
-                    continue;
-                }
-            };
-
-            if sourcemap_url.starts_with(DATA_PREAMBLE) {
-                // source map is a url, hash the source map url for the debug id
-                let debug_id = inject::debug_id_from_bytes_hashed(sourcemap_url.as_bytes());
-                debug_ids.push((source_url.clone(), debug_id));
-            } else {
-                let sourcemap_url = normalize_sourcemap_url(source_url, sourcemap_url);
-                let sourcemap_file = match self.sources.get_mut(&sourcemap_url) {
-                    Some(sourcemap_file) => sourcemap_file,
-                    None => {
-                        debug!("Sourcemap file {} not found", sourcemap_url);
-                        // source map cannot be found, fall back to hashing the contents if
-                        // available.  The v4 fallback should not happen.
-                        let debug_id = self
-                            .sources
-                            .get(source_url)
-                            .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
-                            .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                        debug_ids.push((source_url.clone(), debug_id));
-                        continue;
-                    }
-                };
-
-                let (debug_id, sourcemap_modified) =
-                    inject::fixup_sourcemap(&mut sourcemap_file.contents).context(format!(
-                        "Failed to process {}",
-                        sourcemap_file.path.display()
-                    ))?;
-
-                sourcemap_file
-                    .headers
-                    .push(("debug-id".to_string(), debug_id.to_string()));
-
-                if !dry_run && sourcemap_modified {
-                    let mut file = std::fs::File::create(&sourcemap_file.path)?;
-                    file.write_all(&sourcemap_file.contents).context(format!(
-                        "Failed to write sourcemap file {}",
-                        sourcemap_file.path.display()
-                    ))?;
-                }
-
-                if sourcemap_modified {
-                    report
-                        .sourcemaps
-                        .push((sourcemap_file.path.clone(), debug_id));
-                } else {
-                    report
-                        .skipped_sourcemaps
-                        .push((sourcemap_file.path.clone(), debug_id));
-                }
-
-                debug_ids.push((source_url.clone(), debug_id));
-            }
-        }
-
-        // Step 2: Iterate over the minified source files and inject the debug ids.
-        for (source_url, debug_id) in debug_ids {
+        for (source_url, sourcemap_url) in self.sourcemap_references.iter_mut() {
             // We only allow injection into files that match the extension
-            if !url_matches_extension(&source_url, js_extensions) {
+            if !url_matches_extension(source_url, js_extensions) {
                 debug!(
                     "skipping potential js file {} because it does not match extension",
                     source_url
@@ -857,10 +783,140 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            let source_file = self.sources.get_mut(&source_url).unwrap();
+            if let Some(debug_id) = self.debug_ids.get(source_url) {
+                report
+                    .previously_injected
+                    .push((source_url.into(), *debug_id));
+                continue;
+            }
 
-            fixup_js_file(&mut source_file.contents, debug_id)
-                .context(format!("Failed to process {}", source_file.path.display()))?;
+            // Find or generate a debug id and determine whether we can inject the
+            // code snippet at the start of the source file. This is determined by whether
+            // we are able to adjust the sourcemap accordingly.
+            let (debug_id, inject_at_start) = {
+                match sourcemap_url {
+                    None => {
+                        // no source map at all, try a deterministic debug id from the contents
+                        let debug_id = self
+                            .sources
+                            .get(source_url)
+                            .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
+                            .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
+                        (debug_id, false)
+                    }
+                    Some(sourcemap_url) => {
+                        if let Some(encoded) = sourcemap_url.strip_prefix(DATA_PREAMBLE) {
+                            // Handle embedded sourcemaps
+
+                            // Update the embedded sourcemap and write it back to the source file
+                            let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes()) else {
+                                bail!("Invalid embedded sourcemap in source file {source_url}");
+                            };
+
+                            inject::insert_empty_mapping(&mut decoded)?;
+                            let encoded = data_encoding::BASE64.encode(&decoded);
+                            let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
+
+                            let source_file = self.sources.get_mut(source_url).unwrap();
+
+                            // hash the new source map url for the debug id
+                            let debug_id =
+                                inject::debug_id_from_bytes_hashed(new_sourcemap_url.as_bytes());
+
+                            inject::replace_sourcemap_url(
+                                &mut source_file.contents,
+                                &new_sourcemap_url,
+                            )?;
+                            *sourcemap_url = new_sourcemap_url;
+
+                            (debug_id, true)
+                        } else {
+                            // Handle external sourcemaps
+
+                            let normalized =
+                                inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                            let matches = inject::find_matching_paths(&sourcemaps, &normalized);
+
+                            let sourcemap_url = match &matches[..] {
+                                [] => normalized,
+                                [x] => x.to_string(),
+                                _ => {
+                                    warn!("Ambiguous matches for sourcemap path {normalized}:");
+                                    for path in matches {
+                                        warn!("{path}");
+                                    }
+                                    normalized
+                                }
+                            };
+
+                            match self.sources.get_mut(&sourcemap_url) {
+                                None => {
+                                    debug!("Sourcemap file {} not found", sourcemap_url);
+                                    // source map cannot be found, fall back to hashing the contents if
+                                    // available.  The v4 fallback should not happen.
+                                    let debug_id = self
+                                        .sources
+                                        .get(source_url)
+                                        .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
+                                        .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
+                                    (debug_id, false)
+                                }
+                                Some(sourcemap_file) => {
+                                    inject::insert_empty_mapping(&mut sourcemap_file.contents)
+                                        .context(format!(
+                                            "Failed to process {}",
+                                            sourcemap_file.path.display()
+                                        ))?;
+
+                                    let (debug_id, sourcemap_modified) =
+                                        inject::fixup_sourcemap(&mut sourcemap_file.contents)
+                                            .context(format!(
+                                                "Failed to process {}",
+                                                sourcemap_file.path.display()
+                                            ))?;
+
+                                    sourcemap_file
+                                        .headers
+                                        .push(("debug-id".to_string(), debug_id.to_string()));
+
+                                    if !dry_run {
+                                        let mut file = std::fs::File::create(&sourcemap_file.path)?;
+                                        file.write_all(&sourcemap_file.contents).context(
+                                            format!(
+                                                "Failed to write sourcemap file {}",
+                                                sourcemap_file.path.display()
+                                            ),
+                                        )?;
+                                    }
+
+                                    if sourcemap_modified {
+                                        report
+                                            .sourcemaps
+                                            .push((sourcemap_file.path.clone(), debug_id));
+                                    } else {
+                                        report
+                                            .skipped_sourcemaps
+                                            .push((sourcemap_file.path.clone(), debug_id));
+                                    }
+
+                                    (debug_id, true)
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+
+            // Finally, inject the debug id and the code snippet into the source file
+            let source_file = self.sources.get_mut(source_url).unwrap();
+
+            if inject_at_start {
+                inject::fixup_js_file(&mut source_file.contents, debug_id)
+                    .context(format!("Failed to process {}", source_file.path.display()))?;
+            } else {
+                inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                    .context(format!("Failed to process {}", source_file.path.display()))?;
+            }
 
             source_file
                 .headers
@@ -944,54 +1000,59 @@ impl Default for SourceMapProcessor {
     }
 }
 
-#[test]
-fn test_split_url() {
-    assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
-    assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
-    assert_eq!(split_url("foo"), (None, "foo", None));
-    assert_eq!(split_url("/foo"), (Some(""), "foo", None));
-    assert_eq!(
-        split_url("/foo.deadbeef0123.js"),
-        (Some(""), "foo", Some("deadbeef0123.js"))
-    );
-    assert_eq!(
-        split_url("/foo/bar/baz.js"),
-        (Some("/foo/bar"), "baz", Some("js"))
-    );
-}
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-#[test]
-fn test_unsplit_url() {
-    assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
-    assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
-    assert_eq!(&unsplit_url(None, "foo", None), "foo");
-    assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
-}
+    #[test]
+    fn test_split_url() {
+        assert_eq!(split_url("/foo.js"), (Some(""), "foo", Some("js")));
+        assert_eq!(split_url("foo.js"), (None, "foo", Some("js")));
+        assert_eq!(split_url("foo"), (None, "foo", None));
+        assert_eq!(split_url("/foo"), (Some(""), "foo", None));
+        assert_eq!(
+            split_url("/foo.deadbeef0123.js"),
+            (Some(""), "foo", Some("deadbeef0123.js"))
+        );
+        assert_eq!(
+            split_url("/foo/bar/baz.js"),
+            (Some("/foo/bar"), "baz", Some("js"))
+        );
+    }
 
-#[test]
-fn test_join() {
-    assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
-    assert_eq!(
-        &join_url("app:///", "/foo.html").unwrap(),
-        "app:///foo.html"
-    );
-    assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
-    assert_eq!(
-        &join_url("https:///example.com/", "foo.html").unwrap(),
-        "https://example.com/foo.html"
-    );
-    assert_eq!(
-        &join_url("https://example.com/", "foo.html").unwrap(),
-        "https://example.com/foo.html"
-    );
-}
+    #[test]
+    fn test_unsplit_url() {
+        assert_eq!(&unsplit_url(Some(""), "foo", Some("js")), "/foo.js");
+        assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
+        assert_eq!(&unsplit_url(None, "foo", None), "foo");
+        assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
+    }
 
-#[test]
-fn test_url_matches_extension() {
-    assert!(url_matches_extension("foo.js", &["js"][..]));
-    assert!(!url_matches_extension("foo.mjs", &["js"][..]));
-    assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
-    assert!(!url_matches_extension("js", &["js"][..]));
+    #[test]
+    fn test_join() {
+        assert_eq!(&join_url("app:///", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("app://", "foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(&join_url("~/", "foo.html").unwrap(), "~/foo.html");
+        assert_eq!(
+            &join_url("app:///", "/foo.html").unwrap(),
+            "app:///foo.html"
+        );
+        assert_eq!(&join_url("app://", "/foo.html").unwrap(), "app:///foo.html");
+        assert_eq!(
+            &join_url("https:///example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+        assert_eq!(
+            &join_url("https://example.com/", "foo.html").unwrap(),
+            "https://example.com/foo.html"
+        );
+    }
+
+    #[test]
+    fn test_url_matches_extension() {
+        assert!(url_matches_extension("foo.js", &["js"][..]));
+        assert!(!url_matches_extension("foo.mjs", &["js"][..]));
+        assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
+        assert!(!url_matches_extension("js", &["js"][..]));
+    }
 }

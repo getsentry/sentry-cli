@@ -1,0 +1,21 @@
+```
+$ sentry-cli sourcemaps inject ./code ./maps
+? success
+> Searching ./code
+> Found 2 files
+> Searching ./maps
+> Found 2 files
+> Analyzing 4 sources
+> Injecting debug ids
+
+Source Map Debug ID Injection Report
+  Modified: The following source files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./code/foo/index.js
+    [..]-[..]-[..]-[..]-[..] - ./code/index.js
+  Modified: The following sourcemap files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./maps/foo/index.js.map
+  Ignored: The following sourcemap files already have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./maps/index.js.map
+
+
+```

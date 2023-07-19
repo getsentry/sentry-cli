@@ -23,6 +23,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("paths")
                 .value_name("PATHS")
                 .num_args(1..)
+                .required(true)
                 .action(ArgAction::Append)
                 .help(
                     "A path to recursively search for javascript files that should be processed.",
@@ -65,7 +66,6 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Don't modify files on disk."),
         )
-        .hide(true)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -89,18 +89,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut extensions = matches
         .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-        .unwrap_or_else(Vec::new);
-    if extensions.is_empty() {
-        extensions.push("js");
-        extensions.push("cjs");
-        extensions.push("mjs");
-    }
+        .unwrap_or_else(|| vec!["js", "cjs", "mjs"]);
+
+    // Sourcemaps should be discovered regardless of which JavaScript extensions have been selected.
+    extensions.push("map");
 
     for path in paths {
         println!("> Searching {}", path.display());
         let sources = ReleaseFileSearch::new(path)
             .ignore_file(ignore_file)
             .ignores(&ignores)
+            .extensions(extensions.clone())
             .collect_files()?;
         for source in sources {
             let url = path_as_url(&source.path);

@@ -1,0 +1,14 @@
+```
+$ sentry-cli sourcemaps inject .
+? success
+> Searching .
+> Found 1 file
+> Analyzing 1 sources
+> Injecting debug ids
+
+Source Map Debug ID Injection Report
+  Modified: The following source files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./dummy_embedded.js
+
+
+```

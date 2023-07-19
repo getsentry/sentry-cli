@@ -51,13 +51,11 @@ jobs:
         include:
           - arch: x86_64
             target: x86_64-apple-darwin
-            macos-version: '10.15'
           - arch: arm64
             target: aarch64-apple-darwin
-            macos-version: '11.0'
 
     name: macOS ${{ matrix.arch }}
-    runs-on: macos-${{ matrix.macos-version }}
+    runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v2

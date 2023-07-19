@@ -2,6 +2,74 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- feat: The server URL and org slug can now be extracted from Org Auth Tokens (#1673)
+
+## 2.19.4
+
+### Various fixes and improvements
+
+- feat: Don't upload chunks that are already on the server (fixed version) (#1660)
+
+## 2.19.3
+
+### Various fixes and improvements
+
+- Revert "feat: Don't upload chunks that are already on the server (#1651)"
+
+## 2.19.2
+
+### Various fixes and improvements
+
+- fix: Make artifact bundle creation deterministic (#1652) 
+- feat: Don't upload chunks that are already on the server (#1651)
+
+## 2.19.1
+
+### Various fixes & improvements
+
+- fix(inject): Add semicolon at the end of inject snippet (#1643) by @kamilogorek
+
+## 2.19.0
+
+### Various fixes & improvements
+
+- ref(debug-files): Use temp file handle instead of keeping zips in memory (#1641) by @kamilogorek
+- feat(crons): Bring back legacy token-auth checkin API (#1634) by @evanpurkhiser
+- ref: Unhide sourcemaps inject command as its already GA (#1631) by @kamilogorek
+- ref: Match case-insensitive value when finding repo by name (#1629) by @maxnowack
+- ref(inject): Inject code snippet at the start (#1567) by @loewenheim
+- feat(crons): Replace API checkins w/ send_envelope (#1618) by @evanpurkhiser
+
+## 2.18.1
+
+### Various fixes & improvements
+
+- ref(types): Add dedupe to available TS types (#1619) by @kamilogorek
+- ref(debug-files): Polish after-upload message output (#1620) by @kamilogorek
+
+## 2.18.0
+
+### Various fixes & improvements
+
+- ci: Use macos-latest to run build workflow (#1617) by @kamilogorek
+- Update `sentry` SDK to fix sending raw envelopes (#1616) by @Swatinem
+- misc: Add custom issues templates (#1613) by @kamilogorek
+- ref: Remove proguard from debug-files upload types (#1615) by @kamilogorek
+- ref(inject): Constrain file search by extensions (#1608) by @loewenheim
+- feat(crons): Allow specifying checkin environment (#1599) by @evanpurkhiser
+- chore(crons): Make monitors command visible (#1600) by @evanpurkhiser
+
+## 2.17.5
+
+### Various fixes & improvements
+
+- feat: Print bundle id after artifact bundle creation (#1593) by @loewenheim
+- ref: Use 'embedded sourcemap' label for upload log (#1595) by @kamilogorek
+
 ## 2.17.4
 
 ### Various fixes & improvements

@@ -22,7 +22,7 @@ use console::style;
 use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
-use symbolic::common::{AsSelf, ByteView, DebugId, SelfCell, Uuid};
+use symbolic::common::{Arch, AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::pe::PeObject;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileDescriptor};
@@ -508,14 +508,18 @@ where
 {
     for index in 0..zip.len() {
         let (name, buffer) = {
-            let zip_file = zip.by_index(index)?;
+            let mut zip_file = zip.by_index(index)?;
             let name = zip_file.name().to_string();
 
             if !options.valid_extension(Path::new(&name).extension()) {
                 continue;
             }
 
-            (name, ByteView::read(zip_file).map_err(Error::new)?)
+            let tmp_file = TempFile::create()?;
+            let mut tmp_fh = tmp_file.open()?;
+            std::io::copy(&mut zip_file, &mut tmp_fh)?;
+
+            (name, ByteView::map_file(tmp_fh).map_err(Error::new)?)
         };
 
         func(DifSource::Zip(&mut zip, &name), name.clone(), buffer)?;
@@ -1509,13 +1513,18 @@ fn poll_dif_assemble(
             };
 
             println!(
-                "  {:>7} {} ({}; {}{})",
-                style("PENDING").yellow(),
+                "  {:>8} {} ({}; {}{})",
+                style("UPLOADED").yellow(),
                 style(dif.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
                 dif.name,
                 dif.object()
-                    .map(|object| object.arch())
-                    .map(|arch| arch.to_string())
+                    .map(|object| {
+                        let arch = object.arch();
+                        match arch {
+                            Arch::Unknown => String::new(),
+                            _ => arch.to_string(),
+                        }
+                    })
                     .unwrap_or_default(),
                 kind,
             );

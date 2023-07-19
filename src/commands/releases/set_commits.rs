@@ -107,7 +107,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if let Some(commits) = matches.get_many::<String>("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
-                if repos.iter().any(|r| r.name == commit_spec.repo) {
+                if repos.iter().any(|r| r.name.to_lowercase() == commit_spec.repo.to_lowercase()) {
                     commit_specs.push(commit_spec);
                 } else {
                     bail!("Unknown repo '{}'", commit_spec.repo);

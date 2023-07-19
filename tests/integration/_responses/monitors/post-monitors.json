@@ -1,5 +1,6 @@
 {
   "id": "85a34e5a-c0b6-11ec-9d64-0242ac120002",
   "duration": 1337,
+  "environment": "production",
   "status": "in_progress"
 }
