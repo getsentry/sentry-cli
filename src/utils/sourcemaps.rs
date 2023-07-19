@@ -684,7 +684,7 @@ impl SourceMapProcessor {
                 .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())
                 .collect();
 
-            for mut source in self.sources.values_mut() {
+            for source in self.sources.values_mut() {
                 if let Ok(checksum) = source.checksum() {
                     if already_uploaded_checksums.contains(&checksum) {
                         source.already_uploaded = true;
