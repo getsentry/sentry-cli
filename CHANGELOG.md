@@ -6,7 +6,10 @@
 
 ### Various fixes and improvements
 
+- feat(inject): Make sourcemap discovery smarter (#1663) 
+- fix: Add wasm to supported debug-files upload formats (#1683) injection
 - feat: The server URL and org slug can now be extracted from Org Auth Tokens (#1673)
+- fix: Sourcemap rewriting no longer deletes debug ids (#1686)
 
 ## 2.19.4
 
