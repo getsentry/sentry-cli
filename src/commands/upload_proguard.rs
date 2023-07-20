@@ -11,8 +11,8 @@ use proguard::ProguardMapping;
 use symbolic::common::ByteView;
 use uuid::Uuid;
 
+use crate::api::Api;
 use crate::api::AssociateProguard;
-use crate::api::{Api, AssociateDsyms};
 use crate::config::Config;
 use crate::utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
 use crate::utils::args::ArgExt;
@@ -271,7 +271,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
         for mapping in &mappings {
-            let uuid = forced_uuid.unwrap_or_else(|| &mapping.uuid);
+            let uuid = forced_uuid.unwrap_or(&mapping.uuid);
             api.associate_proguard_mappings(
                 &org,
                 &project,
