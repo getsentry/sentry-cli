@@ -2380,10 +2380,6 @@ pub struct AssociateDsyms {
 pub struct AssociateProguard {
     pub release_name: String,
     pub proguard_uuid: String,
-    #[serde(rename = "appId")]
-    pub app_id: String,
-    pub version: String,
-    pub build: Option<String>,
 }
 
 #[derive(Deserialize)]

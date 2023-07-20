@@ -270,17 +270,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let version = matches.get_one::<String>("version").unwrap().to_owned();
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
+        let mut release_name = app_id.to_owned();
+        release_name.push('@');
+        release_name.push_str(&version);
+
+        if let Some(build_str) = build {
+            release_name.push('+');
+            release_name.push_str(&build_str);
+        }
+
         for mapping in &mappings {
             let uuid = forced_uuid.unwrap_or(&mapping.uuid);
             api.associate_proguard_mappings(
                 &org,
                 &project,
                 &AssociateProguard {
-                    release_name: app_id.to_owned(),
+                    release_name: release_name.to_owned(),
                     proguard_uuid: uuid.to_string(),
-                    app_id: app_id.to_owned(),
-                    version: version.clone(),
-                    build: build.clone(),
                 },
             )?;
         }
