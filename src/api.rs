@@ -1361,7 +1361,7 @@ impl Api {
         data: &AssociateProguard,
     ) -> ApiResult<()> {
         let path = format!(
-            "/projects/{}/{}/files/proguard-artifact-releases",
+            "/projects/{}/{}/files/proguard-artif",
             PathArg(org),
             PathArg(project)
         );
@@ -1369,8 +1369,10 @@ impl Api {
             .request(Method::Post, &path)?
             .with_json_body(data)?
             .send()?;
-        if resp.status() == 404 || resp.status() == 201 {
+        if resp.status() == 201 {
             Ok(())
+        } else if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
         } else {
             resp.convert()
         }
