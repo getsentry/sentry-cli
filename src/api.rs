@@ -1361,7 +1361,7 @@ impl Api {
         data: &AssociateProguard,
     ) -> ApiResult<()> {
         let path = format!(
-            "/projects/{}/{}/files/proguard-artif",
+            "/projects/{}/{}/files/proguard-artifact-releases",
             PathArg(org),
             PathArg(project)
         );
