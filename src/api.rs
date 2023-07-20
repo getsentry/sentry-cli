@@ -1361,6 +1361,30 @@ impl Api {
         )
     }
 
+    pub fn associate_proguard_mappings(
+        &self,
+        org: &str,
+        project: &str,
+        data: &AssociateProguard,
+    ) -> ApiResult<()> {
+        let path = format!(
+            "/projects/{}/{}/files/proguard-artifact-releases",
+            PathArg(org),
+            PathArg(project)
+        );
+        let resp: ApiResponse = self
+            .request(Method::Post, &path)?
+            .with_json_body(data)?
+            .send()?;
+        if resp.status() == 201 {
+            Ok(())
+        } else if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        } else {
+            resp.convert()
+        }
+    }
+
     /// Associate arbitrary debug symbols with a build
     pub fn associate_dsyms(
         &self,
@@ -2402,6 +2426,12 @@ pub struct AssociateDsyms {
     pub app_id: String,
     pub version: String,
     pub build: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct AssociateProguard {
+    pub release_name: String,
+    pub proguard_uuid: String,
 }
 
 #[derive(Deserialize)]
