@@ -75,6 +75,7 @@ walkdir = "2.3.2"
 which = "4.4.0"
 zip = "0.6.4"
 data-encoding = "2.3.3"
+magic_string = "0.3.4"
 
 [dev-dependencies]
 insta = { version = "1.26.0", features = ["redactions", "yaml"] }

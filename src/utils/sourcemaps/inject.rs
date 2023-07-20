@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use anyhow::{bail, Result};
 use lazy_static::lazy_static;
 use log::debug;
+use magic_string::{GenerateDecodedMapOptions, MagicString};
 use sentry::types::DebugId;
 use serde_json::Value;
 
@@ -19,15 +20,11 @@ const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 lazy_static! {
-<<<<<<< Updated upstream
     static ref USE_PRAGMA_RE: Regex = Regex::new(r#"^"use \w+";|^'use \w+';"#).unwrap();
-=======
-    static ref USE_PRAGMA_RE: Regex = Regex::new(r#""use \w+";|'use \w+';"#).unwrap();
     static ref TEST_RE: Regex = Regex::new(
-        r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';)?"#
+        r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';)?[\n\r]?"#
     )
     .unwrap();
->>>>>>> Stashed changes
 }
 
 fn print_section_with_debugid(
@@ -164,7 +161,10 @@ impl fmt::Display for InjectReport {
 /// "#
 /// );
 /// ```
-pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
+pub fn fixup_js_file(
+    js_contents: &mut Vec<u8>,
+    debug_id: DebugId,
+) -> Result<magic_string::SourceMap> {
     let contents = String::from_utf8(js_contents.clone())?;
     js_contents.clear();
 
@@ -173,52 +173,27 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()>
         .expect("regex is infallible")
         .range();
 
-    dbg!(&contents);
+    let mut magic = MagicString::new(&contents);
 
-    write!(js_contents, "{}", &contents[m.clone()])?;
-    if ![b'\n', b'\r'].contains(&js_contents[js_contents.len() - 1]) {
-        writeln!(js_contents)?;
-    }
+    let to_inject = format!(
+        "\n{}\n",
+        CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string())
+    );
+    magic
+        .append_left(m.end as u32, &to_inject)
+        .unwrap()
+        .append(&format!("\n{DEBUGID_COMMENT_PREFIX}={debug_id}\n"))
+        .unwrap();
 
-    let rest = &contents[m.end..];
-    let mut rest_lines = rest.lines().map(String::from).collect::<Vec<_>>();
+    write!(js_contents, "{}", magic.to_string())?;
 
-    // Find the last source mapping URL comment, it's the only one that matters
-    let sourcemap_comment_idx = rest_lines
-        .iter()
-        .enumerate()
-        .rev()
-        .find(|(_idx, line)| {
-            line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+    Ok(magic
+        .generate_map(GenerateDecodedMapOptions {
+            source: Some("pre_injection.js".to_string()),
+            include_content: true,
+            ..Default::default()
         })
-        .map(|(idx, _)| idx);
-
-    let sourcemap_comment = sourcemap_comment_idx.map(|idx| rest_lines.remove(idx));
-
-    dbg!(&sourcemap_comment);
-
-    println!("{}", std::str::from_utf8(js_contents).unwrap());
-    // Inject the code snippet
-    let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
-    writeln!(js_contents, "{to_inject}")?;
-    println!("{}", std::str::from_utf8(js_contents).unwrap());
-
-    for line in rest_lines {
-        writeln!(js_contents, "{line}")?;
-    }
-    println!("{}", std::str::from_utf8(js_contents).unwrap());
-
-    // Write the debug id comment
-    writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
-    println!("{}", std::str::from_utf8(js_contents).unwrap());
-
-    // Lastly, write the source mapping URL comment, if there was one
-    if let Some(sourcemap_comment) = sourcemap_comment {
-        writeln!(js_contents, "{sourcemap_comment}")?;
-        println!("{}", std::str::from_utf8(js_contents).unwrap());
-    }
-
-    Ok(())
+        .unwrap())
 
     // let mut js_lines = js_lines.into_iter().peekable();
 
@@ -534,12 +509,13 @@ something else"#;
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"//# sourceMappingURL=fake1
+
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
 some line
 //# sourceMappingURL=fake2
+//# sourceMappingURL=real
 something else
 //# debugId=00000000-0000-0000-0000-000000000000
-//# sourceMappingURL=real
 "#;
 
         assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
@@ -587,6 +563,7 @@ something else"#;
         let expected = r#"//# sourceMappingURL=fake
 
 
+
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
 some line
 //# sourceMappingURL=fake
@@ -602,9 +579,9 @@ some line
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
+//# sourceMappingURL=real
 something else
 //# debugId=00000000-0000-0000-0000-000000000000
-//# sourceMappingURL=real
 "#;
 
         println!("{}", result);
@@ -628,20 +605,27 @@ something else"#;
 
         let mut source = Vec::from(source);
 
-        fixup_js_file(&mut source, debug_id).unwrap();
+        let map = fixup_js_file(&mut source, debug_id).unwrap();
+
+        let mut map_file = std::fs::File::create("converted.map").unwrap();
+        write!(map_file, "{}", map.to_string().unwrap()).unwrap();
+
+        let mut min_file = std::fs::File::create("converted.js").unwrap();
+        min_file.write_all(&source).unwrap();
 
         let expected = r#"#!/bin/node
 //# sourceMappingURL=fake1
 
   // some other comment
-"use strict"; rest of the line
-'use strict';
+"use strict";
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+ rest of the line
+'use strict';
 some line
 //# sourceMappingURL=fake2
+//# sourceMappingURL=real
 something else
 //# debugId=00000000-0000-0000-0000-000000000000
-//# sourceMappingURL=real
 "#;
 
         assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
@@ -670,14 +654,15 @@ something else"#;
 //# sourceMappingURL=fake1
 
   // some other comment
-"use strict"; rest of the line
+"use strict";
 !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+ rest of the line
 (this.foo=this.bar||[]).push([[2],[function(e,t,n){"use strict"; […] }
 some line
 //# sourceMappingURL=fake2
+//# sourceMappingURL=real
 something else
 //# debugId=00000000-0000-0000-0000-000000000000
-//# sourceMappingURL=real
 "#;
 
         assert_eq!(std::str::from_utf8(&source).unwrap(), expected);
