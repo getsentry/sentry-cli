@@ -15,6 +15,7 @@
 - fix(debug-files): Add wasm to supported debug-files upload formats (#1683)
 - fix(sourcemaps): Sourcemap rewriting no longer deletes debug ids when uploading (#1686)
 - ref(sourcemaps): Do not dedupe artifacts if server won't handle it due to url limit (#1680)
+
 ## 2.19.4
 
 ### Various fixes and improvements
