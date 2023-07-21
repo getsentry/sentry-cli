@@ -123,26 +123,29 @@ pub fn fixup_js_file(
     js_contents: &mut Vec<u8>,
     debug_id: DebugId,
 ) -> Result<magic_string::SourceMap> {
-    let contents = String::from_utf8(js_contents.clone())?;
-    js_contents.clear();
+    let contents = std::str::from_utf8(js_contents)?;
 
     let m = PRE_INJECT_RE
-        .find(&contents)
+        .find(contents)
         .expect("regex is infallible")
         .range();
 
-    let mut magic = MagicString::new(&contents);
-
-    let to_inject = format!(
+    let code_snippet = format!(
         "\n{}\n",
         CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string())
     );
+
+    let debug_id_comment = format!("\n{DEBUGID_COMMENT_PREFIX}={debug_id}\n");
+
+    let mut magic = MagicString::new(contents);
+
     magic
-        .append_left(m.end as u32, &to_inject)
+        .append_left(m.end as u32, &code_snippet)
         .unwrap()
-        .append(&format!("\n{DEBUGID_COMMENT_PREFIX}={debug_id}\n"))
+        .append(&debug_id_comment)
         .unwrap();
 
+    js_contents.clear();
     write!(js_contents, "{}", magic.to_string())?;
 
     Ok(magic
