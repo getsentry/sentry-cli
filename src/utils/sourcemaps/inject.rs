@@ -25,7 +25,7 @@ lazy_static! {
     // 2. a block of line comments, block comments, and empty lines,
     // 3. and an optional `"use strict";` statement.`
     static ref PRE_INJECT_RE: Regex = Regex::new(
-        r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';)?[\n\r]?"#
+        r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';[\n\r]?)?"#
     )
     .unwrap();
 }
