@@ -7,7 +7,7 @@ use std::fmt;
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use lazy_static::lazy_static;
 use log::debug;
 use magic_string::{GenerateDecodedMapOptions, MagicString};
@@ -16,7 +16,6 @@ use serde_json::Value;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}();"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
-const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 lazy_static! {
@@ -242,27 +241,35 @@ pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
 ///
 /// In either case, the value of the `debug_id` key is returned.
 pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, bool)> {
-    let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
+    match sourcemap::decode_slice(sourcemap_contents).context("Invalid sourcemap")? {
+        sourcemap::DecodedMap::Regular(mut sm) => {
+            if let Some(debug_id) = sm.get_debug_id() {
+                debug!("Sourcemap already has a debug id");
+                Ok((debug_id, false))
+            } else {
+                let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
+                sm.set_debug_id(Some(debug_id));
 
-    let Some(map) = sourcemap.as_object_mut() else {
-        bail!("Invalid sourcemap");
-    };
-
-    match map.get(SOURCEMAP_DEBUGID_KEY) {
-        Some(id) => {
-            let debug_id = serde_json::from_value(id.clone())?;
-            debug!("Sourcemap already has a debug id");
-            Ok((debug_id, false))
+                sourcemap_contents.clear();
+                sm.to_writer(sourcemap_contents)?;
+                Ok((debug_id, true))
+            }
         }
+        sourcemap::DecodedMap::Hermes(mut smh) => {
+            if let Some(debug_id) = smh.get_debug_id() {
+                debug!("Sourcemap already has a debug id");
+                Ok((debug_id, false))
+            } else {
+                let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
+                smh.set_debug_id(Some(debug_id));
 
-        None => {
-            let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
-            let id = serde_json::to_value(debug_id)?;
-            map.insert(SOURCEMAP_DEBUGID_KEY.to_string(), id);
-
-            sourcemap_contents.clear();
-            serde_json::to_writer(sourcemap_contents, &sourcemap)?;
-            Ok((debug_id, true))
+                sourcemap_contents.clear();
+                smh.to_writer(sourcemap_contents)?;
+                Ok((debug_id, true))
+            }
+        }
+        sourcemap::DecodedMap::Index(_) => {
+            bail!("DebugId injection is not supported for sourcemap indexes")
         }
     }
 }

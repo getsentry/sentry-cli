@@ -2,6 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- feat(issues): Add `issues list` command (#1349)
+- feat(inject): Make sourcemap discovery smarter (#1663) 
+- feat(config): Support organization-based tokens (#1673)
+- feat(proguard): Create a weak release association with a proguard mapping file (#1688)
+- fix(inject): Make pragma detection stricter (#1648)
+- fix(inject): Mark paths argument as required (#1662)
+- fix(debug-files): Add wasm to supported debug-files upload formats (#1683)
+- fix(sourcemaps): Sourcemap rewriting no longer deletes debug ids when uploading (#1686)
+- ref(sourcemaps): Do not dedupe artifacts if server won't handle it due to url limit (#1680)
+
 ## 2.19.4
 
 ### Various fixes and improvements
