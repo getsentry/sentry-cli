@@ -20,8 +20,11 @@ const SOURCEMAP_DEBUGID_KEY: &str = "debug_id";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
 lazy_static! {
-    static ref USE_PRAGMA_RE: Regex = Regex::new(r#"^"use \w+";|^'use \w+';"#).unwrap();
-    static ref TEST_RE: Regex = Regex::new(
+    // A regex that captures
+    // 1. an optional initial hashbang,
+    // 2. a block of line comments, block comments, and empty lines,
+    // 3. and an optional `"use strict";` statement.`
+    static ref PRE_INJECT_RE: Regex = Regex::new(
         r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';)?[\n\r]?"#
     )
     .unwrap();
@@ -111,56 +114,11 @@ impl fmt::Display for InjectReport {
 /// `<CODE_SNIPPET>[<debug_id>]`
 /// is inserted at the earliest possible position, which is after an
 /// optional hashbang, followed by a
-/// block of comments, empty lines, and `"use […]";` or `'use […]';` pragmas.
+/// block of comments, empty lines, and an optional `"use […]";` or `'use […]';` pragma.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
-/// 3. The last source mapping comment (a comment starting with
-/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
-/// the very end of the file, after the debug id comment from 2.
 ///
-/// This function will naturally mess with the correspondence between a source file
-/// and its sourcemap. Use [`insert_empty_mapping`] on the sourcemap to fix this.
-/// # Example
-/// ```
-/// let file = "
-/// // a
-/// // comment
-/// // block
-///
-/// // another
-/// // comment
-/// // block
-///
-/// 'use strict';
-/// function t(t) {
-///   return '[object Object]' === Object.prototype.toString.call(t);
-/// }
-/// //# sourceMappingURL=/path/to/sourcemap
-/// ";
-///
-/// let mut file = file.as_bytes().to_vec();
-/// fixup_js_file(&mut file, DebugId::default()).unwrap();
-///
-/// assert_eq!(
-///     std::str::from_utf8(&file).unwrap(),
-///     r#"
-/// // a
-/// // comment
-/// // block
-///
-/// // another
-/// // comment
-/// // block
-///
-/// 'use strict';
-/// !function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
-/// function t(t) {
-///   return '[object Object]' === Object.prototype.toString.call(t);
-/// }
-/// //# debugId=00000000-0000-0000-0000-000000000000
-/// //# sourceMappingURL=/path/to/sourcemap
-/// "#
-/// );
-/// ```
+/// This function returns a [`magic_string::SourceMap`] that maps locations in the injected file
+/// to their corresponding places in the original file.
 pub fn fixup_js_file(
     js_contents: &mut Vec<u8>,
     debug_id: DebugId,
@@ -168,7 +126,7 @@ pub fn fixup_js_file(
     let contents = String::from_utf8(js_contents.clone())?;
     js_contents.clear();
 
-    let m = TEST_RE
+    let m = PRE_INJECT_RE
         .find(&contents)
         .expect("regex is infallible")
         .range();
@@ -194,44 +152,6 @@ pub fn fixup_js_file(
             ..Default::default()
         })
         .unwrap())
-
-    // let mut js_lines = js_lines.into_iter().peekable();
-
-    // // Handle initial hashbang
-    // if let Some(hashbang) = js_lines.next_if(|line| line.trim().starts_with("#!")) {
-    //     writeln!(js_contents, "{hashbang}")?;
-    // }
-
-    // // Write comments and empty lines at the start back to the file
-    // while let Some(comment_or_empty) =
-    //     js_lines.next_if(|line| line.trim().is_empty() || line.trim().starts_with("//"))
-    // {
-    //     writeln!(js_contents, "{comment_or_empty}")?;
-    // }
-
-    // // Write use statements back to the file
-    // while let Some(use_pragma) = js_lines.next_if(|line| USE_PRAGMA_RE.is_match(line)) {
-    //     writeln!(js_contents, "{use_pragma}")?;
-    // }
-
-    // // Inject the code snippet
-    // let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
-    // writeln!(js_contents, "{to_inject}")?;
-
-    // // Write other lines
-    // for line in js_lines {
-    //     writeln!(js_contents, "{line}")?;
-    // }
-
-    // // Write the debug id comment
-    // writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
-
-    // // Lastly, write the source mapping URL comment, if there was one
-    // if let Some(sourcemap_comment) = sourcemap_comment {
-    //     writeln!(js_contents, "{sourcemap_comment}")?;
-    // }
-
-    // Ok(())
 }
 
 /// Fixes up a minified JS source file with a debug id without messing with mappings.
@@ -802,7 +722,7 @@ some line
 //# sourceMappingURL=real
 something else"#;
 
-        let m = TEST_RE.find(source).unwrap();
+        let m = PRE_INJECT_RE.find(source).unwrap();
         dbg!(&source[m.range()]);
     }
 }
