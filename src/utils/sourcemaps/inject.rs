@@ -174,14 +174,9 @@ pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result
 
     js_contents.clear();
 
-    let sourcemap_comment_idx = js_lines
-        .iter()
-        .enumerate()
-        .rev()
-        .find(|(_idx, line)| {
-            line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
-        })
-        .map(|(idx, _)| idx);
+    let sourcemap_comment_idx = js_lines.iter().rposition(|line| {
+        line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
+    });
 
     let sourcemap_comment = sourcemap_comment_idx.map(|idx| js_lines.remove(idx));
 
@@ -191,11 +186,10 @@ pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result
 
     let to_inject = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
     writeln!(js_contents, "{to_inject}")?;
-    writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
-
     if let Some(sourcemap_comment) = sourcemap_comment {
         writeln!(js_contents, "{sourcemap_comment}")?;
     }
+    writeln!(js_contents, "{DEBUGID_COMMENT_PREFIX}={debug_id}")?;
 
     Ok(())
 }
