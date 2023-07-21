@@ -88,7 +88,7 @@ declare module '@sentry/cli' {
      */
     sourceMapReference?: boolean;
     /**
-     * Enable files gzip decompression prior to upload.
+     * Enables files gzip decompression prior to uploading. Defaults to `false`.
      */
     decompress?: boolean;
     /**
