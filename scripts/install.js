@@ -193,7 +193,9 @@ async function downloadBinary() {
 
   if (process.env.SENTRYCLI_USE_LOCAL === '1') {
     try {
-      const binPath = which.sync('sentry-cli');
+      const binPaths = which.sync('sentry-cli', { all: true });
+      if (!binPaths.length) throw new Error('Binary not found');
+      const binPath = binPaths[binPaths.length - 1];
       logger.log(`Using local binary: ${binPath}`);
       fs.copyFileSync(binPath, outputPath);
       return Promise.resolve();
