@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.20.1
+
+### Various fixes and improvements
+
+- fix: Correctly detect local binary when installing via npm (#1695)
+
 ## 2.20.0
 
 ### Various fixes and improvements
