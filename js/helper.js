@@ -12,6 +12,10 @@ const childProcess = require('child_process');
  * @returns {string} The path to the sentry-cli binary
  */
 function getBinaryPath() {
+  if (process.env.SENTRY_BINARY_PATH) {
+    return process.env.SENTRY_BINARY_PATH;
+  }
+
   const parts = [];
   parts.push(__dirname);
   parts.push('..');
