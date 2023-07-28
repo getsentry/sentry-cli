@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.20.2
+
+### Various fixes & improvements
+
+- feat: Allow the CLI binary path to be overridden (#1697) by @koddsson
+
 ## 2.20.1
 
 ### Various fixes and improvements
