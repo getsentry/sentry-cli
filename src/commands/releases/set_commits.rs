@@ -34,7 +34,7 @@ pub fn make_command(command: Command) -> Command {
                     will create a release with the default commits count (or the one specified with `--initial-depth`) \
                     instead of failing the command."))
         .arg(Arg::new("local")
-            .conflicts_with_all(["auto", "clear", "commits", ])
+            .conflicts_with_all(["auto", "clear", "commits"])
             .long("local")
             .action(ArgAction::SetTrue)
             .help("Set commits of a release from local git.{n}\
@@ -42,7 +42,6 @@ pub fn make_command(command: Command) -> Command {
                     sentry-cli will then automatically find remotely configured \
                     repositories and discover commits."))
         .arg(Arg::new("initial-depth")
-            .conflicts_with("auto")
             .long("initial-depth")
             .value_name("INITIAL DEPTH")
             .value_parser(clap::value_parser!(usize))
@@ -107,7 +106,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if let Some(commits) = matches.get_many::<String>("commits") {
             for spec in commits {
                 let commit_spec = CommitSpec::parse(spec)?;
-                if repos.iter().any(|r| r.name.to_lowercase() == commit_spec.repo.to_lowercase()) {
+                if repos
+                    .iter()
+                    .any(|r| r.name.to_lowercase() == commit_spec.repo.to_lowercase())
+                {
                     commit_specs.push(commit_spec);
                 } else {
                     bail!("Unknown repo '{}'", commit_spec.repo);
