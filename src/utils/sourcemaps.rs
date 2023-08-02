@@ -799,6 +799,9 @@ impl SourceMapProcessor {
                     let source_file = self.sources.get_mut(source_url).unwrap();
                     let debug_id = inject::debug_id_from_bytes_hashed(&source_file.contents);
 
+                    // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                    // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                    // This isn't ideal, but it's the best we can do in this case.
                     inject::fixup_js_file_end(&mut source_file.contents, debug_id)
                         .context(format!("Failed to process {}", source_file.path.display()))?;
                     debug_id
@@ -861,12 +864,16 @@ impl SourceMapProcessor {
 
                         if self.sources.contains_key(&sourcemap_url) {
                             // Case 3: We have an external sourcemap for the source file.
+
+                            // We need to do a bit of a dance here because we can't mutably
+                            // borrow the source file and the sourcemap at the same time.
                             let (sourcemap, debug_id, debug_id_fresh) = {
                                 let sourcemap_file = &self.sources[&sourcemap_url];
 
                                 let sm = SourceMap::from_slice(&sourcemap_file.contents).context(
                                     format!("Invalid sourcemap at {}", sourcemap_file.url),
                                 )?;
+
                                 match sm.get_debug_id() {
                                     Some(debug_id) => (sm, debug_id, false),
                                     None => {
@@ -925,6 +932,9 @@ impl SourceMapProcessor {
                             let debug_id =
                                 inject::debug_id_from_bytes_hashed(&source_file.contents);
 
+                            // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                            // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                            // This isn't ideal, but it's the best we can do in this case.
                             inject::fixup_js_file_end(&mut source_file.contents, debug_id)
                                 .context(format!(
                                     "Failed to process {}",
