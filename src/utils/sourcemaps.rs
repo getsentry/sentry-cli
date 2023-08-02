@@ -791,7 +791,7 @@ impl SourceMapProcessor {
             }
 
             // Modify the source file and the sourcemap.
-            // There are seveal cases to consider according to whether we have a sourcemap for the source file and
+            // There are several cases to consider according to whether we have a sourcemap for the source file and
             // whether it's embedded or external.
             let debug_id = match sourcemap_url {
                 None => {
