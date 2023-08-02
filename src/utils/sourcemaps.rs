@@ -890,6 +890,7 @@ impl SourceMapProcessor {
                             adjusted_map.set_debug_id(Some(debug_id));
 
                             let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
+                            sourcemap_file.contents.clear();
                             adjusted_map.to_writer(&mut sourcemap_file.contents)?;
 
                             sourcemap_file
