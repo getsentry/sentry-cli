@@ -1,0 +1,22 @@
+```
+$ sentry-cli sourcemaps inject .
+? success
+> Searching .
+> Found 8 files
+> Analyzing 8 sources
+> Injecting debug ids
+
+Source Map Debug ID Injection Report
+  Modified: The following source files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./rollup/rollup.bundle.js
+    [..]-[..]-[..]-[..]-[..] - ./rspack/rspack.bundle.js
+    [..]-[..]-[..]-[..]-[..] - ./vite/vite.bundle.js
+    [..]-[..]-[..]-[..]-[..] - ./webpack/webpack.bundle.js
+  Modified: The following sourcemap files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./rollup/rollup.bundle.js.map
+    [..]-[..]-[..]-[..]-[..] - ./rspack/rspack.bundle.js.map
+    [..]-[..]-[..]-[..]-[..] - ./vite/vite.bundle.js.map
+    [..]-[..]-[..]-[..]-[..] - ./webpack/webpack.bundle.js.map
+
+
+```

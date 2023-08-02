@@ -91,3 +91,41 @@ fn command_sourcemaps_inject_output_split_ambiguous() {
 
     register_test("sourcemaps/sourcemaps-inject-split-ambiguous.trycmd");
 }
+
+#[test]
+fn command_sourcemaps_inject_bundlers() {
+    let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject-bundlers.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_bundlers/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    register_test("sourcemaps/sourcemaps-inject-bundlers.trycmd");
+
+    for bundler in ["rollup", "rspack", "vite", "webpack"] {
+        let actual_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/{bundler}.bundle.js"))
+                .unwrap();
+        let expected_code = std::fs::read_to_string(format!(
+            "{testcase_cwd_path}/{bundler}/{bundler}.bundle.js.expected"
+        ))
+        .unwrap();
+
+        assert_eq!(actual_code, expected_code);
+
+        let actual_map = std::fs::read_to_string(format!(
+            "{testcase_cwd_path}/{bundler}/{bundler}.bundle.js.map"
+        ))
+        .unwrap();
+        let expected_map = std::fs::read_to_string(format!(
+            "{testcase_cwd_path}/{bundler}/{bundler}.bundle.js.map.expected"
+        ))
+        .unwrap();
+
+        assert_eq!(actual_map, expected_map);
+    }
+}
