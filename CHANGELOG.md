@@ -2,7 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
-## Unreleased
+## 2.20.3
+
+### Various fixes & improvements
+
+- fix(set-commits): Allow --initial-depth to be specified alongside --auto (#1703) by @kamilogorek
+- feat: Allow the CLI binary path to be overridden (#1697) by @koddsson
+
+## 2.20.1
+
+### Various fixes and improvements
+
+- fix: Correctly detect local binary when installing via npm (#1695)
+
+## 2.20.0
 
 ### Various fixes and improvements
 

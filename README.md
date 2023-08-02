@@ -17,7 +17,7 @@
 
 This is a Sentry command line client for some generic tasks. Right now this is
 primarily used to upload debug symbols to Sentry if you are not using the
-fastlane tools.
+Fastlane tools.
 
 * Downloads can be found under
   [Releases](https://github.com/getsentry/sentry-cli/releases/)
@@ -29,7 +29,7 @@ If you are on OS X or Linux, you can use the automated downloader which will fet
 
     curl -sL https://sentry.io/get-cli/ | bash
 
-We do however, encourage you to pin the specific version of the CLI, so your builds are always reproducible.
+We do, however, encourage you to pin the specific version of the CLI, so your builds are always reproducible.
 To do that, you can use the exact same method, with an additional version specifier:
 
     curl -sL https://sentry.io/get-cli/ | SENTRY_CLI_VERSION=2.0.4 bash
@@ -52,7 +52,7 @@ pip install sentry-cli
 
 ### Node
 
-Additionally you can also install this binary via npm:
+Additionally, you can also install this binary via npm:
 
     npm install @sentry/cli
 
@@ -77,14 +77,22 @@ Or add property into your `.npmrc` file (https://www.npmjs.org/doc/files/npmrc.h
 sentrycli_cdnurl=https://mymirror.local/path
 ```
 
-Another option is to use the environment variable `SENTRYCLI_CDNURL`.
+There are a few environment variables that you can provide to control the npm installation:
 
-```sh
-SENTRYCLI_CDNURL=https://mymirror.local/path npm install @sentry/cli
+```
+SENTRYCLI_CDNURL=<url> # Use alternative cdn url for downloading binary
+SENTRYCLI_USE_LOCAL=1 # Use local instance of sentry-cli binary (looked up via $PATH environment)
+SENTRYCLI_SKIP_DOWNLOAD=1 # Skip downloading binary entirely
+SENTRYCLI_NO_PROGRESS_BAR=1 # Do not print the progress bar when downloading binary (default for non-TTY environments like CI)
+SENTRYCLI_LOG_STREAM=<stdout|stderr> # Changes where to redirect install script output
 ```
 
+When using `sentry-cli` via JavaScript API or any 3rd party plugin that is consuming said API,
+you can also use `SENTRY_BINARY_PATH=<path>` alongside `SENTRYCLI_SKIP_DOWNLOAD=1` to completely
+control what binaries are downloaded and used throughout the whole process.
+
 If you're installing the CLI with NPM from behind a proxy, the install script will
-use either NPM's configured HTTPS proxy server, or the value from your `HTTPS_PROXY`
+use either NPM's configured HTTPS proxy server or the value from your `HTTPS_PROXY`
 environment variable.
 
 ### Homebrew
