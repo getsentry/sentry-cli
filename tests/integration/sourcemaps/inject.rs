@@ -58,33 +58,7 @@ fn command_sourcemaps_inject_output_embedded() {
     )
     .unwrap();
 
-    // Check mappings before injection
-    let contents = std::fs::read_to_string(testcase_cwd_path.join("dummy_embedded.js")).unwrap();
-    let encoded_sourcemap = contents
-        .lines()
-        .find_map(|line| line.strip_prefix("//# sourceMappingURL=data:application/json;base64,"))
-        .unwrap();
-
-    let decoded = data_encoding::BASE64
-        .decode(encoded_sourcemap.as_bytes())
-        .unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&decoded).unwrap();
-    assert_eq!(parsed["mappings"], ";;;");
-
     register_test("sourcemaps/sourcemaps-inject-embedded.trycmd");
-
-    // Check mappings after injection
-    let contents = std::fs::read_to_string(testcase_cwd_path.join("dummy_embedded.js")).unwrap();
-    let encoded_sourcemap = contents
-        .lines()
-        .find_map(|line| line.strip_prefix("//# sourceMappingURL=data:application/json;base64,"))
-        .unwrap();
-
-    let decoded = data_encoding::BASE64
-        .decode(encoded_sourcemap.as_bytes())
-        .unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&decoded).unwrap();
-    assert_eq!(parsed["mappings"], ";;;;");
 }
 
 #[test]

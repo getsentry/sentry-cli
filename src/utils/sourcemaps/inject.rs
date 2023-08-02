@@ -7,12 +7,12 @@ use std::fmt;
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
 
-use anyhow::{bail, Context, Result};
+use anyhow::Result;
 use lazy_static::lazy_static;
-use log::debug;
+
 use magic_string::{GenerateDecodedMapOptions, MagicString};
 use sentry::types::DebugId;
-use serde_json::Value;
+use sourcemap::SourceMap;
 
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}();"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
@@ -116,12 +116,9 @@ impl fmt::Display for InjectReport {
 /// block of comments, empty lines, and an optional `"use […]";` or `'use […]';` pragma.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
 ///
-/// This function returns a [`magic_string::SourceMap`] that maps locations in the injected file
+/// This function returns a [`SourceMap`] that maps locations in the injected file
 /// to their corresponding places in the original file.
-pub fn fixup_js_file(
-    js_contents: &mut Vec<u8>,
-    debug_id: DebugId,
-) -> Result<magic_string::SourceMap> {
+pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<SourceMap> {
     let contents = std::str::from_utf8(js_contents)?;
 
     let m = PRE_INJECT_RE
@@ -147,13 +144,17 @@ pub fn fixup_js_file(
     js_contents.clear();
     write!(js_contents, "{}", magic.to_string())?;
 
-    Ok(magic
+    let map = magic
         .generate_map(GenerateDecodedMapOptions {
             source: Some("pre_injection.js".to_string()),
             include_content: true,
             ..Default::default()
         })
-        .unwrap())
+        .unwrap();
+
+    let map = map.to_string().unwrap();
+
+    Ok(SourceMap::from_slice(map.as_bytes()).unwrap())
 }
 
 /// Fixes up a minified JS source file with a debug id without messing with mappings.
@@ -203,11 +204,10 @@ pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result
 pub fn replace_sourcemap_url(js_contents: &mut Vec<u8>, new_url: &str) -> Result<()> {
     let js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
 
-    let sourcemap_comment_idx = match js_lines.iter().enumerate().rev().find(|(_idx, line)| {
+    let Some(sourcemap_comment_idx) = js_lines.iter().rposition(|line| {
         line.starts_with("//# sourceMappingURL=") || line.starts_with("//@ sourceMappingURL=")
-    }) {
-        Some((idx, _)) => idx,
-        None => return Ok(()),
+    }) else {
+        return Ok(());
     };
 
     js_contents.clear();
@@ -232,74 +232,6 @@ pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
     let mut sha1_bytes = [0u8; 16];
     sha1_bytes.copy_from_slice(&hash.digest().bytes()[..16]);
     DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
-}
-
-/// Fixes up a sourcemap file with a debug id.
-///
-/// If the file already contains a debug id under the `debug_id` key, it is left unmodified.
-/// Otherwise, a fresh debug id is inserted under that key.
-///
-/// In either case, the value of the `debug_id` key is returned.
-pub fn fixup_sourcemap(sourcemap_contents: &mut Vec<u8>) -> Result<(DebugId, bool)> {
-    match sourcemap::decode_slice(sourcemap_contents).context("Invalid sourcemap")? {
-        sourcemap::DecodedMap::Regular(mut sm) => {
-            if let Some(debug_id) = sm.get_debug_id() {
-                debug!("Sourcemap already has a debug id");
-                Ok((debug_id, false))
-            } else {
-                let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
-                sm.set_debug_id(Some(debug_id));
-
-                sourcemap_contents.clear();
-                sm.to_writer(sourcemap_contents)?;
-                Ok((debug_id, true))
-            }
-        }
-        sourcemap::DecodedMap::Hermes(mut smh) => {
-            if let Some(debug_id) = smh.get_debug_id() {
-                debug!("Sourcemap already has a debug id");
-                Ok((debug_id, false))
-            } else {
-                let debug_id = debug_id_from_bytes_hashed(sourcemap_contents);
-                smh.set_debug_id(Some(debug_id));
-
-                sourcemap_contents.clear();
-                smh.to_writer(sourcemap_contents)?;
-                Ok((debug_id, true))
-            }
-        }
-        sourcemap::DecodedMap::Index(_) => {
-            bail!("DebugId injection is not supported for sourcemap indexes")
-        }
-    }
-}
-
-/// This adds an empty mapping at the start of a sourcemap.
-///
-/// This is used to adjust a sourcemap when the corresponding source file has a
-/// new line injected near the top (see [`fixup_js_file`]).
-pub fn insert_empty_mapping(sourcemap_contents: &mut Vec<u8>) -> Result<()> {
-    let mut sourcemap: Value = serde_json::from_slice(sourcemap_contents)?;
-
-    let Some(map) = sourcemap.as_object_mut() else {
-        bail!("Invalid sourcemap");
-    };
-
-    let Some(mappings) = map.get_mut("mappings") else {
-        bail!("Invalid sourcemap");
-    };
-
-    let Value::String(mappings) = mappings else {
-        bail!("Invalid sourcemap");
-    };
-
-    // Insert empty mapping at the start
-    *mappings = format!(";{mappings}");
-
-    sourcemap_contents.clear();
-    serde_json::to_writer(sourcemap_contents, &sourcemap)?;
-
-    Ok(())
 }
 
 /// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
@@ -380,43 +312,11 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
-
     use sentry::types::DebugId;
 
     use crate::utils::fs::TempFile;
 
     use super::*;
-
-    #[test]
-    fn test_fixup_sourcemap() {
-        for sourcemap_path in &[
-            "server/chunks/1.js.map",
-            "server/edge-runtime-webpack.js.map",
-            "server/pages/_document.js.map",
-            "server/pages/asdf.js.map",
-            "static/chunks/575-bb7d7e0e6de8d623.js.map",
-            "static/chunks/app/client/page-d5742c254d9533f8.js.map",
-            "static/chunks/pages/asdf-05b39167abbe433b.js.map",
-        ] {
-            let mut sourcemap_contents = std::fs::read(format!(
-                "tests/integration/_fixtures/inject/{sourcemap_path}"
-            ))
-            .unwrap();
-
-            assert!(
-                sourcemap::decode_slice(&sourcemap_contents).is_ok(),
-                "sourcemap is valid before injection"
-            );
-
-            fixup_sourcemap(&mut sourcemap_contents).unwrap();
-
-            assert!(
-                sourcemap::decode_slice(&sourcemap_contents).is_ok(),
-                "sourcemap is valid after injection"
-            );
-        }
-    }
 
     #[test]
     fn test_fixup_js_file() {
@@ -529,13 +429,7 @@ something else"#;
 
         let mut source = Vec::from(source);
 
-        let map = fixup_js_file(&mut source, debug_id).unwrap();
-
-        let mut map_file = std::fs::File::create("converted.map").unwrap();
-        write!(map_file, "{}", map.to_string().unwrap()).unwrap();
-
-        let mut min_file = std::fs::File::create("converted.js").unwrap();
-        min_file.write_all(&source).unwrap();
+        fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"#!/bin/node
 //# sourceMappingURL=fake1
