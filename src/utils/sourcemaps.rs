@@ -791,11 +791,11 @@ impl SourceMapProcessor {
             }
 
             // Modify the source file and the sourcemap.
-            // There are seveal cases to consider according to whether we have a sourcemap for the source file and
+            // There are several cases to consider according to whether we have a sourcemap for the source file and
             // whether it's embedded or external.
             let debug_id = match sourcemap_url {
                 None => {
-                    // Case 1: We have no sourcemap for the source file. Hash the file contetns for the debug id.
+                    // Case 1: We have no sourcemap for the source file. Hash the file contents for the debug id.
                     let source_file = self.sources.get_mut(source_url).unwrap();
                     let debug_id = inject::debug_id_from_bytes_hashed(&source_file.contents);
 
