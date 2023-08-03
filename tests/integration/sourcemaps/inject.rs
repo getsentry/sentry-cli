@@ -106,25 +106,41 @@ fn command_sourcemaps_inject_bundlers() {
 
     register_test("sourcemaps/sourcemaps-inject-bundlers.trycmd");
 
-    for bundler in ["rollup", "rspack", "vite", "webpack"] {
+    // IIFE tests
+    for bundler in ["esbuild", "rollup", "rspack", "vite", "webpack"] {
         let actual_code =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/{bundler}.bundle.js"))
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js")).unwrap();
+        let expected_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js.expected"))
                 .unwrap();
-        let expected_code = std::fs::read_to_string(format!(
-            "{testcase_cwd_path}/{bundler}/{bundler}.bundle.js.expected"
-        ))
-        .unwrap();
 
         assert_eq!(actual_code, expected_code);
 
-        let actual_map = std::fs::read_to_string(format!(
-            "{testcase_cwd_path}/{bundler}/{bundler}.bundle.js.map"
-        ))
-        .unwrap();
+        let actual_map =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js.map")).unwrap();
         let expected_map = std::fs::read_to_string(format!(
-            "{testcase_cwd_path}/{bundler}/{bundler}.bundle.js.map.expected"
+            "{testcase_cwd_path}/{bundler}/iife.js.map.expected"
         ))
         .unwrap();
+
+        assert_eq!(actual_map, expected_map);
+    }
+
+    // CJS tests. Not sure how to make this happen for rspack.
+    for bundler in ["esbuild", "rollup", "vite", "webpack"] {
+        let actual_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js")).unwrap();
+        let expected_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.expected"))
+                .unwrap();
+
+        assert_eq!(actual_code, expected_code);
+
+        let actual_map =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map")).unwrap();
+        let expected_map =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map.expected"))
+                .unwrap();
 
         assert_eq!(actual_map, expected_map);
     }

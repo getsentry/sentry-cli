@@ -606,21 +606,4 @@ more text
             &["./project/maps/page/index.js.map"]
         );
     }
-
-    #[test]
-    fn test_regex() {
-        let source = r#"#!/bin/node
-//# sourceMappingURL=fake1
-
-  // some other comment
- "use strict"; rest of the line
-'use strict';
-some line
-//# sourceMappingURL=fake2
-//# sourceMappingURL=real
-something else"#;
-
-        let m = PRE_INJECT_RE.find(source).unwrap();
-        dbg!(&source[m.range()]);
-    }
 }
