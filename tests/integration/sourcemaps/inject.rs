@@ -58,33 +58,7 @@ fn command_sourcemaps_inject_output_embedded() {
     )
     .unwrap();
 
-    // Check mappings before injection
-    let contents = std::fs::read_to_string(testcase_cwd_path.join("dummy_embedded.js")).unwrap();
-    let encoded_sourcemap = contents
-        .lines()
-        .find_map(|line| line.strip_prefix("//# sourceMappingURL=data:application/json;base64,"))
-        .unwrap();
-
-    let decoded = data_encoding::BASE64
-        .decode(encoded_sourcemap.as_bytes())
-        .unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&decoded).unwrap();
-    assert_eq!(parsed["mappings"], ";;;");
-
     register_test("sourcemaps/sourcemaps-inject-embedded.trycmd");
-
-    // Check mappings after injection
-    let contents = std::fs::read_to_string(testcase_cwd_path.join("dummy_embedded.js")).unwrap();
-    let encoded_sourcemap = contents
-        .lines()
-        .find_map(|line| line.strip_prefix("//# sourceMappingURL=data:application/json;base64,"))
-        .unwrap();
-
-    let decoded = data_encoding::BASE64
-        .decode(encoded_sourcemap.as_bytes())
-        .unwrap();
-    let parsed: serde_json::Value = serde_json::from_slice(&decoded).unwrap();
-    assert_eq!(parsed["mappings"], ";;;;");
 }
 
 #[test]
@@ -116,4 +90,58 @@ fn command_sourcemaps_inject_output_split_ambiguous() {
     .unwrap();
 
     register_test("sourcemaps/sourcemaps-inject-split-ambiguous.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_inject_bundlers() {
+    let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject-bundlers.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_bundlers/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    register_test("sourcemaps/sourcemaps-inject-bundlers.trycmd");
+
+    // IIFE tests
+    for bundler in ["esbuild", "rollup", "rspack", "vite", "webpack"] {
+        let actual_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js")).unwrap();
+        let expected_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js.expected"))
+                .unwrap();
+
+        assert_eq!(actual_code, expected_code);
+
+        let actual_map =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js.map")).unwrap();
+        let expected_map = std::fs::read_to_string(format!(
+            "{testcase_cwd_path}/{bundler}/iife.js.map.expected"
+        ))
+        .unwrap();
+
+        assert_eq!(actual_map, expected_map);
+    }
+
+    // CJS tests. Not sure how to make this happen for rspack.
+    for bundler in ["esbuild", "rollup", "vite", "webpack"] {
+        let actual_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js")).unwrap();
+        let expected_code =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.expected"))
+                .unwrap();
+
+        assert_eq!(actual_code, expected_code);
+
+        let actual_map =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map")).unwrap();
+        let expected_map =
+            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map.expected"))
+                .unwrap();
+
+        assert_eq!(actual_map, expected_map);
+    }
 }

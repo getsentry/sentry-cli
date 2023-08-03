@@ -13,12 +13,12 @@ use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sentry::types::DebugId;
 use sha1_smol::Digest;
+use sourcemap::SourceMap;
 use symbolic::debuginfo::js::{
     discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
 };
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
-use uuid::Uuid;
 
 use crate::api::Api;
 use crate::utils::enc::decode_unknown_string;
@@ -790,133 +790,165 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            // Find or generate a debug id and determine whether we can inject the
-            // code snippet at the start of the source file. This is determined by whether
-            // we are able to adjust the sourcemap accordingly.
-            let (debug_id, inject_at_start) = {
-                match sourcemap_url {
-                    None => {
-                        // no source map at all, try a deterministic debug id from the contents
-                        let debug_id = self
-                            .sources
-                            .get(source_url)
-                            .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
-                            .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                        (debug_id, false)
-                    }
-                    Some(sourcemap_url) => {
-                        if let Some(encoded) = sourcemap_url.strip_prefix(DATA_PREAMBLE) {
-                            // Handle embedded sourcemaps
+            // Modify the source file and the sourcemap.
+            // There are several cases to consider according to whether we have a sourcemap for the source file and
+            // whether it's embedded or external.
+            let debug_id = match sourcemap_url {
+                None => {
+                    // Case 1: We have no sourcemap for the source file. Hash the file contents for the debug id.
+                    let source_file = self.sources.get_mut(source_url).unwrap();
+                    let debug_id = inject::debug_id_from_bytes_hashed(&source_file.contents);
 
-                            // Update the embedded sourcemap and write it back to the source file
-                            let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes()) else {
-                                bail!("Invalid embedded sourcemap in source file {source_url}");
+                    // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                    // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                    // This isn't ideal, but it's the best we can do in this case.
+                    inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                        .context(format!("Failed to process {}", source_file.path.display()))?;
+                    debug_id
+                }
+                Some(sourcemap_url) => {
+                    if let Some(encoded) = sourcemap_url.strip_prefix(DATA_PREAMBLE) {
+                        // Case 2: The source file has an embedded sourcemap.
+
+                        let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes())
+                        else {
+                            bail!("Invalid embedded sourcemap in source file {source_url}");
+                        };
+
+                        let sourcemap = SourceMap::from_slice(&decoded)
+                            .context("Invalid embedded sourcemap in source file {source_url}")?;
+
+                        let debug_id = sourcemap
+                            .get_debug_id()
+                            .unwrap_or_else(|| inject::debug_id_from_bytes_hashed(&decoded));
+
+                        let source_file = self.sources.get_mut(source_url).unwrap();
+                        let adjustment_map =
+                            inject::fixup_js_file(&mut source_file.contents, debug_id).context(
+                                format!("Failed to process {}", source_file.path.display()),
+                            )?;
+                        let mut adjusted_map =
+                            SourceMap::adjust_mappings(&sourcemap, &adjustment_map);
+                        adjusted_map.set_debug_id(Some(debug_id));
+
+                        decoded.clear();
+                        adjusted_map.to_writer(&mut decoded)?;
+
+                        let encoded = data_encoding::BASE64.encode(&decoded);
+                        let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
+
+                        inject::replace_sourcemap_url(
+                            &mut source_file.contents,
+                            &new_sourcemap_url,
+                        )?;
+                        *sourcemap_url = new_sourcemap_url;
+
+                        debug_id
+                    } else {
+                        // Handle external sourcemaps
+
+                        let normalized = inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                        let matches = inject::find_matching_paths(&sourcemaps, &normalized);
+
+                        let sourcemap_url = match &matches[..] {
+                            [] => normalized,
+                            [x] => x.to_string(),
+                            _ => {
+                                warn!("Ambiguous matches for sourcemap path {normalized}:");
+                                for path in matches {
+                                    warn!("{path}");
+                                }
+                                normalized
+                            }
+                        };
+
+                        if self.sources.contains_key(&sourcemap_url) {
+                            // Case 3: We have an external sourcemap for the source file.
+
+                            // We need to do a bit of a dance here because we can't mutably
+                            // borrow the source file and the sourcemap at the same time.
+                            let (sourcemap, debug_id, debug_id_fresh) = {
+                                let sourcemap_file = &self.sources[&sourcemap_url];
+
+                                let sm = SourceMap::from_slice(&sourcemap_file.contents).context(
+                                    format!("Invalid sourcemap at {}", sourcemap_file.url),
+                                )?;
+
+                                match sm.get_debug_id() {
+                                    Some(debug_id) => (sm, debug_id, false),
+                                    None => {
+                                        let debug_id = inject::debug_id_from_bytes_hashed(
+                                            &sourcemap_file.contents,
+                                        );
+                                        (sm, debug_id, true)
+                                    }
+                                }
                             };
-
-                            inject::insert_empty_mapping(&mut decoded)?;
-                            let encoded = data_encoding::BASE64.encode(&decoded);
-                            let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
 
                             let source_file = self.sources.get_mut(source_url).unwrap();
+                            let adjustment_map =
+                                inject::fixup_js_file(&mut source_file.contents, debug_id)
+                                    .context(format!(
+                                        "Failed to process {}",
+                                        source_file.path.display()
+                                    ))?;
+                            let mut adjusted_map =
+                                SourceMap::adjust_mappings(&sourcemap, &adjustment_map);
+                            adjusted_map.set_debug_id(Some(debug_id));
 
-                            // hash the new source map url for the debug id
-                            let debug_id =
-                                inject::debug_id_from_bytes_hashed(new_sourcemap_url.as_bytes());
+                            let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
+                            sourcemap_file.contents.clear();
+                            adjusted_map.to_writer(&mut sourcemap_file.contents)?;
 
-                            inject::replace_sourcemap_url(
-                                &mut source_file.contents,
-                                &new_sourcemap_url,
-                            )?;
-                            *sourcemap_url = new_sourcemap_url;
+                            sourcemap_file
+                                .headers
+                                .push(("debug-id".to_string(), debug_id.to_string()));
 
-                            (debug_id, true)
-                        } else {
-                            // Handle external sourcemaps
-
-                            let normalized =
-                                inject::normalize_sourcemap_url(source_url, sourcemap_url);
-                            let matches = inject::find_matching_paths(&sourcemaps, &normalized);
-
-                            let sourcemap_url = match &matches[..] {
-                                [] => normalized,
-                                [x] => x.to_string(),
-                                _ => {
-                                    warn!("Ambiguous matches for sourcemap path {normalized}:");
-                                    for path in matches {
-                                        warn!("{path}");
-                                    }
-                                    normalized
-                                }
-                            };
-
-                            match self.sources.get_mut(&sourcemap_url) {
-                                None => {
-                                    debug!("Sourcemap file {} not found", sourcemap_url);
-                                    // source map cannot be found, fall back to hashing the contents if
-                                    // available.  The v4 fallback should not happen.
-                                    let debug_id = self
-                                        .sources
-                                        .get(source_url)
-                                        .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
-                                        .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                                    (debug_id, false)
-                                }
-                                Some(sourcemap_file) => {
-                                    inject::insert_empty_mapping(&mut sourcemap_file.contents)
-                                        .context(format!(
-                                            "Failed to process {}",
-                                            sourcemap_file.path.display()
-                                        ))?;
-
-                                    let (debug_id, sourcemap_modified) =
-                                        inject::fixup_sourcemap(&mut sourcemap_file.contents)
-                                            .context(format!(
-                                                "Failed to process {}",
-                                                sourcemap_file.path.display()
-                                            ))?;
-
-                                    sourcemap_file
-                                        .headers
-                                        .push(("debug-id".to_string(), debug_id.to_string()));
-
-                                    if !dry_run {
-                                        let mut file = std::fs::File::create(&sourcemap_file.path)?;
-                                        file.write_all(&sourcemap_file.contents).context(
-                                            format!(
-                                                "Failed to write sourcemap file {}",
-                                                sourcemap_file.path.display()
-                                            ),
-                                        )?;
-                                    }
-
-                                    if sourcemap_modified {
-                                        report
-                                            .sourcemaps
-                                            .push((sourcemap_file.path.clone(), debug_id));
-                                    } else {
-                                        report
-                                            .skipped_sourcemaps
-                                            .push((sourcemap_file.path.clone(), debug_id));
-                                    }
-
-                                    (debug_id, true)
-                                }
+                            if !dry_run {
+                                let mut file = std::fs::File::create(&sourcemap_file.path)?;
+                                file.write_all(&sourcemap_file.contents).context(format!(
+                                    "Failed to write sourcemap file {}",
+                                    sourcemap_file.path.display()
+                                ))?;
                             }
+
+                            if debug_id_fresh {
+                                report
+                                    .sourcemaps
+                                    .push((sourcemap_file.path.clone(), debug_id));
+                            } else {
+                                report
+                                    .skipped_sourcemaps
+                                    .push((sourcemap_file.path.clone(), debug_id));
+                            }
+
+                            debug_id
+                        } else {
+                            // Case 4: We have a URL for the external sourcemap, but we can't find it.
+                            // This is substantially the same as case 1.
+                            debug!("Sourcemap file {} not found", sourcemap_url);
+                            // source map cannot be found, fall back to hashing the contents.
+                            let source_file = self.sources.get_mut(source_url).unwrap();
+                            let debug_id =
+                                inject::debug_id_from_bytes_hashed(&source_file.contents);
+
+                            // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                            // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                            // This isn't ideal, but it's the best we can do in this case.
+                            inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                                .context(format!(
+                                    "Failed to process {}",
+                                    source_file.path.display()
+                                ))?;
+
+                            debug_id
                         }
                     }
                 }
             };
 
-            // Finally, inject the debug id and the code snippet into the source file
+            // Finally, some housekeeping.
             let source_file = self.sources.get_mut(source_url).unwrap();
-
-            if inject_at_start {
-                inject::fixup_js_file(&mut source_file.contents, debug_id)
-                    .context(format!("Failed to process {}", source_file.path.display()))?;
-            } else {
-                inject::fixup_js_file_end(&mut source_file.contents, debug_id)
-                    .context(format!("Failed to process {}", source_file.path.display()))?;
-            }
 
             source_file
                 .headers
