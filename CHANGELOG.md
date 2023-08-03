@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- fix(injection): Make debug id injection sound (#1693) by @loewenheim
+
 ## 2.20.3
 
 ### Various fixes & improvements
