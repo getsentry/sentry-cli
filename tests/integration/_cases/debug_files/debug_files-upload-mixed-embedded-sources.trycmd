@@ -1,8 +1,7 @@
 ```
 $ sentry-cli --log-level=debug debug-files upload --include-sources tests/integration/_fixtures/SrcGenSampleApp.pdb
 ? success
-  DEBUG   [..] sentry-cli version: [VERSION], platform: "[..]", architecture: "[..]"
-  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "--log-level=debug" "debug-files" "upload" "--include-sources" "tests/integration/_fixtures/SrcGenSampleApp.pdb"
+  INFO    [..] Loaded config from [CWD]/.sentryclirc
 ...
 > Found 1 debug information file (1 with embedded sources)
 > Resolved source code for 0 debug information files
