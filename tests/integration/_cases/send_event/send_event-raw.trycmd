@@ -13,6 +13,7 @@ $ sentry-cli send-event --log-level=debug
 > --fingerprint custom-fingerprint
 > --no-environ
 ? success
+  INFO    [..] Loaded config from [CWD]/.sentryclirc
   DEBUG   [..] sentry-cli version: [VERSION], platform: [..], architecture: [..]
   INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "send-event" "--log-level=debug" "--level" "debug" "--timestamp" "1649335000929" "--release" "my-release" "--dist" "my-dist" "--env" "production" "--message" "hello" "--platform" "prod" "--tag" "hello:there" "--extra" "hello:there" "--user" "id:42" "--fingerprint" "custom-fingerprint" "--no-environ"
   DEBUG   [..] Event { event_id: [..], level: Debug, fingerprint: ["custom-fingerprint"], culprit: None, transaction: None, message: None, logentry: Some(LogEntry { message: "hello", params: [] }), logger: None, modules: {}, platform: "prod", timestamp: SystemTime { tv_sec: 1649335000929, tv_nsec: 0 }, server_name: None, release: Some("my-release"), dist: Some("my-dist"), environment: Some("production"), user: Some(User { id: Some("42"), email: None, ip_address: Some(Auto), username: None, other: {} }), request: None, contexts: {}, breadcrumbs: Values { values: [] }, exception: Values { values: [] }, stacktrace: None, template: None, threads: Values { values: [] }, tags: {"hello": "there"}, extra: {"hello": String("there")}, debug_meta: DebugMeta { sdk_info: None, images: [] }, sdk: Some(ClientSdkInfo { name: "sentry-cli", version: "[VERSION]", integrations: [], packages: [] }) }

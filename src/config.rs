@@ -577,6 +577,12 @@ fn find_project_config_file() -> Option<PathBuf> {
 }
 
 fn load_global_config_file() -> Result<(PathBuf, Ini)> {
+    // Make sure to not load global configuration, as it can skew the tests results
+    // during local development for different environments.
+    if env::var("SENTRY_INTEGRATION_TEST").is_ok() {
+        return Ok((PathBuf::new(), Ini::new()));
+    }
+
     let filename = find_global_config_file()?;
     match fs::File::open(&filename) {
         Ok(mut file) => match Ini::read_from(&mut file) {
