@@ -915,6 +915,7 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
             "--author",
             "John Doe <john.doe@example.com>",
             "--quiet",
+            "--no-edit",
         ])
         .current_dir(dir)
         .spawn()
