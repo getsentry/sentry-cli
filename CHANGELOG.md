@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.20.5
+
+### Various fixes & improvements
+
+- deps: Bump sourcemap to 6.4.1 (#1715) by @kamilogorek
+
 ## 2.20.4
 
 ### Various fixes and improvements
