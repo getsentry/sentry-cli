@@ -89,6 +89,9 @@ fn send_event(
 
     let mut event = Event {
         environment: config.get_environment().map(Into::into),
+        release: release.map_or(detect_release_name().ok().map(Into::into), |release| {
+            Some(release).map(Into::into)
+        }),
         sdk: Some(get_sdk_info()),
         user: get_user_name().ok().map(|n| User {
             username: Some(n),
@@ -106,11 +109,6 @@ fn send_event(
             .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
     }
-
-    event.release = release.map_or(
-        detect_release_name().ok().map(Into::into),
-        |release| Some(release).map(Into::into),
-    );
 
     if environ {
         event.extra.insert(
