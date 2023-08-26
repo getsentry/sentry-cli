@@ -68,15 +68,27 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append)
                 .help("Add tags (key:value) to the event."),
         )
+        .arg(
+            Arg::new("release")
+                .value_name("RELEASE_VERSION")
+                .long("release")
+                .action(ArgAction::Set)
+                .help("Define release version for the event."),
+        )
         .arg(Arg::new("log").long("log").value_name("PATH").hide(true))
 }
 
-fn send_event(traceback: &str, logfile: &str, tags: &[&String], environ: bool) -> Result<()> {
+fn send_event(
+    traceback: &str,
+    logfile: &str,
+    tags: &[&String],
+    release: Option<String>,
+    environ: bool,
+) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
         environment: config.get_environment().map(Into::into),
-        release: detect_release_name().ok().map(Into::into),
         sdk: Some(get_sdk_info()),
         user: get_user_name().ok().map(|n| User {
             username: Some(n),
@@ -94,6 +106,11 @@ fn send_event(traceback: &str, logfile: &str, tags: &[&String], environ: bool) -
             .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
     }
+
+    event.release = release.map_or(
+        detect_release_name().ok().map(Into::into),
+        |release| Some(release).map(Into::into),
+    );
 
     if environ {
         event.extra.insert(
@@ -192,6 +209,13 @@ fn send_event(traceback: &str, logfile: &str, tags: &[&String], environ: bool) -
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
+    let release = if let Ok(release) = config.get_release(matches) {
+        Some(release)
+    } else {
+        None
+    };
+
     let tags = matches
         .get_many::<String>("tags")
         .map(|v| v.collect())
@@ -202,6 +226,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             matches.get_one::<String>("traceback").unwrap(),
             matches.get_one::<String>("log").unwrap(),
             &tags,
+            release,
             !matches.get_flag("no_environ"),
         );
     }
@@ -227,6 +252,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .collect::<Vec<_>>()
             .join(""),
     );
+
+    script = match release {
+        Some(release) => script.replace(
+            "___SENTRY_RELEASE___",
+            format!(" --release \"{}\"", release).as_str(),
+        ),
+        None => script.replace("___SENTRY_RELEASE___", ""),
+    };
 
     script = script.replace(
         "___SENTRY_CLI___",
