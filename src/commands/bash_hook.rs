@@ -70,7 +70,7 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(
             Arg::new("release")
-                .value_name("RELEASE_VERSION")
+                .value_name("RELEASE")
                 .long("release")
                 .action(ArgAction::Set)
                 .help("Define release version for the event."),
@@ -89,9 +89,7 @@ fn send_event(
 
     let mut event = Event {
         environment: config.get_environment().map(Into::into),
-        release: release.map_or(detect_release_name().ok().map(Into::into), |release| {
-            Some(release).map(Into::into)
-        }),
+        release: release.or(detect_release_name().ok()).map(Into::into),
         sdk: Some(get_sdk_info()),
         user: get_user_name().ok().map(|n| User {
             username: Some(n),
@@ -207,12 +205,7 @@ fn send_event(
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let config = Config::current();
-    let release = if let Ok(release) = config.get_release(matches) {
-        Some(release)
-    } else {
-        None
-    };
+    let release = Config::current().get_release(matches).ok();
 
     let tags = matches
         .get_many::<String>("tags")
@@ -253,10 +246,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     script = match release {
         Some(release) => script.replace(
-            "___SENTRY_RELEASE___",
+            " ___SENTRY_RELEASE___",
             format!(" --release \"{}\"", release).as_str(),
         ),
-        None => script.replace("___SENTRY_RELEASE___", ""),
+        None => script.replace(" ___SENTRY_RELEASE___", ""),
     };
 
     script = script.replace(

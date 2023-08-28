@@ -6,19 +6,19 @@ Prints out a bash script that does error handling.
 Usage: sentry-cli[EXE] bash-hook [OPTIONS]
 
 Options:
-      --no-exit                    Do not turn on -e (exit immediately) flag automatically
-      --header <KEY:VALUE>         Custom headers that should be attached to all requests
-                                   in key:value format.
-      --no-environ                 Do not send environment variables along
-      --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
-      --cli <CMD>                  Explicitly set/override the sentry-cli command
-      --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
-                                   info, warn, error]
-      --quiet                      Do not print any output while preserving correct exit code. This
-                                   flag is currently implemented only for selected subcommands.
-                                   [aliases: silent]
-      --tag <KEY:VALUE>            Add tags (key:value) to the event.
-      --release <RELEASE_VERSION>  Define release version for the event.
-  -h, --help                       Print help
+      --no-exit                  Do not turn on -e (exit immediately) flag automatically
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+      --no-environ               Do not send environment variables along
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+      --cli <CMD>                Explicitly set/override the sentry-cli command
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: silent]
+      --tag <KEY:VALUE>          Add tags (key:value) to the event.
+      --release <RELEASE>        Define release version for the event.
+  -h, --help                     Print help
 
 ```
