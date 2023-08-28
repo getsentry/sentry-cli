@@ -577,7 +577,7 @@ impl Api {
             }
 
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Artifact>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Artifact>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1450,7 +1450,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Organization>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Organization>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1478,7 +1478,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Monitor>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Monitor>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1540,7 +1540,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Project>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Project>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1580,7 +1580,7 @@ impl Api {
             }
 
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<ProcessedEvent>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<ProcessedEvent>>()?);
 
             if requests_no == max_pages {
                 break;
@@ -1633,7 +1633,7 @@ impl Api {
             }
 
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Issue>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Issue>>()?);
 
             if requests_no == max_pages {
                 break;
@@ -1664,7 +1664,7 @@ impl Api {
                 break;
             } else {
                 let pagination = resp.pagination();
-                rv.extend(resp.convert::<Vec<Repo>>()?.into_iter());
+                rv.extend(resp.convert::<Vec<Repo>>()?);
                 if let Some(next) = pagination.into_next_cursor() {
                     cursor = next;
                 } else {
