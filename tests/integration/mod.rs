@@ -18,6 +18,7 @@ mod uninstall;
 mod update;
 mod upload_dif;
 mod upload_proguard;
+mod react_native;
 
 use std::fs;
 use std::io;

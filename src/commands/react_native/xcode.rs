@@ -324,8 +324,14 @@ pub fn wrap_call() -> Result<()> {
     let mut args: Vec<_> = env::args().skip(1).collect();
     let mut bundle_path = None;
     let mut sourcemap_path = None;
+    let bundle_command = env::var("SENTRY_RN_BUNDLE_COMMAND");
 
-    if args.len() > 1 && (args[1] == "bundle" || args[1] == "ram-bundle") {
+    // bundle and ram-bundle are React Native CLI commands
+    // export:embed is an Expo CLI command (drop in replacement for bundle)
+    // if bundle_command is set, ignore the default values
+    if args.len() > 1
+      && ((bundle_command.is_err() && (args[1] == "bundle" || args[1] == "ram-bundle" || args[1] == "export:embed"))
+        || (bundle_command.is_ok() && args[1] == bundle_command.unwrap())) {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "--sourcemap-output" {
