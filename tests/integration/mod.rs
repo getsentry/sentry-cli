@@ -10,6 +10,7 @@ mod monitors;
 mod org_tokens;
 mod organizations;
 mod projects;
+mod react_native;
 mod releases;
 mod send_envelope;
 mod send_event;
@@ -18,7 +19,6 @@ mod uninstall;
 mod update;
 mod upload_dif;
 mod upload_proguard;
-mod react_native;
 
 use std::fs;
 use std::io;

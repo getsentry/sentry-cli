@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 use crate::integration::register_test;
 
 #[test]
@@ -37,21 +38,21 @@ fn clean_up() {
 }
 
 fn assert_full_sourcemap_report() {
-    let actual_code =
-    std::fs::read_to_string("rn-sourcemap-report.json").unwrap();
-    let expected_code =
-      std::fs::read_to_string("tests/integration/_fixtures/react_native/full-sourcemap-report.json.expected")
-          .unwrap();
+    let actual_code = std::fs::read_to_string("rn-sourcemap-report.json").unwrap();
+    let expected_code = std::fs::read_to_string(
+        "tests/integration/_fixtures/react_native/full-sourcemap-report.json.expected",
+    )
+    .unwrap();
 
     assert_eq!(actual_code, expected_code);
 }
 
 fn assert_empty_sourcemap_report() {
-    let actual_code =
-    std::fs::read_to_string("rn-sourcemap-report.json").unwrap();
-    let expected_code =
-      std::fs::read_to_string("tests/integration/_fixtures/react_native/empty-sourcemap-report.json.expected")
-          .unwrap();
+    let actual_code = std::fs::read_to_string("rn-sourcemap-report.json").unwrap();
+    let expected_code = std::fs::read_to_string(
+        "tests/integration/_fixtures/react_native/empty-sourcemap-report.json.expected",
+    )
+    .unwrap();
 
     assert_eq!(actual_code, expected_code);
 }
