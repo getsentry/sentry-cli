@@ -33,15 +33,11 @@ fn xcode_wrap_call_expo_export() {
     clean_up("rn-sourcemap-report-expo-export.json");
 }
 
-fn clean_up(
-  path: &str,
-) {
+fn clean_up(path: &str) {
     std::fs::remove_file(path).unwrap();
 }
 
-fn assert_full_sourcemap_report(
-  actual: &str,
-) {
+fn assert_full_sourcemap_report(actual: &str) {
     let actual_code = std::fs::read_to_string(actual).unwrap();
     let expected_code = std::fs::read_to_string(
         "tests/integration/_fixtures/react_native/full-sourcemap-report.json.expected",
@@ -51,9 +47,7 @@ fn assert_full_sourcemap_report(
     assert_eq!(actual_code, expected_code);
 }
 
-fn assert_empty_sourcemap_report(
-  actual: &str,
-) {
+fn assert_empty_sourcemap_report(actual: &str) {
     let actual_code = std::fs::read_to_string(actual).unwrap();
     let expected_code = std::fs::read_to_string(
         "tests/integration/_fixtures/react_native/empty-sourcemap-report.json.expected",
