@@ -123,7 +123,7 @@ fn command_sourcemaps_inject_bundlers() {
         ))
         .unwrap();
 
-        assert_eq!(actual_map, expected_map);
+        assert_eq!(actual_map, expected_map, "IIFE, bundler: {bundler}");
     }
 
     // CJS tests. Not sure how to make this happen for rspack.
@@ -142,6 +142,6 @@ fn command_sourcemaps_inject_bundlers() {
             std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map.expected"))
                 .unwrap();
 
-        assert_eq!(actual_map, expected_map);
+        assert_eq!(actual_map, expected_map, "CJS, bundler: {bundler}");
     }
 }

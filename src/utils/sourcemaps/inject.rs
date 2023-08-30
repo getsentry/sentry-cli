@@ -145,16 +145,14 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
     write!(js_contents, "{}", magic.to_string())?;
 
     let map = magic
-        .generate_map(GenerateDecodedMapOptions {
+        .generate_decoded_map(GenerateDecodedMapOptions {
             source: Some("pre_injection.js".to_string()),
             include_content: true,
             ..Default::default()
         })
         .unwrap();
 
-    let map = map.to_string().unwrap();
-
-    Ok(SourceMap::from_slice(map.as_bytes()).unwrap())
+    Ok(SourceMap::from(map))
 }
 
 /// Fixes up a minified JS source file with a debug id without messing with mappings.
