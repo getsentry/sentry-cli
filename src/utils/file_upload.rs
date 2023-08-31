@@ -396,18 +396,16 @@ fn upload_files_chunked(
         chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
     };
 
-    upload_chunks(&chunks, options, progress_style)?;
-
     if !chunks.is_empty() {
+        upload_chunks(&chunks, options, progress_style)?;
         println!("{} Uploaded files to Sentry", style(">").dim());
-        poll_assemble(checksum, &checksums, context, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
             style(">").dim()
         );
-        Ok(())
     }
+    poll_assemble(checksum, &checksums, context, options)
 }
 
 fn build_debug_id(files: &SourceFiles) -> DebugId {
