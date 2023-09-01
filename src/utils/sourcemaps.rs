@@ -301,9 +301,6 @@ impl SourceMapProcessor {
             );
             pb.inc(1);
         }
-
-        self.collect_sourcemap_references();
-
         pb.finish_with_duration("Analyzing");
     }
 
@@ -556,8 +553,6 @@ impl SourceMapProcessor {
                 },
             );
         }
-
-        self.collect_sourcemap_references();
         Ok(())
     }
 
@@ -634,6 +629,7 @@ impl SourceMapProcessor {
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
+        self.collect_sourcemap_references();
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
@@ -764,6 +760,7 @@ impl SourceMapProcessor {
     /// for JavaScript files.
     pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str]) -> Result<()> {
         self.flush_pending_sources();
+        self.collect_sourcemap_references();
         println!("{} Injecting debug ids", style(">").dim());
 
         let mut report = InjectReport::default();
