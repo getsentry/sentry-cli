@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.20.6
+
+### Various fixes & improvements
+
+- fix: Always poll artifact assembly, even if nothing was uploaded (#1726) by @loewenheim
+- feat(rn): Allow custom bundle command and Expo export:embed in xcode wrap calls (#1723) by @krystofwoldrich
+- feat(bash-hook): Add support for `SENTRY_RELEASE` in bash-hook (#1720) by @boozec
+- misc: Add CONTRIBUTING.md for working with integration tests (#1716) by @kamilogorek
+- test: Prevent .sentryclirc being read from global config (#1716) by @kamilogorek
+- test: Do not sign git tags and commits during tests (#1716) by @kamilogorek
+- test: Make sure to always skip opening editor in git-based tests (#1716) by @kamilogorek
+
 ## 2.20.5
 
 ### Various fixes & improvements
