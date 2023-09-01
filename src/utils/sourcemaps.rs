@@ -556,6 +556,8 @@ impl SourceMapProcessor {
                 },
             );
         }
+
+        self.collect_sourcemap_references();
         Ok(())
     }
 
