@@ -420,13 +420,21 @@ fn build_debug_id(files: &SourceFiles) -> DebugId {
         if let Some(debug_id) = source_file
             .headers
             .iter()
-            .filter_map(|(k, v)| (k == "debug_id").then_some(v))
-            .next()
+            .find_map(|(k, v)| (k == "debug_id").then_some(v))
         {
             hash.update(debug_id.as_bytes());
         } else {
             hash.update(&[0u8; 16]);
         }
+
+        if let Some(sourcemap_ref) = source_file
+            .headers
+            .iter()
+            .find_map(|(k, v)| (k == "Sourcemap").then_some(v))
+        {
+            hash.update(sourcemap_ref.as_bytes())
+        }
+
         hash.update(&source_file.contents);
     }
 
