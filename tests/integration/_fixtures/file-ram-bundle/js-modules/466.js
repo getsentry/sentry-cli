@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0}),e.getSDKSource=function(){return"npm"},e.isBrowserBundle=function(){return'undefined'!=typeof __SENTRY_BROWSER_BUNDLE__&&!!__SENTRY_BROWSER_BUNDLE__}}),466,[]);

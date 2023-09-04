@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){var t=r(d[0])(r(d[1]));m.exports=function(s,c){'focus'===c&&t.default.sendAccessibilityEvent(s,t.default.getConstants().AccessibilityEventTypes.typeViewFocused),'click'===c&&t.default.sendAccessibilityEvent(s,t.default.getConstants().AccessibilityEventTypes.typeViewClicked)}}),38,[9,39]);

@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=void 0;r(d[0])(r(d[1])),r(d[0])(r(d[2]));var n={install:function(){},uninstall:function(){},isInstalled:function(){return!1},ignoreLogs:function(n){},ignoreAllLogs:function(n){},clearAllLogs:function(){},addLog:function(n){},addException:function(n){}};e.default=n}),398,[9,23,141]);

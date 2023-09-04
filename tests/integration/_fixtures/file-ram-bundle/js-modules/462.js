@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0});var t=r(d[0]).getGlobalObject();e.supportsHistory=function(){var o=t.chrome,p=o&&o.app&&o.app.runtime,n='history'in t&&!!t.history.pushState&&!!t.history.replaceState;return!p&&n}}),462,[437]);

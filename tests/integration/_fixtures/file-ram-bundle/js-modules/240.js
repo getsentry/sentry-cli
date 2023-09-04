@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){'use strict';var t=r(d[0]).shape({bottom:r(d[0]).number,left:r(d[0]).number,right:r(d[0]).number,top:r(d[0]).number});m.exports=t}),240,[241]);

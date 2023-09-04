@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,_e,d){Object.defineProperty(_e,'__esModule',{value:!0});_e.observe=function(e,n,t){try{if(PerformanceObserver.supportedEntryTypes.includes(e)){var s=new PerformanceObserver((function(e){n(e.getEntries())}));return s.observe(Object.assign({type:e,buffered:!0},t||{})),s}}catch(e){}}}),565,[]);

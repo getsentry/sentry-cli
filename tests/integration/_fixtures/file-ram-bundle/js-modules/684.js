@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(n){var t=[];return(function n(u,o){o.routes.forEach((function(o){var f,c,l=u?`${u} > ${o.name}`:o.name;null==(f=o.state)||null==(c=f.routeNames)||c.forEach((function(n){n===o.name&&t.push([l,`${l} > ${o.name}`])})),o.state&&n(l,o.state)}))})('',n),t}}),684,[]);

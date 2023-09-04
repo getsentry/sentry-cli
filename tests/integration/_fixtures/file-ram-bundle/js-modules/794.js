@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){"use strict";e.__esModule=!0,e.getBatch=e.setBatch=void 0;var t=function(t){t()};e.setBatch=function(n){return t=n};e.getBatch=function(){return t}}),794,[]);

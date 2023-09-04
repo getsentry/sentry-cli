@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){'use strict';var n=[],t={name:'default'},c={setActiveScene:function(c){t=c,n.forEach((function(n){return n(t)}))},getActiveScene:function(){return t},addActiveSceneChangedListener:function(t){return n.push(t),{remove:function(){n=n.filter((function(n){return t!==n}))}}}};m.exports=c}),151,[]);

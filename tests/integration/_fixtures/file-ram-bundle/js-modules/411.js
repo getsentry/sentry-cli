@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){'use strict';Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(){return(0,r(d[2]).useSyncExternalStore)((function(n){var u=t.default.addChangeListener(n);return function(){return u.remove()}}),(function(){return t.default.getColorScheme()}))};var t=r(d[0])(r(d[1]))}),411,[9,385,412]);

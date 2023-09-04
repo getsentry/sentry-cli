@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,_e,d){var e=r(d[0])(r(d[1])),t={captureHeap:function(t){var p=null;try{g.nativeCaptureHeap(t),console.log('HeapCapture.captureHeap succeeded: '+t)}catch(e){console.log('HeapCapture.captureHeap error: '+e.toString()),p=e.toString()}e.default&&e.default.captureComplete(t,p)}};m.exports=t}),137,[9,138]);

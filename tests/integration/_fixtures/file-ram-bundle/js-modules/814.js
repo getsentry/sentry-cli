@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){"use strict";e.__esModule=!0,e.default=function(n,c,f){(0,t.default)(n)||(0,u.default)(`${f}() in ${c} must return a plain object. Instead received ${n}.`)};var t=r(d[0])(r(d[1])),u=r(d[0])(r(d[2]))}),814,[791,815,804]);

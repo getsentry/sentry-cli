@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){'use strict';m.exports=r(d[0]),r(d[0]).prototype.done=function(t,n){var o=arguments.length?this.then.apply(this,arguments):this;o.then(null,(function(t){setTimeout((function(){throw t}),0)}))}}),666,[667]);

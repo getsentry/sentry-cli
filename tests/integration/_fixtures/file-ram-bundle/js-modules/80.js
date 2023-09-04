@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,_e,d){m.exports=function(){if("undefined"==typeof Reflect||!Reflect.construct)return!1;if(Reflect.construct.sham)return!1;if("function"==typeof Proxy)return!0;try{return Boolean.prototype.valueOf.call(Reflect.construct(Boolean,[],(function(){}))),!0}catch(t){return!1}},m.exports.__esModule=!0,m.exports.default=m.exports}),80,[]);

@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){var l,t,n=r(d[0])(r(d[1]));m.exports=function(){var u;if(void 0===l){var o=n.default.getConstants().scriptURL,s=o.match(/^https?:\/\/.*?\//);l=s?s[0]:null,t=s?o:null}return{url:null!=(u=l)?u:"http://localhost:8081/",fullBundleUrl:t,bundleLoadedFromServer:null!==l}}}),642,[9,180]);

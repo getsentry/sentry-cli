@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){"use strict";e.__esModule=!0,e.createReduxContextHook=n,e.useReduxContext=void 0;var t=r(d[0]);function n(){var n=arguments.length>0&&void 0!==arguments[0]?arguments[0]:r(d[1]).ReactReduxContext;return function(){return(0,t.useContext)(n)}}var u=n();e.useReduxContext=u}),787,[156,784]);

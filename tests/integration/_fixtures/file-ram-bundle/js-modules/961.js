@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.pinchHandlerName=e.PinchGestureHandler=void 0;var n=r(d[0])(r(d[1])),l='PinchGestureHandler';e.pinchHandlerName=l;var c=(0,n.default)({name:l,allowedProps:r(d[2]).baseGestureHandlerProps,config:{}});e.PinchGestureHandler=c}),961,[9,834,931]);

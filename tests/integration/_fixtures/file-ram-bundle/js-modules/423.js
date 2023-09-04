@@ -1,0 +1,1 @@
+__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0}),e.init=function(t){t._metadata=t._metadata||{},t._metadata.sdk=t._metadata.sdk||{name:'sentry.javascript.react',packages:[{name:'npm:@sentry/react',version:r(d[0]).SDK_VERSION}],version:r(d[0]).SDK_VERSION},r(d[0]).init(t)}}),423,[424]);

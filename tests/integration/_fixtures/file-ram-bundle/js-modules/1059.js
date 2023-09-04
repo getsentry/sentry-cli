@@ -1,0 +1,1 @@
+__d((function(e,t,a,c,r,i,m){r.exports={name:"sampleNewArchitecture",displayName:"sampleNewArchitecture"}}),1059,[]);
