@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0}),e.hasTracingEnabled=function(n){if('boolean'==typeof __SENTRY_TRACING__&&!__SENTRY_TRACING__)return!1;var t=r(d[0]).getCurrentHub().getClient(),_=n||t&&t.getOptions();return!!_&&(_.enableTracing||'tracesSampleRate'in _||'tracesSampler'in _)}}),485,[486]);

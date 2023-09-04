@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0});var n=['fatal','error','warning','log','info','debug'];function t(t){return'warn'===t?'warning':n.includes(t)?t:'log'}e.severityFromString=function(n){return t(n)},e.severityLevelFromString=t,e.validSeverityLevels=n}),473,[]);

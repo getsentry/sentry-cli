@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(n){return n.reduce((function(n,u){var o=(0,t.default)(u,2),f=o[0],c=o[1];if(n.hasOwnProperty(f))throw new Error(`A value for key '${f}' already exists in the object.`);return n[f]=c,n}),{})};var t=r(d[0])(r(d[1]))}),722,[9,28]);

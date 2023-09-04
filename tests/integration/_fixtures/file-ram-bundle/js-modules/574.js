@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0});var t=-1;e.getVisibilityWatcher=function(){return t<0&&(t='hidden'!==r(d[0]).WINDOW.document.visibilityState||r(d[0]).WINDOW.document.prerendering?1/0:0,r(d[1]).onHidden((function(n){var u=n.timeStamp;t=u}),!0)),{get firstHiddenTime(){return t}}}}),574,[562,572]);

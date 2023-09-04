@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){m.exports=r(d[0]).registerAsset({__packager_asset:!0,httpServerLocation:"/assets/src/assets",width:640,height:679,scales:[1],hash:"d23457beb84b703a72de8847875f6527",name:"sentry-announcement",type:"png"})}),774,[775]);

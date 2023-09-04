@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){m.exports=function(o,n){if(!(o instanceof n))throw new TypeError("Cannot call a class as a function")},m.exports.__esModule=!0,m.exports.default=m.exports}),18,[]);

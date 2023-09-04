@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(n,c){var l=(0,t.default)(c);switch(c){case'vertical':case'vertical-inverted':return n.height*l;case'horizontal':case'horizontal-inverted':return n.width*l}};var t=r(d[0])(r(d[1]))}),1033,[9,1034]);

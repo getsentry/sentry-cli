@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){'use strict';var t={register:function(t){g.RN$Bridgeless?g.RN$registerCallableModule('RCTEventEmitter',(function(){return t})):r(d[0]).registerCallableModule('RCTEventEmitter',t)}};m.exports=t}),206,[32]);

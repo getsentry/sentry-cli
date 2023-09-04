@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=void 0;var t=(0,r(d[0])(r(d[1])).default)('InputAccessory',{interfaceOnly:!0,paperComponentName:'RCTInputAccessoryView',excludedPlatforms:['android']});e.default=t}),356,[9,222]);

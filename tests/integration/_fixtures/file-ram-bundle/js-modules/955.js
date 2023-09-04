@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.TouchEventType=void 0;e.TouchEventType={UNDETERMINED:0,TOUCHES_DOWN:1,TOUCHES_MOVE:2,TOUCHES_UP:3,TOUCHES_CANCELLED:4}}),955,[]);

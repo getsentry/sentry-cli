@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.ConditionallyIgnoredEventHandlers=function(t){if('ios'===n.default.OS)return t;return},e.DynamicallyInjectedByGestureHandler=function(n){return t.add(n),n},e.isIgnored=function(n){if('object'==typeof n&&null!=n)return t.has(n);return!1};var n=r(d[0])(r(d[1])),t=new WeakSet}),192,[9,23]);

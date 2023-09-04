@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.onlySampleIfChildSpans=void 0;e.onlySampleIfChildSpans=function(n){var o=n.spanRecorder&&n.spanRecorder.spans.filter((function(o){return o.spanId!==n.spanId})).length;(!o||o<=0)&&(r(d[0]).logger.log(`Not sampling as ${n.op} transaction has no child spans.`),n.sampled=!1)}}),623,[426]);

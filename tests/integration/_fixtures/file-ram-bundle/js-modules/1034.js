@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(n){switch(n){case'vertical':return 1;case'vertical-inverted':return-1;case'horizontal':return t.I18nManager.getConstants().isRTL?-1:1;case'horizontal-inverted':return t.I18nManager.getConstants().isRTL?1:-1}};var t=r(d[0])}),1034,[7]);

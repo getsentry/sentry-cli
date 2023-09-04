@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0}),e.TRACEPARENT_REGEXP=r(d[1]).TRACEPARENT_REGEXP,e.extractTraceparentData=r(d[1]).extractTraceparentData,e.stripUrlQueryAndFragment=r(d[1]).stripUrlQueryAndFragment,e.getActiveTransaction=function(t){return(t||r(d[0]).getCurrentHub()).getScope().getTransaction()}}),498,[486,426]);

@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){var t=r(d[0])(r(d[1]));m.exports=function(n){return'normal'===n?t.default.select({ios:.998,android:.985}):'fast'===n?t.default.select({ios:.99,android:.9}):n}}),339,[9,23]);

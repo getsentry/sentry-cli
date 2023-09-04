@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){e.version={major:0,minor:72,patch:0,prerelease:null}}),606,[]);

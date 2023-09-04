@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){'use strict';var t=r(d[0]).ReactNativeViewConfigRegistry.register;m.exports=function(n,s){return t(n,s)}}),224,[205]);

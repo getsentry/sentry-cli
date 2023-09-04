@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){function t(t){return{bottom:t,left:t,right:t,top:t}}Object.defineProperty(e,"__esModule",{value:!0}),e.createSquare=t,e.normalizeRect=function(n){return'number'==typeof n?t(n):n}}),235,[]);

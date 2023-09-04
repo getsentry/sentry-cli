@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){'use strict';r(d[0]),m.exports={fetch:fetch,Headers:Headers,Request:Request,Response:Response}}),119,[120]);

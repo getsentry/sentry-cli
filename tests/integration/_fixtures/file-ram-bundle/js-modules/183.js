@@ -1,1 +1,0 @@
-__d((function(g,r,_i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.getUrlCacheBreaker=function(){if(null==n)return'';return n},e.pickScale=function(n,u){null==u&&(u=t.default.get());for(var l=0;l<n.length;l++)if(n[l]>=u)return n[l];return n[n.length-1]||1},e.setUrlCacheBreaker=function(t){n=t};var n,t=r(d[0])(r(d[1]))}),183,[9,184]);

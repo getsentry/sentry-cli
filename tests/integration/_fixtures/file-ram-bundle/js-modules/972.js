@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.initialize=function(){(0,r(d[2]).startListening)()},e.maybeInitializeFabric=function(){(0,r(d[3]).isFabric)()&&!t&&(n.default.install(),t=!0)};var n=r(d[0])(r(d[1])),t=!1}),972,[9,924,958,925]);

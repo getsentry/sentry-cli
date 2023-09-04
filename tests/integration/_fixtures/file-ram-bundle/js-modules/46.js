@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){'use strict';Object.defineProperty(e,"__esModule",{value:!0}),e.getFabricUIManager=function(){return g.nativeFabricUIManager}}),46,[]);

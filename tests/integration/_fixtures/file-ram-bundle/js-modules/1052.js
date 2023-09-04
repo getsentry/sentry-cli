@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.executeNativeBackPress=function(){return t.BackHandler.exitApp(),!0},e.isSearchBarAvailableForCurrentPlatform=e.isNewBackTitleImplementation=void 0;var t=r(d[0]),l=['ios','android'].includes(t.Platform.OS);e.isSearchBarAvailableForCurrentPlatform=l;e.isNewBackTitleImplementation=!0}),1052,[7]);

@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0});e.onHidden=function(n,t){var v=function v(o){'pagehide'!==o.type&&'hidden'!==r(d[0]).WINDOW.document.visibilityState||(n(o),t&&(removeEventListener('visibilitychange',v,!0),removeEventListener('pagehide',v,!0)))};addEventListener('visibilitychange',v,!0),addEventListener('pagehide',v,!0)}}),572,[562]);

@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){var n=r(d[0])(r(d[1])),o=r(d[0])(r(d[2]));n.default?g.performance=new o.default:(g.performance||(g.performance={}),'function'!=typeof g.performance.now&&(g.performance.now=function(){return(g.nativePerformanceNow||Date.now)()}))}),63,[9,64,65]);

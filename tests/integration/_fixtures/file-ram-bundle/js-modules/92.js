@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){function t(t){return'function'==typeof t&&t.toString().indexOf('[native code]')>-1}m.exports={isNativeFunction:t,hasNativeConstructor:function(n,o){var c=Object.getPrototypeOf(n).constructor;return c.name===o&&t(c)}}}),92,[]);

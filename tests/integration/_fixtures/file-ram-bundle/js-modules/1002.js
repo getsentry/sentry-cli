@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),Object.defineProperty(e,"NativeSafeAreaProvider",{enumerable:!0,get:function(){return t.default}});var t=r(d[0])(r(d[1]))}),1002,[9,1003]);

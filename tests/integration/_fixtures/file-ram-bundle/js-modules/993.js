@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(o,f,l){var n,u=o.width>o.height;n='ios'===t.Platform.OS?t.Platform.isPad||t.Platform.isTV?f?56:50:u?32:f?56:44:'android'===t.Platform.OS?56:64;return n+l};var t=r(d[0])}),993,[7]);

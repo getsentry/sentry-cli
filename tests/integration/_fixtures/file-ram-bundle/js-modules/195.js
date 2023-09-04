@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=void 0;var n=function(n){var o={};return n.supportedCommands.forEach((function(n){o[n]=function(o){for(var t=arguments.length,u=new Array(t>1?t-1:0),f=1;f<t;f++)u[f-1]=arguments[f];r(d[0]).dispatchCommand(o,n,u)}})),o};e.default=n}),195,[49]);

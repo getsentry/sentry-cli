@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){"use strict";e.__esModule=!0,e.default=function(t){if('object'!=typeof t||null===t)return!1;var o=Object.getPrototypeOf(t);if(null===o)return!0;var u=o;for(;null!==Object.getPrototypeOf(u);)u=Object.getPrototypeOf(u);return o===u}}),815,[]);

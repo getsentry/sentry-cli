@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.rotationHandlerName=e.RotationGestureHandler=void 0;var o=r(d[0])(r(d[1])),t='RotationGestureHandler';e.rotationHandlerName=t;var n=(0,o.default)({name:t,allowedProps:r(d[2]).baseGestureHandlerProps,config:{}});e.RotationGestureHandler=n}),962,[9,834,931]);

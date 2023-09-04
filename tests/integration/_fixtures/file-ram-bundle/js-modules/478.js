@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,'__esModule',{value:!0}),e.createClientReportEnvelope=function(t,n,o){var c=[{type:'client_report'},{timestamp:o||r(d[0]).dateTimestampInSeconds(),discarded_events:t}];return r(d[1]).createEnvelope(n?{dsn:n}:{},[c])}}),478,[474,477]);

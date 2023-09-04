@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){Object.defineProperty(e,"__esModule",{value:!0}),e.default=function(t,l){return'string'==typeof t.headerTitle?t.headerTitle:void 0!==t.title?t.title:l}}),994,[]);

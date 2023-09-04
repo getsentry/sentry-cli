@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){'use strict';var t=g.navigator;void 0===t?g.navigator={product:'ReactNative'}:r(d[0]).polyfillObjectProperty(t,'product',(function(){return'ReactNative'}))}),135,[86]);

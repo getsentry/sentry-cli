@@ -1,1 +1,0 @@
-__d((function(g,r,i,a,m,e,d){"use strict";e.__esModule=!0,e.mapStateToPropsFactory=function(t){return t?'function'==typeof t?(0,r(d[0]).wrapMapToPropsFunc)(t,'mapStateToProps'):(0,r(d[1]).createInvalidArgFactory)(t,'mapStateToProps'):(0,r(d[0]).wrapMapToPropsConstant)((function(){return{}}))}}),812,[813,816]);
