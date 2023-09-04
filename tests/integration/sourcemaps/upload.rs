@@ -141,3 +141,10 @@ fn command_sourcemaps_upload_no_debugids() {
         mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
     register_test("sourcemaps/sourcemaps-upload-no-debugids.trycmd");
 }
+
+#[test]
+fn command_sourcemaps_upload_file_ram_bundle() {
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-file-ram-bundle.trycmd");
+}
