@@ -327,7 +327,15 @@ impl SourceMapProcessor {
             };
 
             let sourcemap_url = match discover_sourcemaps_location(contents) {
-                Some(url) => url.to_string(),
+                Some(url) => {
+                    // The URL might contain a query string or fragment. Strip those away before recording the URL.
+                    let without_query = url.split_once('?').map(|x| x.0).unwrap_or(url);
+                    let without_fragment = without_query
+                        .split_once('#')
+                        .map(|x| x.0)
+                        .unwrap_or(without_query);
+                    without_fragment.to_string()
+                }
                 None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
                     Ok(target_url) => target_url.to_string(),
                     Err(err) => {
@@ -895,9 +903,7 @@ impl SourceMapProcessor {
                             sourcemap_file.contents.clear();
                             adjusted_map.to_writer(&mut sourcemap_file.contents)?;
 
-                            sourcemap_file
-                                .headers
-                                .insert("debug-id".to_string(), debug_id.to_string());
+                            sourcemap_file.set_debug_id(debug_id.to_string());
 
                             if !dry_run {
                                 let mut file = std::fs::File::create(&sourcemap_file.path)?;
