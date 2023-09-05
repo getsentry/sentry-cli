@@ -206,7 +206,7 @@ impl SourceMapProcessor {
     pub fn new() -> SourceMapProcessor {
         SourceMapProcessor {
             pending_sources: HashSet::new(),
-            sources: HashMap::new(),
+            sources: SourceFiles::new(),
             sourcemap_references: HashMap::new(),
             debug_ids: HashMap::new(),
         }

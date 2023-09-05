@@ -1,5 +1,5 @@
 //! Searches, processes and uploads release files.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::io::BufWriter;
 use std::path::PathBuf;
@@ -141,7 +141,10 @@ impl SourceFile {
     }
 }
 
-pub type SourceFiles = HashMap<String, SourceFile>;
+/// A map from URLs to source files.
+///
+/// The keys correspond to the `url` field on the values.
+pub type SourceFiles = BTreeMap<String, SourceFile>;
 
 pub struct FileUpload<'a> {
     context: &'a UploadContext<'a>,
@@ -152,7 +155,7 @@ impl<'a> FileUpload<'a> {
     pub fn new(context: &'a UploadContext) -> Self {
         FileUpload {
             context,
-            files: HashMap::new(),
+            files: SourceFiles::new(),
         }
     }
 
@@ -410,32 +413,19 @@ fn upload_files_chunked(
     }
 }
 
+/// Creates a debug id from a map of source files by hashing each file's
+/// URL, contents, type, and headers.
 fn build_debug_id(files: &SourceFiles) -> DebugId {
-    let mut sorted_files = Vec::from_iter(files);
-    sorted_files.sort_by_key(|x| x.0);
-
     let mut hash = sha1_smol::Sha1::new();
-    for (path, source_file) in sorted_files {
-        hash.update(path.as_bytes());
-        if let Some(debug_id) = source_file
-            .headers
-            .iter()
-            .find_map(|(k, v)| (k == "debug_id").then_some(v))
-        {
-            hash.update(debug_id.as_bytes());
-        } else {
-            hash.update(&[0u8; 16]);
-        }
-
-        if let Some(sourcemap_ref) = source_file
-            .headers
-            .iter()
-            .find_map(|(k, v)| (k == "Sourcemap").then_some(v))
-        {
-            hash.update(sourcemap_ref.as_bytes())
-        }
-
+    for source_file in files.values() {
+        hash.update(source_file.url.as_bytes());
         hash.update(&source_file.contents);
+        hash.update(format!("{:?}", source_file.ty).as_bytes());
+
+        for (key, value) in &source_file.headers {
+            hash.update(key.as_bytes());
+            hash.update(value.as_bytes());
+        }
     }
 
     let mut sha1_bytes = [0u8; 16];
@@ -479,10 +469,7 @@ fn build_artifact_bundle(
         bundle.set_attribute("dist".to_owned(), dist.to_owned());
     }
 
-    let mut files_sorted = files.values().collect::<Vec<_>>();
-    files_sorted.sort_by_key(|file| &file.url[..]);
-
-    for file in files_sorted {
+    for file in files.values() {
         pb.inc(1);
         pb.set_message(&file.url);
 
