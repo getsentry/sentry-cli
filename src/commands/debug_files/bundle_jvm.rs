@@ -1,21 +1,24 @@
-use std::fs;
-use std::path::{PathBuf};
-use std::str::FromStr;
-use anyhow::{bail, Context, Result};
-use clap::{Arg, ArgMatches, Command};
-use sentry::types::DebugId;
-use symbolic::debuginfo::sourcebundle::{SourceFileType};
 use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
-use crate::utils::fs::{path_as_url};
+use crate::utils::fs::path_as_url;
+use anyhow::{bail, Context, Result};
+use clap::{Arg, ArgMatches, Command};
+use sentry::types::DebugId;
+use std::collections::BTreeMap;
+use std::fs;
+use std::path::PathBuf;
+use std::str::FromStr;
+use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 pub fn make_command(command: Command) -> Command {
     command
         .hide(true) // experimental for now
-        .about("Create a source bundle for the given JVM based source files (e.g. Java, Kotlin, ...)")
+        .about(
+            "Create a source bundle for the given JVM based source files (e.g. Java, Kotlin, ...)",
+        )
         .org_arg()
         .project_arg(false)
         .arg(
@@ -73,7 +76,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if !output_path.exists() {
-        fs::create_dir_all(output_path).context(format!("Failed to create output directory {}", output_path.display()))?;
+        fs::create_dir_all(output_path).context(format!(
+            "Failed to create output directory {}",
+            output_path.display()
+        ))?;
     }
 
     let sources = ReleaseFileSearch::new(path.to_path_buf()).collect_files()?;
@@ -90,7 +96,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     path: source.path.clone(),
                     contents: source.contents.clone(),
                     ty: SourceFileType::Source,
-                    headers: vec![],
+                    headers: BTreeMap::new(),
                     messages: vec![],
                     already_uploaded: false,
                 },
