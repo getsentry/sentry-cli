@@ -117,7 +117,12 @@ pub struct SourceFile {
     pub path: PathBuf,
     pub contents: Vec<u8>,
     pub ty: SourceFileType,
-    pub headers: Vec<(String, String)>,
+    /// A map of headers attatched to the source file.
+    ///
+    /// Headers that `sentry-cli` knows about are
+    /// * "debug-id" for a file's debug id
+    /// * "Sourcemap" for a reference to a file's sourcemap
+    pub headers: BTreeMap<String, String>,
     pub messages: Vec<(LogLevel, String)>,
     pub already_uploaded: bool,
 }
@@ -126,6 +131,26 @@ impl SourceFile {
     /// Calculates and returns the SHA1 checksum of the file.
     pub fn checksum(&self) -> Result<Digest> {
         get_sha1_checksum(&*self.contents)
+    }
+
+    /// Returns the value of the "debug-id" header.
+    pub fn debug_id(&self) -> Option<&String> {
+        self.headers.get("debug-id")
+    }
+
+    /// Sets the value of the "debug-id" header.
+    pub fn set_debug_id(&mut self, debug_id: String) {
+        self.headers.insert("debug-id".to_string(), debug_id);
+    }
+
+    /// Returns the value of the "Sourcemap" header.
+    pub fn sourcemap_reference(&self) -> Option<&String> {
+        self.headers.get("Sourcemap")
+    }
+
+    /// Sets the value of the "Sourcemap" header.
+    pub fn set_sourcemap_reference(&mut self, sourcemap: String) {
+        self.headers.insert("Sourcemap".to_string(), sourcemap);
     }
 
     pub fn log(&mut self, level: LogLevel, msg: String) {
@@ -262,7 +287,13 @@ fn upload_files_parallel(
                     context,
                     &file.contents,
                     &file.url,
-                    Some(file.headers.as_slice()),
+                    Some(
+                        file.headers
+                            .iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    ),
                     mode,
                 )?;
 
@@ -634,7 +665,7 @@ mod tests {
         let hash = Sha1::from(buf);
         assert_eq!(
             hash.digest().to_string(),
-            "3f1ae634a707ec4bc01cf227589e24e4deac4a19"
+            "d38fb9915de70eec2aa2d0c380b344d89ef540f0"
         );
     }
 }

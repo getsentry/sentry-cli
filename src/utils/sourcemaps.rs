@@ -1,5 +1,5 @@
 //! Provides sourcemap validation functionality.
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::io::Write;
 use std::mem;
@@ -280,25 +280,22 @@ impl SourceMapProcessor {
                 (SourceFileType::Source, None)
             };
 
-            // attach the debug id to the artifact bundle when it's detected
-            let mut headers = Vec::new();
+            let mut source_file = SourceFile {
+                url: url.clone(),
+                path: file.path,
+                contents: file.contents,
+                ty,
+                headers: BTreeMap::new(),
+                messages: vec![],
+                already_uploaded: false,
+            };
+
             if let Some(debug_id) = debug_id {
-                headers.push(("debug-id".to_string(), debug_id.to_string()));
+                source_file.set_debug_id(debug_id.to_string());
                 self.debug_ids.insert(url.clone(), debug_id);
             }
 
-            self.sources.insert(
-                url.clone(),
-                SourceFile {
-                    url: url.clone(),
-                    path: file.path,
-                    contents: file.contents,
-                    ty,
-                    headers,
-                    messages: vec![],
-                    already_uploaded: false,
-                },
-            );
+            self.sources.insert(url.clone(), source_file);
             pb.inc(1);
         }
         pb.finish_with_duration("Analyzing");
@@ -399,7 +396,8 @@ impl SourceMapProcessor {
                     pieces.push("no sourcemap ref".into());
                 }
             }
-            if let Some((_, debug_id)) = source.headers.iter().find(|x| x.0 == "debug-id") {
+
+            if let Some(debug_id) = source.debug_id() {
                 pieces.push(format!("debug id {}", style(debug_id).yellow()));
             }
 
@@ -529,7 +527,7 @@ impl SourceMapProcessor {
                     path: PathBuf::from(name.clone()),
                     contents: sourceview.source().as_bytes().to_vec(),
                     ty: SourceFileType::MinifiedSource,
-                    headers: vec![],
+                    headers: BTreeMap::new(),
                     messages: vec![],
                     already_uploaded: false,
                 },
@@ -547,7 +545,7 @@ impl SourceMapProcessor {
                     path: PathBuf::from(sourcemap_name),
                     contents: sourcemap_content,
                     ty: SourceFileType::SourceMap,
-                    headers: vec![],
+                    headers: BTreeMap::new(),
                     messages: vec![],
                     already_uploaded: false,
                 },
@@ -638,9 +636,7 @@ impl SourceMapProcessor {
             }
 
             if let Some(Some(sourcemap_url)) = self.sourcemap_references.get(&source.url) {
-                source
-                    .headers
-                    .push(("Sourcemap".to_string(), sourcemap_url.to_string()));
+                source.set_sourcemap_reference(sourcemap_url.to_string());
             }
         }
         Ok(())
@@ -901,7 +897,7 @@ impl SourceMapProcessor {
 
                             sourcemap_file
                                 .headers
-                                .push(("debug-id".to_string(), debug_id.to_string()));
+                                .insert("debug-id".to_string(), debug_id.to_string());
 
                             if !dry_run {
                                 let mut file = std::fs::File::create(&sourcemap_file.path)?;
@@ -949,9 +945,7 @@ impl SourceMapProcessor {
             // Finally, some housekeeping.
             let source_file = self.sources.get_mut(source_url).unwrap();
 
-            source_file
-                .headers
-                .push(("debug-id".to_string(), debug_id.to_string()));
+            source_file.set_debug_id(debug_id.to_string());
             self.debug_ids.insert(source_url.clone(), debug_id);
 
             if !dry_run {
