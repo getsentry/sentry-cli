@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes & improvements
+
+- fix(sourcemaps): Query parameters and fragments are removed from source mapping URLs (#1735) by @loewenheim
+
 ## 2.20.6
 
 ### Various fixes & improvements
