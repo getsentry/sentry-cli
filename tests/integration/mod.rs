@@ -10,6 +10,7 @@ mod monitors;
 mod org_tokens;
 mod organizations;
 mod projects;
+mod react_native;
 mod releases;
 mod send_envelope;
 mod send_event;
@@ -26,7 +27,7 @@ use std::path::Path;
 use mockito::{mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
-pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z"#;
+pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn register_test(path: &str) -> TestCases {

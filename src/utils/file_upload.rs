@@ -1,5 +1,5 @@
 //! Searches, processes and uploads release files.
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt;
 use std::io::BufWriter;
 use std::path::PathBuf;
@@ -117,7 +117,12 @@ pub struct SourceFile {
     pub path: PathBuf,
     pub contents: Vec<u8>,
     pub ty: SourceFileType,
-    pub headers: Vec<(String, String)>,
+    /// A map of headers attatched to the source file.
+    ///
+    /// Headers that `sentry-cli` knows about are
+    /// * "debug-id" for a file's debug id
+    /// * "Sourcemap" for a reference to a file's sourcemap
+    pub headers: BTreeMap<String, String>,
     pub messages: Vec<(LogLevel, String)>,
     pub already_uploaded: bool,
 }
@@ -126,6 +131,26 @@ impl SourceFile {
     /// Calculates and returns the SHA1 checksum of the file.
     pub fn checksum(&self) -> Result<Digest> {
         get_sha1_checksum(&*self.contents)
+    }
+
+    /// Returns the value of the "debug-id" header.
+    pub fn debug_id(&self) -> Option<&String> {
+        self.headers.get("debug-id")
+    }
+
+    /// Sets the value of the "debug-id" header.
+    pub fn set_debug_id(&mut self, debug_id: String) {
+        self.headers.insert("debug-id".to_string(), debug_id);
+    }
+
+    /// Returns the value of the "Sourcemap" header.
+    pub fn sourcemap_reference(&self) -> Option<&String> {
+        self.headers.get("Sourcemap")
+    }
+
+    /// Sets the value of the "Sourcemap" header.
+    pub fn set_sourcemap_reference(&mut self, sourcemap: String) {
+        self.headers.insert("Sourcemap".to_string(), sourcemap);
     }
 
     pub fn log(&mut self, level: LogLevel, msg: String) {
@@ -141,7 +166,10 @@ impl SourceFile {
     }
 }
 
-pub type SourceFiles = HashMap<String, SourceFile>;
+/// A map from URLs to source files.
+///
+/// The keys correspond to the `url` field on the values.
+pub type SourceFiles = BTreeMap<String, SourceFile>;
 
 pub struct FileUpload<'a> {
     context: &'a UploadContext<'a>,
@@ -152,7 +180,7 @@ impl<'a> FileUpload<'a> {
     pub fn new(context: &'a UploadContext) -> Self {
         FileUpload {
             context,
-            files: HashMap::new(),
+            files: SourceFiles::new(),
         }
     }
 
@@ -259,7 +287,13 @@ fn upload_files_parallel(
                     context,
                     &file.contents,
                     &file.url,
-                    Some(file.headers.as_slice()),
+                    Some(
+                        file.headers
+                            .iter()
+                            .map(|(k, v)| (k.clone(), v.clone()))
+                            .collect::<Vec<_>>()
+                            .as_slice(),
+                    ),
                     mode,
                 )?;
 
@@ -396,38 +430,31 @@ fn upload_files_chunked(
         chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
     };
 
-    upload_chunks(&chunks, options, progress_style)?;
-
     if !chunks.is_empty() {
+        upload_chunks(&chunks, options, progress_style)?;
         println!("{} Uploaded files to Sentry", style(">").dim());
-        poll_assemble(checksum, &checksums, context, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
             style(">").dim()
         );
-        Ok(())
     }
+    poll_assemble(checksum, &checksums, context, options)
 }
 
+/// Creates a debug id from a map of source files by hashing each file's
+/// URL, contents, type, and headers.
 fn build_debug_id(files: &SourceFiles) -> DebugId {
-    let mut sorted_files = Vec::from_iter(files);
-    sorted_files.sort_by_key(|x| x.0);
-
     let mut hash = sha1_smol::Sha1::new();
-    for (path, source_file) in sorted_files {
-        hash.update(path.as_bytes());
-        if let Some(debug_id) = source_file
-            .headers
-            .iter()
-            .filter_map(|(k, v)| (k == "debug_id").then_some(v))
-            .next()
-        {
-            hash.update(debug_id.as_bytes());
-        } else {
-            hash.update(&[0u8; 16]);
-        }
+    for source_file in files.values() {
+        hash.update(source_file.url.as_bytes());
         hash.update(&source_file.contents);
+        hash.update(format!("{:?}", source_file.ty).as_bytes());
+
+        for (key, value) in &source_file.headers {
+            hash.update(key.as_bytes());
+            hash.update(value.as_bytes());
+        }
     }
 
     let mut sha1_bytes = [0u8; 16];
@@ -471,10 +498,7 @@ fn build_artifact_bundle(
         bundle.set_attribute("dist".to_owned(), dist.to_owned());
     }
 
-    let mut files_sorted = files.values().collect::<Vec<_>>();
-    files_sorted.sort_by_key(|file| &file.url[..]);
-
-    for file in files_sorted {
+    for file in files.values() {
         pb.inc(1);
         pb.set_message(&file.url);
 
@@ -639,7 +663,7 @@ mod tests {
         let hash = Sha1::from(buf);
         assert_eq!(
             hash.digest().to_string(),
-            "3f1ae634a707ec4bc01cf227589e24e4deac4a19"
+            "d38fb9915de70eec2aa2d0c380b344d89ef540f0"
         );
     }
 }

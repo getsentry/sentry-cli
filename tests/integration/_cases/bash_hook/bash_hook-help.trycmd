@@ -18,6 +18,7 @@ Options:
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: silent]
       --tag <KEY:VALUE>          Add tags (key:value) to the event.
+      --release <RELEASE>        Define release version for the event.
   -h, --help                     Print help
 
 ```

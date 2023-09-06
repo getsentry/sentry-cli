@@ -1,0 +1,6 @@
+```
+$ __SENTRY_RN_WRAP_XCODE_CALL=1 SENTRY_RN_REAL_NODE_BINARY=tests/integration/_fixtures/binary.sh SENTRY_RN_SOURCEMAP_REPORT=rn-sourcemap-report-minimum.json sentry-cli first second
+? success
+Binary executed with args: first second
+
+```
