@@ -7,6 +7,7 @@
 ### Various fixes & improvements
 
 - fix(sourcemaps): Query parameters and fragments are removed from source mapping URLs (#1735) by @loewenheim
+- fix(sourcemaps): Debug ID injection is significantly faster (#1736) by @loewenheim
 
 ## 2.20.6
 
