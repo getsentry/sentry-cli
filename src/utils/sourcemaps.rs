@@ -810,7 +810,7 @@ impl SourceMapProcessor {
                             bail!("Invalid embedded sourcemap in source file {source_url}");
                         };
 
-                        let sourcemap = SourceMap::from_slice(&decoded)
+                        let mut sourcemap = SourceMap::from_slice(&decoded)
                             .context("Invalid embedded sourcemap in source file {source_url}")?;
 
                         let debug_id = sourcemap
@@ -822,12 +822,12 @@ impl SourceMapProcessor {
                             inject::fixup_js_file(&mut source_file.contents, debug_id).context(
                                 format!("Failed to process {}", source_file.path.display()),
                             )?;
-                        let mut adjusted_map =
-                            SourceMap::adjust_mappings(&sourcemap, &adjustment_map);
-                        adjusted_map.set_debug_id(Some(debug_id));
+
+                        sourcemap.adjust_mappings(&adjustment_map);
+                        sourcemap.set_debug_id(Some(debug_id));
 
                         decoded.clear();
-                        adjusted_map.to_writer(&mut decoded)?;
+                        sourcemap.to_writer(&mut decoded)?;
 
                         let encoded = data_encoding::BASE64.encode(&decoded);
                         let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
@@ -862,7 +862,7 @@ impl SourceMapProcessor {
 
                             // We need to do a bit of a dance here because we can't mutably
                             // borrow the source file and the sourcemap at the same time.
-                            let (sourcemap, debug_id, debug_id_fresh) = {
+                            let (mut sourcemap, debug_id, debug_id_fresh) = {
                                 let sourcemap_file = &self.sources[&sourcemap_url];
 
                                 let sm = SourceMap::from_slice(&sourcemap_file.contents).context(
@@ -887,13 +887,13 @@ impl SourceMapProcessor {
                                         "Failed to process {}",
                                         source_file.path.display()
                                     ))?;
-                            let mut adjusted_map =
-                                SourceMap::adjust_mappings(&sourcemap, &adjustment_map);
-                            adjusted_map.set_debug_id(Some(debug_id));
+
+                            sourcemap.adjust_mappings(&adjustment_map);
+                            sourcemap.set_debug_id(Some(debug_id));
 
                             let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
                             sourcemap_file.contents.clear();
-                            adjusted_map.to_writer(&mut sourcemap_file.contents)?;
+                            sourcemap.to_writer(&mut sourcemap_file.contents)?;
 
                             sourcemap_file.set_debug_id(debug_id.to_string());
 

@@ -2492,9 +2492,9 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "6.4.1"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e4cbf65ca7dc576cf50e21f8d0712d96d4fcfd797389744b7b222a85cdf5bd90"
+checksum = "dbecc42a2b6131acc3bf9a25c9fe4161dba438eb52131bba83c5d781b5b70be3"
 dependencies = [
  "data-encoding",
  "debugid",
