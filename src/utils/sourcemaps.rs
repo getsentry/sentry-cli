@@ -895,9 +895,7 @@ impl SourceMapProcessor {
                             sourcemap_file.contents.clear();
                             sourcemap.to_writer(&mut sourcemap_file.contents)?;
 
-                            sourcemap_file
-                                .headers
-                                .insert("debug-id".to_string(), debug_id.to_string());
+                            sourcemap_file.set_debug_id(debug_id.to_string());
 
                             if !dry_run {
                                 let mut file = std::fs::File::create(&sourcemap_file.path)?;
