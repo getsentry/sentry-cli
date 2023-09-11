@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
@@ -115,14 +116,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
     let dist = matches.get_one::<String>("dist").map(String::as_str);
-    let mut headers = vec![];
+    let mut headers = BTreeMap::new();
     if let Some(header_list) = matches.get_many::<String>("file-headers") {
         for header in header_list {
             if !header.contains(':') {
                 bail!("Invalid header. Needs to be in key:value format");
             }
             let (key, value) = header.split_once(':').unwrap();
-            headers.push((key.trim().to_string(), value.trim().to_string()));
+            headers.insert(key.trim().to_string(), value.trim().to_string());
         }
     };
 
@@ -222,7 +223,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             context,
             &contents,
             name,
-            Some(&headers[..]),
+            Some(
+                headers
+                    .iter()
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect::<Vec<_>>()
+                    .as_slice(),
+            ),
             ProgressBarMode::Request,
         )? {
             println!("A {}  ({} bytes)", artifact.sha1, artifact.size);

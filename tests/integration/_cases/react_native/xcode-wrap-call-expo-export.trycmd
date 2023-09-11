@@ -1,0 +1,6 @@
+```
+$ __SENTRY_RN_WRAP_XCODE_CALL=1 SENTRY_RN_REAL_NODE_BINARY=tests/integration/_fixtures/binary.sh SENTRY_RN_SOURCEMAP_REPORT=rn-sourcemap-report-expo-export.json sentry-cli expo-cli.js export:embed --sourcemap-output source.map.path --bundle-output source.path
+? success
+Binary executed with args: expo-cli.js export:embed --sourcemap-output source.map.path --bundle-output source.path
+
+```

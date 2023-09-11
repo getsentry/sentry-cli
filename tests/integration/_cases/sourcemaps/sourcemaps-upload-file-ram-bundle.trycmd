@@ -1,0 +1,34 @@
+```
+$ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-ram-bundle/index.android.bundle --bundle-sourcemap tests/integration/_fixtures/file-ram-bundle/index.android.bundle.packager.map --release=wat-release
+? success
+> Analyzing 2 sources
+> Rewriting sources
+> Adding source map references
+> Bundled 13 files for upload
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Uploaded files to Sentry
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Project: wat-project
+> Release: wat-release
+> Dist: None
+> Upload type: artifact bundle
+
+Source Map Upload Report
+  Minified Scripts
+    ~/0.js (sourcemap at 0.js.map)
+    ~/1.js (sourcemap at 1.js.map)
+    ~/10.js (sourcemap at 10.js.map)
+    ~/7.js (sourcemap at 7.js.map)
+    ~/8.js (sourcemap at 8.js.map)
+    ~/9.js (sourcemap at 9.js.map)
+    ~/index.android.bundle (sourcemap at index.android.bundle.packager.map)
+  Source Maps
+    ~/0.js.map
+    ~/1.js.map
+    ~/10.js.map
+    ~/7.js.map
+    ~/8.js.map
+    ~/9.js.map
+
+```

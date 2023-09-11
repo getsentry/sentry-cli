@@ -127,7 +127,7 @@ fn command_sourcemaps_upload_some_debugids_v2() {
     let upload_endpoints = mock_common_upload_endpoints(
         ServerBehavior::ModernV2,
         ChunkOptions {
-            missing_chunks: vec!["5e102ab3da27af9d1095a9c847d4e92a57fe01af".to_string()],
+            missing_chunks: vec!["ff16e0ac593a74b454cc34814f6249f45a1a2dfe".to_string()],
             chunk_size: 524288,
         },
     );
@@ -140,4 +140,18 @@ fn command_sourcemaps_upload_no_debugids() {
     let _upload_endpoints =
         mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
     register_test("sourcemaps/sourcemaps-upload-no-debugids.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_upload_file_ram_bundle() {
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-file-ram-bundle.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_upload_indexed_ram_bundle() {
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-indexed-ram-bundle.trycmd");
 }

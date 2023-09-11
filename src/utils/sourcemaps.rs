@@ -1,5 +1,5 @@
 //! Provides sourcemap validation functionality.
-use std::collections::{BTreeSet, HashMap, HashSet};
+use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::ffi::OsStr;
 use std::io::Write;
 use std::mem;
@@ -13,12 +13,12 @@ use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sentry::types::DebugId;
 use sha1_smol::Digest;
+use sourcemap::SourceMap;
 use symbolic::debuginfo::js::{
     discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
 };
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
-use uuid::Uuid;
 
 use crate::api::Api;
 use crate::utils::enc::decode_unknown_string;
@@ -240,7 +240,7 @@ impl SourceMapProcessor {
     pub fn new() -> SourceMapProcessor {
         SourceMapProcessor {
             pending_sources: HashSet::new(),
-            sources: HashMap::new(),
+            sources: SourceFiles::new(),
             sourcemap_references: HashMap::new(),
             debug_ids: HashMap::new(),
         }
@@ -314,30 +314,24 @@ impl SourceMapProcessor {
                 (SourceFileType::Source, None)
             };
 
-            // attach the debug id to the artifact bundle when it's detected
-            let mut headers = Vec::new();
+            let mut source_file = SourceFile {
+                url: url.clone(),
+                path: file.path,
+                contents: file.contents,
+                ty,
+                headers: BTreeMap::new(),
+                messages: vec![],
+                already_uploaded: false,
+            };
+
             if let Some(debug_id) = debug_id {
-                headers.push(("debug-id".to_string(), debug_id.to_string()));
+                source_file.set_debug_id(debug_id.to_string());
                 self.debug_ids.insert(url.clone(), debug_id);
             }
 
-            self.sources.insert(
-                url.clone(),
-                SourceFile {
-                    url: url.clone(),
-                    path: file.path,
-                    contents: file.contents,
-                    ty,
-                    headers,
-                    messages: vec![],
-                    already_uploaded: false,
-                },
-            );
+            self.sources.insert(url.clone(), source_file);
             pb.inc(1);
         }
-
-        self.collect_sourcemap_references();
-
         pb.finish_with_duration("Analyzing");
     }
 
@@ -436,7 +430,8 @@ impl SourceMapProcessor {
                     pieces.push("no sourcemap ref".into());
                 }
             }
-            if let Some((_, debug_id)) = source.headers.iter().find(|x| x.0 == "debug-id") {
+
+            if let Some(debug_id) = source.debug_id() {
                 pieces.push(format!("debug id {}", style(debug_id).yellow()));
             }
 
@@ -566,7 +561,7 @@ impl SourceMapProcessor {
                     path: PathBuf::from(name.clone()),
                     contents: sourceview.source().as_bytes().to_vec(),
                     ty: SourceFileType::MinifiedSource,
-                    headers: vec![],
+                    headers: BTreeMap::new(),
                     messages: vec![],
                     already_uploaded: false,
                 },
@@ -584,7 +579,7 @@ impl SourceMapProcessor {
                     path: PathBuf::from(sourcemap_name),
                     contents: sourcemap_content,
                     ty: SourceFileType::SourceMap,
-                    headers: vec![],
+                    headers: BTreeMap::new(),
                     messages: vec![],
                     already_uploaded: false,
                 },
@@ -666,6 +661,7 @@ impl SourceMapProcessor {
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
+        self.collect_sourcemap_references();
 
         println!("{} Adding source map references", style(">").dim());
         for source in self.sources.values_mut() {
@@ -674,9 +670,7 @@ impl SourceMapProcessor {
             }
 
             if let Some(Some(sourcemap)) = self.sourcemap_references.get(&source.url) {
-                source
-                    .headers
-                    .push(("Sourcemap".to_string(), sourcemap.url.to_string()));
+              source.set_sourcemap_reference(sourcemap.url);
             }
         }
         Ok(())
@@ -781,7 +775,7 @@ impl SourceMapProcessor {
                 .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())
                 .collect();
 
-            for mut source in self.sources.values_mut() {
+            for source in self.sources.values_mut() {
                 if let Ok(checksum) = source.checksum() {
                     if already_uploaded_checksums.contains(&checksum) {
                         source.already_uploaded = true;
@@ -859,6 +853,7 @@ impl SourceMapProcessor {
     /// for JavaScript files.
     pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str]) -> Result<()> {
         self.flush_pending_sources();
+        self.collect_sourcemap_references();
         println!("{} Injecting debug ids", style(">").dim());
 
         let mut report = InjectReport::default();
@@ -887,137 +882,165 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            // Find or generate a debug id and determine whether we can inject the
-            // code snippet at the start of the source file. This is determined by whether
-            // we are able to adjust the sourcemap accordingly.
-            let (debug_id, inject_at_start) = {
-                match sourcemap_url {
-                    None => {
-                        // no source map at all, try a deterministic debug id from the contents
-                        let debug_id = self
-                            .sources
-                            .get(source_url)
-                            .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
-                            .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                        (debug_id, false)
-                    }
-                    Some(sourcemap) => {
-                        if let Some(encoded) = sourcemap.url.strip_prefix(DATA_PREAMBLE) {
-                            // Handle embedded sourcemaps
+            // Modify the source file and the sourcemap.
+            // There are several cases to consider according to whether we have a sourcemap for the source file and
+            // whether it's embedded or external.
+            let debug_id = match sourcemap_url {
+                None => {
+                    // Case 1: We have no sourcemap for the source file. Hash the file contents for the debug id.
+                    let source_file = self.sources.get_mut(source_url).unwrap();
+                    let debug_id = inject::debug_id_from_bytes_hashed(&source_file.contents);
 
-                            // Update the embedded sourcemap and write it back to the source file
-                            let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes()) else {
-                                bail!("Invalid embedded sourcemap in source file {source_url}");
+                    // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                    // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                    // This isn't ideal, but it's the best we can do in this case.
+                    inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                        .context(format!("Failed to process {}", source_file.path.display()))?;
+                    debug_id
+                }
+                Some(sourcemap) => {
+                    if let Some(encoded) = sourcemap.url.strip_prefix(DATA_PREAMBLE) {
+                        // Case 2: The source file has an embedded sourcemap.
+
+                        let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes())
+                        else {
+                            bail!("Invalid embedded sourcemap in source file {source_url}");
+                        };
+
+                        let mut sourcemap = SourceMap::from_slice(&decoded)
+                            .context("Invalid embedded sourcemap in source file {source_url}")?;
+
+                        let debug_id = sourcemap
+                            .get_debug_id()
+                            .unwrap_or_else(|| inject::debug_id_from_bytes_hashed(&decoded));
+
+                        let source_file = self.sources.get_mut(source_url).unwrap();
+                        let adjustment_map =
+                            inject::fixup_js_file(&mut source_file.contents, debug_id).context(
+                                format!("Failed to process {}", source_file.path.display()),
+                            )?;
+
+                        sourcemap.adjust_mappings(&adjustment_map);
+                        sourcemap.set_debug_id(Some(debug_id));
+
+                        decoded.clear();
+                        sourcemap.to_writer(&mut decoded)?;
+
+                        let encoded = data_encoding::BASE64.encode(&decoded);
+                        let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
+
+                        inject::replace_sourcemap_url(
+                            &mut source_file.contents,
+                            &new_sourcemap_url,
+                        )?;
+                        *sourcemap_url = new_sourcemap_url;
+
+                        debug_id
+                    } else {
+                        // Handle external sourcemaps
+
+                        let normalized = inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                        let matches = inject::find_matching_paths(&sourcemaps, &normalized);
+
+                        let sourcemap_url = match &matches[..] {
+                            [] => normalized,
+                            [x] => x.to_string(),
+                            _ => {
+                                warn!("Ambiguous matches for sourcemap path {normalized}:");
+                                for path in matches {
+                                    warn!("{path}");
+                                }
+                                normalized
+                            }
+                        };
+
+                        if self.sources.contains_key(&sourcemap_url) {
+                            // Case 3: We have an external sourcemap for the source file.
+
+                            // We need to do a bit of a dance here because we can't mutably
+                            // borrow the source file and the sourcemap at the same time.
+                            let (mut sourcemap, debug_id, debug_id_fresh) = {
+                                let sourcemap_file = &self.sources[&sourcemap_url];
+
+                                let sm = SourceMap::from_slice(&sourcemap_file.contents).context(
+                                    format!("Invalid sourcemap at {}", sourcemap_file.url),
+                                )?;
+
+                                match sm.get_debug_id() {
+                                    Some(debug_id) => (sm, debug_id, false),
+                                    None => {
+                                        let debug_id = inject::debug_id_from_bytes_hashed(
+                                            &sourcemap_file.contents,
+                                        );
+                                        (sm, debug_id, true)
+                                    }
+                                }
                             };
-
-                            inject::insert_empty_mapping(&mut decoded)?;
-                            let encoded = data_encoding::BASE64.encode(&decoded);
-                            let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
 
                             let source_file = self.sources.get_mut(source_url).unwrap();
+                            let adjustment_map =
+                                inject::fixup_js_file(&mut source_file.contents, debug_id)
+                                    .context(format!(
+                                        "Failed to process {}",
+                                        source_file.path.display()
+                                    ))?;
 
-                            // hash the new source map url for the debug id
-                            let debug_id =
-                                inject::debug_id_from_bytes_hashed(new_sourcemap_url.as_bytes());
+                            sourcemap.adjust_mappings(&adjustment_map);
+                            sourcemap.set_debug_id(Some(debug_id));
 
-                            inject::replace_sourcemap_url(
-                                &mut source_file.contents,
-                                &new_sourcemap_url,
-                            )?;
-                            *sourcemap = SourceMapReference::from_url(new_sourcemap_url);
+                            let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
+                            sourcemap_file.contents.clear();
+                            sourcemap.to_writer(&mut sourcemap_file.contents)?;
 
-                            (debug_id, true)
-                        } else {
-                            // Handle external sourcemaps
+                            sourcemap_file.set_debug_id(debug_id.to_string());
 
-                            let normalized =
-                                inject::normalize_sourcemap_url(source_url, &sourcemap.url);
-                            let matches = inject::find_matching_paths(&sourcemaps, &normalized);
-
-                            let sourcemap_url = match &matches[..] {
-                                [] => normalized,
-                                [x] => x.to_string(),
-                                _ => {
-                                    warn!("Ambiguous matches for sourcemap path {normalized}:");
-                                    for path in matches {
-                                        warn!("{path}");
-                                    }
-                                    normalized
-                                }
-                            };
-
-                            match self.sources.get_mut(&sourcemap_url) {
-                                None => {
-                                    debug!("Sourcemap file {} not found", sourcemap_url);
-                                    // source map cannot be found, fall back to hashing the contents if
-                                    // available.  The v4 fallback should not happen.
-                                    let debug_id = self
-                                        .sources
-                                        .get(source_url)
-                                        .map(|s| inject::debug_id_from_bytes_hashed(&s.contents))
-                                        .unwrap_or_else(|| DebugId::from_uuid(Uuid::new_v4()));
-                                    (debug_id, false)
-                                }
-                                Some(sourcemap_file) => {
-                                    inject::insert_empty_mapping(&mut sourcemap_file.contents)
-                                        .context(format!(
-                                            "Failed to process {}",
-                                            sourcemap_file.path.display()
-                                        ))?;
-
-                                    let (debug_id, sourcemap_modified) =
-                                        inject::fixup_sourcemap(&mut sourcemap_file.contents)
-                                            .context(format!(
-                                                "Failed to process {}",
-                                                sourcemap_file.path.display()
-                                            ))?;
-
-                                    sourcemap_file
-                                        .headers
-                                        .push(("debug-id".to_string(), debug_id.to_string()));
-
-                                    if !dry_run {
-                                        let mut file = std::fs::File::create(&sourcemap_file.path)?;
-                                        file.write_all(&sourcemap_file.contents).context(
-                                            format!(
-                                                "Failed to write sourcemap file {}",
-                                                sourcemap_file.path.display()
-                                            ),
-                                        )?;
-                                    }
-
-                                    if sourcemap_modified {
-                                        report
-                                            .sourcemaps
-                                            .push((sourcemap_file.path.clone(), debug_id));
-                                    } else {
-                                        report
-                                            .skipped_sourcemaps
-                                            .push((sourcemap_file.path.clone(), debug_id));
-                                    }
-
-                                    (debug_id, true)
-                                }
+                            if !dry_run {
+                                let mut file = std::fs::File::create(&sourcemap_file.path)?;
+                                file.write_all(&sourcemap_file.contents).context(format!(
+                                    "Failed to write sourcemap file {}",
+                                    sourcemap_file.path.display()
+                                ))?;
                             }
+
+                            if debug_id_fresh {
+                                report
+                                    .sourcemaps
+                                    .push((sourcemap_file.path.clone(), debug_id));
+                            } else {
+                                report
+                                    .skipped_sourcemaps
+                                    .push((sourcemap_file.path.clone(), debug_id));
+                            }
+
+                            debug_id
+                        } else {
+                            // Case 4: We have a URL for the external sourcemap, but we can't find it.
+                            // This is substantially the same as case 1.
+                            debug!("Sourcemap file {} not found", sourcemap_url);
+                            // source map cannot be found, fall back to hashing the contents.
+                            let source_file = self.sources.get_mut(source_url).unwrap();
+                            let debug_id =
+                                inject::debug_id_from_bytes_hashed(&source_file.contents);
+
+                            // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
+                            // because that would throw off all the mappings. Instead, inject the snippet at the very end.
+                            // This isn't ideal, but it's the best we can do in this case.
+                            inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                                .context(format!(
+                                    "Failed to process {}",
+                                    source_file.path.display()
+                                ))?;
+
+                            debug_id
                         }
                     }
                 }
             };
 
-            // Finally, inject the debug id and the code snippet into the source file
+            // Finally, some housekeeping.
             let source_file = self.sources.get_mut(source_url).unwrap();
 
-            if inject_at_start {
-                inject::fixup_js_file(&mut source_file.contents, debug_id)
-                    .context(format!("Failed to process {}", source_file.path.display()))?;
-            } else {
-                inject::fixup_js_file_end(&mut source_file.contents, debug_id)
-                    .context(format!("Failed to process {}", source_file.path.display()))?;
-            }
-
-            source_file
-                .headers
-                .push(("debug-id".to_string(), debug_id.to_string()));
+            source_file.set_debug_id(debug_id.to_string());
             self.debug_ids.insert(source_url.clone(), debug_id);
 
             if !dry_run {

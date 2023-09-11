@@ -2,6 +2,64 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.20.7
+
+### Various fixes & improvements
+
+- fix(sourcemaps): Query parameters and fragments are removed from source mapping URLs (#1735) by @loewenheim
+- fix(sourcemaps): Debug ID injection is significantly faster (#1736) by @loewenheim
+
+## 2.20.6
+
+### Various fixes & improvements
+
+- fix: Always poll artifact assembly, even if nothing was uploaded (#1726) by @loewenheim
+- feat(rn): Allow custom bundle command and Expo export:embed in xcode wrap calls (#1723) by @krystofwoldrich
+- feat(bash-hook): Add support for `SENTRY_RELEASE` in bash-hook (#1720) by @boozec
+- misc: Add CONTRIBUTING.md for working with integration tests (#1716) by @kamilogorek
+- test: Prevent .sentryclirc being read from global config (#1716) by @kamilogorek
+- test: Do not sign git tags and commits during tests (#1716) by @kamilogorek
+- test: Make sure to always skip opening editor in git-based tests (#1716) by @kamilogorek
+
+## 2.20.5
+
+### Various fixes & improvements
+
+- deps: Bump sourcemap to 6.4.1 (#1715) by @kamilogorek
+
+## 2.20.4
+
+### Various fixes and improvements
+
+- fix(injection): Make debug id injection sound (#1693) by @loewenheim
+
+## 2.20.3
+
+### Various fixes & improvements
+
+- fix(set-commits): Allow --initial-depth to be specified alongside --auto (#1703) by @kamilogorek
+- feat: Allow the CLI binary path to be overridden (#1697) by @koddsson
+
+## 2.20.1
+
+### Various fixes and improvements
+
+- fix: Correctly detect local binary when installing via npm (#1695)
+
+## 2.20.0
+
+### Various fixes and improvements
+
+- feat(issues): Add `issues list` command (#1349)
+- feat(inject): Make sourcemap discovery smarter (#1663) 
+- feat(config): Support organization-based tokens (#1673)
+- feat(proguard): Create a weak release association with a proguard mapping file (#1688)
+- fix(inject): Make pragma detection stricter (#1648)
+- fix(inject): Mark paths argument as required (#1662)
+- fix(debug-files): Add wasm to supported debug-files upload formats (#1683)
+- fix(sourcemaps): Sourcemap rewriting no longer deletes debug ids when uploading (#1686)
+- ref(sourcemaps): Do not dedupe artifacts if server won't handle it due to url limit (#1680)
+
 ## 2.19.4
 
 ### Various fixes and improvements

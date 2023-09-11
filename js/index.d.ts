@@ -88,6 +88,10 @@ declare module '@sentry/cli' {
      */
     sourceMapReference?: boolean;
     /**
+     * Enables files gzip decompression prior to uploading. Defaults to `false`.
+     */
+    decompress?: boolean;
+    /**
      * Enable artifacts deduplication prior to uploading. This will skip uploading
      * any artifacts that are already present on the server. Defaults to `true`.
      */

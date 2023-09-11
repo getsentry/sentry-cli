@@ -584,13 +584,12 @@ use {
     std::io::Write,
     std::path::Path,
     std::process::Command,
-    tempfile::tempdir,
+    tempfile::{tempdir, TempDir},
 };
 
 #[test]
 fn test_find_matching_rev_with_lightweight_tag() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),
@@ -627,8 +626,7 @@ fn test_find_matching_rev_with_lightweight_tag() {
 
 #[test]
 fn test_find_matching_rev_with_annotated_tag() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),
@@ -854,30 +852,32 @@ fn test_url_normalization() {
 }
 
 #[cfg(test)]
-fn git_initialize_repo(dir: &Path) {
+fn git_initialize_repo() -> TempDir {
+    let dir = tempdir().expect("Failed to generate temp dir.");
+
     Command::new("git")
         .args(["init", "--quiet"])
-        .current_dir(dir)
+        .current_dir(&dir)
         .spawn()
         .expect("Failed to execute `git init`.")
         .wait()
-        .expect("Failed to wait on git init.");
+        .expect("Failed to wait on `git init`.");
 
     Command::new("git")
         .args(["config", "--local", "user.name", "test"])
-        .current_dir(dir)
+        .current_dir(&dir)
         .spawn()
         .expect("Failed to execute `git config`.")
         .wait()
-        .expect("Failed to wait on git config.");
+        .expect("Failed to wait on `git config`.");
 
     Command::new("git")
         .args(["config", "--local", "user.email", "test@example.com"])
-        .current_dir(dir)
+        .current_dir(&dir)
         .spawn()
         .expect("Failed to execute `git config`.")
         .wait()
-        .expect("Failed to wait on git config.");
+        .expect("Failed to wait on `git config`.");
 
     Command::new("git")
         .args([
@@ -886,11 +886,29 @@ fn git_initialize_repo(dir: &Path) {
             "origin",
             "https://github.com/getsentry/sentry-cli",
         ])
-        .current_dir(dir)
+        .current_dir(&dir)
         .spawn()
         .expect("Failed to execute `git remote add`.")
         .wait()
-        .expect("Failed to wait on git remote add.");
+        .expect("Failed to wait on `git remote add`.");
+
+    Command::new("git")
+        .args(["config", "--local", "commit.gpgsign", "false"])
+        .current_dir(&dir)
+        .spawn()
+        .expect("Failed to execute `config --local commit.gpgsign false`.")
+        .wait()
+        .expect("Failed to wait on `config --local commit.gpgsign false`.");
+
+    Command::new("git")
+        .args(["config", "--local", "tag.gpgsign", "false"])
+        .current_dir(&dir)
+        .spawn()
+        .expect("Failed to execute `config --local tag.gpgsign false`.")
+        .wait()
+        .expect("Failed to wait on `config --local tag.gpgsign false`.");
+
+    dir
 }
 
 #[cfg(test)]
@@ -905,7 +923,7 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
         .spawn()
         .expect("Failed to execute `git add .`");
 
-    add.wait().expect("Failed to wait on git add.");
+    add.wait().expect("Failed to wait on `git add`.");
 
     let mut commit = Command::new("git")
         .args([
@@ -915,12 +933,13 @@ fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message
             "--author",
             "John Doe <john.doe@example.com>",
             "--quiet",
+            "--no-edit",
         ])
         .current_dir(dir)
         .spawn()
         .expect("Failed to execute `git commit -m {message}`.");
 
-    commit.wait().expect("Failed to wait on git commit.");
+    commit.wait().expect("Failed to wait on `git commit`.");
 }
 
 #[cfg(test)]
@@ -939,7 +958,7 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
         .spawn()
         .unwrap_or_else(|_| panic!("Failed to execute `git tag {tag_name}`"));
 
-    tag.wait().expect("Failed to wait on git tag.");
+    tag.wait().expect("Failed to wait on `git tag`.");
 
     let hash = Command::new("git")
         .args(["rev-list", "-n", "1", tag_name])
@@ -954,8 +973,7 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
 
 #[test]
 fn test_get_commits_from_git() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),
@@ -989,8 +1007,7 @@ fn test_get_commits_from_git() {
 
 #[test]
 fn test_generate_patch_set_base() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),
@@ -1026,8 +1043,7 @@ fn test_generate_patch_set_base() {
 
 #[test]
 fn test_generate_patch_set_previous_commit() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),
@@ -1079,8 +1095,7 @@ fn test_generate_patch_set_previous_commit() {
 
 #[test]
 fn test_generate_patch_default_twenty() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),
@@ -1119,8 +1134,7 @@ fn test_generate_patch_default_twenty() {
 
 #[test]
 fn test_generate_patch_ignore_missing() {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-    git_initialize_repo(dir.path());
+    let dir = git_initialize_repo();
 
     git_create_commit(
         dir.path(),

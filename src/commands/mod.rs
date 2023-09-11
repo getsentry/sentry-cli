@@ -97,21 +97,21 @@ fn preexecute_hooks() -> Result<bool> {
 }
 
 fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
+    if let Some(api_key) = matches.get_one::<String>("api_key") {
+        config.set_auth(Auth::Key(api_key.to_owned()))?;
+    }
+
+    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
+        config.set_auth(Auth::Token(auth_token.to_owned()))?;
+    }
+
     if let Some(url) = matches.get_one::<String>("url") {
-        config.set_base_url(url);
+        config.set_base_url(url)?;
     }
 
     if let Some(headers) = matches.get_many::<String>("headers") {
         let headers = headers.map(|h| h.to_owned()).collect();
         config.set_headers(headers);
-    }
-
-    if let Some(api_key) = matches.get_one::<String>("api_key") {
-        config.set_auth(Auth::Key(api_key.to_owned()));
-    }
-
-    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
-        config.set_auth(Auth::Token(auth_token.to_owned()));
     }
 
     if let Some(level_str) = matches.get_one::<String>("log_level") {

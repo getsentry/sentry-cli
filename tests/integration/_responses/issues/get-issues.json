@@ -1,0 +1,26 @@
+[
+  {
+    "id": "4242424243",
+    "shortId": "SEN-CLI-L",
+    "title": "ProgrammingError: column users_user.role does not exist",
+    "lastSeen": "2023-07-18T00:12:01.222387Z",
+    "status": "unresolved",
+    "level": "error"
+  },
+  {
+    "id": "4242424242",
+    "shortId": "SEN-CLI-H",
+    "title": "N+1 Query",
+    "lastSeen": "2023-07-18T00:10:01.222387Z",
+    "status": "resolved",
+    "level": "info"
+  },
+  {
+    "id": "4242424241",
+    "shortId": "SEN-CLI-1",
+    "title": "NameError: name 'jobs' is not defined",
+    "lastSeen": "2023-07-18T00:00:01.222387Z",
+    "status": "ignored",
+    "level": "error"
+  }
+]

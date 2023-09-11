@@ -1,0 +1,6 @@
+```
+$ __SENTRY_RN_WRAP_XCODE_CALL=1 SENTRY_RN_REAL_NODE_BINARY=tests/integration/_fixtures/binary.sh SENTRY_RN_SOURCEMAP_REPORT=rn-sourcemap-report-bundle.json sentry-cli rn-cli.js bundle --sourcemap-output source.map.path --bundle-output source.path
+? success
+Binary executed with args: rn-cli.js bundle --sourcemap-output source.map.path --bundle-output source.path
+
+```

@@ -11,7 +11,8 @@ use proguard::ProguardMapping;
 use symbolic::common::ByteView;
 use uuid::Uuid;
 
-use crate::api::{Api, AssociateDsyms};
+use crate::api::Api;
+use crate::api::AssociateProguard;
 use crate::config::Config;
 use crate::utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
 use crate::utils::args::ArgExt;
@@ -216,7 +217,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let tf = TempFile::create()?;
     {
         let mut zip = zip::ZipWriter::new(tf.open()?);
-
         for mapping in &mappings {
             let pb = make_byte_progress_bar(mapping.size);
             zip.start_file(
@@ -267,22 +267,29 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // if values are given associate
     } else if let Some(app_id) = matches.get_one::<String>("app_id") {
-        api.associate_dsyms(
-            &org,
-            &project,
-            &AssociateDsyms {
-                platform: matches
-                    .get_one::<String>("platform")
-                    .map(String::as_str)
-                    .unwrap_or("android")
-                    .to_string(),
-                checksums: all_checksums,
-                name: app_id.to_string(),
-                app_id: app_id.to_string(),
-                version: matches.get_one::<String>("version").unwrap().to_owned(),
-                build: matches.get_one::<String>("version_code").cloned(),
-            },
-        )?;
+        let version = matches.get_one::<String>("version").unwrap().to_owned();
+        let build: Option<String> = matches.get_one::<String>("version_code").cloned();
+
+        let mut release_name = app_id.to_owned();
+        release_name.push('@');
+        release_name.push_str(&version);
+
+        if let Some(build_str) = build {
+            release_name.push('+');
+            release_name.push_str(&build_str);
+        }
+
+        for mapping in &mappings {
+            let uuid = forced_uuid.unwrap_or(&mapping.uuid);
+            api.associate_proguard_mappings(
+                &org,
+                &project,
+                &AssociateProguard {
+                    release_name: release_name.to_owned(),
+                    proguard_uuid: uuid.to_string(),
+                },
+            )?;
+        }
     }
 
     // If wanted trigger reprocessing

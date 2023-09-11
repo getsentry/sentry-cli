@@ -11,7 +11,9 @@ fn command_info_help() {
 #[test]
 fn command_info_no_token() {
     // Special case where we don't want any env variables set, so we don't use `register_task` helper.
-    TestCases::new().case("tests/integration/_cases/info/info-no-token.trycmd");
+    TestCases::new()
+        .env("SENTRY_INTEGRATION_TEST", "1")
+        .case("tests/integration/_cases/info/info-no-token.trycmd");
 }
 
 #[test]

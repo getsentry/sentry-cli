@@ -556,8 +556,15 @@ impl Api {
                 )
             };
 
+            let mut checkums_qs = String::new();
             for checksum in checksums.iter() {
-                path.push_str(&format!("&checksum={}", QueryArg(checksum)));
+                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+            }
+            // We have a 16kb buffer for reach request configured in nginx,
+            // so do not even bother trying if it's too long.
+            // (16_384 limit still leaves us with 384 bytes for the url itself).
+            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
+                path.push_str(&checkums_qs);
             }
 
             let resp = self.get(&path)?;
@@ -570,7 +577,7 @@ impl Api {
             }
 
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Artifact>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Artifact>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1354,6 +1361,30 @@ impl Api {
         )
     }
 
+    pub fn associate_proguard_mappings(
+        &self,
+        org: &str,
+        project: &str,
+        data: &AssociateProguard,
+    ) -> ApiResult<()> {
+        let path = format!(
+            "/projects/{}/{}/files/proguard-artifact-releases",
+            PathArg(org),
+            PathArg(project)
+        );
+        let resp: ApiResponse = self
+            .request(Method::Post, &path)?
+            .with_json_body(data)?
+            .send()?;
+        if resp.status() == 201 {
+            Ok(())
+        } else if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        } else {
+            resp.convert()
+        }
+    }
+
     /// Associate arbitrary debug symbols with a build
     pub fn associate_dsyms(
         &self,
@@ -1419,7 +1450,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Organization>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Organization>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1447,7 +1478,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Monitor>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Monitor>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1509,7 +1540,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Project>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Project>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1549,7 +1580,60 @@ impl Api {
             }
 
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<ProcessedEvent>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<ProcessedEvent>>()?);
+
+            if requests_no == max_pages {
+                break;
+            }
+
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+
+        Ok(rv)
+    }
+
+    /// List all issues associated with an organization and a project
+    pub fn list_organization_project_issues(
+        &self,
+        org: &str,
+        project: &str,
+        max_pages: usize,
+        query: Option<String>,
+    ) -> ApiResult<Vec<Issue>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        let mut requests_no = 0;
+
+        let url = if let Some(query) = query {
+            format!(
+                "/projects/{}/{}/issues/?query={}&",
+                PathArg(org),
+                PathArg(project),
+                QueryArg(&query),
+            )
+        } else {
+            format!("/projects/{}/{}/issues/?", PathArg(org), PathArg(project),)
+        };
+
+        loop {
+            requests_no += 1;
+
+            let resp = self.get(&format!("{}cursor={}", url, QueryArg(&cursor)))?;
+
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                } else {
+                    break;
+                }
+            }
+
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Issue>>()?);
 
             if requests_no == max_pages {
                 break;
@@ -1580,7 +1664,7 @@ impl Api {
                 break;
             } else {
                 let pagination = resp.pagination();
-                rv.extend(resp.convert::<Vec<Repo>>()?.into_iter());
+                rv.extend(resp.convert::<Vec<Repo>>()?);
                 if let Some(next) = pagination.into_next_cursor() {
                     cursor = next;
                 } else {
@@ -2344,9 +2428,26 @@ pub struct AssociateDsyms {
     pub build: Option<String>,
 }
 
+#[derive(Debug, Serialize)]
+pub struct AssociateProguard {
+    pub release_name: String,
+    pub proguard_uuid: String,
+}
+
 #[derive(Deserialize)]
 struct MissingChecksumsResponse {
     missing: HashSet<Digest>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Issue {
+    pub id: String,
+    pub short_id: String,
+    pub title: String,
+    pub last_seen: String,
+    pub status: String,
+    pub level: String,
 }
 
 /// Change information for issue bulk updates.
