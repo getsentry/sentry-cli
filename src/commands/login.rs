@@ -71,11 +71,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             cfg.set_auth(Auth::Token(token.to_string()))?;
             Ok(())
         })?;
+
         match Api::with_config(test_cfg).get_auth_info() {
             Ok(info) => {
-                // we can unwrap here somewhat safely because we do not permit
-                // signing in with legacy non user bound api keys here.
-                println!("Valid token for user {}", info.user.unwrap().email);
+                match info.user {
+                    Some(user) => {
+                        // Old school user auth token
+                        println!("Valid token for user {}", user.email);
+                    }
+                    None => {
+                        // New org auth token
+                        println!("Valid org token");
+                    }
+                }
                 break;
             }
             Err(err) => {
