@@ -27,7 +27,10 @@ fn update_config(config: &Config, token: &str) -> Result<()> {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-    let token_url = format!("{}/api/", config.get_base_url()?);
+    let token_url = format!(
+        "{}/orgredirect/organizations/:orgslug/settings/auth-tokens/",
+        config.get_base_url()?
+    );
     let predefined_token = matches.get_one::<String>("auth_token");
     let has_predefined_token = predefined_token.is_some();
 
