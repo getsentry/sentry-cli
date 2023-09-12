@@ -502,9 +502,13 @@ pub fn wrap_call() -> Result<()> {
             }
 
             if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) = (packager_sourcemap_result, hermes_sourcemap_result) {
-                if hermes_sourcemap.get("debugId").is_none() {
+                if hermes_sourcemap.get("debugId").is_none() && hermes_sourcemap.get("debug_id").is_none() {
                     if let Some(debug_id) = packager_sourcemap.get("debugId") {
                         hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
+                        hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
+                    } else if let Some(debug_id) = packager_sourcemap.get("debug_id") {
+                        hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
+                        hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
                     } else {
                         println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
                     }
