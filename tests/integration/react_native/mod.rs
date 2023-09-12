@@ -13,7 +13,7 @@ fn xcode_wrap_call_minimum() {
 #[cfg(target_os = "macos")]
 fn xcode_wrap_call_bundle() {
     register_test("react_native/xcode-wrap-call-bundle.trycmd");
-    assert_full_sourcemap_report("rn-sourcemap-report-bundle.json");
+    assert_packager_sourcemap_report("rn-sourcemap-report-bundle.json");
     clean_up("rn-sourcemap-report-bundle.json");
 }
 
@@ -21,7 +21,7 @@ fn xcode_wrap_call_bundle() {
 #[cfg(target_os = "macos")]
 fn xcode_wrap_call_custom_bundle() {
     register_test("react_native/xcode-wrap-call-custom-bundle.trycmd");
-    assert_full_sourcemap_report("rn-sourcemap-report-custom-bundle.json");
+    assert_packager_sourcemap_report("rn-sourcemap-report-custom-bundle.json");
     clean_up("rn-sourcemap-report-custom-bundle.json");
 }
 
@@ -29,8 +29,31 @@ fn xcode_wrap_call_custom_bundle() {
 #[cfg(target_os = "macos")]
 fn xcode_wrap_call_expo_export() {
     register_test("react_native/xcode-wrap-call-expo-export.trycmd");
-    assert_full_sourcemap_report("rn-sourcemap-report-expo-export.json");
+    assert_packager_sourcemap_report("rn-sourcemap-report-expo-export.json");
     clean_up("rn-sourcemap-report-expo-export.json");
+}
+
+#[test]
+#[cfg(target_os = "macos")]
+fn xcode_wrap_call_hermesc() {
+    register_test("react_native/xcode-wrap-call-hermesc.trycmd");
+    assert_sourcemap_report(
+        "hermesc-sourcemap-report.json.expected",
+        "rn-sourcemap-report-hermesc.json",
+    );
+    clean_up("rn-sourcemap-report-hermesc.json");
+}
+
+#[test]
+#[cfg(target_os = "macos")]
+fn xcode_wrap_call_compose_source_maps() {
+    std::fs::copy("tests/integration/_fixtures/react_native/compose-source-maps-sourcemap-report.json.before.test","rn-sourcemap-report-compose-source-maps.json").unwrap();
+    register_test("react_native/xcode-wrap-call-compose-source-maps.trycmd");
+    assert_sourcemap_report(
+        "compose-source-maps-sourcemap-report.json.expected",
+        "rn-sourcemap-report-compose-source-maps.json",
+    );
+    clean_up("rn-sourcemap-report-compose-source-maps.json");
 }
 
 #[cfg(target_os = "macos")]
@@ -39,23 +62,21 @@ fn clean_up(path: &str) {
 }
 
 #[cfg(target_os = "macos")]
-fn assert_full_sourcemap_report(actual: &str) {
-    let actual_code = std::fs::read_to_string(actual).unwrap();
-    let expected_code = std::fs::read_to_string(
-        "tests/integration/_fixtures/react_native/full-sourcemap-report.json.expected",
-    )
-    .unwrap();
-
-    assert_eq!(actual_code, expected_code);
+fn assert_packager_sourcemap_report(actual: &str) {
+    assert_sourcemap_report("packager-sourcemap-report.json.expected", actual);
 }
 
 #[cfg(target_os = "macos")]
 fn assert_empty_sourcemap_report(actual: &str) {
+    assert_sourcemap_report("empty-sourcemap-report.json.expected", actual);
+}
+
+#[cfg(target_os = "macos")]
+fn assert_sourcemap_report(expected: &str, actual: &str) {
     let actual_code = std::fs::read_to_string(actual).unwrap();
-    let expected_code = std::fs::read_to_string(
-        "tests/integration/_fixtures/react_native/empty-sourcemap-report.json.expected",
-    )
-    .unwrap();
+    let expected_code =
+        std::fs::read_to_string("tests/integration/_fixtures/react_native/".to_owned() + expected)
+            .unwrap();
 
     assert_eq!(actual_code, expected_code);
 }

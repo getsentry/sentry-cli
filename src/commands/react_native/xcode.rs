@@ -382,9 +382,16 @@ pub fn wrap_call() -> Result<()> {
     let mut bundle_path = None;
     let mut sourcemap_path = None;
     let bundle_command = env::var("SENTRY_RN_BUNDLE_COMMAND");
+    let compose_source_maps_path = env::var("COMPOSE_SOURCEMAP_PATH");
+    let no_debug_id = env::var("SENTRY_RN_NO_DEBUG_ID").unwrap_or("0".to_string()) == "1";
 
     let report_file_path = env::var("SENTRY_RN_SOURCEMAP_REPORT").unwrap();
-    let mut f = fs::File::open(report_file_path.clone())?;
+    let mut f;
+    if std::path::Path::new(&report_file_path).exists() {
+        f = fs::File::open(report_file_path.clone())?;
+    } else {
+        f = fs::File::create(report_file_path.clone())?;
+    }
     let mut sourcemap_report: SourceMapReport = serde_json::from_reader(&mut f)
         .unwrap_or_else(|_| SourceMapReport::default());
 
@@ -441,7 +448,10 @@ pub fn wrap_call() -> Result<()> {
     // because we need the final source map not the intermediate hermes only one
     // combine source maps script is execute only if hermes emitted source maps
     // if not packages bundle and sourcemap have to be used for symbolication
-    } else if args.len() > 1 && args[0].ends_with("compose-source-maps.js") {
+    //
+    // The compose script can be user defined so we have to check for that
+    } else if args.len() > 1 && (args[0].ends_with("compose-source-maps.js")
+        || (compose_source_maps_path.is_ok() && args[1] == compose_source_maps_path.unwrap())) {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "-o" {
@@ -453,55 +463,60 @@ pub fn wrap_call() -> Result<()> {
         should_copy_debug_id = true;
     }
 
-    let mut executable = env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap();
-    if execute_hermes_compiler {
-        executable = env::var("SENTRY_RN_REAL_HERMES_CLI_PATH").unwrap()
-    }
+    let executable = if execute_hermes_compiler {
+        env::var("SENTRY_RN_REAL_HERMES_CLI_PATH").unwrap()
+    } else {
+        env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap()
+    };
     let rv = process::Command::new(executable)
         .args(args)
         .spawn()?
         .wait()?;
     propagate_exit_status(rv);
 
-    if should_copy_debug_id {
+    if !no_debug_id && should_copy_debug_id {
         // Copy debug id to the combined source map
         // We have to copy the debug id from the packager source map
         // because the combine source map doesn't copy it over
         // We have to do it while pretending being the script because of the clean up afterwards
-        let packager_sourcemap_path = sourcemap_report.packager_sourcemap_path.clone().unwrap();
-        let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path.clone())?;
-        let packager_sourcemap: HashMap<String, Value> = serde_json::from_reader(&mut packager_sourcemap_file).unwrap_or_else(|_| {
-            let format_err = format!(
-                "React Native Packager source map {} doesn't contain a valid JSON data.",
-                packager_sourcemap_path.as_path().display()
-            );
-            panic!("{}", format_err);
-        });
-        let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.clone().unwrap();
-        let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path.clone())?;
-        let mut hermes_sourcemap: HashMap<String, Value> = serde_json::from_reader(&mut hermes_sourcemap_file).unwrap_or_else(|_| {
-            let format_err = format!(
-                "React Native Packager source map {} doesn't contain a valid JSON data.",
-                hermes_sourcemap_path.as_path().display()
-            );
-            panic!("{}", format_err);
-        });
+        if let Some(packager_sourcemap_path) = sourcemap_report.packager_sourcemap_path.clone() {
+            let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path.clone())?;
+            let packager_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut packager_sourcemap_file);
 
-        if hermes_sourcemap.get("debugId").is_none() && hermes_sourcemap.get("debug_id").is_none() {
-            if let Some(debug_id) = packager_sourcemap.get("debugId") {
-                hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
-                hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
-            } else if let Some(debug_id) = packager_sourcemap.get("debug_id") {
-                hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
-                hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
-            } else {
-                println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
+            let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.clone().unwrap();
+            let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path.clone())?;
+            let hermes_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut hermes_sourcemap_file);
+
+            if packager_sourcemap_result.is_err() {
+                println!(
+                    "React Native Packager source map {} doesn't contain a valid JSON data, skipping copy of debug id to Hermes combined source map.",
+                    packager_sourcemap_path.as_path().display(),
+                );
             }
 
-            hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
-            serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
+            if hermes_sourcemap_result.is_err() {
+                println!(
+                    "Hermes combined source map {} doesn't contain a valid JSON data, skipping copy of debug id to Hermes combined source map.",
+                    hermes_sourcemap_path.as_path().display(),
+                );
+            }
+
+            if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) = (packager_sourcemap_result, hermes_sourcemap_result) {
+                if hermes_sourcemap.get("debugId").is_none() {
+                    if let Some(debug_id) = packager_sourcemap.get("debugId") {
+                        hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
+                    } else {
+                        println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
+                    }
+
+                    hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
+                    serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
+                } else {
+                    println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
+                }
+            }
         } else {
-            println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
+            println!("No packager source map found in source map report, skipping copy of debug id to Hermes combined source map.");
         }
     }
 
