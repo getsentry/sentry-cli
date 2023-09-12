@@ -56,6 +56,29 @@ fn xcode_wrap_call_compose_source_maps() {
     clean_up("rn-sourcemap-report-compose-source-maps.json");
 }
 
+#[test]
+#[cfg(target_os = "macos")]
+fn xcode_wrap_call_compose_source_maps_no_debug_id_copy() {
+    std::fs::copy("tests/integration/_fixtures/react_native/compose-source-maps-sourcemap-report.json.before.test","rn-sourcemap-report-compose-source-maps-no-debug-id-copy.json").unwrap();
+    register_test("react_native/xcode-wrap-call-compose-source-maps-no-debug-id-copy.trycmd");
+    assert_sourcemap_report(
+        "compose-source-maps-sourcemap-report.json.expected",
+        "rn-sourcemap-report-compose-source-maps-no-debug-id-copy.json",
+    );
+    clean_up("rn-sourcemap-report-compose-source-maps-no-debug-id-copy.json");
+}
+
+#[test]
+#[cfg(target_os = "macos")]
+fn xcode_wrap_call_compose_source_maps_custom() {
+    register_test("react_native/xcode-wrap-call-compose-source-maps-custom.trycmd");
+    assert_sourcemap_report(
+        "compose-source-maps-custom-sourcemap-report.json.expected",
+        "rn-sourcemap-report-compose-source-maps-custom.json",
+    );
+    clean_up("rn-sourcemap-report-compose-source-maps-custom.json");
+}
+
 #[cfg(target_os = "macos")]
 fn clean_up(path: &str) {
     std::fs::remove_file(path).unwrap();

@@ -451,7 +451,7 @@ pub fn wrap_call() -> Result<()> {
     //
     // The compose script can be user defined so we have to check for that
     } else if args.len() > 1 && (args[0].ends_with("compose-source-maps.js")
-        || (compose_source_maps_path.is_ok() && args[1] == compose_source_maps_path.unwrap())) {
+        || (compose_source_maps_path.is_ok() && args[0] == compose_source_maps_path.unwrap())) {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "-o" {
