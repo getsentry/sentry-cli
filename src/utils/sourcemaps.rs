@@ -670,7 +670,7 @@ impl SourceMapProcessor {
             }
 
             if let Some(Some(sourcemap)) = self.sourcemap_references.get(&source.url) {
-              source.set_sourcemap_reference(sourcemap.url);
+                source.set_sourcemap_reference(sourcemap.url.to_string());
             }
         }
         Ok(())
@@ -705,7 +705,7 @@ impl SourceMapProcessor {
                     "debug-id".to_string(),
                     self.debug_ids[sourcemap_url].to_string(),
                 );
-                if source.headers.contains(&debug_id_header) {
+                if source.headers.contains_key(&debug_id_header.0) {
                     debug!(
                         "{} {} already has a debug id reference",
                         style(">").dim(),
@@ -725,7 +725,7 @@ impl SourceMapProcessor {
                     self.debug_ids[sourcemap_url].to_string(),
                     source.url
                 );
-                source.headers.push(debug_id_header);
+                source.headers.insert(debug_id_header.0, debug_id_header.1);
                 self.debug_ids
                     .insert(source.url.clone(), self.debug_ids[sourcemap_url]);
             } else {
@@ -933,13 +933,14 @@ impl SourceMapProcessor {
                             &mut source_file.contents,
                             &new_sourcemap_url,
                         )?;
-                        *sourcemap_url = new_sourcemap_url;
+                        *sourcemap_url = Some(SourceMapReference::from_url(new_sourcemap_url));
 
                         debug_id
                     } else {
                         // Handle external sourcemaps
 
-                        let normalized = inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                        let normalized =
+                            inject::normalize_sourcemap_url(source_url, &sourcemap.url);
                         let matches = inject::find_matching_paths(&sourcemaps, &normalized);
 
                         let sourcemap_url = match &matches[..] {
