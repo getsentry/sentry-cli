@@ -85,15 +85,16 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-          Arg::new("no_debug_id_reference")
-              .long("no-debug_id-reference")
+          Arg::new("debug_id_reference")
+              .long("debug-id-reference")
               .action(ArgAction::SetTrue)
               .help(
-                  "Disable emitting of automatic debug id references.{n}\
-                  By default the tool will store a 'debug-is' header with \
-                  binary files so that debug ida are located automatically \
-                  if the tool can detect it. If this causes issues it can \
-                  be disabled.",
+                  "Enable emitting of automatic debug id references.{n}\
+                  By default Debug ID reference has to be present both \
+                  in the source and related the sourcemap. But in cases \
+                  of binary bundles, the tool can't verify presence of \
+                  the Debug ID. This flag allows use of Debug ID from \
+                  the linked sourcemap.",
               ),
         )
         .arg(
@@ -375,7 +376,7 @@ fn process_sources_from_paths(
         processor.add_sourcemap_references()?;
     }
 
-    if !matches.get_flag("no_debug_id_reference"){
+    if matches.get_flag("debug_id_reference"){
         processor.add_debug_id_references()?;
     }
 
