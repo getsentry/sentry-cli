@@ -1,0 +1,6 @@
+```
+$ __SENTRY_RN_WRAP_XCODE_CALL=1 SENTRY_RN_REAL_NODE_BINARY=tests/integration/_fixtures/binary.sh SENTRY_RN_SOURCEMAP_REPORT=rn-sourcemap-report-compose-source-maps-no-debug-id-copy.json SENTRY_RN_NO_DEBUG_ID=1 sentry-cli path/to/compose-source-maps.js package.map hermes.map -o source.map.path
+? success
+Binary executed with args: path/to/compose-source-maps.js package.map hermes.map -o source.map.path
+
+```

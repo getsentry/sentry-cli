@@ -44,6 +44,11 @@ Options:
           By default the tool will store a 'Sourcemap' header with minified files so that sourcemaps
           are located automatically if the tool can detect a link. If this causes issues it can be
           disabled.
+      --debug-id-reference
+          Enable emitting of automatic debug id references.
+          By default Debug ID reference has to be present both in the source and the related
+          sourcemap. But in cases of binary bundles, the tool can't verify presence of the Debug ID.
+          This flag allows use of Debug ID from the linked sourcemap.
       --no-rewrite
           Disables rewriting of matching sourcemaps. By default the tool will rewrite sources, so
           that indexed maps are flattened and missing sources are inlined if possible.

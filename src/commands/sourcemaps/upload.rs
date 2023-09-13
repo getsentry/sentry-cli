@@ -85,6 +85,19 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
+          Arg::new("debug_id_reference")
+              .long("debug-id-reference")
+              .action(ArgAction::SetTrue)
+              .help(
+                  "Enable emitting of automatic debug id references.{n}\
+                  By default Debug ID reference has to be present both \
+                  in the source and the related sourcemap. But in cases \
+                  of binary bundles, the tool can't verify presence of \
+                  the Debug ID. This flag allows use of Debug ID from \
+                  the linked sourcemap.",
+              ),
+        )
+        .arg(
             Arg::new("no_rewrite")
                 .long("no-rewrite")
                 .action(ArgAction::SetTrue)
@@ -284,6 +297,7 @@ fn process_sources_from_bundle(
 
     processor.rewrite(&prefixes)?;
     processor.add_sourcemap_references()?;
+    processor.add_debug_id_references()?;
 
     Ok(())
 }
@@ -360,6 +374,10 @@ fn process_sources_from_paths(
 
     if !matches.get_flag("no_sourcemap_reference") {
         processor.add_sourcemap_references()?;
+    }
+
+    if matches.get_flag("debug_id_reference"){
+        processor.add_debug_id_references()?;
     }
 
     if matches.get_flag("validate") {

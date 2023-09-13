@@ -1,0 +1,24 @@
+```
+$ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-hermes-bundle/main.jsbundle --bundle-sourcemap tests/integration/_fixtures/file-hermes-bundle/main.jsbundle.map
+? success
+  WARN    [..] Regular bundle found
+> Analyzing 2 sources
+> Rewriting sources
+> Adding source map references
+> Bundled 2 files for upload
+> Bundle ID: 0b10dfbf-7d11-52a5-9107-d16f625896ad
+> Uploaded files to Sentry
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Project: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+
+Source Map Upload Report
+  Minified Scripts
+    ~/main.jsbundle (sourcemap at main.jsbundle.map, debug id 6bf97754-15b7-4f17-a726-b2a617eb588c)
+  Source Maps
+    ~/main.jsbundle.map (debug id 6bf97754-15b7-4f17-a726-b2a617eb588c)
+
+```

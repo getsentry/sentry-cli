@@ -1,0 +1,6 @@
+```
+$ __SENTRY_RN_WRAP_XCODE_CALL=1 SENTRY_RN_REAL_HERMES_CLI_PATH=tests/integration/_fixtures/binary.sh SENTRY_RN_SOURCEMAP_REPORT=rn-sourcemap-report-hermesc.json sentry-cli -emit-binary -out source.path
+? success
+Binary executed with args: -emit-binary -out source.path
+
+```

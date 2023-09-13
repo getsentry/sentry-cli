@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 use std::fs;
 use std::path::PathBuf;
@@ -9,6 +10,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use if_chain::if_chain;
 use log::info;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 
 use crate::api::Api;
 use crate::config::Config;
@@ -22,8 +24,10 @@ use crate::utils::xcode::{InfoPlist, MayDetach};
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct SourceMapReport {
-    bundle_path: Option<PathBuf>,
-    sourcemap_path: Option<PathBuf>,
+    packager_bundle_path: Option<PathBuf>,
+    packager_sourcemap_path: Option<PathBuf>,
+    hermes_bundle_path: Option<PathBuf>,
+    hermes_sourcemap_path: Option<PathBuf>,
 }
 
 pub fn make_command(command: Command) -> Command {
@@ -101,6 +105,12 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Wait for the server to fully process uploaded files."),
         )
+        .arg(
+            Arg::new("no_auto_release")
+                .long("no-auto-release")
+                .action(ArgAction::SetTrue)
+                .help("Don't try to automatically read release from Xcode project files."),
+        )
 }
 
 fn find_node() -> String {
@@ -110,6 +120,17 @@ fn find_node() -> String {
         }
     }
     "node".into()
+}
+
+fn find_hermesc() -> String {
+    if let Ok(path) = env::var("HERMES_CLI_PATH") {
+        if !path.is_empty() {
+            return path;
+        }
+    }
+
+    let pods_root_path = env::var("PODS_ROOT").unwrap_or("".to_string());
+    format!("{}/hermes-engine/destroot/bin/hermesc", pods_root_path)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -168,6 +189,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let report_file = TempFile::create()?;
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
+    let hermesc = find_hermesc();
+    info!("Using hermesc interpreter '{}'", &hermesc);
 
     MayDetach::wrap("React native symbol handling", |md| {
         let bundle_path;
@@ -221,12 +244,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // arguments if needed and then report the parsed arguments to a temporary
         // JSON file we load back below.
         //
+        // We do the same for Hermes Compiler to retrieve the bundle file and
+        // the same for the combine source maps for the final Hermes source map.
+        //
         // With that we we then have all the information we need to invoke the
         // upload process.
         } else {
             let rv = process::Command::new(&script)
                 .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
                 .env("SENTRY_RN_REAL_NODE_BINARY", &node)
+                .env("HERMES_CLI_PATH", env::current_exe()?.to_str().unwrap())
+                .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc)
                 .env(
                     "SENTRY_RN_SOURCEMAP_REPORT",
                     report_file.path().to_str().unwrap(),
@@ -247,14 +275,26 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 );
                 panic!("{}", format_err);
             });
-            if report.bundle_path.is_none() || report.sourcemap_path.is_none() {
-                println!("Warning: build produced no sourcemaps.");
+            let (Some(packager_bundle_path), Some(packager_sourcemap_path)) =
+                (report.packager_bundle_path, report.packager_sourcemap_path)
+            else {
+                println!("Warning: build produced no packager sourcemaps.");
                 return Ok(());
-            }
+            };
 
-            bundle_path = report.bundle_path.unwrap();
+            // If Hermes emitted source map we have to use it
+            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) = (report.hermes_bundle_path, report.hermes_sourcemap_path) {
+                bundle_path = hermes_bundle_path.clone();
+                sourcemap_path = hermes_sourcemap_path.clone();
+                println!("Using Hermes bundle and combined source map.");
+
+            // If Hermes emitted only bundle or Hermes was disabled use packager bundle and source map
+            } else {
+                bundle_path = packager_bundle_path;
+                sourcemap_path = packager_sourcemap_path;
+                println!("Using React Native Packager bundle and combined source map.");
+            }
             bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
-            sourcemap_path = report.sourcemap_path.unwrap();
             sourcemap_url = format!(
                 "~/{}",
                 sourcemap_path.file_name().unwrap().to_string_lossy()
@@ -275,43 +315,60 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         )?;
         processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
         processor.add_sourcemap_references()?;
-
-        let dist = env::var("SENTRY_DIST").unwrap_or_else(|_| plist.build().to_string());
-        let release_name = env::var("SENTRY_RELEASE").unwrap_or(format!(
-            "{}@{}+{}",
-            plist.bundle_id(),
-            plist.version(),
-            dist
-        ));
+        processor.add_debug_id_references()?;
 
         let api = Api::current();
         let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-        match matches.get_many::<String>("dist") {
-            None => {
-                processor.upload(&UploadContext {
-                    org: &org,
-                    project: Some(&project),
-                    release: Some(&release_name),
-                    dist: Some(&dist),
-                    note: None,
-                    wait: matches.get_flag("wait"),
-                    dedupe: false,
-                    chunk_upload_options: chunk_upload_options.as_ref(),
-                })?;
-            }
-            Some(dists) => {
-                for dist in dists {
+        let dist_from_env = env::var("SENTRY_DIST");
+        let release_from_env = env::var("SENTRY_RELEASE");
+
+        if dist_from_env.is_err() && release_from_env.is_err() && matches.get_flag("no_auto_release") {
+            processor.upload(&UploadContext {
+                org: &org,
+                project: Some(&project),
+                release: None,
+                dist: None,
+                note: None,
+                wait: matches.get_flag("wait"),
+                dedupe: false,
+                chunk_upload_options: chunk_upload_options.as_ref(),
+            })?;
+        } else {
+            let dist = dist_from_env.unwrap_or_else(|_| plist.build().to_string());
+            let release_name = release_from_env.unwrap_or(format!(
+                "{}@{}+{}",
+                plist.bundle_id(),
+                plist.version(),
+                dist
+            ));
+
+            match matches.get_many::<String>("dist") {
+                None => {
                     processor.upload(&UploadContext {
                         org: &org,
                         project: Some(&project),
                         release: Some(&release_name),
-                        dist: Some(dist),
+                        dist: Some(&dist),
                         note: None,
                         wait: matches.get_flag("wait"),
                         dedupe: false,
                         chunk_upload_options: chunk_upload_options.as_ref(),
                     })?;
+                }
+                Some(dists) => {
+                    for dist in dists {
+                        processor.upload(&UploadContext {
+                            org: &org,
+                            project: Some(&project),
+                            release: Some(&release_name),
+                            dist: Some(dist),
+                            note: None,
+                            wait: matches.get_flag("wait"),
+                            dedupe: false,
+                            chunk_upload_options: chunk_upload_options.as_ref(),
+                        })?;
+                    }
                 }
             }
         }
@@ -321,10 +378,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 }
 
 pub fn wrap_call() -> Result<()> {
+    let mut execute_hermes_compiler = false;
+    let mut should_copy_debug_id = false;
     let mut args: Vec<_> = env::args().skip(1).collect();
     let mut bundle_path = None;
     let mut sourcemap_path = None;
     let bundle_command = env::var("SENTRY_RN_BUNDLE_COMMAND");
+    let compose_source_maps_path = env::var("COMPOSE_SOURCEMAP_PATH");
+    let no_debug_id = env::var("SENTRY_RN_NO_DEBUG_ID").unwrap_or("0".to_string()) == "1";
+
+    let report_file_path = env::var("SENTRY_RN_SOURCEMAP_REPORT").unwrap();
+    let mut sourcemap_report: SourceMapReport = if std::path::Path::new(&report_file_path).exists()
+    {
+        let mut f = fs::File::open(report_file_path.clone())?;
+        serde_json::from_reader(&mut f).unwrap_or_else(|_| SourceMapReport::default())
+    } else {
+        SourceMapReport::default()
+    };
 
     // bundle and ram-bundle are React Native CLI commands
     // export:embed is an Expo CLI command (drop in replacement for bundle)
@@ -344,31 +414,115 @@ pub fn wrap_call() -> Result<()> {
                 bundle_path = Some(rest.to_string());
             }
         }
+
+        if sourcemap_path.is_none() && bundle_path.is_some() {
+            let mut path = env::temp_dir();
+            let mut map_path = PathBuf::from(bundle_path.clone().unwrap());
+            map_path.set_extension("jsbundle.map");
+            path.push(map_path.file_name().unwrap());
+            sourcemap_report.packager_sourcemap_path = Some(PathBuf::from(&path));
+            args.push("--sourcemap-output".into());
+            args.push(path.into_os_string().into_string().unwrap());
+        } else if let Some(path) = sourcemap_path {
+            sourcemap_report.packager_sourcemap_path = Some(PathBuf::from(path));
+        }
+
+        sourcemap_report.packager_bundle_path = bundle_path.map(PathBuf::from);
+
+    // Hermes Compiler
+    // -emit-binary doesn't have to be first in order but all
+    // supported RN 0.65 to 0.72 have it as first argument
+    // and users can't change it
+    } else if args.len() > 1 && args[0] == "-emit-binary" {
+        execute_hermes_compiler = true;
+        let mut iter = args.iter().fuse();
+        while let Some(item) = iter.next() {
+            if item == "-out" {
+                bundle_path = iter.next().cloned();
+            }
+        }
+
+        sourcemap_report.hermes_bundle_path = bundle_path.map(PathBuf::from);
+
+    // Combine Source Maps Script
+    // We don't check -output-source-map the previous hermesc
+    // because we need the final source map not the intermediate hermes only one
+    // combine source maps script is execute only if hermes emitted source maps
+    // if not packages bundle and sourcemap have to be used for symbolication
+    //
+    // The compose script can be user defined so we have to check for that
+    } else if args.len() > 1 && (args[0].ends_with("compose-source-maps.js")
+        || (compose_source_maps_path.is_ok() && args[0] == compose_source_maps_path.unwrap())) {
+        let mut iter = args.iter().fuse();
+        while let Some(item) = iter.next() {
+            if item == "-o" {
+                sourcemap_path = iter.next().cloned();
+            }
+        }
+
+        sourcemap_report.hermes_sourcemap_path = sourcemap_path.map(PathBuf::from);
+        should_copy_debug_id = true;
     }
 
-    let mut sourcemap_report = SourceMapReport::default();
-
-    if sourcemap_path.is_none() && bundle_path.is_some() {
-        let mut path = env::temp_dir();
-        let mut map_path = PathBuf::from(bundle_path.clone().unwrap());
-        map_path.set_extension("jsbundle.map");
-        path.push(map_path.file_name().unwrap());
-        sourcemap_report.sourcemap_path = Some(PathBuf::from(&path));
-        args.push("--sourcemap-output".into());
-        args.push(path.into_os_string().into_string().unwrap());
-    } else if let Some(path) = sourcemap_path {
-        sourcemap_report.sourcemap_path = Some(PathBuf::from(path));
-    }
-
-    sourcemap_report.bundle_path = bundle_path.map(PathBuf::from);
-
-    let rv = process::Command::new(env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap())
+    let executable = if execute_hermes_compiler {
+        env::var("SENTRY_RN_REAL_HERMES_CLI_PATH").unwrap()
+    } else {
+        env::var("SENTRY_RN_REAL_NODE_BINARY").unwrap()
+    };
+    let rv = process::Command::new(executable)
         .args(args)
         .spawn()?
         .wait()?;
     propagate_exit_status(rv);
 
-    let mut f = fs::File::create(env::var("SENTRY_RN_SOURCEMAP_REPORT").unwrap())?;
+    if !no_debug_id && should_copy_debug_id {
+        // Copy debug id to the combined source map
+        // We have to copy the debug id from the packager source map
+        // because the combine source map doesn't copy it over
+        // We have to do it while pretending being the script because of the clean up afterwards
+        if let Some(ref packager_sourcemap_path) = sourcemap_report.packager_sourcemap_path {
+            let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path)?;
+            let packager_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut packager_sourcemap_file);
+
+            let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.as_ref().unwrap();
+            let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path)?;
+            let hermes_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut hermes_sourcemap_file);
+
+            if packager_sourcemap_result.is_err() {
+                println!(
+                    "React Native Packager source map {} doesn't contain a valid JSON data, skipping copy of debug id to Hermes combined source map.",
+                    packager_sourcemap_path.as_path().display(),
+                );
+            }
+
+            if hermes_sourcemap_result.is_err() {
+                println!(
+                    "Hermes combined source map {} doesn't contain a valid JSON data, skipping copy of debug id to Hermes combined source map.",
+                    hermes_sourcemap_path.as_path().display(),
+                );
+            }
+
+            if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) = (packager_sourcemap_result, hermes_sourcemap_result) {
+                if hermes_sourcemap.get("debugId").is_none() && hermes_sourcemap.get("debug_id").is_none() {
+                    if let Some(debug_id) = packager_sourcemap.get("debugId").or_else(|| packager_sourcemap.get("debug_id")) {
+                        hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
+                        hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
+
+                        hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
+                        serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
+                    } else {
+                        println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
+                    }
+                } else {
+                    println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
+                }
+            }
+        } else {
+            println!("No packager source map found in source map report, skipping copy of debug id to Hermes combined source map.");
+        }
+    }
+
+    let mut f = fs::File::create(&report_file_path)?;
     serde_json::to_writer(&mut f, &sourcemap_report)?;
 
     Ok(())

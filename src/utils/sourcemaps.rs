@@ -121,15 +121,19 @@ pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, 
     None
 }
 
-fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Result<String> {
+fn guess_sourcemap_reference(
+    sourcemaps: &HashSet<String>,
+    min_url: &str,
+) -> Result<SourceMapReference> {
     // if there is only one sourcemap in total we just assume that's the one.
     // We just need to make sure that we fix up the reference if we need to
     // (eg: ~/ -> /).
     if sourcemaps.len() == 1 {
-        return Ok(sourcemap::make_relative_path(
-            min_url,
-            sourcemaps.iter().next().unwrap(),
-        ));
+        let original_url = sourcemaps.iter().next().unwrap();
+        return Ok(SourceMapReference {
+            url: sourcemap::make_relative_path(min_url, original_url),
+            original_url: Option::from(original_url.to_string()),
+        });
     }
 
     let map_ext = "map";
@@ -137,21 +141,33 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
 
     // foo.min.js -> foo.map
     if sourcemaps.contains(&unsplit_url(path, basename, Some("map"))) {
-        return Ok(unsplit_url(None, basename, Some("map")));
+        return Ok(SourceMapReference::from_url(unsplit_url(
+            None,
+            basename,
+            Some("map"),
+        )));
     }
 
     if let Some(ext) = ext.as_ref() {
         // foo.min.js -> foo.min.js.map
         let new_ext = format!("{ext}.{map_ext}");
         if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
-            return Ok(unsplit_url(None, basename, Some(&new_ext)));
+            return Ok(SourceMapReference::from_url(unsplit_url(
+                None,
+                basename,
+                Some(&new_ext),
+            )));
         }
 
         // foo.min.js -> foo.js.map
         if let Some(rest) = ext.strip_prefix("min.") {
             let new_ext = format!("{rest}.{map_ext}");
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
-                return Ok(unsplit_url(None, basename, Some(&new_ext)));
+                return Ok(SourceMapReference::from_url(unsplit_url(
+                    None,
+                    basename,
+                    Some(&new_ext),
+                )));
             }
         }
 
@@ -162,7 +178,11 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
             parts[parts_len - 1] = map_ext;
             let new_ext = parts.join(".");
             if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
-                return Ok(unsplit_url(None, basename, Some(&new_ext)));
+                return Ok(SourceMapReference::from_url(unsplit_url(
+                    None,
+                    basename,
+                    Some(&new_ext),
+                )));
             }
         }
     }
@@ -170,10 +190,28 @@ fn guess_sourcemap_reference(sourcemaps: &HashSet<String>, min_url: &str) -> Res
     bail!("Could not auto-detect referenced sourcemap for {}", min_url);
 }
 
+/// Container to cary relative computed source map url.
+/// and original url with which the file was added to the processor.
+/// This enable us to look up the source map file based on the original url.
+/// Which can be used for example for debug id referencing.
+pub struct SourceMapReference {
+    url: String,
+    original_url: Option<String>,
+}
+
+impl SourceMapReference {
+    pub fn from_url(url: String) -> Self {
+        SourceMapReference {
+            url,
+            original_url: None,
+        }
+    }
+}
+
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
     sources: SourceFiles,
-    sourcemap_references: HashMap<String, Option<String>>,
+    sourcemap_references: HashMap<String, Option<SourceMapReference>>,
     debug_ids: HashMap<String, DebugId>,
 }
 
@@ -326,10 +364,10 @@ impl SourceMapProcessor {
                 continue;
             };
 
-            let sourcemap_url = match discover_sourcemaps_location(contents) {
-                Some(url) => url.to_string(),
+            let sourcemap_reference = match discover_sourcemaps_location(contents) {
+                Some(url) => SourceMapReference::from_url(url.to_string()),
                 None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
-                    Ok(target_url) => target_url.to_string(),
+                    Ok(target) => target,
                     Err(err) => {
                         source.warn(format!(
                             "could not determine a source map reference ({err})"
@@ -342,7 +380,7 @@ impl SourceMapProcessor {
             };
 
             self.sourcemap_references
-                .insert(source.url.to_string(), Some(sourcemap_url));
+                .insert(source.url.to_string(), Some(sourcemap_reference));
         }
     }
 
@@ -479,7 +517,7 @@ impl SourceMapProcessor {
             match guess_sourcemap_reference(&sourcemaps_references, bundle_source_url) {
                 Ok(filename) => {
                     let (path, _, _) = split_url(bundle_source_url);
-                    unsplit_url(path, &filename, None)
+                    unsplit_url(path, &filename.url, None)
                 }
                 Err(_) => {
                     warn!("Sourcemap reference for {} not found!", bundle_source_url);
@@ -635,8 +673,67 @@ impl SourceMapProcessor {
                 continue;
             }
 
-            if let Some(Some(sourcemap_url)) = self.sourcemap_references.get(&source.url) {
-                source.set_sourcemap_reference(sourcemap_url.to_string());
+            if let Some(Some(sourcemap)) = self.sourcemap_references.get(&source.url) {
+                source.set_sourcemap_reference(sourcemap.url.to_string());
+            }
+        }
+        Ok(())
+    }
+
+    /// Adds debug id to the source file headers from the linked source map.
+    /// This is used for files we can't read debug ids from (e.g. Hermes bytecode bundles).
+    pub fn add_debug_id_references(&mut self) -> Result<()> {
+        self.flush_pending_sources();
+
+        for source in self.sources.values_mut() {
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            if let Some(Some(sourcemap_reference)) = self.sourcemap_references.get(&source.url) {
+                let sourcemap_url = &sourcemap_reference
+                    .original_url
+                    .clone()
+                    .unwrap_or(sourcemap_reference.url.clone());
+
+                if !self.debug_ids.contains_key(sourcemap_url) {
+                    debug!(
+                        "{} No debug id found for {} to reference",
+                        style(">").dim(),
+                        sourcemap_url
+                    );
+                    continue;
+                }
+
+                if source.debug_id().is_some() {
+                    debug!(
+                        "{} {} already has a debug id reference",
+                        style(">").dim(),
+                        source.url
+                    );
+                    continue;
+                }
+
+                if self.debug_ids.contains_key(&source.url) {
+                    debug!("{} {} already has a debug id", style(">").dim(), source.url);
+                    continue;
+                }
+
+                debug!(
+                    "{} Adding debug id {} reference to {}",
+                    style(">").dim(),
+                    self.debug_ids[sourcemap_url].to_string(),
+                    source.url
+                );
+                source.set_debug_id(self.debug_ids[sourcemap_url].to_string());
+                self.debug_ids
+                    .insert(source.url.clone(), self.debug_ids[sourcemap_url]);
+            } else {
+                debug!(
+                    "{} No sourcemap reference found for {}",
+                    style(">").dim(),
+                    source.url
+                );
             }
         }
         Ok(())
@@ -801,8 +898,8 @@ impl SourceMapProcessor {
                         .context(format!("Failed to process {}", source_file.path.display()))?;
                     debug_id
                 }
-                Some(sourcemap_url) => {
-                    if let Some(encoded) = sourcemap_url.strip_prefix(DATA_PREAMBLE) {
+                Some(sourcemap) => {
+                    if let Some(encoded) = sourcemap.url.strip_prefix(DATA_PREAMBLE) {
                         // Case 2: The source file has an embedded sourcemap.
 
                         let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes())
@@ -836,13 +933,14 @@ impl SourceMapProcessor {
                             &mut source_file.contents,
                             &new_sourcemap_url,
                         )?;
-                        *sourcemap_url = new_sourcemap_url;
+                        *sourcemap_url = Some(SourceMapReference::from_url(new_sourcemap_url));
 
                         debug_id
                     } else {
                         // Handle external sourcemaps
 
-                        let normalized = inject::normalize_sourcemap_url(source_url, sourcemap_url);
+                        let normalized =
+                            inject::normalize_sourcemap_url(source_url, &sourcemap.url);
                         let matches = inject::find_matching_paths(&sourcemaps, &normalized);
 
                         let sourcemap_url = match &matches[..] {
