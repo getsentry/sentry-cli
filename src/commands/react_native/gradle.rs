@@ -98,7 +98,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.add_sourcemap_references()?;
     processor.add_debug_id_references()?;
 
-    // TODO: make this optional
     let version = matches.get_one::<String>("release");
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
