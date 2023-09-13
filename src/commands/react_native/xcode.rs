@@ -275,21 +275,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 );
                 panic!("{}", format_err);
             });
-            if report.packager_bundle_path.is_none() || report.packager_sourcemap_path.is_none() {
+            let (Some(packager_bundle_path), Some(packager_sourcemap_path)) =
+                (report.packager_bundle_path, report.packager_sourcemap_path)
+            else {
                 println!("Warning: build produced no packager sourcemaps.");
                 return Ok(());
-            }
+            };
 
             // If Hermes emitted source map we have to use it
-            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) = (&report.hermes_bundle_path, &report.hermes_sourcemap_path) {
+            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) = (report.hermes_bundle_path, report.hermes_sourcemap_path) {
                 bundle_path = hermes_bundle_path.clone();
                 sourcemap_path = hermes_sourcemap_path.clone();
                 println!("Using Hermes bundle and combined source map.");
 
             // If Hermes emitted only bundle or Hermes was disabled use packager bundle and source map
             } else {
-                bundle_path = report.packager_bundle_path.unwrap();
-                sourcemap_path = report.packager_sourcemap_path.unwrap();
+                bundle_path = packager_bundle_path;
+                sourcemap_path = packager_sourcemap_path;
                 println!("Using React Native Packager bundle and combined source map.");
             }
             bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
@@ -321,7 +323,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let dist_from_env = env::var("SENTRY_DIST");
         let release_from_env = env::var("SENTRY_RELEASE");
 
-        if dist_from_env.is_err() && dist_from_env.is_err() && matches.get_flag("no_auto_release") {
+        if dist_from_env.is_err() && release_from_env.is_err() && matches.get_flag("no_auto_release") {
             processor.upload(&UploadContext {
                 org: &org,
                 project: Some(&project),
@@ -386,14 +388,13 @@ pub fn wrap_call() -> Result<()> {
     let no_debug_id = env::var("SENTRY_RN_NO_DEBUG_ID").unwrap_or("0".to_string()) == "1";
 
     let report_file_path = env::var("SENTRY_RN_SOURCEMAP_REPORT").unwrap();
-    let mut f;
-    if std::path::Path::new(&report_file_path).exists() {
-        f = fs::File::open(report_file_path.clone())?;
+    let mut sourcemap_report: SourceMapReport = if std::path::Path::new(&report_file_path).exists()
+    {
+        let mut f = fs::File::open(report_file_path.clone())?;
+        serde_json::from_reader(&mut f).unwrap_or_else(|_| SourceMapReport::default())
     } else {
-        f = fs::File::create(report_file_path.clone())?;
-    }
-    let mut sourcemap_report: SourceMapReport = serde_json::from_reader(&mut f)
-        .unwrap_or_else(|_| SourceMapReport::default());
+        SourceMapReport::default()
+    };
 
     // bundle and ram-bundle are React Native CLI commands
     // export:embed is an Expo CLI command (drop in replacement for bundle)
@@ -479,12 +480,12 @@ pub fn wrap_call() -> Result<()> {
         // We have to copy the debug id from the packager source map
         // because the combine source map doesn't copy it over
         // We have to do it while pretending being the script because of the clean up afterwards
-        if let Some(packager_sourcemap_path) = sourcemap_report.packager_sourcemap_path.clone() {
-            let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path.clone())?;
+        if let Some(ref packager_sourcemap_path) = sourcemap_report.packager_sourcemap_path {
+            let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path)?;
             let packager_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut packager_sourcemap_file);
 
-            let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.clone().unwrap();
-            let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path.clone())?;
+            let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.as_ref().unwrap();
+            let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path)?;
             let hermes_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut hermes_sourcemap_file);
 
             if packager_sourcemap_result.is_err() {
@@ -503,18 +504,15 @@ pub fn wrap_call() -> Result<()> {
 
             if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) = (packager_sourcemap_result, hermes_sourcemap_result) {
                 if hermes_sourcemap.get("debugId").is_none() && hermes_sourcemap.get("debug_id").is_none() {
-                    if let Some(debug_id) = packager_sourcemap.get("debugId") {
+                    if let Some(debug_id) = packager_sourcemap.get("debugId").or_else(|| packager_sourcemap.get("debug_id")) {
                         hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
                         hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
-                    } else if let Some(debug_id) = packager_sourcemap.get("debug_id") {
-                        hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
-                        hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
+
+                        hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
+                        serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
                     } else {
                         println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
                     }
-
-                    hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
-                    serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
                 } else {
                     println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
                 }
@@ -524,7 +522,7 @@ pub fn wrap_call() -> Result<()> {
         }
     }
 
-    f = fs::File::create(&report_file_path)?;
+    let mut f = fs::File::create(&report_file_path)?;
     serde_json::to_writer(&mut f, &sourcemap_report)?;
 
     Ok(())
