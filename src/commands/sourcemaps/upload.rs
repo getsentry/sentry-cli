@@ -91,7 +91,7 @@ pub fn make_command(command: Command) -> Command {
               .help(
                   "Enable emitting of automatic debug id references.{n}\
                   By default Debug ID reference has to be present both \
-                  in the source and related the sourcemap. But in cases \
+                  in the source and the related sourcemap. But in cases \
                   of binary bundles, the tool can't verify presence of \
                   the Debug ID. This flag allows use of Debug ID from \
                   the linked sourcemap.",

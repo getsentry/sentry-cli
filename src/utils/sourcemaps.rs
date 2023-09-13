@@ -190,6 +190,10 @@ fn guess_sourcemap_reference(
     bail!("Could not auto-detect referenced sourcemap for {}", min_url);
 }
 
+/// Container to cary relative computed source map url.
+/// and original url with which the file was added to the processor.
+/// This enable us to look up the source map file based on the original url.
+/// Which can be used for example for debug id referencing.
 pub struct SourceMapReference {
     url: String,
     original_url: Option<String>,
@@ -676,7 +680,7 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    /// Adds debug id reference from the given source map to all minified files.
+    /// Adds debug id to the source file headers from the linked source map.
     /// This is used for files we can't read debug ids from (e.g. Hermes bytecode bundles).
     pub fn add_debug_id_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
@@ -698,14 +702,10 @@ impl SourceMapProcessor {
                         style(">").dim(),
                         sourcemap_url
                     );
-                    return Ok(());
+                    continue;
                 }
 
-                let debug_id_header = (
-                    "debug-id".to_string(),
-                    self.debug_ids[sourcemap_url].to_string(),
-                );
-                if source.headers.contains_key(&debug_id_header.0) {
+                if source.debug_id().is_some() {
                     debug!(
                         "{} {} already has a debug id reference",
                         style(">").dim(),
@@ -725,7 +725,7 @@ impl SourceMapProcessor {
                     self.debug_ids[sourcemap_url].to_string(),
                     source.url
                 );
-                source.headers.insert(debug_id_header.0, debug_id_header.1);
+                source.set_debug_id(self.debug_ids[sourcemap_url].to_string());
                 self.debug_ids
                     .insert(source.url.clone(), self.debug_ids[sourcemap_url]);
             } else {
