@@ -551,12 +551,13 @@ impl Config {
 }
 
 fn find_global_config_file() -> Result<PathBuf> {
-    dirs::home_dir()
-        .ok_or_else(|| format_err!("Could not find home dir"))
-        .map(|mut path| {
-            path.push(CONFIG_RC_FILE_NAME);
-            path
-        })
+    if let Ok(xdg_dirs) = xdg::BaseDirectories::with_prefix("sentry") {
+        xdg_dirs
+            .place_config_file("cli.ini")
+            .or(Err(format_err!("Could not create the config file")))
+    } else {
+        Err(format_err!("Could not find home dir"))
+    }
 }
 
 fn find_project_config_file() -> Option<PathBuf> {
