@@ -548,7 +548,8 @@ impl SourceMapProcessor {
             }
         };
 
-        // We have to include the bundle sourcemap which is the first section in the bundle source map
+        // We have to include the bundle sourcemap which is the first section
+        // in the bundle source map before the modules maps
         if let Some(sourcemap_source) = self.sources.get(&sourcemap_url) {
             if let Some(index_section) = &sourcemap_index.sections().nth(0) {
                 if let Some(index_section) = index_section.get_sourcemap() {
