@@ -548,8 +548,27 @@ impl SourceMapProcessor {
             }
         };
 
-        // We don't need the RAM bundle sourcemap itself
-        self.sources.remove(&sourcemap_url);
+        // We have to include the bundle sourcemap which is the first section in the bundle source map
+        if let Some(sourcemap_source) = self.sources.get(&sourcemap_url) {
+            if let Some(index_section) = &sourcemap_index.sections().nth(0) {
+                if let Some(index_section) = index_section.get_sourcemap() {
+                    let mut sourcemap_content: Vec<u8> = vec![];
+                    index_section.to_writer(&mut sourcemap_content)?;
+                    self.sources.insert(
+                        sourcemap_url.clone(),
+                        SourceFile {
+                            url: sourcemap_source.url.clone(),
+                            path: sourcemap_source.path.clone(),
+                            contents: sourcemap_content,
+                            ty: SourceFileType::SourceMap,
+                            headers: sourcemap_source.headers.clone(),
+                            messages: sourcemap_source.messages.clone(),
+                            already_uploaded: false,
+                        },
+                    );
+                }
+            }
+        }
 
         let ram_bundle_iter =
             sourcemap::ram_bundle::split_ram_bundle(ram_bundle, &sourcemap_index).unwrap();

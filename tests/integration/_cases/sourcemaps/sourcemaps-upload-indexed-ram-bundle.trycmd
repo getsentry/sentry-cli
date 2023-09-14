@@ -4,7 +4,7 @@ $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/indexed-ram-
 > Analyzing 2 sources
 > Rewriting sources
 > Adding source map references
-> Bundled 2106 files for upload
+> Bundled 2107 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
@@ -2123,5 +2123,6 @@ Source Map Upload Report
     ~/997.js.map
     ~/998.js.map
     ~/999.js.map
+    ~/main.jsbundle.packager.map
 
 ```
