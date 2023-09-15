@@ -4,7 +4,7 @@ $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-ram-bun
 > Analyzing 2 sources
 > Rewriting sources
 > Adding source map references
-> Bundled 13 files for upload
+> Bundled 14 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
@@ -30,5 +30,6 @@ Source Map Upload Report
     ~/7.js.map
     ~/8.js.map
     ~/9.js.map
+    ~/index.android.bundle.packager.map
 
 ```

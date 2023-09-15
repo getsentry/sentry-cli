@@ -529,16 +529,14 @@ impl SourceMapProcessor {
             bundle_source_url, sourcemap_url
         );
 
-        let sourcemap_content = match self.sources.get(&sourcemap_url) {
-            Some(source) => &source.contents,
-            None => {
-                warn!(
-                    "Cannot find the sourcemap for the RAM bundle using the URL: {}, skipping",
-                    sourcemap_url
-                );
-                return Ok(());
-            }
+        let Some(sourcemap_source) = self.sources.get(&sourcemap_url) else {
+            warn!(
+                "Cannot find the sourcemap for the RAM bundle using the URL: {}, skipping",
+                sourcemap_url
+            );
+            return Ok(());
         };
+        let sourcemap_content = &sourcemap_source.contents;
 
         let sourcemap_index = match sourcemap::decode_slice(sourcemap_content)? {
             sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
@@ -548,8 +546,28 @@ impl SourceMapProcessor {
             }
         };
 
-        // We don't need the RAM bundle sourcemap itself
-        self.sources.remove(&sourcemap_url);
+        // We have to include the bundle sourcemap which is the first section
+        // in the bundle source map before the modules maps
+        if let Some(index_section) = &sourcemap_index
+            .sections()
+            .nth(0)
+            .and_then(|index_section| index_section.get_sourcemap())
+        {
+            let mut index_sourcemap_content: Vec<u8> = vec![];
+            index_section.to_writer(&mut index_sourcemap_content)?;
+            self.sources.insert(
+                sourcemap_url.clone(),
+                SourceFile {
+                    url: sourcemap_source.url.clone(),
+                    path: sourcemap_source.path.clone(),
+                    contents: index_sourcemap_content,
+                    ty: SourceFileType::SourceMap,
+                    headers: sourcemap_source.headers.clone(),
+                    messages: sourcemap_source.messages.clone(),
+                    already_uploaded: false,
+                },
+            );
+        }
 
         let ram_bundle_iter =
             sourcemap::ram_bundle::split_ram_bundle(ram_bundle, &sourcemap_index).unwrap();
