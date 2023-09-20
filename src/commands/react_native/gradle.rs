@@ -10,7 +10,7 @@ use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::{UploadContext, Wait};
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
@@ -50,7 +50,18 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait")
                 .long("wait")
                 .action(ArgAction::SetTrue)
+                .conflicts_with("wait_for")
                 .help("Wait for the server to fully process uploaded files."),
+        )
+        .arg(
+            Arg::new("wait_for")
+                .long("wait-for")
+                .value_name("SECS")
+                .conflicts_with("wait")
+                .help(
+                    "Wait for the server to fully process uploaded files, \
+                     but at most for the given number of seconds.",
+                ),
         )
 }
 
@@ -101,6 +112,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let version = matches.get_one::<String>("release");
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
+    let wait = if let Some(secs) = matches.get_one::<u64>("wait_for") {
+        Wait::from_secs(*secs)
+    } else if matches.get_flag("wait") {
+        Wait::Forever
+    } else {
+        Wait::No
+    };
+
     if let Some(version) = version {
         for dist in matches.get_many::<String>("dist").unwrap() {
             println!(
@@ -114,7 +133,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 release: Some(version),
                 dist: Some(dist),
                 note: None,
-                wait: matches.get_flag("wait"),
+                wait,
                 dedupe: false,
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
@@ -127,7 +146,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             release: None,
             dist: None,
             note: None,
-            wait: matches.get_flag("wait"),
+            wait,
             dedupe: false,
             chunk_upload_options: chunk_upload_options.as_ref(),
         })?;

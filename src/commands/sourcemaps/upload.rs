@@ -10,7 +10,7 @@ use crate::api::{Api, ChunkUploadCapability};
 use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::{UploadContext, Wait};
 use crate::utils::fs::path_as_url;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
@@ -70,7 +70,18 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait")
                 .long("wait")
                 .action(ArgAction::SetTrue)
+                .conflicts_with("wait_for")
                 .help("Wait for the server to fully process uploaded files."),
+        )
+        .arg(
+            Arg::new("wait_for")
+                .long("wait-for")
+                .value_name("SECS")
+                .conflicts_with("wait")
+                .help(
+                    "Wait for the server to fully process uploaded files, \
+                     but at most for the given number of seconds.",
+                ),
         )
         .arg(
             Arg::new("no_sourcemap_reference")
@@ -85,17 +96,17 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-          Arg::new("debug_id_reference")
-              .long("debug-id-reference")
-              .action(ArgAction::SetTrue)
-              .help(
-                  "Enable emitting of automatic debug id references.{n}\
+            Arg::new("debug_id_reference")
+                .long("debug-id-reference")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Enable emitting of automatic debug id references.{n}\
                   By default Debug ID reference has to be present both \
                   in the source and the related sourcemap. But in cases \
                   of binary bundles, the tool can't verify presence of \
                   the Debug ID. This flag allows use of Debug ID from \
                   the linked sourcemap.",
-              ),
+                ),
         )
         .arg(
             Arg::new("no_rewrite")
@@ -376,7 +387,7 @@ fn process_sources_from_paths(
         processor.add_sourcemap_references()?;
     }
 
-    if matches.get_flag("debug_id_reference"){
+    if matches.get_flag("debug_id_reference") {
         processor.add_debug_id_references()?;
     }
 
@@ -411,13 +422,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         process_sources_from_paths(matches, &mut processor)?;
     }
 
+    let wait = if let Some(secs) = matches.get_one::<u64>("wait_for") {
+        Wait::from_secs(*secs)
+    } else if matches.get_flag("wait") {
+        Wait::Forever
+    } else {
+        Wait::No
+    };
+
     processor.upload(&UploadContext {
         org: &org,
         project: Some(&project),
         release: version.as_deref(),
         dist: matches.get_one::<String>("dist").map(String::as_str),
         note: matches.get_one::<String>("note").map(String::as_str),
-        wait: matches.get_flag("wait"),
+        wait,
         dedupe: !matches.get_flag("no_dedupe"),
         chunk_upload_options: chunk_upload_options.as_ref(),
     })?;

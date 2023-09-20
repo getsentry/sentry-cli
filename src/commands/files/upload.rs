@@ -14,7 +14,7 @@ use crate::config::Config;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{
-    initialize_legacy_release_upload, FileUpload, SourceFile, UploadContext,
+    initialize_legacy_release_upload, FileUpload, SourceFile, UploadContext, Wait,
 };
 use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
 
@@ -52,7 +52,18 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait")
                 .long("wait")
                 .action(ArgAction::SetTrue)
+                .conflicts_with("wait_for")
                 .help("Wait for the server to fully process uploaded files."),
+        )
+        .arg(
+            Arg::new("wait_for")
+                .long("wait-for")
+                .value_name("SECS")
+                .conflicts_with("wait")
+                .help(
+                    "Wait for the server to fully process uploaded files, \
+                     but at most for the given number of seconds.",
+                ),
         )
         .arg(
             Arg::new("file-headers")
@@ -127,13 +138,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     };
 
+    let wait = if let Some(secs) = matches.get_one::<u64>("wait_for") {
+        Wait::from_secs(*secs)
+    } else if matches.get_flag("wait") {
+        Wait::Forever
+    } else {
+        Wait::No
+    };
+
     let context = &UploadContext {
         org: &org,
         project: project.as_deref(),
         release: Some(&release),
         dist,
         note: None,
-        wait: matches.get_flag("wait"),
+        wait,
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
     };

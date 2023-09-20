@@ -77,6 +77,25 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     Ok(())
 }
 
+/// How long to wait for a result when uploading files.
+#[derive(Debug, Clone, Copy, Default)]
+pub enum Wait {
+    /// Don't wait at all.
+    #[default]
+    No,
+    /// Wait forever, which is to say, until the server's `max_wait`
+    /// or `DEFAULT_MAX_WAIT` is reached.
+    Forever,
+    /// Wait for the given duration at most.
+    Limited(Duration),
+}
+
+impl Wait {
+    pub fn from_secs(secs: u64) -> Self {
+        Self::Limited(Duration::from_secs(secs))
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
@@ -84,7 +103,7 @@ pub struct UploadContext<'a> {
     pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
     pub note: Option<&'a str>,
-    pub wait: bool,
+    pub wait: Wait,
     pub dedupe: bool,
     pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
 }
@@ -322,10 +341,14 @@ fn poll_assemble(
     pb.set_style(progress_style);
 
     let assemble_start = Instant::now();
-    let max_wait = match options.max_wait {
+    let mut max_wait = match options.max_wait {
         0 => DEFAULT_MAX_WAIT,
         secs => Duration::from_secs(secs),
     };
+
+    if let Wait::Limited(duration) = context.wait {
+        max_wait = max_wait.min(duration);
+    }
 
     let api = Api::current();
     let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
@@ -349,7 +372,7 @@ fn poll_assemble(
         // Poll until there is a response, unless the user has specified to skip polling. In
         // that case, we return the potentially partial response from the server. This might
         // still contain a cached error.
-        if !context.wait || response.state.is_finished() {
+        if matches!(context.wait, Wait::No) || response.state.is_finished() {
             break response;
         }
 
@@ -368,7 +391,7 @@ fn poll_assemble(
     pb.finish_with_duration("Processing");
 
     if response.state.is_pending() {
-        if context.wait {
+        if matches!(context.wait, Wait::Forever | Wait::Limited(_)) {
             bail!("Failed to process files in {}s", max_wait.as_secs());
         } else {
             println!(
@@ -636,7 +659,7 @@ mod tests {
             release: None,
             dist: None,
             note: None,
-            wait: false,
+            wait: Wait::No,
             dedupe: true,
             chunk_upload_options: None,
         };

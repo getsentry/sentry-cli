@@ -2,7 +2,7 @@ use crate::api::Api;
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
+use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext, Wait};
 use crate::utils::fs::path_as_url;
 use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -58,7 +58,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         release: None,
         dist: None,
         note: None,
-        wait: true,
+        wait: Wait::Forever,
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
     };
