@@ -14,6 +14,7 @@ use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
+use crate::utils::file_upload::Wait;
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
@@ -182,8 +183,21 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait")
                 .long("wait")
                 .action(ArgAction::SetTrue)
+                .conflicts_with("wait_for")
                 .help(
                     "Wait for the server to fully process uploaded files. Errors \
+                    can only be displayed if --wait is specified, but this will \
+                    significantly slow down the upload process.",
+                ),
+        )
+        .arg(
+            Arg::new("wait_for")
+                .long("wait-for")
+                .value_name("SECS")
+                .conflicts_with("wait")
+                .help(
+                    "Wait for the server to fully process uploaded files, \
+                    but at most for the given number of seconds. Errors \
                     can only be displayed if --wait is specified, but this will \
                     significantly slow down the upload process.",
                 ),
@@ -217,10 +231,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
+    let wait = if let Some(secs) = matches.get_one::<u64>("wait_for") {
+        Wait::from_secs(*secs)
+    } else if matches.get_flag("wait") {
+        Wait::Forever
+    } else {
+        Wait::No
+    };
+
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
-        .wait(matches.get_flag("wait"))
+        .wait(wait)
         .search_paths(matches.get_many::<String>("paths").unwrap_or_default())
         .allow_zips(!matches.get_flag("no_zips"))
         .filter_ids(ids);
