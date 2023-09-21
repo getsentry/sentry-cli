@@ -112,14 +112,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let version = matches.get_one::<String>("release");
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
-    let wait = if let Some(secs) = matches.get_one::<u64>("wait_for") {
-        Wait::from_secs(*secs)
-    } else if matches.get_flag("wait") {
-        Wait::Forever
-    } else {
-        Wait::No
-    };
-
     if let Some(version) = version {
         for dist in matches.get_many::<String>("dist").unwrap() {
             println!(
@@ -133,7 +125,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 release: Some(version),
                 dist: Some(dist),
                 note: None,
-                wait,
+                wait: matches.get_flag("wait"),
                 dedupe: false,
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
@@ -146,7 +138,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             release: None,
             dist: None,
             note: None,
-            wait,
+            wait: matches.get_flag("wait"),
             dedupe: false,
             chunk_upload_options: chunk_upload_options.as_ref(),
         })?;
