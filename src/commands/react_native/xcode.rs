@@ -14,6 +14,7 @@ use serde_json::Value;
 
 use crate::api::Api;
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
@@ -110,6 +111,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait_for")
                 .long("wait-for")
                 .value_name("SECS")
+                .value_parser(clap::value_parser!(u64))
                 .conflicts_with("wait")
                 .help(
                     "Wait for the server to fully process uploaded files, \
@@ -294,7 +296,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             };
 
             // If Hermes emitted source map we have to use it
-            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) = (report.hermes_bundle_path, report.hermes_sourcemap_path) {
+            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) =
+                (report.hermes_bundle_path, report.hermes_sourcemap_path)
+            {
                 bundle_path = hermes_bundle_path.clone();
                 sourcemap_path = hermes_sourcemap_path.clone();
                 println!("Using Hermes bundle and combined source map.");
@@ -334,14 +338,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let dist_from_env = env::var("SENTRY_DIST");
         let release_from_env = env::var("SENTRY_RELEASE");
 
-        if dist_from_env.is_err() && release_from_env.is_err() && matches.get_flag("no_auto_release") {
+        let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
+        let wait = matches.get_flag("wait") || wait_for_secs.is_some();
+        let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, std::time::Duration::from_secs);
+
+        if dist_from_env.is_err()
+            && release_from_env.is_err()
+            && matches.get_flag("no_auto_release")
+        {
             processor.upload(&UploadContext {
                 org: &org,
                 project: Some(&project),
                 release: None,
                 dist: None,
                 note: None,
-                wait: matches.get_flag("wait"),
+                wait,
+                max_wait,
                 dedupe: false,
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
@@ -362,7 +374,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         release: Some(&release_name),
                         dist: Some(&dist),
                         note: None,
-                        wait: matches.get_flag("wait"),
+                        wait,
+                        max_wait,
                         dedupe: false,
                         chunk_upload_options: chunk_upload_options.as_ref(),
                     })?;
@@ -375,7 +388,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                             release: Some(&release_name),
                             dist: Some(dist),
                             note: None,
-                            wait: matches.get_flag("wait"),
+                            wait,
+                            max_wait,
                             dedupe: false,
                             chunk_upload_options: chunk_upload_options.as_ref(),
                         })?;
@@ -411,8 +425,10 @@ pub fn wrap_call() -> Result<()> {
     // export:embed is an Expo CLI command (drop in replacement for bundle)
     // if bundle_command is set, ignore the default values
     if args.len() > 1
-      && ((bundle_command.is_err() && (args[1] == "bundle" || args[1] == "ram-bundle" || args[1] == "export:embed"))
-        || (bundle_command.is_ok() && args[1] == bundle_command.unwrap())) {
+        && ((bundle_command.is_err()
+            && (args[1] == "bundle" || args[1] == "ram-bundle" || args[1] == "export:embed"))
+            || (bundle_command.is_ok() && args[1] == bundle_command.unwrap()))
+    {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "--sourcemap-output" {
@@ -462,8 +478,10 @@ pub fn wrap_call() -> Result<()> {
     // if not packages bundle and sourcemap have to be used for symbolication
     //
     // The compose script can be user defined so we have to check for that
-    } else if args.len() > 1 && (args[0].ends_with("compose-source-maps.js")
-        || (compose_source_maps_path.is_ok() && args[0] == compose_source_maps_path.unwrap())) {
+    } else if args.len() > 1
+        && (args[0].ends_with("compose-source-maps.js")
+            || (compose_source_maps_path.is_ok() && args[0] == compose_source_maps_path.unwrap()))
+    {
         let mut iter = args.iter().fuse();
         while let Some(item) = iter.next() {
             if item == "-o" {
@@ -493,11 +511,13 @@ pub fn wrap_call() -> Result<()> {
         // We have to do it while pretending being the script because of the clean up afterwards
         if let Some(ref packager_sourcemap_path) = sourcemap_report.packager_sourcemap_path {
             let mut packager_sourcemap_file = fs::File::open(packager_sourcemap_path)?;
-            let packager_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut packager_sourcemap_file);
+            let packager_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> =
+                serde_json::from_reader(&mut packager_sourcemap_file);
 
             let hermes_sourcemap_path = sourcemap_report.hermes_sourcemap_path.as_ref().unwrap();
             let mut hermes_sourcemap_file = fs::File::open(hermes_sourcemap_path)?;
-            let hermes_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> = serde_json::from_reader(&mut hermes_sourcemap_file);
+            let hermes_sourcemap_result: Result<HashMap<String, Value>, serde_json::Error> =
+                serde_json::from_reader(&mut hermes_sourcemap_file);
 
             if packager_sourcemap_result.is_err() {
                 println!(
@@ -513,9 +533,16 @@ pub fn wrap_call() -> Result<()> {
                 );
             }
 
-            if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) = (packager_sourcemap_result, hermes_sourcemap_result) {
-                if hermes_sourcemap.get("debugId").is_none() && hermes_sourcemap.get("debug_id").is_none() {
-                    if let Some(debug_id) = packager_sourcemap.get("debugId").or_else(|| packager_sourcemap.get("debug_id")) {
+            if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) =
+                (packager_sourcemap_result, hermes_sourcemap_result)
+            {
+                if hermes_sourcemap.get("debugId").is_none()
+                    && hermes_sourcemap.get("debug_id").is_none()
+                {
+                    if let Some(debug_id) = packager_sourcemap
+                        .get("debugId")
+                        .or_else(|| packager_sourcemap.get("debug_id"))
+                    {
                         hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
                         hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
 

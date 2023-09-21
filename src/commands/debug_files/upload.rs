@@ -1,5 +1,6 @@
 use std::collections::BTreeSet;
 use std::str::{self, FromStr};
+use std::time::Duration;
 
 use anyhow::{bail, format_err, Result};
 use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
@@ -11,10 +12,10 @@ use symbolic::debuginfo::FileFormat;
 
 use crate::api::Api;
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
-use crate::utils::file_upload::Wait;
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
@@ -186,7 +187,7 @@ pub fn make_command(command: Command) -> Command {
                 .conflicts_with("wait_for")
                 .help(
                     "Wait for the server to fully process uploaded files. Errors \
-                    can only be displayed if --wait is specified, but this will \
+                    can only be displayed if --wait or --wait-for is specified, but this will \
                     significantly slow down the upload process.",
                 ),
         )
@@ -194,11 +195,12 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait_for")
                 .long("wait-for")
                 .value_name("SECS")
+                .value_parser(clap::value_parser!(u64))
                 .conflicts_with("wait")
                 .help(
                     "Wait for the server to fully process uploaded files, \
                     but at most for the given number of seconds. Errors \
-                    can only be displayed if --wait is specified, but this will \
+                    can only be displayed if --wait or --wait-for is specified, but this will \
                     significantly slow down the upload process.",
                 ),
         )
@@ -231,18 +233,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    let wait = if let Some(secs) = matches.get_one::<u64>("wait_for") {
-        Wait::from_secs(*secs)
-    } else if matches.get_flag("wait") {
-        Wait::Forever
-    } else {
-        Wait::No
-    };
+    let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
+    let wait = matches.get_flag("wait") || wait_for_secs.is_some();
+    let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
 
     // Build generic upload parameters
     let mut upload = DifUpload::new(org.clone(), project.clone());
     upload
         .wait(wait)
+        .max_wait(max_wait)
         .search_paths(matches.get_many::<String>("paths").unwrap_or_default())
         .allow_zips(!matches.get_flag("no_zips"))
         .filter_ids(ids);

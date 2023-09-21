@@ -3,6 +3,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
 use std::path::Path;
+use std::time::Duration;
 
 use anyhow::{bail, format_err, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -11,6 +12,7 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 use crate::api::{Api, ProgressBarMode};
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{
@@ -59,6 +61,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait_for")
                 .long("wait-for")
                 .value_name("SECS")
+                .value_parser(clap::value_parser!(u64))
                 .conflicts_with("wait")
                 .help(
                     "Wait for the server to fully process uploaded files, \
@@ -138,13 +141,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     };
 
+    let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
+    let wait = matches.get_flag("wait") || wait_for_secs.is_some();
+    let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
+
     let context = &UploadContext {
         org: &org,
         project: project.as_deref(),
         release: Some(&release),
         dist,
         note: None,
-        wait: matches.get_flag("wait"),
+        wait,
+        max_wait,
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
     };

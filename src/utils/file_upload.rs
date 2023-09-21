@@ -85,6 +85,7 @@ pub struct UploadContext<'a> {
     pub dist: Option<&'a str>,
     pub note: Option<&'a str>,
     pub wait: bool,
+    pub max_wait: Duration,
     pub dedupe: bool,
     pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
 }
@@ -322,10 +323,12 @@ fn poll_assemble(
     pb.set_style(progress_style);
 
     let assemble_start = Instant::now();
-    let max_wait = match options.max_wait {
+    let options_max_wait = match options.max_wait {
         0 => DEFAULT_MAX_WAIT,
         secs => Duration::from_secs(secs),
     };
+
+    let max_wait = context.max_wait.min(options_max_wait);
 
     let api = Api::current();
     let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
@@ -637,6 +640,7 @@ mod tests {
             dist: None,
             note: None,
             wait: false,
+            max_wait: DEFAULT_MAX_WAIT,
             dedupe: true,
             chunk_upload_options: None,
         };
