@@ -1979,6 +1979,14 @@ impl DifUpload {
         self
     }
 
+    /// Sets the maximum length of time the upload should wait for the server to complete processing.
+    ///
+    /// Defaults to [`DEFAULT_MAX_WAIT`].
+    pub fn max_wait(&mut self, max_wait: Duration) -> &mut Self {
+        self.max_wait = max_wait;
+        self
+    }
+
     /// Set whether il2cpp line mappings should be computed and uploaded.
     ///
     /// Defaults to `false`.
@@ -2011,7 +2019,9 @@ impl DifUpload {
                 self.max_file_size = chunk_options.max_file_size;
             }
             if chunk_options.max_wait > 0 {
-                self.max_wait = Duration::from_secs(chunk_options.max_wait);
+                self.max_wait = self
+                    .max_wait
+                    .min(Duration::from_secs(chunk_options.max_wait));
             }
 
             self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);

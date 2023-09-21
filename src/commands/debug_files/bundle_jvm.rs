@@ -1,5 +1,6 @@
 use crate::api::Api;
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
@@ -52,6 +53,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let api = Api::current();
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+
     let context = &UploadContext {
         org: &org,
         project: project.as_deref(),
@@ -59,6 +61,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         dist: None,
         note: None,
         wait: true,
+        max_wait: DEFAULT_MAX_WAIT,
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
     };

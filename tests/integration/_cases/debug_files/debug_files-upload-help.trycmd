@@ -63,8 +63,12 @@ Options:
       --include-sources          Include sources from the local file system and upload them as
                                  source bundles.
       --wait                     Wait for the server to fully process uploaded files. Errors can
-                                 only be displayed if --wait is specified, but this will
-                                 significantly slow down the upload process.
+                                 only be displayed if --wait or --wait-for is specified, but this
+                                 will significantly slow down the upload process.
+      --wait-for <SECS>          Wait for the server to fully process uploaded files, but at most
+                                 for the given number of seconds. Errors can only be displayed if
+                                 --wait or --wait-for is specified, but this will significantly slow
+                                 down the upload process.
       --il2cpp-mapping           Compute il2cpp line mappings and upload them along with sources.
   -h, --help                     Print help
 

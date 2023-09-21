@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes and improvements
+
+- feat: Commands with a `--wait` flag now also have a `--wait-for <SECS>` option that additionally puts a limit on the wait time. (#1748) by @loewenheim
+
 ## 2.20.7
 
 ### Various fixes & improvements

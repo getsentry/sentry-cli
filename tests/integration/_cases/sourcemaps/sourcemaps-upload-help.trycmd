@@ -39,6 +39,9 @@ Options:
           Enable files gzip decompression prior to upload.
       --wait
           Wait for the server to fully process uploaded files.
+      --wait-for <SECS>
+          Wait for the server to fully process uploaded files, but at most for the given number of
+          seconds.
       --no-sourcemap-reference
           Disable emitting of automatic sourcemap references.
           By default the tool will store a 'Sourcemap' header with minified files so that sourcemaps

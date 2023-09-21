@@ -1,5 +1,6 @@
 use std::env;
 use std::path::PathBuf;
+use std::time::Duration;
 
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -8,6 +9,7 @@ use sourcemap::ram_bundle::RamBundle;
 
 use crate::api::Api;
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
@@ -50,7 +52,19 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("wait")
                 .long("wait")
                 .action(ArgAction::SetTrue)
+                .conflicts_with("wait_for")
                 .help("Wait for the server to fully process uploaded files."),
+        )
+        .arg(
+            Arg::new("wait_for")
+                .long("wait-for")
+                .value_name("SECS")
+                .value_parser(clap::value_parser!(u64))
+                .conflicts_with("wait")
+                .help(
+                    "Wait for the server to fully process uploaded files, \
+                     but at most for the given number of seconds.",
+                ),
         )
 }
 
@@ -101,6 +115,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let version = matches.get_one::<String>("release");
     let chunk_upload_options = api.get_chunk_upload_options(&org)?;
 
+    let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
+    let wait = matches.get_flag("wait") || wait_for_secs.is_some();
+    let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
+
     if let Some(version) = version {
         for dist in matches.get_many::<String>("dist").unwrap() {
             println!(
@@ -114,7 +132,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 release: Some(version),
                 dist: Some(dist),
                 note: None,
-                wait: matches.get_flag("wait"),
+                wait,
+                max_wait,
                 dedupe: false,
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
@@ -127,7 +146,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             release: None,
             dist: None,
             note: None,
-            wait: matches.get_flag("wait"),
+            wait,
+            max_wait,
             dedupe: false,
             chunk_upload_options: chunk_upload_options.as_ref(),
         })?;
