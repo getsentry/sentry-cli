@@ -268,7 +268,9 @@ impl Config {
     /// Returns the API URL for a path
     pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
         let base = self.get_base_url()?;
-        Ok(format!("{}/api/0/{}", base, path.trim_start_matches('/')))
+        let path = path.trim_start_matches('/');
+        let path = path.trim_start_matches("api/0/");
+        Ok(format!("{}/api/0/{}", base, path))
     }
 
     /// Returns the log level.
@@ -749,6 +751,8 @@ fn get_default_vcs_remote(ini: &Ini) -> String {
 
 #[cfg(test)]
 mod tests {
+    use log::LevelFilter;
+
     use super::*;
 
     #[test]
@@ -761,6 +765,35 @@ mod tests {
                 org: "test-org".to_string(),
                 url: "https://sentry.io".to_string(),
             }
+        );
+    }
+
+    #[test]
+    fn test_get_api_endpoint() {
+        let config = Config {
+            filename: PathBuf::from("/path/to/config"),
+            process_bound: false,
+            ini: Default::default(),
+            cached_auth: None,
+            cached_base_url: "https://sentry.io/".to_string(),
+            cached_headers: None,
+            cached_log_level: LevelFilter::Off,
+            cached_vcs_remote: String::new(),
+            cached_token_data: None,
+        };
+
+        assert_eq!(
+            config
+                .get_api_endpoint("/organizations/test-org/chunk-upload/")
+                .unwrap(),
+            "https://sentry.io/api/0/organizations/test-org/chunk-upload/"
+        );
+
+        assert_eq!(
+            config
+                .get_api_endpoint("/api/0/organizations/test-org/chunk-upload/")
+                .unwrap(),
+            "https://sentry.io/api/0/organizations/test-org/chunk-upload/"
         );
     }
 }
