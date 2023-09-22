@@ -268,7 +268,9 @@ impl Config {
     /// Returns the API URL for a path
     pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
         let base = self.get_base_url()?;
-        Ok(format!("{}/api/0/{}", base, path.trim_start_matches('/')))
+        let path = path.trim_start_matches('/');
+        let path = path.trim_start_matches("api/0/");
+        Ok(format!("{}/api/0/{}", base, path))
     }
 
     /// Returns the log level.
