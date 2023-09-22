@@ -7,7 +7,6 @@ use std::process;
 
 use anyhow::{bail, Result};
 use chrono::Duration;
-use clap::command;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use if_chain::if_chain;
 use log::info;
