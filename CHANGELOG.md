@@ -6,7 +6,11 @@
 
 ### Various fixes and improvements
 
+- feat: `login` now opens the org auth token creation page (#1737) by @loewenheim
+- feat: Debug IDs are now supported in Hermes bundles (#1667) by @krystofwoldrich
+- feat: The root sourcemap for RAM bundles is now uploaded, improving support for preloaded modules (#1743) by @krystofwoldrich
 - feat: Commands with a `--wait` flag now also have a `--wait-for <SECS>` option that additionally puts a limit on the wait time. (#1748) by @loewenheim
+- deps: `symbolic` updated to 12.4.1 (#1749) by @loewenheim
 
 ## 2.20.7
 
