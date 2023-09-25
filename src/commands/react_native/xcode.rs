@@ -151,7 +151,7 @@ fn find_hermesc() -> String {
 /// The same as RN Tooling does it https://github.com/facebook/react-native/blob/435245978122d34a78014600562517c3bf96f92e/scripts/react-native-xcode.sh#L98C11-L98C11
 /// We ignore `USE_HERMES` as its behavior is not consistent between 0.65 - 0.72 and it the later versions it was removed as user override.
 fn is_hermes_enabled(hermesc: &String) -> bool {
-  return Path::new(hermesc).exists();
+    return Path::new(hermesc).exists();
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -271,7 +271,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // With that we we then have all the information we need to invoke the
         // upload process.
         } else {
-            let mut command= process::Command::new(&script);
+            let mut command = process::Command::new(&script);
             command
                 .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
                 .env("SENTRY_RN_REAL_NODE_BINARY", &node)
@@ -287,9 +287,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc);
             }
 
-            let rv = command
-                .spawn()?
-                .wait()?;
+            let rv = command.spawn()?.wait()?;
             propagate_exit_status(rv);
 
             if !matches.get_flag("force_foreground") {
