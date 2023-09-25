@@ -275,7 +275,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             command
                 .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
                 .env("SENTRY_RN_REAL_NODE_BINARY", &node)
-
                 .env(
                     "SENTRY_RN_SOURCEMAP_REPORT",
                     report_file.path().to_str().unwrap(),
