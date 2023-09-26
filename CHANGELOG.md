@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.21.1
+
+### Various fixes & improvements
+
+- fix: Strip `/api/0` prefix from endpoint URLs (#1752) by @loewenheim
+
 ## 2.21.0
 
 ### Various fixes and improvements
