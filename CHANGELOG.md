@@ -7,13 +7,6 @@
 ### Various fixes & improvements
 
 - fix: Strip `/api/0` prefix from endpoint URLs (#1752) by @loewenheim
-- meta: Fix 2.21.0 changelog (#1753) by @loewenheim
-- release: 2.21.0 (#1751) by @loewenheim
-- deps: Update symbolic to 12.4.1 (#1749) by @loewenheim
-- feat(upload): Introduce `--wait-for` option (#1748) by @loewenheim
-- fix(rn): Upload root bundle source map for ram bundles (#1743) by @krystofwoldrich
-- feat(rn): Add Debug Id reference from Source Map, Upload Hermes Source Map (#1667) by @krystofwoldrich
-- feat(login): Open org auth token creation page (#1737) by @loewenheim
 
 ## 2.21.0
 
