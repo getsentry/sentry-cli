@@ -60,7 +60,14 @@ impl TokenData {
             .decode(encoded.as_bytes())
             .context("invalid base64 data")?;
 
-        Ok(serde_json::from_slice(&json)?)
+        let json =
+            serde_json::from_slice::<serde_json::Value>(&json).context("Failed to decode JSON")?;
+
+        if matches!(json.get("url"), Some(serde_json::Value::Null) | None) {
+            bail!("Org auth token is missing a URL. Please make sure that `system.url-prefix` is set in your Sentry config.yml.");
+        }
+
+        serde_json::from_value(json).context("Failed to decode org auth token")
     }
 }
 
@@ -92,9 +99,8 @@ impl Config {
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
-            Some(Auth::Token(ref token)) => {
-                TokenData::decode(token).context("Failed to parse org auth token {token}")?
-            }
+            Some(Auth::Token(ref token)) => TokenData::decode(token)
+                .context(format!("Failed to parse org auth token {token}"))?,
             _ => None,
         };
 
@@ -207,8 +213,8 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.cached_token_data =
-                    TokenData::decode(val).context("Failed to parse org auth token {token}")?;
+                self.cached_token_data = TokenData::decode(val)
+                    .context(format!("Failed to parse org auth token {val}"))?;
 
                 if let Some(ref data) = self.cached_token_data {
                     self.cached_base_url = data.url.clone();
