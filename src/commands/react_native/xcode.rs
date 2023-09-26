@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::env;
 use std::fs;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process;
 
@@ -146,6 +147,13 @@ fn find_hermesc() -> String {
     format!("{}/hermes-engine/destroot/bin/hermesc", pods_root_path)
 }
 
+/// Check if Hermes is enabled based its executable existence in the installed pods
+/// The same as RN Tooling does it https://github.com/facebook/react-native/blob/435245978122d34a78014600562517c3bf96f92e/scripts/react-native-xcode.sh#L98C11-L98C11
+/// We ignore `USE_HERMES` as its behavior is not consistent between 0.65 - 0.72 and it the later versions it was removed as user override.
+fn is_hermes_enabled(hermesc: &String) -> bool {
+    return Path::new(hermesc).exists();
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
@@ -263,18 +271,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // With that we we then have all the information we need to invoke the
         // upload process.
         } else {
-            let rv = process::Command::new(&script)
+            let mut command = process::Command::new(&script);
+            command
                 .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
                 .env("SENTRY_RN_REAL_NODE_BINARY", &node)
-                .env("HERMES_CLI_PATH", env::current_exe()?.to_str().unwrap())
-                .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc)
                 .env(
                     "SENTRY_RN_SOURCEMAP_REPORT",
                     report_file.path().to_str().unwrap(),
                 )
-                .env("__SENTRY_RN_WRAP_XCODE_CALL", "1")
-                .spawn()?
-                .wait()?;
+                .env("__SENTRY_RN_WRAP_XCODE_CALL", "1");
+
+            if is_hermes_enabled(&hermesc) {
+                command
+                    .env("HERMES_CLI_PATH", env::current_exe()?.to_str().unwrap())
+                    .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc);
+            }
+
+            let rv = command.spawn()?.wait()?;
             propagate_exit_status(rv);
 
             if !matches.get_flag("force_foreground") {
@@ -307,7 +320,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             } else {
                 bundle_path = packager_bundle_path;
                 sourcemap_path = packager_sourcemap_path;
-                println!("Using React Native Packager bundle and combined source map.");
+                println!("Using React Native Packager bundle and source map.");
             }
             bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
             sourcemap_url = format!(
