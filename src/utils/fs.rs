@@ -125,11 +125,7 @@ impl Drop for TempFile {
 
 /// Checks if a path is writable.
 pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
-    fs::OpenOptions::new()
-        .write(true)
-        .open(&path)
-        .map(|_| true)
-        .unwrap_or(false)
+    fs::metadata(path).map_or(false, |md| !md.permissions().readonly())
 }
 
 /// Set the mode of a path to 755 if we're on a Unix machine, otherwise
