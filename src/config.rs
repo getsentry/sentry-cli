@@ -33,7 +33,7 @@ struct TokenData {
     /// An org slug.
     org: String,
     /// A base Sentry URL.
-    url: String,
+    url: Option<String>,
 }
 
 impl TokenData {
@@ -106,13 +106,13 @@ impl Config {
 
         let mut url = get_default_url(&ini);
 
-        if let Some(ref token_embedded_data) = token_embedded_data {
+        if let Some(token_url) = token_embedded_data.as_ref().and_then(|td| td.url.as_ref()) {
             if url == DEFAULT_URL || url.is_empty() {
-                url = token_embedded_data.url.clone();
-            } else if url != token_embedded_data.url {
+                url = token_url.clone();
+            } else if url != *token_url {
                 bail!(
                     "Two different url values supplied: `{}` (from token), `{url}`.",
-                    token_embedded_data.url,
+                    token_url,
                 );
             }
         }
@@ -216,8 +216,12 @@ impl Config {
                 self.cached_token_data = TokenData::decode(val)
                     .context(format!("Failed to parse org auth token {val}"))?;
 
-                if let Some(ref data) = self.cached_token_data {
-                    self.cached_base_url = data.url.clone();
+                if let Some(token_url) = self
+                    .cached_token_data
+                    .as_ref()
+                    .and_then(|td| td.url.as_ref())
+                {
+                    self.cached_base_url = token_url.clone();
                 }
 
                 self.ini
@@ -247,12 +251,13 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) -> Result<()> {
-        if let Some(ref org_token) = self.cached_token_data {
-            if url != org_token.url {
-                bail!(
-                    "Two different url values supplied: `{}` (from token), `{url}`.",
-                    org_token.url,
-                );
+        if let Some(token_url) = self
+            .cached_token_data
+            .as_ref()
+            .and_then(|td| td.url.as_ref())
+        {
+            if url != token_url {
+                bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
             }
         }
         self.cached_base_url = url.to_owned();
@@ -769,7 +774,7 @@ mod tests {
             TokenData::decode(token).unwrap().unwrap(),
             TokenData {
                 org: "test-org".to_string(),
-                url: "https://sentry.io".to_string(),
+                url: Some("https://sentry.io".to_string()),
             }
         );
     }
