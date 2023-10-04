@@ -60,14 +60,7 @@ impl TokenData {
             .decode(encoded.as_bytes())
             .context("invalid base64 data")?;
 
-        let json =
-            serde_json::from_slice::<serde_json::Value>(&json).context("Failed to decode JSON")?;
-
-        if matches!(json.get("url"), Some(serde_json::Value::Null) | None) {
-            bail!("Org auth token is missing a URL. Please make sure that `system.url-prefix` is set in your Sentry config.yml.");
-        }
-
-        serde_json::from_value(json).context("Failed to decode org auth token")
+        Ok(serde_json::from_slice(&json)?)
     }
 }
 
