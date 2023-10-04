@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.21.2
+
+### Various fixes & improvements
+
+- fix(rn): Remove hermesc envs if hermes is disabled (#1754) by @krystofwoldrich
+- fix: Don't fail on duplicate proguard release association (#1762) by @loewenheim
+- fix: Make URL in org auth tokens optional (#1766) by @loewenheim
+- Explain how to update in the README (#1767) by @philipphofmann
+
 ## 2.21.1
 
 ### Various fixes & improvements
