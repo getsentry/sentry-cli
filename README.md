@@ -122,6 +122,14 @@ docker run --rm -u "$(id -u):$(id -g)" -v $(pwd):/work getsentry/sentry-cli --he
 
 This is required due to security issue in older `git` implementations. See [here](https://github.blog/2022-04-12-git-security-vulnerability-announced/) for more details.
 
+## Update
+
+To update sentry-cli to the latest version run:
+
+```sh
+sentry-cli update
+```
+
 ## Compiling
 
 In case you want to compile this yourself, you need to install at minimum the
