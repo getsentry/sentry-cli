@@ -138,7 +138,7 @@ fn app() -> Command {
         .version(VERSION)
         .about(ABOUT)
         .max_term_width(100)
-        .subcommand_required(false)
+        .subcommand_required(true)
         .arg_required_else_help(true)
         .arg(Arg::new("url").value_name("URL").long("url").help(
             "Fully qualified URL to the Sentry server.{n}\
@@ -192,15 +192,18 @@ fn app() -> Command {
               .hide(true)
               .help("Always return 0 exit code."),
         )
-        .arg(
-            Arg::new("completions")
-                .long("completions")
-                .help(
-                    "Print completions for the specified shell.",
-                )
-                .value_parser(value_parser!(Shell)),
+        .subcommand(
+            Command::new("completions")
+            .about("Generate completions for the specified shell.")
+            .arg_required_else_help(true)
+            .arg(
+                Arg::new("shell")
+                    .long("shell")
+                    .help("The shell to print completions for.")
+                    .value_parser(value_parser!(Shell)),
+            )
         )
-}
+    }
 
 fn add_commands(mut app: Command) -> Command {
     macro_rules! add_subcommand {
@@ -270,10 +273,12 @@ pub fn execute() -> Result<()> {
             .join(" ")
     );
 
-    if let Some(generator) = matches.get_one::<Shell>("completions") {
-        eprintln!("Generating completion file for {generator}...");
-        print_completions(*generator, &mut app2);
-        return Ok(())
+    if let Some(argmatches) = matches.subcommand_matches("completions") {
+        if let Some(generator) = argmatches.get_one::<Shell>("shell") {
+            eprintln!("Generating completion file for {generator}...");
+            print_completions(*generator, &mut app2);
+            return Ok(())
+        }
     }
 
     match run_command(&matches) {
