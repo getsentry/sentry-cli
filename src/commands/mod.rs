@@ -1,12 +1,13 @@
 //! This module implements the root command of the CLI tool.
 
 use std::env;
+use std::io;
 use std::process;
 
 use anyhow::{bail, Result};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
-
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
@@ -75,6 +76,10 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "sourcemaps",
 ];
 
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
+}
+
 fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();
 
@@ -133,7 +138,7 @@ fn app() -> Command {
         .version(VERSION)
         .about(ABOUT)
         .max_term_width(100)
-        .subcommand_required(true)
+        .subcommand_required(false)
         .arg_required_else_help(true)
         .arg(Arg::new("url").value_name("URL").long("url").help(
             "Fully qualified URL to the Sentry server.{n}\
@@ -187,6 +192,14 @@ fn app() -> Command {
               .hide(true)
               .help("Always return 0 exit code."),
         )
+        .arg(
+            Arg::new("completions")
+                .long("completions")
+                .help(
+                    "Print completions for the specified shell.",
+                )
+                .value_parser(value_parser!(Shell)),
+        )
 }
 
 fn add_commands(mut app: Command) -> Command {
@@ -229,6 +242,8 @@ pub fn execute() -> Result<()> {
     let mut config = Config::from_cli_config()?;
     let mut app = app();
     app = add_commands(app);
+    // here to as proof-of-concept, doing it locally gave borrow checker errors
+    let mut app2 = app.clone();
     let matches = app.get_matches();
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
@@ -254,6 +269,12 @@ pub fn execute() -> Result<()> {
             .collect::<Vec<String>>()
             .join(" ")
     );
+
+    if let Some(generator) = matches.get_one::<Shell>("completions") {
+        eprintln!("Generating completion file for {generator}...");
+        print_completions(*generator, &mut app2);
+        return Ok(())
+    }
 
     match run_command(&matches) {
         Ok(()) => Ok(()),
