@@ -273,6 +273,7 @@ pub fn execute() -> Result<()> {
 
     if let Some(argmatches) = matches.subcommand_matches("completions") {
         let mut cmd = app();
+        cmd = add_commands(cmd);
         if let Some(generator) = argmatches.get_one::<Shell>("shell") {
             eprintln!("Generating completion file for {generator}...");
             print_completions(*generator, &mut cmd);
