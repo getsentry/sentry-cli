@@ -207,10 +207,10 @@ fn send_event(
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = Config::current().get_release(matches).ok();
 
-    let tags = matches
+    let tags: Vec<_> = matches
         .get_many::<String>("tags")
         .map(|v| v.collect())
-        .unwrap_or_else(Vec::new);
+        .unwrap_or_default();
 
     if matches.get_flag("send_event") {
         return send_event(

@@ -329,10 +329,10 @@ fn process_sources_from_paths(
         .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
-    let ignores = matches
+    let ignores: Vec<_> = matches
         .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
-        .unwrap_or_else(Vec::new);
+        .unwrap_or_default();
 
     let opts = MatchOptions::new();
     let collected_paths = paths.flat_map(|path| glob_with(path, opts).unwrap().flatten());
