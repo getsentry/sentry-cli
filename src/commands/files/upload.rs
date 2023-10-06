@@ -164,14 +164,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .get_one::<String>("ignore_file")
             .map(String::as_str)
             .unwrap_or_default();
-        let ignores = matches
+        let ignores: Vec<_> = matches
             .get_many::<String>("ignore")
             .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
-            .unwrap_or_else(Vec::new);
-        let extensions = matches
+            .unwrap_or_default();
+        let extensions: Vec<_> = matches
             .get_many::<String>("extensions")
             .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-            .unwrap_or_else(Vec::new);
+            .unwrap_or_default();
 
         let sources = ReleaseFileSearch::new(path.to_path_buf())
             .ignore_file(ignore_file)
