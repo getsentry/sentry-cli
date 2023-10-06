@@ -858,12 +858,15 @@ fn collect_object_dif<'a>(
     // create a shared instance here and clone it into `DifMatch`es
     // below.
     for object in archive.objects() {
-        // Silently skip all objects that we cannot process. This can
+        // Skip all objects that we cannot process. This can
         // happen due to invalid object files, which we then just
         // discard rather than stopping the scan.
         let object = match object {
             Ok(object) => object,
-            Err(_) => continue,
+            Err(e) => {
+                warn!("Skipping invalid object: {e}");
+                continue;
+            }
         };
 
         // Objects without debug id will be skipped altogether. While frames
@@ -871,6 +874,7 @@ fn collect_object_dif<'a>(
         // Sentry requires object files to have one during upload.
         let id = object.debug_id();
         if id.is_nil() {
+            debug!("Skipping object without debug id");
             continue;
         }
 
