@@ -243,11 +243,9 @@ pub fn execute() -> Result<()> {
     }
 
     let mut config = Config::from_cli_config()?;
-    let mut app = app();
-    app = add_commands(app);
-    // here to as proof-of-concept, doing it locally gave borrow checker errors
-    let mut app2 = app.clone();
-    let matches = app.get_matches();
+    let mut cmd = app();
+    cmd = add_commands(cmd);
+    let matches = cmd.get_matches();
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
 
@@ -274,9 +272,10 @@ pub fn execute() -> Result<()> {
     );
 
     if let Some(argmatches) = matches.subcommand_matches("completions") {
+        let mut cmd = app();
         if let Some(generator) = argmatches.get_one::<Shell>("shell") {
             eprintln!("Generating completion file for {generator}...");
-            print_completions(*generator, &mut app2);
+            print_completions(*generator, &mut cmd);
             return Ok(())
         }
     }
