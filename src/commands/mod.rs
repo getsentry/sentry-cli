@@ -4,6 +4,10 @@ use std::env;
 use std::io;
 use std::process;
 
+use anyhow::{bail, Result};
+use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap_complete::{generate, Generator, Shell};
+use log::{debug, info, set_logger, set_max_level, LevelFilter};
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
@@ -11,10 +15,6 @@ use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
-use anyhow::{bail, Result};
-use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
-use clap_complete::{generate, Generator, Shell};
-use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
