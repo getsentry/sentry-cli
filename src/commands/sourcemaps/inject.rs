@@ -81,10 +81,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_one::<String>("ignore_file")
         .map(String::as_str)
         .unwrap_or_default();
-    let ignores = matches
+    let ignores: Vec<_> = matches
         .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
-        .unwrap_or_else(Vec::new);
+        .unwrap_or_default();
 
     let mut extensions = matches
         .get_many::<String>("extensions")

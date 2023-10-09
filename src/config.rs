@@ -33,7 +33,7 @@ struct TokenData {
     /// An org slug.
     org: String,
     /// A base Sentry URL.
-    url: String,
+    url: Option<String>,
 }
 
 impl TokenData {
@@ -92,21 +92,20 @@ impl Config {
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
-            Some(Auth::Token(ref token)) => {
-                TokenData::decode(token).context("Failed to parse org auth token {token}")?
-            }
+            Some(Auth::Token(ref token)) => TokenData::decode(token)
+                .context(format!("Failed to parse org auth token {token}"))?,
             _ => None,
         };
 
         let mut url = get_default_url(&ini);
 
-        if let Some(ref token_embedded_data) = token_embedded_data {
+        if let Some(token_url) = token_embedded_data.as_ref().and_then(|td| td.url.as_ref()) {
             if url == DEFAULT_URL || url.is_empty() {
-                url = token_embedded_data.url.clone();
-            } else if url != token_embedded_data.url {
+                url = token_url.clone();
+            } else if url != *token_url {
                 bail!(
                     "Two different url values supplied: `{}` (from token), `{url}`.",
-                    token_embedded_data.url,
+                    token_url,
                 );
             }
         }
@@ -207,11 +206,15 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.cached_token_data =
-                    TokenData::decode(val).context("Failed to parse org auth token {token}")?;
+                self.cached_token_data = TokenData::decode(val)
+                    .context(format!("Failed to parse org auth token {val}"))?;
 
-                if let Some(ref data) = self.cached_token_data {
-                    self.cached_base_url = data.url.clone();
+                if let Some(token_url) = self
+                    .cached_token_data
+                    .as_ref()
+                    .and_then(|td| td.url.as_ref())
+                {
+                    self.cached_base_url = token_url.clone();
                 }
 
                 self.ini
@@ -241,12 +244,13 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) -> Result<()> {
-        if let Some(ref org_token) = self.cached_token_data {
-            if url != org_token.url {
-                bail!(
-                    "Two different url values supplied: `{}` (from token), `{url}`.",
-                    org_token.url,
-                );
+        if let Some(token_url) = self
+            .cached_token_data
+            .as_ref()
+            .and_then(|td| td.url.as_ref())
+        {
+            if url != token_url {
+                bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
             }
         }
         self.cached_base_url = url.to_owned();
@@ -268,7 +272,9 @@ impl Config {
     /// Returns the API URL for a path
     pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
         let base = self.get_base_url()?;
-        Ok(format!("{}/api/0/{}", base, path.trim_start_matches('/')))
+        let path = path.trim_start_matches('/');
+        let path = path.trim_start_matches("api/0/");
+        Ok(format!("{}/api/0/{}", base, path))
     }
 
     /// Returns the log level.
@@ -749,6 +755,8 @@ fn get_default_vcs_remote(ini: &Ini) -> String {
 
 #[cfg(test)]
 mod tests {
+    use log::LevelFilter;
+
     use super::*;
 
     #[test]
@@ -759,8 +767,37 @@ mod tests {
             TokenData::decode(token).unwrap().unwrap(),
             TokenData {
                 org: "test-org".to_string(),
-                url: "https://sentry.io".to_string(),
+                url: Some("https://sentry.io".to_string()),
             }
+        );
+    }
+
+    #[test]
+    fn test_get_api_endpoint() {
+        let config = Config {
+            filename: PathBuf::from("/path/to/config"),
+            process_bound: false,
+            ini: Default::default(),
+            cached_auth: None,
+            cached_base_url: "https://sentry.io/".to_string(),
+            cached_headers: None,
+            cached_log_level: LevelFilter::Off,
+            cached_vcs_remote: String::new(),
+            cached_token_data: None,
+        };
+
+        assert_eq!(
+            config
+                .get_api_endpoint("/organizations/test-org/chunk-upload/")
+                .unwrap(),
+            "https://sentry.io/api/0/organizations/test-org/chunk-upload/"
+        );
+
+        assert_eq!(
+            config
+                .get_api_endpoint("/api/0/organizations/test-org/chunk-upload/")
+                .unwrap(),
+            "https://sentry.io/api/0/organizations/test-org/chunk-upload/"
         );
     }
 }

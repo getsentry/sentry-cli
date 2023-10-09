@@ -1378,6 +1378,12 @@ impl Api {
             .send()?;
         if resp.status() == 201 {
             Ok(())
+        } else if resp.status() == 409 {
+            info!(
+                "Release association for release '{}', UUID '{}' already exists.",
+                data.release_name, data.proguard_uuid
+            );
+            Ok(())
         } else if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         } else {
