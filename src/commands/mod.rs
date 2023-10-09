@@ -12,7 +12,7 @@ use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 use anyhow::{bail, Result};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
@@ -195,12 +195,12 @@ fn app() -> Command {
         .subcommand(
             Command::new("completions")
             .about("Generate completions for the specified shell.")
-            .subcommand_required(true)
-            .subcommand(Command::new("bash"))
-            .subcommand(Command::new("elvish"))
-            .subcommand(Command::new("fish"))
-            .subcommand(Command::new("powershell"))
-            .subcommand(Command::new("zsh"))
+            .arg_required_else_help(true)
+            .arg(
+                Arg::new("shell")
+                    .help("The shell to print completions for.")
+                    .value_parser(value_parser!(Shell)),
+            )
         )
 }
 
@@ -273,17 +273,11 @@ pub fn execute() -> Result<()> {
     if let Some(argmatches) = matches.subcommand_matches("completions") {
         let mut cmd = app();
         cmd = add_commands(cmd);
-
-        let generator = match argmatches.subcommand_name() {
-            Some("bash") => Shell::Bash,
-            Some("elvish") => Shell::Elvish,
-            Some("fish") => Shell::Fish,
-            Some("powershell") => Shell::PowerShell,
-            Some("zsh") => Shell::Zsh,
-            _ => return Ok(()),
-        };
-        print_completions(generator, &mut cmd);
-        return Ok(());
+        if let Some(generator) = argmatches.get_one::<Shell>("shell") {
+            eprintln!("Generating completion file for {generator}...");
+            print_completions(*generator, &mut cmd);
+            return Ok(());
+        }
     }
 
     match run_command(&matches) {
