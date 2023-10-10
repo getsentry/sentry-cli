@@ -8,6 +8,7 @@ use anyhow::{bail, Result};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
+
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
