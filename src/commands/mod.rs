@@ -1,10 +1,12 @@
 //! This module implements the root command of the CLI tool.
 
 use std::env;
+use std::io;
 use std::process;
 
 use anyhow::{bail, Result};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
+use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
 
 use crate::api::Api;
@@ -74,6 +76,10 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "repos",
     "sourcemaps",
 ];
+
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
+}
 
 fn preexecute_hooks() -> Result<bool> {
     return sentry_react_native_xcode_wrap();
@@ -187,6 +193,16 @@ fn app() -> Command {
               .hide(true)
               .help("Always return 0 exit code."),
         )
+        .subcommand(
+            Command::new("completions")
+            .about("Generate completions for the specified shell.")
+            .arg_required_else_help(true)
+            .arg(
+                Arg::new("shell")
+                    .help("The shell to print completions for.")
+                    .value_parser(value_parser!(Shell)),
+            )
+        )
 }
 
 fn add_commands(mut app: Command) -> Command {
@@ -227,9 +243,9 @@ pub fn execute() -> Result<()> {
     }
 
     let mut config = Config::from_cli_config()?;
-    let mut app = app();
-    app = add_commands(app);
-    let matches = app.get_matches();
+    let mut cmd = app();
+    cmd = add_commands(cmd);
+    let matches = cmd.get_matches();
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
 
@@ -254,6 +270,16 @@ pub fn execute() -> Result<()> {
             .collect::<Vec<String>>()
             .join(" ")
     );
+
+    if let Some(argmatches) = matches.subcommand_matches("completions") {
+        let mut cmd = app();
+        cmd = add_commands(cmd);
+        if let Some(generator) = argmatches.get_one::<Shell>("shell") {
+            eprintln!("Generating completion file for {generator}...");
+            print_completions(*generator, &mut cmd);
+            return Ok(());
+        }
+    }
 
     match run_command(&matches) {
         Ok(()) => Ok(()),

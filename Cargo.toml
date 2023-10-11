@@ -24,6 +24,7 @@ clap = { version = "4.1.6", default-features = false, features = [
   "usage",
   "error-context",
 ] }
+clap_complete = "4.4.3"
 console = "0.15.5"
 curl = { version = "0.4.44", features = ["static-curl", "static-ssl"] }
 dirs = "4.0.0"
