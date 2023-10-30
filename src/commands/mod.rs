@@ -124,18 +124,19 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
 }
 
 pub fn configure_log_level(matches: &ArgMatches) -> Result<Option<LevelFilter>> {
-    if let Some(level_str) = matches.get_one::<String>("log_level") {
-        let log_level = match level_str.parse() {
-            Ok(level) => level,
-            Err(_) => {
-                bail!("Unknown log level: {}", level_str);
-            }
-        };
-        set_max_level(log_level);
-        return Ok(Some(log_level));
-    }
+    match matches.get_one::<String>("log_level") {
+        Some(log_level) => match log_level.parse() {
+            Ok(log_level) => {
+                set_max_level(log_level);
 
-    Ok(None)
+                Ok(Some(log_level))
+            }
+            Err(_) => {
+                bail!("Unknown log level: {}", log_level);
+            }
+        },
+        None => Ok(None),
+    }
 }
 
 fn app() -> Command {
