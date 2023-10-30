@@ -102,6 +102,15 @@ fn preexecute_hooks() -> Result<bool> {
     }
 }
 
+fn parse_log_level_str(level_str: &str) -> Result<LevelFilter> {
+    match level_str.parse() {
+        Ok(level) => Ok(level),
+        Err(_) => {
+            bail!("Unknown log level: {}", level_str);
+        }
+    }
+}
+
 fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     if let Some(api_key) = matches.get_one::<String>("api_key") {
         config.set_auth(Auth::Key(api_key.to_owned()))?;
@@ -120,18 +129,17 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_headers(headers);
     }
 
-    if let Some(level_str) = matches.get_one::<String>("log_level") {
-        match level_str.parse() {
-            Ok(level) => {
-                config.set_log_level(level);
-            }
-            Err(_) => {
-                bail!("Unknown log level: {}", level_str);
-            }
-        }
+    Ok(())
+}
+
+pub fn configure_log_level(matches: &ArgMatches) -> Result<Option<LevelFilter>> {
+    if let Some(log_level) = matches.get_one::<String>("log_level") {
+        let level = parse_log_level_str(log_level)?;
+        set_max_level(level);
+        return Ok(Some(level));
     }
 
-    Ok(())
+    Ok(None)
 }
 
 fn app() -> Command {
@@ -242,12 +250,17 @@ pub fn execute() -> Result<()> {
         return Ok(());
     }
 
-    let mut config = Config::from_cli_config()?;
     let mut cmd = app();
     cmd = add_commands(cmd);
     let matches = cmd.get_matches();
+    let log_level = configure_log_level(&matches)?;
+    let mut config = Config::from_cli_config()?;
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
+
+    if let Some(log_level) = log_level {
+        config.set_log_level(log_level);
+    }
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();
