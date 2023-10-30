@@ -913,14 +913,14 @@ fn execute_files_upload(
     // Batch files upload
     if path.is_dir() {
         let ignore_file = matches.value_of("ignore_file").unwrap_or("");
-        let ignores = matches
+        let ignores: Vec<_> = matches
             .values_of("ignore")
             .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
-            .unwrap_or_else(Vec::new);
-        let extensions = matches
+            .unwrap_or_default();
+        let extensions: Vec<_> = matches
             .values_of("extensions")
             .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-            .unwrap_or_else(Vec::new);
+            .unwrap_or_default();
 
         let sources = ReleaseFileSearch::new(path.to_path_buf())
             .ignore_file(ignore_file)
@@ -1081,10 +1081,10 @@ fn process_sources_from_paths(
         .values_of("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
-    let ignores = matches
+    let ignores: Vec<_> = matches
         .values_of("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
-        .unwrap_or_else(Vec::new);
+        .unwrap_or_default();
 
     let opts = MatchOptions::new();
     let collected_paths = paths.flat_map(|path| glob_with(path, opts).unwrap().flatten());
