@@ -102,15 +102,6 @@ fn preexecute_hooks() -> Result<bool> {
     }
 }
 
-fn parse_log_level_str(level_str: &str) -> Result<LevelFilter> {
-    match level_str.parse() {
-        Ok(level) => Ok(level),
-        Err(_) => {
-            bail!("Unknown log level: {}", level_str);
-        }
-    }
-}
-
 fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     if let Some(api_key) = matches.get_one::<String>("api_key") {
         config.set_auth(Auth::Key(api_key.to_owned()))?;
