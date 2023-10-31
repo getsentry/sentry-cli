@@ -120,18 +120,19 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_headers(headers);
     }
 
-    if let Some(level_str) = matches.get_one::<String>("log_level") {
-        match level_str.parse() {
-            Ok(level) => {
-                config.set_log_level(level);
-            }
-            Err(_) => {
-                bail!("Unknown log level: {}", level_str);
-            }
-        }
-    }
-
     Ok(())
+}
+
+pub fn get_log_level(matches: &ArgMatches) -> Result<Option<LevelFilter>> {
+    match matches.get_one::<String>("log_level") {
+        Some(log_level) => match log_level.parse() {
+            Ok(log_level) => Ok(Some(log_level)),
+            Err(_) => {
+                bail!("Unknown log level: {}", log_level);
+            }
+        },
+        None => Ok(None),
+    }
 }
 
 fn app() -> Command {
@@ -242,12 +243,20 @@ pub fn execute() -> Result<()> {
         return Ok(());
     }
 
-    let mut config = Config::from_cli_config()?;
     let mut cmd = app();
     cmd = add_commands(cmd);
     let matches = cmd.get_matches();
+    let log_level = get_log_level(&matches)?;
+    if let Some(log_level) = log_level {
+        set_max_level(log_level);
+    }
+    let mut config = Config::from_cli_config()?;
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
+
+    if let Some(log_level) = log_level {
+        config.set_log_level(log_level);
+    }
 
     // bind the config to the process and fetch an immutable reference to it
     config.bind_to_process();
