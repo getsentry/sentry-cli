@@ -20,7 +20,7 @@ use crate::utils::releases::detect_release_name;
 
 const BASH_SCRIPT: &str = include_str!("../bashsupport.sh");
 lazy_static! {
-    static ref FRAME_RE: Regex = Regex::new(r#"^(.*?):(.*):(\d+)$"#).unwrap();
+    static ref FRAME_RE: Regex = Regex::new(r"^(.*?):(.*):(\d+)$").unwrap();
 }
 
 pub fn make_app<'a, 'b: 'a>(app: App<'a, 'b>) -> App<'a, 'b> {
