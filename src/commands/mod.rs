@@ -123,14 +123,10 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub fn configure_log_level(matches: &ArgMatches) -> Result<Option<LevelFilter>> {
+pub fn get_log_level(matches: &ArgMatches) -> Result<Option<LevelFilter>> {
     match matches.get_one::<String>("log_level") {
         Some(log_level) => match log_level.parse() {
-            Ok(log_level) => {
-                set_max_level(log_level);
-
-                Ok(Some(log_level))
-            }
+            Ok(log_level) => Ok(Some(log_level)),
             Err(_) => {
                 bail!("Unknown log level: {}", log_level);
             }
@@ -250,7 +246,10 @@ pub fn execute() -> Result<()> {
     let mut cmd = app();
     cmd = add_commands(cmd);
     let matches = cmd.get_matches();
-    let log_level = configure_log_level(&matches)?;
+    let log_level = get_log_level(&matches)?;
+    if let Some(log_level) = log_level {
+        set_max_level(log_level);
+    }
     let mut config = Config::from_cli_config()?;
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
