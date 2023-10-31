@@ -28,7 +28,7 @@
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",
-    "test": "npm-run-all test:jest test:eslint test:prettier test:vercel-nft",
+    "test": "npm-run-all test:jest  --collect-coverage=false test:eslint test:prettier test:vercel-nft",
     "test:jest": "jest",
     "test:watch": "jest --watch --notify",
     "test:eslint": "eslint bin/* scripts/**/*.js js/**/*.js",
@@ -65,6 +65,6 @@
     "yarn": "1.22.19"
   },
   "publishConfig": {
-    "tag": "v1"  
+    "tag": "v1"
   }
 }
