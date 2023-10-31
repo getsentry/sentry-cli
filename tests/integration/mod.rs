@@ -6,7 +6,7 @@ mod releases;
 use mockito::{mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
-pub const UTC_DATE_FORMAT: &str = r#"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z"#;
+pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 
 pub fn register_test(path: &str) -> TestCases {
     let test_case = TestCases::new();

@@ -522,10 +522,7 @@ impl Api {
             };
             let resp = self.get(&path)?;
             let pagination = resp.pagination();
-            rv.extend(
-                resp.convert_rnf::<Vec<Artifact>>(ApiErrorKind::ReleaseNotFound)?
-                    .into_iter(),
-            );
+            rv.extend(resp.convert_rnf::<Vec<Artifact>>(ApiErrorKind::ReleaseNotFound)?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1349,7 +1346,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Monitor>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Monitor>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1410,7 +1407,7 @@ impl Api {
                 }
             }
             let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Project>>()?.into_iter());
+            rv.extend(resp.convert::<Vec<Project>>()?);
             if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
@@ -1435,7 +1432,7 @@ impl Api {
                 break;
             } else {
                 let pagination = resp.pagination();
-                rv.extend(resp.convert::<Vec<Repo>>()?.into_iter());
+                rv.extend(resp.convert::<Vec<Repo>>()?);
                 if let Some(next) = pagination.into_next_cursor() {
                     cursor = next;
                 } else {
