@@ -1,5 +1,6 @@
 mod help;
 mod info;
+mod org_tokens;
 mod releases;
 
 use mockito::{mock, server_url, Matcher, Mock};

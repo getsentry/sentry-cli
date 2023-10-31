@@ -1,0 +1,11 @@
+```
+$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS10b2tlbml6ZWQuaW8iLCJvcmciOiJ0ZXN0LW9yZy10b2tlbml6ZWQifQ==_ upload-dsym --org test-org-tokenized 
+? failed
+Warning: No paths were provided.
+error: API request failed
+  caused by: [6] Couldn't resolve host name (Could not resolve host: sentry-tokenized.io)
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
