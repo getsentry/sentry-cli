@@ -363,7 +363,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     warning("DEPRECATION: `sourcemaps explain` has drifted from how sourcemap processing actually operates \
-        and its output may not be accurate. It will likely be removed in a future version of `sentry-cli`.");
+        and its output may not be accurate. It will be removed in a future version of `sentry-cli`.");
     let (org, project) = config.get_org_and_project(matches)?;
     let event_id = matches.get_one::<String>("event").unwrap();
 
