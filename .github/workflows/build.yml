@@ -1,9 +1,13 @@
-name: Release Build
+name: Build
 
 on:
   push:
     branches:
+      - master
+      - 1.x
       - release/**
+
+  pull_request:
 
 jobs:
   linux:
