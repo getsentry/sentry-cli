@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.76.0
+
+### Various fixes & improvements
+
+- ci: Use macos-latest to run build workflow (#1800) by @loewenheim
+- feat: Support org auth tokens (#1790) by @loewenheim
+- test: Skip code coverage generation (#1793) by @mydea
+- build(v1): Add `v1` tag config to ensure we do not publish as `latest` (d0f521b5) by @mydea
+
 ## 1.75.2
 
 - This release fixes the checksum mismatch from 1.75.1.
