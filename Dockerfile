@@ -1,6 +1,6 @@
 ARG BUILD_ARCH=x86_64
 ARG BUILD_LIBC=musl
-FROM getsentry/rust-musl-cross:$BUILD_ARCH-$BUILD_LIBC AS sentry-build
+FROM messense/rust-musl-cross:$BUILD_ARCH-$BUILD_LIBC AS sentry-build
 
 ARG BUILD_ARCH
 ARG BUILD_LIBC
