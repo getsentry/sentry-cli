@@ -9,7 +9,6 @@ DOCKER_RUN_OPTS="
   -v $(pwd):${BUILD_DIR}:ro
   -v $(pwd)/target:${BUILD_DIR}/target
   -v $HOME/.cargo/registry:/root/.cargo/registry
-  -e ARMV7_UNKNOWN_LINUX_MUSLEABI_OPENSSL_NO_VENDOR=1
   ${DOCKER_IMAGE}
 "
 
