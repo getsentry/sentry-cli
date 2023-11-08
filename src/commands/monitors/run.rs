@@ -55,6 +55,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("checkin_margin")
                 .long("check-in-margin")
                 .value_parser(clap::value_parser!(u64))
+                .requires("schedule")
                 .help(
                     "The allowed margin of minutes after the expected check-in time that the \
                      monitor will not be considered missed for. This parameter is ignored \
@@ -65,17 +66,23 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("max_runtime")
                 .long("max-runtime")
                 .value_parser(clap::value_parser!(u64))
+                .requires("schedule")
                 .help(
                     "The allowed duration in minutes that the monitor may be in progress for \
                      before being considered failed due to timeout. This parameter is ignored \
                      unless a cron schedule is also provided.",
                 ),
         )
-        .arg(Arg::new("timezone").long("timezone").help(
-            "A tz database string (e.g. \"Europe/Vienna\") representing the monitor's \
+        .arg(
+            Arg::new("timezone")
+                .long("timezone")
+                .requires("schedule")
+                .help(
+                    "A tz database string (e.g. \"Europe/Vienna\") representing the monitor's \
              execution schedule's timezone. This parameter is ignored unless a cron \
              schedule is also provided.",
-        ))
+                ),
+        )
 }
 
 fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Duration) {
@@ -190,36 +197,6 @@ fn token_execute(
     (success, code, None)
 }
 
-fn warn_ignored_arguments(matches: &ArgMatches, possibly_ignored: Vec<&str>, reason: &str) {
-    let mut ignored_arguments: Vec<_> = possibly_ignored
-        .into_iter()
-        .filter(|id| matches.contains_id(id))
-        .map(|id| format!("`{id}`"))
-        .collect();
-
-    if ignored_arguments.len() > 0 {
-        let (possible_s, possible_and) = if ignored_arguments.len() > 1 {
-            ("s", "and ")
-        } else {
-            ("", "")
-        };
-
-        let last = ignored_arguments.len() - 1;
-        ignored_arguments[last] = format!("{possible_and}{}", ignored_arguments[last]);
-
-        let joiner = if ignored_arguments.len() > 2 {
-            ", "
-        } else {
-            " "
-        };
-
-        warn!(
-            "Ignoring {} argument{possible_s} because {reason}.",
-            ignored_arguments.join(joiner)
-        )
-    }
-}
-
 fn parse_monitor_config_args(matches: &ArgMatches) -> Option<MonitorConfig> {
     match matches.get_one::<String>("schedule") {
         Some(schedule) => Some(MonitorConfig {
@@ -230,15 +207,7 @@ fn parse_monitor_config_args(matches: &ArgMatches) -> Option<MonitorConfig> {
             max_runtime: matches.get_one("max_runtime").copied(),
             timezone: matches.get_one("timezone").cloned(),
         }),
-        None => {
-            warn_ignored_arguments(
-                matches,
-                vec!["checkin_margin", "max_runtime", "timezone"],
-                "`schedule` argument is missing",
-            );
-
-            None
-        }
+        None => None,
     }
 }
 
@@ -265,11 +234,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Use legacy API when DSN is not provided
         None => {
             if monitor_config.is_some() {
-                warn_ignored_arguments(
-                    matches,
-                    vec!["schedule", "checkin_margin", "max_runtime", "timezone"],
-                    "cron monitor upserts are only supported with DSN auth",
-                );
+                anyhow::bail!("Crons monitor upserts are only supported with DSN auth. Please try again with \
+                               DSN auth or repeat the command without the `schedule` argument.");
             }
             let (success, code, err) = token_execute(args, monitor_slug, environment);
             if let Some(e) = err {
