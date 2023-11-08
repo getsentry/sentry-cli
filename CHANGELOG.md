@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.21.3
+
+### Various fixes & improvements
+
+- feat: Deprecate `sourcemaps explain` (#1797) by @loewenheim
+- Allow log-level parameter to affect log from reading config (#1789) by @szokeasaurusrex
+- feat: Add shell completion generation (#1775) by @NickyMeuleman
+- fix: Log messages for invalid objects (#1771) by @loewenheim
+
 ## 2.21.2
 
 ### Various fixes & improvements
