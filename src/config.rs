@@ -439,7 +439,7 @@ impl Config {
                     .get_from(Some("defaults"), "project")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| format_err!("A project slug is required"))
+            .ok_or_else(|| format_err!("A project slug is required (provide with --project)"))
     }
 
     /// Return the default pipeline env.
