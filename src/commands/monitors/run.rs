@@ -197,7 +197,7 @@ fn token_execute(
 fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfig>> {
     Ok(match matches.get_one::<String>("schedule") {
         Some(schedule) => Some(MonitorConfig {
-            schedule: MonitorSchedule::from_crontab(&schedule)?,
+            schedule: MonitorSchedule::from_crontab(schedule)?,
             checkin_margin: matches.get_one("checkin_margin").copied(),
             max_runtime: matches.get_one("max_runtime").copied(),
             timezone: matches.get_one("timezone").cloned(),
@@ -220,7 +220,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
     let environment = matches.get_one::<String>("environment").unwrap();
-    let monitor_config = parse_monitor_config_args(&matches)?;
+    let monitor_config = parse_monitor_config_args(matches)?;
 
     let (success, code) = match dsn {
         // Use envelope API when dsn is provided. This is the prefered way to create check-ins,
