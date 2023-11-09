@@ -58,8 +58,7 @@ pub fn make_command(command: Command) -> Command {
                 .requires("schedule")
                 .help(
                     "The allowed margin of minutes after the expected check-in time that the \
-                     monitor will not be considered missed for. This parameter is ignored \
-                     unless a cron schedule is also provided.",
+                     monitor will not be considered missed for. Requires --schedule.",
                 ),
         )
         .arg(
@@ -69,8 +68,7 @@ pub fn make_command(command: Command) -> Command {
                 .requires("schedule")
                 .help(
                     "The allowed duration in minutes that the monitor may be in progress for \
-                     before being considered failed due to timeout. This parameter is ignored \
-                     unless a cron schedule is also provided.",
+                     before being considered failed due to timeout. Requires --schedule.",
                 ),
         )
         .arg(
@@ -79,8 +77,7 @@ pub fn make_command(command: Command) -> Command {
                 .requires("schedule")
                 .help(
                     "A tz database string (e.g. \"Europe/Vienna\") representing the monitor's \
-             execution schedule's timezone. This parameter is ignored unless a cron \
-             schedule is also provided.",
+             execution schedule's timezone. Requires --schedule.",
                 ),
         )
 }
