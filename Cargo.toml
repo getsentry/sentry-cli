@@ -58,7 +58,8 @@ regex = "1.7.1"
 runas = "1.0.0"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.31.2", default-features = false, features = [
+# TODO: Revert back to crates.io version prior to merge
+sentry = {git = "https://github.com/getsentry/sentry-rust.git", rev = "refs/pull/625/head", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",
