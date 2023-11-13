@@ -4,6 +4,8 @@
 
 ## Unreleased
 
+### Various fixes & improvements
+
 - fix: Fixed a bug in sourcemap `sourceRoot` handling (#1818) by @loewenheim
 
 ## 2.21.3
