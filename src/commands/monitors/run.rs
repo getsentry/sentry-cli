@@ -194,15 +194,16 @@ fn token_execute(
 }
 
 fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfig>> {
-    Ok(match matches.get_one::<String>("schedule") {
-        Some(schedule) => Some(MonitorConfig {
-            schedule: MonitorSchedule::from_crontab(schedule)?,
-            checkin_margin: matches.get_one("checkin_margin").copied(),
-            max_runtime: matches.get_one("max_runtime").copied(),
-            timezone: matches.get_one("timezone").cloned(),
-        }),
-        None => None,
-    })
+    let Some(schedule) = matches.get_one::<String>("schedule") else {
+        return Ok(None);
+    };
+    let schedule = MonitorSchedule::from_crontab(schedule)?;
+    Ok(Some(MonitorConfig {
+        schedule,
+        checkin_margin: matches.get_one("checkin_margin").copied(),
+        max_runtime: matches.get_one("max_runtime").copied(),
+        timezone: matches.get_one("timezone").cloned(),
+    }))
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
