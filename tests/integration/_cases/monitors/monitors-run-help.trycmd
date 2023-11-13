@@ -18,7 +18,8 @@ Options:
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
   -s, --schedule <schedule>
-          Configure the cron monitor with the given schedule (crontab format)
+          Configure the cron monitor with the given schedule (crontab format). Enclose the schedule
+          in quotes to ensure your command line environment parses the argument correctly.
       --check-in-margin <checkin_margin>
           The allowed margin of minutes after the expected check-in time that the monitor will not
           be considered missed for. Requires --schedule.

@@ -45,12 +45,11 @@ pub fn make_command(command: Command) -> Command {
                 .num_args(1..)
                 .last(true),
         )
-        .arg(
-            Arg::new("schedule")
-                .short('s')
-                .long("schedule")
-                .help("Configure the cron monitor with the given schedule (crontab format)"),
-        )
+        .arg(Arg::new("schedule").short('s').long("schedule").help(
+            "Configure the cron monitor with the given schedule (crontab format). \
+             Enclose the schedule in quotes to ensure your command line environment \
+             parses the argument correctly.",
+        ))
         .arg(
             Arg::new("checkin_margin")
                 .long("check-in-margin")
