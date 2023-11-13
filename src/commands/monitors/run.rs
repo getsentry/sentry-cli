@@ -53,7 +53,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("checkin_margin")
                 .long("check-in-margin")
-                .value_parser(clap::value_parser!(u64))
+                .value_parser(clap::value_parser!(u64).range(1..))
                 .requires("schedule")
                 .help(
                     "The allowed margin of minutes after the expected check-in time that the \
@@ -63,7 +63,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("max_runtime")
                 .long("max-runtime")
-                .value_parser(clap::value_parser!(u64))
+                .value_parser(clap::value_parser!(u64).range(1..))
                 .requires("schedule")
                 .help(
                     "The allowed duration in minutes that the monitor may be in progress for \
