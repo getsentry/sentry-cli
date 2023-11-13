@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Various fixes & improvements
+
+- Improved error message if a project slug is missing (#1811) by @cleptric
+- Fixed a `curl` issue on Windows (#1815) by @xpirt
+- Added support for monitor upserts (#1807) by @szokeasaurusrex
+
 ## 2.21.3
 
 ### Various fixes & improvements
