@@ -35,5 +35,5 @@ Options:
           schedule's timezone. Requires --schedule.
   -h, --help
           Print help
-  
+
 ```
