@@ -6,7 +6,10 @@
 
 ### Various fixes & improvements
 
-- fix: Fixed a bug in sourcemap `sourceRoot` handling (#1818) by @loewenheim
+- Improved error message if a project slug is missing (#1811) by @cleptric
+- Fixed a `curl` issue on Windows (#1815) by @xpirt
+- Added support for monitor upserts (#1807) by @szokeasaurusrex
+- Fixed a bug in sourcemap `sourceRoot` handling (#1818) by @loewenheim
 
 ## 2.21.3
 
