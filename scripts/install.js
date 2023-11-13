@@ -24,7 +24,7 @@ if (process.env.SENTRYCLI_LOCAL_CDNURL) {
 
 downloadBinary()
   .then(() => process.exit(0))
-  .catch((e) => {
+  .catch(e => {
     // eslint-disable-next-line no-console
     console.error(e.toString());
     process.exit(1);
