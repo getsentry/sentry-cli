@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 'use strict';
 
 const fs = require('fs');
@@ -19,9 +17,9 @@ const Proxy = require('proxy-from-env');
 const mkdirp = require('mkdirp');
 const which = require('which');
 
-const helper = require('../js/helper');
+const helper = require('./helper');
 const pkgInfo = require('../package.json');
-const Logger = require('../js/logger');
+const Logger = require('./logger');
 
 function getLogStream(defaultStream) {
   const logStream = process.env.SENTRYCLI_LOG_STREAM || defaultStream;
@@ -184,7 +182,22 @@ function validateChecksum(tempPath, name) {
   }
 }
 
+function checkVersion() {
+  return helper.execute(['--version']).then((output) => {
+    const version = output.replace('sentry-cli ', '').trim();
+    const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
+    if (version !== expected) {
+      throw new Error(`Unexpected sentry-cli version "${version}", expected "${expected}"`);
+    }
+  });
+}
+
 function downloadBinary() {
+  if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
+    logger.log(`Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
+    return;
+  }
+
   const arch = os.arch();
   const platform = os.platform();
   const outputPath = helper.getPath();
@@ -273,6 +286,9 @@ function downloadBinary() {
         fs.unlinkSync(tempPath);
       });
     })
+    .then(() => {
+      return checkVersion();
+    })
     .catch((error) => {
       if (error instanceof fetch.FetchError) {
         throw new Error(
@@ -284,41 +300,6 @@ function downloadBinary() {
     });
 }
 
-function checkVersion() {
-  return helper.execute(['--version']).then((output) => {
-    const version = output.replace('sentry-cli ', '').trim();
-    const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
-    if (version !== expected) {
-      throw new Error(`Unexpected sentry-cli version "${version}", expected "${expected}"`);
-    }
-  });
-}
-
-if (process.env.SENTRYCLI_LOCAL_CDNURL) {
-  // For testing, mock the CDN by spawning a local server
-  const server = http.createServer((request, response) => {
-    const contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
-    response.writeHead(200, {
-      'Content-Type': 'application/octet-stream',
-      'Content-Length': String(contents.byteLength),
-    });
-    response.end(contents);
-  });
-
-  server.listen(8999);
-  process.on('exit', () => server.close());
-}
-
-if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
-  logger.log(`Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
-  process.exit(0);
-}
-
-downloadBinary()
-  .then(() => checkVersion())
-  .then(() => process.exit(0))
-  .catch((e) => {
-    // eslint-disable-next-line no-console
-    console.error(e.toString());
-    process.exit(1);
-  });
+module.exports = {
+  downloadBinary,
+};

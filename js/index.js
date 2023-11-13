@@ -3,6 +3,7 @@
 const pkgInfo = require('../package.json');
 const helper = require('./helper');
 const Releases = require('./releases');
+const install = require('./install');
 
 /**
  * Interface to and wrapper around the `sentry-cli` executable.
@@ -52,6 +53,14 @@ class SentryCli {
    */
   static getPath() {
     return helper.getPath();
+  }
+
+  /**
+   * Downloads the CLI binary.
+   * @returns {Promise<void>}
+   */
+  static downloadBinary() {
+    return install.downloadBinary();
   }
 
   /**
