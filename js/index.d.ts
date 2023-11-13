@@ -222,6 +222,13 @@ declare module '@sentry/cli' {
 
     public static getVersion(): string
     public static getPath(): string
+
+    /**
+     * Downloads the CLI binary.
+     * @returns {Promise<void>}
+     */
+    static downloadBinary(logger: { log(...args: unknown[]): void }): Promise<void>;
+
     public execute(args: string[], live: boolean): Promise<string>
   }
 }

@@ -57,10 +57,11 @@ class SentryCli {
 
   /**
    * Downloads the CLI binary.
+   * @param {any} [configFile] Optional logger to log installation information. Defaults to printing to the terminal.
    * @returns {Promise<void>}
    */
-  static downloadBinary() {
-    return install.downloadBinary();
+  static downloadBinary(logger) {
+    return install.downloadBinary(logger);
   }
 
   /**

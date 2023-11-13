@@ -37,7 +37,7 @@ function getLogStream(defaultStream) {
   );
 }
 
-const logger = new Logger(getLogStream('stderr'));
+const ttyLogger = new Logger(getLogStream('stderr'));
 
 const CDN_URL =
   process.env.SENTRYCLI_LOCAL_CDNURL ||
@@ -146,7 +146,7 @@ function getTempFile(cached) {
   return `${cached}.${process.pid}-${Math.random().toString(16).slice(2)}.tmp`;
 }
 
-function validateChecksum(tempPath, name) {
+function validateChecksum(tempPath, name, logger) {
   let storedHash;
   try {
     const checksums = fs.readFileSync(path.join(__dirname, '../checksums.txt'), 'utf8');
@@ -192,7 +192,7 @@ function checkVersion() {
   });
 }
 
-function downloadBinary() {
+function downloadBinary(logger = ttyLogger) {
   if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
     logger.log(`Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
     return;
@@ -279,7 +279,7 @@ function downloadBinary() {
           .on('close', () => resolve());
       }).then(() => {
         if (process.env.SENTRYCLI_SKIP_CHECKSUM_VALIDATION !== '1') {
-          validateChecksum(tempPath, name);
+          validateChecksum(tempPath, name, logger);
         }
         fs.copyFileSync(tempPath, cachedPath);
         fs.copyFileSync(tempPath, outputPath);
