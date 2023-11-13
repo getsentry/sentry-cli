@@ -3,7 +3,7 @@ $ sentry-cli monitors run --help
 ? success
 Wraps a command
 
-Usage: sentry-cli monitors run [OPTIONS] <monitor-slug> -- <ARGS>...
+Usage: sentry-cli[EXE] monitors run [OPTIONS] <monitor-slug> -- <ARGS>...
 
 Arguments:
   <monitor-slug>  The monitor slug.
