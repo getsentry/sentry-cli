@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+- fix: Fixed a bug in sourcemap `sourceRoot` handling (#1818) by @loewenheim
+
 ## 2.21.3
 
 ### Various fixes & improvements
