@@ -48,7 +48,7 @@ const CDN_URL =
   'https://downloads.sentry-cdn.com/sentry-cli';
 
 function shouldRenderProgressBar() {
-  const silentFlag = process.argv.some(v => v === '--silent');
+  const silentFlag = process.argv.some((v) => v === '--silent');
   const silentConfig = process.env.npm_config_loglevel === 'silent';
   // Leave `SENTRY_NO_PROGRESS_BAR` for backwards compatibility
   const silentEnv = process.env.SENTRYCLI_NO_PROGRESS_BAR || process.env.SENTRY_NO_PROGRESS_BAR;
@@ -113,7 +113,7 @@ function createProgressBar(name, total) {
   let pct = null;
   let current = 0;
   return {
-    tick: length => {
+    tick: (length) => {
       current += length;
       const next = Math.round((current / total) * 100);
       if (next > pct) {
@@ -135,11 +135,7 @@ function npmCache() {
 }
 
 function getCachedPath(url) {
-  const digest = crypto
-    .createHash('md5')
-    .update(url)
-    .digest('hex')
-    .slice(0, 6);
+  const digest = crypto.createHash('md5').update(url).digest('hex').slice(0, 6);
 
   return path.join(
     npmCache(),
@@ -149,9 +145,7 @@ function getCachedPath(url) {
 }
 
 function getTempFile(cached) {
-  return `${cached}.${process.pid}-${Math.random()
-    .toString(16)
-    .slice(2)}.tmp`;
+  return `${cached}.${process.pid}-${Math.random().toString(16).slice(2)}.tmp`;
 }
 
 function validateChecksum(tempPath, name) {
@@ -178,10 +172,7 @@ function validateChecksum(tempPath, name) {
     return;
   }
 
-  const currentHash = crypto
-    .createHash('sha256')
-    .update(fs.readFileSync(tempPath))
-    .digest('hex');
+  const currentHash = crypto.createHash('sha256').update(fs.readFileSync(tempPath)).digest('hex');
 
   if (storedHash !== currentHash) {
     fs.unlinkSync(tempPath);
@@ -241,7 +232,7 @@ function downloadBinary() {
     },
     redirect: 'follow',
   })
-    .then(response => {
+    .then((response) => {
       if (!response.ok) {
         throw new Error(
           `Unable to download sentry-cli binary from ${downloadUrl}.\nServer returned ${response.status}: ${response.statusText}.`
@@ -267,11 +258,11 @@ function downloadBinary() {
 
       return new Promise((resolve, reject) => {
         response.body
-          .on('error', e => reject(e))
-          .on('data', chunk => progressBar.tick(chunk.length))
+          .on('error', (e) => reject(e))
+          .on('data', (chunk) => progressBar.tick(chunk.length))
           .pipe(decompressor)
           .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
-          .on('error', e => reject(e))
+          .on('error', (e) => reject(e))
           .on('close', () => resolve());
       }).then(() => {
         if (process.env.SENTRYCLI_SKIP_CHECKSUM_VALIDATION !== '1') {
@@ -282,7 +273,7 @@ function downloadBinary() {
         fs.unlinkSync(tempPath);
       });
     })
-    .catch(error => {
+    .catch((error) => {
       if (error instanceof fetch.FetchError) {
         throw new Error(
           `Unable to download sentry-cli binary from ${downloadUrl}.\nError code: ${error.code}`
@@ -294,7 +285,7 @@ function downloadBinary() {
 }
 
 function checkVersion() {
-  return helper.execute(['--version']).then(output => {
+  return helper.execute(['--version']).then((output) => {
     const version = output.replace('sentry-cli ', '').trim();
     const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
     if (version !== expected) {
@@ -326,7 +317,7 @@ if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
 downloadBinary()
   .then(() => checkVersion())
   .then(() => process.exit(0))
-  .catch(e => {
+  .catch((e) => {
     // eslint-disable-next-line no-console
     console.error(e.toString());
     process.exit(1);
