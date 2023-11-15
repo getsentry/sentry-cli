@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+- feat: Expose downloadBinary function to install binary (#1817)
+
 ## 1.76.0
 
 ### Various fixes & improvements
