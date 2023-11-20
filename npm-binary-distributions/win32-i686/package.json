@@ -1,0 +1,17 @@
+{
+  "name": "@sentry/cli-win32-i686",
+  "version": "2.21.5",
+  "description": "TODO",
+  "repository": "https://github.com/getsentry/sentry-cli",
+  "license": "BSD-3-Clause",
+  "engines": {
+    "node": ">=10"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x86",
+    "ia32"
+  ]
+}
