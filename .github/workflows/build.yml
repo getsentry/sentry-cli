@@ -161,6 +161,11 @@ jobs:
           sha256sum sentry-cli-* | awk '{printf("%s=%s\n", $2, $1)}' > checksums.txt
           cat checksums.txt
 
+      - name: Test rename binary
+        shell: bash
+        run: |
+          mv sentry-cli-* npm-binary-distributions/
+
       - run: npm pack
 
       - uses: actions/upload-artifact@v3.1.1
