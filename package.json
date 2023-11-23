@@ -39,7 +39,6 @@
     "@sentry/cli-win32-x64": "2.21.5"
   },
   "scripts": {
-    "install": "node ./scripts/install.js",
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",

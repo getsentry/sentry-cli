@@ -80,14 +80,6 @@ function getBinaryPath() {
     return process.env.SENTRY_BINARY_PATH;
   }
 
-  if (!process.env.USE_SENTRY_BINARY_NPM_DISTRIBUTION) {
-    const parts = [];
-    parts.push(__dirname);
-    parts.push('..');
-    parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
-    return path.resolve(...parts);
-  }
-
   const { packageName, subpath } = getDistributionForThisPlatform();
 
   if (packageName === undefined) {
