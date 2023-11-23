@@ -223,19 +223,19 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ${{ github.sha }}
-      - name: lsla
-        run: |
-          cd ${{ github.sha }}
-          find .
+          path: binary-artifacts
+      - name: Display structure of downloaded files
+        run: ls -R
+        working-directory: binary-artifacts
       - name: Move binaries into distribution packages
         run: |
-          mv ${{ github.sha }}/sentry-cli-Darwin-universal npm-binary-distributions/darwin/bin/sentry-cli
-          mv ${{ github.sha }}/sentry-cli-Linux-armv7 npm-binary-distributions/linux-arm/bin/sentry-cli
-          mv ${{ github.sha }}/sentry-cli-Linux-aarch64 npm-binary-distributions/linux-arm64/bin/sentry-cli
-          mv ${{ github.sha }}/sentry-cli-Linux-i686 npm-binary-distributions/linux-i686/bin/sentry-cli
-          mv ${{ github.sha }}/sentry-cli-Linux-x86_64 npm-binary-distributions/linux-x64/bin/sentry-cli
-          mv ${{ github.sha }}/sentry-cli-Windows-i686 npm-binary-distributions/win32-i686/bin/sentry-cli.exe
-          mv ${{ github.sha }}/sentry-cli-Windows-x86_64 npm-binary-distributions/win32-x64/bin/sentry-cli.exe
+          mv binary-artifacts/sentry-cli-Darwin-universal npm-binary-distributions/darwin/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Linux-armv7 npm-binary-distributions/linux-arm/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Linux-aarch64 npm-binary-distributions/linux-arm64/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Linux-i686 npm-binary-distributions/linux-i686/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Linux-x86_64 npm-binary-distributions/linux-x64/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Windows-i686.exe npm-binary-distributions/win32-i686/bin/sentry-cli.exe
+          mv binary-artifacts/sentry-cli-Windows-x86_64.exe npm-binary-distributions/win32-x64/bin/sentry-cli.exe
       - name: Remove binary placeholders
         run: rm -rf npm-binary-distributions/*/bin/.gitkeep
       - name: Package distribution packages
