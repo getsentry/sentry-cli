@@ -223,6 +223,10 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: ${{ github.sha }}
+      - name: lsla
+        run: |
+          cd ${{ github.sha }}
+          find .
       - name: Move binaries into distribution packages
         run: |
           mv ${{ github.sha }}/sentry-cli-Darwin-universal npm-binary-distributions/darwin/bin/sentry-cli
