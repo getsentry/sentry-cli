@@ -11,7 +11,35 @@ targets:
       - path: /sentry-cli/latest/
         metadata:
           cacheControl: public, max-age=600
+
+  # Main Sentry CLI package
   - name: npm
+    id: '@sentry/cli'
+    includeNames: /^sentry-cli-\d.*\.tgz$/
+
+  # Binary distributions on npm
+  - name: npm
+    id: '@sentry/cli-darwin'
+    includeNames: /^sentry-cli-darwin-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-linux-arm'
+    includeNames: /^sentry-cli-linux-arm-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-linux-arm64'
+    includeNames: /^sentry-cli-linux-arm64-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-linux-i686'
+    includeNames: /^sentry-cli-linux-i686-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-linux-x64'
+    includeNames: /^sentry-cli-linux-x64-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-win32-i686'
+    includeNames: /^sentry-cli-win32-i686-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-win32-x64'
+    includeNames: /^sentry-cli-win32-x64-\d.*\.tgz$/
+
   - name: brew
     tap: getsentry/tools
     template: >

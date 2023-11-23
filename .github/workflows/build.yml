@@ -236,7 +236,7 @@ jobs:
         run: rm -rf npm-binary-distributions/*/bin/.gitkeep
       - name: Package distribution packages
         run: |
-          for dir in npm-binary-distributions/*/bin/; do
+          for dir in npm-binary-distributions/*; do
             cd $dir
             npm pack
             cd -
