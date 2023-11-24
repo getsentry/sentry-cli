@@ -4,6 +4,9 @@
   "description": "The windows x64 distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "BSD-3-Clause",
+  "publishConfig": {
+    "access": "public"
+  },
   "engines": {
     "node": ">=10"
   },

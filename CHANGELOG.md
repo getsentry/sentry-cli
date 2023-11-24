@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.22.1
+
+This release contains no changes and was done for technical purposes.
+
 ## 2.22.0
 
 - feat: Add opt-in code path to use binary distributions instead of downloaded CLI (#1835)
