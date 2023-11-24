@@ -132,7 +132,9 @@ let binaryPath = getBinaryPath();
  * Overrides the default binary path with a mock value, useful for testing.
  *
  * @param {string} mockPath The new path to the mock sentry-cli binary
+ * @deprecated This was used in tests internally and will be removed in the next major version.
  */
+// TODO(v3): Remove this function
 function mockBinaryPath(mockPath) {
   binaryPath = mockPath;
 }
