@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.22.0-alpha.0
+
+This is a release to test the binary distribution npm packages.
+
 ## 2.21.5
 
 This release contains no changes and was done for technical purposes.
