@@ -92,7 +92,12 @@ function getBinaryPath() {
 
   if (packageName === undefined) {
     throw new Error(
-      'Unsupported operating system or architecture! Sentry CLI does not work on this architecture.'
+      `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
+
+Sentry CLI supports:
+- Darwin (macOS)
+- Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
+- Windows x64, x86, and ia32 architectures`
     );
   }
 
