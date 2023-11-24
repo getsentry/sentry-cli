@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.22.1
+
+This release contains no changes and was done for technical purposes.
+
+## 2.22.0
+
+- feat: Add opt-in code path to use binary distributions instead of downloaded CLI (#1835)
+- build: Add optional dependencies to main cli package for binary distributions (#1834)
+- feat: Publish binary distributions on npm (#1833)
+- build: Add placeholder packages for npm binary distributions (#1828)
+
 ## 2.21.5
 
 This release contains no changes and was done for technical purposes.

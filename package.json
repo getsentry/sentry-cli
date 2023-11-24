@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli",
-  "version": "2.21.5",
+  "version": "2.22.1",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "repository": "git://github.com/getsentry/sentry-cli.git",
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
@@ -30,13 +30,13 @@
     "prettier": "2.8.8"
   },
   "optionalDependencies": {
-    "@sentry/cli-darwin": "2.21.5",
-    "@sentry/cli-linux-arm": "2.21.5",
-    "@sentry/cli-linux-arm64": "2.21.5",
-    "@sentry/cli-linux-i686": "2.21.5",
-    "@sentry/cli-linux-x64": "2.21.5",
-    "@sentry/cli-win32-i686": "2.21.5",
-    "@sentry/cli-win32-x64": "2.21.5"
+    "@sentry/cli-darwin": "2.22.1",
+    "@sentry/cli-linux-arm": "2.22.1",
+    "@sentry/cli-linux-arm64": "2.22.1",
+    "@sentry/cli-linux-i686": "2.22.1",
+    "@sentry/cli-linux-x64": "2.22.1",
+    "@sentry/cli-win32-i686": "2.22.1",
+    "@sentry/cli-win32-x64": "2.22.1"
   },
   "scripts": {
     "fix": "npm-run-all fix:eslint fix:prettier",
