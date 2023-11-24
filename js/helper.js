@@ -1,7 +1,71 @@
 'use strict';
 
+const os = require('os');
 const path = require('path');
 const childProcess = require('child_process');
+
+const BINARY_DISTRIBUTIONS = [
+  { packageName: '@sentry/cli-darwin', subpath: 'bin/sentry-cli' },
+  { packageName: '@sentry/cli-linux-x64', subpath: 'bin/sentry-cli' },
+  { packageName: '@sentry/cli-linux-i686', subpath: 'bin/sentry-cli' },
+  { packageName: '@sentry/cli-linux-arm64', subpath: 'bin/sentry-cli' },
+  { packageName: '@sentry/cli-linux-arm', subpath: 'bin/sentry-cli' },
+  { packageName: '@sentry/cli-win32-x64', subpath: 'bin/sentry-cli.exe' },
+  { packageName: '@sentry/cli-win32-i686', subpath: 'bin/sentry-cli.exe' },
+];
+
+function getDistributionForThisPlatform() {
+  const arch = os.arch();
+  const platform = os.platform();
+
+  let packageName = undefined;
+  if (platform === 'darwin') {
+    packageName = '@sentry/cli-darwin';
+  } else if (platform === 'linux' || platform === 'freebsd') {
+    switch (arch) {
+      case 'x64':
+        packageName = '@sentry/cli-linux-x64';
+        break;
+      case 'x86':
+      case 'ia32':
+        packageName = '@sentry/cli-linux-i686';
+        break;
+      case 'arm64':
+        packageName = '@sentry/cli-linux-arm64';
+        break;
+      case 'arm':
+        packageName = '@sentry/cli-linux-arm';
+        break;
+    }
+  } else if (platform === 'win32') {
+    switch (arch) {
+      case 'x64':
+        packageName = '@sentry/cli-win32-x64';
+        break;
+      case 'x86':
+      case 'ia32':
+        packageName = '@sentry/cli-win32-i686';
+        break;
+    }
+  }
+
+  let subpath = undefined;
+  switch (platform) {
+    case 'win32':
+      subpath = 'bin/sentry-cli.exe';
+      break;
+    case 'darwin':
+    case 'linux':
+    case 'freebsd':
+      subpath = 'bin/sentry-cli';
+      break;
+    default:
+      subpath = 'bin/sentry-cli';
+      break;
+  }
+
+  return { packageName, subpath };
+}
 
 /**
  * This convoluted function resolves the path to the `sentry-cli` binary in a
@@ -16,11 +80,55 @@ function getBinaryPath() {
     return process.env.SENTRY_BINARY_PATH;
   }
 
-  const parts = [];
-  parts.push(__dirname);
-  parts.push('..');
-  parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
-  return path.resolve(...parts);
+  if (!process.env.USE_SENTRY_BINARY_NPM_DISTRIBUTION) {
+    const parts = [];
+    parts.push(__dirname);
+    parts.push('..');
+    parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
+    return path.resolve(...parts);
+  }
+
+  const { packageName, subpath } = getDistributionForThisPlatform();
+
+  if (packageName === undefined) {
+    throw new Error(
+      `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
+
+Sentry CLI supports:
+- Darwin (macOS)
+- Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
+- Windows x64, x86, and ia32 architectures`
+    );
+  }
+
+  let compatibleBinaryPath;
+  try {
+    compatibleBinaryPath = require.resolve(`${packageName}/${subpath}`);
+  } catch (e) {
+    const otherInstalledDistribution = BINARY_DISTRIBUTIONS.find(({ packageName, subpath }) => {
+      try {
+        require.resolve(`${packageName}/${subpath}`);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    });
+
+    // These error messages are heavily inspired by esbuild's error messages: https://github.com/evanw/esbuild/blob/f3d535262e3998d845d0f102b944ecd5a9efda57/lib/npm/node-platform.ts#L150
+    if (otherInstalledDistribution) {
+      throw new Error(`Sentry CLI binary for this platform/architecture not found!
+
+The "${otherInstalledDistribution.packageName}" package is installed, but for the current platform, you should have the "${packageName}" package installed instead. This usually happens if the "@sentry/cli" package is installed on one platform (for example Windows or MacOS) and then the "node_modules" folder is reused on another operating system (for example Linux in Docker).
+
+To fix this, avoid copying the "node_modules" folder, and instead freshly install your dependencies on the target system. You can also configure your package manager to install the right package. For example, yarn has the "supportedArchitectures" feature: https://yarnpkg.com/configuration/yarnrc/#supportedArchitecture.`);
+    } else {
+      throw new Error(`Sentry CLI binary for this platform/architecture not found!
+
+It seems like none of the "@sentry/cli" package's optional dependencies got installed. Please make sure your package manager is configured to install optional dependencies. If you are using npm to install your dependencies, please don't set the "--no-optional" or "--omit=optional" flags. Sentry CLI needs the "optionalDependencies" feature in order to install its binary.`);
+    }
+  }
+
+  return compatibleBinaryPath;
 }
 
 /**
