@@ -166,7 +166,7 @@ class Releases {
     // Each entry in the `include` array will map to an array of promises, which
     // will in turn contain one promise per literal path value. Thus `uploads`
     // will be an array of Promise arrays, which we'll flatten later.
-    const uploads = options.include.map((includeEntry) => {
+    const uploads = options.include.map(includeEntry => {
       let pathOptions;
       let uploadPaths;
 
@@ -197,7 +197,7 @@ class Releases {
         .concat(helper.getProjectFlagsFromOptions(options))
         .concat(['files', release, 'upload-sourcemaps']);
 
-      return uploadPaths.map((path) =>
+      return uploadPaths.map(path =>
         // `execute()` is async and thus we're returning a promise here
         this.execute(helper.prepareCommand([...args, path], SOURCEMAPS_SCHEMA, newOptions), true)
       );

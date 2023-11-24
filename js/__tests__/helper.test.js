@@ -1,25 +1,20 @@
 const os = require('os');
-const path = require('path');
 
 const helper = require('../helper');
 
 const SOURCEMAPS_OPTIONS = require('../releases/options/uploadSourcemaps');
 
 describe('SentryCli helper', () => {
-  beforeEach(() => {
-    helper.mockBinaryPath(path.resolve(__dirname, '../__mocks__/sentry-cli'));
-  });
-
   test('call sentry-cli --version', () => {
     expect.assertions(1);
     return helper
       .execute(['--version'])
-      .then((version) => expect(version.trim()).toBe('sentry-cli DEV'));
+      .then(version => expect(version.trim()).toBe('sentry-cli DEV'));
   });
 
   test('call sentry-cli with wrong command', () => {
     expect.assertions(1);
-    return helper.execute(['fail']).catch((e) => expect(e.message).toMatch('Command failed:'));
+    return helper.execute(['fail']).catch(e => expect(e.message).toMatch('Command failed:'));
   });
 
   test('getPath returns platform-appropriate path', () => {
