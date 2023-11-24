@@ -51,7 +51,7 @@ function getLogStream(defaultStream) {
 }
 
 function shouldRenderProgressBar() {
-  const silentFlag = process.argv.some(v => v === '--silent');
+  const silentFlag = process.argv.some((v) => v === '--silent');
   const silentConfig = process.env.npm_config_loglevel === 'silent';
   const silentEnv = process.env.SENTRYCLI_NO_PROGRESS_BAR;
   const ciEnv = process.env.CI === 'true' || process.env.CI === '1';
@@ -116,7 +116,7 @@ function createProgressBar(name, total) {
   let pct = null;
   let current = 0;
   return {
-    tick: length => {
+    tick: (length) => {
       current += length;
       const next = Math.round((current / total) * 100);
       if (next > pct) {
@@ -130,7 +130,7 @@ function createProgressBar(name, total) {
 function npmCache() {
   const keys = ['npm_config_cache', 'npm_config_cache_folder', 'npm_config_yarn_offline_mirror'];
 
-  for (let key of [...keys, ...keys.map(k => k.toUpperCase())]) {
+  for (let key of [...keys, ...keys.map((k) => k.toUpperCase())]) {
     if (process.env[key]) return process.env[key];
   }
 
@@ -142,11 +142,7 @@ function npmCache() {
 }
 
 function getCachedPath(url) {
-  const digest = crypto
-    .createHash('md5')
-    .update(url)
-    .digest('hex')
-    .slice(0, 6);
+  const digest = crypto.createHash('md5').update(url).digest('hex').slice(0, 6);
 
   return path.join(
     npmCache(),
@@ -156,9 +152,7 @@ function getCachedPath(url) {
 }
 
 function getTempFile(cached) {
-  return `${cached}.${process.pid}-${Math.random()
-    .toString(16)
-    .slice(2)}.tmp`;
+  return `${cached}.${process.pid}-${Math.random().toString(16).slice(2)}.tmp`;
 }
 
 function validateChecksum(tempPath, name) {
@@ -185,10 +179,7 @@ function validateChecksum(tempPath, name) {
     return;
   }
 
-  const currentHash = crypto
-    .createHash('sha256')
-    .update(fs.readFileSync(tempPath))
-    .digest('hex');
+  const currentHash = crypto.createHash('sha256').update(fs.readFileSync(tempPath)).digest('hex');
 
   if (storedHash !== currentHash) {
     fs.unlinkSync(tempPath);
@@ -288,14 +279,14 @@ async function downloadBinary() {
 
   await new Promise((resolve, reject) => {
     response.body
-      .on('error', e => reject(e))
-      .on('data', chunk => {
+      .on('error', (e) => reject(e))
+      .on('data', (chunk) => {
         downloadedBytes += chunk.length;
         progressBar.tick(chunk.length);
       })
       .pipe(decompressor)
       .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
-      .on('error', e => reject(e))
+      .on('error', (e) => reject(e))
       .on('close', () => {
         if (downloadedBytes >= totalBytes) {
           resolve();
