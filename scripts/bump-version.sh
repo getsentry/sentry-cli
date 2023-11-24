@@ -22,3 +22,9 @@ cargo update -p sentry-cli
 # Do not tag and commit changes made by "npm version"
 export npm_config_git_tag_version=false
 npm version "${TARGET}"
+
+for dir in $SCRIPT_DIR/../npm-binary-distributions/*; do
+    cd $dir
+    npm version "${TARGET}"
+    cd -
+done
