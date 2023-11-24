@@ -235,6 +235,8 @@ jobs:
           mv binary-artifacts/sentry-cli-Windows-x86_64.exe npm-binary-distributions/win32-x64/bin/sentry-cli.exe
       - name: Remove binary placeholders
         run: rm -rf npm-binary-distributions/*/bin/.gitkeep
+      - name: Make Linux binaries executable
+        run: chmod +x npm-binary-distributions/*/bin/sentry-cli
       - name: Package distribution packages
         run: |
           for dir in npm-binary-distributions/*; do
