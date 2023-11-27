@@ -5,12 +5,14 @@
     "node": true
   },
   "parserOptions": {
-    "ecmaVersion": "latest"
+    "ecmaVersion": 9
   },
-  "overrides": [{
-    "env": {
-      "jest": true
-    },
-    "files": ["*.test.js"]
-  }]
+  "overrides": [
+    {
+      "env": {
+        "jest": true
+      },
+      "files": ["*.test.js"]
+    }
+  ]
 }

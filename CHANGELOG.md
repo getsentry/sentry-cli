@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.22.3
+
+ref: Transition to binaries over npm (#1836)
+
 ## 2.22.2
 
 This release contains no changes and was done for technical purposes.

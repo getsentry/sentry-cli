@@ -1,7 +1,6 @@
 'use strict';
 
 const os = require('os');
-const path = require('path');
 const childProcess = require('child_process');
 
 const BINARY_DISTRIBUTIONS = [
@@ -80,14 +79,6 @@ function getBinaryPath() {
     return process.env.SENTRY_BINARY_PATH;
   }
 
-  if (!process.env.USE_SENTRY_BINARY_NPM_DISTRIBUTION) {
-    const parts = [];
-    parts.push(__dirname);
-    parts.push('..');
-    parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
-    return path.resolve(...parts);
-  }
-
   const { packageName, subpath } = getDistributionForThisPlatform();
 
   if (packageName === undefined) {
@@ -141,7 +132,9 @@ let binaryPath = getBinaryPath();
  * Overrides the default binary path with a mock value, useful for testing.
  *
  * @param {string} mockPath The new path to the mock sentry-cli binary
+ * @deprecated This was used in tests internally and will be removed in the next major version.
  */
+// TODO(v3): Remove this function
 function mockBinaryPath(mockPath) {
   binaryPath = mockPath;
 }

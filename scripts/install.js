@@ -2,8 +2,13 @@
 
 'use strict';
 
+// TODO(v3): Remove this file
+
+console.log(
+  'DEPRECATION NOTICE: The Sentry CLI install script has been deprecated. The package now uses "optionalDependencies" instead to install architecture-compatible binaries distributed over npm.'
+);
+
 const fs = require('fs');
-const http = require('http');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
@@ -303,25 +308,10 @@ async function downloadBinary() {
 async function checkVersion() {
   const output = await helper.execute(['--version']);
   const version = output.replace('sentry-cli ', '').trim();
-  const expected = process.env.SENTRYCLI_LOCAL_CDNURL ? 'DEV' : pkgInfo.version;
+  const expected = pkgInfo.version;
   if (version !== expected) {
     throw new Error(`Unexpected sentry-cli version "${version}", expected "${expected}"`);
   }
-}
-
-if (process.env.SENTRYCLI_LOCAL_CDNURL) {
-  // For testing, mock the CDN by spawning a local server
-  const server = http.createServer((request, response) => {
-    const contents = fs.readFileSync(path.join(__dirname, '../js/__mocks__/sentry-cli'));
-    response.writeHead(200, {
-      'Content-Type': 'application/octet-stream',
-      'Content-Length': String(contents.byteLength),
-    });
-    response.end(contents);
-  });
-
-  server.listen(8999);
-  process.on('exit', () => server.close());
 }
 
 if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {

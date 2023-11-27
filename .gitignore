@@ -6,6 +6,7 @@ coverage
 dist
 dump
 checksums.txt
+yarn-error.log
 
 /sentry-cli
 /sentry-cli.exe
