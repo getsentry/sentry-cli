@@ -207,6 +207,16 @@ pub fn make_command(command: Command) -> Command {
                     Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`",
                 ),
         )
+        .arg(
+            Arg::new("strict")
+                .long("strict")
+                .short('s')
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Fail with a non-zero exit code if the specified source map file cannot be \
+                     uploaded.",
+                ),
+        )
         // NOTE: Hidden until we decide to expose it publicly
         .arg(
             Arg::new("use_artifact_bundle")
@@ -428,8 +438,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
     let wait = matches.get_flag("wait") || wait_for_secs.is_some();
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
-
-    processor.upload(&UploadContext {
+    let upload_context = UploadContext {
         org: &org,
         project: Some(&project),
         release: version.as_deref(),
@@ -439,7 +448,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         max_wait,
         dedupe: !matches.get_flag("no_dedupe"),
         chunk_upload_options: chunk_upload_options.as_ref(),
-    })?;
+    };
+
+    if matches.get_flag("strict") {
+        processor.upload_strict(&upload_context)?;
+    } else {
+        processor.upload(&upload_context)?;
+    }
 
     Ok(())
 }

@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::str::FromStr;
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{anyhow, bail, Context, Error, Result};
 use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
@@ -805,8 +805,9 @@ impl SourceMapProcessor {
         files_needing_upload
     }
 
-    /// Uploads all files
-    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<()> {
+    /// Uploads all files, and on success, returns the number of files that were
+    /// uploaded, wrapped in Ok()
+    pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<usize> {
         initialize_legacy_release_upload(context)?;
         self.flush_pending_sources();
 
@@ -852,7 +853,19 @@ impl SourceMapProcessor {
         } else {
             println!("{} Nothing to upload", style(">").dim());
         }
-        Ok(())
+        Ok(files_needing_upload)
+    }
+
+    /// Upload all files in "strict" mode. Strict mode differs from a normal upload
+    /// only when there are no files to upload. In strict mode, having no files to
+    /// upload results in an error, whereas such an upload is successful in normal
+    /// (non-strict) mode. On success, the number of uploaded files is returned in
+    /// an Ok()
+    pub fn upload_strict(&mut self, context: &UploadContext<'_>) -> Result<usize> {
+        match self.upload(context) {
+            Ok(0) => Err(anyhow!("No files to upload (strict mode).")),
+            other => other,
+        }
     }
 
     /// Injects debug ids into minified source files and sourcemaps.
