@@ -116,3 +116,4 @@ winapi = "0.3.9"
 opt-level = "z"
 codegen-units = 1 # Parallel compilation prevents some optimizations.
 lto = true        # Enable Link-time optimizations to remove dead code.
+debug = true
