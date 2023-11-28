@@ -1,3 +1,4 @@
+use chrono_tz::Tz;
 use log::warn;
 use std::process;
 use std::time::{Duration, Instant};
@@ -73,10 +74,16 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("timezone")
                 .long("timezone")
+                .value_parser(|value: &str| {
+                    value.parse::<Tz>().map_err(|err| {
+                        err + "\n\tSee here for a list of valid timezone strings: \
+                            https://en.wikipedia.org/wiki/List_of_tz_database_time_zones#List"
+                    })
+                })
                 .requires("schedule")
                 .help(
                     "A tz database string (e.g. \"Europe/Vienna\") representing the monitor's \
-             execution schedule's timezone. Requires --schedule.",
+                    execution schedule's timezone. Requires --schedule.",
                 ),
         )
 }
@@ -202,7 +209,7 @@ fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfi
         schedule,
         checkin_margin: matches.get_one("checkin_margin").copied(),
         max_runtime: matches.get_one("max_runtime").copied(),
-        timezone: matches.get_one("timezone").cloned(),
+        timezone: matches.get_one("timezone").map(Tz::to_string),
     }))
 }
 
