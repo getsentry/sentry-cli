@@ -5,14 +5,14 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
 > Analyzing 20 sources
 > Rewriting sources
 > Adding source map references
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] Some source files don't have debug ids:
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/server/app/page.js
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/server/chunks/1.js
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/server/dummy_embedded.js
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/server/pages/_document.js
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/server/pages/api/hello.js
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/575-bb7d7e0e6de8d623.js
-  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] +[..]:[..] - ~/static/chunks/pages/asdf-05b39167abbe433b.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] Some source files don't have debug ids:
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/app/page.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/chunks/1.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/dummy_embedded.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/pages/_document.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/pages/api/hello.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/static/chunks/575-bb7d7e0e6de8d623.js
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/static/chunks/pages/asdf-05b39167abbe433b.js
 > Bundled 20 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Uploaded files to Sentry

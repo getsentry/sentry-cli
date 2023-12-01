@@ -239,6 +239,14 @@ fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
         .unwrap_or(false)
 }
 
+/// Return true iff url is a remote url (not a local path or embedded sourcemap).
+fn is_remote_url(url: &str) -> bool {
+    return match Url::parse(url) {
+        Ok(url) => url.scheme() != "data",
+        Err(_) => false,
+    };
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -364,7 +372,14 @@ impl SourceMapProcessor {
                 continue;
             };
 
-            let sourcemap_reference = match discover_sourcemaps_location(contents) {
+            // If this is a full external URL, the code below is going to attempt
+            // to "normalize" it with the source path, resulting in a bogus path
+            // like "path/to/source/dir/https://some-static-host.example.com/path/to/foo.js.map"
+            // that can't be resolved to a source map file.
+            // Instead, we pretend we failed to discover the location, and we fall back to
+            // guessing the source map location based on the source location.
+            let location = discover_sourcemaps_location(contents).filter(|loc| !is_remote_url(loc));
+            let sourcemap_reference = match location {
                 Some(url) => SourceMapReference::from_url(url.to_string()),
                 None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
                     Ok(target) => target,
