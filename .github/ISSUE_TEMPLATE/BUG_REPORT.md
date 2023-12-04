@@ -11,9 +11,13 @@ What version of the CLI and what OS are you running?
 
 What you did?
 
-### Expected/Actual Result
+### Expected Result
 
-What you thought would happen and what actually happened?
+What you thought would happen?
+
+### Actual Result
+
+What actually happened?
 
 ### Logs
 
