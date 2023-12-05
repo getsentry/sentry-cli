@@ -4,7 +4,7 @@ use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, Result};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -142,9 +142,12 @@ pub fn detect_release_name() -> Result<String> {
         return Ok(release);
     }
 
-    if let Ok(head) = vcs::find_head() {
-        Ok(head)
-    } else {
-        bail!("Could not automatically determine release name");
+    match vcs::find_head() {
+        Ok(head) => Ok(head),
+        Err(e) => Err(anyhow!(
+            "Could not automatically determine release name:\n\t {e} \n\n\
+            Please ensure your version control system is configured correctly, \
+            or provide a release name manually."
+        )),
     }
 }
