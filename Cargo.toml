@@ -115,4 +115,5 @@ winapi = "0.3.9"
 [profile.release]
 opt-level = "z"
 panic = "abort"
+strip = true      # Strip symbols from the binary.
 codegen-units = 1 # Parallel compilation prevents some optimizations.
