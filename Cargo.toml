@@ -117,4 +117,3 @@ opt-level = "z"
 panic = "abort"
 strip = true      # Strip symbols from the binary.
 codegen-units = 1 # Parallel compilation prevents some optimizations.
-lto = true        # Enable Link-time optimizations to remove dead code.
