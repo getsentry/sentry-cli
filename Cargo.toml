@@ -83,7 +83,7 @@ chrono-tz = "0.8.4"
 insta = { version = "1.26.0", features = ["redactions", "yaml"] }
 mockito = "0.31.1"
 predicates = "2.1.5"
-tempfile = "3.3.0"
+tempfile = "3.8.1"
 trycmd = "0.14.11"
 
 [features]
