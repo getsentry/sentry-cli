@@ -115,3 +115,4 @@ winapi = "0.3.9"
 [profile.release]
 opt-level = "z"
 panic = "abort"
+codegen-units = 1 # Parallel compilation prevents some optimizations.
