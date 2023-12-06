@@ -2,6 +2,19 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.23.0
+
+### Various fixes & improvements
+
+- build: Bump tempfile dependency (#1857) by @szokeasaurusrex
+- build: Fix CLI in Xcode Cloud by Disabling Link-time Optimizations (#1855) by @szokeasaurusrex
+- chore(deps): bump tough-cookie from 4.1.2 to 4.1.3 (#1675) by @dependabot
+- chore(deps): bump word-wrap from 1.2.3 to 1.2.5 (#1856) by @dependabot
+- feat(api): More descriptive `releases propose-version` error (#1854) by @szokeasaurusrex
+- meta: Restructure Bug Report Issue Template (#1852) by @szokeasaurusrex
+- fix(sourcemaps): don't attempt to treat remote URL as a local file path (#1850) by @brettdh
+- feat(api): Validate `monitors run` command's `--timezone` argument (#1847) by @szokeasaurusrex
+
 ## 2.22.3
 
 ref: Transition to binaries over npm (#1836)
