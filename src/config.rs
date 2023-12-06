@@ -803,7 +803,10 @@ mod tests {
 
         assert_eq!(
             config
-                .get_api_endpoint("/api/0/organizations/test-org/chunk-upload/", Some("https://us.sentry.io/"))
+                .get_api_endpoint(
+                    "/api/0/organizations/test-org/chunk-upload/",
+                    Some("https://us.sentry.io/")
+                )
                 .unwrap(),
             "https://us.sentry.io/api/0/organizations/test-org/chunk-upload/"
         );

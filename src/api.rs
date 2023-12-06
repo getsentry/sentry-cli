@@ -1497,7 +1497,7 @@ impl Api {
             } else {
                 self.get(current_path)?
             };
-            
+
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
                     return Err(ApiErrorKind::ResourceNotFound.into());
@@ -3016,7 +3016,5 @@ pub struct Region {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct RegionResponse {
-    pub regions: Vec<Region>
+    pub regions: Vec<Region>,
 }
-
-
