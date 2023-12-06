@@ -421,10 +421,7 @@ impl Api {
         let (url, auth) = if is_absolute_url(url) {
             (Cow::Borrowed(url), None)
         } else {
-            let host_override = match region {
-                Some(region_config) => Some(region_config.url.as_str()),
-                None => None,
-            };
+            let host_override = region.map(|rg| rg.url.as_str());
 
             (
                 Cow::Owned(match self.config.get_api_endpoint(url, host_override) {
