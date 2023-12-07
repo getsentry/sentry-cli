@@ -252,7 +252,7 @@ pub enum ApiErrorKind {
     RequestFailed,
     #[error("could not compress data")]
     CompressionFailed,
-    #[error("region prefixes cannot be applied to absolute urls")]
+    #[error("region overrides cannot be applied to absolute urls")]
     InvalidRegionRequest,
 }
 

@@ -271,7 +271,9 @@ impl Config {
 
     /// Returns the API URL for a path
     pub fn get_api_endpoint(&self, path: &str, base_url_override: Option<&str>) -> Result<String> {
-        let base: &str = base_url_override.unwrap_or(self.get_base_url()?).trim_end_matches('/');
+        let base: &str = base_url_override
+            .unwrap_or(self.get_base_url()?)
+            .trim_end_matches('/');
         let path = path.trim_start_matches('/');
         let path = path.trim_start_matches("api/0/");
 
