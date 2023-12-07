@@ -20,9 +20,8 @@ fn command_organizations_list() {
     );
 
     let _mock_regions = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/users/me/regions/", 200).with_response_body(
-            region_response
-        )
+        EndpointOptions::new("GET", "/api/0/users/me/regions/", 200)
+            .with_response_body(region_response),
     );
     register_test("organizations/organizations-list.trycmd");
 }
