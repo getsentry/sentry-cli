@@ -1515,7 +1515,13 @@ impl Api {
 
     pub fn list_available_regions(&self) -> ApiResult<Vec<Region>> {
         let resp = self.get("/users/me/regions/")?;
-        if resp.status() == 404 || resp.status == 400 {
+        if resp.status() == 404 {
+            // This endpoint may not exist for self-hosted users, so
+            // returning a default of [] seems appropriate.
+            return Ok(vec![]);
+        }
+
+        if resp.status == 400 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
 
