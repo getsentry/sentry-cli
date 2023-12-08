@@ -1521,7 +1521,7 @@ impl Api {
             return Ok(vec![]);
         }
 
-        if resp.status == 400 {
+        if resp.status() == 400 {
             return Err(ApiErrorKind::ResourceNotFound.into());
         }
 
