@@ -270,10 +270,13 @@ impl Config {
     }
 
     /// Returns the API URL for a path
-    pub fn get_api_endpoint(&self, path: &str) -> Result<String> {
-        let base = self.get_base_url()?;
+    pub fn get_api_endpoint(&self, path: &str, base_url_override: Option<&str>) -> Result<String> {
+        let base: &str = base_url_override
+            .unwrap_or(self.get_base_url()?)
+            .trim_end_matches('/');
         let path = path.trim_start_matches('/');
         let path = path.trim_start_matches("api/0/");
+
         Ok(format!("{}/api/0/{}", base, path))
     }
 
@@ -788,16 +791,26 @@ mod tests {
 
         assert_eq!(
             config
-                .get_api_endpoint("/organizations/test-org/chunk-upload/")
+                .get_api_endpoint("/organizations/test-org/chunk-upload/", None)
                 .unwrap(),
             "https://sentry.io/api/0/organizations/test-org/chunk-upload/"
         );
 
         assert_eq!(
             config
-                .get_api_endpoint("/api/0/organizations/test-org/chunk-upload/")
+                .get_api_endpoint("/api/0/organizations/test-org/chunk-upload/", None)
                 .unwrap(),
             "https://sentry.io/api/0/organizations/test-org/chunk-upload/"
+        );
+
+        assert_eq!(
+            config
+                .get_api_endpoint(
+                    "/api/0/organizations/test-org/chunk-upload/",
+                    Some("https://us.sentry.io/")
+                )
+                .unwrap(),
+            "https://us.sentry.io/api/0/organizations/test-org/chunk-upload/"
         );
     }
 }

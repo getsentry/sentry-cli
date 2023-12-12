@@ -252,6 +252,8 @@ pub enum ApiErrorKind {
     RequestFailed,
     #[error("could not compress data")]
     CompressionFailed,
+    #[error("region overrides cannot be applied to absolute urls")]
+    InvalidRegionRequest,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -391,6 +393,54 @@ impl Api {
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
     pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        let (url, auth) = self.resolve_base_url_and_auth(url, None)?;
+        self.construct_api_request(method, &url, auth)
+    }
+
+    /// Like `request`, but constructs a new `ApiRequest` using the base URL
+    /// plus a region prefix for requests that must be routed to a region.
+    pub fn region_request(
+        &self,
+        method: Method,
+        url: &str,
+        region: &Region,
+    ) -> ApiResult<ApiRequest> {
+        let (url, auth) = self.resolve_base_url_and_auth(url, Some(region))?;
+        self.construct_api_request(method, &url, auth)
+    }
+
+    fn resolve_base_url_and_auth(
+        &self,
+        url: &str,
+        region: Option<&Region>,
+    ) -> ApiResult<(String, Option<&Auth>)> {
+        if is_absolute_url(url) && region.is_some() {
+            return Err(ApiErrorKind::InvalidRegionRequest.into());
+        }
+
+        let (url, auth) = if is_absolute_url(url) {
+            (Cow::Borrowed(url), None)
+        } else {
+            let host_override = region.map(|rg| rg.url.as_str());
+
+            (
+                Cow::Owned(match self.config.get_api_endpoint(url, host_override) {
+                    Ok(rv) => rv,
+                    Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
+                }),
+                self.config.get_auth(),
+            )
+        };
+
+        Ok((url.into_owned(), auth))
+    }
+
+    fn construct_api_request(
+        &self,
+        method: Method,
+        url: &str,
+        auth: Option<&Auth>,
+    ) -> ApiResult<ApiRequest> {
         let mut handle = self.pool.get().unwrap();
         handle.reset();
         if !self.config.allow_keepalive() {
@@ -401,17 +451,6 @@ impl Api {
             ssl_opts.no_revoke(true);
         }
         handle.ssl_options(&ssl_opts)?;
-        let (url, auth) = if is_absolute_url(url) {
-            (Cow::Borrowed(url), None)
-        } else {
-            (
-                Cow::Owned(match self.config.get_api_endpoint(url) {
-                    Ok(rv) => rv,
-                    Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
-                }),
-                self.config.get_auth(),
-            )
-        };
 
         if let Some(proxy_url) = self.config.get_proxy_url() {
             handle.proxy(&proxy_url)?;
@@ -431,7 +470,7 @@ impl Api {
         let env = self.config.get_pipeline_env();
         let headers = self.config.get_headers();
 
-        ApiRequest::create(handle, &method, &url, auth, env, headers)
+        ApiRequest::create(handle, &method, url, auth, env, headers)
     }
 
     /// Convenience method that performs a request using DSN as authentication method.
@@ -445,7 +484,7 @@ impl Api {
         // We resolve an absolute URL to skip default authentication flow.
         let url = self
             .config
-            .get_api_endpoint(url)
+            .get_api_endpoint(url, None)
             .map_err(|err| ApiError::with_source(ApiErrorKind::BadApiUrl, err))?;
 
         let mut request = self
@@ -1443,11 +1482,19 @@ impl Api {
     }
 
     /// List all organizations associated with the authenticated token
-    pub fn list_organizations(&self) -> ApiResult<Vec<Organization>> {
+    /// in the given `Region`. If no `Region` is provided, we assume
+    /// we're issuing a request to a monolith deployment.
+    pub fn list_organizations(&self, region: Option<&Region>) -> ApiResult<Vec<Organization>> {
         let mut rv = vec![];
         let mut cursor = "".to_string();
         loop {
-            let resp = self.get(&format!("/organizations/?cursor={}", QueryArg(&cursor)))?;
+            let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
+            let resp = if let Some(rg) = region {
+                self.region_request(Method::Get, current_path, rg)?.send()?
+            } else {
+                self.get(current_path)?
+            };
+
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
                     return Err(ApiErrorKind::ResourceNotFound.into());
@@ -1464,6 +1511,22 @@ impl Api {
             }
         }
         Ok(rv)
+    }
+
+    pub fn list_available_regions(&self) -> ApiResult<Vec<Region>> {
+        let resp = self.get("/users/me/regions/")?;
+        if resp.status() == 404 {
+            // This endpoint may not exist for self-hosted users, so
+            // returning a default of [] seems appropriate.
+            return Ok(vec![]);
+        }
+
+        if resp.status() == 400 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+
+        let region_response = resp.convert::<RegionResponse>()?;
+        Ok(region_response.regions)
     }
 
     /// List all monitors associated with an organization
@@ -2946,4 +3009,15 @@ impl fmt::Display for ProcessedEventTag {
         write!(f, "{}: {}", &self.key, &self.value)?;
         Ok(())
     }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct Region {
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct RegionResponse {
+    pub regions: Vec<Region>,
 }

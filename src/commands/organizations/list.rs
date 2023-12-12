@@ -1,7 +1,8 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
+use log::debug;
 
-use crate::api::Api;
+use crate::api::{Api, Organization};
 use crate::utils::formatting::Table;
 
 pub fn make_command(command: Command) -> Command {
@@ -10,7 +11,22 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(_matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
-    let mut organizations = api.list_organizations()?;
+
+    // Query regions available to the current CLI user
+    let regions = api.list_available_regions()?;
+
+    let mut organizations: Vec<Organization> = vec![];
+    debug!("Available regions: {:?}", regions);
+
+    // Self-hosted instances won't have a region instance or prefix, so we
+    // need to check before fanning out.
+    if regions.len() > 1 {
+        for region in regions {
+            organizations.append(&mut api.list_organizations(Some(&region))?)
+        }
+    } else {
+        organizations.append(&mut api.list_organizations(None)?)
+    }
 
     organizations.sort_by_key(|o| o.name.clone().to_lowercase());
 
