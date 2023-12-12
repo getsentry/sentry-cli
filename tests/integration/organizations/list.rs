@@ -10,12 +10,12 @@ fn command_organizations_list() {
     );
 
     let region_response = format!(
-        "{{
-            \"regions\": [{{
-                \"name\": \"monolith\",
-                \"url\": \"{}\"
+        r#"{{
+            "regions": [{{
+                "name": "monolith",
+                "url": "{}"
             }}]
-        }}",
+        }}"#,
         server_url(),
     );
 
