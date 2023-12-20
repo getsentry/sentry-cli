@@ -195,7 +195,7 @@ function checkVersion() {
 function downloadBinary(logger = ttyLogger) {
   if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
     logger.log(`Skipping download because SENTRYCLI_SKIP_DOWNLOAD=1 detected.`);
-    return;
+    return Promise.resolve();
   }
 
   const arch = os.arch();
