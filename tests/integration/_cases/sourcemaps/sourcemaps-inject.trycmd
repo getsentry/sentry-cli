@@ -2,10 +2,10 @@
 $ sentry-cli sourcemaps inject ./server ./static
 ? success
 > Searching ./server
-> Found 14 files
+> Found 16 files
 > Searching ./static
 > Found 8 files
-> Analyzing 22 sources
+> Analyzing 24 sources
 > Injecting debug ids
 
 Source Map Debug ID Injection Report
@@ -14,6 +14,7 @@ Source Map Debug ID Injection Report
     [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.js
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_embedded.js
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted.js
+    [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted_full.js
     [..]-[..]-[..]-[..]-[..] - ./server/flight-manifest.js
     [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.js
     [..]-[..]-[..]-[..]-[..] - ./server/pages/api/hello.js
@@ -23,6 +24,7 @@ Source Map Debug ID Injection Report
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/pages/asdf-05b39167abbe433b.js
   Modified: The following sourcemap files have been modified to have debug ids
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted.js.map
+    [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted_full.js.map
     [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.js.map
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/575-bb7d7e0e6de8d623.js.map
   Ignored: The following source files already have debug ids
