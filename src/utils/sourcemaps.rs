@@ -247,6 +247,19 @@ fn is_remote_url(url: &str) -> bool {
     };
 }
 
+/// Return true if url appears to be a URL path.
+/// Most often, a URL path will begin with `/`,
+/// particularly in the case of static asset collection and hosting,
+/// but such a path is very unlikely to exist in the local filesystem.
+fn is_url_path(url: &str) -> bool {
+    url.starts_with('/') && !Path::new(url).exists()
+}
+
+/// Return true iff url is probably not a local file path.
+fn is_remote_sourcemap(url: &str) -> bool {
+    is_remote_url(url) || is_url_path(url)
+}
+
 impl SourceMapProcessor {
     /// Creates a new sourcemap validator.
     pub fn new() -> SourceMapProcessor {
@@ -378,7 +391,8 @@ impl SourceMapProcessor {
             // that can't be resolved to a source map file.
             // Instead, we pretend we failed to discover the location, and we fall back to
             // guessing the source map location based on the source location.
-            let location = discover_sourcemaps_location(contents).filter(|loc| !is_remote_url(loc));
+            let location =
+                discover_sourcemaps_location(contents).filter(|loc| !is_remote_sourcemap(loc));
             let sourcemap_reference = match location {
                 Some(url) => SourceMapReference::from_url(url.to_string()),
                 None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
