@@ -20,7 +20,7 @@ pub fn execute(_matches: &ArgMatches) -> Result<()> {
 
     // Self-hosted instances won't have a region instance or prefix, so we
     // need to check before fanning out.
-    if regions.len() > 0 {
+    if !regions.is_empty() {
         for region in regions {
             organizations.append(&mut api.list_organizations(Some(&region))?)
         }
