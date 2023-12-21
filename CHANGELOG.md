@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.23.1
+
+### Various fixes & improvements
+
+- ref: upgrade git2 so safe.directory is implemented more correctly (#1866) by @asottile-sentry
+- fix(hybrid-cloud): Adds region fan-out to organizations list command (#1860) by @GabeVillalobos
+- fix: install the x64 cli on windows-on-arm hosts (#1858) by @MarshallOfSound
+
 ## 2.23.0
 
 ### Various fixes & improvements
