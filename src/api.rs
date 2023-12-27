@@ -219,6 +219,12 @@ impl fmt::Display for SentryError {
         if let Some(ref extra) = self.extra {
             write!(f, "\n  {extra:?}")?;
         }
+        if self.status == 401 {
+            write!(
+                f,
+                "\n\tPlease verify that you copied the auth token correctly!"
+            )?;
+        }
         Ok(())
     }
 }
