@@ -2,12 +2,6 @@
 
 'use strict';
 
-// TODO(v3): Remove this file
-
-console.log(
-  'DEPRECATION NOTICE: The Sentry CLI install script has been deprecated. The package now uses "optionalDependencies" instead to install architecture-compatible binaries distributed over npm.'
-);
-
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -198,7 +192,7 @@ function validateChecksum(tempPath, name) {
 async function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
-  const outputPath = helper.getPath();
+  const outputPath = helper.getFallbackBinaryPath();
 
   if (process.env.SENTRYCLI_USE_LOCAL === '1') {
     try {
@@ -323,14 +317,30 @@ if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
   process.exit(0);
 }
 
-(async () => {
-  try {
-    await downloadBinary();
-    await checkVersion();
-    process.exit(0);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(e.toString());
-    process.exit(1);
-  }
-})();
+const { packageName: distributionPackageName, subpath: distributionSubpath } =
+  helper.getDistributionForThisPlatform();
+
+if (distributionPackageName === undefined) {
+  helper.throwUnsupportedPlatformError();
+}
+
+try {
+  require.resolve(`${distributionPackageName}/${distributionSubpath}`);
+  // If the `resolve` call succeeds it means a binary was installed successfully via optional dependencies so we can skip the manual postinstall download.
+  process.exit(0);
+} catch (e) {
+  // Optional dependencies likely didn't get installed - proceed with fallback downloading manually
+  logger.log(
+    `Sentry CLI binary installation via optional dependencies was unsuccessful. Downloading manually instead.`
+  );
+
+  downloadBinary()
+    .then(() => checkVersion())
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}
