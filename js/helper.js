@@ -154,6 +154,10 @@ It seems like none of the "@sentry/cli" package's optional dependencies got inst
   return compatibleBinaryPath;
 }
 
+/**
+ * Will be used as the binary path when defined with `mockBinaryPath`.
+ * @type {string | undefined}
+ */
 let mockedBinaryPath;
 
 /**
