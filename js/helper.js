@@ -154,7 +154,7 @@ It seems like none of the "@sentry/cli" package's optional dependencies got inst
   return compatibleBinaryPath;
 }
 
-let mockedBinaryPath = undefined;
+let mockedBinaryPath;
 
 /**
  * Overrides the default binary path with a mock value, useful for testing.
