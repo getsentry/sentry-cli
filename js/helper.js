@@ -147,7 +147,7 @@ To fix this, avoid copying the "node_modules" folder, and instead freshly instal
     } else {
       throw new Error(`Sentry CLI binary for this platform/architecture not found!
 
-It seems like none of the "@sentry/cli" package's optional dependencies got installed. Please make sure your package manager is configured to install optional dependencies. If you are using npm to install your dependencies, please don't set the "--no-optional" or "--omit=optional" flags. Sentry CLI needs the "optionalDependencies" feature in order to install its binary.`);
+It seems like none of the "@sentry/cli" package's optional dependencies got installed. Please make sure your package manager is configured to install optional dependencies. If you are using npm to install your dependencies, please don't set the "--no-optional", "--ignore-optional", or "--omit=optional" flags. Sentry CLI needs the "optionalDependencies" feature in order to install its binary.`);
     }
   }
 
