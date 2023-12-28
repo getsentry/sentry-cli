@@ -330,8 +330,11 @@ try {
   process.exit(0);
 } catch (e) {
   // Optional dependencies likely didn't get installed - proceed with fallback downloading manually
+  // Log message inspired by esbuild: https://github.com/evanw/esbuild/blob/914f6080c77cfe32a54888caa51ca6ea13873ce9/lib/npm/node-install.ts#L253
   logger.log(
-    `Sentry CLI binary installation via optional dependencies was unsuccessful. Downloading manually instead.`
+    `Sentry CLI failed to locate the "${distributionPackageName}" package after installation!
+
+This can happen if you use an option to disable optional dependencies during installation, like "--no-optional", "--ignore-optional", or "--omit=optional". Sentry CLI uses the "optionalDependencies" package.json feature to install the correct binary for your platform and operating system. This post-install script will now try to work around this by manually downloading the Sentry CLI binary from the Sentry CDN. If this fails, you need to remove the "--no-optional", "--ignore-optional", and "--omit=optional" flags for Sentry CLI to work.`
   );
 
   downloadBinary()
