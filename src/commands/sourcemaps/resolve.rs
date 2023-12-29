@@ -1,3 +1,4 @@
+use std::cmp;
 use std::fs;
 use std::path::PathBuf;
 
@@ -73,28 +74,65 @@ pub fn print_source(token: &Token<'_>, view: &SourceView) {
     }
 }
 
+fn dst_location(token: &Token) -> (u32, u32) {
+    (token.get_dst_line() + 1, token.get_dst_col() + 1)
+}
+
+fn src_location(token: &Token) -> (u32, u32) {
+    (token.get_src_line() + 1, token.get_src_col() + 1)
+}
+
+fn as_string_len<T: ToString>(to_string: T) -> usize {
+    to_string.to_string().len()
+}
+
 fn print_token(token: &Token<'_>) {
-    if let Some(name) = token.get_name() {
-        println!("  name: {name:?}");
-    } else {
-        println!("  name: not found");
-    }
-    if let Some(source) = token.get_source() {
-        println!("  source file: {source:?}");
-    } else {
-        println!("  source file: not found");
-    }
-    println!("  source line: {}", token.get_src_line());
-    println!("  source column: {}", token.get_src_col());
-    println!("  minified line: {}", token.get_dst_line());
-    println!("  minified column: {}", token.get_dst_col());
+    let token_display_name = match token.get_name() {
+        Some(name) => format!("token \"{name}\""),
+        None => String::from("token (unnamed)"),
+    };
+    let source_file = match token.get_source() {
+        Some(file) => format!("{file:>4}"),
+        None => String::from("(unknown path)"),
+    };
+
+    let (dst_line, dst_col) = dst_location(token);
+    let [dst_line_digits, dst_col_digits] = [dst_line, dst_col].map(as_string_len);
+
+    let (src_line, src_col) = src_location(token);
+    let [src_line_digits, src_col_digits] = [src_line, src_col].map(as_string_len);
+
+    let line_align = cmp::max(dst_line_digits, src_line_digits);
+    let col_align = cmp::max(dst_col_digits, src_col_digits);
+
+    let output_minified_line = format!(
+        "Found the nearest {token_display_name} at line {:>line_align$}, column {:>col_align$} in the minified file.",
+        dst_line,
+        dst_col,
+    );
+
+    let output_source_line = format!(
+        "- The same token is located at line {:>line_align$}, column {:>col_align$} in source file {}.",
+        src_line,
+        src_col,
+        source_file,
+    );
+
+    let output_minified_line_align = 2 + output_minified_line.len();
+    let output_source_line_align = output_minified_line.len() + source_file.len() - 3;
+
+    println!("{output_minified_line:>output_minified_line_align$}");
+    println!();
+    println!("{output_source_line:>output_source_line_align$}");
+    println!("\n");
+
     if let Some(view) = token.get_source_view() {
-        println!("  source code:");
+        println!("  Source code:");
         print_source(token, view);
     } else if token.get_source_view().is_none() {
-        println!("  cannot find source");
+        println!("  Cannot find source");
     } else {
-        println!("  cannot find source line");
+        println!("  Cannot find source line");
     }
 }
 
@@ -112,14 +150,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
     println!("source map path: {sourcemap_path:?}");
     println!("source map type: {ty}");
+    println!();
 
     // perform a lookup
     if let Some((line, column)) = lookup_pos(matches) {
-        println!("lookup line: {line}, column: {column}:");
+        println!(
+            "Searching for token nearest to line {}, column {} in the minified file:\n",
+            line + 1,
+            column + 1
+        );
         if let Some(token) = sm.lookup_token(line, column) {
             print_token(&token);
         } else {
-            println!("  - no match");
+            println!("  - no token found!");
         }
     }
 
