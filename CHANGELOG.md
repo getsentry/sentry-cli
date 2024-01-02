@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.23.2
+
+### Various fixes & improvements
+
+- ref: Removed unneeded identity `map` (#1883) by @szokeasaurusrex
+- ci: Skip fallback download in tests (#1878) by @lforst
+- ref: Emit better log message for fallback postinstall script (#1877) by @lforst
+- fix: Manually download binary if optional dependency binary can't be found after installation (#1874) by @lforst
+- fix(hybrid-cloud): Updates organization list to handle single org fanout (#1872) by @GabeVillalobos
+
 ## 2.23.1
 
 ### Various fixes & improvements
