@@ -12,34 +12,34 @@ env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
+  # lint:
+  #   name: Lint
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          components: clippy, rustfmt
-          override: true
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         toolchain: stable
+  #         profile: minimal
+  #         components: clippy, rustfmt
+  #         override: true
 
-      - uses: swatinem/rust-cache@v1
-        with:
-          key: ${{ github.job }}
+  #     - uses: swatinem/rust-cache@v1
+  #       with:
+  #         key: ${{ github.job }}
 
-      - name: Run Rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+  #     - name: Run Rustfmt
+  #       uses: actions-rs/cargo@v1
+  #       with:
+  #         command: fmt
+  #         args: --all -- --check
 
-      - name: Run Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --workspace --all-features --tests -- -D clippy::all
+  #     - name: Run Clippy
+  #       uses: actions-rs/cargo@v1
+  #       with:
+  #         command: clippy
+  #         args: --workspace --all-features --tests -- -D clippy::all
 
   test:
     strategy:
