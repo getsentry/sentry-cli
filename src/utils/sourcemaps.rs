@@ -97,7 +97,7 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
 }
 
 pub fn get_sourcemap_ref_from_headers(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
-    get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
+    get_sourcemap_reference_from_headers(file.headers.iter())
         .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
