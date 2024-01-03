@@ -79,8 +79,10 @@ fn test_valid_user_auth_token() {
     testing_logger::validate(assert_no_logs);
 }
 
+// Unknown auth token tests -------------------------------------------------
+
 #[rstest]
-// Unknown auth token test cases (similar to org auth token) ----------------
+// Cases similar to org auth token -----------------------------------------
 #[case::wrong_prefix(
     "sentry_\
     eyJpYXQiOjE3MDQyMDU4MDIuMTk5NzQzLCJ1cmwiOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJyZ\
@@ -128,7 +130,7 @@ fn test_valid_user_auth_token() {
     Wdpb25fdXJsIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwib3JnIjoic2VudHJ5In0=_\
     lQ5ETt61cHhvJa35fxvxARsDXeVrd0pu4/smF4sRieAx"
 )]
-// Unknown auth token test cases (similar to user auth token) -------------
+// Cases similar to user auth token ----------------------------------------
 #[case::thirty_one_bytes("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c")]
 #[case::thirty_three_bytes("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c3000")]
 #[case::invalid_hex("c66aee1348a6g7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30")]
