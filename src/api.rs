@@ -40,6 +40,7 @@ use uuid::Uuid;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::android::AndroidManifest;
+use crate::utils::auth_token::AuthToken;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::http::{self, is_absolute_url, parse_link_header};
 use crate::utils::progress::ProgressBar;
@@ -1980,11 +1981,15 @@ impl ApiRequest {
                 debug!("using key based authentication");
                 Ok(self)
             }
+            #[allow(deprecated)] // Auth::Token is deprecated, but we still need to handle it
             Auth::Token(ref token) => {
+                let token = AuthToken::from(token.to_owned());
+                self.with_auth(&Auth::AuthToken(token))
+            }
+            Auth::AuthToken(ref token) => {
                 debug!("using token authentication");
                 self.with_header("Authorization", &format!("Bearer {token}"))
             }
-            _ => todo!(),
         }
     }
 

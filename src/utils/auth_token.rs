@@ -6,7 +6,8 @@ use std::{
 };
 
 const ORG_AUTH_TOKEN_PREFIX: &'static str = "sntrys_";
-const SECRET_BYTES: usize = 32;
+const ORG_TOKEN_SECRET_BYTES: usize = 32;
+const USER_TOKEN_BYTES: usize = 32;
 
 /// Represents an auth token that can be used with the Sentry API.
 #[derive(Debug, Clone)]
@@ -61,6 +62,8 @@ impl AuthTokenInner {
     fn new(auth_string: String) -> Self {
         if let Ok(org_auth_token) = OrgAuthToken::try_from(auth_string.clone()) {
             AuthTokenInner::Org(org_auth_token)
+        } else if let Ok(user_auth_token) = UserAuthToken::try_from(auth_string.clone()) {
+            AuthTokenInner::User(user_auth_token)
         } else {
             log::warn!(
                 "Unrecognized auth token format!\n\tHint: Did you copy your token correctly?"
@@ -94,7 +97,7 @@ impl OrgAuthToken {
             .map(|bytes| bytes.len());
 
         match num_bytes {
-            Ok(SECRET_BYTES) => Ok(()),
+            Ok(ORG_TOKEN_SECRET_BYTES) => Ok(()),
             _ => Err(AuthTokenParseError),
         }
     }
@@ -124,31 +127,44 @@ impl OrgAuthToken {
     }
 }
 
+impl UserAuthToken {
+    fn construct_from_string(auth_string: String) -> Result<Self> {
+        let bytes = data_encoding::HEXLOWER_PERMISSIVE.decode(auth_string.as_bytes());
+
+        if bytes.is_ok() && bytes.unwrap().len() == USER_TOKEN_BYTES {
+            Ok(UserAuthToken(auth_string))
+        } else {
+            Err(AuthTokenParseError)
+        }
+    }
+}
+
 impl From<String> for AuthToken {
     fn from(auth_string: String) -> Self {
         AuthToken::new(auth_string)
     }
 }
 
-impl From<AuthToken> for String {
-    fn from(auth_token: AuthToken) -> Self {
-        auth_token.0.into()
+impl<'a> From<&'a AuthToken> for &'a str {
+    fn from(auth_token: &'a AuthToken) -> Self {
+        let ref inner = auth_token.0;
+        inner.into()
     }
 }
 
-impl From<AuthTokenInner> for String {
-    fn from(value: AuthTokenInner) -> Self {
+impl<'a> From<&'a AuthTokenInner> for &'a str {
+    fn from(value: &'a AuthTokenInner) -> Self {
         match value {
-            AuthTokenInner::Org(org_auth_token) => org_auth_token.into(),
+            AuthTokenInner::Org(ref org_auth_token) => org_auth_token.into(),
             AuthTokenInner::User(user_auth_token) => user_auth_token.into(),
             AuthTokenInner::Unknown(auth_string) => auth_string,
         }
     }
 }
 
-impl From<UserAuthToken> for String {
-    fn from(user_auth_token: UserAuthToken) -> Self {
-        user_auth_token.0
+impl<'a> From<&'a UserAuthToken> for &'a str {
+    fn from(user_auth_token: &'a UserAuthToken) -> Self {
+        &user_auth_token.0
     }
 }
 
@@ -160,9 +176,26 @@ impl TryFrom<String> for OrgAuthToken {
     }
 }
 
-impl From<OrgAuthToken> for String {
-    fn from(auth_token: OrgAuthToken) -> Self {
-        auth_token.auth_string
+impl<'a> From<&'a OrgAuthToken> for &'a str {
+    fn from(auth_token: &'a OrgAuthToken) -> Self {
+        &auth_token.auth_string
+    }
+}
+
+impl TryFrom<String> for UserAuthToken {
+    type Error = AuthTokenParseError;
+
+    fn try_from(value: String) -> Result<UserAuthToken> {
+        UserAuthToken::construct_from_string(value)
+    }
+}
+
+impl Display for AuthToken {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        let representation: &str = self.into();
+        write!(f, "{representation}")?;
+
+        Ok(())
     }
 }
 
@@ -209,12 +242,51 @@ mod test {
         assert_eq!(payload.org, "sentry");
         assert_eq!(payload.url, Some(String::from("http://localhost:8000")));
 
-        assert_eq!(good_token, String::from(token));
+        assert_eq!(good_token, token.to_string());
 
         testing_logger::validate(assert_no_logs);
     }
 
-    // Unknown auth token tests -------------------------------------------------
+    #[test]
+    fn test_valid_org_auth_token_missing_url() {
+        let good_token = String::from(
+            "sntrys_\
+            eyJpYXQiOjE3MDQyMDU4MDIuMTk5NzQzLCJ1cmwiOm51bGwsInJlZ2lvbl91cmwiOiJodHRwOi8vb\
+            G9jYWxob3N0OjgwMDAiLCJvcmciOiJzZW50cnkifQ==_\
+            lQ5ETt61cHhvJa35fxvxARsDXeVrd0pu4/smF4sRieA",
+        );
+
+        testing_logger::setup();
+        let token = AuthToken::from(good_token.clone());
+
+        assert!(token.payload().is_some());
+
+        let payload = token.payload().unwrap();
+        assert_eq!(payload.org, "sentry");
+        assert!(payload.url.is_none());
+
+        assert_eq!(good_token, token.to_string());
+
+        testing_logger::validate(assert_no_logs);
+    }
+
+    // User auth token tests ----------------------------------------------------
+
+    #[test]
+    fn test_valid_user_auth_token() {
+        let good_token =
+            String::from("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30");
+
+        testing_logger::setup();
+        let token = AuthToken::from(good_token.clone());
+
+        assert!(token.payload().is_none());
+        assert_eq!(good_token, token.to_string());
+
+        testing_logger::validate(assert_no_logs);
+    }
+
+    // Unknown auth token tests (similar to org auth token) ---------------------
 
     #[test]
     fn test_wrong_prefix() {
@@ -229,7 +301,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -246,7 +318,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -263,7 +335,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -280,7 +352,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -297,7 +369,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -309,7 +381,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -325,7 +397,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -342,7 +414,7 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }
@@ -359,7 +431,65 @@ mod test {
         let token = AuthToken::from(bad_token.clone());
 
         assert!(token.payload().is_none());
-        assert_eq!(bad_token, String::from(token));
+        assert_eq!(bad_token, token.to_string());
+
+        testing_logger::validate(assert_one_warning);
+    }
+
+    // Unknown auth token tests (similar to user auth token) -------------------
+
+    #[test]
+    fn test_31_bytes() {
+        let bad_token =
+            String::from("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c");
+
+        testing_logger::setup();
+        let token = AuthToken::from(bad_token.clone());
+
+        assert!(token.payload().is_none());
+        assert_eq!(bad_token, token.to_string());
+
+        testing_logger::validate(assert_one_warning);
+    }
+
+    #[test]
+    fn test_33_bytes() {
+        let bad_token =
+            String::from("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c3000");
+
+        testing_logger::setup();
+        let token = AuthToken::from(bad_token.clone());
+
+        assert!(token.payload().is_none());
+        assert_eq!(bad_token, token.to_string());
+
+        testing_logger::validate(assert_one_warning);
+    }
+
+    #[test]
+    fn test_invalid_hex() {
+        let bad_token =
+            String::from("c66aee1348a6g7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30");
+
+        testing_logger::setup();
+        let token = AuthToken::from(bad_token.clone());
+
+        assert!(token.payload().is_none());
+        assert_eq!(bad_token, token.to_string());
+
+        testing_logger::validate(assert_one_warning);
+    }
+
+    #[test]
+    fn test_63_characters() {
+        let bad_token =
+            String::from("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c3");
+
+        testing_logger::setup();
+        let token = AuthToken::from(bad_token.clone());
+
+        assert!(token.payload().is_none());
+        assert_eq!(bad_token, token.to_string());
 
         testing_logger::validate(assert_one_warning);
     }

@@ -5,7 +5,7 @@ use std::io;
 use std::process;
 
 use anyhow::Context;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
@@ -112,7 +112,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     if let Some(auth_token) = matches.get_one::<String>("auth_token") {
         let auth_token = AuthToken::try_from(auth_token.to_owned())
             .context("Please make sure you copied the auth token correctly!")?;
-        config.set_auth(Auth::OrgToken(auth_token))?;
+        config.set_auth(Auth::AuthToken(auth_token))?;
     }
 
     if let Some(url) = matches.get_one::<String>("url") {

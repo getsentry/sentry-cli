@@ -58,9 +58,10 @@ pub fn make_command(command: Command) -> Command {
 fn describe_auth(auth: Option<&Auth>) -> &str {
     match auth {
         None => "Unauthorized",
-        Some(&Auth::Token(_)) => "Auth Token",
+        Some(&Auth::AuthToken(_)) => "Auth Token",
         Some(&Auth::Key(_)) => "API Key",
-        _ => todo!(),
+        #[allow(deprecated)]
+        Some(&Auth::Token(_)) => "Auth Token",
     }
 }
 
@@ -74,9 +75,10 @@ fn get_config_status_json() -> Result<()> {
     rv.config.url = Some(config.get_base_url()?.to_string());
 
     rv.auth.auth_type = config.get_auth().map(|val| match val {
-        Auth::Token(_) => "token".into(),
+        Auth::AuthToken(_) => "token".into(),
         Auth::Key(_) => "api_key".into(),
-        _ => todo!(),
+        #[allow(deprecated)]
+        Auth::Token(_) => "token".into(),
     });
     rv.auth.successful = config.get_auth().is_some() && Api::current().get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();
