@@ -2356,6 +2356,7 @@ dependencies = [
  "sourcemap",
  "symbolic",
  "tempfile",
+ "testing_logger",
  "thiserror",
  "trycmd",
  "unix-daemonize",
@@ -2788,6 +2789,15 @@ checksum = "cb20089a8ba2b69debd491f8d2d023761cbf196e999218c591fa1e7e15a21907"
 dependencies = [
  "rustix 0.36.16",
  "windows-sys 0.42.0",
+]
+
+[[package]]
+name = "testing_logger"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d92b727cb45d33ae956f7f46b966b25f1bc712092aeef9dba5ac798fc89f720"
+dependencies = [
+ "log",
 ]
 
 [[package]]

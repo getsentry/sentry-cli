@@ -60,6 +60,7 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
         None => "Unauthorized",
         Some(&Auth::Token(_)) => "Auth Token",
         Some(&Auth::Key(_)) => "API Key",
+        _ => todo!(),
     }
 }
 
@@ -75,6 +76,7 @@ fn get_config_status_json() -> Result<()> {
     rv.auth.auth_type = config.get_auth().map(|val| match val {
         Auth::Token(_) => "token".into(),
         Auth::Key(_) => "api_key".into(),
+        _ => todo!(),
     });
     rv.auth.successful = config.get_auth().is_some() && Api::current().get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();

@@ -18,13 +18,16 @@ use serde::Deserialize;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
+use crate::utils::auth_token::AuthToken;
 use crate::utils::http::is_absolute_url;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
     Key(String),
+    #[deprecated = "Use Auth::OrgToken instead"]
     Token(String),
+    OrgToken(AuthToken),
 }
 
 /// Data parsed from an "org auth token".
@@ -220,6 +223,7 @@ impl Config {
                 self.ini
                     .set_to(Some("auth"), "token".into(), val.to_string());
             }
+            Some(Auth::OrgToken(ref val)) => todo!(),
             Some(Auth::Key(ref val)) => {
                 self.ini
                     .set_to(Some("auth"), "api_key".into(), val.to_string());

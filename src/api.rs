@@ -1984,6 +1984,7 @@ impl ApiRequest {
                 debug!("using token authentication");
                 self.with_header("Authorization", &format!("Bearer {token}"))
             }
+            _ => todo!(),
         }
     }
 
