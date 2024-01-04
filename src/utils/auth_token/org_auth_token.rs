@@ -1,7 +1,7 @@
 use super::{AuthTokenParseError, Result};
 use serde::Deserialize;
 
-const ORG_AUTH_TOKEN_PREFIX: &'static str = "sntrys_";
+const ORG_AUTH_TOKEN_PREFIX: &str = "sntrys_";
 const ORG_TOKEN_SECRET_BYTES: usize = 32;
 
 /// Represents a valid org auth token.

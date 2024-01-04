@@ -85,7 +85,7 @@ impl AuthTokenInner {
         match self {
             AuthTokenInner::Org(ref org_auth_token) => org_auth_token.as_str(),
             AuthTokenInner::User(user_auth_token) => user_auth_token.as_str(),
-            AuthTokenInner::Unknown(auth_string) => &auth_string,
+            AuthTokenInner::Unknown(auth_string) => auth_string,
         }
     }
 }
