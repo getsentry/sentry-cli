@@ -112,7 +112,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     if let Some(auth_token) = matches.get_one::<String>("auth_token") {
         let auth_token = AuthToken::try_from(auth_token.to_owned())
             .context("Please make sure you copied the auth token correctly!")?;
-        config.set_auth(Auth::AuthToken(auth_token))?;
+        config.set_auth(Auth::Token(auth_token))?;
     }
 
     if let Some(url) = matches.get_one::<String>("url") {

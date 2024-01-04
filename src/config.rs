@@ -25,15 +25,13 @@ use crate::utils::http::is_absolute_url;
 #[derive(Debug, Clone)]
 pub enum Auth {
     Key(String),
-    #[deprecated = "Use Auth::AuthToken instead"]
-    Token(String),
-    AuthToken(AuthToken),
+    Token(AuthToken),
 }
 
 impl Auth {
     /// Construct AuthToken from a string. Prints warning if the token's format is unrecognized.
     pub fn from_token(token: String) -> Auth {
-        Auth::AuthToken(AuthToken::from(token))
+        Auth::Token(AuthToken::from(token))
     }
 }
 
@@ -65,7 +63,7 @@ impl Config {
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
-            Some(Auth::AuthToken(ref token)) => token.payload().cloned(),
+            Some(Auth::Token(ref token)) => token.payload().cloned(),
             _ => None, // get_default_auth never returns Auth::Token variant
         };
 
@@ -177,12 +175,7 @@ impl Config {
         self.ini.delete_from(Some("auth"), "api_key");
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
-            #[allow(deprecated)] // Still need to handle Auth::Token here
             Some(Auth::Token(ref val)) => {
-                let token = AuthToken::from(val.to_owned());
-                self.set_auth(Auth::AuthToken(token))?;
-            }
-            Some(Auth::AuthToken(ref val)) => {
                 self.cached_token_data = val.payload().cloned();
 
                 if let Some(token_url) = self
