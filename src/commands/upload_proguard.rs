@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::api::Api;
 use crate::api::AssociateProguard;
 use crate::config::Config;
-use crate::utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
+use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
 use crate::utils::fs::{get_sha1_checksum, TempFile};
 use crate::utils::system::QuietExit;
@@ -106,6 +106,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("android-manifest")
                 .value_name("PATH")
                 .conflicts_with("app_id")
+                .hide(true)
                 .help("Read version and version code from an Android manifest file."),
         )
         .arg(
@@ -151,13 +152,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
     let mut mappings = vec![];
     let mut all_checksums = vec![];
-
-    // TODO: maybe remove this at some point?
-    let android_manifest = if let Some(path) = matches.get_one::<String>("android_manifest") {
-        Some(AndroidManifest::from_path(path)?)
-    } else {
-        None
-    };
 
     let forced_uuid = matches.get_one::<Uuid>("uuid");
     if forced_uuid.is_some() && paths.len() != 1 {
@@ -262,10 +256,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    // update the uuids
-    if android_manifest.is_some() {
-        // if values are given associate
-    } else if let Some(app_id) = matches.get_one::<String>("app_id") {
+    // if values are given associate
+    if let Some(app_id) = matches.get_one::<String>("app_id") {
         let version = matches.get_one::<String>("version").unwrap().to_owned();
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
