@@ -31,12 +31,13 @@ pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn register_test(path: &str) -> TestCases {
+    let auth_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     let test_case = TestCases::new();
     test_case
         .env("SENTRY_INTEGRATION_TEST", "1")
         .env("SENTRY_DUMP_RESPONSES", "dump") // reused default directory of `trycmd` output dumps
         .env("SENTRY_URL", server_url())
-        .env("SENTRY_AUTH_TOKEN", "lolnope")
+        .env("SENTRY_AUTH_TOKEN", auth_token)
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
         .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
