@@ -1,7 +1,7 @@
 ```
-$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS10b2tlbml6ZWQuaW8iLCJvcmciOiJ0ZXN0LW9yZy10b2tlbml6ZWQifQ==_ --url http://example.com sourcemaps upload test_path
+$ sentry-cli --auth-token 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 --url http://example.com sourcemaps upload test_path
 ? failed
-error: Two different url values supplied: `https://sentry-tokenized.io` (from token), `http://example.com`.
+error: Two different url values supplied: `http://localhost:8000` (from token), `http://example.com`.
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
 Please attach the full debug log to all bug reports.
