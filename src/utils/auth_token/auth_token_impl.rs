@@ -34,6 +34,14 @@ impl From<String> for AuthToken {
     }
 }
 
+impl From<&str> for AuthToken {
+    /// Constructs a new AuthToken from a string. Logs a warning if the auth token's
+    /// format is unrecognized.
+    fn from(auth_string: &str) -> Self {
+        AuthToken::from(auth_string.to_owned())
+    }
+}
+
 impl Display for AuthToken {
     /// Displays the auth token string.
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {

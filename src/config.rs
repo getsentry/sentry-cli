@@ -28,13 +28,6 @@ pub enum Auth {
     Token(AuthToken),
 }
 
-impl Auth {
-    /// Construct AuthToken from a string. Prints warning if the token's format is unrecognized.
-    pub fn from_token(token: String) -> Auth {
-        Auth::Token(AuthToken::from(token))
-    }
-}
-
 lazy_static! {
     static ref CONFIG: Mutex<Option<Arc<Config>>> = Mutex::new(None);
 }
@@ -664,11 +657,11 @@ impl Clone for Config {
 #[allow(clippy::manual_map)]
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
-        Some(Auth::from_token(val))
+        Some(Auth::Token(val.into()))
     } else if let Ok(val) = env::var("SENTRY_API_KEY") {
         Some(Auth::Key(val))
     } else if let Some(val) = ini.get_from(Some("auth"), "token") {
-        Some(Auth::from_token(val.to_owned()))
+        Some(Auth::Token(val.into()))
     } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
         Some(Auth::Key(val.to_owned()))
     } else {
