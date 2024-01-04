@@ -4,7 +4,6 @@ use std::env;
 use std::io;
 use std::process;
 
-use anyhow::Context;
 use anyhow::{bail, Result};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
@@ -109,10 +108,8 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_auth(Auth::Key(api_key.to_owned()))?;
     }
 
-    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
-        let auth_token = AuthToken::try_from(auth_token.to_owned())
-            .context("Please make sure you copied the auth token correctly!")?;
-        config.set_auth(Auth::Token(auth_token))?;
+    if let Some(auth_token) = matches.get_one::<AuthToken>("auth_token") {
+        config.set_auth(Auth::Token(auth_token.to_owned()))?;
     }
 
     if let Some(url) = matches.get_one::<String>("url") {
@@ -165,6 +162,7 @@ fn app() -> Command {
                 .value_name("AUTH_TOKEN")
                 .long("auth-token")
                 .global(true)
+                .value_parser(value_parser!(AuthToken))
                 .help("Use the given Sentry auth token."),
         )
         .arg(
