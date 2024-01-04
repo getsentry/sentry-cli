@@ -17,12 +17,10 @@ impl UserAuthToken {
             Err(AuthTokenParseError)
         }
     }
-}
 
-impl<'a> From<&'a UserAuthToken> for &'a str {
-    /// Retrieves a reference to the auth token string from a UserAuthToken.
-    fn from(user_auth_token: &'a UserAuthToken) -> Self {
-        &user_auth_token.0
+    /// Retrieves a reference to the auth token string.
+    pub fn as_str(&self) -> &str {
+        &self.0
     }
 }
 

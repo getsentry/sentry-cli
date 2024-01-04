@@ -19,6 +19,11 @@ impl AuthToken {
     pub fn payload(&self) -> Option<&AuthTokenPayload> {
         self.0.payload()
     }
+
+    /// Retrieves a reference to the auth token string.
+    fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
 }
 
 impl From<String> for AuthToken {
@@ -29,20 +34,10 @@ impl From<String> for AuthToken {
     }
 }
 
-impl<'a> From<&'a AuthToken> for &'a str {
-    /// Retrieves a reference to the auth token string from an AuthToken.
-    fn from(auth_token: &'a AuthToken) -> Self {
-        let ref inner = auth_token.0;
-        inner.into()
-    }
-}
-
 impl Display for AuthToken {
     /// Displays the auth token string.
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        let representation: &str = self.into();
-        write!(f, "{representation}")?;
-
+        write!(f, "{}", self.as_str())?;
         Ok(())
     }
 }
@@ -84,15 +79,13 @@ impl AuthTokenInner {
             _ => None,
         }
     }
-}
 
-impl<'a> From<&'a AuthTokenInner> for &'a str {
-    /// Retrieves a reference to the auth token string from an AuthTokenInner.
-    fn from(value: &'a AuthTokenInner) -> Self {
-        match value {
-            AuthTokenInner::Org(ref org_auth_token) => org_auth_token.into(),
-            AuthTokenInner::User(user_auth_token) => user_auth_token.into(),
-            AuthTokenInner::Unknown(auth_string) => auth_string,
+    /// Retrieves a reference to the auth token string.
+    fn as_str(&self) -> &str {
+        match self {
+            AuthTokenInner::Org(ref org_auth_token) => org_auth_token.as_str(),
+            AuthTokenInner::User(user_auth_token) => user_auth_token.as_str(),
+            AuthTokenInner::Unknown(auth_string) => &auth_string,
         }
     }
 }

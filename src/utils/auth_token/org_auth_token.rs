@@ -70,6 +70,11 @@ impl OrgAuthToken {
             payload,
         })
     }
+
+    /// Retrieves a reference to the auth token string.
+    pub fn as_str(&self) -> &str {
+        &self.auth_string
+    }
 }
 
 impl TryFrom<String> for OrgAuthToken {
@@ -78,12 +83,5 @@ impl TryFrom<String> for OrgAuthToken {
     /// Constructs a new OrgAuthToken from a string. Returns an error if the string is not a valid org auth token.
     fn try_from(value: String) -> Result<OrgAuthToken> {
         OrgAuthToken::construct_from_string(value)
-    }
-}
-
-impl<'a> From<&'a OrgAuthToken> for &'a str {
-    /// Retrieves a reference to the auth token string from an OrgAuthToken.
-    fn from(auth_token: &'a OrgAuthToken) -> Self {
-        &auth_token.auth_string
     }
 }
