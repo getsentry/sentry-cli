@@ -1,12 +1,13 @@
+If this test fails with "Expected failure, was success," you are probably running the Sentry devserver locally.
+Stop the devserver and try again.
 ```
-$ sentry-cli --auth-token sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS10b2tlbml6ZWQuaW8iLCJvcmciOiJ0ZXN0LW9yZy10b2tlbml6ZWQifQ==_ info
+$ sentry-cli --auth-token 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 info
 ? failed
-Sentry Server: https://sentry-tokenized.io
+Sentry Server: http://localhost:8000
 Default Organization: wat-org
 Default Project: wat-project
 
 Authentication Info:
   Method: Auth Token
-  (failure on authentication: API request failed)
-
+...
 ```
