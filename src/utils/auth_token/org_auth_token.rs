@@ -53,7 +53,7 @@ impl OrgAuthToken {
         }
 
         let mut segment_split = auth_string.split('_');
-        segment_split.next(); // Skip the prefix
+        segment_split.next(); // Skip the prefix; we already validated it.
 
         let payload_encoded = segment_split.next().ok_or(AuthTokenParseError)?;
         let payload = OrgAuthToken::parse_payload(payload_encoded)?;
