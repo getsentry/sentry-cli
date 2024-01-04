@@ -16,7 +16,6 @@ use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
-use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 
@@ -304,7 +303,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // Try to resolve the Info.plist either by path or from Xcode
-    let info_plist = match matches.get_one::<String>("info_plist") {
+    // TODO: maybe remove this completely?
+    let _info_plist = match matches.get_one::<String>("info_plist") {
         Some(path) => Some(InfoPlist::from_path(path)?),
         None => InfoPlist::discover_from_env()?,
     };
@@ -323,35 +323,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Execute the upload
         let (uploaded, has_processing_errors) = upload.upload()?;
         let api = Api::current();
-
-        // Associate the dSYMs with the Info.plist data, if available
-        if let Some(ref info_plist) = info_plist {
-            let progress_style = ProgressStyle::default_spinner()
-                .template("{spinner} Associating dSYMs with {msg}...");
-
-            let pb = ProgressBar::new_spinner();
-            pb.enable_steady_tick(100);
-            pb.set_style(progress_style);
-            pb.set_message(&info_plist.to_string());
-
-            let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
-            let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
-            pb.finish_and_clear();
-
-            if let Some(association) = response {
-                if association.associated_dsyms.is_empty() {
-                    println!("{} No new debug symbols to associate.", style(">").dim());
-                } else {
-                    println!(
-                        "{} Associated {} debug symbols with the build.",
-                        style(">").dim(),
-                        style(association.associated_dsyms.len()).yellow()
-                    );
-                }
-            } else {
-                info!("Server does not support dSYM associations. Ignoring.");
-            }
-        }
 
         // Trigger reprocessing only if requested by user
         if matches.get_flag("no_reprocessing") {

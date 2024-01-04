@@ -152,6 +152,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut mappings = vec![];
     let mut all_checksums = vec![];
 
+    // TODO: maybe remove this at some point?
     let android_manifest = if let Some(path) = matches.get_one::<String>("android_manifest") {
         Some(AndroidManifest::from_path(path)?)
     } else {
@@ -262,10 +263,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // update the uuids
-    if let Some(android_manifest) = android_manifest {
-        api.associate_android_proguard_mappings(&org, &project, &android_manifest, all_checksums)?;
-
-    // if values are given associate
+    if android_manifest.is_some() {
+        // if values are given associate
     } else if let Some(app_id) = matches.get_one::<String>("app_id") {
         let version = matches.get_one::<String>("version").unwrap().to_owned();
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
