@@ -15,6 +15,7 @@ mod releases;
 mod send_envelope;
 mod send_event;
 mod sourcemaps;
+mod token_validation;
 mod uninstall;
 mod update;
 mod upload_dif;
