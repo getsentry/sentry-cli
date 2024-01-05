@@ -3,14 +3,15 @@ $ sentry-cli sourcemaps resolve tests/integration/_fixtures/bundle.min.js.map -l
 ? success
 source map path: "tests/integration/_fixtures/bundle.min.js.map"
 source map type: regular
-lookup line: 0, column: 39:
-  name: "bar"
-  source file: "webpack://webpack-plugin/./src/app.js"
-  source line: 1
-  source column: 2
-  minified line: 0
-  minified column: 39
-  source code:
+
+Searching for token nearest to line 1, column 40 in the minified file:
+
+  Found the nearest token "bar" at line 1, column 40 in the minified file.
+
+    - The same token is located at line 2, column  3 in source file webpack://webpack-plugin/./src/app.js.
+
+
+  Source code:
     function foo(msg) {
       bar(msg);
     }
