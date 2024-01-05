@@ -6,7 +6,7 @@
 
 ### Various fixes & improvements
 
-- Revert "feat(api): Validate Auth Tokens client-side (#1885)" (#1889) by @szokeasaurusrex
+- Revert #1885, which was causing an [error in the `sentry-cli login` command](https://github.com/getsentry/sentry-cli/issues/1888) (#1889) by @szokeasaurusrex
 
 ## 2.24.0
 
