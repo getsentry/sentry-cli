@@ -2,7 +2,6 @@
 pub mod android;
 pub mod appcenter;
 pub mod args;
-pub mod auth_token;
 pub mod chunks;
 pub mod codepush;
 pub mod cordova;

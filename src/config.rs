@@ -13,19 +13,55 @@ use lazy_static::lazy_static;
 use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
 use sentry::types::Dsn;
+use serde::Deserialize;
 
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
-use crate::utils::auth_token::AuthToken;
-use crate::utils::auth_token::AuthTokenPayload;
 use crate::utils::http::is_absolute_url;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
     Key(String),
-    Token(AuthToken),
+    Token(String),
+}
+
+/// Data parsed from an "org auth token".
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
+struct TokenData {
+    /// An org slug.
+    org: String,
+    /// A base Sentry URL.
+    url: Option<String>,
+}
+
+impl TokenData {
+    /// Attempt to extract data from an "org auth token".
+    ///
+    /// Org auth tokens start with `sntrys` and contain BASE64-encoded
+    /// data between two underscores.
+    ///
+    /// Attempting to decode a valid org auth token results in `Ok(Some(data))`.
+    /// Attempting to decode an org auth token that contains invalid data returns an error.
+    /// Attempting to decode any other token returns Ok(None).
+    fn decode(token: &str) -> Result<Option<Self>> {
+        const ORG_TOKEN_PREFIX: &str = "sntrys_";
+
+        let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
+            return Ok(None);
+        };
+
+        let Some((encoded, _)) = rest.split_once('_') else {
+            bail!("no closing _");
+        };
+
+        let json = data_encoding::BASE64
+            .decode(encoded.as_bytes())
+            .context("invalid base64 data")?;
+
+        Ok(serde_json::from_slice(&json)?)
+    }
 }
 
 lazy_static! {
@@ -42,7 +78,7 @@ pub struct Config {
     cached_headers: Option<Vec<String>>,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
-    cached_token_data: Option<AuthTokenPayload>,
+    cached_token_data: Option<TokenData>,
 }
 
 impl Config {
@@ -56,8 +92,9 @@ impl Config {
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
-            Some(Auth::Token(ref token)) => token.payload().cloned(),
-            _ => None, // get_default_auth never returns Auth::Token variant
+            Some(Auth::Token(ref token)) => TokenData::decode(token)
+                .context(format!("Failed to parse org auth token {token}"))?,
+            _ => None,
         };
 
         let mut url = get_default_url(&ini);
@@ -169,7 +206,8 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.cached_token_data = val.payload().cloned();
+                self.cached_token_data = TokenData::decode(val)
+                    .context(format!("Failed to parse org auth token {val}"))?;
 
                 if let Some(token_url) = self
                     .cached_token_data
@@ -657,11 +695,11 @@ impl Clone for Config {
 #[allow(clippy::manual_map)]
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
-        Some(Auth::Token(val.into()))
+        Some(Auth::Token(val))
     } else if let Ok(val) = env::var("SENTRY_API_KEY") {
         Some(Auth::Key(val))
     } else if let Some(val) = ini.get_from(Some("auth"), "token") {
-        Some(Auth::Token(val.into()))
+        Some(Auth::Token(val.to_owned()))
     } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
         Some(Auth::Key(val.to_owned()))
     } else {
@@ -723,6 +761,19 @@ mod tests {
     use log::LevelFilter;
 
     use super::*;
+
+    #[test]
+    fn test_decode_token_data() {
+        let token = "sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_foobarthisdoesntmatter";
+
+        assert_eq!(
+            TokenData::decode(token).unwrap().unwrap(),
+            TokenData {
+                org: "test-org".to_string(),
+                url: Some("https://sentry.io".to_string()),
+            }
+        );
+    }
 
     #[test]
     fn test_get_api_endpoint() {
