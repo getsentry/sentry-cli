@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.24.1
+
+### Various fixes & improvements
+
+- Revert #1885, which was causing an [error in the `sentry-cli login` command](https://github.com/getsentry/sentry-cli/issues/1888) (#1889) by @szokeasaurusrex
+
 ## 2.24.0
 
 ### Various fixes & improvements
