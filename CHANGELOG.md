@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.24.1
+
+### Various fixes & improvements
+
+- Revert "feat(api): Validate Auth Tokens client-side (#1885)" (#1889) by @szokeasaurusrex
+
 ## 2.24.0
 
 ### Various fixes & improvements
