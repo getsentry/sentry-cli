@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.24.0
+
+### Various fixes & improvements
+
+- feat(sourcemaps): Improve `sourcemaps resolve` command output (#1880) by @szokeasaurusrex
+- feat(api): Validate Auth Tokens client-side (#1885) by @szokeasaurusrex
+
 ## 2.23.2
 
 ### Various fixes & improvements
