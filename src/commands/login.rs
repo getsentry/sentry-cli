@@ -6,6 +6,7 @@ use url::Url;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
+use crate::utils::auth_token::AuthToken;
 use crate::utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_command(command: Command) -> Command {
@@ -18,9 +19,9 @@ pub fn make_command(command: Command) -> Command {
     )
 }
 
-fn update_config(config: &Config, token: &str) -> Result<()> {
+fn update_config(config: &Config, token: AuthToken) -> Result<()> {
     let mut new_cfg = config.clone();
-    new_cfg.set_auth(Auth::Token(token.to_string()))?;
+    new_cfg.set_auth(Auth::Token(token))?;
     new_cfg.save()?;
     Ok(())
 }
@@ -31,7 +32,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         "{}/orgredirect/organizations/:orgslug/settings/auth-tokens/",
         config.get_base_url()?
     );
-    let predefined_token = matches.get_one::<String>("auth_token");
+    let predefined_token = matches.get_one::<AuthToken>("auth_token");
     let has_predefined_token = predefined_token.is_some();
 
     println!("This helps you signing in your sentry-cli with an authentication token.");
@@ -62,13 +63,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut token;
     loop {
         token = if let Some(token) = predefined_token {
-            token.to_string()
+            token.to_owned()
         } else {
-            prompt("Enter your token")?
+            prompt("Enter your token")?.into()
         };
 
         let test_cfg = config.make_copy(|cfg| {
-            cfg.set_auth(Auth::Token(token.to_string()))?;
+            cfg.set_auth(Auth::Token(token.clone()))?;
             Ok(())
         })?;
 
@@ -103,7 +104,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Config::from_cli_config()?
     };
 
-    update_config(&config_to_update, &token)?;
+    update_config(&config_to_update, token)?;
     println!();
     println!(
         "Stored token in {}",

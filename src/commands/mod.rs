@@ -12,6 +12,7 @@ use log::{debug, info, set_logger, set_max_level, LevelFilter};
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
+use crate::utils::auth_token::AuthToken;
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
@@ -107,7 +108,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_auth(Auth::Key(api_key.to_owned()))?;
     }
 
-    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
+    if let Some(auth_token) = matches.get_one::<AuthToken>("auth_token") {
         config.set_auth(Auth::Token(auth_token.to_owned()))?;
     }
 
@@ -161,6 +162,7 @@ fn app() -> Command {
                 .value_name("AUTH_TOKEN")
                 .long("auth-token")
                 .global(true)
+                .value_parser(value_parser!(AuthToken))
                 .help("Use the given Sentry auth token."),
         )
         .arg(
