@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.25.0
+
+### Various fixes & improvements
+
+- fix(api): Fix panic that occurred when `sentry-cli login` called with `--auth-token` (#1893) by @szokeasaurusrex
+
 ## 2.24.1
 
 ### Various fixes & improvements
