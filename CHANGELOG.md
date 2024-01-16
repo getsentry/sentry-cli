@@ -2,6 +2,11 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+- fix: Upload Xcode debug files and source maps background upload (#1896) by @krystofwoldrich
+  - revert: Fixed a `curl` issue on Windows (#1815) by @xpirt
+
 ## 2.25.0
 
 ### Various fixes & improvements
