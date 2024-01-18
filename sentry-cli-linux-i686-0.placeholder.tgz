@@ -1,0 +1,1 @@
+// Workaround for Craft always using master/.craft.yml for publish. Config has been modified to require more files for successful release, but it's not applicable to 1.x branch

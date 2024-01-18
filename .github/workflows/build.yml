@@ -163,4 +163,11 @@ jobs:
           path: |
             *.tgz
             sentry_cli-placeholder.tar.gz
+            sentry-cli-darwin-0.placeholder.tgz
+            sentry-cli-linux-arm-0.placeholder.tgz
+            sentry-cli-linux-arm64-0.placeholder.tgz
+            sentry-cli-linux-i686-0.placeholder.tgz
+            sentry-cli-linux-x64-0.placeholder.tgz
+            sentry-cli-win32-i686-0.placeholder.tgz
+            sentry-cli-win32-x64-0.placeholder.tgz
             sentry_cli-placeholder.whl
