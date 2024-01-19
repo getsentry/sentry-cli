@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 1.77.3
+
+### Various fixes & improvements
+
+- meta: Add fake files for release (245b3059) by @lforst
+- meta: Disable lint for release (62ae5e3b) by @szokeasaurusrex
+- fix: Return promise from download binary when `SENTRYCLI_SKIP_DOWNLOAD` is set (#1869) by @lforst
+
 ## 1.77.1
 
 - feat: Expose downloadBinary function to install binary (#1817)
