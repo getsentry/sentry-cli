@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.26.0
+
+### Various fixes & improvements
+
+- meta: Revert "meta: Temporarily disable npm targets for v1 release (#1903)" (#1908) by @szokeasaurusrex
+- Add "--environment" option to "monitors run" (supplement "-e" shorthand) (#1881) by @skalee
+- meta: Temporarily disable npm targets for v1 release (#1903) by @lforst
+
 ## 2.25.3
 
 - No documented changes.
