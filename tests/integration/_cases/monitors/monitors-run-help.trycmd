@@ -10,7 +10,7 @@ Arguments:
   <ARGS>...       
 
 Options:
-  -e <environment>
+  -e, --environment <environment>
           Specify the environment of the monitor. [default: production]
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests

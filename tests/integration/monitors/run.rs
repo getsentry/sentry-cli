@@ -33,6 +33,11 @@ fn command_monitors_run_environment() {
 }
 
 #[test]
+fn command_monitors_run_environment_long() {
+    register_test("monitors/monitors-run-environment-long.trycmd");
+}
+
+#[test]
 fn command_monitors_run_help() {
     register_test("monitors/monitors-run-help.trycmd");
 }
