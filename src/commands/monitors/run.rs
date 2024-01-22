@@ -28,6 +28,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("environment")
                 .short('e')
+                .long("environment")
                 .default_value("production")
                 .help("Specify the environment of the monitor."),
         )
