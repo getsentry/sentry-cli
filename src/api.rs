@@ -246,6 +246,8 @@ pub enum ApiErrorKind {
     ProjectNotFound,
     #[error("release not found")]
     ReleaseNotFound,
+    #[error("organization or project not found")]
+    OrganizationOrProjectNotFound,
     #[error("chunk upload endpoint not supported by sentry server")]
     ChunkUploadNotSupported,
     #[error("API request failed")]
@@ -1642,7 +1644,7 @@ impl Api {
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
-                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                    return self.org_or_project_error(org);
                 } else {
                     break;
                 }
@@ -1695,7 +1697,7 @@ impl Api {
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
-                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                    return self.org_or_project_error(org);
                 } else {
                     break;
                 }
@@ -1716,6 +1718,36 @@ impl Api {
         }
 
         Ok(rv)
+    }
+
+    /// Determines whether an organization exists or not. If the organization exists, returns
+    /// Err(ApiErrorKind::ProjectNotFound). If the organization does not exist, returns
+    /// Err(ApiErrorKind::OrganizationNotFound). If the user does not have permisisons to access
+    /// the organizations endpoint, we will be unable to determine whether the organization or
+    /// project doesn't exist, so we return Err(ApiErrorKind::OrganizationOrProjectNotFound).
+    /// If there is another error during the API request used to check the organization, that error
+    /// is returned.
+    ///
+    /// This function is intended to be called by functions where an API request was made,
+    /// which would fail identically if either the organization or project does not exist.
+    ///
+    /// This function always returns an Err() variant.
+    fn org_or_project_error<T>(&self, org: &str) -> ApiResult<T> {
+        let resp = self.get(&format!("/organizations/{}/", PathArg(org)))?;
+
+        if resp.ok() {
+            // The organization exists, so the project does not exist.
+            return Err(ApiErrorKind::ProjectNotFound.into());
+        }
+
+        match resp.status() {
+            404 => Err(ApiErrorKind::OrganizationNotFound.into()), // The organization does not exist.
+            403 => Err(ApiErrorKind::OrganizationOrProjectNotFound.into()), // The user does not have permissions to access the organizations endpoint.
+            _ => {
+                resp.into_result()?;
+                unreachable!("The above line will result in an error, since the request failed");
+            }
+        }
     }
 
     /// List all repos associated with an organization
