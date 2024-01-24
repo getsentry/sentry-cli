@@ -1,5 +1,5 @@
 use super::{AuthTokenParseError, Result};
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 
 const ORG_AUTH_TOKEN_PREFIX: &str = "sntrys_";
 const ORG_TOKEN_SECRET_BYTES: usize = 32;
@@ -16,9 +16,20 @@ pub struct OrgAuthToken {
 #[allow(dead_code)] // Otherwise, we get a warning about unused fields
 pub struct AuthTokenPayload {
     iat: f64,
-    pub url: Option<String>, // URL may be missing from some old auth tokens, see getsentry/sentry#57123
     region_url: String,
     pub org: String,
+
+    // URL may be missing from some old auth tokens, see getsentry/sentry#57123
+    #[serde(deserialize_with = "url_deserializer")]
+    pub url: String,
+}
+
+/// Deserializes a URL from a string, returning an empty string if the URL is missing or null.
+fn url_deserializer<'de, D>(deserializer: D) -> std::result::Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::deserialize(deserializer).map(|url| url.unwrap_or_default())
 }
 
 impl OrgAuthToken {

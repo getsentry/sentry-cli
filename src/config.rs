@@ -60,18 +60,20 @@ impl Config {
             _ => None, // get_default_auth never returns Auth::Token variant
         };
 
-        let mut url = get_default_url(&ini);
+        let default_url = get_default_url(&ini);
+        let token_url = token_embedded_data
+            .as_ref()
+            .and_then(|td| Some(td.url.as_str()))
+            .unwrap_or_default();
 
-        if let Some(token_url) = token_embedded_data.as_ref().and_then(|td| td.url.as_ref()) {
-            if url == DEFAULT_URL || url.is_empty() {
-                url = token_url.clone();
-            } else if url != *token_url {
-                bail!(
-                    "Two different url values supplied: `{}` (from token), `{url}`.",
-                    token_url,
-                );
-            }
-        }
+        let url = match (default_url.as_str(), token_url) {
+            (_, "") => default_url,
+            _ if default_url == token_url => default_url,
+            (DEFAULT_URL | "", _) => String::from(token_url),
+            _ => bail!(
+                "Two different url values supplied: `{token_url}` (from token), `{default_url}`."
+            ),
+        };
 
         Ok(Config {
             filename,
@@ -174,9 +176,9 @@ impl Config {
                 if let Some(token_url) = self
                     .cached_token_data
                     .as_ref()
-                    .and_then(|td| td.url.as_ref())
+                    .and_then(|td| Some(td.url.as_str()))
                 {
-                    self.cached_base_url = token_url.clone();
+                    self.cached_base_url = token_url.to_string();
                 }
 
                 self.ini
@@ -206,15 +208,16 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) -> Result<()> {
-        if let Some(token_url) = self
+        let token_url = self
             .cached_token_data
             .as_ref()
-            .and_then(|td| td.url.as_ref())
-        {
-            if url != token_url {
-                bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
-            }
+            .and_then(|td| Some(td.url.as_str()))
+            .unwrap_or_default();
+
+        if !token_url.is_empty() && url != token_url {
+            bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
         }
+
         self.cached_base_url = url.to_owned();
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
