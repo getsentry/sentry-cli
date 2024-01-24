@@ -63,7 +63,7 @@ impl Config {
         let default_url = get_default_url(&ini);
         let token_url = token_embedded_data
             .as_ref()
-            .and_then(|td| Some(td.url.as_str()))
+            .map(|td| td.url.as_str())
             .unwrap_or_default();
 
         let url = match (default_url.as_str(), token_url) {
@@ -173,11 +173,7 @@ impl Config {
             Some(Auth::Token(ref val)) => {
                 self.cached_token_data = val.payload().cloned();
 
-                if let Some(token_url) = self
-                    .cached_token_data
-                    .as_ref()
-                    .and_then(|td| Some(td.url.as_str()))
-                {
+                if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.url.as_str()) {
                     self.cached_base_url = token_url.to_string();
                 }
 
@@ -211,7 +207,7 @@ impl Config {
         let token_url = self
             .cached_token_data
             .as_ref()
-            .and_then(|td| Some(td.url.as_str()))
+            .map(|td| td.url.as_str())
             .unwrap_or_default();
 
         if !token_url.is_empty() && url != token_url {
