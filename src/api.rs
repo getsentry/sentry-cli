@@ -242,7 +242,7 @@ pub enum ApiErrorKind {
     OrganizationNotFound,
     #[error("resource not found")]
     ResourceNotFound,
-    #[error("project not found")]
+    #[error("Project not found. Please check that you entered the project and organization slugs correctly.")]
     ProjectNotFound,
     #[error("release not found")]
     ReleaseNotFound,
@@ -1642,7 +1642,7 @@ impl Api {
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
-                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                    return Err(ApiErrorKind::ProjectNotFound.into());
                 } else {
                     break;
                 }
@@ -1695,7 +1695,7 @@ impl Api {
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
-                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                    return Err(ApiErrorKind::ProjectNotFound.into());
                 } else {
                     break;
                 }
