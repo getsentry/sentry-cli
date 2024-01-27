@@ -954,7 +954,7 @@ impl SourceMapProcessor {
                         };
 
                         let mut sourcemap = SourceMap::from_slice(&decoded)
-                            .context("Invalid embedded sourcemap in source file {source_url}")?;
+                            .with_context(|| format!("Invalid embedded sourcemap in source file {source_url}"))?;
 
                         let debug_id = sourcemap
                             .get_debug_id()
