@@ -39,14 +39,12 @@ use uuid::Uuid;
 
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
-use crate::utils::android::AndroidManifest;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::http::{self, is_absolute_url, parse_link_header};
 use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
-use crate::utils::xcode::InfoPlist;
 
 // Based on https://docs.rs/percent-encoding/1.0.1/src/percent_encoding/lib.rs.html#104
 // WHATWG Spec: https://url.spec.whatwg.org/#percent-encoded-bytes
@@ -1356,50 +1354,6 @@ impl Api {
         }
     }
 
-    /// Associate apple debug symbols with a build
-    pub fn associate_apple_dsyms(
-        &self,
-        org: &str,
-        project: &str,
-        info_plist: &InfoPlist,
-        checksums: Vec<String>,
-    ) -> ApiResult<Option<AssociateDsymsResponse>> {
-        self.associate_dsyms(
-            org,
-            project,
-            &AssociateDsyms {
-                platform: "apple".to_string(),
-                checksums,
-                name: info_plist.name().to_string(),
-                app_id: info_plist.bundle_id().to_string(),
-                version: info_plist.version().to_string(),
-                build: Some(info_plist.build().to_string()),
-            },
-        )
-    }
-
-    /// Associate proguard mappings with an android app
-    pub fn associate_android_proguard_mappings(
-        &self,
-        org: &str,
-        project: &str,
-        manifest: &AndroidManifest,
-        checksums: Vec<String>,
-    ) -> ApiResult<Option<AssociateDsymsResponse>> {
-        self.associate_dsyms(
-            org,
-            project,
-            &AssociateDsyms {
-                platform: "android".to_string(),
-                checksums,
-                name: manifest.name(),
-                app_id: manifest.package().to_string(),
-                version: manifest.version_name().to_string(),
-                build: Some(manifest.version_code().to_string()),
-            },
-        )
-    }
-
     pub fn associate_proguard_mappings(
         &self,
         org: &str,
@@ -1425,39 +1379,6 @@ impl Api {
             Ok(())
         } else if resp.status() == 404 {
             return Err(ApiErrorKind::ResourceNotFound.into());
-        } else {
-            resp.convert()
-        }
-    }
-
-    /// Associate arbitrary debug symbols with a build
-    pub fn associate_dsyms(
-        &self,
-        org: &str,
-        project: &str,
-        data: &AssociateDsyms,
-    ) -> ApiResult<Option<AssociateDsymsResponse>> {
-        // in case we have no checksums to send up the server does not actually
-        // let us associate anything.  This generally makes sense but means that
-        // from the client side we need to deal with this separately.  In this
-        // case we just pretend we did a request that did nothing.
-        if data.checksums.is_empty() {
-            return Ok(Some(AssociateDsymsResponse {
-                associated_dsyms: vec![],
-            }));
-        }
-
-        let path = format!(
-            "/projects/{}/{}/files/dsyms/associate/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_json_body(data)?
-            .send()?;
-        if resp.status() == 404 {
-            Ok(None)
         } else {
             resp.convert()
         }
@@ -2487,17 +2408,6 @@ impl DebugInfoFile {
 }
 
 #[derive(Debug, Serialize)]
-pub struct AssociateDsyms {
-    pub platform: String,
-    pub checksums: Vec<String>,
-    pub name: String,
-    #[serde(rename = "appId")]
-    pub app_id: String,
-    pub version: String,
-    pub build: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
 pub struct AssociateProguard {
     pub release_name: String,
     pub proguard_uuid: String,
@@ -2583,12 +2493,6 @@ impl IssueFilter {
             Ok(IssueFilter::ExplicitIds(ids))
         }
     }
-}
-
-#[derive(Deserialize)]
-pub struct AssociateDsymsResponse {
-    #[serde(rename = "associatedDsymFiles")]
-    pub associated_dsyms: Vec<DebugInfoFile>,
 }
 
 #[derive(Deserialize, Debug)]

@@ -37,7 +37,6 @@ Options:
                                      upload (this also automatically disables reprocessing).  This
                                      is useful if you just want to verify the mapping files and
                                      write the proguard UUIDs into a properties file.
-      --android-manifest <PATH>      Read version and version code from an Android manifest file.
       --write-properties <PATH>      Write the UUIDs for the processed mapping files into the given
                                      properties file.
       --require-one                  Requires at least one file to upload or the command will error.
