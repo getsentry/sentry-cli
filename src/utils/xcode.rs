@@ -403,9 +403,12 @@ impl<'a> MayDetach<'a> {
             return Ok(false);
         }
 
-        println!("Continuing in background.");
-        show_notification("Sentry", &format!("{} starting", self.task_name))?;
         let output_file = TempFile::create()?;
+
+        println!("Continuing in background.");
+        println!("Output is redirected to {}", output_file.path().display());
+        show_notification("Sentry", &format!("{} starting", self.task_name))?;
+
         daemonize_redirect(
             Some(output_file.path()),
             Some(output_file.path()),
