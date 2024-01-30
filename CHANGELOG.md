@@ -2,6 +2,19 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.27.0
+
+### Improvements
+- Prefer `--url` argument over empty auth token URL (#1914) by @szokeasaurusrex
+- feat(xcode): Print redirected output file path when going to the background (#1920) by @krystofwoldrich
+
+### Fixes
+- Correct error message for querying events/issues on non-existing project. The message now states that the project could not be found, instead of stating that the organization could not be found. (#1916) by @szokeasaurusrex
+
+### Other
+
+- Remove `dsyms/associate` API usage (#1886) by @Swatinem
+
 ## 2.26.0
 
 ### Various fixes & improvements
