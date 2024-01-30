@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.27.0
+
+### Various fixes & improvements
+
+- feat(xcode): Print redirected output file path when going to the background (#1920) by @krystofwoldrich
+- Remove `dsyms/associate` API usage (#1886) by @Swatinem
+- Update incorrect usages of `OrgNotFound` to `ProjectNotFound` (#1916) by @szokeasaurusrex
+- Prefer `--url` argument over empty auth token URL (#1914) by @szokeasaurusrex
+
 ## 2.26.0
 
 ### Various fixes & improvements
