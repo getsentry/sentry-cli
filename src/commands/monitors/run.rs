@@ -87,6 +87,26 @@ pub fn make_command(command: Command) -> Command {
                     execution schedule's timezone. Requires --schedule.",
                 ),
         )
+        .arg(
+            Arg::new("failure_issue_threshold")
+                .long("failure-issue-threshold")
+                .value_parser(clap::value_parser!(u64).range(1..))
+                .requires("schedule")
+                .help(
+                    "The number of consecutive missed or error check-ins that trigger an \
+                     issue. Requires --schedule.",
+                ),
+        )
+        .arg(
+            Arg::new("recovery_threshold")
+                .long("recovery-threshold")
+                .value_parser(clap::value_parser!(u64).range(1..))
+                .requires("schedule")
+                .help(
+                    "The number of consecutive successful check-ins that resolve an \
+                     issue. Requires --schedule.",
+                ),
+        )
 }
 
 fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Duration) {
@@ -211,6 +231,8 @@ fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfi
         checkin_margin: matches.get_one("checkin_margin").copied(),
         max_runtime: matches.get_one("max_runtime").copied(),
         timezone: matches.get_one("timezone").map(Tz::to_string),
+        failure_issue_threshold: matches.get_one("failure_issue_threshold").copied(),
+        recovery_threshold: matches.get_one("recovery_threshold").copied(),
     }))
 }
 

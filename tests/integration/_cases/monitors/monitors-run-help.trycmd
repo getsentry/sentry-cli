@@ -34,6 +34,11 @@ Options:
       --timezone <timezone>
           A tz database string (e.g. "Europe/Vienna") representing the monitor's execution
           schedule's timezone. Requires --schedule.
+      --failure-issue-threshold <failure_issue_threshold>
+          The number of consecutive missed or error check-ins that trigger an issue. Requires
+          --schedule.
+      --recovery-threshold <recovery_threshold>
+          The number of consecutive successful check-ins that resolve an issue. Requires --schedule.
   -h, --help
           Print help
 
