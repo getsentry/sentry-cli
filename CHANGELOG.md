@@ -4,11 +4,13 @@
 
 ## 2.28.0
 
+### New features
+- New cron monitor configuration options (#1922) by @szokeasaurusrex
+  - The `sentry-cli monitors run` command now has two new command line arguments: `--failure-issue-threshold` and `--recovery-threshold`. These arguments allow the user to specify the number of consecutive failed checkins that trigger an issue to be created and the number of successful checkins that trigger the issue to be resolved, respectively.
+
 ### Various fixes & improvements
 
 - fix(sourcemaps): print source map URL instead of {source_url} on error (#1917) by @jbg
-- chore(deps): bump shlex from 1.1.0 to 1.3.0 (#1909) by @dependabot
-- feat(crons): New monitor configuration options (#1922) by @szokeasaurusrex
 
 ## 2.27.0
 
