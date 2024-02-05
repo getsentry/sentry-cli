@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.28.0
+
+### Various fixes & improvements
+
+- fix(sourcemaps): print source map URL instead of {source_url} on error (#1917) by @jbg
+- chore(deps): bump shlex from 1.1.0 to 1.3.0 (#1909) by @dependabot
+- feat(crons): New monitor configuration options (#1922) by @szokeasaurusrex
+
 ## 2.27.0
 
 ### Improvements
