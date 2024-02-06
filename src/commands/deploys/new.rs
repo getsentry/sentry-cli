@@ -71,6 +71,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         env: matches.get_one::<String>("env").unwrap().to_string(),
         name: matches.get_one::<String>("name").cloned(),
         url: matches.get_one::<String>("url").cloned(),
+        projects: config.get_projects(matches).ok(),
         ..Default::default()
     };
 
