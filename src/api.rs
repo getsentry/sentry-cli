@@ -2610,6 +2610,8 @@ pub struct Deploy {
     pub started: Option<DateTime<Utc>>,
     #[serde(rename = "dateFinished")]
     pub finished: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub projects: Option<Vec<String>>,
 }
 
 impl Deploy {
