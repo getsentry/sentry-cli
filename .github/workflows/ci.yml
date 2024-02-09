@@ -17,14 +17,12 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Rust Toolchain
-        run: rustup toolchain install stable --profile minimal --component clippy rustfmt
+        run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt --no-self-update
 
       - uses: swatinem/rust-cache@v2
-        with:
-          key: ${{ github.job }}
 
       - name: Run Rustfmt
         run: cargo fmt --all -- --check
