@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
+      - name: Install Rust Toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy rustfmt
+
       - uses: swatinem/rust-cache@81d053bdb0871dcd3f10763c8cc60d0adc41762b # pin@v1
         with:
           key: ${{ github.job }}
