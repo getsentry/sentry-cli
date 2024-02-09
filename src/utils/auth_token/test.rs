@@ -5,11 +5,13 @@ use rstest::rstest;
 use testing_logger::CapturedLog;
 
 /// Asserts that the logs vector is empty.
+#[allow(clippy::ptr_arg)] // This function signature is required by testing_logger
 fn assert_no_logs(logs: &Vec<CapturedLog>) {
     assert!(logs.is_empty());
 }
 
 /// Asserts that the logs vector contains exactly one warning.
+#[allow(clippy::ptr_arg)] // This function signature is required by testing_logger
 fn assert_one_warning(logs: &Vec<CapturedLog>) {
     assert_eq!(logs.len(), 1);
     assert_eq!(logs[0].level, log::Level::Warn);
