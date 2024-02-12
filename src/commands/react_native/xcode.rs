@@ -380,16 +380,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 },
                 (Err(_), Err(_)) => {
                     // Neither environment variable is present, attempt to parse Info.plist
+                    info!("Parsing Info.plist");
                     match InfoPlist::discover_from_env() {
                         Ok(Some(plist)) => {
                             // Successfully discovered and parsed Info.plist
                             let dist_string = plist.build().to_string();
                             let release_string = format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist_string);
+                            info!("Parse result from Info.plist: {:?}", &plist);
                             (Some(dist_string), Some(release_string))
                         },
                         _ => {
-                            // Info.plist was not found or an error occurred
-                            (None, None) // Handle the error or absence as needed
+                            bail!("Info.plist was not found or an parsing error occurred");
                         }
                     }
                 }
