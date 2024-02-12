@@ -1,9 +1,9 @@
 #[cfg(target_os = "macos")]
-use mockito::Mock;
-#[cfg(target_os = "macos")]
 use crate::integration::register_test;
 #[cfg(target_os = "macos")]
 use crate::integration::{mock_common_upload_endpoints, ChunkOptions, ServerBehavior};
+#[cfg(target_os = "macos")]
+use mockito::Mock;
 
 #[test]
 #[cfg(target_os = "macos")]

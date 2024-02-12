@@ -365,35 +365,35 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
         } else {
-            let mut dist: Option<String> = None;
-            let mut release_name: Option<String> = None;
-
-            if dist_from_env.is_err() && release_from_env.is_err() {
-              info!("Parsing Info.plist");
-              let plist = match InfoPlist::discover_from_env()? {
-                  Some(plist) => plist,
-                  None => bail!("Could not find info.plist"),
-              };
-              info!("Parse result from Info.plist: {:?}", &plist);
-
-              let dist_string = plist.build().to_string();
-              dist = Some(dist_string.clone());
-              release_name = Some(format!(
-                  "{}@{}+{}",
-                  plist.bundle_id(),
-                  plist.version(),
-                  dist_string
-              ));
-            }
-
-            if let Ok(_dist) = dist_from_env {
-              info!("Using dist from `SENTRY_DIST` env");
-              dist = Some(_dist);
-            }
-            if let Ok(_release) = release_from_env {
-              info!("Using release from `SENTRY_RELEASE` env");
-              release_name = Some(_release);
-            }
+            let (dist, release_name) = match (dist_from_env, release_from_env) {
+                (Ok(dist_env), Ok(release_env)) => {
+                    // Both environment variables are present
+                    (Some(dist_env), Some(release_env))
+                },
+                (Ok(dist_env), Err(_)) => {
+                    // Only dist environment variable is present
+                    (Some(dist_env), None)
+                },
+                (Err(_), Ok(release_env)) => {
+                    // Only release environment variable is present
+                    (None, Some(release_env))
+                },
+                (Err(_), Err(_)) => {
+                    // Neither environment variable is present, attempt to parse Info.plist
+                    match InfoPlist::discover_from_env() {
+                        Ok(Some(plist)) => {
+                            // Successfully discovered and parsed Info.plist
+                            let dist_string = plist.build().to_string();
+                            let release_string = format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist_string);
+                            (Some(dist_string), Some(release_string))
+                        },
+                        _ => {
+                            // Info.plist was not found or an error occurred
+                            (None, None) // Handle the error or absence as needed
+                        }
+                    }
+                }
+            };
 
             match matches.get_many::<String>("dist") {
                 None => {
