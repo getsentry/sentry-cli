@@ -1,6 +1,8 @@
 #[cfg(target_os = "macos")]
 use crate::integration::register_test;
 
+mod xcode;
+
 #[test]
 #[cfg(target_os = "macos")]
 fn xcode_wrap_call_minimum() {

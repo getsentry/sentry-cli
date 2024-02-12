@@ -201,12 +201,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    info!("Parsing Info.plist");
-    let plist = match InfoPlist::discover_from_env()? {
-        Some(plist) => plist,
-        None => bail!("Could not find info.plist"),
-    };
-    info!("Parse result from Info.plist: {:?}", &plist);
     let report_file = TempFile::create()?;
     let node = find_node();
     info!("Using node interpreter '{}'", &node);
@@ -371,21 +365,43 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
         } else {
-            let dist = dist_from_env.unwrap_or_else(|_| plist.build().to_string());
-            let release_name = release_from_env.unwrap_or(format!(
-                "{}@{}+{}",
-                plist.bundle_id(),
-                plist.version(),
-                dist
-            ));
+            let mut dist: Option<String> = None;
+            let mut release_name: Option<String> = None;
+
+            if dist_from_env.is_err() && release_from_env.is_err() {
+              info!("Parsing Info.plist");
+              let plist = match InfoPlist::discover_from_env()? {
+                  Some(plist) => plist,
+                  None => bail!("Could not find info.plist"),
+              };
+              info!("Parse result from Info.plist: {:?}", &plist);
+
+              let dist_string = plist.build().to_string();
+              dist = Some(dist_string.clone());
+              release_name = Some(format!(
+                  "{}@{}+{}",
+                  plist.bundle_id(),
+                  plist.version(),
+                  dist_string
+              ));
+            }
+
+            if let Ok(_dist) = dist_from_env {
+              info!("Using dist from `SENTRY_DIST` env");
+              dist = Some(_dist);
+            }
+            if let Ok(_release) = release_from_env {
+              info!("Using release from `SENTRY_RELEASE` env");
+              release_name = Some(_release);
+            }
 
             match matches.get_many::<String>("dist") {
                 None => {
                     processor.upload(&UploadContext {
                         org: &org,
                         project: Some(&project),
-                        release: Some(&release_name),
-                        dist: Some(&dist),
+                        release: release_name.as_deref(),
+                        dist: dist.as_deref(),
                         note: None,
                         wait,
                         max_wait,
@@ -398,7 +414,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         processor.upload(&UploadContext {
                             org: &org,
                             project: Some(&project),
-                            release: Some(&release_name),
+                            release: release_name.as_deref(),
                             dist: Some(dist),
                             note: None,
                             wait,
