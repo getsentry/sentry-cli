@@ -365,19 +365,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
         } else {
-            let (dist, release_name) = match (dist_from_env, release_from_env) {
-                (Ok(dist_env), Ok(release_env)) => {
-                    // Both environment variables are present
-                    (Some(dist_env), Some(release_env))
-                },
-                (Ok(dist_env), Err(_)) => {
-                    // Only dist environment variable is present
-                    (Some(dist_env), None)
-                },
-                (Err(_), Ok(release_env)) => {
-                    // Only release environment variable is present
-                    (None, Some(release_env))
-                },
+            let (dist, release_name) = match (&dist_from_env, &release_from_env) {
                 (Err(_), Err(_)) => {
                     // Neither environment variable is present, attempt to parse Info.plist
                     info!("Parsing Info.plist");
@@ -394,6 +382,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         }
                     }
                 }
+                // At least one environment variable is present, use the values from the environment
+                _ => (dist_from_env.ok(), release_from_env.ok()),
             };
 
             match matches.get_many::<String>("dist") {
