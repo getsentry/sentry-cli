@@ -4,12 +4,9 @@
 
 ## 2.28.4
 
-### Various fixes & improvements
+This release re-enables releases to PyPI, in addition to the following fix:
 
-- ci: Bump node version to pack main package (#1937) by @lforst
-- meta: Re-enable Python releases (#1932) by @szokeasaurusrex
-- ci: Updates to lint GH action (#1935) by @szokeasaurusrex
-- ci: Lint without `actions-rs` (#1934) by @szokeasaurusrex
+### Various fixes & improvements
 - fix(deploys): Use `--project` argument (#1930) by @szokeasaurusrex
 
 ## 2.28.0
