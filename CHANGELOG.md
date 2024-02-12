@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.28.4
+
+### Various fixes & improvements
+
+- ci: Bump node version to pack main package (#1937) by @lforst
+- meta: Re-enable Python releases (#1932) by @szokeasaurusrex
+- ci: Updates to lint GH action (#1935) by @szokeasaurusrex
+- ci: Lint without `actions-rs` (#1934) by @szokeasaurusrex
+- fix(deploys): Use `--project` argument (#1930) by @szokeasaurusrex
+
 ## 2.28.0
 
 ### New features
