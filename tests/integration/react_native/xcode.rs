@@ -1,5 +1,5 @@
+#[cfg(target_os = "macos")]
 use mockito::Mock;
-
 #[cfg(target_os = "macos")]
 use crate::integration::register_test;
 #[cfg(target_os = "macos")]
@@ -22,6 +22,7 @@ fn xcode_upload_source_maps_release_and_dist_from_env() {
     assert_endpoints(&upload_endpoints);
 }
 
+#[cfg(target_os = "macos")]
 pub fn assert_endpoints(mocks: &[Mock]) {
     for mock in mocks {
         mock.assert();
