@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.28.6
+
+### Various fixes & improvements
+
+- fix(deploys): Revert "fix(deploys): Use `--project` argument (#1930)" (#1942) by @szokeasaurusrex
+
 ## 2.28.5
 
 ### Various fixes & improvements
