@@ -58,6 +58,8 @@ function getDistributionForThisPlatform() {
   } else if (platform === 'win32') {
     switch (arch) {
       case 'x64':
+      // Windows arm64 can run x64 binaries
+      case 'arm64':
         packageName = '@sentry/cli-win32-x64';
         break;
       case 'x86':
