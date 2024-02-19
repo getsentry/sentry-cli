@@ -35,9 +35,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
 
     if matches.get_flag("all") {
-        if api.delete_release_files(&org, project.as_deref(), &release)? {
-            println!("All files deleted.");
-        }
+        api.delete_release_files(&org, project.as_deref(), &release)?;
+        println!("All files deleted.");
         return Ok(());
     }
 
