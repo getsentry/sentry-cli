@@ -180,12 +180,15 @@ impl ProgressBarMode {
 }
 
 /// Helper for the API access.
+/// Implements the low-level API access methods, and provides high-level implementations for interacting
+/// with portions of the API that do not require authentication via an auth token.
 pub struct Api {
     config: Arc<Config>,
     pool: r2d2::Pool<CurlConnectionManager>,
 }
 
-/// Wrapper for Api that ensures Auth is provided. Any API requiring auth is called through here.
+/// Wrapper for Api that ensures Auth is provided. AuthenticatedApi provides implementations of high-level
+/// functions that make API requests requiring authentication via auth token.
 pub struct AuthenticatedApi<'a> {
     api: &'a Api,
 }
@@ -404,6 +407,8 @@ impl Api {
         *API.lock() = None;
     }
 
+    /// Creates an AuthenticatedApi referencing this Api instance if an auth token is available.
+    /// If an auth token is not available, returns an error.
     pub fn authenticated(&self) -> ApiResult<AuthenticatedApi> {
         self.try_into()
     }
