@@ -716,7 +716,7 @@ impl Api {
         org: &str,
         project: Option<&str>,
         version: &str,
-    ) -> ApiResult<bool> {
+    ) -> ApiResult<()> {
         let path = if let Some(project) = project {
             format!(
                 "/projects/{}/{}/files/source-maps/?name={}",
@@ -732,12 +732,7 @@ impl Api {
             )
         };
 
-        let resp = self.delete(&path)?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
+        self.delete(&path)?.into_result().map(|_| ())
     }
 
     /// Uploads a new release file.  The file is loaded directly from the file
