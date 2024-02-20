@@ -143,6 +143,7 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
 
     let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
@@ -243,7 +244,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    let rv = api.upload_dif_archive(&org, &project, tf.path())?;
+    let rv = authenticated_api.upload_dif_archive(&org, &project, tf.path())?;
     println!(
         "{} Uploaded a total of {} new mapping files",
         style(">").dim(),
@@ -272,7 +273,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         for mapping in &mappings {
             let uuid = forced_uuid.unwrap_or(&mapping.uuid);
-            api.associate_proguard_mappings(
+            authenticated_api.associate_proguard_mappings(
                 &org,
                 &project,
                 &AssociateProguard {
@@ -285,7 +286,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // If wanted trigger reprocessing
     if !matches.get_flag("no_reprocessing") && !matches.get_flag("no_upload") {
-        if !api.trigger_reprocessing(&org, &project)? {
+        if !authenticated_api.trigger_reprocessing(&org, &project)? {
             println!(
                 "{} Server does not support reprocessing. Not triggering.",
                 style(">").dim()

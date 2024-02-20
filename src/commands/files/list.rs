@@ -26,7 +26,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .add("Source Map")
         .add("Size");
 
-    for artifact in api.list_release_files(&org, project.as_deref(), &release)? {
+    for artifact in api
+        .authenticated()?
+        .list_release_files(&org, project.as_deref(), &release)?
+    {
         let row = table.add_row();
         row.add(&artifact.name);
         if let Some(ref dist) = artifact.dist {

@@ -13,7 +13,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
     let org = config.get_org(matches)?;
-    let mut projects = api.list_organization_projects(&org)?;
+    let mut projects = api.authenticated()?.list_organization_projects(&org)?;
     projects.sort_by_key(|p| {
         (
             p.team.as_ref().map_or(String::new(), |t| t.name.clone()),

@@ -22,7 +22,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     changes.new_status = Some("muted".into());
 
-    if Api::current().bulk_update_issue(&org, &project, &filter, &changes)? {
+    if Api::current()
+        .authenticated()?
+        .bulk_update_issue(&org, &project, &filter, &changes)?
+    {
         println!("Updated matching issues.");
         if let Some(status) = changes.new_status.as_ref() {
             println!("  new status: {status}");

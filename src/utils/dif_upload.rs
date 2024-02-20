@@ -1274,7 +1274,9 @@ fn try_assemble_difs<'data, 'm>(
         .iter()
         .map(|d| d.to_assemble(options.pdbs_allowed))
         .collect();
-    let response = api.assemble_difs(&options.org, &options.project, &request)?;
+    let response = api
+        .authenticated()?
+        .assemble_difs(&options.org, &options.project, &request)?;
 
     // We map all DIFs by their checksum, so we can access them faster when
     // iterating through the server response below. Since the caller will invoke
@@ -1424,7 +1426,9 @@ fn poll_dif_assemble(
         .map(|d| d.to_assemble(options.pdbs_allowed))
         .collect();
     let response = loop {
-        let response = api.assemble_difs(&options.org, &options.project, &request)?;
+        let response =
+            api.authenticated()?
+                .assemble_difs(&options.org, &options.project, &request)?;
 
         let chunks_missing = response
             .values()
@@ -1628,7 +1632,11 @@ fn get_missing_difs<'data>(
     let api = Api::current();
     let missing_checksums = {
         let checksums = objects.iter().map(HashedDifMatch::checksum);
-        api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
+        api.authenticated()?.find_missing_dif_checksums(
+            &options.org,
+            &options.project,
+            checksums,
+        )?
     };
 
     let missing = objects
@@ -1679,7 +1687,11 @@ fn upload_in_batches(
         let archive = create_batch_archive(batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(api.upload_dif_archive(&options.org, &options.project, archive.path())?);
+        dsyms.extend(api.authenticated()?.upload_dif_archive(
+            &options.org,
+            &options.project,
+            archive.path(),
+        )?);
     }
 
     Ok(dsyms)
@@ -2018,7 +2030,7 @@ impl DifUpload {
         }
 
         let api = Api::current();
-        if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
+        if let Some(ref chunk_options) = api.authenticated()?.get_chunk_upload_options(&self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;
             }

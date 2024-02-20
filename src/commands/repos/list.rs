@@ -14,7 +14,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let config = Config::current();
     let org = config.get_org(matches)?;
-    let repos = api.list_organization_repos(&org)?;
+    let repos = api.authenticated()?.list_organization_repos(&org)?;
 
     let mut table = Table::new();
     table.title_row().add("Name").add("Provider").add("URL");

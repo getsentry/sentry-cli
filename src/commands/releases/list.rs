@@ -44,7 +44,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
     let project = config.get_project(matches).ok();
-    let releases = api.list_releases(&config.get_org(matches)?, project.as_deref())?;
+    let releases = api
+        .authenticated()?
+        .list_releases(&config.get_org(matches)?, project.as_deref())?;
 
     if matches.get_flag("raw") {
         let versions = releases

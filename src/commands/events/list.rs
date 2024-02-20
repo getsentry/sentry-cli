@@ -46,7 +46,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let pages = *matches.get_one("pages").unwrap();
     let api = Api::current();
 
-    let events = api.list_organization_project_events(&org, &project, pages)?;
+    let events = api
+        .authenticated()?
+        .list_organization_project_events(&org, &project, pages)?;
 
     let mut table = Table::new();
     let title_row = table.title_row().add("Event ID").add("Date").add("Title");

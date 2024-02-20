@@ -90,7 +90,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     let org = config.get_org(matches)?;
-    let created_deploy = api.create_deploy(&org, &version, &deploy)?;
+    let created_deploy = api
+        .authenticated()?
+        .create_deploy(&org, &version, &deploy)?;
 
     println!(
         "Created new deploy {} for '{}'",

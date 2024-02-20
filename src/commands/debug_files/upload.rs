@@ -327,7 +327,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Trigger reprocessing only if requested by user
         if matches.get_flag("no_reprocessing") {
             println!("{} skipped reprocessing", style(">").dim());
-        } else if !api.trigger_reprocessing(&org, &project)? {
+        } else if !api.authenticated()?.trigger_reprocessing(&org, &project)? {
             println!("{} Server does not support reprocessing.", style(">").dim());
         }
 

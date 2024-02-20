@@ -84,9 +84,10 @@ fn strip_sha(sha: &str) -> &str {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
     let version = matches.get_one::<String>("version").unwrap();
     let org = config.get_org(matches)?;
-    let repos = api.list_organization_repos(&org)?;
+    let repos = authenticated_api.list_organization_repos(&org)?;
     let mut commit_specs = vec![];
 
     let heads = if repos.is_empty() {
@@ -130,7 +131,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // make sure the release exists if projects are given
     if let Ok(projects) = config.get_projects(matches) {
-        api.new_release(
+        authenticated_api.new_release(
             &org,
             &NewRelease {
                 version: version.into(),
@@ -161,7 +162,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
             table.print();
         }
-        api.set_release_refs(&org, version, heads)?;
+        authenticated_api.set_release_refs(&org, version, heads)?;
     } else {
         let default_count = matches
             .get_one::<usize>("initial-depth")
@@ -172,7 +173,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             println!("Could not determine any commits to be associated with a repo-based integration. Proceeding to find commits from local git tree.");
         }
         // Get the commit of the most recent release.
-        let prev_commit = match api.get_previous_release_with_commits(&org, version)? {
+        let prev_commit = match authenticated_api
+            .get_previous_release_with_commits(&org, version)?
+        {
             OptionalReleaseInfo::Some(prev) => prev.last_commit.map(|c| c.id).unwrap_or_default(),
             OptionalReleaseInfo::None(NoneReleaseInfo {}) => String::new(),
         };
@@ -197,7 +200,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             return Ok(());
         }
 
-        api.update_release(
+        authenticated_api.update_release(
             &config.get_org(matches)?,
             version,
             &UpdatedRelease {

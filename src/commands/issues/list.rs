@@ -40,7 +40,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let query = matches.get_one::<String>("query").cloned();
     let api = Api::current();
 
-    let issues = api.list_organization_project_issues(&org, &project, pages, query)?;
+    let issues = api
+        .authenticated()?
+        .list_organization_project_issues(&org, &project, pages, query)?;
 
     let mut table = Table::new();
     table

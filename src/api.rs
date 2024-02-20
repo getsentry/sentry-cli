@@ -187,7 +187,9 @@ pub struct Api {
 }
 
 /// Wrapper for Api that ensures Auth is provided. Any API requiring auth is called through here.
-pub struct AuthenticatedApi<'a>(&'a Api);
+pub struct AuthenticatedApi<'a> {
+    api: &'a Api,
+}
 
 #[derive(Debug, thiserror::Error)]
 pub struct SentryError {
@@ -365,7 +367,7 @@ impl<'a> TryFrom<&'a Api> for AuthenticatedApi<'a> {
 
     fn try_from(api: &'a Api) -> ApiResult<AuthenticatedApi<'a>> {
         match api.config.get_auth() {
-            Some(_) => Ok(AuthenticatedApi(api)),
+            Some(_) => Ok(AuthenticatedApi { api }),
             None => Err(ApiErrorKind::AuthMissing.into()),
         }
     }
@@ -405,15 +407,6 @@ impl Api {
 
     pub fn authenticated(&self) -> ApiResult<AuthenticatedApi> {
         self.try_into()
-    }
-
-    /// Utility method which returns AuthMissing error if the auth is not provided.
-    /// Should call for all APIs requiring token authentication.
-    fn ensure_auth_provided(&self) -> ApiResult<()> {
-        match self.config.get_auth() {
-            Some(_) => Ok(()),
-            None => Err(ApiErrorKind::AuthMissing.into()),
-        }
     }
 
     // Low Level Methods
@@ -737,11 +730,841 @@ impl Api {
         }
         resp.convert()
     }
+}
+
+impl<'a> AuthenticatedApi<'a> {
+    // Pass through low-level methods to API.
+
+    /// Convenience method to call self.api.get.
+    fn get(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.api.get(path)
+    }
+
+    /// Convenience method to call self.api.delete.
+    fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.api.delete(path)
+    }
+
+    /// Convenience method to call self.api.post.
+    fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.api.post(path, body)
+    }
+
+    /// Convenience method to call self.api.put.
+    fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.api.put(path, body)
+    }
+
+    /// Convinience method to call self.api.request.
+    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        self.api.request(method, url)
+    }
+
+    /// Performs an API request to verify the authentication status of the
+    /// current token.
+    pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
+        self.get("/")?.convert()
+    }
+
+    /// Lists release files for the given `release`, filtered by a set of checksums.
+    /// When empty checksums list is provided, fetches all possible artifacts.
+    pub fn list_release_files_by_checksum(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+        checksums: &[String],
+    ) -> ApiResult<Vec<Artifact>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let mut path = if let Some(project) = project {
+                format!(
+                    "/projects/{}/{}/releases/{}/files/?cursor={}",
+                    PathArg(org),
+                    PathArg(project),
+                    PathArg(release),
+                    QueryArg(&cursor),
+                )
+            } else {
+                format!(
+                    "/organizations/{}/releases/{}/files/?cursor={}",
+                    PathArg(org),
+                    PathArg(release),
+                    QueryArg(&cursor),
+                )
+            };
+
+            let mut checkums_qs = String::new();
+            for checksum in checksums.iter() {
+                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+            }
+            // We have a 16kb buffer for reach request configured in nginx,
+            // so do not even bother trying if it's too long.
+            // (16_384 limit still leaves us with 384 bytes for the url itself).
+            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
+                path.push_str(&checkums_qs);
+            }
+
+            let resp = self.get(&path)?;
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::ReleaseNotFound.into());
+                } else {
+                    break;
+                }
+            }
+
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Artifact>>()?);
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
+    }
+
+    /// Lists all the release files for the given `release`.
+    pub fn list_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        release: &str,
+    ) -> ApiResult<Vec<Artifact>> {
+        self.list_release_files_by_checksum(org, project, release, &[])
+    }
+
+    /// Get a single release file and store it inside provided descriptor.
+    pub fn get_release_file(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        file_id: &str,
+        file_desc: &mut File,
+    ) -> Result<(), ApiError> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/{}/?download=1",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/{}/?download=1",
+                PathArg(org),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        };
+
+        let resp = self.api.download(&path, file_desc)?;
+        if resp.status() == 404 {
+            resp.convert_rnf(ApiErrorKind::ResourceNotFound)
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Get a single release file metadata.
+    pub fn get_release_file_metadata(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        file_id: &str,
+    ) -> ApiResult<Option<Artifact>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        };
+
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    /// Deletes a single release file.  Returns `true` if the file was
+    /// deleted or `false` otherwise.
+    pub fn delete_release_file(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+        file_id: &str,
+    ) -> ApiResult<bool> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/{}/",
+                PathArg(org),
+                PathArg(version),
+                PathArg(file_id)
+            )
+        };
+
+        let resp = self.delete(&path)?;
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.into_result().map(|_| true)
+        }
+    }
+
+    /// Deletes all release files.  Returns `true` if files were
+    /// deleted or `false` otherwise.
+    pub fn delete_release_files(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<()> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/files/source-maps/?name={}",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
+        } else {
+            format!(
+                "/organizations/{}/files/source-maps/?name={}",
+                PathArg(org),
+                PathArg(version)
+            )
+        };
+
+        self.delete(&path)?.into_result().map(|_| ())
+    }
+
+    /// Uploads a new release file.  The file is loaded directly from the file
+    /// system and uploaded as `name`.
+    pub fn upload_release_file(
+        &self,
+        context: &UploadContext,
+        contents: &[u8],
+        name: &str,
+        headers: Option<&[(String, String)]>,
+        progress_bar_mode: ProgressBarMode,
+    ) -> ApiResult<Option<Artifact>> {
+        let release = context
+            .release()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
+
+        let path = if let Some(project) = context.project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/",
+                PathArg(context.org),
+                PathArg(project),
+                PathArg(release)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/",
+                PathArg(context.org),
+                PathArg(release)
+            )
+        };
+        let mut form = curl::easy::Form::new();
+
+        let filename = Path::new(name)
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("unknown.bin");
+        form.part("file")
+            .buffer(filename, contents.to_vec())
+            .add()?;
+        form.part("name").contents(name.as_bytes()).add()?;
+        if let Some(dist) = context.dist {
+            form.part("dist").contents(dist.as_bytes()).add()?;
+        }
+
+        if let Some(headers) = headers {
+            for (key, value) in headers {
+                form.part("header")
+                    .contents(format!("{key}:{value}").as_bytes())
+                    .add()?;
+            }
+        }
+
+        let resp = self
+            .api
+            .request(Method::Post, &path)?
+            .with_form_data(form)?
+            .with_retry(
+                self.api.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .progress_bar_mode(progress_bar_mode)?
+            .send()?;
+        if resp.status() == 409 {
+            Ok(None)
+        } else {
+            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
+        }
+    }
+
+    /// Creates a new release.
+    pub fn new_release(&self, org: &str, release: &NewRelease) -> ApiResult<ReleaseInfo> {
+        // for single project releases use the legacy endpoint that is project bound.
+        // This means we can support both old and new servers.
+        if release.projects.len() == 1 {
+            let path = format!(
+                "/projects/{}/{}/releases/",
+                PathArg(org),
+                PathArg(&release.projects[0])
+            );
+            self.post(&path, release)?
+                .convert_rnf(ApiErrorKind::ProjectNotFound)
+        } else {
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            self.post(&path, release)?
+                .convert_rnf(ApiErrorKind::OrganizationNotFound)
+        }
+    }
+
+    /// Updates a release.
+    pub fn update_release(
+        &self,
+        org: &str,
+        version: &str,
+        release: &UpdatedRelease,
+    ) -> ApiResult<ReleaseInfo> {
+        if_chain! {
+            if let Some(ref projects) = release.projects;
+            if projects.len() == 1;
+            then {
+                let path = format!("/projects/{}/{}/releases/{}/",
+                    PathArg(org),
+                    PathArg(&projects[0]),
+                    PathArg(version)
+                );
+                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+            } else {
+                if release.version.is_some() {
+                    let path = format!("/organizations/{}/releases/",
+                                    PathArg(org));
+                    return self.post(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+                }
+
+                let path = format!("/organizations/{}/releases/{}/",
+                                PathArg(org),
+                                PathArg(version));
+                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+            }
+        }
+    }
+
+    /// Sets release commits
+    pub fn set_release_refs(
+        &self,
+        org: &str,
+        version: &str,
+        refs: Vec<Ref>,
+    ) -> ApiResult<ReleaseInfo> {
+        let update = UpdatedRelease {
+            refs: Some(refs),
+            ..Default::default()
+        };
+        let path = format!(
+            "/organizations/{}/releases/{}/",
+            PathArg(org),
+            PathArg(version)
+        );
+        self.put(&path, &update)?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    /// Deletes an already existing release.  Returns `true` if it was deleted
+    /// or `false` if not.  The project is needed to support the old deletion
+    /// API.
+    pub fn delete_release(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<bool> {
+        let resp = if let Some(project) = project {
+            self.delete(&format!(
+                "/projects/{}/{}/releases/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            ))?
+        } else {
+            self.delete(&format!(
+                "/organizations/{}/releases/{}/",
+                PathArg(org),
+                PathArg(version)
+            ))?
+        };
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.into_result().map(|_| true)
+        }
+    }
+
+    /// Looks up a release and returns it.  If it does not exist `None`
+    /// will be returned.
+    pub fn get_release(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<Option<ReleaseInfo>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/",
+                PathArg(org),
+                PathArg(version)
+            )
+        };
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    /// Returns a list of releases for a given project.  This is currently a
+    /// capped list by what the server deems an acceptable default limit.
+    pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
+        if let Some(project) = project {
+            let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
+        } else {
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
+        }
+    }
+
+    /// Looks up a release commits and returns it.  If it does not exist `None`
+    /// will be returned.
+    pub fn get_release_commits(
+        &self,
+        org: &str,
+        project: Option<&str>,
+        version: &str,
+    ) -> ApiResult<Option<Vec<ReleaseCommit>>> {
+        let path = if let Some(project) = project {
+            format!(
+                "/projects/{}/{}/releases/{}/commits/",
+                PathArg(org),
+                PathArg(project),
+                PathArg(version)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/commits/",
+                PathArg(org),
+                PathArg(version)
+            )
+        };
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    // Finds the most recent release with commits and returns it.
+    // If it does not exist `None` will be returned.
+    pub fn get_previous_release_with_commits(
+        &self,
+        org: &str,
+        version: &str,
+    ) -> ApiResult<OptionalReleaseInfo> {
+        let path = format!(
+            "/organizations/{}/releases/{}/previous-with-commits/",
+            PathArg(org),
+            PathArg(version)
+        );
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(OptionalReleaseInfo::None(NoneReleaseInfo {}))
+        } else {
+            resp.convert()
+        }
+    }
+
+    /// Creates a new deploy for a release.
+    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy) -> ApiResult<Deploy> {
+        let path = format!(
+            "/organizations/{}/releases/{}/deploys/",
+            PathArg(org),
+            PathArg(version)
+        );
+
+        self.post(&path, deploy)?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    /// Lists all deploys for a release
+    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy>> {
+        let path = format!(
+            "/organizations/{}/releases/{}/deploys/",
+            PathArg(org),
+            PathArg(version)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    /// Updates a bunch of issues within a project that match a provided filter
+    /// and performs `changes` changes.
+    pub fn bulk_update_issue(
+        &self,
+        org: &str,
+        project: &str,
+        filter: &IssueFilter,
+        changes: &IssueChanges,
+    ) -> ApiResult<bool> {
+        let qs = match filter.get_query_string() {
+            None => {
+                return Ok(false);
+            }
+            Some(qs) => qs,
+        };
+        self.put(
+            &format!(
+                "/projects/{}/{}/issues/?{}",
+                PathArg(org),
+                PathArg(project),
+                qs
+            ),
+            changes,
+        )?
+        .into_result()
+        .map(|_| true)
+    }
+
+    /// Given a list of checksums for DIFs, this returns a list of those
+    /// that do not exist for the project yet.
+    pub fn find_missing_dif_checksums<I>(
+        &self,
+        org: &str,
+        project: &str,
+        checksums: I,
+    ) -> ApiResult<HashSet<Digest>>
+    where
+        I: IntoIterator<Item = Digest>,
+    {
+        let mut url = format!(
+            "/projects/{}/{}/files/dsyms/unknown/?",
+            PathArg(org),
+            PathArg(project)
+        );
+        for (idx, checksum) in checksums.into_iter().enumerate() {
+            if idx > 0 {
+                url.push('&');
+            }
+            url.push_str("checksums=");
+            url.push_str(&checksum.to_string());
+        }
+
+        let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
+        Ok(state.missing)
+    }
+
+    /// Uploads a ZIP archive containing DIFs from the given path.
+    pub fn upload_dif_archive(
+        &self,
+        org: &str,
+        project: &str,
+        file: &Path,
+    ) -> ApiResult<Vec<DebugInfoFile>> {
+        let path = format!(
+            "/projects/{}/{}/files/dsyms/",
+            PathArg(org),
+            PathArg(project)
+        );
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(file).add()?;
+        self.request(Method::Post, &path)?
+            .with_form_data(form)?
+            .progress_bar_mode(ProgressBarMode::Request)?
+            .send()?
+            .convert()
+    }
+
+    /// Get the server configuration for chunked file uploads.
+    pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
+        let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
+        match self
+            .get(&url)?
+            .convert_rnf::<ChunkUploadOptions>(ApiErrorKind::ChunkUploadNotSupported)
+        {
+            Ok(options) => Ok(Some(options)),
+            Err(error) => {
+                if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
+                    Ok(None)
+                } else {
+                    Err(error)
+                }
+            }
+        }
+    }
+
+    /// Request DIF assembling and processing from chunks.
+    pub fn assemble_difs(
+        &self,
+        org: &str,
+        project: &str,
+        request: &AssembleDifsRequest<'_>,
+    ) -> ApiResult<AssembleDifsResponse> {
+        let url = format!(
+            "/projects/{}/{}/files/difs/assemble/",
+            PathArg(org),
+            PathArg(project)
+        );
+
+        self.request(Method::Post, &url)?
+            .with_json_body(request)?
+            .with_retry(
+                self.api.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
+    }
+
+    pub fn assemble_release_artifacts(
+        &self,
+        org: &str,
+        release: &str,
+        checksum: Digest,
+        chunks: &[Digest],
+    ) -> ApiResult<AssembleArtifactsResponse> {
+        let url = format!(
+            "/organizations/{}/releases/{}/assemble/",
+            PathArg(org),
+            PathArg(release)
+        );
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects: Vec::new(),
+                version: None,
+                dist: None,
+            })?
+            .with_retry(
+                self.api.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    pub fn assemble_artifact_bundle(
+        &self,
+        org: &str,
+        projects: Vec<String>,
+        checksum: Digest,
+        chunks: &[Digest],
+        version: Option<&str>,
+        dist: Option<&str>,
+    ) -> ApiResult<AssembleArtifactsResponse> {
+        let url = format!("/organizations/{}/artifactbundle/assemble/", PathArg(org));
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedArtifactRequest {
+                checksum,
+                chunks,
+                projects,
+                version,
+                dist,
+            })?
+            .with_retry(
+                self.api.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .send()?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    pub fn associate_proguard_mappings(
+        &self,
+        org: &str,
+        project: &str,
+        data: &AssociateProguard,
+    ) -> ApiResult<()> {
+        let path = format!(
+            "/projects/{}/{}/files/proguard-artifact-releases",
+            PathArg(org),
+            PathArg(project)
+        );
+        let resp: ApiResponse = self
+            .request(Method::Post, &path)?
+            .with_json_body(data)?
+            .send()?;
+        if resp.status() == 201 {
+            Ok(())
+        } else if resp.status() == 409 {
+            info!(
+                "Release association for release '{}', UUID '{}' already exists.",
+                data.release_name, data.proguard_uuid
+            );
+            Ok(())
+        } else if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        } else {
+            resp.convert()
+        }
+    }
+
+    /// Triggers reprocessing for a project
+    pub fn trigger_reprocessing(&self, org: &str, project: &str) -> ApiResult<bool> {
+        let path = format!(
+            "/projects/{}/{}/reprocessing/",
+            PathArg(org),
+            PathArg(project)
+        );
+        let resp = self
+            .request(Method::Post, &path)?
+            .with_header("Content-Length", "0")?
+            .send()?;
+        if resp.status() == 404 {
+            Ok(false)
+        } else {
+            resp.into_result().map(|_| true)
+        }
+    }
+
+    /// List all organizations associated with the authenticated token
+    /// in the given `Region`. If no `Region` is provided, we assume
+    /// we're issuing a request to a monolith deployment.
+    pub fn list_organizations(&self, region: Option<&Region>) -> ApiResult<Vec<Organization>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
+            let resp = if let Some(rg) = region {
+                self.api
+                    .region_request(Method::Get, current_path, rg)?
+                    .send()?
+            } else {
+                self.get(current_path)?
+            };
+
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::ResourceNotFound.into());
+                } else {
+                    break;
+                }
+            }
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Organization>>()?);
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
+    }
+
+    pub fn list_available_regions(&self) -> ApiResult<Vec<Region>> {
+        let resp = self.get("/users/me/regions/")?;
+        if resp.status() == 404 {
+            // This endpoint may not exist for self-hosted users, so
+            // returning a default of [] seems appropriate.
+            return Ok(vec![]);
+        }
+
+        if resp.status() == 400 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+
+        let region_response = resp.convert::<RegionResponse>()?;
+        Ok(region_response.regions)
+    }
+
+    /// List all monitors associated with an organization
+    pub fn list_organization_monitors(&self, org: &str) -> ApiResult<Vec<Monitor>> {
+        let mut rv = vec![];
+        let mut cursor = "".to_string();
+        loop {
+            let resp = self.get(&format!(
+                "/organizations/{}/monitors/?cursor={}",
+                PathArg(org),
+                QueryArg(&cursor)
+            ))?;
+            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
+                if rv.is_empty() {
+                    return Err(ApiErrorKind::ResourceNotFound.into());
+                } else {
+                    break;
+                }
+            }
+            let pagination = resp.pagination();
+            rv.extend(resp.convert::<Vec<Monitor>>()?);
+            if let Some(next) = pagination.into_next_cursor() {
+                cursor = next;
+            } else {
+                break;
+            }
+        }
+        Ok(rv)
+    }
 
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
-        self.ensure_auth_provided()?;
-
         let mut rv = vec![];
         let mut cursor = "".to_string();
         loop {
@@ -775,8 +1598,6 @@ impl Api {
         project: &str,
         max_pages: usize,
     ) -> ApiResult<Vec<ProcessedEvent>> {
-        self.ensure_auth_provided()?;
-
         let mut rv = vec![];
         let mut cursor = "".to_string();
         let mut requests_no = 0;
@@ -824,8 +1645,6 @@ impl Api {
         max_pages: usize,
         query: Option<String>,
     ) -> ApiResult<Vec<Issue>> {
-        self.ensure_auth_provided()?;
-
         let mut rv = vec![];
         let mut cursor = "".to_string();
         let mut requests_no = 0;
@@ -873,8 +1692,6 @@ impl Api {
 
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
-        self.ensure_auth_provided()?;
-
         let mut rv = vec![];
         let mut cursor = "".to_string();
         loop {
@@ -907,8 +1724,6 @@ impl Api {
         project: Option<&str>,
         event_id: &str,
     ) -> ApiResult<Option<ProcessedEvent>> {
-        self.ensure_auth_provided()?;
-
         let path = if let Some(project) = project {
             format!(
                 "/projects/{}/{}/events/{}/json/",
@@ -930,862 +1745,6 @@ impl Api {
         } else {
             resp.convert()
         }
-    }
-}
-
-impl<'a> AuthenticatedApi<'a> {
-    /// Performs an API request to verify the authentication status of the
-    /// current token.
-    pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
-        self.0.get("/")?.convert()
-    }
-
-    /// Lists release files for the given `release`, filtered by a set of checksums.
-    /// When empty checksums list is provided, fetches all possible artifacts.
-    pub fn list_release_files_by_checksum(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        checksums: &[String],
-    ) -> ApiResult<Vec<Artifact>> {
-        let mut rv = vec![];
-        let mut cursor = "".to_string();
-        loop {
-            let mut path = if let Some(project) = project {
-                format!(
-                    "/projects/{}/{}/releases/{}/files/?cursor={}",
-                    PathArg(org),
-                    PathArg(project),
-                    PathArg(release),
-                    QueryArg(&cursor),
-                )
-            } else {
-                format!(
-                    "/organizations/{}/releases/{}/files/?cursor={}",
-                    PathArg(org),
-                    PathArg(release),
-                    QueryArg(&cursor),
-                )
-            };
-
-            let mut checkums_qs = String::new();
-            for checksum in checksums.iter() {
-                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
-            }
-            // We have a 16kb buffer for reach request configured in nginx,
-            // so do not even bother trying if it's too long.
-            // (16_384 limit still leaves us with 384 bytes for the url itself).
-            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
-                path.push_str(&checkums_qs);
-            }
-
-            let resp = self.0.get(&path)?;
-            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
-                if rv.is_empty() {
-                    return Err(ApiErrorKind::ReleaseNotFound.into());
-                } else {
-                    break;
-                }
-            }
-
-            let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Artifact>>()?);
-            if let Some(next) = pagination.into_next_cursor() {
-                cursor = next;
-            } else {
-                break;
-            }
-        }
-        Ok(rv)
-    }
-
-    /// Lists all the release files for the given `release`.
-    pub fn list_release_files(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-    ) -> ApiResult<Vec<Artifact>> {
-        self.list_release_files_by_checksum(org, project, release, &[])
-    }
-
-    /// Get a single release file and store it inside provided descriptor.
-    pub fn get_release_file(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-        file_id: &str,
-        file_desc: &mut File,
-    ) -> Result<(), ApiError> {
-        self.ensure_auth_provided()?;
-
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/{}/?download=1",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/{}/?download=1",
-                PathArg(org),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        };
-
-        let resp = self.download(&path, file_desc)?;
-        if resp.status() == 404 {
-            resp.convert_rnf(ApiErrorKind::ResourceNotFound)
-        } else {
-            Ok(())
-        }
-    }
-
-    /// Get a single release file metadata.
-    pub fn get_release_file_metadata(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-        file_id: &str,
-    ) -> ApiResult<Option<Artifact>> {
-        self.ensure_auth_provided()?;
-
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/{}/",
-                PathArg(org),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        };
-
-        let resp = self.get(&path)?;
-        if resp.status() == 404 {
-            Ok(None)
-        } else {
-            resp.convert()
-        }
-    }
-
-    /// Deletes a single release file.  Returns `true` if the file was
-    /// deleted or `false` otherwise.
-    pub fn delete_release_file(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-        file_id: &str,
-    ) -> ApiResult<bool> {
-        self.ensure_auth_provided()?;
-
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/{}/",
-                PathArg(org),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        };
-
-        let resp = self.delete(&path)?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
-    }
-
-    /// Deletes all release files.  Returns `true` if files were
-    /// deleted or `false` otherwise.
-    pub fn delete_release_files(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<()> {
-        self.ensure_auth_provided()?;
-
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/files/source-maps/?name={}",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            )
-        } else {
-            format!(
-                "/organizations/{}/files/source-maps/?name={}",
-                PathArg(org),
-                PathArg(version)
-            )
-        };
-
-        self.delete(&path)?.into_result().map(|_| ())
-    }
-
-    /// Uploads a new release file.  The file is loaded directly from the file
-    /// system and uploaded as `name`.
-    pub fn upload_release_file(
-        &self,
-        context: &UploadContext,
-        contents: &[u8],
-        name: &str,
-        headers: Option<&[(String, String)]>,
-        progress_bar_mode: ProgressBarMode,
-    ) -> ApiResult<Option<Artifact>> {
-        self.ensure_auth_provided()?;
-
-        let release = context
-            .release()
-            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
-
-        let path = if let Some(project) = context.project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(project),
-                PathArg(release)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(release)
-            )
-        };
-        let mut form = curl::easy::Form::new();
-
-        let filename = Path::new(name)
-            .file_name()
-            .and_then(OsStr::to_str)
-            .unwrap_or("unknown.bin");
-        form.part("file")
-            .buffer(filename, contents.to_vec())
-            .add()?;
-        form.part("name").contents(name.as_bytes()).add()?;
-        if let Some(dist) = context.dist {
-            form.part("dist").contents(dist.as_bytes()).add()?;
-        }
-
-        if let Some(headers) = headers {
-            for (key, value) in headers {
-                form.part("header")
-                    .contents(format!("{key}:{value}").as_bytes())
-                    .add()?;
-            }
-        }
-
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_form_data(form)?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .progress_bar_mode(progress_bar_mode)?
-            .send()?;
-        if resp.status() == 409 {
-            Ok(None)
-        } else {
-            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
-        }
-    }
-
-    /// Creates a new release.
-    pub fn new_release(&self, org: &str, release: &NewRelease) -> ApiResult<ReleaseInfo> {
-        self.ensure_auth_provided()?;
-
-        // for single project releases use the legacy endpoint that is project bound.
-        // This means we can support both old and new servers.
-        if release.projects.len() == 1 {
-            let path = format!(
-                "/projects/{}/{}/releases/",
-                PathArg(org),
-                PathArg(&release.projects[0])
-            );
-            self.post(&path, release)?
-                .convert_rnf(ApiErrorKind::ProjectNotFound)
-        } else {
-            let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.post(&path, release)?
-                .convert_rnf(ApiErrorKind::OrganizationNotFound)
-        }
-    }
-
-    /// Updates a release.
-    pub fn update_release(
-        &self,
-        org: &str,
-        version: &str,
-        release: &UpdatedRelease,
-    ) -> ApiResult<ReleaseInfo> {
-        self.ensure_auth_provided()?;
-
-        if_chain! {
-            if let Some(ref projects) = release.projects;
-            if projects.len() == 1;
-            then {
-                let path = format!("/projects/{}/{}/releases/{}/",
-                    PathArg(org),
-                    PathArg(&projects[0]),
-                    PathArg(version)
-                );
-                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-            } else {
-                if release.version.is_some() {
-                    let path = format!("/organizations/{}/releases/",
-                                    PathArg(org));
-                    return self.post(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-                }
-
-                let path = format!("/organizations/{}/releases/{}/",
-                                PathArg(org),
-                                PathArg(version));
-                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-            }
-        }
-    }
-
-    /// Sets release commits
-    pub fn set_release_refs(
-        &self,
-        org: &str,
-        version: &str,
-        refs: Vec<Ref>,
-    ) -> ApiResult<ReleaseInfo> {
-        self.ensure_auth_provided()?;
-
-        let update = UpdatedRelease {
-            refs: Some(refs),
-            ..Default::default()
-        };
-        let path = format!(
-            "/organizations/{}/releases/{}/",
-            PathArg(org),
-            PathArg(version)
-        );
-        self.put(&path, &update)?
-            .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    /// Deletes an already existing release.  Returns `true` if it was deleted
-    /// or `false` if not.  The project is needed to support the old deletion
-    /// API.
-    pub fn delete_release(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<bool> {
-        self.ensure_auth_provided()?;
-
-        let resp = if let Some(project) = project {
-            self.delete(&format!(
-                "/projects/{}/{}/releases/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            ))?
-        } else {
-            self.delete(&format!(
-                "/organizations/{}/releases/{}/",
-                PathArg(org),
-                PathArg(version)
-            ))?
-        };
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
-    }
-
-    /// Looks up a release and returns it.  If it does not exist `None`
-    /// will be returned.
-    pub fn get_release(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<Option<ReleaseInfo>> {
-        self.ensure_auth_provided()?;
-
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/",
-                PathArg(org),
-                PathArg(version)
-            )
-        };
-        let resp = self.get(&path)?;
-        if resp.status() == 404 {
-            Ok(None)
-        } else {
-            resp.convert()
-        }
-    }
-
-    /// Returns a list of releases for a given project.  This is currently a
-    /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
-        self.ensure_auth_provided()?;
-
-        if let Some(project) = project {
-            let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
-            self.get(&path)?
-                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
-        } else {
-            let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.get(&path)?
-                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
-        }
-    }
-
-    /// Looks up a release commits and returns it.  If it does not exist `None`
-    /// will be returned.
-    pub fn get_release_commits(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<Option<Vec<ReleaseCommit>>> {
-        self.ensure_auth_provided()?;
-
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/commits/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/commits/",
-                PathArg(org),
-                PathArg(version)
-            )
-        };
-        let resp = self.get(&path)?;
-        if resp.status() == 404 {
-            Ok(None)
-        } else {
-            resp.convert()
-        }
-    }
-
-    // Finds the most recent release with commits and returns it.
-    // If it does not exist `None` will be returned.
-    pub fn get_previous_release_with_commits(
-        &self,
-        org: &str,
-        version: &str,
-    ) -> ApiResult<OptionalReleaseInfo> {
-        self.ensure_auth_provided()?;
-
-        let path = format!(
-            "/organizations/{}/releases/{}/previous-with-commits/",
-            PathArg(org),
-            PathArg(version)
-        );
-        let resp = self.get(&path)?;
-        if resp.status() == 404 {
-            Ok(OptionalReleaseInfo::None(NoneReleaseInfo {}))
-        } else {
-            resp.convert()
-        }
-    }
-
-    /// Creates a new deploy for a release.
-    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy) -> ApiResult<Deploy> {
-        self.ensure_auth_provided()?;
-
-        let path = format!(
-            "/organizations/{}/releases/{}/deploys/",
-            PathArg(org),
-            PathArg(version)
-        );
-
-        self.post(&path, deploy)?
-            .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    /// Lists all deploys for a release
-    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy>> {
-        self.ensure_auth_provided()?;
-
-        let path = format!(
-            "/organizations/{}/releases/{}/deploys/",
-            PathArg(org),
-            PathArg(version)
-        );
-        self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    /// Updates a bunch of issues within a project that match a provided filter
-    /// and performs `changes` changes.
-    pub fn bulk_update_issue(
-        &self,
-        org: &str,
-        project: &str,
-        filter: &IssueFilter,
-        changes: &IssueChanges,
-    ) -> ApiResult<bool> {
-        self.ensure_auth_provided()?;
-
-        let qs = match filter.get_query_string() {
-            None => {
-                return Ok(false);
-            }
-            Some(qs) => qs,
-        };
-        self.put(
-            &format!(
-                "/projects/{}/{}/issues/?{}",
-                PathArg(org),
-                PathArg(project),
-                qs
-            ),
-            changes,
-        )?
-        .into_result()
-        .map(|_| true)
-    }
-
-    /// Given a list of checksums for DIFs, this returns a list of those
-    /// that do not exist for the project yet.
-    pub fn find_missing_dif_checksums<I>(
-        &self,
-        org: &str,
-        project: &str,
-        checksums: I,
-    ) -> ApiResult<HashSet<Digest>>
-    where
-        I: IntoIterator<Item = Digest>,
-    {
-        self.ensure_auth_provided()?;
-
-        let mut url = format!(
-            "/projects/{}/{}/files/dsyms/unknown/?",
-            PathArg(org),
-            PathArg(project)
-        );
-        for (idx, checksum) in checksums.into_iter().enumerate() {
-            if idx > 0 {
-                url.push('&');
-            }
-            url.push_str("checksums=");
-            url.push_str(&checksum.to_string());
-        }
-
-        let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
-        Ok(state.missing)
-    }
-
-    /// Uploads a ZIP archive containing DIFs from the given path.
-    pub fn upload_dif_archive(
-        &self,
-        org: &str,
-        project: &str,
-        file: &Path,
-    ) -> ApiResult<Vec<DebugInfoFile>> {
-        self.ensure_auth_provided()?;
-
-        let path = format!(
-            "/projects/{}/{}/files/dsyms/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let mut form = curl::easy::Form::new();
-        form.part("file").file(file).add()?;
-        self.request(Method::Post, &path)?
-            .with_form_data(form)?
-            .progress_bar_mode(ProgressBarMode::Request)?
-            .send()?
-            .convert()
-    }
-
-    /// Get the server configuration for chunked file uploads.
-    pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
-        self.ensure_auth_provided()?;
-
-        let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
-        match self
-            .get(&url)?
-            .convert_rnf::<ChunkUploadOptions>(ApiErrorKind::ChunkUploadNotSupported)
-        {
-            Ok(options) => Ok(Some(options)),
-            Err(error) => {
-                if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
-                    Ok(None)
-                } else {
-                    Err(error)
-                }
-            }
-        }
-    }
-
-    /// Request DIF assembling and processing from chunks.
-    pub fn assemble_difs(
-        &self,
-        org: &str,
-        project: &str,
-        request: &AssembleDifsRequest<'_>,
-    ) -> ApiResult<AssembleDifsResponse> {
-        self.ensure_auth_provided()?;
-
-        let url = format!(
-            "/projects/{}/{}/files/difs/assemble/",
-            PathArg(org),
-            PathArg(project)
-        );
-
-        self.request(Method::Post, &url)?
-            .with_json_body(request)?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .send()?
-            .convert_rnf(ApiErrorKind::ProjectNotFound)
-    }
-
-    pub fn assemble_release_artifacts(
-        &self,
-        org: &str,
-        release: &str,
-        checksum: Digest,
-        chunks: &[Digest],
-    ) -> ApiResult<AssembleArtifactsResponse> {
-        self.ensure_auth_provided()?;
-
-        let url = format!(
-            "/organizations/{}/releases/{}/assemble/",
-            PathArg(org),
-            PathArg(release)
-        );
-
-        self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedArtifactRequest {
-                checksum,
-                chunks,
-                projects: Vec::new(),
-                version: None,
-                dist: None,
-            })?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .send()?
-            .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    pub fn assemble_artifact_bundle(
-        &self,
-        org: &str,
-        projects: Vec<String>,
-        checksum: Digest,
-        chunks: &[Digest],
-        version: Option<&str>,
-        dist: Option<&str>,
-    ) -> ApiResult<AssembleArtifactsResponse> {
-        self.ensure_auth_provided()?;
-
-        let url = format!("/organizations/{}/artifactbundle/assemble/", PathArg(org));
-
-        self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedArtifactRequest {
-                checksum,
-                chunks,
-                projects,
-                version,
-                dist,
-            })?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .send()?
-            .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    pub fn associate_proguard_mappings(
-        &self,
-        org: &str,
-        project: &str,
-        data: &AssociateProguard,
-    ) -> ApiResult<()> {
-        self.ensure_auth_provided()?;
-
-        let path = format!(
-            "/projects/{}/{}/files/proguard-artifact-releases",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp: ApiResponse = self
-            .request(Method::Post, &path)?
-            .with_json_body(data)?
-            .send()?;
-        if resp.status() == 201 {
-            Ok(())
-        } else if resp.status() == 409 {
-            info!(
-                "Release association for release '{}', UUID '{}' already exists.",
-                data.release_name, data.proguard_uuid
-            );
-            Ok(())
-        } else if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        } else {
-            resp.convert()
-        }
-    }
-
-    /// Triggers reprocessing for a project
-    pub fn trigger_reprocessing(&self, org: &str, project: &str) -> ApiResult<bool> {
-        self.ensure_auth_provided()?;
-
-        let path = format!(
-            "/projects/{}/{}/reprocessing/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_header("Content-Length", "0")?
-            .send()?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
-    }
-
-    /// List all organizations associated with the authenticated token
-    /// in the given `Region`. If no `Region` is provided, we assume
-    /// we're issuing a request to a monolith deployment.
-    pub fn list_organizations(&self, region: Option<&Region>) -> ApiResult<Vec<Organization>> {
-        self.ensure_auth_provided()?;
-
-        let mut rv = vec![];
-        let mut cursor = "".to_string();
-        loop {
-            let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
-            let resp = if let Some(rg) = region {
-                self.region_request(Method::Get, current_path, rg)?.send()?
-            } else {
-                self.get(current_path)?
-            };
-
-            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
-                if rv.is_empty() {
-                    return Err(ApiErrorKind::ResourceNotFound.into());
-                } else {
-                    break;
-                }
-            }
-            let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Organization>>()?);
-            if let Some(next) = pagination.into_next_cursor() {
-                cursor = next;
-            } else {
-                break;
-            }
-        }
-        Ok(rv)
-    }
-
-    pub fn list_available_regions(&self) -> ApiResult<Vec<Region>> {
-        self.ensure_auth_provided()?;
-
-        let resp = self.get("/users/me/regions/")?;
-        if resp.status() == 404 {
-            // This endpoint may not exist for self-hosted users, so
-            // returning a default of [] seems appropriate.
-            return Ok(vec![]);
-        }
-
-        if resp.status() == 400 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-
-        let region_response = resp.convert::<RegionResponse>()?;
-        Ok(region_response.regions)
-    }
-
-    /// List all monitors associated with an organization
-    pub fn list_organization_monitors(&self, org: &str) -> ApiResult<Vec<Monitor>> {
-        self.ensure_auth_provided()?;
-
-        let mut rv = vec![];
-        let mut cursor = "".to_string();
-        loop {
-            let resp = self.get(&format!(
-                "/organizations/{}/monitors/?cursor={}",
-                PathArg(org),
-                QueryArg(&cursor)
-            ))?;
-            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
-                if rv.is_empty() {
-                    return Err(ApiErrorKind::ResourceNotFound.into());
-                } else {
-                    break;
-                }
-            }
-            let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Monitor>>()?);
-            if let Some(next) = pagination.into_next_cursor() {
-                cursor = next;
-            } else {
-                break;
-            }
-        }
-        Ok(rv)
     }
 }
 

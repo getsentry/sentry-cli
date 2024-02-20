@@ -69,7 +69,10 @@ where
 }
 
 fn fetch_event(org: &str, project: &str, event_id: &str) -> Result<ProcessedEvent> {
-    match Api::current().get_event(org, Some(project), event_id)? {
+    match Api::current()
+        .authenticated()?
+        .get_event(org, Some(project), event_id)?
+    {
         Some(event) => {
             success(format!("Fetched data for event: {event_id}"));
             Ok(event)
@@ -121,7 +124,7 @@ fn extract_nth_frame(stacktrace: &Stacktrace, position: usize) -> Result<&Frame>
 }
 
 fn fetch_release_artifacts(org: &str, project: &str, release: &str) -> Result<Vec<Artifact>> {
-    Api::current().list_release_files(org, Some(project), release).map(|artifacts| {
+    Api::current().authenticated()?.list_release_files(org, Some(project), release).map(|artifacts| {
         if artifacts.is_empty() {
             error("Release has no artifacts uploaded");
             tip("https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/#verify-artifacts-are-uploaded");
@@ -187,28 +190,29 @@ fn fetch_release_artifact_file(
     let api = Api::current();
     let file = TempFile::create()?;
 
-    api.get_release_file(
-        org,
-        Some(project),
-        release,
-        &artifact.id,
-        &mut file.open().unwrap(),
-    )
-    .map(|_| {
-        success(format!(
-            "Successfully fetched {} file from the server.",
-            artifact.name
-        ));
-        Ok(file)
-    })
-    .map_err(|err| {
-        format_err!(
-            "Could not retrieve file {} from release {}: {:?}",
-            artifact.name,
+    api.authenticated()?
+        .get_release_file(
+            org,
+            Some(project),
             release,
-            err
+            &artifact.id,
+            &mut file.open().unwrap(),
         )
-    })?
+        .map(|_| {
+            success(format!(
+                "Successfully fetched {} file from the server.",
+                artifact.name
+            ));
+            Ok(file)
+        })
+        .map_err(|err| {
+            format_err!(
+                "Could not retrieve file {} from release {}: {:?}",
+                artifact.name,
+                release,
+                err
+            )
+        })?
 }
 
 fn fetch_release_artifact_file_metadata(
@@ -218,7 +222,12 @@ fn fetch_release_artifact_file_metadata(
     artifact: &Artifact,
 ) -> Result<Artifact> {
     let api = Api::current();
-    let file_metadata = api.get_release_file_metadata(org, Some(project), release, &artifact.id)?;
+    let file_metadata = api.authenticated()?.get_release_file_metadata(
+        org,
+        Some(project),
+        release,
+        &artifact.id,
+    )?;
     file_metadata
         .ok_or_else(|| format_err!("Could not retrieve file metadata: {}", &artifact.id))
         .map(|f| {
