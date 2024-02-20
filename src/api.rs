@@ -389,19 +389,14 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         let (url, auth) = self.resolve_base_url_and_auth(url, None)?;
         self.construct_api_request(method, &url, auth)
     }
 
     /// Like `request`, but constructs a new `ApiRequest` using the base URL
     /// plus a region prefix for requests that must be routed to a region.
-    pub fn region_request(
-        &self,
-        method: Method,
-        url: &str,
-        region: &Region,
-    ) -> ApiResult<ApiRequest> {
+    fn region_request(&self, method: Method, url: &str, region: &Region) -> ApiResult<ApiRequest> {
         let (url, auth) = self.resolve_base_url_and_auth(url, Some(region))?;
         self.construct_api_request(method, &url, auth)
     }
@@ -471,24 +466,24 @@ impl Api {
     }
 
     /// Convenience method that performs a `GET` request.
-    pub fn get(&self, path: &str) -> ApiResult<ApiResponse> {
+    fn get(&self, path: &str) -> ApiResult<ApiResponse> {
         self.request(Method::Get, path)?.send()
     }
 
     /// Convenience method that performs a `DELETE` request.
-    pub fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
+    fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
         self.request(Method::Delete, path)?.send()
     }
 
     /// Convenience method that performs a `POST` request with JSON data.
-    pub fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+    fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
         self.request(Method::Post, path)?
             .with_json_body(body)?
             .send()
     }
 
     /// Convenience method that performs a `PUT` request with JSON data.
-    pub fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+    fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
         self.request(Method::Put, path)?
             .with_json_body(body)?
             .send()
