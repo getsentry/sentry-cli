@@ -354,9 +354,6 @@ pub struct ApiResponse {
 
 impl Api {
     /// Returns the current api for the thread.
-    ///
-    /// Threads other than the main thread must call `Api::reset` when
-    /// shutting down to prevent `process::exit` from hanging afterwards.
     pub fn current() -> Arc<Api> {
         let mut api_opt = API.lock();
         if let Some(ref api) = *api_opt {
