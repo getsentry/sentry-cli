@@ -28,7 +28,6 @@ use parking_lot::{Mutex, RwLock};
 use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use regex::{Captures, Regex};
 use sentry::protocol::{Exception, Values};
-use sentry::types::Dsn;
 use serde::de::{DeserializeOwned, Deserializer};
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
@@ -469,31 +468,6 @@ impl Api {
         let headers = self.config.get_headers();
 
         ApiRequest::create(handle, &method, url, auth, env, headers)
-    }
-
-    /// Convenience method that performs a request using DSN as authentication method.
-    pub fn request_with_dsn_auth<S: Serialize>(
-        &self,
-        method: Method,
-        url: &str,
-        dsn: Dsn,
-        body: Option<&S>,
-    ) -> ApiResult<ApiResponse> {
-        // We resolve an absolute URL to skip default authentication flow.
-        let url = self
-            .config
-            .get_api_endpoint(url, None)
-            .map_err(|err| ApiError::with_source(ApiErrorKind::BadApiUrl, err))?;
-
-        let mut request = self
-            .request(method, &url)?
-            .with_header("Authorization", &format!("DSN {dsn}"))?;
-
-        if let Some(body) = body {
-            request = request.with_json_body(body)?;
-        }
-
-        request.send()
     }
 
     /// Convenience method that performs a `GET` request.
