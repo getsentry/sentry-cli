@@ -739,6 +739,8 @@ impl<'a> AuthenticatedApi<'a> {
         self.api.request(method, url)
     }
 
+    // High-level method implementations
+
     /// Performs an API request to verify the authentication status of the
     /// current token.
     pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
