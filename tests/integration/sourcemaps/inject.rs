@@ -93,6 +93,17 @@ fn command_sourcemaps_inject_output_split_ambiguous() {
 }
 
 #[test]
+fn command_sourcemaps_inject_treat_source_as_minified() {
+    let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject-treat-source-as-minified.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively("tests/integration/_fixtures/inject_treat_source_as_minified/", testcase_cwd_path).unwrap();
+
+    register_test("sourcemaps/sourcemaps-inject-treat-source-as-minified.trycmd");
+}
+
+#[test]
 fn command_sourcemaps_inject_bundlers() {
     let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject-bundlers.in/";
     if std::path::Path::new(testcase_cwd_path).exists() {

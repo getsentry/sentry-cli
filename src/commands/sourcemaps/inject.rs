@@ -61,6 +61,14 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
+            Arg::new("treat_source_as_minified")
+                .long("treat-source-as-minified")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Treat all source files as minified source files and inject debug IDs into the files regardless of content."
+                ),
+        )
+        .arg(
             Arg::new("dry_run")
                 .long("dry-run")
                 .action(ArgAction::SetTrue)
@@ -91,6 +99,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "cjs", "mjs"]);
 
+    let treat_source_as_minified = matches.get_flag("treat_source_as_minified");
+
     // Sourcemaps should be discovered regardless of which JavaScript extensions have been selected.
     extensions.push("map");
 
@@ -107,6 +117,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    processor.inject_debug_ids(dry_run, &extensions)?;
+    processor.inject_debug_ids(dry_run, &extensions, treat_source_as_minified)?;
     Ok(())
 }

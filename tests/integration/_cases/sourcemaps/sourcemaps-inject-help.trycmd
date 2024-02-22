@@ -42,6 +42,10 @@ Options:
           extensions must be repeated.  Specify once per extension.  Source maps are discovered via
           those files.
 
+      --treat-source-as-minified
+          Treat all source files as minified source files and inject debug IDs into the files
+          regardless of content.
+
       --dry-run
           Don't modify files on disk.
 

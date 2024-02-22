@@ -264,7 +264,7 @@ impl SourceMapProcessor {
         Ok(())
     }
 
-    fn flush_pending_sources(&mut self) {
+    fn flush_pending_sources(&mut self, treat_source_as_minified: bool) {
         if self.pending_sources.is_empty() {
             return;
         }
@@ -307,6 +307,7 @@ impl SourceMapProcessor {
                 .map(|x| x.contains(".min."))
                 .unwrap_or(false)
                 || is_likely_minified_js(&file.contents)
+                || treat_source_as_minified
             {
                 (
                     SourceFileType::MinifiedSource,
@@ -468,7 +469,7 @@ impl SourceMapProcessor {
 
     /// Validates all sources within.
     pub fn validate_all(&mut self) -> Result<()> {
-        self.flush_pending_sources();
+        self.flush_pending_sources(false);
         let source_urls = self.sources.keys().cloned().collect();
         let sources: Vec<&mut SourceFile> = self.sources.values_mut().collect();
         let mut failed = false;
@@ -518,7 +519,7 @@ impl SourceMapProcessor {
         bundle_source_url: &str,
     ) -> Result<()> {
         // We need this to flush all pending sourcemaps
-        self.flush_pending_sources();
+        self.flush_pending_sources(false);
 
         debug!("Trying to guess the sourcemap reference");
         let sourcemaps_references = self
@@ -652,7 +653,7 @@ impl SourceMapProcessor {
     ///
     /// This inlines sources, flattens indexes and skips individual uploads.
     pub fn rewrite(&mut self, prefixes: &[&str]) -> Result<()> {
-        self.flush_pending_sources();
+        self.flush_pending_sources(false);
 
         println!("{} Rewriting sources", style(">").dim());
 
@@ -697,7 +698,7 @@ impl SourceMapProcessor {
 
     /// Adds sourcemap references to all minified files
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
-        self.flush_pending_sources();
+        self.flush_pending_sources(false);
         self.collect_sourcemap_references();
 
         println!("{} Adding source map references", style(">").dim());
@@ -716,7 +717,7 @@ impl SourceMapProcessor {
     /// Adds debug id to the source file headers from the linked source map.
     /// This is used for files we can't read debug ids from (e.g. Hermes bytecode bundles).
     pub fn add_debug_id_references(&mut self) -> Result<()> {
-        self.flush_pending_sources();
+        self.flush_pending_sources(false);
 
         for source in self.sources.values_mut() {
             if source.ty != SourceFileType::MinifiedSource {
@@ -824,7 +825,7 @@ impl SourceMapProcessor {
     /// uploaded, wrapped in Ok()
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<usize> {
         initialize_legacy_release_upload(context)?;
-        self.flush_pending_sources();
+        self.flush_pending_sources(false);
 
         // If there is no release, we have to check that the files at least
         // contain debug ids.
@@ -896,9 +897,11 @@ impl SourceMapProcessor {
     /// If `dry_run` is false, this will modify the source and sourcemap files on disk!
     ///
     /// The `js_extensions` is a list of file extensions that should be considered
+    ///
+    /// If `treat_source_as_minified` is set, the source files will be treated as minified regardless of their content
     /// for JavaScript files.
-    pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str]) -> Result<()> {
-        self.flush_pending_sources();
+    pub fn inject_debug_ids(&mut self, dry_run: bool, js_extensions: &[&str], treat_source_as_minified: bool) -> Result<()> {
+        self.flush_pending_sources(treat_source_as_minified);
         self.collect_sourcemap_references();
         println!("{} Injecting debug ids", style(">").dim());
 
