@@ -1,4 +1,17 @@
-// Please treat this as a minified JavaScript file
+var MyElement = class extends LitElement {
+    constructor() {
+      super(...arguments);
+      this.isInitialized = true;
+    }
+    render() {
+      return x`
+        <div>
+            <h1>My Element</h1>
+        </div>
+      `;
+    }
+  };
 
-var message = "Hello, World!";
-console.log(message);
+export {
+   MyElement
+};
