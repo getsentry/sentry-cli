@@ -1,14 +1,16 @@
 ```
-$ sentry-cli sourcemaps inject ./src --treat-source-as-minified
+$ sentry-cli sourcemaps inject ./builddist --treat-source-as-minified
 ? success
-> Searching ./src
-> Found 1 file
-> Analyzing 1 sources
+> Searching ./builddist
+> Found 2 files
+> Analyzing 2 sources
 > Injecting debug ids
 
 Source Map Debug ID Injection Report
   Modified: The following source files have been modified to have debug ids
-    [..]-[..]-[..]-[..]-[..] - ./src/index.js
+    [..]-[..]-[..]-[..]-[..] - ./builddist/bundle.js
+  Modified: The following sourcemap files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - ./builddist/bundle.js.map
 
 
 ```

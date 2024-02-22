@@ -1,0 +1,1 @@
+{"version":3,"file":"bundle.js.map","sources":["input.js"],"names":["MyElement","LitElement","constructor","super","arguments","this","isInitialized","render","x"],"mappings":"AAAA,IAAIA,wBAA0BC,WAC1BC,cACEC,MAAM,GAAGC,SAAS,EAClBC,KAAKC,cAAgB,CAAA,CACvB,CACAC,SACE,OAAOC;;;;OAKT,CACF,SAGCR,SACF"}
