@@ -94,7 +94,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project_defaults();
     let org = org.filter(|s| !s.is_empty());
     let project = project.filter(|s| !s.is_empty());
-    let info_rv = Api::current().authenticated()?.get_auth_info();
+    let info_rv = Api::current()
+        .authenticated()
+        .and_then(|api| api.get_auth_info());
     let mut errors = config.get_auth().is_none() || info_rv.is_err();
 
     // If `no-defaults` is present, only authentication should be verified.

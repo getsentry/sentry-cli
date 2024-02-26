@@ -1,6 +1,12 @@
 ```
 $ sentry-cli info
 ? failed
+Sentry Server: https://sentry.io
+Default Organization: -
+Default Project: -
+
+Authentication Info:
+  Method: Unauthorized
 error: Auth token is required for this request. Please run `sentry-cli login` and try again!
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
