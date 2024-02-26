@@ -300,20 +300,6 @@ impl SourceMapProcessor {
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
             {
                 (SourceFileType::IndexedRamBundle, None)
-            } else if file
-                .path
-                .file_name()
-                .and_then(OsStr::to_str)
-                .map(|x| x.contains(".min."))
-                .unwrap_or(false)
-                || is_likely_minified_js(&file.contents)
-            {
-                (
-                    SourceFileType::MinifiedSource,
-                    std::str::from_utf8(&file.contents)
-                        .ok()
-                        .and_then(discover_debug_id),
-                )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
                 // For the react-native Hermes case, we skip uploading the bytecode bundle,
@@ -323,7 +309,12 @@ impl SourceMapProcessor {
                 file.contents.clear();
                 (SourceFileType::MinifiedSource, None)
             } else {
-                (SourceFileType::Source, None)
+                (
+                    SourceFileType::MinifiedSource,
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(discover_debug_id),
+                )
             };
 
             let mut source_file = SourceFile {
