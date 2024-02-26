@@ -38,7 +38,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let version = matches.get_one::<String>("version").unwrap();
 
-    api.update_release(
+    api.authenticated()?.update_release(
         &config.get_org(matches)?,
         version,
         &UpdatedRelease {

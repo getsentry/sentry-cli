@@ -73,7 +73,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             Ok(())
         })?;
 
-        match Api::with_config(test_cfg).get_auth_info() {
+        match Api::with_config(test_cfg).authenticated()?.get_auth_info() {
             Ok(info) => {
                 match info.user {
                     Some(user) => {

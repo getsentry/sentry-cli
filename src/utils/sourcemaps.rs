@@ -797,12 +797,14 @@ impl SourceMapProcessor {
 
         let api = Api::current();
 
-        if let Ok(artifacts) = api.list_release_files_by_checksum(
-            context.org,
-            context.project,
-            release,
-            &sources_checksums,
-        ) {
+        if let Ok(artifacts) = api.authenticated().and_then(|api| {
+            api.list_release_files_by_checksum(
+                context.org,
+                context.project,
+                release,
+                &sources_checksums,
+            )
+        }) {
             let already_uploaded_checksums: HashSet<_> = artifacts
                 .into_iter()
                 .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())

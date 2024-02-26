@@ -346,7 +346,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         processor.add_debug_id_references()?;
 
         let api = Api::current();
-        let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+        let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 
         let dist_from_env = env::var("SENTRY_DIST");
         let release_from_env = env::var("SENTRY_RELEASE");

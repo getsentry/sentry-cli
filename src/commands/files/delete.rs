@@ -33,9 +33,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
 
     if matches.get_flag("all") {
-        api.delete_release_files(&org, project.as_deref(), &release)?;
+        authenticated_api.delete_release_files(&org, project.as_deref(), &release)?;
         println!("All files deleted.");
         return Ok(());
     }
@@ -44,11 +45,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Some(paths) => paths.map(|x| x.into()).collect(),
         None => HashSet::new(),
     };
-    for file in api.list_release_files(&org, project.as_deref(), &release)? {
+    for file in authenticated_api.list_release_files(&org, project.as_deref(), &release)? {
         if !files.contains(&file.name) {
             continue;
         }
-        if api.delete_release_file(&org, project.as_deref(), &release, &file.id)? {
+        if authenticated_api.delete_release_file(&org, project.as_deref(), &release, &file.id)? {
             println!("D {}", file.name);
         }
     }

@@ -180,9 +180,17 @@ impl ProgressBarMode {
 }
 
 /// Helper for the API access.
+/// Implements the low-level API access methods, and provides high-level implementations for interacting
+/// with portions of the API that do not require authentication via an auth token.
 pub struct Api {
     config: Arc<Config>,
     pool: r2d2::Pool<CurlConnectionManager>,
+}
+
+/// Wrapper for Api that ensures Auth is provided. AuthenticatedApi provides implementations of high-level
+/// functions that make API requests requiring authentication via auth token.
+pub struct AuthenticatedApi<'a> {
+    api: &'a Api,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -251,6 +259,10 @@ pub enum ApiErrorKind {
     CompressionFailed,
     #[error("region overrides cannot be applied to absolute urls")]
     InvalidRegionRequest,
+    #[error(
+        "Auth token is required for this request. Please run `sentry-cli login` and try again!"
+    )]
+    AuthMissing,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -352,6 +364,17 @@ pub struct ApiResponse {
     body: Option<Vec<u8>>,
 }
 
+impl<'a> TryFrom<&'a Api> for AuthenticatedApi<'a> {
+    type Error = ApiError;
+
+    fn try_from(api: &'a Api) -> ApiResult<AuthenticatedApi<'a>> {
+        match api.config.get_auth() {
+            Some(_) => Ok(AuthenticatedApi { api }),
+            None => Err(ApiErrorKind::AuthMissing.into()),
+        }
+    }
+}
+
 impl Api {
     /// Returns the current api for the thread.
     pub fn current() -> Arc<Api> {
@@ -379,6 +402,12 @@ impl Api {
     /// Utility method that unbinds the current api.
     pub fn dispose_pool() {
         *API.lock() = None;
+    }
+
+    /// Creates an AuthenticatedApi referencing this Api instance if an auth token is available.
+    /// If an auth token is not available, returns an error.
+    pub fn authenticated(&self) -> ApiResult<AuthenticatedApi> {
+        self.try_into()
     }
 
     // Low Level Methods
@@ -524,6 +553,186 @@ impl Api {
 
     // High Level Methods
 
+    /// Finds the latest release for sentry-cli on GitHub.
+    pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
+        let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
+
+        // Prefer universal binary on macOS
+        let arch = match PLATFORM {
+            "darwin" => "universal",
+            _ => ARCH,
+        };
+
+        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), arch, EXT);
+        info!("Looking for file named: {}", ref_name);
+
+        if resp.status() == 200 {
+            let info: RegistryRelease = resp.convert()?;
+            for (filename, download_url) in info.file_urls {
+                info!("Found asset {}", filename);
+                if filename == ref_name {
+                    return Ok(Some(SentryCliRelease {
+                        version: info.version,
+                        download_url,
+                    }));
+                }
+            }
+            warn!("Unable to find release file");
+            Ok(None)
+        } else {
+            info!("Release registry returned {}", resp.status());
+            Ok(None)
+        }
+    }
+
+    /// Compresses a file with the given compression.
+    fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
+        Ok(match compression {
+            ChunkCompression::Brotli => {
+                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Gzip => {
+                let mut encoder = GzEncoder::new(Vec::new(), Default::default());
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Uncompressed => data.into(),
+        })
+    }
+
+    /// Upload a batch of file chunks.
+    pub fn upload_chunks<'data, I, T>(
+        &self,
+        url: &str,
+        chunks: I,
+        progress_bar_mode: ProgressBarMode,
+        compression: ChunkCompression,
+    ) -> ApiResult<()>
+    where
+        I: IntoIterator<Item = &'data T>,
+        T: AsRef<(Digest, &'data [u8])> + 'data,
+    {
+        // Curl stores a raw pointer to the stringified checksum internally. We first
+        // transform all checksums to string and keep them in scope until the request
+        // has completed. The original iterator is not needed anymore after this.
+        let stringified_chunks: Vec<_> = chunks
+            .into_iter()
+            .map(T::as_ref)
+            .map(|&(checksum, data)| (checksum.to_string(), data))
+            .collect();
+
+        let mut form = curl::easy::Form::new();
+        for (ref checksum, data) in stringified_chunks {
+            let name = compression.field_name();
+            let buffer = Api::compress(data, compression)
+                .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
+            form.part(name).buffer(&checksum, buffer).add()?
+        }
+
+        let request = self
+            .request(Method::Post, url)?
+            .with_form_data(form)?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .progress_bar_mode(progress_bar_mode)?;
+
+        // The request is performed to an absolute URL. Thus, `Self::request()` will
+        // not add the authorization header, by default. Since the URL is guaranteed
+        // to be a Sentry-compatible endpoint, we force the Authorization header at
+        // this point.
+        let request = match Config::current().get_auth() {
+            // Make sure that we don't authenticate a request
+            // that has been already authenticated
+            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
+            _ => request,
+        };
+
+        // Handle 301 or 302 requests as a missing project
+        let resp = request.send()?;
+        match resp.status() {
+            301 | 302 => Err(ApiErrorKind::ProjectNotFound.into()),
+            _ => {
+                resp.into_result()?;
+                Ok(())
+            }
+        }
+    }
+
+    /// Create a new checkin for a monitor
+    pub fn create_monitor_checkin(
+        &self,
+        monitor_slug: &String,
+        checkin: &ApiCreateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
+        let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
+        let resp = self.post(path, checkin)?;
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+        resp.convert()
+    }
+
+    /// Update a checkin for a monitor
+    pub fn update_monitor_checkin(
+        &self,
+        monitor_slug: &String,
+        checkin_id: &Uuid,
+        checkin: &ApiUpdateMonitorCheckIn,
+    ) -> ApiResult<ApiMonitorCheckIn> {
+        let path = &format!(
+            "/monitors/{}/checkins/{}/",
+            PathArg(monitor_slug),
+            PathArg(checkin_id),
+        );
+        let resp = self.put(path, checkin)?;
+
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+        resp.convert()
+    }
+}
+
+impl<'a> AuthenticatedApi<'a> {
+    // Pass through low-level methods to API.
+
+    /// Convenience method to call self.api.get.
+    fn get(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.api.get(path)
+    }
+
+    /// Convenience method to call self.api.delete.
+    fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.api.delete(path)
+    }
+
+    /// Convenience method to call self.api.post.
+    fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.api.post(path, body)
+    }
+
+    /// Convenience method to call self.api.put.
+    fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.api.put(path, body)
+    }
+
+    /// Convinience method to call self.api.request.
+    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        self.api.request(method, url)
+    }
+
+    // High-level method implementations
+
     /// Performs an API request to verify the authentication status of the
     /// current token.
     pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
@@ -626,7 +835,7 @@ impl Api {
             )
         };
 
-        let resp = self.download(&path, file_desc)?;
+        let resp = self.api.download(&path, file_desc)?;
         if resp.status() == 404 {
             resp.convert_rnf(ApiErrorKind::ResourceNotFound)
         } else {
@@ -778,10 +987,11 @@ impl Api {
         }
 
         let resp = self
+            .api
             .request(Method::Post, &path)?
             .with_form_data(form)?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1042,38 +1252,6 @@ impl Api {
         .map(|_| true)
     }
 
-    /// Finds the latest release for sentry-cli on GitHub.
-    pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
-        let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
-
-        // Prefer universal binary on macOS
-        let arch = match PLATFORM {
-            "darwin" => "universal",
-            _ => ARCH,
-        };
-
-        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), arch, EXT);
-        info!("Looking for file named: {}", ref_name);
-
-        if resp.status() == 200 {
-            let info: RegistryRelease = resp.convert()?;
-            for (filename, download_url) in info.file_urls {
-                info!("Found asset {}", filename);
-                if filename == ref_name {
-                    return Ok(Some(SentryCliRelease {
-                        version: info.version,
-                        download_url,
-                    }));
-                }
-            }
-            warn!("Unable to find release file");
-            Ok(None)
-        } else {
-            info!("Release registry returned {}", resp.status());
-            Ok(None)
-        }
-    }
-
     /// Given a list of checksums for DIFs, this returns a list of those
     /// that do not exist for the project yet.
     pub fn find_missing_dif_checksums<I>(
@@ -1157,7 +1335,7 @@ impl Api {
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1190,7 +1368,7 @@ impl Api {
                 dist: None,
             })?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1221,7 +1399,7 @@ impl Api {
                 dist,
             })?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1230,89 +1408,6 @@ impl Api {
             )?
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    /// Compresses a file with the given compression.
-    fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
-        Ok(match compression {
-            ChunkCompression::Brotli => {
-                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
-                encoder.write_all(data)?;
-                encoder.finish()?
-            }
-
-            ChunkCompression::Gzip => {
-                let mut encoder = GzEncoder::new(Vec::new(), Default::default());
-                encoder.write_all(data)?;
-                encoder.finish()?
-            }
-
-            ChunkCompression::Uncompressed => data.into(),
-        })
-    }
-
-    /// Upload a batch of file chunks.
-    pub fn upload_chunks<'data, I, T>(
-        &self,
-        url: &str,
-        chunks: I,
-        progress_bar_mode: ProgressBarMode,
-        compression: ChunkCompression,
-    ) -> ApiResult<()>
-    where
-        I: IntoIterator<Item = &'data T>,
-        T: AsRef<(Digest, &'data [u8])> + 'data,
-    {
-        // Curl stores a raw pointer to the stringified checksum internally. We first
-        // transform all checksums to string and keep them in scope until the request
-        // has completed. The original iterator is not needed anymore after this.
-        let stringified_chunks: Vec<_> = chunks
-            .into_iter()
-            .map(T::as_ref)
-            .map(|&(checksum, data)| (checksum.to_string(), data))
-            .collect();
-
-        let mut form = curl::easy::Form::new();
-        for (ref checksum, data) in stringified_chunks {
-            let name = compression.field_name();
-            let buffer = Api::compress(data, compression)
-                .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
-            form.part(name).buffer(&checksum, buffer).add()?
-        }
-
-        let request = self
-            .request(Method::Post, url)?
-            .with_form_data(form)?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .progress_bar_mode(progress_bar_mode)?;
-
-        // The request is performed to an absolute URL. Thus, `Self::request()` will
-        // not add the authorization header, by default. Since the URL is guaranteed
-        // to be a Sentry-compatible endpoint, we force the Authorization header at
-        // this point.
-        let request = match Config::current().get_auth() {
-            // Make sure that we don't authenticate a request
-            // that has been already authenticated
-            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
-            _ => request,
-        };
-
-        // Handle 301 or 302 requests as a missing project
-        let resp = request.send()?;
-        match resp.status() {
-            301 | 302 => Err(ApiErrorKind::ProjectNotFound.into()),
-            _ => {
-                resp.into_result()?;
-                Ok(())
-            }
-        }
     }
 
     pub fn associate_proguard_mappings(
@@ -1372,7 +1467,9 @@ impl Api {
         loop {
             let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
             let resp = if let Some(rg) = region {
-                self.region_request(Method::Get, current_path, rg)?.send()?
+                self.api
+                    .region_request(Method::Get, current_path, rg)?
+                    .send()?
             } else {
                 self.get(current_path)?
             };
@@ -1437,40 +1534,6 @@ impl Api {
             }
         }
         Ok(rv)
-    }
-
-    /// Create a new checkin for a monitor
-    pub fn create_monitor_checkin(
-        &self,
-        monitor_slug: &String,
-        checkin: &ApiCreateMonitorCheckIn,
-    ) -> ApiResult<ApiMonitorCheckIn> {
-        let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
-        let resp = self.post(path, checkin)?;
-        if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-        resp.convert()
-    }
-
-    /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(
-        &self,
-        monitor_slug: &String,
-        checkin_id: &Uuid,
-        checkin: &ApiUpdateMonitorCheckIn,
-    ) -> ApiResult<ApiMonitorCheckIn> {
-        let path = &format!(
-            "/monitors/{}/checkins/{}/",
-            PathArg(monitor_slug),
-            PathArg(checkin_id),
-        );
-        let resp = self.put(path, checkin)?;
-
-        if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-        resp.convert()
     }
 
     /// List all projects associated with an organization

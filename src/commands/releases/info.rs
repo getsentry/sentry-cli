@@ -31,11 +31,12 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
     let version = matches.get_one::<String>("version").unwrap();
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
-    let release = api.get_release(&org, project.as_deref(), version)?;
+    let release = authenticated_api.get_release(&org, project.as_deref(), version)?;
 
     if is_quiet_mode() {
         if release.is_none() {
@@ -83,7 +84,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
 
         if matches.get_flag("show_commits") {
-            if let Ok(Some(commits)) = api.get_release_commits(&org, project.as_deref(), version) {
+            if let Ok(Some(commits)) =
+                authenticated_api.get_release_commits(&org, project.as_deref(), version)
+            {
                 if !commits.is_empty() {
                     data_row.add(
                         commits

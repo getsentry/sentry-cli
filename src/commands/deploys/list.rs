@@ -24,7 +24,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .add("Name")
         .add("Finished");
 
-    for deploy in api.list_deploys(&config.get_org(matches)?, &version)? {
+    for deploy in api
+        .authenticated()?
+        .list_deploys(&config.get_org(matches)?, &version)?
+    {
         table
             .add_row()
             .add(&deploy.env)

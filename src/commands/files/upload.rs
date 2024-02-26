@@ -127,7 +127,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
     let api = Api::current();
-    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    let authenticated_api = api.authenticated()?;
+    let chunk_upload_options = authenticated_api.get_chunk_upload_options(&org)?;
 
     let dist = matches.get_one::<String>("dist").map(String::as_str);
     let mut headers = BTreeMap::new();
@@ -238,7 +239,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             });
         }
 
-        if let Some(artifact) = api.upload_release_file(
+        if let Some(artifact) = authenticated_api.upload_release_file(
             context,
             &contents,
             name,

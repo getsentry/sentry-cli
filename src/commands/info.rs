@@ -76,7 +76,8 @@ fn get_config_status_json() -> Result<()> {
         Auth::Token(_) => "token".into(),
         Auth::Key(_) => "api_key".into(),
     });
-    rv.auth.successful = config.get_auth().is_some() && Api::current().get_auth_info().is_ok();
+    rv.auth.successful =
+        config.get_auth().is_some() && Api::current().authenticated()?.get_auth_info().is_ok();
     rv.have_dsn = config.get_dsn().is_ok();
 
     serde_json::to_writer_pretty(&mut io::stdout(), &rv)?;
@@ -93,7 +94,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project_defaults();
     let org = org.filter(|s| !s.is_empty());
     let project = project.filter(|s| !s.is_empty());
-    let info_rv = Api::current().get_auth_info();
+    let info_rv = Api::current()
+        .authenticated()
+        .and_then(|api| api.get_auth_info());
     let mut errors = config.get_auth().is_none() || info_rv.is_err();
 
     // If `no-defaults` is present, only authentication should be verified.
@@ -122,26 +125,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!();
     println!("Authentication Info:");
     println!("  Method: {}", describe_auth(config.get_auth()));
-    match info_rv {
-        Ok(info) => {
-            if let Some(ref user) = info.user {
-                println!("  User: {}", user.email);
-            }
-            if let Some(ref auth) = info.auth {
-                println!("  Scopes:");
-                for scope in &auth.scopes {
-                    println!("    - {scope}");
-                }
-            }
-        }
-        Err(err) => {
-            println!("  (failure on authentication: {err})");
+
+    let info = info_rv?;
+
+    if let Some(ref user) = info.user {
+        println!("  User: {}", user.email);
+    }
+
+    if let Some(ref auth) = info.auth {
+        println!("  Scopes:");
+        for scope in &auth.scopes {
+            println!("    - {scope}");
         }
     }
 
-    if errors {
-        Err(QuietExit(1).into())
-    } else {
-        Ok(())
-    }
+    Ok(())
 }

@@ -417,7 +417,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
-    let mut chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    let mut chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 
     if matches.get_flag("use_artifact_bundle")
         || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")

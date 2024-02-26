@@ -63,7 +63,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
 
     if let Some(version) = context.release {
         let api = Api::current();
-        api.new_release(
+        api.authenticated()?.new_release(
             context.org,
             &NewRelease {
                 version: version.to_string(),
@@ -236,6 +236,7 @@ fn upload_files_parallel(
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
+        .authenticated()?
         .list_release_files(context.org, context.project, release)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
@@ -270,6 +271,7 @@ fn upload_files_parallel(
             .enumerate()
             .map(|(index, (_, file))| -> Result<()> {
                 let api = Api::current();
+                let authenticated_api = api.authenticated()?;
                 let mode = ProgressBarMode::Shared((
                     pb.clone(),
                     file.contents.len() as u64,
@@ -280,11 +282,12 @@ fn upload_files_parallel(
                 if let Some(old_id) =
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
-                    api.delete_release_file(context.org, context.project, release, old_id)
+                    authenticated_api
+                        .delete_release_file(context.org, context.project, release, old_id)
                         .ok();
                 }
 
-                api.upload_release_file(
+                authenticated_api.upload_release_file(
                     context,
                     &file.contents,
                     &file.url,
@@ -331,13 +334,14 @@ fn poll_assemble(
     let max_wait = context.max_wait.min(options_max_wait);
 
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
     let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
         || options.supports(ChunkUploadCapability::ArtifactBundlesV2))
         && context.project.is_some();
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
         let response = if use_artifact_bundle {
-            api.assemble_artifact_bundle(
+            authenticated_api.assemble_artifact_bundle(
                 context.org,
                 vec![context.project.unwrap().to_string()],
                 checksum,
@@ -346,7 +350,12 @@ fn poll_assemble(
                 context.dist,
             )?
         } else {
-            api.assemble_release_artifacts(context.org, context.release()?, checksum, chunks)?
+            authenticated_api.assemble_release_artifacts(
+                context.org,
+                context.release()?,
+                checksum,
+                chunks,
+            )?
         };
 
         // Poll until there is a response, unless the user has specified to skip polling. In
@@ -422,7 +431,7 @@ fn upload_files_chunked(
     // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
     if options.supports(ChunkUploadCapability::ArtifactBundlesV2) && context.project.is_some() {
         let api = Api::current();
-        let response = api.assemble_artifact_bundle(
+        let response = api.authenticated()?.assemble_artifact_bundle(
             context.org,
             vec![context.project.unwrap().to_string()],
             checksum,
