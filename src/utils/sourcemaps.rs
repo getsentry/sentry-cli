@@ -797,7 +797,7 @@ impl SourceMapProcessor {
 
         let api = Api::current();
 
-        if let Ok(Ok(artifacts)) = api.authenticated().map(|api| {
+        if let Ok(artifacts) = api.authenticated().and_then(|api| {
             api.list_release_files_by_checksum(
                 context.org,
                 context.project,
