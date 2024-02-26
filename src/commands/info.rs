@@ -123,19 +123,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!();
     println!("Authentication Info:");
     println!("  Method: {}", describe_auth(config.get_auth()));
-    match info_rv {
-        Ok(info) => {
-            if let Some(ref user) = info.user {
-                println!("  User: {}", user.email);
-            }
-            if let Some(ref auth) = info.auth {
-                println!("  Scopes:");
-                for scope in &auth.scopes {
-                    println!("    - {scope}");
-                }
-            }
-            Ok(())
-        }
-        Err(err) => Err(anyhow::anyhow!(err)),
+
+    let info = info_rv?;
+
+    if let Some(ref user) = info.user {
+        println!("  User: {}", user.email);
     }
+
+    if let Some(ref auth) = info.auth {
+        println!("  Scopes:");
+        for scope in &auth.scopes {
+            println!("    - {scope}");
+        }
+    }
+
+    Ok(())
 }
