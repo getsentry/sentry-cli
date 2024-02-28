@@ -12,6 +12,7 @@ Source Map Debug ID Injection Report
   Modified: The following source files have been modified to have debug ids
     [..]-[..]-[..]-[..]-[..] - ./server/app/page.min.js
     [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.min.js
+    [..]-[..]-[..]-[..]-[..] - ./server/chunks/flight-server-css-manifest.js
     [..]-[..]-[..]-[..]-[..] - ./server/flight-manifest.js
     [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.min.js
     [..]-[..]-[..]-[..]-[..] - ./server/pages/api/hello.min.js

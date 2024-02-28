@@ -21,7 +21,6 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
 use crate::api::Api;
-use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
@@ -36,20 +35,6 @@ pub mod inject;
 ///
 /// Data URLs are used to embed sourcemaps directly in javascript source files.
 const DATA_PREAMBLE: &str = "data:application/json;base64,";
-
-fn is_likely_minified_js(code: &[u8]) -> bool {
-    // if we have a debug id or source maps location reference, this is a minified file
-    if let Ok(code) = std::str::from_utf8(code) {
-        if discover_debug_id(code).is_some() || discover_sourcemaps_location(code).is_some() {
-            return true;
-        }
-    }
-    if let Ok(code_str) = decode_unknown_string(code) {
-        might_be_minified::analyze_str(&code_str).is_likely_minified()
-    } else {
-        false
-    }
-}
 
 fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
