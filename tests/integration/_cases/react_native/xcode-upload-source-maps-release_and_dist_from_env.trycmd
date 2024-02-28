@@ -1,0 +1,26 @@
+```
+$ CONFIGURATION=Release SENTRY_RELEASE=test-release SENTRY_DIST=test-dist sentry-cli react-native xcode tests/integration/_fixtures/react_native/react-native-xcode.sh --force-foreground
+? success
+react-native-xcode.sh called with args: 
+Using React Native Packager bundle and source map.
+Processing react-native sourcemaps for Sentry upload.
+> Analyzing 2 sources
+> Rewriting sources
+> Adding source map references
+> Bundled 2 files for upload
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Uploaded files to Sentry
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Project: wat-project
+> Release: test-release
+> Dist: test-dist
+> Upload type: artifact bundle
+
+Source Map Upload Report
+  Scripts
+    ~/react-native-xcode-bundle.js.map
+  Minified Scripts
+    ~/react-native-xcode-bundle.js (sourcemap at react-native-xcode-bundle.map)
+
+```
