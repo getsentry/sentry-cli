@@ -5,6 +5,7 @@ use std::time::Duration;
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
+use itertools::Itertools;
 use log::{debug, warn};
 
 use crate::api::{Api, ChunkUploadCapability};
@@ -15,6 +16,8 @@ use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::path_as_url;
 use crate::utils::sourcemaps::SourceMapProcessor;
+
+const DEFAULT_EXTENSIONS: &[&str] = &["js", "cjs", "mjs", "map", "jsbundle", "bundle"];
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -200,12 +203,16 @@ pub fn make_command(command: Command) -> Command {
                 .short('x')
                 .value_name("EXT")
                 .action(ArgAction::Append)
-                .help(
+                .help(format!(
                     "Set the file extensions that are considered for upload. \
                     This overrides the default extensions. To add an extension, all default \
-                    extensions must be repeated. Specify once per extension.{n}\
-                    Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`",
-                ),
+                    extensions must be repeated. Specify once per extension.\n\
+                    Defaults to: `{}`",
+                    DEFAULT_EXTENSIONS
+                        .iter()
+                        .map(|ext| format!("--ext={ext}"))
+                        .join(" ")
+                )),
         )
         .arg(
             Arg::new("strict")
@@ -338,7 +345,7 @@ fn process_sources_from_paths(
     let extensions = matches
         .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
-        .unwrap_or_else(|| vec!["js", "map", "jsbundle", "bundle"]);
+        .unwrap_or_else(|| DEFAULT_EXTENSIONS.to_vec());
     let ignores: Vec<_> = matches
         .get_many::<String>("ignore")
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
