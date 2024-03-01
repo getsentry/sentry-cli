@@ -81,7 +81,7 @@ Options:
           Set the file extensions that are considered for upload. This overrides the default
           extensions. To add an extension, all default extensions must be repeated. Specify once per
           extension.
-          Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`
+          Defaults to: `--ext=js --ext=cjs --ext=mjs --ext=map --ext=jsbundle --ext=bundle`
   -s, --strict
           Fail with a non-zero exit code if the specified source map file cannot be uploaded.
   -h, --help

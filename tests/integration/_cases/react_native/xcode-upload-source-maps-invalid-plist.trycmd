@@ -1,0 +1,15 @@
+```
+$ CONFIGURATION=Release sentry-cli react-native xcode tests/integration/_fixtures/react_native/react-native-xcode.sh --force-foreground
+? failed
+react-native-xcode.sh called with args: 
+Using React Native Packager bundle and source map.
+Processing react-native sourcemaps for Sentry upload.
+> Analyzing 2 sources
+> Rewriting sources
+> Adding source map references
+error: Info.plist was not found or an parsing error occurred
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
