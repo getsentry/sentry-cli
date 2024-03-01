@@ -19,8 +19,7 @@ Processing react-native sourcemaps for Sentry upload.
 
 Source Map Upload Report
   Scripts
-    ~/react-native-xcode-bundle.js.map
-  Minified Scripts
+    ~/react-native-xcode-bundle.js.map (no sourcemap ref)
     ~/react-native-xcode-bundle.js (sourcemap at react-native-xcode-bundle.map)
 
 ```

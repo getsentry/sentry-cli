@@ -15,7 +15,7 @@ $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-ram-bun
 > Upload type: artifact bundle
 
 Source Map Upload Report
-  Minified Scripts
+  Scripts
     ~/0.js (sourcemap at 0.js.map)
     ~/1.js (sourcemap at 1.js.map)
     ~/10.js (sourcemap at 10.js.map)
