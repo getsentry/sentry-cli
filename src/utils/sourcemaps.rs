@@ -294,6 +294,18 @@ impl SourceMapProcessor {
                 file.contents.clear();
                 (SourceFileType::MinifiedSource, None)
             } else {
+                // Here, we use MinifiedSource for historical reasons. We used to guess whether
+                // a JS file was a minified file or a source file, and we would treat these files
+                // differently when uploading or injecting them. However, the desired behavior is
+                // and has always been to treat all JS files the same, since users should be
+                // responsible for providing the file paths for only files they would like to have
+                // uploaded or injected. The minified file guessing furthermore was not reliable,
+                // since minification is not a necessary step in the JS build process.
+                //
+                // We use MinifiedSource here rather than Source because we want to treat all JS
+                // files the way we used to treat minified files only. To use Source, we would need
+                // to analyze all possible code paths that check this value, and update those as
+                // well. To keep the change minimal, we use MinifiedSource here.
                 (
                     SourceFileType::MinifiedSource,
                     std::str::from_utf8(&file.contents)
