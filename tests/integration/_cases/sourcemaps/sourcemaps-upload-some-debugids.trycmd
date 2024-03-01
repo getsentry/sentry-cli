@@ -24,11 +24,11 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
 > Upload type: artifact bundle
 
 Source Map Upload Report
-  Scripts
-    ~/server/chunks/flight-server-css-manifest.js
   Minified Scripts
     ~/server/app/page.js (sourcemap at page.js.map)
     ~/server/chunks/1.js (sourcemap at 1.js.map)
+    ~/server/chunks/flight-server-css-manifest.js (no sourcemap ref)
+      - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for ~/server/chunks/flight-server-css-manifest.js)
     ~/server/dummy_embedded.js (embedded sourcemap)
     ~/server/edge-runtime-webpack.js (sourcemap at edge-runtime-webpack.js.map, debug id 2297b93d-928d-421e-8910-127c786382dd)
     ~/server/flight-manifest.js (no sourcemap ref)
