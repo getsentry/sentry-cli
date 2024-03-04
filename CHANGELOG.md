@@ -3,19 +3,20 @@
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
 ## 2.29.0
+### Source maps fixes
+This release fixes the behavior of `sourcemaps inject` and `sourcemaps upload`. We now treat minified and non-minified source files the same way in both commands, which was always the desired behavior, and is also consistent with our JS bundler plugins.
 
-### Various fixes & improvements
+**Please be aware that from now on, `sourcemaps inject` will inject debug IDs into all JS source files at the path provided to the command.** If you only wish for some of the files to have debug IDs injected, you need to modify the path(s) passed to `sourcemaps inject` or you need to use the `--ignore` or `--ignore-file` options to exclude the files you do not wish to inject the debug IDs into.
 
-- fix(sourcemaps): Remove distinction between `Source` and `MinifiedSource` for `sourcemaps inject` (#1958) by @szokeasaurusrex
-- Add clarifying comment to RN sourcemaps upload test (#1965) by @szokeasaurusrex
-- fix: Merge "Scripts" and "Minified Scripts" under sourcemaps upload report (#1962) by @szokeasaurusrex
+In the `sourcemaps upload` command, we have eliminated the "Minified Scripts" section in the Source Maps Upload Report. Instead, these minified scripts will appear under "Scripts."
+
+### Auth token validation
+Sentry CLI now validates that you have provided an auth token whenever you run a command that requires authentication to succeed. If you fail to provide an auth token when running such a command, the Sentry CLI will exit with an error message explaining that the auth token is required but missing.
+
+### Other fixes & improvements
 - fix(sourcemaps): Add `.cjs` and `.mjs` to default `sourcemaps upload` extensions (#1961) by @szokeasaurusrex
 - fix(xcode): Only parse Plist when required during RN source maps upload (#1940) by @krystofwoldrich
-- feat: Validate that auth token provided when needed (#1951) by @szokeasaurusrex
-- ref: Privatize most low-level api functions (#1953) by @szokeasaurusrex
-- docs: Remove outdated comment (#1952) by @szokeasaurusrex
 - fix(files): Fail when deleting all files fails with 404 error (#1949) by @szokeasaurusrex
-- ref: Delete dead code (#1945) by @szokeasaurusrex
 - fix: support windows on arm via x64 binary (#1943) by @MarshallOfSound
 
 ## 2.28.6
