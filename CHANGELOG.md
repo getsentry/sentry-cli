@@ -4,9 +4,7 @@
 
 ## 2.29.1
 
-### Various fixes & improvements
-
-- docs: Update changelog (#1966) by @szokeasaurusrex
+Updated version 2.29.0 changelog. No code changes.
 
 ## 2.29.0
 ### Source maps fixes
