@@ -2,6 +2,22 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.29.0
+
+### Various fixes & improvements
+
+- fix(sourcemaps): Remove distinction between `Source` and `MinifiedSource` for `sourcemaps inject` (#1958) by @szokeasaurusrex
+- Add clarifying comment to RN sourcemaps upload test (#1965) by @szokeasaurusrex
+- fix: Merge "Scripts" and "Minified Scripts" under sourcemaps upload report (#1962) by @szokeasaurusrex
+- fix(sourcemaps): Add `.cjs` and `.mjs` to default `sourcemaps upload` extensions (#1961) by @szokeasaurusrex
+- fix(xcode): Only parse Plist when required during RN source maps upload (#1940) by @krystofwoldrich
+- feat: Validate that auth token provided when needed (#1951) by @szokeasaurusrex
+- ref: Privatize most low-level api functions (#1953) by @szokeasaurusrex
+- docs: Remove outdated comment (#1952) by @szokeasaurusrex
+- fix(files): Fail when deleting all files fails with 404 error (#1949) by @szokeasaurusrex
+- ref: Delete dead code (#1945) by @szokeasaurusrex
+- fix: support windows on arm via x64 binary (#1943) by @MarshallOfSound
+
 ## 2.28.6
 
 ### Various fixes & improvements
