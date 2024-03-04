@@ -25,8 +25,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
 
 Source Map Upload Report
   Scripts
-    ~/server/chunks/flight-server-css-manifest.js
-  Minified Scripts
+    ~/server/chunks/flight-server-css-manifest.js (no sourcemap ref)
     ~/server/app/page.js (sourcemap at page.js.map)
     ~/server/chunks/1.js (sourcemap at 1.js.map)
     ~/server/dummy_embedded.js (embedded sourcemap)
