@@ -145,3 +145,23 @@ fn command_sourcemaps_inject_bundlers() {
         assert_eq!(actual_map, expected_map, "CJS, bundler: {bundler}");
     }
 }
+
+#[test]
+fn command_sourcemaps_inject_not_compiled() {
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-not-compiled.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+
+    copy_recursively(
+        "tests/integration/_fixtures/inject-not-compiled",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    register_test("sourcemaps/sourcemaps-inject-not-compiled.trycmd");
+
+    let file_contents = fs::read_to_string(format!("{testcase_cwd_path}not-compiled.js")).unwrap();
+    assert!(file_contents.contains("//# debugId="));
+}

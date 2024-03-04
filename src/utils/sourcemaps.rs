@@ -21,7 +21,6 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
 use crate::api::Api;
-use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
@@ -36,20 +35,6 @@ pub mod inject;
 ///
 /// Data URLs are used to embed sourcemaps directly in javascript source files.
 const DATA_PREAMBLE: &str = "data:application/json;base64,";
-
-fn is_likely_minified_js(code: &[u8]) -> bool {
-    // if we have a debug id or source maps location reference, this is a minified file
-    if let Ok(code) = std::str::from_utf8(code) {
-        if discover_debug_id(code).is_some() || discover_sourcemaps_location(code).is_some() {
-            return true;
-        }
-    }
-    if let Ok(code_str) = decode_unknown_string(code) {
-        might_be_minified::analyze_str(&code_str).is_likely_minified()
-    } else {
-        false
-    }
-}
 
 fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
@@ -300,20 +285,6 @@ impl SourceMapProcessor {
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
             {
                 (SourceFileType::IndexedRamBundle, None)
-            } else if file
-                .path
-                .file_name()
-                .and_then(OsStr::to_str)
-                .map(|x| x.contains(".min."))
-                .unwrap_or(false)
-                || is_likely_minified_js(&file.contents)
-            {
-                (
-                    SourceFileType::MinifiedSource,
-                    std::str::from_utf8(&file.contents)
-                        .ok()
-                        .and_then(discover_debug_id),
-                )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
                 // For the react-native Hermes case, we skip uploading the bytecode bundle,
@@ -323,7 +294,24 @@ impl SourceMapProcessor {
                 file.contents.clear();
                 (SourceFileType::MinifiedSource, None)
             } else {
-                (SourceFileType::Source, None)
+                // Here, we use MinifiedSource for historical reasons. We used to guess whether
+                // a JS file was a minified file or a source file, and we would treat these files
+                // differently when uploading or injecting them. However, the desired behavior is
+                // and has always been to treat all JS files the same, since users should be
+                // responsible for providing the file paths for only files they would like to have
+                // uploaded or injected. The minified file guessing furthermore was not reliable,
+                // since minification is not a necessary step in the JS build process.
+                //
+                // We use MinifiedSource here rather than Source because we want to treat all JS
+                // files the way we used to treat minified files only. To use Source, we would need
+                // to analyze all possible code paths that check this value, and update those as
+                // well. To keep the change minimal, we use MinifiedSource here.
+                (
+                    SourceFileType::MinifiedSource,
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(discover_debug_id),
+                )
             };
 
             let mut source_file = SourceFile {
