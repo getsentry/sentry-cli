@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.29.1
+
+Updated version 2.29.0 changelog. No code changes.
+
 ## 2.29.0
 ### Source maps fixes
 This release fixes the behavior of `sourcemaps inject` and `sourcemaps upload`. We now treat minified and non-minified source files the same way in both commands, which was always the desired behavior, and is also consistent with our JS bundler plugins.
