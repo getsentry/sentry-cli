@@ -1,3 +1,6 @@
+TODO: ~/react-native-xcode-bundle.js.map should likely be listed under Source Maps in the output. 
+      See https://github.com/getsentry/sentry-cli/issues/1963
+
 ```
 $ CONFIGURATION=Release SENTRY_RELEASE=test-release SENTRY_DIST=test-dist sentry-cli react-native xcode tests/integration/_fixtures/react_native/react-native-xcode.sh --force-foreground
 ? success
