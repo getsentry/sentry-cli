@@ -24,7 +24,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
 > Upload type: artifact bundle
 
 Source Map Upload Report
-  Minified Scripts
+  Scripts
     ~/server/app/page.js (sourcemap at page.js.map)
     ~/server/chunks/1.js (sourcemap at 1.js.map)
     ~/server/chunks/flight-server-css-manifest.js (no sourcemap ref)

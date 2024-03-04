@@ -397,22 +397,18 @@ impl SourceMapProcessor {
 
         println!();
         println!("{}", style(title).dim().bold());
-        let mut sect = None;
+        let mut current_section = None;
 
         for source in sources {
-            if Some(source.ty) != sect {
-                println!(
-                    "  {}",
-                    style(match source.ty {
-                        SourceFileType::Source => "Scripts",
-                        SourceFileType::MinifiedSource => "Minified Scripts",
-                        SourceFileType::SourceMap => "Source Maps",
-                        SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
-                    })
-                    .yellow()
-                    .bold()
-                );
-                sect = Some(source.ty);
+            let section_title = match source.ty {
+                SourceFileType::Source | SourceFileType::MinifiedSource => "Scripts",
+                SourceFileType::SourceMap => "Source Maps",
+                SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
+            };
+
+            if Some(section_title) != current_section {
+                println!("  {}", style(section_title).yellow().bold());
+                current_section = Some(section_title);
             }
 
             if source.already_uploaded {
@@ -425,7 +421,7 @@ impl SourceMapProcessor {
 
             let mut pieces = Vec::new();
 
-            if source.ty == SourceFileType::MinifiedSource {
+            if [SourceFileType::Source, SourceFileType::MinifiedSource].contains(&source.ty) {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
                     let sm_url = sm_ref.get_url();
                     if sm_url.starts_with("data:") {
