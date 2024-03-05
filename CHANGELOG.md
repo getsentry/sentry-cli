@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Cron Monitor Changes
+
+The `monitors run` subcommand now no longer accepts `--auth-token` or other means of authentication using token-based auth. It is now required to use DSN based auth to monitor cron jobs using the sentry-cli.
+
 ## 2.29.1
 
 Updated version 2.29.0 changelog. No code changes.
