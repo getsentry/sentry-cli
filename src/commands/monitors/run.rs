@@ -1,20 +1,18 @@
 use chrono_tz::Tz;
-use log::warn;
 use std::process;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use anyhow::{Context, Result};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 
 use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus, MonitorConfig, MonitorSchedule};
 use sentry::types::Dsn;
 
-use crate::api::{Api, ApiCreateMonitorCheckIn, ApiMonitorCheckInStatus, ApiUpdateMonitorCheckIn};
 use crate::config::Config;
 use crate::utils::event::with_sentry_client;
-use crate::utils::system::{print_error, QuietExit};
+use crate::utils::system::QuietExit;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -31,14 +29,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("environment")
                 .default_value("production")
                 .help("Specify the environment of the monitor."),
-        )
-        .arg(
-            Arg::new("allow_failure")
-                .short('f')
-                .long("allow-failure")
-                .action(ArgAction::SetTrue)
-                .help("Run provided command even when Sentry reports an error.")
-                .hide(true),
         )
         .arg(
             Arg::new("args")
@@ -107,6 +97,8 @@ pub fn make_command(command: Command) -> Command {
                      issue. Requires --schedule.",
                 ),
         )
+        // Hide auth token from --help output
+        .arg(Arg::new("auth_token").long("auth-token").hide(true))
 }
 
 fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Duration) {
@@ -176,51 +168,6 @@ fn dsn_execute(
     (success, code)
 }
 
-fn token_execute(
-    args: Vec<&String>,
-    monitor_slug: &str,
-    environment: &str,
-) -> (bool, Option<i32>, Option<anyhow::Error>) {
-    let api = Api::current();
-    let monitor_checkin = api.create_monitor_checkin(
-        &monitor_slug.to_owned(),
-        &ApiCreateMonitorCheckIn {
-            status: ApiMonitorCheckInStatus::InProgress,
-            environment: environment.to_string(),
-        },
-    );
-
-    let (success, code, elapsed) = run_program(args, monitor_slug);
-
-    match monitor_checkin {
-        Ok(checkin) => {
-            let status = if success {
-                ApiMonitorCheckInStatus::Ok
-            } else {
-                ApiMonitorCheckInStatus::Error
-            };
-
-            let duration = Some(elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis()));
-
-            api.update_monitor_checkin(
-                &monitor_slug.to_owned(),
-                &checkin.id,
-                &ApiUpdateMonitorCheckIn {
-                    status: Some(status),
-                    duration,
-                    environment: Some(environment.to_string()),
-                },
-            )
-            .ok();
-        }
-        Err(e) => {
-            return (success, code, Some(e.into()));
-        }
-    }
-
-    (success, code, None)
-}
-
 fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfig>> {
     let Some(schedule) = matches.get_one::<String>("schedule") else {
         return Ok(None);
@@ -238,41 +185,19 @@ fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfi
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-    let dsn = config.get_dsn().ok();
 
-    // Token based auth is deprecated, prefer DSN style auth for monitor checkins.
-    // Using token based auth *DOES NOT WORK* when using slugs.
-    if dsn.is_none() {
-        warn!("Token auth is deprecated for cron monitor checkins and will be removed in the next major version.");
-        warn!("Please use DSN auth.");
-    }
+    // Token based auth has been removed, prefer DSN style auth for monitor checkins
+    let dsn = config.get_dsn().ok().context(
+        "Token auth is no longer supported for cron monitor checkins. Please use DSN auth.\n\
+                    See: https://docs.sentry.io/product/crons/getting-started/cli/#configuration",
+    )?;
 
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
     let environment = matches.get_one::<String>("environment").unwrap();
     let monitor_config = parse_monitor_config_args(matches)?;
 
-    let (success, code) = match dsn {
-        // Use envelope API when dsn is provided. This is the prefered way to create check-ins,
-        // and the legacy API will be removed in the next major CLI version.
-        Some(dsn) => dsn_execute(dsn, args, monitor_slug, environment, monitor_config),
-        // Use legacy API when DSN is not provided
-        None => {
-            if monitor_config.is_some() {
-                anyhow::bail!("Crons monitor upserts are only supported with DSN auth. Please try again with \
-                               DSN auth or repeat the command without the `schedule` argument.");
-            }
-            let (success, code, err) = token_execute(args, monitor_slug, environment);
-            if let Some(e) = err {
-                if matches.get_flag("allow_failure") {
-                    print_error(&e);
-                } else {
-                    return Err(e);
-                }
-            }
-            (success, code)
-        }
-    };
+    let (success, code) = dsn_execute(dsn, args, monitor_slug, environment, monitor_config);
 
     if !success {
         return Err(QuietExit(code.unwrap_or(1)).into());

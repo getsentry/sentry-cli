@@ -1,8 +1,10 @@
 ```
 $ sentry-cli monitors run foo-monitor -- echo 123
-? success
-  WARN    [..] Token auth is deprecated for cron monitor checkins and will be removed in the next major version.
-  WARN    [..] Please use DSN auth.
-123
+? failed
+error: Token auth is no longer supported for cron monitor checkins. Please use DSN auth.
+See: https://docs.sentry.io/product/crons/getting-started/cli/#configuration
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
 
 ```
