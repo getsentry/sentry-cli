@@ -18,7 +18,7 @@ Commands:
   info             Print information about the configuration and verify authentication.
   issues           Manage issues in Sentry.
   login            Authenticate with the Sentry server.
-  monitors         Manage monitors on Sentry [beta].
+  monitors         Manage cron monitors on Sentry.
   organizations    Manage organizations on Sentry.
   projects         Manage projects on Sentry.
   react-native     Upload build artifacts for react-native projects.
