@@ -97,6 +97,8 @@ pub fn make_command(command: Command) -> Command {
                      issue. Requires --schedule.",
                 ),
         )
+        // Hide auth token from --help output
+        .arg(Arg::new("auth_token").long("auth-token").hide(true))
 }
 
 fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Duration) {
