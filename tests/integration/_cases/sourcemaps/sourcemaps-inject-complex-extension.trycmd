@@ -1,0 +1,10 @@
+```
+$ sentry-cli sourcemaps inject --ext="test.js" --dry-run tests/integration/_fixtures/inject_complex_extension
+? success
+...
+Source Map Debug ID Injection Report
+  Modified: [..]
+    [..] - tests/integration/_fixtures/inject_complex_extension/hello.test.js
+
+
+```

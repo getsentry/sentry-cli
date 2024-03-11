@@ -165,3 +165,8 @@ fn command_sourcemaps_inject_not_compiled() {
     let file_contents = fs::read_to_string(format!("{testcase_cwd_path}not-compiled.js")).unwrap();
     assert!(file_contents.contains("//# debugId="));
 }
+
+#[test]
+fn command_sourcemaps_inject_complex_extension() {
+    register_test("sourcemaps/sourcemaps-inject-complex-extension.trycmd");
+}
