@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.30.1
+
+### Various fixes & improvements
+
+- fix(sourcemaps): allow complex file extensions (#1976) by @szokeasaurusrex
+
 ## 2.30.0
 
 ### Cron Monitor Changes
