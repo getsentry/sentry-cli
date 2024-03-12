@@ -130,7 +130,7 @@ impl ReleaseFileSearch {
         if !&self.extensions.is_empty() {
             let mut types_builder = TypesBuilder::new();
             for ext in &self.extensions {
-                let ext_name = ext.replace('.', "__");
+                let ext_name = ext.replace('.', "");
                 types_builder.add(&ext_name, &format!("*.{ext}"))?;
             }
             builder.types(types_builder.select("all").build()?);

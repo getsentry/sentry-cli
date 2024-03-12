@@ -1,0 +1,10 @@
+```
+$ sentry-cli sourcemaps upload --ext="complex.js" tests/integration/_fixtures/inject_complex_extension
+? success
+...
+Source Map Upload Report
+  Scripts
+    ~/hello.complex.js[..]
+      - warning: [..]
+
+```

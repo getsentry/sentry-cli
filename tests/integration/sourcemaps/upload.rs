@@ -169,3 +169,10 @@ fn command_sourcemaps_upload_cjs_mjs() {
         mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
     register_test("sourcemaps/sourcemaps-upload-cjs-mjs.trycmd");
 }
+
+#[test]
+fn command_sourcemaps_upload_complex_extension() {
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-complex-extension.trycmd");
+}
