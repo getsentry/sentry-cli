@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.30.2
+
+### Various fixes & improvements
+
+- meta: Re-enable Python releases (#1980) by @szokeasaurusrex
+
 ## 2.30.1
 
 ### Various fixes & improvements
