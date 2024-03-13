@@ -4,9 +4,7 @@
 
 ## 2.30.2
 
-### Various fixes & improvements
-
-- meta: Re-enable Python releases (#1980) by @szokeasaurusrex
+This release re-enables Python releases. There are no code changes.
 
 ## 2.30.1
 
