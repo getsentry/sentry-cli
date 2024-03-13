@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.30.2
+
+This release re-enables Python releases. There are no code changes.
+
 ## 2.30.1
 
 ### Various fixes & improvements
