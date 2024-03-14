@@ -16,7 +16,7 @@ pub struct OrgAuthToken {
 #[allow(dead_code)] // Otherwise, we get a warning about unused fields
 pub struct AuthTokenPayload {
     iat: f64,
-    region_url: String,
+    pub region_url: String,
     pub org: String,
 
     // URL may be missing from some old auth tokens, see getsentry/sentry#57123

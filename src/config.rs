@@ -518,6 +518,13 @@ impl Config {
                 false
             }
     }
+
+    pub fn get_auth_token_region_url(&self) -> Option<String> {
+        match &self.cached_token_data {
+            Some(cache) => Some(cache.region_url.clone()),
+            _ => None,
+        }
+    }
 }
 
 fn find_global_config_file() -> Result<PathBuf> {

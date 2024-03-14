@@ -1247,24 +1247,48 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Uploads a ZIP archive containing DIFs from the given path.
+    /// Will attempt to route directly to the organization's region if possible.
     pub fn upload_dif_archive(
         &self,
         org: &str,
         project: &str,
         file: &Path,
     ) -> ApiResult<Vec<DebugInfoFile>> {
+        // Obtain auth data for the dsym upload request
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(file).add()?;
+
         let path = format!(
             "/projects/{}/{}/files/dsyms/",
             PathArg(org),
             PathArg(project)
         );
-        let mut form = curl::easy::Form::new();
-        form.part("file").file(file).add()?;
-        self.request(Method::Post, &path)?
+
+        // Attempt to pull the org's region url from the auth token payload,
+        // otherwise, fall back to the relative path.
+        let full_path = if let Some(region_url) = self.api.config.get_auth_token_region_url() {
+            debug!("Pulled region data from auth token config {:?}", &region_url);
+            match self.api.config.get_api_endpoint(&path, Some(&region_url)) {
+                Ok(full_region_url) => full_region_url,
+                Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
+            }
+        } else {
+            path
+        };
+
+        let request = self
+            .request(Method::Post, &full_path)?
             .with_form_data(form)?
-            .progress_bar_mode(ProgressBarMode::Request)?
-            .send()?
-            .convert()
+            .progress_bar_mode(ProgressBarMode::Request)?;
+
+        // This logic was pulled from the `upload_chunks` method and ensures we
+        // only add authentication to the request if it does not already have it.
+        let request = match Config::current().get_auth() {
+            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
+            _ => request,
+        };
+
+        request.send()?.convert()
     }
 
     /// Get the server configuration for chunked file uploads.

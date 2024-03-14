@@ -245,6 +245,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     let rv = authenticated_api.upload_dif_archive(&org, &project, tf.path())?;
+
     println!(
         "{} Uploaded a total of {} new mapping files",
         style(">").dim(),
