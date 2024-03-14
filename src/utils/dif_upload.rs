@@ -1676,6 +1676,10 @@ fn upload_in_batches(
     let max_size = Config::current().get_max_dif_archive_size();
     let mut dsyms = Vec::new();
 
+    let dsym_config = api
+        .authenticated()?
+        .get_dsym_upload_config(&options.org, &options.project)?;
+
     for (i, (batch, _)) in objects.batches(max_size, MAX_CHUNKS).enumerate() {
         println!("\n{}", style(format!("Batch {}", i + 1)).bold());
 
@@ -1687,11 +1691,22 @@ fn upload_in_batches(
         let archive = create_batch_archive(batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(api.authenticated()?.upload_dif_archive(
-            &options.org,
-            &options.project,
-            archive.path(),
-        )?);
+        // The DSYM config contains a region-specific upload URL, so default to
+        //  using it if we have one.
+        if let Some(config) = &dsym_config {
+            debug!("Using DSYM config to drive upload: {:?}", dsym_config);
+            dsyms.extend(
+                api.authenticated()?
+                    .upload_dif_archive_with_dsym_config(archive.path(), config)?,
+            );
+        } else {
+            debug!("Using fallback DSYM endpoint due to missing config");
+            dsyms.extend(api.authenticated()?.upload_dif_archive(
+                &options.org,
+                &options.project,
+                archive.path(),
+            )?);
+        }
     }
 
     Ok(dsyms)

@@ -244,7 +244,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    let rv = authenticated_api.upload_dif_archive(&org, &project, tf.path())?;
+    debug!("Retrieving DSym Upload Config");
+
+    let dsym_config_option = api
+        .authenticated()?
+        .get_dsym_upload_config(&org, &project)?;
+
+    let rv = if let Some(dsym_config) = dsym_config_option {
+        debug!("Retrieved DSYM Upload Config: {:?}", &dsym_config);
+        authenticated_api.upload_dif_archive_with_dsym_config(tf.path(), &dsym_config)?
+    } else {
+        // If no config could be pulled, fallback to the base upload API request
+        debug!("No DSYM config found, falling back to base upload endpoint");
+        authenticated_api.upload_dif_archive(&org, &project, tf.path())?
+    };
+
     println!(
         "{} Uploaded a total of {} new mapping files",
         style(">").dim(),

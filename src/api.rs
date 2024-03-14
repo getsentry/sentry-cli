@@ -1280,6 +1280,22 @@ impl<'a> AuthenticatedApi<'a> {
         Ok(state.missing)
     }
 
+    pub fn get_dsym_upload_config(self, org: &str, project: &str) -> ApiResult<Option<DSymConfig>> {
+        let request = self.api.get(&format!(
+            "projects/{}/{}/files/dsyms/config/",
+            PathArg(org),
+            PathArg(project)
+        ))?;
+
+        // If the endpoint doesn't exist, it could be due to an older Sentry self-hosted instance so
+        // return None simply to flag that we couldn't retrieve the config successfully.
+        if request.status() == 404 {
+            return Ok(None);
+        }
+
+        request.convert()
+    }
+
     /// Uploads a ZIP archive containing DIFs from the given path.
     pub fn upload_dif_archive(
         &self,
@@ -1299,6 +1315,33 @@ impl<'a> AuthenticatedApi<'a> {
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?
             .convert()
+    }
+
+    /// The same as `upload_dif_archive_with_dsym_config`, but differs in that
+    ///  it takes a dsym config with a region specific URL.
+    pub fn upload_dif_archive_with_dsym_config(
+        &self,
+        file: &Path,
+        dsym_config: &DSymConfig,
+    ) -> ApiResult<Vec<DebugInfoFile>> {
+        // Obtain auth data for the dsym upload request
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(file).add()?;
+
+        let request = self
+            .api
+            .request(Method::Post, &dsym_config.region_url)?
+            .with_form_data(form)?
+            .progress_bar_mode(ProgressBarMode::Request)?;
+
+        // This logic was pulled from the `upload_chunks` method and ensures we only add
+        //  authentication to the request if it does not already have it.
+        let request = match Config::current().get_auth() {
+            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
+            _ => request,
+        };
+
+        request.send()?.convert()
     }
 
     /// Get the server configuration for chunked file uploads.
@@ -2948,4 +2991,10 @@ pub struct Region {
 #[derive(Clone, Debug, Deserialize)]
 pub struct RegionResponse {
     pub regions: Vec<Region>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct DSymConfig {
+    #[serde(rename = "regionUrl")]
+    pub region_url: String,
 }

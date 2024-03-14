@@ -218,6 +218,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     // Single file upload
     else {
+        //  TODO(Gabe): Delegate to region here as well?
         initialize_legacy_release_upload(context)?;
 
         let name = match matches.get_one::<String>("name") {
@@ -239,6 +240,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             });
         }
 
+        // TODO(Gabe): Figure out how to delegate to the organization's region if necessary
         if let Some(artifact) = authenticated_api.upload_release_file(
             context,
             &contents,
