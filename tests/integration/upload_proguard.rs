@@ -16,13 +16,11 @@ fn command_upload_proguard() {
         .with_response_body("[]"),
     );
 
-    let _dsym_config  = mock_endpoint(
-        EndpointOptions::new(
-            "GET",
-            "/api/0/projects/wat-org/wat-project/files/dsyms/config/",
-            404,
-        ),
-    );
+    let _dsym_config = mock_endpoint(EndpointOptions::new(
+        "GET",
+        "/api/0/projects/wat-org/wat-project/files/dsyms/config/",
+        404,
+    ));
 
     let _reprocessing = mock_endpoint(
         EndpointOptions::new(
@@ -51,13 +49,11 @@ fn command_upload_proguard_no_reprocessing() {
         .with_response_body("[]"),
     );
 
-    let _dsym_config = mock_endpoint(
-        EndpointOptions::new(
-            "GET",
-            "/api/0/projects/wat-org/wat-project/files/dsyms/config/",
-            404,
-        ),
-    );
+    let _dsym_config = mock_endpoint(EndpointOptions::new(
+        "GET",
+        "/api/0/projects/wat-org/wat-project/files/dsyms/config/",
+        404,
+    ));
 
     register_test("upload_proguard/upload_proguard-no-reprocessing.trycmd");
 }
