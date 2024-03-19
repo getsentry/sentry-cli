@@ -1267,7 +1267,10 @@ impl<'a> AuthenticatedApi<'a> {
         // Attempt to pull the org's region url from the auth token payload,
         // otherwise, fall back to the relative path.
         let full_path = if let Some(region_url) = self.api.config.get_auth_token_region_url() {
-            debug!("Pulled region data from auth token config {:?}", &region_url);
+            debug!(
+                "Pulled region data from auth token config {:?}",
+                &region_url
+            );
             match self.api.config.get_api_endpoint(&path, Some(&region_url)) {
                 Ok(full_region_url) => full_region_url,
                 Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
