@@ -520,10 +520,9 @@ impl Config {
     }
 
     pub fn get_auth_token_region_url(&self) -> Option<String> {
-        match &self.cached_token_data {
-            Some(cache) => Some(cache.region_url.clone()),
-            _ => None,
-        }
+        self.cached_token_data
+            .as_ref()
+            .map(|token_data| token_data.region_url.clone())
     }
 }
 
