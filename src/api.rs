@@ -1271,7 +1271,11 @@ impl<'a> AuthenticatedApi<'a> {
                 "Pulled region data from auth token config {:?}",
                 &region_url
             );
-            match self.api.config.get_api_endpoint(&api_path, Some(&region_url)) {
+            match self
+                .api
+                .config
+                .get_api_endpoint(&api_path, Some(&region_url))
+            {
                 Ok(full_region_url) => full_region_url,
                 Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
             }
