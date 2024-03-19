@@ -1258,7 +1258,7 @@ impl<'a> AuthenticatedApi<'a> {
         let mut form = curl::easy::Form::new();
         form.part("file").file(file).add()?;
 
-        let path = format!(
+        let api_path = format!(
             "/projects/{}/{}/files/dsyms/",
             PathArg(org),
             PathArg(project)
@@ -1266,21 +1266,21 @@ impl<'a> AuthenticatedApi<'a> {
 
         // Attempt to pull the org's region url from the auth token payload,
         // otherwise, fall back to the relative path.
-        let full_path = if let Some(region_url) = self.api.config.get_auth_token_region_url() {
+        let request_url = if let Some(region_url) = self.api.config.get_auth_token_region_url() {
             debug!(
                 "Pulled region data from auth token config {:?}",
                 &region_url
             );
-            match self.api.config.get_api_endpoint(&path, Some(&region_url)) {
+            match self.api.config.get_api_endpoint(&api_path, Some(&region_url)) {
                 Ok(full_region_url) => full_region_url,
                 Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
             }
         } else {
-            path
+            api_path
         };
 
         let request = self
-            .request(Method::Post, &full_path)?
+            .request(Method::Post, &request_url)?
             .with_form_data(form)?
             .progress_bar_mode(ProgressBarMode::Request)?;
 
