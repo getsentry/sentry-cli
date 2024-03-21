@@ -10,5 +10,5 @@ pub mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {
-    utils::system::run_or_interrupt(commands::main);
+    commands::main()
 }
