@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use crate::utils::logging;
 
-pub use indicatif::{ProgressDrawTarget, ProgressStyle};
+pub use indicatif::ProgressStyle;
 
 pub fn is_progress_bar_visible() -> bool {
     env::var("SENTRY_NO_PROGRESS_BAR") != Ok("1".into())
@@ -35,16 +35,6 @@ impl ProgressBar {
 
     pub fn hidden() -> Self {
         indicatif::ProgressBar::hidden().into()
-    }
-
-    pub fn finish(&self) {
-        self.inner.finish();
-        logging::set_progress_bar(None);
-    }
-
-    pub fn finish_with_message(&self, msg: &str) {
-        self.inner.finish_with_message(msg);
-        logging::set_progress_bar(None);
     }
 
     pub fn finish_with_duration(&self, op: &str) {

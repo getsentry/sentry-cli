@@ -45,14 +45,6 @@ impl ReleaseFileSearch {
         self
     }
 
-    pub fn extension<E>(&mut self, extension: E) -> &mut Self
-    where
-        E: Into<String>,
-    {
-        self.extensions.insert(extension.into());
-        self
-    }
-
     pub fn extensions<E>(&mut self, extensions: E) -> &mut Self
     where
         E: IntoIterator,
@@ -61,14 +53,6 @@ impl ReleaseFileSearch {
         for extension in extensions {
             self.extensions.insert(extension.into());
         }
-        self
-    }
-
-    pub fn ignore<I>(&mut self, ignore: I) -> &mut Self
-    where
-        I: Into<String>,
-    {
-        self.ignores.insert(ignore.into());
         self
     }
 

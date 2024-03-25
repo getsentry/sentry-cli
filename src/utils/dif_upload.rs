@@ -1876,17 +1876,6 @@ impl DifUpload {
         self
     }
 
-    /// Add a `DebugId` to filter for.
-    ///
-    /// By default, all DebugIds will be included.
-    pub fn filter_id<I>(&mut self, id: I) -> &mut Self
-    where
-        I: Into<DebugId>,
-    {
-        self.ids.insert(id.into());
-        self
-    }
-
     /// Add `DebugId`s to filter for.
     ///
     /// By default, all DebugIds will be included. If `ids` is empty, this will
@@ -1910,48 +1899,11 @@ impl DifUpload {
         self
     }
 
-    /// Add `FileFormat`s to filter for.
-    ///
-    /// By default, all object formats will be included. If `formats` is empty, this
-    /// will not be changed.
-    pub fn filter_formats<I>(&mut self, formats: I) -> &mut Self
-    where
-        I: IntoIterator<Item = DifFormat>,
-    {
-        self.formats.extend(formats);
-        self
-    }
-
     /// Add an `ObjectFeature` to filter for.
     ///
     /// By default, all object features will be included.
     pub fn filter_features(&mut self, features: ObjectDifFeatures) -> &mut Self {
         self.features = features;
-        self
-    }
-
-    /// Add a file extension to filter for.
-    ///
-    /// By default, all file extensions will be included.
-    pub fn filter_extension<S>(&mut self, extension: S) -> &mut Self
-    where
-        S: Into<OsString>,
-    {
-        self.extensions.insert(extension.into());
-        self
-    }
-
-    /// Add a file extension to filter for.
-    ///
-    /// By default, all file extensions will be included.
-    pub fn filter_extensions<I>(&mut self, extensions: I) -> &mut Self
-    where
-        I: IntoIterator,
-        I::Item: Into<OsString>,
-    {
-        for extension in extensions {
-            self.extensions.insert(extension.into());
-        }
         self
     }
 
