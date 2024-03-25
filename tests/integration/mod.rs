@@ -4,6 +4,7 @@ mod deploys;
 mod events;
 mod help;
 mod info;
+mod invalid_env;
 mod issues;
 mod login;
 mod monitors;
