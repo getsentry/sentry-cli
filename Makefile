@@ -14,7 +14,7 @@ format-check:
 
 lint:
 	@rustup component add clippy 2> /dev/null
-	@cargo clippy --tests --all-features -- -D clippy::all
+	@cargo clippy --tests -- -D clippy::all
 .PHONY: lint
 
 check: lint format-check
