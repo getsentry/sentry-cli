@@ -2,6 +2,8 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binary that links against this library.
 
+use anyhow::Result;
+
 pub mod api;
 pub mod commands;
 pub mod config;
@@ -9,6 +11,7 @@ pub mod constants;
 pub mod utils;
 
 /// Executes the command line application and exits the process.
-pub fn main() {
+pub fn main() -> Result<()> {
+    // TODO: Actually print a warning
     commands::main()
 }

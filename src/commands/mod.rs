@@ -306,19 +306,21 @@ pub fn execute() -> Result<()> {
     }
 }
 
-fn setup() {
+fn setup() -> Result<()> {
     init_backtrace();
-    load_dotenv();
+    load_dotenv()?;
 
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
     set_max_level(LevelFilter::Debug);
     set_logger(&Logger).unwrap();
+
+    Ok(())
 }
 
 /// Executes the command line application and exits the process.
-pub fn main() {
-    setup();
+pub fn main() -> Result<()> {
+    setup()?;
 
     let exit_code = match execute() {
         Ok(()) => 0,
