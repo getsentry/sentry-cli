@@ -308,12 +308,20 @@ pub fn execute() -> Result<()> {
 
 fn setup() {
     init_backtrace();
-    load_dotenv();
+
+    // Store the result of loading the dotenv file. We must load the dotenv file
+    // before setting the log level, as the log level can be set in the dotenv
+    // file, but we should only log a warning after setting the log level.
+    let load_dotenv_result = load_dotenv();
 
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
     set_max_level(LevelFilter::Debug);
     set_logger(&Logger).unwrap();
+
+    if let Err(e) = load_dotenv_result {
+        log::warn!("Failed to load .env file: {}", e);
+    }
 }
 
 /// Executes the command line application and exits the process.

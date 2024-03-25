@@ -1,0 +1,7 @@
+```
+$ sentry-cli
+? failed
+[..]WARN[..]Failed to load .env file:[..]
+...
+
+```

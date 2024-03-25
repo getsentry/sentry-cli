@@ -4,6 +4,7 @@ use std::process;
 
 use anyhow::{Error, Result};
 use console::style;
+use dotenv::Result as DotenvResult;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
@@ -127,15 +128,28 @@ pub fn init_backtrace() {
 pub struct QuietExit(pub i32);
 
 /// Loads a .env file
-pub fn load_dotenv() {
-    if env::var("SENTRY_LOAD_DOTENV")
-        .map(|x| x.as_str() == "1")
-        .unwrap_or(true)
-    {
-        if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
-            dotenv::from_path(path).ok();
-        } else {
-            dotenv::dotenv().ok();
-        }
+pub fn load_dotenv() -> DotenvResult<()> {
+    let load_dotenv_unset = env::var("SENTRY_LOAD_DOTENV")
+        .map(|x| x.as_str() != "1")
+        .unwrap_or(false);
+
+    if load_dotenv_unset {
+        return Ok(());
     }
+
+    match env::var("SENTRY_DOTENV_PATH") {
+        Ok(path) => dotenv::from_path(path),
+        Err(_) => dotenv::dotenv().map(|_| ()),
+    }
+    .map_or_else(
+        |error| {
+            // We only propogate errors if the .env file was found and failed to load.
+            if error.not_found() {
+                Ok(())
+            } else {
+                Err(error)
+            }
+        },
+        |_| Ok(()),
+    )
 }
