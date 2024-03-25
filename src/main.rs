@@ -11,7 +11,6 @@ pub mod constants;
 pub mod utils;
 
 /// Executes the command line application and exits the process.
-pub fn main() -> Result<()> {
-    // TODO: Actually print a warning
+pub fn main() {
     commands::main()
 }
