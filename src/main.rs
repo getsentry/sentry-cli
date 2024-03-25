@@ -2,8 +2,6 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binary that links against this library.
 
-use anyhow::Result;
-
 pub mod api;
 pub mod commands;
 pub mod config;
