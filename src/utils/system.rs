@@ -9,7 +9,6 @@ use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
-#[cfg(not(windows))]
 
 /// Propagate an exit status outwarts
 pub fn propagate_exit_status(status: process::ExitStatus) {
