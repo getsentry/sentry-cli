@@ -7,5 +7,5 @@ use crate::integration::register_test;
 #[cfg(not(windows))]
 #[test]
 fn command_upload_dsym_help() {
-    register_test("upload_sym/upload_sym-help.trycmd");
+    register_test("upload_dsym/upload_dsym-help.trycmd");
 }
