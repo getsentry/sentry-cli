@@ -71,10 +71,10 @@ impl Config {
             .map(|td| td.region_url.as_str())
             .unwrap_or_default();
 
-        let url = match (default_url.as_str(), token_url) {
-            (_, "") => default_url,
+        let url = match (default_url.as_str(), token_url, region_url) {
+            (_, "", "") => default_url,
             _ if default_url == token_url || default_url == region_url => default_url,
-            (DEFAULT_URL | "", _) => String::from(token_url),
+            (DEFAULT_URL | "", _, _) => String::from(token_url),
             _ => bail!(
                 "Two different url values supplied: `{token_url}` (from token), `{default_url}`."
             ),
