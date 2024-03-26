@@ -66,9 +66,14 @@ impl Config {
             .map(|td| td.url.as_str())
             .unwrap_or_default();
 
+        let region_url = token_embedded_data
+            .as_ref()
+            .map(|td| td.region_url.as_str())
+            .unwrap_or_default();
+
         let url = match (default_url.as_str(), token_url) {
             (_, "") => default_url,
-            _ if default_url == token_url => default_url,
+            _ if default_url == token_url || default_url == region_url => default_url,
             (DEFAULT_URL | "", _) => String::from(token_url),
             _ => bail!(
                 "Two different url values supplied: `{token_url}` (from token), `{default_url}`."
@@ -210,8 +215,14 @@ impl Config {
             .map(|td| td.url.as_str())
             .unwrap_or_default();
 
-        if !token_url.is_empty() && url != token_url {
-            bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
+        let region_url = self
+            .cached_token_data
+            .as_ref()
+            .map(|td| td.region_url.as_str())
+            .unwrap_or_default();
+
+        if !token_url.is_empty() && url != token_url && url != region_url {
+            bail!("URL must match one of the provided URLs on the authentication token: `{token_url}` or `{region_url}`, received: `{url}`.")
         }
 
         self.cached_base_url = url.to_owned();
