@@ -48,12 +48,10 @@ Options:
                                  Providing this information will associate the debug symbols with a
                                  specific ITC application and build in Sentry.  Note that if you
                                  provide the plist explicitly it must already be processed.
-      --no-reprocessing          Do not trigger reprocessing after uploading.
       --no-upload                Disable the actual upload.
                                  This runs all steps for the processing but does not trigger the
-                                 upload (this also automatically disables reprocessing).  This is
-                                 useful if you just want to verify the setup or skip the upload in
-                                 tests.
+                                 upload.  This is useful if you just want to verify the setup or
+                                 skip the upload in tests.
       --force-foreground         Wait for the process to finish.
                                  By default, the upload process will detach and continue in the
                                  background when triggered from Xcode.  When an error happens, a

@@ -10,7 +10,6 @@ use log::info;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::FileFormat;
 
-use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt;
@@ -142,19 +141,12 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-            Arg::new("no_reprocessing")
-                .long("no-reprocessing")
-                .action(ArgAction::SetTrue)
-                .help("Do not trigger reprocessing after uploading."),
-        )
-        .arg(
             Arg::new("no_upload")
                 .long("no-upload")
                 .action(ArgAction::SetTrue)
                 .help(
                     "Disable the actual upload.{n}This runs all steps for the \
-                    processing but does not trigger the upload (this also \
-                    automatically disables reprocessing).  This is useful if you \
+                    processing but does not trigger the upload.  This is useful if you \
                     just want to verify the setup or skip the upload in tests.",
                 ),
         )
@@ -322,14 +314,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         // Execute the upload
         let (uploaded, has_processing_errors) = upload.upload()?;
-        let api = Api::current();
-
-        // Trigger reprocessing only if requested by user
-        if matches.get_flag("no_reprocessing") {
-            println!("{} skipped reprocessing", style(">").dim());
-        } else if !api.authenticated()?.trigger_reprocessing(&org, &project)? {
-            println!("{} Server does not support reprocessing.", style(">").dim());
-        }
 
         // Did we miss explicitly requested symbols?
         if matches.get_flag("require_all") {
