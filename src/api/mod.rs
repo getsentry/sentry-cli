@@ -1076,24 +1076,6 @@ impl<'a> AuthenticatedApi<'a> {
         }
     }
 
-    /// Triggers reprocessing for a project
-    pub fn trigger_reprocessing(&self, org: &str, project: &str) -> ApiResult<bool> {
-        let path = format!(
-            "/projects/{}/{}/reprocessing/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_header("Content-Length", "0")?
-            .send()?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
-    }
-
     /// List all organizations associated with the authenticated token
     /// in the given `Region`. If no `Region` is provided, we assume
     /// we're issuing a request to a monolith deployment.

@@ -84,19 +84,12 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-            Arg::new("no_reprocessing")
-                .long("no-reprocessing")
-                .action(ArgAction::SetTrue)
-                .help("Do not trigger reprocessing after upload."),
-        )
-        .arg(
             Arg::new("no_upload")
                 .long("no-upload")
                 .action(ArgAction::SetTrue)
                 .help(
                     "Disable the actual upload.{n}This runs all steps for the \
-                    processing but does not trigger the upload (this also \
-                    automatically disables reprocessing).  This is useful if you \
+                    processing but does not trigger the upload.  This is useful if you \
                     just want to verify the mapping files and write the \
                     proguard UUIDs into a properties file.",
                 ),
@@ -285,18 +278,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 },
             )?;
         }
-    }
-
-    // If wanted trigger reprocessing
-    if !matches.get_flag("no_reprocessing") && !matches.get_flag("no_upload") {
-        if !authenticated_api.trigger_reprocessing(&org, &project)? {
-            println!(
-                "{} Server does not support reprocessing. Not triggering.",
-                style(">").dim()
-            );
-        }
-    } else {
-        println!("{} skipped reprocessing", style(">").dim());
     }
 
     Ok(())

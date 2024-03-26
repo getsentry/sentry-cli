@@ -21,6 +21,7 @@ mod token_validation;
 mod uninstall;
 mod update;
 mod upload_dif;
+mod upload_dsym;
 mod upload_proguard;
 
 use std::fs;
