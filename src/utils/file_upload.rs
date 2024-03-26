@@ -282,19 +282,21 @@ fn upload_files_parallel(
                         .ok();
                 }
 
-                authenticated_api.upload_release_file(
-                    context,
-                    &file.contents,
-                    &file.url,
-                    Some(
-                        file.headers
-                            .iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    ),
-                    mode,
-                )?;
+                authenticated_api
+                    .region_specific(context.org)
+                    .upload_release_file(
+                        context,
+                        &file.contents,
+                        &file.url,
+                        Some(
+                            file.headers
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect::<Vec<_>>()
+                                .as_slice(),
+                        ),
+                        mode,
+                    )?;
 
                 Ok(())
             })

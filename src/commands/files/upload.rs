@@ -239,19 +239,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             });
         }
 
-        if let Some(artifact) = authenticated_api.upload_release_file(
-            context,
-            &contents,
-            name,
-            Some(
-                headers
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            ),
-            ProgressBarMode::Request,
-        )? {
+        if let Some(artifact) = authenticated_api
+            .region_specific(context.org)
+            .upload_release_file(
+                context,
+                &contents,
+                name,
+                Some(
+                    headers
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                ),
+                ProgressBarMode::Request,
+            )?
+        {
             println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
         } else {
             bail!("File already present!");
