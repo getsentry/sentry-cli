@@ -1,7 +1,7 @@
 use std::env;
 use std::fs;
 use std::io;
-use std::io::{Read, Seek, SeekFrom};
+use std::io::{Read, Seek};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Result};
@@ -82,11 +82,6 @@ impl TempFile {
     /// Returns the path to the tempfile.
     pub fn path(&self) -> &Path {
         &self.path
-    }
-
-    /// Returns the size of the temp file.
-    pub fn size(&self) -> io::Result<u64> {
-        self.open()?.seek(SeekFrom::End(0))
     }
 }
 

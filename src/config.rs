@@ -431,7 +431,9 @@ impl Config {
         )
     }
 
-    /// Returns true if notifications should be displayed
+    /// Returns true if notifications should be displayed.
+    /// We only use this function in the macOS binary.
+    #[cfg(target_os = "macos")]
     pub fn show_notifications(&self) -> Result<bool> {
         Ok(self
             .ini

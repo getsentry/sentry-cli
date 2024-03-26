@@ -144,11 +144,6 @@ impl SourceFile {
         self.headers.insert("debug-id".to_string(), debug_id);
     }
 
-    /// Returns the value of the "Sourcemap" header.
-    pub fn sourcemap_reference(&self) -> Option<&String> {
-        self.headers.get("Sourcemap")
-    }
-
     /// Sets the value of the "Sourcemap" header.
     pub fn set_sourcemap_reference(&mut self, sourcemap: String) {
         self.headers.insert("Sourcemap".to_string(), sourcemap);

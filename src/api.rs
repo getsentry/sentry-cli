@@ -18,7 +18,9 @@ use std::{env, fmt};
 use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+#[cfg(target_os = "macos")]
+use chrono::Duration;
+use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
@@ -158,7 +160,6 @@ pub enum ProgressBarMode {
     Disabled,
     Request,
     Response,
-    Both,
     Shared((Arc<ProgressBar>, u64, usize, Arc<RwLock<Vec<u64>>>)),
 }
 
@@ -170,12 +171,12 @@ impl ProgressBarMode {
 
     /// Returns whether a progress bar should be displayed during upload.
     pub fn request(&self) -> bool {
-        matches!(*self, ProgressBarMode::Request | ProgressBarMode::Both)
+        matches!(*self, ProgressBarMode::Request)
     }
 
     /// Returns whether a progress bar should be displayed during download.
     pub fn response(&self) -> bool {
-        matches!(*self, ProgressBarMode::Response | ProgressBarMode::Both)
+        matches!(*self, ProgressBarMode::Response)
     }
 }
 
@@ -324,7 +325,6 @@ pub type ApiResult<T> = Result<T, ApiError>;
 #[derive(Eq, PartialEq, Debug)]
 pub enum Method {
     Get,
-    Head,
     Post,
     Put,
     Delete,
@@ -334,7 +334,6 @@ impl fmt::Display for Method {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Method::Get => write!(f, "GET"),
-            Method::Head => write!(f, "HEAD"),
             Method::Post => write!(f, "POST"),
             Method::Put => write!(f, "PUT"),
             Method::Delete => write!(f, "DELETE"),
@@ -532,7 +531,8 @@ impl Api {
     }
 
     /// Convenience method that waits for a few seconds until a resource
-    /// becomes available.
+    /// becomes available. We only use this in the macOS binary.
+    #[cfg(target_os = "macos")]
     pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
         let started = Utc::now();
         loop {
@@ -1851,11 +1851,6 @@ impl ApiRequest {
 
         match method {
             Method::Get => handle.get(true)?,
-            Method::Head => {
-                handle.get(true)?;
-                handle.custom_request("HEAD")?;
-                handle.nobody(true)?;
-            }
             Method::Post => handle.custom_request("POST")?,
             Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,
@@ -2235,16 +2230,6 @@ pub struct Artifact {
 }
 
 impl Artifact {
-    pub fn get_header<'a>(&'a self, key: &str) -> Option<&'a str> {
-        let ikey = key.to_lowercase();
-        for (k, v) in &self.headers {
-            if k.to_lowercase() == ikey {
-                return Some(v.as_str());
-            }
-        }
-        None
-    }
-
     pub fn get_sourcemap_reference(&self) -> Option<&str> {
         get_sourcemap_reference_from_headers(self.headers.iter())
     }

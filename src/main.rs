@@ -2,11 +2,11 @@
 //! exported function is `main` which is directly invoked from the
 //! compiled binary that links against this library.
 
-pub mod api;
-pub mod commands;
-pub mod config;
-pub mod constants;
-pub mod utils;
+mod api;
+mod commands;
+mod config;
+mod constants;
+mod utils;
 
 /// Executes the command line application and exits the process.
 pub fn main() {

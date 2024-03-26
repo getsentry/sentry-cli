@@ -21,7 +21,9 @@ use {
     unix_daemonize::{daemonize_redirect, ChdirMode},
 };
 
-use crate::utils::fs::{SeekRead, TempFile};
+use crate::utils::fs::SeekRead;
+#[cfg(target_os = "macos")]
+use crate::utils::fs::TempFile;
 use crate::utils::system::expand_vars;
 
 #[derive(Deserialize, Debug)]
@@ -359,6 +361,7 @@ impl InfoPlist {
         &self.version
     }
 
+    #[cfg(target_os = "macos")] // only used in macOS binary
     pub fn build(&self) -> &str {
         &self.build
     }
@@ -376,6 +379,7 @@ impl InfoPlist {
 /// the xcode console and continue in the background.  This becomes
 /// a dummy shim for non xcode runs or platforms.
 pub struct MayDetach<'a> {
+    #[cfg(target_os = "macos")] // only used in macOS binary
     output_file: Option<TempFile>,
     #[allow(dead_code)]
     task_name: &'a str,
@@ -383,13 +387,20 @@ pub struct MayDetach<'a> {
 
 impl<'a> MayDetach<'a> {
     fn new(task_name: &'a str) -> MayDetach<'a> {
-        MayDetach {
-            output_file: None,
-            task_name,
+        #[cfg(target_os = "macos")]
+        {
+            MayDetach {
+                output_file: None,
+                task_name,
+            }
         }
+
+        #[cfg(not(target_os = "macos"))]
+        MayDetach { task_name }
     }
 
-    /// Returns true if we are deteached from xcode
+    /// Returns true if we are deteached from xcode.
+    #[cfg(target_os = "macos")]
     pub fn is_detached(&self) -> bool {
         self.output_file.is_some()
     }
@@ -499,12 +510,6 @@ pub fn launched_from_xcode() -> bool {
         pid = parent;
     }
 
-    false
-}
-
-/// Returns true if we were invoked from xcode
-#[cfg(not(target_os = "macos"))]
-pub fn launched_from_xcode() -> bool {
     false
 }
 
