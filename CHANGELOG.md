@@ -4,13 +4,13 @@
 
 ## 2.30.4
 
+Release made for technical reasons. There are no code changes in this version.
+
+## 2.30.3
+
 ### Various fixes & improvements
 
-- ref: Privatize top-level modules and delete dead code (#1992) by @szokeasaurusrex
-- ci: Run Clippy with default features (#1993) by @szokeasaurusrex
-- fix: Handle .env errors (#1987) by @szokeasaurusrex
-- ref: Remove custom ctrl-c handling code (#1986) by @szokeasaurusrex
-- ref: Fixed new Clippy errors (#1988) by @szokeasaurusrex
+ - fix: Handle .env errors (#1987) by @szokeasaurusrex
 
 ## 2.30.2
 
