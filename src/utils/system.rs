@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 use std::env;
+#[cfg(target_os = "macos")]
 use std::process;
 
 use anyhow::{Error, Result};

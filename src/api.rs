@@ -18,7 +18,9 @@ use std::{env, fmt};
 use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+#[cfg(target_os = "macos")]
+use chrono::Duration;
+use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;

@@ -21,7 +21,9 @@ use {
     unix_daemonize::{daemonize_redirect, ChdirMode},
 };
 
-use crate::utils::fs::{SeekRead, TempFile};
+use crate::utils::fs::SeekRead;
+#[cfg(target_os = "macos")]
+use crate::utils::fs::TempFile;
 use crate::utils::system::expand_vars;
 
 #[derive(Deserialize, Debug)]
@@ -379,16 +381,22 @@ impl InfoPlist {
 pub struct MayDetach<'a> {
     #[cfg(target_os = "macos")] // only used in macOS binary
     output_file: Option<TempFile>,
-    #[allow(dead_code)]
+    //#[allow(dead_code)]
     task_name: &'a str,
 }
 
 impl<'a> MayDetach<'a> {
     fn new(task_name: &'a str) -> MayDetach<'a> {
-        MayDetach {
-            output_file: None,
-            task_name,
+        #[cfg(target_os = "macos")]
+        {
+            MayDetach {
+                output_file: None,
+                task_name,
+            }
         }
+
+        #[cfg(not(target_os = "macos"))]
+        MayDetach { task_name }
     }
 
     /// Returns true if we are deteached from xcode.
