@@ -1670,7 +1670,7 @@ impl<'a> AuthenticatedApi<'a> {
     pub fn region_specific<'b>(&'a self, org: &'b str) -> RegionSpecificApi<'a, 'b> {
         let base_url = self.api.config.get_base_url();
         if base_url.is_err()
-            || base_url.expect("base_url should not be error") != DEFAULT_URL.trim_end_matches("/")
+            || base_url.expect("base_url should not be error") != DEFAULT_URL.trim_end_matches('/')
         {
             // Do not specify a region URL unless the URL is configured to https://sentry.io (i.e. the default).
             return RegionSpecificApi {
