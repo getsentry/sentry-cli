@@ -76,7 +76,7 @@ impl Config {
             _ if default_url == token_url || default_url == region_url => default_url,
             (DEFAULT_URL | "", _, _) => String::from(token_url),
             _ => bail!(
-                "Two different url values supplied: `{token_url}` (from token), `{default_url}`."
+                "URL must match one of the provided URLs on the authentication token: `{token_url}` or `{region_url}`, received: `{default_url}`."
             ),
         };
 
