@@ -359,6 +359,7 @@ impl InfoPlist {
         &self.version
     }
 
+    #[cfg(target_os = "macos")] // only used in macOS binary
     pub fn build(&self) -> &str {
         &self.build
     }
@@ -376,6 +377,7 @@ impl InfoPlist {
 /// the xcode console and continue in the background.  This becomes
 /// a dummy shim for non xcode runs or platforms.
 pub struct MayDetach<'a> {
+    #[cfg(target_os = "macos")] // only used in macOS binary
     output_file: Option<TempFile>,
     #[allow(dead_code)]
     task_name: &'a str,
@@ -389,7 +391,8 @@ impl<'a> MayDetach<'a> {
         }
     }
 
-    /// Returns true if we are deteached from xcode
+    /// Returns true if we are deteached from xcode.
+    #[cfg(target_os = "macos")]
     pub fn is_detached(&self) -> bool {
         self.output_file.is_some()
     }
@@ -499,12 +502,6 @@ pub fn launched_from_xcode() -> bool {
         pid = parent;
     }
 
-    false
-}
-
-/// Returns true if we were invoked from xcode
-#[cfg(not(target_os = "macos"))]
-pub fn launched_from_xcode() -> bool {
     false
 }
 

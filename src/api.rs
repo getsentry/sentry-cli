@@ -529,7 +529,8 @@ impl Api {
     }
 
     /// Convenience method that waits for a few seconds until a resource
-    /// becomes available.
+    /// becomes available. We only use this in the macOS binary.
+    #[cfg(target_os = "macos")]
     pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
         let started = Utc::now();
         loop {
