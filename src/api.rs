@@ -197,7 +197,7 @@ pub struct AuthenticatedApi<'a> {
 pub struct RegionSpecificApi<'a, 'b> {
     api: &'a AuthenticatedApi<'a>,
     org: &'b str,
-    region_url: Option<&'a str>,
+    region_url: Option<Box<str>>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -1667,6 +1667,12 @@ impl<'a> AuthenticatedApi<'a> {
         }
     }
 
+    fn get_region_url(&self, org: &str) -> ApiResult<String> {
+        self.get(&format!("/organizations/{org}/region/"))
+            .and_then(|resp| resp.convert::<Region>())
+            .map(|region| region.url)
+    }
+
     pub fn region_specific<'b>(&'a self, org: &'b str) -> RegionSpecificApi<'a, 'b> {
         let base_url = self.api.config.get_base_url();
         if base_url.is_err()
@@ -1680,41 +1686,46 @@ impl<'a> AuthenticatedApi<'a> {
             };
         }
 
-        match self
+        let region_url = match self
             .api
             .config
             .get_auth()
             .expect("auth should not be None for authenticated API!")
         {
-            Auth::Token(token) if token.payload().is_some() => {
-                let region_url = &token
-                    .payload()
-                    .expect("Payload already checked to have Some value")
-                    .region_url;
+            Auth::Token(token) => match token.payload() {
+                Some(payload) => Some(payload.region_url.clone().into()),
+                None => {
+                    let region_url = self.get_region_url(org);
+                    if let Err(err) = &region_url {
+                        log::warn!("Failed to get region URL due to following error: {err}");
+                        log::info!("Failling back to the default region.");
+                    }
 
-                RegionSpecificApi {
-                    api: self,
-                    org,
-                    region_url: Some(region_url),
+                    region_url.ok().map(|url| url.into())
                 }
-            }
-            _ => {
-                log::info!(
-                    "Auth does not encode a region URL. Falling back to using default region!"
+            },
+            Auth::Key(_) => {
+                log::warn!(
+                    "Auth key is not supported for region-specific API. Falling back to default region."
                 );
-                RegionSpecificApi {
-                    api: self,
-                    org,
-                    region_url: None,
-                }
+
+                None
             }
+        };
+
+        RegionSpecificApi {
+            api: self,
+            org,
+            region_url,
         }
     }
 }
 
 impl<'a, 'b> RegionSpecificApi<'a, 'b> {
     fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
-        self.api.api.request(method, url, self.region_url)
+        self.api
+            .api
+            .request(method, url, self.region_url.as_deref())
     }
 
     /// Uploads a ZIP archive containing DIFs from the given path.
