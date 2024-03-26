@@ -381,7 +381,7 @@ impl InfoPlist {
 pub struct MayDetach<'a> {
     #[cfg(target_os = "macos")] // only used in macOS binary
     output_file: Option<TempFile>,
-    //#[allow(dead_code)]
+    #[allow(dead_code)]
     task_name: &'a str,
 }
 
