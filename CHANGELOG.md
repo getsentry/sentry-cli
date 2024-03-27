@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.30.5
+
+### Various fixes & improvements
+
+- meta: Re-enable Python releases (#2004) by @szokeasaurusrex
+- meta: Disable Python releases (#2000) by @szokeasaurusrex
+- ref: Privatize top-level modules and delete dead code (#1992) by @szokeasaurusrex
+- ci: Run Clippy with default features (#1993) by @szokeasaurusrex
+- fix: Handle .env errors (#1987) by @szokeasaurusrex
+- ref: Remove custom ctrl-c handling code (#1986) by @szokeasaurusrex
+- ref: Fixed new Clippy errors (#1988) by @szokeasaurusrex
+
 ## 2.30.2
 
 This release re-enables Python releases. There are no code changes.
