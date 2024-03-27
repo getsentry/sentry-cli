@@ -194,9 +194,9 @@ pub struct AuthenticatedApi<'a> {
     api: &'a Api,
 }
 
-pub struct RegionSpecificApi<'a, 'b> {
+pub struct RegionSpecificApi<'a> {
     api: &'a AuthenticatedApi<'a>,
-    org: &'b str,
+    org: &'a str,
     region_url: Option<&'a str>,
 }
 
@@ -1667,7 +1667,7 @@ impl<'a> AuthenticatedApi<'a> {
         }
     }
 
-    pub fn region_specific<'b>(&'a self, org: &'b str) -> RegionSpecificApi<'a, 'b> {
+    pub fn region_specific(&'a self, org: &'a str) -> RegionSpecificApi<'a> {
         let base_url = self.api.config.get_base_url();
         if base_url.is_err()
             || base_url.expect("base_url should not be error") != DEFAULT_URL.trim_end_matches('/')
@@ -1712,7 +1712,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 }
 
-impl<'a, 'b> RegionSpecificApi<'a, 'b> {
+impl<'a> RegionSpecificApi<'a> {
     fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         self.api.api.request(method, url, self.region_url)
     }
