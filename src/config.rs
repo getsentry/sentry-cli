@@ -61,18 +61,15 @@ impl Config {
         };
 
         let default_url = get_default_url(&ini);
-        let token_url = token_embedded_data
-            .as_ref()
-            .map(|td| td.url.as_str())
-            .unwrap_or_default();
+        let token_region_url = token_embedded_data.as_ref().map(|td| &td.region_url);
 
-        let url = match (default_url.as_str(), token_url) {
-            (_, "") => default_url,
-            _ if default_url == token_url => default_url,
-            (DEFAULT_URL | "", _) => String::from(token_url),
-            _ => bail!(
-                "Two different url values supplied: `{token_url}` (from token), `{default_url}`."
-            ),
+        let url = match token_region_url {
+            Some(region_url) => {
+                log::info!("Using region URL from token: {}", region_url);
+
+                region_url.clone()
+            }
+            None => default_url,
         };
 
         Ok(Config {
@@ -204,14 +201,13 @@ impl Config {
 
     /// Sets the URL
     pub fn set_base_url(&mut self, url: &str) -> Result<()> {
-        let token_url = self
-            .cached_token_data
-            .as_ref()
-            .map(|td| td.url.as_str())
-            .unwrap_or_default();
-
-        if !token_url.is_empty() && url != token_url {
-            bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
+        if self.cached_token_data.is_some() {
+            log::warn!(
+                "Ignoring the --url argument because org auth token authentication is used. \
+                We are using the following URL from the token, instead: {}",
+                self.cached_base_url
+            );
+            return Ok(());
         }
 
         self.cached_base_url = url.to_owned();
