@@ -1687,11 +1687,11 @@ fn upload_in_batches(
         let archive = create_batch_archive(batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(api.authenticated()?.upload_dif_archive(
-            &options.org,
-            &options.project,
-            archive.path(),
-        )?);
+        dsyms.extend(
+            api.authenticated()?
+                .region_specific(&options.org)
+                .upload_dif_archive(&options.project, archive.path())?,
+        );
     }
 
     Ok(dsyms)

@@ -39,7 +39,7 @@ use url::Url;
 use uuid::Uuid;
 
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
+use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::UploadContext;
 use crate::utils::http::{self, is_absolute_url, parse_link_header};
 use crate::utils::progress::ProgressBar;
@@ -192,6 +192,12 @@ pub struct Api {
 /// functions that make API requests requiring authentication via auth token.
 pub struct AuthenticatedApi<'a> {
     api: &'a Api,
+}
+
+pub struct RegionSpecificApi<'a> {
+    api: &'a AuthenticatedApi<'a>,
+    org: &'a str,
+    region_url: Option<&'a str>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -414,34 +420,30 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
-        let (url, auth) = self.resolve_base_url_and_auth(url, None)?;
-        self.construct_api_request(method, &url, auth)
-    }
-
-    /// Like `request`, but constructs a new `ApiRequest` using the base URL
-    /// plus a region prefix for requests that must be routed to a region.
-    fn region_request(&self, method: Method, url: &str, region: &Region) -> ApiResult<ApiRequest> {
-        let (url, auth) = self.resolve_base_url_and_auth(url, Some(region))?;
+    fn request(
+        &self,
+        method: Method,
+        url: &str,
+        region_url: Option<&str>,
+    ) -> ApiResult<ApiRequest> {
+        let (url, auth) = self.resolve_base_url_and_auth(url, region_url)?;
         self.construct_api_request(method, &url, auth)
     }
 
     fn resolve_base_url_and_auth(
         &self,
         url: &str,
-        region: Option<&Region>,
+        region_url: Option<&str>,
     ) -> ApiResult<(String, Option<&Auth>)> {
-        if is_absolute_url(url) && region.is_some() {
+        if is_absolute_url(url) && region_url.is_some() {
             return Err(ApiErrorKind::InvalidRegionRequest.into());
         }
 
         let (url, auth) = if is_absolute_url(url) {
             (Cow::Borrowed(url), None)
         } else {
-            let host_override = region.map(|rg| rg.url.as_str());
-
             (
-                Cow::Owned(match self.config.get_api_endpoint(url, host_override) {
+                Cow::Owned(match self.config.get_api_endpoint(url, region_url) {
                     Ok(rv) => rv,
                     Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
                 }),
@@ -492,31 +494,31 @@ impl Api {
 
     /// Convenience method that performs a `GET` request.
     fn get(&self, path: &str) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, path)?.send()
+        self.request(Method::Get, path, None)?.send()
     }
 
     /// Convenience method that performs a `DELETE` request.
     fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
-        self.request(Method::Delete, path)?.send()
+        self.request(Method::Delete, path, None)?.send()
     }
 
     /// Convenience method that performs a `POST` request with JSON data.
     fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.request(Method::Post, path)?
+        self.request(Method::Post, path, None)?
             .with_json_body(body)?
             .send()
     }
 
     /// Convenience method that performs a `PUT` request with JSON data.
     fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.request(Method::Put, path)?
+        self.request(Method::Put, path, None)?
             .with_json_body(body)?
             .send()
     }
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, url)?
+        self.request(Method::Get, url, None)?
             .follow_location(true)?
             .send_into(dst)
     }
@@ -524,7 +526,7 @@ impl Api {
     /// Convenience method that downloads a file into the given file object
     /// and show a progress bar
     pub fn download_with_progress(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, url)?
+        self.request(Method::Get, url, None)?
             .follow_location(true)?
             .progress_bar_mode(ProgressBarMode::Response)?
             .send_into(dst)
@@ -536,7 +538,7 @@ impl Api {
     pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
         let started = Utc::now();
         loop {
-            match self.request(Method::Get, url)?.send() {
+            match self.request(Method::Get, url, None)?.send() {
                 Ok(_) => return Ok(true),
                 Err(err) => {
                     if err.kind() != ApiErrorKind::RequestFailed {
@@ -634,7 +636,7 @@ impl Api {
         }
 
         let request = self
-            .request(Method::Post, url)?
+            .request(Method::Post, url, None)?
             .with_form_data(form)?
             .with_retry(
                 self.config.get_max_retry_count().unwrap(),
@@ -694,7 +696,7 @@ impl<'a> AuthenticatedApi<'a> {
 
     /// Convinience method to call self.api.request.
     fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
-        self.api.request(method, url)
+        self.api.request(method, url, None)
     }
 
     // High-level method implementations
@@ -954,7 +956,7 @@ impl<'a> AuthenticatedApi<'a> {
 
         let resp = self
             .api
-            .request(Method::Post, &path)?
+            .request(Method::Post, &path, None)?
             .with_form_data(form)?
             .with_retry(
                 self.api.config.get_max_retry_count().unwrap(),
@@ -1246,27 +1248,6 @@ impl<'a> AuthenticatedApi<'a> {
         Ok(state.missing)
     }
 
-    /// Uploads a ZIP archive containing DIFs from the given path.
-    pub fn upload_dif_archive(
-        &self,
-        org: &str,
-        project: &str,
-        file: &Path,
-    ) -> ApiResult<Vec<DebugInfoFile>> {
-        let path = format!(
-            "/projects/{}/{}/files/dsyms/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let mut form = curl::easy::Form::new();
-        form.part("file").file(file).add()?;
-        self.request(Method::Post, &path)?
-            .with_form_data(form)?
-            .progress_bar_mode(ProgressBarMode::Request)?
-            .send()?
-            .convert()
-    }
-
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkUploadOptions>> {
         let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
@@ -1434,7 +1415,7 @@ impl<'a> AuthenticatedApi<'a> {
             let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
             let resp = if let Some(rg) = region {
                 self.api
-                    .region_request(Method::Get, current_path, rg)?
+                    .request(Method::Get, current_path, Some(&rg.url))?
                     .send()?
             } else {
                 self.get(current_path)?
@@ -1684,6 +1665,72 @@ impl<'a> AuthenticatedApi<'a> {
         } else {
             resp.convert()
         }
+    }
+
+    pub fn region_specific(&'a self, org: &'a str) -> RegionSpecificApi<'a> {
+        let base_url = self.api.config.get_base_url();
+        if base_url.is_err()
+            || base_url.expect("base_url should not be error") != DEFAULT_URL.trim_end_matches('/')
+        {
+            // Do not specify a region URL unless the URL is configured to https://sentry.io (i.e. the default).
+            return RegionSpecificApi {
+                api: self,
+                org,
+                region_url: None,
+            };
+        }
+
+        match self
+            .api
+            .config
+            .get_auth()
+            .expect("auth should not be None for authenticated API!")
+        {
+            Auth::Token(token) if token.payload().is_some() => {
+                let region_url = &token
+                    .payload()
+                    .expect("Payload already checked to have Some value")
+                    .region_url;
+
+                RegionSpecificApi {
+                    api: self,
+                    org,
+                    region_url: Some(region_url),
+                }
+            }
+            _ => {
+                log::info!(
+                    "Auth does not encode a region URL. Falling back to using default region!"
+                );
+                RegionSpecificApi {
+                    api: self,
+                    org,
+                    region_url: None,
+                }
+            }
+        }
+    }
+}
+
+impl<'a> RegionSpecificApi<'a> {
+    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        self.api.api.request(method, url, self.region_url)
+    }
+
+    /// Uploads a ZIP archive containing DIFs from the given path.
+    pub fn upload_dif_archive(&self, project: &str, file: &Path) -> ApiResult<Vec<DebugInfoFile>> {
+        let path = format!(
+            "/projects/{}/{}/files/dsyms/",
+            PathArg(self.org),
+            PathArg(project)
+        );
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(file).add()?;
+        self.request(Method::Post, &path)?
+            .with_form_data(form)?
+            .progress_bar_mode(ProgressBarMode::Request)?
+            .send()?
+            .convert()
     }
 }
 
