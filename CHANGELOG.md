@@ -4,11 +4,10 @@
 
 ## 2.31.0
 
-### Various fixes & improvements
+With this change, dSYM uploads to the legacy endpoint and release file uploads are routed to the region URL directly (e.g. to https://us.sentry.io instead of https://sentry.io). This change only affects users using the CLI to interact with SaaS Sentry; everything stays the same for self-hosted users.
 
-- feat(api): Direct `releases/{}/files` POST request to region (#2002) by @szokeasaurusrex
-- feat(api): Region specific API with user token (#1999) by @szokeasaurusrex
-- feat(api): `files/dsyms/` hits org auth token's region URL (#1997) by @szokeasaurusrex
+### Other changes
+
 - build: `make lint` only with default features (#1994) by @szokeasaurusrex
 
 ## 2.30.5
