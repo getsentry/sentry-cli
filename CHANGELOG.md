@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.31.0
+
+With this change, dSYM uploads to the legacy endpoint and release file uploads are routed to the region URL directly (e.g. to https://us.sentry.io instead of https://sentry.io). This change only affects users using the CLI to interact with SaaS Sentry; everything stays the same for self-hosted users.
+
+### Other changes
+
+- build: `make lint` only with default features (#1994) by @szokeasaurusrex
+
 ## 2.30.5
 
 Release made for technical reasons. There are no code changes in this version.
