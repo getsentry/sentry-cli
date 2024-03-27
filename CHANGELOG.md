@@ -2,6 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.30.5
+
+Release made for technical reasons. There are no code changes in this version.
+
+## 2.30.4
+
+Release made for technical reasons. There are no code changes in this version.
+
+## 2.30.3
+
+### Various fixes & improvements
+
+ - fix: Handle .env errors (#1987) by @szokeasaurusrex
+
 ## 2.30.2
 
 This release re-enables Python releases. There are no code changes.
