@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.31.0
+
+### Various fixes & improvements
+
+- feat(api): Direct `releases/{}/files` POST request to region (#2002) by @szokeasaurusrex
+- feat(api): Region specific API with user token (#1999) by @szokeasaurusrex
+- feat(api): `files/dsyms/` hits org auth token's region URL (#1997) by @szokeasaurusrex
+- build: `make lint` only with default features (#1994) by @szokeasaurusrex
+
 ## 2.30.5
 
 Release made for technical reasons. There are no code changes in this version.
