@@ -904,77 +904,6 @@ impl<'a> AuthenticatedApi<'a> {
         self.delete(&path)?.into_result().map(|_| ())
     }
 
-    /// Uploads a new release file.  The file is loaded directly from the file
-    /// system and uploaded as `name`.
-    pub fn upload_release_file(
-        &self,
-        context: &UploadContext,
-        contents: &[u8],
-        name: &str,
-        headers: Option<&[(String, String)]>,
-        progress_bar_mode: ProgressBarMode,
-    ) -> ApiResult<Option<Artifact>> {
-        let release = context
-            .release()
-            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
-
-        let path = if let Some(project) = context.project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(project),
-                PathArg(release)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(release)
-            )
-        };
-        let mut form = curl::easy::Form::new();
-
-        let filename = Path::new(name)
-            .file_name()
-            .and_then(OsStr::to_str)
-            .unwrap_or("unknown.bin");
-        form.part("file")
-            .buffer(filename, contents.to_vec())
-            .add()?;
-        form.part("name").contents(name.as_bytes()).add()?;
-        if let Some(dist) = context.dist {
-            form.part("dist").contents(dist.as_bytes()).add()?;
-        }
-
-        if let Some(headers) = headers {
-            for (key, value) in headers {
-                form.part("header")
-                    .contents(format!("{key}:{value}").as_bytes())
-                    .add()?;
-            }
-        }
-
-        let resp = self
-            .api
-            .request(Method::Post, &path, None)?
-            .with_form_data(form)?
-            .with_retry(
-                self.api.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .progress_bar_mode(progress_bar_mode)?
-            .send()?;
-        if resp.status() == 409 {
-            Ok(None)
-        } else {
-            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
-        }
-    }
-
     /// Creates a new release.
     pub fn new_release(&self, org: &str, release: &NewRelease) -> ApiResult<ReleaseInfo> {
         // for single project releases use the legacy endpoint that is project bound.
@@ -1742,6 +1671,76 @@ impl<'a> RegionSpecificApi<'a> {
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?
             .convert()
+    }
+
+    /// Uploads a new release file.  The file is loaded directly from the file
+    /// system and uploaded as `name`.
+    pub fn upload_release_file(
+        &self,
+        context: &UploadContext,
+        contents: &[u8],
+        name: &str,
+        headers: Option<&[(String, String)]>,
+        progress_bar_mode: ProgressBarMode,
+    ) -> ApiResult<Option<Artifact>> {
+        let release = context
+            .release()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
+
+        let path = if let Some(project) = context.project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/",
+                PathArg(context.org),
+                PathArg(project),
+                PathArg(release)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/",
+                PathArg(context.org),
+                PathArg(release)
+            )
+        };
+        let mut form = curl::easy::Form::new();
+
+        let filename = Path::new(name)
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("unknown.bin");
+        form.part("file")
+            .buffer(filename, contents.to_vec())
+            .add()?;
+        form.part("name").contents(name.as_bytes()).add()?;
+        if let Some(dist) = context.dist {
+            form.part("dist").contents(dist.as_bytes()).add()?;
+        }
+
+        if let Some(headers) = headers {
+            for (key, value) in headers {
+                form.part("header")
+                    .contents(format!("{key}:{value}").as_bytes())
+                    .add()?;
+            }
+        }
+
+        let resp = self
+            .request(Method::Post, &path)?
+            .with_form_data(form)?
+            .with_retry(
+                self.api.api.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .progress_bar_mode(progress_bar_mode)?
+            .send()?;
+        if resp.status() == 409 {
+            Ok(None)
+        } else {
+            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
+        }
     }
 }
 
