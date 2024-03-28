@@ -471,6 +471,7 @@ pub fn get_commits_from_git<'a>(
                 .filter_map(move |id: Result<git2::Oid, git2::Error>| {
                     repo.find_commit(id.ok()?).ok()
                 })
+                .take(default_count)
                 .collect();
 
             // If there is a previous commit but cannot find it in git history
