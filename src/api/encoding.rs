@@ -21,10 +21,10 @@ const PATH_SEGMENT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET
     .add(b'/');
 
 /// Wrapper that escapes arguments for URL path segments.
-pub struct PathArg<A: Display>(pub A);
+pub(super) struct PathArg<A: Display>(pub(super) A);
 
 /// Wrapper that escapes arguments for URL query segments.
-pub struct QueryArg<A: Display>(pub A);
+pub(super) struct QueryArg<A: Display>(pub(super) A);
 
 impl<A: Display> Display for PathArg<A> {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result {
