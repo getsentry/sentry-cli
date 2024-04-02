@@ -47,3 +47,39 @@ impl<A: Display> Display for QueryArg<A> {
         utf8_percent_encode(&format!("{}", self.0), &QUERY_ENCODE_SET).fmt(f)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use rstest::rstest;
+
+    use super::*;
+
+    #[rstest]
+    #[case("/")]
+    #[case(".")]
+    #[case("..")]
+    fn test_path_arg_replacement_cases(#[case] input: &str) {
+        assert_eq!(
+            format!("{}", PathArg(input)),
+            format!("{}", utf8_percent_encode("\u{fffd}", CONTROLS)),
+            "case \"{input}\" failed"
+        );
+    }
+
+    #[rstest]
+    #[case(" ", "%20")]
+    #[case("\"", "%22")]
+    #[case("#", "%23")]
+    #[case("<", "%3C")]
+    #[case(">", "%3E")]
+    #[case("+", "%2B")]
+    #[case(" \"#<>+", "%20%22%23%3C%3E%2B")]
+    #[case("1 + 3 < 4", "1%20%2B%203%20%3C%204")]
+    fn test_path_arg_percent_encode(#[case] input: &str, #[case] expected: &str) {
+        assert_eq!(
+            format!("{}", PathArg(input)),
+            expected,
+            "case \"{input}\" failed"
+        );
+    }
+}
