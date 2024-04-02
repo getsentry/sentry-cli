@@ -1,7 +1,7 @@
 ```
 $ sentry-cli --auth-token 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 --url http://example.com sourcemaps upload test_path
 ? failed
-error: URL must match one of the provided URLs on the authentication token: `http://localhost:8000` or `http://region.localhost:8000`, received: `http://example.com`.
+error: The provided URL does not match any of the URLs on the authentication token. Expected: `http://localhost:8000` or `http://region.localhost:8000`, Received: `http://example.com`.
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
 Please attach the full debug log to all bug reports.

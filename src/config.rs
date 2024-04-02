@@ -45,6 +45,26 @@ pub struct Config {
     cached_token_data: Option<AuthTokenPayload>,
 }
 
+fn get_url_validation_error(
+    default_url: &str,
+    region_url: &str,
+    token_url: &str,
+) -> String {
+    match (region_url, token_url) {
+        ("", "") => format!("An unexpected error occurred when validating the URL."),
+        (region_url, token_url) if token_url != region_url && region_url != "" && token_url != "" => format!(
+            "The provided URL does not match any of the URLs on the authentication token. \
+                Expected: `{token_url}` or `{region_url}`, Received: `{default_url}`."
+        ),
+        ("", url) | (url, _) => {
+            format!(
+                "The provided URL does not match the URL on the authentication token. \
+                Expected: `{url}`, Received: `{default_url}`."
+            )
+        }
+    }
+}
+
 impl Config {
     /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> Result<Config> {
@@ -76,7 +96,7 @@ impl Config {
             _ if default_url == token_url || default_url == region_url => default_url,
             (DEFAULT_URL | "", _, _) => String::from(token_url),
             _ => bail!(
-                "URL must match one of the provided URLs on the authentication token: `{token_url}` or `{region_url}`, received: `{default_url}`."
+                get_url_validation_error(&default_url, region_url, token_url)
             ),
         };
 
@@ -222,7 +242,7 @@ impl Config {
             .unwrap_or_default();
 
         if !token_url.is_empty() && url != token_url && url != region_url {
-            bail!("URL must match one of the provided URLs on the authentication token: `{token_url}` or `{region_url}`, received: `{url}`.")
+            bail!(get_url_validation_error(url, region_url, token_url))
         }
 
         self.cached_base_url = url.to_owned();

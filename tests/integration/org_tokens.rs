@@ -21,6 +21,11 @@ fn org_token_region_url_match() {
 }
 
 #[test]
+fn org_token_url_mismatch_with_matching_region_url() {
+    register_test("org_tokens/url-mismatch-with-matching-region.trycmd");
+}
+
+#[test]
 fn org_token_org_match() {
     register_test("org_tokens/org-match.trycmd");
 }
