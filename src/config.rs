@@ -45,17 +45,17 @@ pub struct Config {
     cached_token_data: Option<AuthTokenPayload>,
 }
 
-fn get_url_validation_error(
-    default_url: &str,
-    region_url: &str,
-    token_url: &str,
-) -> String {
+fn get_url_validation_error(default_url: &str, region_url: &str, token_url: &str) -> String {
     match (region_url, token_url) {
         ("", "") => format!("An unexpected error occurred when validating the URL."),
-        (region_url, token_url) if token_url != region_url && region_url != "" && token_url != "" => format!(
-            "The provided URL does not match any of the URLs on the authentication token. \
+        (region_url, token_url)
+            if token_url != region_url && region_url != "" && token_url != "" =>
+        {
+            format!(
+                "The provided URL does not match any of the URLs on the authentication token. \
                 Expected: `{token_url}` or `{region_url}`, Received: `{default_url}`."
-        ),
+            )
+        }
         ("", url) | (url, _) => {
             format!(
                 "The provided URL does not match the URL on the authentication token. \
@@ -95,9 +95,11 @@ impl Config {
             (_, "", "") => default_url,
             _ if default_url == token_url || default_url == region_url => default_url,
             (DEFAULT_URL | "", _, _) => String::from(token_url),
-            _ => bail!(
-                get_url_validation_error(&default_url, region_url, token_url)
-            ),
+            _ => bail!(get_url_validation_error(
+                &default_url,
+                region_url,
+                token_url
+            )),
         };
 
         Ok(Config {
