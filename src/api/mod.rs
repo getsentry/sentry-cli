@@ -3,6 +3,8 @@
 //! to the GitHub API to figure out if there are new releases of the
 //! sentry-cli tool.
 
+mod pagination;
+
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -11,7 +13,6 @@ use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::{env, fmt};
 
@@ -41,11 +42,13 @@ use uuid::Uuid;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::UploadContext;
-use crate::utils::http::{self, is_absolute_url, parse_link_header};
+use crate::utils::http::{self, is_absolute_url};
 use crate::utils::progress::ProgressBar;
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
+
+use self::pagination::Pagination;
 
 // Based on https://docs.rs/percent-encoding/1.0.1/src/percent_encoding/lib.rs.html#104
 // WHATWG Spec: https://url.spec.whatwg.org/#percent-encoded-bytes
@@ -92,45 +95,6 @@ impl r2d2::ManageConnection for CurlConnectionManager {
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
-}
-
-#[derive(Debug, Clone)]
-pub struct Link {
-    results: bool,
-    cursor: String,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Pagination {
-    next: Option<Link>,
-}
-
-impl Pagination {
-    pub fn into_next_cursor(self) -> Option<String> {
-        self.next
-            .and_then(|x| if x.results { Some(x.cursor) } else { None })
-    }
-}
-
-impl FromStr for Pagination {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Pagination, ()> {
-        let mut rv = Pagination::default();
-        for item in parse_link_header(s) {
-            let target = match item.get("rel") {
-                Some(&"next") => &mut rv.next,
-                _ => continue,
-            };
-
-            *target = Some(Link {
-                results: item.get("results") == Some(&"true"),
-                cursor: (*item.get("cursor").unwrap_or(&"")).to_string(),
-            });
-        }
-
-        Ok(rv)
-    }
 }
 
 impl<A: fmt::Display> fmt::Display for QueryArg<A> {
