@@ -6,7 +6,7 @@ struct Link<'p> {
     cursor: &'p str,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Clone)]
 pub(super) struct Pagination<'p> {
     next: Option<Link<'p>>,
 }
