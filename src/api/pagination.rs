@@ -25,11 +25,9 @@ impl<'p> From<&'p str> for Pagination<'p> {
             .iter()
             .rev() // Reversing is necessary for backwards compatibility with a previous implementation
             .find(|item| item.get("rel") == Some(&"next"))
-            .map_or(None, |item| {
-                Some(Link {
-                    results: item.get("results") == Some(&"true"),
-                    cursor: item.get("cursor").unwrap_or(&""),
-                })
+            .map(|item| Link {
+                results: item.get("results") == Some(&"true"),
+                cursor: item.get("cursor").unwrap_or(&""),
             });
 
         Pagination { next }
