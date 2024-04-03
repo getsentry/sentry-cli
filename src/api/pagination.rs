@@ -21,15 +21,17 @@ impl<'p> Pagination<'p> {
 
 impl<'p> From<&'p str> for Pagination<'p> {
     fn from(value: &'p str) -> Self {
-        http::parse_link_header(value)
+        let next = http::parse_link_header(value)
             .iter()
             .rev() // Reversing is necessary for backwards compatibility with a previous implementation
             .find(|item| item.get("rel") == Some(&"next"))
-            .map_or(Pagination { next: None }, |item| Pagination {
-                next: Some(Link {
+            .map_or(None, |item| {
+                Some(Link {
                     results: item.get("results") == Some(&"true"),
                     cursor: item.get("cursor").unwrap_or(&""),
-                }),
-            })
+                })
+            });
+
+        Pagination { next }
     }
 }
