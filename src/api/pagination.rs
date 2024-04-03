@@ -21,19 +21,15 @@ impl<'p> Pagination<'p> {
 
 impl<'p> From<&'p str> for Pagination<'p> {
     fn from(value: &'p str) -> Self {
-        let mut rv = Pagination::default();
-        for item in http::parse_link_header(value) {
-            let target = match item.get("rel") {
-                Some(&"next") => &mut rv.next,
-                _ => continue,
-            };
-
-            *target = Some(Link {
-                results: item.get("results") == Some(&"true"),
-                cursor: item.get("cursor").unwrap_or(&""),
-            });
-        }
-
-        rv
+        http::parse_link_header(value)
+            .iter()
+            .rev() // Reversing is necessary for backwards compatibility with a previous implementation
+            .find(|item| item.get("rel") == Some(&"next"))
+            .map_or(Pagination { next: None }, |item| Pagination {
+                next: Some(Link {
+                    results: item.get("results") == Some(&"true"),
+                    cursor: item.get("cursor").unwrap_or(&""),
+                }),
+            })
     }
 }
