@@ -48,7 +48,6 @@ use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 
-use self::pagination::Pagination;
 use encoding::{PathArg, QueryArg};
 
 struct CurlConnectionManager;
@@ -2111,15 +2110,10 @@ impl ApiResponse {
         None
     }
 
-    /// Returns the pagination info
-    fn pagination(&self) -> Pagination<'_> {
-        self.get_header("link")
-            .map(|x| x.into())
-            .unwrap_or_default()
-    }
-
     fn next_pagination_cursor(&self) -> Option<String> {
-        self.pagination().next_cursor().map(|s| s.to_string())
+        self.get_header("link")
+            .and_then(pagination::next_cursor)
+            .map(String::from)
     }
 
     /// Returns true if the response is JSON.
