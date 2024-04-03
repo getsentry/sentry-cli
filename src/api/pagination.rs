@@ -13,3 +13,34 @@ pub(super) fn next_cursor(value: &str) -> Option<&str> {
             }
         })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_pagination_empty_string() {
+        let pagination = Pagination::from("");
+        assert_eq!(pagination.next_cursor(), None);
+    }
+
+    #[test]
+    fn test_pagination_with_next() {
+        let pagination = Pagination::from(
+            "<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; \
+            rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\", \
+            <https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0>; \
+            rel=\"next\"; results=\"true\"; cursor=\"100:1:0\"",
+        );
+        assert_eq!(pagination.next_cursor(), Some("100:1:0"));
+    }
+
+    #[test]
+    fn test_pagination_without_next() {
+        let pagination = Pagination::from(
+            "<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; \
+            rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\"",
+        );
+        assert_eq!(pagination.next_cursor(), None);
+    }
+}
