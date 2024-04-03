@@ -1,31 +1,28 @@
-use std::str::FromStr;
-
 use crate::utils::http;
 
 #[derive(Debug, Clone)]
-pub struct Link {
+struct Link<'p> {
     results: bool,
-    cursor: String,
+    cursor: &'p str,
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct Pagination {
-    next: Option<Link>,
+pub(super) struct Pagination<'p> {
+    next: Option<Link<'p>>,
 }
 
-impl Pagination {
-    pub fn into_next_cursor(self) -> Option<String> {
+impl<'p> Pagination<'p> {
+    pub fn next_cursor(&self) -> Option<&str> {
         self.next
+            .as_ref()
             .and_then(|x| if x.results { Some(x.cursor) } else { None })
     }
 }
 
-impl FromStr for Pagination {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Pagination, ()> {
+impl<'p> From<&'p str> for Pagination<'p> {
+    fn from(value: &'p str) -> Self {
         let mut rv = Pagination::default();
-        for item in http::parse_link_header(s) {
+        for item in http::parse_link_header(value) {
             let target = match item.get("rel") {
                 Some(&"next") => &mut rv.next,
                 _ => continue,
@@ -33,10 +30,10 @@ impl FromStr for Pagination {
 
             *target = Some(Link {
                 results: item.get("results") == Some(&"true"),
-                cursor: (*item.get("cursor").unwrap_or(&"")).to_string(),
+                cursor: item.get("cursor").unwrap_or(&""),
             });
         }
 
-        Ok(rv)
+        rv
     }
 }
