@@ -3,6 +3,7 @@
 //! to the GitHub API to figure out if there are new releases of the
 //! sentry-cli tool.
 
+mod connection_manager;
 mod encoding;
 mod pagination;
 
@@ -48,26 +49,8 @@ use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 
+use connection_manager::CurlConnectionManager;
 use encoding::{PathArg, QueryArg};
-
-struct CurlConnectionManager;
-
-impl r2d2::ManageConnection for CurlConnectionManager {
-    type Connection = curl::easy::Easy;
-    type Error = curl::Error;
-
-    fn connect(&self) -> Result<curl::easy::Easy, curl::Error> {
-        Ok(curl::easy::Easy::new())
-    }
-
-    fn is_valid(&self, _conn: &mut curl::easy::Easy) -> Result<(), curl::Error> {
-        Ok(())
-    }
-
-    fn has_broken(&self, _conn: &mut curl::easy::Easy) -> bool {
-        false
-    }
-}
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
