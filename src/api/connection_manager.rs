@@ -39,6 +39,6 @@ mod tests {
     #[test]
     fn test_has_broken() {
         let manager = CurlConnectionManager;
-        assert_eq!(manager.has_broken(&mut curl::easy::Easy::new()), false);
+        assert!(!manager.has_broken(&mut curl::easy::Easy::new()));
     }
 }
