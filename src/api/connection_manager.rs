@@ -1,14 +1,16 @@
+use std::convert::Infallible;
+
 pub(super) struct CurlConnectionManager;
 
 impl r2d2::ManageConnection for CurlConnectionManager {
     type Connection = curl::easy::Easy;
-    type Error = curl::Error;
+    type Error = Infallible;
 
-    fn connect(&self) -> Result<curl::easy::Easy, curl::Error> {
+    fn connect(&self) -> Result<curl::easy::Easy, Infallible> {
         Ok(curl::easy::Easy::new())
     }
 
-    fn is_valid(&self, _conn: &mut curl::easy::Easy) -> Result<(), curl::Error> {
+    fn is_valid(&self, _conn: &mut curl::easy::Easy) -> Result<(), Infallible> {
         Ok(())
     }
 
