@@ -18,3 +18,29 @@ impl r2d2::ManageConnection for CurlConnectionManager {
         false
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use r2d2::ManageConnection;
+
+    #[test]
+    fn test_connect() {
+        let manager = CurlConnectionManager;
+
+        // Just make sure the connection can be established without panic.
+        manager.connect().unwrap();
+    }
+
+    #[test]
+    fn test_is_valid() {
+        let manager = CurlConnectionManager;
+        assert_eq!(manager.is_valid(&mut curl::easy::Easy::new()), Ok(()));
+    }
+
+    #[test]
+    fn test_has_broken() {
+        let manager = CurlConnectionManager;
+        assert!(!manager.has_broken(&mut curl::easy::Easy::new()));
+    }
+}
