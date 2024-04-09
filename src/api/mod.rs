@@ -1923,7 +1923,7 @@ impl ApiResponse {
     }
 
     /// Like convert but produces resource not found errors.
-    pub fn convert_rnf<T: DeserializeOwned>(self, res_err: ApiErrorKind) -> ApiResult<T> {
+    fn convert_rnf<T: DeserializeOwned>(self, res_err: ApiErrorKind) -> ApiResult<T> {
         match self.status() {
             301 | 302 if res_err == ApiErrorKind::ProjectNotFound => {
                 #[derive(Deserialize, Debug)]
