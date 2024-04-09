@@ -1,39 +1,8 @@
+mod sentry_error;
+
 use std::fmt;
 
-#[derive(Debug, thiserror::Error)]
-pub(super) struct SentryError {
-    pub(super) status: u32,
-    pub(super) detail: Option<String>,
-    pub(super) extra: Option<serde_json::Value>,
-}
-
-impl fmt::Display for SentryError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let detail = self.detail.as_deref().unwrap_or("");
-        write!(
-            f,
-            "sentry reported an error: {} (http status: {})",
-            if detail.is_empty() {
-                match self.status {
-                    400 => "bad request",
-                    401 => "unauthorized",
-                    404 => "not found",
-                    500 => "internal server error",
-                    502 => "bad gateway",
-                    504 => "gateway timeout",
-                    _ => "unknown error",
-                }
-            } else {
-                detail
-            },
-            self.status
-        )?;
-        if let Some(ref extra) = self.extra {
-            write!(f, "\n  {extra:?}")?;
-        }
-        Ok(())
-    }
-}
+pub(super) use self::sentry_error::SentryError;
 
 #[derive(Clone, Debug, thiserror::Error)]
 #[error("project was renamed to '{0}'\nPlease use this slug in your .sentryclirc file, sentry.properties file or in the CLI --project parameter")]
