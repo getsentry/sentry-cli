@@ -53,8 +53,7 @@ use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 
 use connection_manager::CurlConnectionManager;
 use encoding::{PathArg, QueryArg};
-
-use self::errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
+use errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
