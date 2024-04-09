@@ -1471,8 +1471,7 @@ impl<'a> AuthenticatedApi<'a> {
             if resp.status() == 404 {
                 break;
             } else {
-                let next = resp.next_pagination_cursor();
-                if let Some(next) = next {
+                if let Some(next) = resp.next_pagination_cursor() {
                     cursor = next;
                 } else {
                     break;
