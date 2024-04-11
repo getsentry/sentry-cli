@@ -21,6 +21,9 @@ use crate::utils::auth_token::AuthToken;
 use crate::utils::auth_token::AuthTokenPayload;
 use crate::utils::http::is_absolute_url;
 
+#[cfg(target_os = "macos")]
+use crate::utils::xcode;
+
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
@@ -575,6 +578,15 @@ fn load_global_config_file() -> Result<(PathBuf, Ini)> {
     }
 }
 
+fn failed_local_config_load_message(file_desc: &str) -> String {
+    let msg = format!("Failed to load {file_desc}.");
+    #[cfg(target_os = "macos")]
+    if xcode::launched_from_xcode() {
+        return msg + (" Hint: Please ensure that ${SRCROOT}/.sentryclirc is added to the Input Files of this Xcode Build Phases script.");
+    }
+    msg
+}
+
 fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let (global_filename, mut rv) = load_global_config_file()?;
 
@@ -584,8 +596,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
             CONFIG_RC_FILE_NAME,
             project_config_path.display()
         );
-        let mut f =
-            fs::File::open(&project_config_path).context(format!("Failed to load {file_desc}"))?;
+        let mut f = fs::File::open(&project_config_path)
+            .context(failed_local_config_load_message(&file_desc))?;
         let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
         for (section, props) in ini.iter() {
             for (key, value) in props.iter() {
