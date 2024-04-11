@@ -579,10 +579,10 @@ fn load_global_config_file() -> Result<(PathBuf, Ini)> {
 }
 
 fn failed_local_config_load_message(file_desc: &str) -> String {
-    let mut msg = format!("Failed to load {file_desc}.");
+    let msg = format!("Failed to load {file_desc}.");
     #[cfg(target_os = "macos")]
     if xcode::launched_from_xcode() {
-        msg.push_str(" Hint: Please ensure that ${SRCROOT}/.sentryclirc is added to the Input Files of this Xcode Build Phases script.");
+        return msg + (" Hint: Please ensure that ${SRCROOT}/.sentryclirc is added to the Input Files of this Xcode Build Phases script.");
     }
     msg
 }
