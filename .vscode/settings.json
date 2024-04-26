@@ -1,0 +1,13 @@
+{
+    "files.exclude": {
+        "target": true
+    },
+    "[javascript]": {
+        "editor.formatOnSave": true
+    },
+    "eslint.autoFixOnSave": true,
+    "editor.tabSize": 4,
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    }
+}
