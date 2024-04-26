@@ -7,7 +7,7 @@ dist
 dump
 checksums.txt
 yarn-error.log
-.vscode/*
+.vscode/settings.json
 
 /sentry-cli
 /sentry-cli.exe
