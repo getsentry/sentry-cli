@@ -17,7 +17,7 @@ pub(super) struct SentryCLI {
 
     #[arg(global=true, ignore_case=true, value_parser=["trace", "debug", "info", "warn", "error"])]
     #[arg(long, help = "Set the log output verbosity")]
-    pub(super) log_level: Option<&'static str>,
+    pub(super) log_level: Option<String>,
 
     #[arg(global=true, action=SetTrue, visible_alias="silent", long)]
     #[arg(help = "Do not print any output while preserving correct exit code. \
