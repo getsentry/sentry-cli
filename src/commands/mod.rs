@@ -18,7 +18,7 @@ use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 
-pub mod derive_parser;
+mod derive_parser;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
