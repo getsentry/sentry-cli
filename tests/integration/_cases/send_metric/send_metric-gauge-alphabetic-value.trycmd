@@ -1,0 +1,8 @@
+```
+$ sentry-cli send-metric gauge -k testmetric -v a
+? failed
+error: invalid value 'a' for '--value <VALUE>': invalid float literal
+
+For more information, try '--help'.
+
+```

@@ -38,6 +38,7 @@ macro_rules! each_subcommand {
         $mac!(repos);
         $mac!(send_event);
         $mac!(send_envelope);
+        $mac!(send_metric);
         $mac!(sourcemaps);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);
@@ -77,6 +78,7 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "projects",
     "releases",
     "repos",
+    "send-metric",
     "sourcemaps",
 ];
 

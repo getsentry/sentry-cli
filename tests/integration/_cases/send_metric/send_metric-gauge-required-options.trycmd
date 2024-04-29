@@ -1,0 +1,10 @@
+```
+$ sentry-cli send-metric gauge -k testMetric -v 3 --log-level debug
+? success
+[..]
+[..]
+[..]
+[..] testMetric:3|g|#environment:production,release:[..]|T[..]
+[..]
+
+```

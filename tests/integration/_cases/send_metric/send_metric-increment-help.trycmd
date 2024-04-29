@@ -1,0 +1,23 @@
+```
+$ sentry-cli send-metric increment --help
+? success
+Send an increment to a counter metric
+
+Usage: sentry-cli send-metric increment [OPTIONS] --key <KEY>
+
+Options:
+  -k, --key <KEY>                Metric key/name [aliases: name] [short aliases: n]
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+  -u, --unit <UNIT>              Metric unit
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+  -t, --tags <KEY:VALUE>...      Metric tags as key:value pairs
+  -v, --value <VALUE>            Metric value [default: 1]
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: silent]
+  -h, --help                     Print help
+
+```

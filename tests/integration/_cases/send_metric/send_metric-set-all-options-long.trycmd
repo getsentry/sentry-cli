@@ -1,0 +1,10 @@
+```
+$ sentry-cli --log-level debug send-metric set --key testMetric --value 2 --unit mb --tags a:b
+? success
+[..]
+[..]
+[..]
+[..] testMetric@mb:2|s|#a:b,environment:production,release:[..]|T[..]
+[..]
+
+```

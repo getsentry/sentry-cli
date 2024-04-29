@@ -1,0 +1,10 @@
+```
+$ sentry-cli send-metric increment -k testMetric --log-level debug -t release:testRelease,environment:testEnvironment
+? success
+[..]
+[..]
+[..]
+[..] testMetric:1|c|#environment:testEnvironment,release:testRelease|T[..]
+[..]
+
+```

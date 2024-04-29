@@ -1,0 +1,11 @@
+```
+$ sentry-cli --log-level debug send-metric set -v 1 -k "aA1_-./+ö{😀	 |\\," -u "aA1_-./+ö{😀 	|\\," -t "aA1_-./+ö{😀 	|\\:aA1_-./+ö{😀 	|\\" release:testRelease +:b a:+ +:+ a: :b :
+? success
+[..]
+[..]
+[..]
+[..] aA1_-.__________@aA1_:1|s|#aA1_-./:aA1_-./+ö{😀 /t/u{7c}//,environment:production,release:testRelease|T[..]
+[..]
+
+```
+	

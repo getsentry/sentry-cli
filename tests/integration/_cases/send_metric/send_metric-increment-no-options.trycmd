@@ -1,0 +1,11 @@
+```
+$ sentry-cli send-metric increment
+? failed
+error: the following required arguments were not provided:
+  --key <KEY>
+
+Usage: sentry-cli send-metric increment --key <KEY>
+
+For more information, try '--help'.
+
+```

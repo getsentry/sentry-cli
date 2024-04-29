@@ -55,14 +55,15 @@ prettytable-rs = "0.10.0"
 proguard = { version = "5.0.0", features = ["uuid"] }
 r2d2 = "0.8.10"
 rayon = "1.6.1"
-regex = "1.7.3"
+regex = "1.10.4"
 runas = "1.0.0"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.32.2", default-features = false, features = [
+sentry = { version = "0.32.3", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",
+  "UNSTABLE_metrics",
 ] }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
@@ -79,6 +80,7 @@ zip = "0.6.4"
 data-encoding = "2.3.3"
 magic_string = "0.3.4"
 chrono-tz = "0.8.4"
+crc32fast = "1.4.0"
 
 [dev-dependencies]
 insta = { version = "1.26.0", features = ["redactions", "yaml"] }

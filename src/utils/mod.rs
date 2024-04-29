@@ -14,6 +14,7 @@ pub mod formatting;
 pub mod fs;
 pub mod http;
 pub mod logging;
+pub mod metrics;
 pub mod progress;
 pub mod releases;
 pub mod retry;

@@ -1,0 +1,12 @@
+```
+$ sentry-cli send-metric set
+? failed
+error: the following required arguments were not provided:
+  --key <KEY>
+  --value <VALUE>
+
+Usage: sentry-cli send-metric set --key <KEY> --value <VALUE>
+
+For more information, try '--help'.
+
+```
