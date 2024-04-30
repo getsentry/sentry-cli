@@ -17,8 +17,7 @@ pub fn make_command(command: Command) -> Command {
             "Send a stored envelope to Sentry.{n}{n}\
              This command will validate and attempt to send an envelope to Sentry. \
              Due to network errors, rate limits or sampling the envelope is not guaranteed to \
-             actually arrive. Check debug output for transmission errors by passing --log-level=\
-             debug or setting `SENTRY_LOG_LEVEL=debug`.",
+             actually arrive.",
         )
         .arg(
             Arg::new("path")

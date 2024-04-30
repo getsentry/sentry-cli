@@ -4,8 +4,7 @@ $ sentry-cli send-event --help
 Send a manual event to Sentry.
 
 This command will validate input parameters and attempt to send an event to Sentry. Due to network
-errors, rate limits or sampling the event is not guaranteed to actually arrive. Check debug output
-for transmission errors by passing --log-level=debug or setting `SENTRY_LOG_LEVEL=debug`.
+errors, rate limits or sampling the event is not guaranteed to actually arrive.
 
 Usage: sentry-cli[EXE] send-event [OPTIONS] [PATH]
 
