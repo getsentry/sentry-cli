@@ -142,8 +142,6 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let api = Api::current();
-    let authenticated_api = api.authenticated()?;
 
     let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
@@ -243,6 +241,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         "Issuing a command for Organization: {} Project: {}",
         org, project
     );
+
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
 
     let rv = authenticated_api
         .region_specific(&org)
