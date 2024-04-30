@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.31.1
+
+### Various fixes & improvements
+
+- fix(proguard): Don't require auth token with --no-upload flag (#2047) by @markushi
+- fix(debug-files): Improve error when `check` passed a directory (#2034) by @szokeasaurusrex
+- fix(xcode): Improve Xcode error msg when config load fails (#2028) by @elramen
+
 ## 2.31.0
 
 With this change, dSYM uploads to the legacy endpoint and release file uploads are routed to the region URL directly (e.g. to https://us.sentry.io instead of https://sentry.io). This change only affects users using the CLI to interact with SaaS Sentry; everything stays the same for self-hosted users.
