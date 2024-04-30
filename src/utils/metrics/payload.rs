@@ -1,5 +1,6 @@
+use super::metric_data::MetricData;
 use super::tags::NormalizedTags;
-use crate::commands::send_metric::subcommands::{CommonMetricArgs, SendMetricSubcommand};
+use crate::commands::send_metric::subcommands::SendMetricSubcommand;
 use anyhow::Result;
 use regex::Regex;
 use std::io::Write;
@@ -13,16 +14,15 @@ pub struct MetricsPayload {
 impl MetricsPayload {
     /// Creates a normalized MetricsPayload, consuming the subcommand
     pub fn from_subcommand(command: SendMetricSubcommand) -> Result<Self> {
-        let (metric_value, metric_type) = (command.value(), command.metric_type());
-        let common_args = CommonMetricArgs::from(command);
+        let metric_data = MetricData::from(command);
         Self {
             payload: Vec::new(),
         }
-        .with_name(&common_args.key)?
-        .with_unit(common_args.unit)?
-        .with_value(metric_value)?
-        .with_type(metric_type)?
-        .with_tags(common_args.tags)?
+        .with_name(&metric_data.key)?
+        .with_unit(metric_data.unit)?
+        .with_value(metric_data.value)?
+        .with_type(metric_data.metric_type)?
+        .with_tags(metric_data.tags)?
         .with_timestamp()
     }
 
