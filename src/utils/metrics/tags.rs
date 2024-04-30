@@ -46,7 +46,7 @@ impl NormalizedTags {
     }
 
     fn normalize_tag_key(&self, key: &str) -> String {
-        Regex::new(r"[^a-zA-Z0-9_\-.\/]")
+        Regex::new(r"[^a-zA-Z0-9_\-./]")
             .expect("Tag normalization regex should compile")
             .replace_all(key, "")
             .to_string()

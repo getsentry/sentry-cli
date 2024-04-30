@@ -1,7 +1,7 @@
 use super::derive_parser::{SentryCLI, SentryCLICommand};
 use crate::config::Config;
 use crate::utils::event;
-use crate::utils::metrics::payload::MetricsPayload;
+use crate::utils::metrics::payload::MetricPayload;
 use anyhow::Context;
 use anyhow::Result;
 use clap::{command, Args, Subcommand};
@@ -25,8 +25,8 @@ pub(super) fn make_command(command: Command) -> Command {
 
 pub(super) fn execute(_: &ArgMatches) -> Result<()> {
     let SentryCLICommand::SendMetric(SendMetricArgs { subcommand }) = SentryCLI::parse().command;
-    let payload = MetricsPayload::from_subcommand(subcommand)?;
     let mut envelope = Envelope::new();
+    let payload = Result::<MetricPayload>::from(subcommand)?;
     envelope.add_item(EnvelopeItem::Statsd(payload.to_bytes()));
     let dsn = Config::current().get_dsn().ok().context(
         "DSN not found. \

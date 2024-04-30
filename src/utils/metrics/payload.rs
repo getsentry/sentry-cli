@@ -7,15 +7,14 @@ use std::io::Write;
 use std::string::FromUtf8Error;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-pub struct MetricsPayload {
+pub struct MetricPayload {
     payload: Vec<u8>,
 }
 
-impl MetricsPayload {
-    /// Creates a normalized MetricsPayload, consuming the subcommand
-    pub fn from_subcommand(command: SendMetricSubcommand) -> Result<Self> {
-        let metric_data = MetricData::from(command);
-        Self {
+impl From<SendMetricSubcommand> for Result<MetricPayload> {
+    fn from(subcommand: SendMetricSubcommand) -> Self {
+        let metric_data = MetricData::from(subcommand);
+        MetricPayload {
             payload: Vec::new(),
         }
         .with_name(&metric_data.key)?
@@ -25,7 +24,9 @@ impl MetricsPayload {
         .with_tags(metric_data.tags)?
         .with_timestamp()
     }
+}
 
+impl MetricPayload {
     fn with_name(mut self, name: &str) -> Result<Self> {
         let safe_name = Regex::new(r"[^a-zA-Z0-9_\-.]")?.replace_all(name, "_");
         write!(self.payload, "{safe_name}")?;
