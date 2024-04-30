@@ -1,4 +1,6 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{
+    mock_endpoint, register_test, register_test_without_token, EndpointOptions,
+};
 
 #[test]
 fn command_upload_proguard_help() {
@@ -29,6 +31,11 @@ fn command_upload_proguard() {
 #[test]
 fn command_upload_proguard_no_upload() {
     register_test("upload_proguard/upload_proguard-no-upload.trycmd");
+}
+
+#[test]
+fn command_upload_proguard_no_upload_no_auth_token() {
+    register_test_without_token("upload_proguard/upload_proguard-no-upload.trycmd");
 }
 
 #[test]
