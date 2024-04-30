@@ -7,28 +7,8 @@
 ### Various fixes & improvements
 
 - fix(proguard): Don't require auth token with --no-upload flag (#2047) by @markushi
-- meta: Add bug report form (#2039) by @szokeasaurusrex
-- meta: Delete old bug report template (#2039) by @szokeasaurusrex
-- test(debug-files): Add `check` directory test (#2034) by @szokeasaurusrex
 - fix(debug-files): Improve error when `check` passed a directory (#2034) by @szokeasaurusrex
 - fix(xcode): Improve Xcode error msg when config load fails (#2028) by @elramen
-- ref(api): Remove `self` from error import (#2025) by @szokeasaurusrex
-- ref(api): ApiError submodule (#2023) by @szokeasaurusrex
-- Revert "test(api): Add tests for Sentry error" (#2024) by @szokeasaurusrex
-- test(api): Add tests for Sentry error (#2022) by @szokeasaurusrex
-- ref(api): Sentry error submodule (#2020) by @szokeasaurusrex
-- test(api): Add tests for connection manager (#2018) by @szokeasaurusrex
-- ref(api): Errors submodule (#2019) by @szokeasaurusrex
-- ref(api): Change connection manager error to `Infallible` (#2017) by @szokeasaurusrex
-- ref(api): Split `CurlConnectionManager` into its own submodule (#2016) by @szokeasaurusrex
-- test(api): Add tests for pagination submodule (#2015) by @szokeasaurusrex
-- ref(api): Simplify pagination code (#2014) by @szokeasaurusrex
-- test(api): add tests for encoding functions (#2011) by @szokeasaurusrex
-- ref(api): Split pagination logic into submodule (#2013) by @szokeasaurusrex
-- ref(api): `encoding` sub-module (#2010) by @szokeasaurusrex
-- meta(vscode): Change editor tab size to 4 (#2012) by @szokeasaurusrex
-- ref(api): Move `src/api.rs` to `src/api/mod.rs` (#2009) by @szokeasaurusrex
-- docs: Remove inaccurate and unnecessary comments (#2007) by @szokeasaurusrex
 
 ## 2.31.0
 
