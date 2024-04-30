@@ -3,7 +3,7 @@ $ sentry-cli send-metric gauge --help
 ? success
 Send a value to a gauge metric
 
-Usage: sentry-cli send-metric gauge [OPTIONS] --key <KEY> --value <VALUE>
+Usage: sentry-cli[EXE] send-metric gauge [OPTIONS] --key <KEY> --value <VALUE>
 
 Options:
   -k, --key <KEY>                Metric key/name [aliases: name] [short aliases: n]

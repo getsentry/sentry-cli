@@ -3,7 +3,7 @@ $ sentry-cli send-metric set --help
 ? success
 Send a value to a set metric
 
-Usage: sentry-cli send-metric set [OPTIONS] --key <KEY> --value <VALUE>
+Usage: sentry-cli[EXE] send-metric set [OPTIONS] --key <KEY> --value <VALUE>
 
 Options:
   -k, --key <KEY>                Metric key/name [aliases: name] [short aliases: n]

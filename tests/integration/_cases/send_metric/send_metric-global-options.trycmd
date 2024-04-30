@@ -3,11 +3,11 @@ $ sentry-cli send-metric --header a:b --auth-token "0123456789abcdef0123456789ab
 ? failed
   INFO    [..] Loaded config from [CWD]/.sentryclirc
   DEBUG   [..] sentry-cli version: [VERSION], platform: [..], architecture: [..]
-  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli" "send-metric" "--header" "a:b" "--auth-token" "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" "--allow-failure" "--log-level" "debug"
-error: 'sentry-cli send-metric' requires a subcommand but one was not provided
+  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "send-metric" "--header" "a:b" "--auth-token" "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" "--allow-failure" "--log-level" "debug"
+error: 'sentry-cli[EXE] send-metric' requires a subcommand but one was not provided
   [subcommands: increment, distribution, gauge, set, help]
 
-Usage: sentry-cli send-metric [OPTIONS] <COMMAND>
+Usage: sentry-cli[EXE] send-metric [OPTIONS] <COMMAND>
 
 For more information, try '--help'.
 

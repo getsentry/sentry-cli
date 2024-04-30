@@ -3,7 +3,7 @@ $ sentry-cli send-metric increment --help
 ? success
 Send an increment to a counter metric
 
-Usage: sentry-cli send-metric increment [OPTIONS] --key <KEY>
+Usage: sentry-cli[EXE] send-metric increment [OPTIONS] --key <KEY>
 
 Options:
   -k, --key <KEY>                Metric key/name [aliases: name] [short aliases: n]

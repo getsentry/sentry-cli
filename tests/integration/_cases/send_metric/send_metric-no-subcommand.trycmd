@@ -3,7 +3,7 @@ $ sentry-cli send-metric
 ? failed
 Send a metric to Sentry.
 
-Usage: sentry-cli send-metric [OPTIONS] <COMMAND>
+Usage: sentry-cli[EXE] send-metric [OPTIONS] <COMMAND>
 
 Commands:
   increment     Send an increment to a counter metric

@@ -4,7 +4,7 @@ $ sentry-cli send-metric increment
 error: the following required arguments were not provided:
   --key <KEY>
 
-Usage: sentry-cli send-metric increment --key <KEY>
+Usage: sentry-cli[EXE] send-metric increment --key <KEY>
 
 For more information, try '--help'.
 
