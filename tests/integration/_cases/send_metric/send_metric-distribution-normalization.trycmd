@@ -8,4 +8,3 @@ $ sentry-cli --log-level debug send-metric distribution -v 1 -k "aA1_-./+ö{😀
 [..]
 
 ```
-	

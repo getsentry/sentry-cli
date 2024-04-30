@@ -8,4 +8,3 @@ $ sentry-cli --log-level debug send-metric increment -v 1 -k "aA1_-./+ö{😀	 |
 [..]
 
 ```
-	
