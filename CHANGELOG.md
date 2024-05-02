@@ -6,11 +6,7 @@
 
 ### Various fixes & improvements
 
-- fix(xcode): Add back accidentally deleted check (#2058) by @szokeasaurusrex
-- fix(releases): Revert pagination refactor (#2056) by @szokeasaurusrex
-- ref: Fix `assigning_clones` clippy lint (#2057) by @szokeasaurusrex
-- ref: Fix `unnecessary_get_then_check` clippy lint (#2057) by @szokeasaurusrex
-- ref: Fix clippy `multiple_bound_locations` lint (#2057) by @szokeasaurusrex
+- Fix regressions related to `releases set-commits` command, which were introduced in 2.31.1.
 
 ## 2.31.1
 
