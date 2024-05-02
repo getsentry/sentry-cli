@@ -217,7 +217,7 @@ impl Config {
             bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
         }
 
-        self.cached_base_url = url.to_owned();
+        url.clone_into(&mut self.cached_base_url);
         self.ini
             .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
         Ok(())
