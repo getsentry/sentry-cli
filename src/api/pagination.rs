@@ -1,46 +1,42 @@
+use std::str::FromStr;
+
 use crate::utils::http;
 
-pub(super) fn next_cursor(value: &str) -> Option<&str> {
-    http::parse_link_header(value)
-        .iter()
-        .rev() // Reversing is necessary for backwards compatibility with a previous implementation
-        .find(|item| item.get("rel") == Some(&"next"))
-        .and_then::<&str, _>(|item| {
-            if item.get("results") == Some(&"true") {
-                Some(item.get("cursor").unwrap_or(&""))
-            } else {
-                None
-            }
-        })
+#[derive(Debug, Clone)]
+pub struct Link {
+    results: bool,
+    cursor: String,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+#[derive(Debug, Default, Clone)]
+pub struct Pagination {
+    next: Option<Link>,
+}
 
-    #[test]
-    fn test_pagination_empty_string() {
-        let result = next_cursor("");
-        assert_eq!(result, None);
+impl Pagination {
+    pub fn into_next_cursor(self) -> Option<String> {
+        self.next
+            .and_then(|x| if x.results { Some(x.cursor) } else { None })
     }
+}
 
-    #[test]
-    fn test_pagination_with_next() {
-        let result = next_cursor(
-            "<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; \
-            rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\", \
-            <https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0>; \
-            rel=\"next\"; results=\"true\"; cursor=\"100:1:0\"",
-        );
-        assert_eq!(result, Some("100:1:0"));
-    }
+impl FromStr for Pagination {
+    type Err = ();
 
-    #[test]
-    fn test_pagination_without_next() {
-        let result = next_cursor(
-            "<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; \
-            rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\"",
-        );
-        assert_eq!(result, None);
+    fn from_str(s: &str) -> Result<Pagination, ()> {
+        let mut rv = Pagination::default();
+        for item in http::parse_link_header(s) {
+            let target = match item.get("rel") {
+                Some(&"next") => &mut rv.next,
+                _ => continue,
+            };
+
+            *target = Some(Link {
+                results: item.get("results") == Some(&"true"),
+                cursor: (*item.get("cursor").unwrap_or(&"")).to_string(),
+            });
+        }
+
+        Ok(rv)
     }
 }

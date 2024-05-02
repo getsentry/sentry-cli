@@ -51,6 +51,7 @@ use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 
+use self::pagination::Pagination;
 use connection_manager::CurlConnectionManager;
 use encoding::{PathArg, QueryArg};
 use errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
@@ -533,9 +534,9 @@ impl<'a> AuthenticatedApi<'a> {
                 }
             }
 
-            let next = resp.next_pagination_cursor();
+            let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<Artifact>>()?);
-            if let Some(next) = next {
+            if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
                 break;
@@ -1134,9 +1135,9 @@ impl<'a> AuthenticatedApi<'a> {
                     break;
                 }
             }
-            let next = resp.next_pagination_cursor();
+            let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<Organization>>()?);
-            if let Some(next) = next {
+            if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
                 break;
@@ -1178,9 +1179,9 @@ impl<'a> AuthenticatedApi<'a> {
                     break;
                 }
             }
-            let next = resp.next_pagination_cursor();
+            let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<Monitor>>()?);
-            if let Some(next) = next {
+            if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
                 break;
@@ -1206,9 +1207,9 @@ impl<'a> AuthenticatedApi<'a> {
                     break;
                 }
             }
-            let next = resp.next_pagination_cursor();
+            let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<Project>>()?);
-            if let Some(next) = next {
+            if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
                 break;
@@ -1246,14 +1247,14 @@ impl<'a> AuthenticatedApi<'a> {
                 }
             }
 
-            let next = resp.next_pagination_cursor();
+            let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<ProcessedEvent>>()?);
 
             if requests_no == max_pages {
                 break;
             }
 
-            if let Some(next) = next {
+            if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
                 break;
@@ -1272,7 +1273,7 @@ impl<'a> AuthenticatedApi<'a> {
         query: Option<String>,
     ) -> ApiResult<Vec<Issue>> {
         let mut rv = vec![];
-        let mut cursor = String::from("");
+        let mut cursor = "".to_string();
         let mut requests_no = 0;
 
         let url = if let Some(query) = query {
@@ -1299,14 +1300,14 @@ impl<'a> AuthenticatedApi<'a> {
                 }
             }
 
-            let next = resp.next_pagination_cursor();
+            let pagination = resp.pagination();
             rv.extend(resp.convert::<Vec<Issue>>()?);
 
             if requests_no == max_pages {
                 break;
             }
 
-            if let Some(next) = next {
+            if let Some(next) = pagination.into_next_cursor() {
                 cursor = next;
             } else {
                 break;
@@ -1330,12 +1331,13 @@ impl<'a> AuthenticatedApi<'a> {
             if resp.status() == 404 {
                 break;
             } else {
-                if let Some(next) = resp.next_pagination_cursor() {
+                let pagination = resp.pagination();
+                rv.extend(resp.convert::<Vec<Repo>>()?);
+                if let Some(next) = pagination.into_next_cursor() {
                     cursor = next;
                 } else {
                     break;
                 }
-                rv.extend(resp.convert::<Vec<Repo>>()?);
             }
         }
         Ok(rv)
@@ -1968,10 +1970,11 @@ impl ApiResponse {
         None
     }
 
-    fn next_pagination_cursor(&self) -> Option<String> {
+    /// Returns the pagination info
+    pub fn pagination(&self) -> Pagination {
         self.get_header("link")
-            .and_then(pagination::next_cursor)
-            .map(String::from)
+            .and_then(|x| x.parse().ok())
+            .unwrap_or_default()
     }
 
     /// Returns true if the response is JSON.
