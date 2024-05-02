@@ -531,16 +531,16 @@ fn find_home_dir_config_file() -> Option<PathBuf> {
         .filter(|p| p.exists())
 }
 
-fn find_xdg_dir_config_file(filename: &str) -> Option<PathBuf> {
+fn find_xdg_dir_config_file() -> Option<PathBuf> {
     xdg::BaseDirectories::with_prefix("sentry")
         .ok()
-        .map(|dir| dir.get_config_file(filename))
+        .map(|dir| dir.get_config_file("sentrycli.ini"))
         .filter(|p| p.exists())
 }
 
 fn find_global_config_file() -> Result<PathBuf> {
     find_home_dir_config_file()
-        .or(find_xdg_dir_config_file("sentrycli.ini"))
+        .or(find_xdg_dir_config_file())
         .ok_or_else(|| {
             format_err!("Could not find config file. Please run `sentry-cli login` and try again!")
         })
