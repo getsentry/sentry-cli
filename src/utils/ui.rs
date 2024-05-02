@@ -45,14 +45,10 @@ pub fn capitalize_string(s: &str) -> String {
 }
 
 /// Like ``io::copy`` but advances a progress bar set to bytes.
-pub fn copy_with_progress<R: ?Sized, W: ?Sized>(
-    pb: &ProgressBar,
-    reader: &mut R,
-    writer: &mut W,
-) -> io::Result<u64>
+pub fn copy_with_progress<R, W>(pb: &ProgressBar, reader: &mut R, writer: &mut W) -> io::Result<u64>
 where
-    R: Read,
-    W: Write,
+    R: Read + ?Sized,
+    W: Write + ?Sized,
 {
     let mut buf = [0; 16384];
     let mut written = 0;
