@@ -373,10 +373,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         Ok(Some(plist)) => {
                             // Successfully discovered and parsed Info.plist
                             let dist_string = plist.build().to_string();
-                            let release_string = format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist_string);
+                            let release_string = format!(
+                                "{}@{}+{}",
+                                plist.bundle_id(),
+                                plist.version(),
+                                dist_string
+                            );
                             info!("Parse result from Info.plist: {:?}", &plist);
                             (Some(dist_string), Some(release_string))
-                        },
+                        }
                         _ => {
                             bail!("Info.plist was not found or an parsing error occurred");
                         }
@@ -556,9 +561,7 @@ pub fn wrap_call() -> Result<()> {
             if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) =
                 (packager_sourcemap_result, hermes_sourcemap_result)
             {
-                if hermes_sourcemap.get("debugId").is_none()
-                    && hermes_sourcemap.get("debug_id").is_none()
-                {
+                if !hermes_sourcemap.contains_key("debug_id") {
                     if let Some(debug_id) = packager_sourcemap
                         .get("debugId")
                         .or_else(|| packager_sourcemap.get("debug_id"))
