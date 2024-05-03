@@ -78,7 +78,6 @@ zip = "0.6.4"
 data-encoding = "2.3.3"
 magic_string = "0.3.4"
 chrono-tz = "0.8.4"
-xdg = "2.5.2"
 
 [dev-dependencies]
 insta = { version = "1.26.0", features = ["redactions", "yaml"] }
