@@ -530,11 +530,8 @@ fn find_global_config_file() -> Result<PathBuf> {
         .map(|p| p.join(CONFIG_RC_FILE_NAME))
         .filter(|p| p.exists())
         .or(dirs::config_dir()
-            .map(|p| p.join(CONFIG_RC_FILE_NAME))
-            .filter(|p| p.exists())
-            .or(dirs::config_dir()
-                .map(|p| p.join("sentrycli.ini"))
-                .filter(|p| p.exists())))
+            .map(|p| p.join("sentry/sentrycli.ini"))
+            .filter(|p| p.exists()))
         .ok_or_else(|| {
             format_err!("Could not find config file. Please run `sentry-cli login` and try again!")
         })
