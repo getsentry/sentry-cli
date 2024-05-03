@@ -14,6 +14,9 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// The name of the configuration file.
 pub const CONFIG_RC_FILE_NAME: &str = ".sentryclirc";
 
+/// The relative path of the configuration file in dirs::config_dir()
+pub const CONFIG_INI_FILE_PATH: &str = "sentry/sentrycli.ini";
+
 /// The release registry URL where the latest released version of sentry-cli can be found
 pub const RELEASE_REGISTRY_LATEST_URL: &str =
     "https://release-registry.services.sentry.io/apps/sentry-cli/latest";
