@@ -4,7 +4,7 @@ $ sentry-cli send-metric set -k testmetric -v abc --log-level debug
 [..]
 [..]
 [..]
-[..]testmetric:891568578|s|#environment:production,release:[..]|T[..]
+[..]testmetric@none:891568578|s|#environment:production,release:[..]|T[..]
 [..]
 
 ```

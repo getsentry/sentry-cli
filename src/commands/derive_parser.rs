@@ -31,6 +31,6 @@ pub(super) struct SentryCLI {
 }
 
 #[derive(Subcommand)]
-pub enum SentryCLICommand {
+pub(super) enum SentryCLICommand {
     SendMetric(SendMetricArgs),
 }

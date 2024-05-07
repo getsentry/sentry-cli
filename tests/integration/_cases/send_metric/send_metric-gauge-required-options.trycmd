@@ -4,7 +4,7 @@ $ sentry-cli send-metric gauge -k testMetric -v 3 --log-level debug
 [..]
 [..]
 [..]
-[..] testMetric:3|g|#environment:production,release:[..]|T[..]
+[..] testMetric@none:3|g|#environment:production,release:[..]|T[..]
 [..]
 
 ```

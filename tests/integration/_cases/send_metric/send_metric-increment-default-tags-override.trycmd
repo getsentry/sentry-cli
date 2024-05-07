@@ -4,7 +4,7 @@ $ sentry-cli send-metric increment -k testMetric --log-level debug -t release:te
 [..]
 [..]
 [..]
-[..] testMetric:1|c|#environment:testEnvironment,release:testRelease|T[..]
+[..] testMetric@none:1|c|#environment:testEnvironment,release:testRelease|T[..]
 [..]
 
 ```
