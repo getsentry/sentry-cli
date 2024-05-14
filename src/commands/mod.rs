@@ -18,6 +18,8 @@ use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 
+mod derive_parser;
+
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bash_hook);
@@ -36,6 +38,7 @@ macro_rules! each_subcommand {
         $mac!(repos);
         $mac!(send_event);
         $mac!(send_envelope);
+        $mac!(send_metric);
         $mac!(sourcemaps);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);

@@ -12,6 +12,8 @@ pub struct ApiError {
 pub(in crate::api) enum ApiErrorKind {
     #[error("could not serialize value as JSON")]
     CannotSerializeAsJson,
+    #[error("could not serialize envelope")]
+    CannotSerializeEnvelope,
     #[error("could not parse JSON response")]
     BadJson,
     #[error("not a JSON response")]
@@ -38,6 +40,10 @@ pub(in crate::api) enum ApiErrorKind {
         "Auth token is required for this request. Please run `sentry-cli login` and try again!"
     )]
     AuthMissing,
+    #[error(
+        "DSN missing. Please set the `SENTRY_DSN` environment variable to your project's DSN."
+    )]
+    DsnMissing,
 }
 
 impl fmt::Display for ApiError {

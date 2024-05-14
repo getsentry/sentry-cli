@@ -1,0 +1,10 @@
+```
+$ sentry-cli send-metric set -n testmetric -v 1.9 --log-level debug
+? success
+...
+{}
+{"type":"statsd","length":113}
+testmetric@none:2397755281|s|#environment:production,release:[..]|T[..]
+...
+
+```

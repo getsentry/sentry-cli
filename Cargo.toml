@@ -16,6 +16,7 @@ bytecount = "0.6.3"
 chardet = "0.2.4"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.1.6", default-features = false, features = [
+  "derive",
   "std",
   "suggestions",
   "wrap_help",
@@ -26,6 +27,7 @@ clap = { version = "4.1.6", default-features = false, features = [
 ] }
 clap_complete = "4.4.3"
 console = "0.15.5"
+crc32fast = "1.4.0"
 curl = { version = "0.4.44", features = ["static-curl", "static-ssl"] }
 dirs = "4.0.0"
 dotenv = "0.15.0"
@@ -58,10 +60,11 @@ regex = "1.7.3"
 runas = "1.0.0"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.32.2", default-features = false, features = [
+sentry = { version = "0.32.3", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",
+  "UNSTABLE_metrics",
 ] }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
@@ -69,6 +72,7 @@ sha1_smol = { version = "1.0.0", features = ["serde"] }
 sourcemap = { version = "7.0.1", features = ["ram_bundle"] }
 symbolic = { version = "12.4.1", features = ["debuginfo-serde", "il2cpp"] }
 thiserror = "1.0.38"
+unicode-segmentation = "1.11.0"
 url = "2.3.1"
 username = "0.2.0"
 uuid = { version = "1.3.0", features = ["v4", "serde"] }

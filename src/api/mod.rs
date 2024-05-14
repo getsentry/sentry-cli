@@ -3,6 +3,8 @@
 //! to the GitHub API to figure out if there are new releases of the
 //! sentry-cli tool.
 
+pub mod envelopes_api;
+
 mod connection_manager;
 mod encoding;
 mod errors;
@@ -1743,6 +1745,11 @@ impl ApiRequest {
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
+        Ok(self)
+    }
+
+    pub fn with_body(mut self, body: Vec<u8>) -> ApiResult<Self> {
+        self.body = Some(body);
         Ok(self)
     }
 
