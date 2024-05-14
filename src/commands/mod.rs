@@ -78,7 +78,6 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "projects",
     "releases",
     "repos",
-    "send-metric",
     "sourcemaps",
 ];
 

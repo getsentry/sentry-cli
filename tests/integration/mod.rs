@@ -27,7 +27,7 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use mockito::{mock, server_url, Matcher, Mock};
+use mockito::{self, Matcher, Mock};
 use trycmd::TestCases;
 
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
@@ -36,14 +36,15 @@ const VERSION: &str = env!("CARGO_PKG_VERSION");
 pub fn register_test(path: &str) -> TestCases {
     let auth_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
     let test_case = TestCases::new();
+    let server_addr = mockito::server_address();
     test_case
         .env("SENTRY_INTEGRATION_TEST", "1")
         .env("SENTRY_DUMP_RESPONSES", "dump") // reused default directory of `trycmd` output dumps
-        .env("SENTRY_URL", server_url())
+        .env("SENTRY_URL", mockito::server_url())
         .env("SENTRY_AUTH_TOKEN", auth_token)
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
-        .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
+        .env("SENTRY_DSN", format!("http://test@{}/1337", server_addr))
         .case(format!("tests/integration/_cases/{path}"));
     test_case.insert_var("[VERSION]", VERSION).unwrap();
     test_case
@@ -55,6 +56,7 @@ pub struct EndpointOptions {
     pub response_body: Option<String>,
     pub response_file: Option<String>,
     pub matcher: Option<Matcher>,
+    pub header_matcher: Option<(&'static str, Matcher)>,
 }
 
 impl EndpointOptions {
@@ -66,6 +68,7 @@ impl EndpointOptions {
             response_body: None,
             response_file: None,
             matcher: None,
+            header_matcher: None,
         }
     }
 
@@ -86,10 +89,15 @@ impl EndpointOptions {
         self.matcher = Some(matcher);
         self
     }
+
+    pub fn with_header_matcher(mut self, key: &'static str, matcher: Matcher) -> Self {
+        self.header_matcher = Some((key, matcher));
+        self
+    }
 }
 
 pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
-    let mut mock = mock(opts.method.as_str(), opts.endpoint.as_str())
+    let mut mock = mockito::mock(opts.method.as_str(), opts.endpoint.as_str())
         .with_status(opts.status)
         .with_header("content-type", "application/json");
 
@@ -103,6 +111,10 @@ pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
 
     if let Some(matcher) = opts.matcher {
         mock = mock.match_body(matcher);
+    }
+
+    if let Some((key, matcher)) = opts.header_matcher {
+        mock = mock.match_header(&key, matcher);
     }
 
     mock.create()
@@ -180,7 +192,7 @@ pub fn mock_common_upload_endpoints(
             \"hashAlgorithm\": \"sha1\",
             \"accept\": [{}]
           }}",
-        server_url(),
+        mockito::server_url(),
         accept,
     );
 

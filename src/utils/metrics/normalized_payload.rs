@@ -32,10 +32,6 @@ impl<'a> NormalizedPayload<'a> {
         }
     }
 
-    pub fn to_string(&self) -> Result<String> {
-        Ok(String::from_utf8(self.to_bytes()?)?)
-    }
-
     pub fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut data = Vec::new();
         write!(data, "{}", self.key)?;
@@ -46,5 +42,39 @@ impl<'a> NormalizedPayload<'a> {
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
         write!(data, "|T{timestamp}")?;
         Ok(data)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        commands::send_metric::common_args::CommonMetricArgs,
+        config::Config,
+        utils::metrics::{
+            normalized_payload::NormalizedPayload, types::MetricType, values::MetricValue,
+        },
+    };
+    use regex::Regex;
+
+    #[test]
+    fn test_to_bytes() {
+        Config::from_cli_config().unwrap().bind_to_process();
+        let common_args = CommonMetricArgs {
+            key: "nöme".to_string(),
+            unit: Some("möb".to_string()),
+            tags: vec![("atagö".to_string(), "aval|ö".to_string())],
+        };
+        let expected = Regex::new(
+            r"^n_me@mb:1\|s\|#atag:aval\\u\{7c}ö,environment:production,release:.+\|T\d{10}$",
+        )
+        .unwrap();
+
+        let bytes =
+            NormalizedPayload::from_cli_args(&common_args, MetricValue::Int(1), MetricType::Set)
+                .to_bytes()
+                .unwrap();
+        let actual = String::from_utf8_lossy(&bytes);
+
+        assert!(expected.is_match(&actual));
     }
 }

@@ -1,10 +1,8 @@
 ```
 $ sentry-cli send-metric set -k testmetric -v 1.9 --log-level debug
-? success
-[..]
-[..]
-[..]
-[..] testmetric:1|s|#environment:production,release:[..]|T[..]
-[..]
+? failed
+error: invalid value '1.9' for '--value <VALUE>': floats are not supported for set metrics
+
+For more information, try '--help'.
 
 ```

@@ -1,10 +1,10 @@
 ```
 $ sentry-cli send-metric increment -k testMetric --log-level debug
 ? success
-[..]
-[..]
-[..]
-[..] testMetric@none:1|c|#environment:production,release:[..]|T[..]
-[..]
+...
+{}
+{"type":"statsd","length":[..]}
+testMetric@none:1|c|#environment:production,release:[..]|T[..]
+...
 
 ```

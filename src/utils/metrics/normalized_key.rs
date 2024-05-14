@@ -20,3 +20,17 @@ impl std::fmt::Display for NormalizedKey<'_> {
         write!(f, "{}", self.key)
     }
 }
+
+#[cfg(test)]
+mod test {
+    use crate::utils::metrics::normalized_key::NormalizedKey;
+
+    #[test]
+    fn test_from() {
+        let expected = "aA1_-.____________";
+
+        let actual = NormalizedKey::from("aA1_-./+ö{😀\n\t\r\\| ,").to_string();
+
+        assert_eq!(expected, actual);
+    }
+}

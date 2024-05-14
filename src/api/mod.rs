@@ -5,6 +5,7 @@
 
 mod connection_manager;
 mod encoding;
+pub(super) mod envelopes_api;
 mod errors;
 mod pagination;
 
@@ -26,6 +27,7 @@ use brotli2::write::BrotliEncoder;
 use chrono::Duration;
 use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
+use curl::easy::InfoType;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
@@ -1604,13 +1606,21 @@ fn handle_req<W: Write>(
         })?;
 
         handle.debug_function(move |info, data| match info {
-            curl::easy::InfoType::HeaderIn => {
+            InfoType::HeaderIn => {
                 log_headers(false, data);
             }
-            curl::easy::InfoType::HeaderOut => {
+            InfoType::HeaderOut => {
                 log_headers(true, data);
             }
-            _ => {}
+            InfoType::DataIn | InfoType::SslDataIn => {
+                debug!("< {}", String::from_utf8_lossy(data))
+            }
+            InfoType::DataOut | InfoType::SslDataOut => {
+                debug!(">\n{}", String::from_utf8_lossy(data))
+            }
+            _ => {
+                debug!("{}", String::from_utf8_lossy(data))
+            }
         })?;
 
         handle.header_function(move |data| {
@@ -1739,8 +1749,12 @@ impl ApiRequest {
         serde_json::to_writer(&mut body_bytes, &body)
             .map_err(|err| ApiError::with_source(ApiErrorKind::CannotSerializeAsJson, err))?;
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
-        self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
+        self.with_body(body_bytes)
+    }
+
+    pub fn with_body(mut self, body: Vec<u8>) -> ApiResult<Self> {
+        self.body = Some(body);
         Ok(self)
     }
 

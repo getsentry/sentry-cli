@@ -1,7 +1,7 @@
 use crate::{config::Config, utils::releases};
 use itertools::Itertools;
 use regex::Regex;
-use std::{borrow::Cow, collections::HashMap};
+use std::{borrow::Cow, cmp::min, collections::HashMap};
 
 pub(super) struct NormalizedTags<'a> {
     tags: HashMap<Cow<'a, str>, String>,
@@ -12,7 +12,7 @@ impl<'a> From<&'a Vec<(String, String)>> for NormalizedTags<'a> {
         Self {
             tags: tags
                 .iter()
-                .map(|(k, v)| (Self::normalize_key(&k), Self::normalize_value(&v)))
+                .map(|(k, v)| (Self::normalize_key(k), Self::normalize_value(v)))
                 .filter(|(k, v)| !v.is_empty() && !k.is_empty())
                 .collect(),
         }
@@ -23,11 +23,11 @@ impl NormalizedTags<'_> {
     fn normalize_key(key: &str) -> Cow<str> {
         Regex::new(r"[^a-zA-Z0-9_\-./]")
             .expect("Tag normalization regex should compile")
-            .replace_all(key, "")
+            .replace_all(&key[..min(key.len(), 32)], "")
     }
 
     fn normalize_value(value: &str) -> String {
-        value
+        value[..min(value.len(), 200)]
             .replace('\\', "\\\\")
             .replace('\n', "\\n")
             .replace('\r', "\\r")
@@ -62,5 +62,102 @@ impl std::fmt::Display for NormalizedTags<'_> {
             .sorted()
             .join(",");
         write!(f, "{res}")
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::env;
+
+    use crate::config::Config;
+
+    use super::NormalizedTags;
+
+    #[test]
+    fn test_replacement_characters() {
+        let tags = vec![
+            ("a\na", "a\na"),
+            ("b\rb", "b\rb"),
+            ("c\tc", "c\tc"),
+            ("d\\d", "d\\d"),
+            ("e|e", "e|e"),
+            ("f,f", "f,f"),
+        ]
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect();
+        let expected = "aa:a\\na,bb:b\\rb,cc:c\\tc,dd:d\\\\d,ee:e\\u{7c}e,ff:f\\u{2c}f";
+
+        let actual = NormalizedTags::from(&tags).to_string();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_empty_tags() {
+        let tags = vec![("+", "a"), ("a", ""), ("", "a"), ("", "")]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        let expected = "";
+
+        let actual = NormalizedTags::from(&tags).to_string();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_special_characters() {
+        let tags = vec![("aA1_-./+ö{ 😀", "aA1_-./+ö{ 😀")]
+            .iter()
+            .map(|(k, v)| (k.to_string(), v.to_string()))
+            .collect();
+        let expected = "aA1_-./:aA1_-./+ö{ 😀";
+
+        let actual = NormalizedTags::from(&tags).to_string();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_add_default_tags() {
+        Config::from_cli_config().unwrap().bind_to_process();
+        env::set_var("SOURCE_VERSION", "my-release");
+        let expected = "environment:production,release:my-release";
+
+        let actual = NormalizedTags::from(&Vec::new())
+            .with_default_tags()
+            .to_string();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_override_default_tags() {
+        Config::from_cli_config().unwrap().bind_to_process();
+        env::set_var("SOURCE_VERSION", "my-release");
+        let expected = "environment:env_override,release:release_override";
+
+        let actual = NormalizedTags::from(&vec![
+            ("release".to_string(), "release_override".to_string()),
+            ("environment".to_string(), "env_override".to_string()),
+        ])
+        .with_default_tags()
+        .to_string();
+
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn test_tag_lengths() {
+        let expected = "abcdefghijklmnopqrstuvwxyzabcdef:abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqr";
+
+        let actual = NormalizedTags::from(&vec![
+            ("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz".to_string(), 
+            "abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz".to_string()),
+        ])
+        .to_string();
+
+        assert_eq!(expected, actual);
     }
 }

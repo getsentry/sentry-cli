@@ -38,6 +38,8 @@ pub(in crate::api) enum ApiErrorKind {
         "Auth token is required for this request. Please run `sentry-cli login` and try again!"
     )]
     AuthMissing,
+    #[error("DSN not found. See: https://docs.sentry.io/product/crons/getting-started/cli/#configuration")]
+    DsnMissing,
 }
 
 impl fmt::Display for ApiError {

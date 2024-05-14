@@ -1,9 +1,9 @@
 ```
-$ sentry-cli send-metric --header a:b --auth-token "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" --allow-failure --log-level debug
+$ sentry-cli send-metric --header a:b --auth-token "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" --allow-failure --quiet --log-level debug
 ? failed
   INFO    [..] Loaded config from [CWD]/.sentryclirc
   DEBUG   [..] sentry-cli version: [VERSION], platform: [..], architecture: [..]
-  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "send-metric" "--header" "a:b" "--auth-token" "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" "--allow-failure" "--log-level" "debug"
+  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "send-metric" "--header" "a:b" "--auth-token" "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef" "--allow-failure" "--quiet" "--log-level" "debug"
 error: 'sentry-cli[EXE] send-metric' requires a subcommand but one was not provided
   [subcommands: increment, distribution, gauge, set, help]
 

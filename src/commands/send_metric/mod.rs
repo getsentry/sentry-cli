@@ -2,14 +2,9 @@ use self::common_args::FloatValueMetricArgs;
 use self::increment::IncrementArgs;
 use self::set::SetArgs;
 use super::derive_parser::{SentryCLI, SentryCLICommand};
-use crate::config::Config;
-use crate::utils::event;
-use anyhow::Context;
 use anyhow::Result;
 use clap::{command, Args, Subcommand};
 use clap::{ArgMatches, Command, Parser};
-use sentry::protocol::EnvelopeItem;
-use sentry::Envelope;
 
 pub mod common_args;
 mod distribution;
@@ -52,16 +47,4 @@ pub(super) fn execute(_: &ArgMatches) -> Result<()> {
         SendMetricSubcommand::Gauge(args) => gauge::execute(args),
         SendMetricSubcommand::Set(args) => set::execute(args),
     }
-}
-
-//TODO: Replace with envelopes api and put in api folder
-pub(super) fn send_envelope(item: EnvelopeItem) -> Result<()> {
-    let mut envelope = Envelope::new();
-    envelope.add_item(item);
-    let dsn = Config::current().get_dsn().ok().context(
-        "DSN not found. \
-    See: https://docs.sentry.io/product/crons/getting-started/cli/#configuration",
-    )?;
-    event::with_sentry_client(dsn, |c| c.send_envelope(envelope));
-    Ok(())
 }

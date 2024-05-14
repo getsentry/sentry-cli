@@ -1,51 +1,49 @@
-use crate::integration::register_test;
+use crate::integration;
+
+#[test]
+fn command_send_metric_gauge_all_options_long_with_float_value() {
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test(
+        "send_metric/send_metric-gauge-all-options-long-with-float-value.trycmd",
+    );
+}
+
+#[test]
+fn command_send_metric_gauge_all_options_short_with_int_value() {
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test(
+        "send_metric/send_metric-gauge-all-options-short-with-int-value.trycmd",
+    );
+}
 
 #[test]
 fn command_send_metric_gauge_help() {
-    register_test("send_metric/send_metric-gauge-help.trycmd");
-}
-
-#[test]
-fn command_send_metric_gauge_alphabetic_value() {
-    register_test("send_metric/send_metric-gauge-alphabetic-value.trycmd");
-}
-
-#[test]
-fn command_send_metric_gauge_normalization() {
-    register_test("send_metric/send_metric-gauge-normalization.trycmd");
-}
-
-#[test]
-fn command_send_metric_gauge_required_options() {
-    register_test("send_metric/send_metric-gauge-required-options.trycmd");
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test("send_metric/send_metric-gauge-help.trycmd");
 }
 
 #[test]
 fn command_send_metric_gauge_no_options() {
-    register_test("send_metric/send_metric-gauge-no-options.trycmd");
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test("send_metric/send_metric-gauge-no-options.trycmd");
 }
 
 #[test]
-fn command_send_metric_gauge_all_options_long() {
-    register_test("send_metric/send_metric-gauge-all-options-long.trycmd");
+fn command_send_metric_gauge_normalization() {
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test("send_metric/send_metric-gauge-normalization.trycmd");
 }
 
 #[test]
-fn command_send_metric_gauge_all_options_short() {
-    register_test("send_metric/send_metric-gauge-all-options-short.trycmd");
+fn command_send_metric_gauge_numerical_key_prefix() {
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test("send_metric/send_metric-gauge-numerical-key-prefix.trycmd");
 }
 
 #[test]
-fn command_send_metric_gauge_integer_value() {
-    register_test("send_metric/send_metric-gauge-integer-value.trycmd");
-}
-
-#[test]
-fn command_send_metric_gauge_float_value() {
-    register_test("send_metric/send_metric-gauge-float-value.trycmd");
-}
-
-#[test]
-fn command_send_metric_gauge_negative_value() {
-    register_test("send_metric/send_metric-gauge-negative-value.trycmd");
+fn command_send_metric_gauge_required_options_with_negative_value() {
+    let _m = super::mock_envelopes_endpoint();
+    integration::register_test(
+        "send_metric/send_metric-gauge-required-options-with-negative-value.trycmd",
+    );
 }

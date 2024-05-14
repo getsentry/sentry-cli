@@ -1,0 +1,10 @@
+```
+$ sentry-cli send-metric gauge -k testMetric -v 2 -u mb -t a:b --log-level debug 
+? success
+...
+{}
+{"type":"statsd","length":[..]}
+testMetric@mb:2|g|#a:b,environment:production,release:[..]|T[..]
+...
+
+```
