@@ -85,7 +85,14 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
 
 /// Detects the release name for the current working directory.
 pub fn detect_release_name() -> Result<String> {
-    // cordova release detection first.
+    // try SENTRY_RELEASE environment variable
+    if let Ok(release) = env::var("SENTRY_RELEASE") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
+    // try cordova release detection
     if let Some(release) = get_cordova_release_name(None)? {
         return Ok(release);
     }
@@ -140,6 +147,13 @@ pub fn detect_release_name() -> Result<String> {
     // the xml manifests.
     if let Some(release) = infer_gradle_release_name(None)? {
         return Ok(release);
+    }
+
+    // try Google App Engine: https://cloud.google.com/appengine/docs/standard/python3/runtime#environment_variables
+    if let Ok(release) = env::var("GAE_DEPLOYMENT_ID") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
     }
 
     match vcs::find_head() {
