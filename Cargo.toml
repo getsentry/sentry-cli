@@ -16,6 +16,7 @@ bytecount = "0.6.3"
 chardet = "0.2.4"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.1.6", default-features = false, features = [
+  "derive",
   "std",
   "suggestions",
   "wrap_help",
@@ -58,10 +59,11 @@ regex = "1.7.3"
 runas = "1.0.0"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.32.2", default-features = false, features = [
+sentry = { version = "0.33.0", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",
+  "UNSTABLE_metrics",
 ] }
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
