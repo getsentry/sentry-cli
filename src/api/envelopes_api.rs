@@ -4,7 +4,7 @@ use super::{
 };
 use crate::{api::errors::ApiError, constants::USER_AGENT};
 use log::debug;
-use sentry::{protocol::EnvelopeItem, types::Dsn, Envelope};
+use sentry::{types::Dsn, Envelope};
 use std::sync::Arc;
 
 pub struct EnvelopesApi {
@@ -21,20 +21,14 @@ impl EnvelopesApi {
             .map_err(|_| ApiErrorKind::DsnMissing.into())
     }
 
-    pub fn send_item(&self, item: EnvelopeItem) -> ApiResult<ApiResponse> {
-        let mut envelope = Envelope::new();
-        envelope.add_item(item);
-        self.send_envelope(envelope)
-    }
-
     pub fn send_envelope(&self, envelope: Envelope) -> ApiResult<ApiResponse> {
         let mut body = vec![];
         envelope
             .to_writer(&mut body)
             .map_err(|e| ApiError::with_source(ApiErrorKind::CannotSerializeEnvelope, e))?;
-        debug!("Sending envelope:\n{}", String::from_utf8_lossy(&body));
         let url = self.dsn.envelope_api_url();
         let auth = self.dsn.to_auth(Some(USER_AGENT));
+        debug!("Sending envelope:\n{}", String::from_utf8_lossy(&body));
         self.api
             .request(Method::Post, url.as_str(), None)?
             .with_header("X-Sentry-Auth", &auth.to_string())?

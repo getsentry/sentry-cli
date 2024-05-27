@@ -1,16 +1,15 @@
 use super::common_args::FloatValueMetricArgs;
-use crate::{
-    api::envelopes_api::EnvelopesApi,
-    utils::metrics::{
-        normalized_payload::NormalizedPayload, types::MetricType, values::MetricValue,
-    },
-};
+use crate::{api::envelopes_api::EnvelopesApi, utils::metrics::DefaultTags};
 use anyhow::Result;
-use sentry::protocol::EnvelopeItem;
+use sentry::metrics::Metric;
 
 pub(super) fn execute(args: FloatValueMetricArgs) -> Result<()> {
-    let value = MetricValue::Float(args.value);
-    let payload = NormalizedPayload::from_cli_args(&args.common, value, MetricType::Distribution);
-    EnvelopesApi::try_new()?.send_item(EnvelopeItem::Statsd(payload.to_bytes()?))?;
+    EnvelopesApi::try_new()?.send_envelope(
+        Metric::distribution(args.common.name, args.value)
+            .with_unit(args.common.unit)
+            .with_tags(args.common.tags.with_default_tags())
+            .finish()
+            .to_envelope(),
+    )?;
     Ok(())
 }

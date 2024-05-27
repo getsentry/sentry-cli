@@ -6,15 +6,14 @@ Update a distribution metric with the provided value
 Usage: sentry-cli[EXE] send-metric distribution [OPTIONS] --name <NAME> --value <VALUE>
 
 Options:
-  -n, --name <NAME>              Metric name, used for finding the metric on the Sentry UI metrics
-                                 page.
+  -n, --name <NAME>              The name of the metric, identifying it in Sentry.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
   -u, --unit <UNIT>              Any custom unit. You can have multiple metrics with the same name
                                  but different units.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
-  -t, --tags <KEY:VALUE>...      Metric tags as key:value pairs. Tags are used for filtering on the
-                                 Sentry UI metrics page.
+  -t, --tags <KEY:VALUE>...      Metric tags as key:value pairs. Tags allow you to add dimensions to
+                                 your metrics and can be filtered or grouped by in Sentry.
   -v, --value <VALUE>            Metric value, any finite 64 bit float.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]

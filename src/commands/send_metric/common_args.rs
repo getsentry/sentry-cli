@@ -2,6 +2,7 @@ use crate::utils::value_parsers;
 use anyhow::{anyhow, Result};
 use clap::command;
 use clap::Args;
+use sentry::metrics::MetricStr;
 use std::str::FromStr;
 
 /// Arguments for send-metric subcommands using float as value type and no default value.
@@ -16,35 +17,29 @@ pub(super) struct FloatValueMetricArgs {
 
 /// Common arguments for all send-metric subcommands.
 #[derive(Args)]
-pub struct CommonMetricArgs {
+pub(super) struct CommonMetricArgs {
     #[arg(short, long)]
-    #[arg(help = "Metric name, used for finding the metric on the Sentry UI metrics page.")]
-    pub name: MetricName,
+    #[arg(help = "The name of the metric, identifying it in Sentry.")]
+    pub(super) name: MetricName,
 
+    #[arg(short, long)]
     #[arg(
-        short,
-        long,
-        help = "Any custom unit. You can have multiple metrics with the same name but different units."
+        help = "Any custom unit. You can have multiple metrics with the same name but different \
+        units."
     )]
-    pub unit: Option<String>,
+    pub(super) unit: Option<String>,
 
     #[arg(short, long, value_delimiter=',', value_name = "KEY:VALUE", num_args = 1..)]
     #[arg(value_parser=value_parsers::kv_parser)]
     #[arg(
-        help = "Metric tags as key:value pairs. Tags are used for filtering on the \
-        Sentry UI metrics page."
+        help = "Metric tags as key:value pairs. Tags allow you to add dimensions to your metrics \
+        and can be filtered or grouped by in Sentry."
     )]
-    pub tags: Vec<(String, String)>,
+    pub(super) tags: Vec<(String, String)>,
 }
 
 #[derive(Clone)]
-pub struct MetricName(String);
-
-impl MetricName {
-    pub fn as_str(&self) -> &str {
-        &self.0
-    }
-}
+pub(super) struct MetricName(String);
 
 impl FromStr for MetricName {
     type Err = anyhow::Error;
@@ -62,5 +57,11 @@ impl FromStr for MetricName {
                 "metric name must start with an alphabetic character"
             ))
         }
+    }
+}
+
+impl From<MetricName> for MetricStr {
+    fn from(name: MetricName) -> MetricStr {
+        MetricStr::from(name.0)
     }
 }
