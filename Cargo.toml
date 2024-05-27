@@ -6,7 +6,6 @@ version = "2.31.2"
 edition = "2021"
 rust-version = "1.65"
 
-
 [dependencies]
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }
@@ -60,7 +59,7 @@ regex = "1.7.3"
 runas = "1.0.0"
 rust-ini = "0.18.0"
 semver = "1.0.16"
-sentry = { version = "0.32.3", default-features = false, features = [
+sentry = { version = "0.33.0", default-features = false, features = [
   "anyhow",
   "curl",
   "contexts",
