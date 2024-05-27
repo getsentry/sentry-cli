@@ -14,6 +14,7 @@ use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
 use sentry::types::Dsn;
 
+use crate::constants::CONFIG_INI_FILE_PATH;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
@@ -526,12 +527,14 @@ impl Config {
 }
 
 fn find_global_config_file() -> Result<PathBuf> {
-    dirs::home_dir()
+    let home_dir_file = dirs::home_dir().map(|p| p.join(CONFIG_RC_FILE_NAME));
+    let config_dir_file = dirs::config_dir().map(|p| p.join(CONFIG_INI_FILE_PATH));
+    home_dir_file
+        .clone()
+        .filter(|p| p.exists())
+        .or(config_dir_file.filter(|p| p.exists()))
+        .or(home_dir_file)
         .ok_or_else(|| format_err!("Could not find home dir"))
-        .map(|mut path| {
-            path.push(CONFIG_RC_FILE_NAME);
-            path
-        })
 }
 
 fn find_project_config_file() -> Option<PathBuf> {
