@@ -4,7 +4,7 @@
 
 ## 2.32.1
 
-- No documented changes.
+Release performed for technical reasons. This release is identical to 2.32.0.
 
 ## 2.32.0
 
