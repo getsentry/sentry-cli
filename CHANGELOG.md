@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.32.0
+
+### Various fixes & improvements
+
+- docs(commands): Add info about clap Derive API (#2066) by @elramen
+- feat(metrics): Add send-metric command (#2063) by @elramen
+- feat(auth): Allow global config to be located in XDG directory (#2059) by @elramen
+- fix(commands): Add missing env vars for release name detection (#2051) by @elramen
+
 ## 2.31.2
 
 ### Various fixes & improvements

@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli-darwin",
-  "version": "2.31.2",
+  "version": "2.32.0",
   "description": "The darwin distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "BSD-3-Clause",
