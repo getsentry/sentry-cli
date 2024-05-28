@@ -15,8 +15,8 @@ use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sha1_smol::Digest;
 
-use crate::api::{Api, ChunkUploadOptions, ProgressBarMode};
-use crate::utils::progress::{ProgressBar, ProgressStyle};
+use crate::api::{Api, ChunkUploadOptions};
+use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 
 /// Timeout for polling all assemble endpoints.
 pub const ASSEMBLE_POLL_INTERVAL: Duration = Duration::from_millis(1000);

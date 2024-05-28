@@ -32,7 +32,7 @@ use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
-use parking_lot::{Mutex, RwLock};
+use parking_lot::Mutex;
 use regex::{Captures, Regex};
 use sentry::protocol::{Exception, Values};
 use serde::de::{DeserializeOwned, Deserializer};
@@ -48,7 +48,7 @@ use crate::config::{Auth, Config};
 use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::UploadContext;
 use crate::utils::http::{self, is_absolute_url};
-use crate::utils::progress::ProgressBar;
+use crate::utils::progress::{ProgressBar, ProgressBarMode};
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
@@ -60,31 +60,6 @@ use errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
-}
-
-#[derive(Clone)]
-pub enum ProgressBarMode {
-    Disabled,
-    Request,
-    Response,
-    Shared((Arc<ProgressBar>, u64, usize, Arc<RwLock<Vec<u64>>>)),
-}
-
-impl ProgressBarMode {
-    /// Returns if progress bars are generally enabled.
-    pub fn active(&self) -> bool {
-        !matches!(*self, ProgressBarMode::Disabled)
-    }
-
-    /// Returns whether a progress bar should be displayed during upload.
-    pub fn request(&self) -> bool {
-        matches!(*self, ProgressBarMode::Request)
-    }
-
-    /// Returns whether a progress bar should be displayed during download.
-    pub fn response(&self) -> bool {
-        matches!(*self, ProgressBarMode::Response)
-    }
 }
 
 /// Helper for the API access.

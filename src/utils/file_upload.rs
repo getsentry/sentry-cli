@@ -19,11 +19,11 @@ use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, Sour
 use url::Url;
 
 use crate::api::NewRelease;
-use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
-use crate::utils::progress::{ProgressBar, ProgressStyle};
+use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;

@@ -10,7 +10,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
-use crate::api::{Api, ProgressBarMode};
+use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::validate_distribution;
@@ -19,6 +19,7 @@ use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, UploadContext,
 };
 use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
+use crate::utils::progress::ProgressBarMode;
 
 pub fn make_command(command: Command) -> Command {
     command
