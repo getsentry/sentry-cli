@@ -66,13 +66,17 @@ impl TempFile {
         Ok(TempFile { path: destination })
     }
 
-    /// Opens the tempfile at the beginning.
+    /// Opens the tempfile for reading and writing at the beginning. We create the
+    /// file if it doesn't exist yet, but if the file exists, we don't truncate it.
+    /// The lack of truncation allows us to re-open and read a temp file from the
+    /// beginning. Writing to the file will overwrite the existing content, but existing
+    /// data after the written content will remain.
     pub fn open(&self) -> io::Result<fs::File> {
         let mut f = fs::OpenOptions::new()
             .read(true)
             .write(true)
             .create(true)
-            .truncate(false)
+            .truncate(false) // Allows us to re-open and read a temp file from the beginning
             .open(&self.path)?;
 
         f.rewind().ok();
