@@ -15,7 +15,7 @@ use sentry::Envelope;
 use serde_json::Value;
 use username::get_user_name;
 
-use crate::commands::send_envelope::send_raw_envelope;
+use crate::api::envelopes_api::EnvelopesApi;
 use crate::config::Config;
 use crate::utils::args::{get_timestamp, validate_distribution};
 use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
@@ -200,7 +200,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 writeln!(buf, r#"{{"type":"event","length":{}}}"#, raw_event.len())?;
                 buf.extend(raw_event);
                 let envelope = Envelope::from_bytes_raw(buf)?;
-                send_raw_envelope(envelope, dsn.clone());
+                EnvelopesApi::try_new()?.send_envelope(envelope)?;
                 id
             } else {
                 let event: Event = serde_json::from_slice(&raw_event)?;

@@ -3,12 +3,10 @@ use std::path::PathBuf;
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
-use log::{debug, warn};
-use sentry::types::Dsn;
+use log::warn;
 use sentry::Envelope;
 
-use crate::config::Config;
-use crate::utils::event::with_sentry_client;
+use crate::api::envelopes_api::EnvelopesApi;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -34,14 +32,7 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-pub fn send_raw_envelope(envelope: Envelope, dsn: Dsn) {
-    debug!("{:?}", envelope);
-    with_sentry_client(dsn, |c| c.send_envelope(envelope));
-}
-
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let config = Config::current();
-    let dsn = config.get_dsn()?;
     let raw = matches.get_flag("raw");
 
     let path = matches.get_one::<String>("path").unwrap();
@@ -63,7 +54,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         } else {
             Envelope::from_path(p)
         }?;
-        send_raw_envelope(envelope, dsn.clone());
+        EnvelopesApi::try_new()?.send_envelope(envelope)?;
         println!("Envelope from file {} dispatched", p.display());
     }
 
