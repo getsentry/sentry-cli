@@ -3,15 +3,13 @@ use std::process;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 
 use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus, MonitorConfig, MonitorSchedule};
-use sentry::types::Dsn;
 
-use crate::config::Config;
-use crate::utils::event::with_sentry_client;
+use crate::api::envelopes_api::EnvelopesApi;
 use crate::utils::system::QuietExit;
 
 pub fn make_command(command: Command) -> Command {
@@ -124,13 +122,12 @@ fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Du
     (success, code, elapsed)
 }
 
-fn dsn_execute(
-    dsn: Dsn,
+fn execute_checkin(
     args: Vec<&String>,
     monitor_slug: &str,
     environment: &str,
     monitor_config: Option<MonitorConfig>,
-) -> (bool, Option<i32>) {
+) -> Result<(bool, Option<i32>)> {
     let check_in_id = Uuid::new_v4();
 
     let open_checkin = MonitorCheckIn {
@@ -142,7 +139,8 @@ fn dsn_execute(
         monitor_config,
     };
 
-    with_sentry_client(dsn.clone(), |c| c.send_envelope(open_checkin.into()));
+    let envelopes_api = EnvelopesApi::try_new()?;
+    envelopes_api.send_envelope(open_checkin.into())?;
 
     let (success, code, elapsed) = run_program(args, monitor_slug);
 
@@ -163,9 +161,9 @@ fn dsn_execute(
         monitor_config: None,
     };
 
-    with_sentry_client(dsn, |c| c.send_envelope(close_checkin.into()));
+    envelopes_api.send_envelope(close_checkin.into())?;
 
-    (success, code)
+    Ok((success, code))
 }
 
 fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfig>> {
@@ -184,20 +182,12 @@ fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfi
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let config = Config::current();
-
-    // Token based auth has been removed, prefer DSN style auth for monitor checkins
-    let dsn = config.get_dsn().ok().context(
-        "Token auth is no longer supported for cron monitor checkins. Please use DSN auth.\n\
-                    See: https://docs.sentry.io/product/crons/getting-started/cli/#configuration",
-    )?;
-
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
     let environment = matches.get_one::<String>("environment").unwrap();
     let monitor_config = parse_monitor_config_args(matches)?;
 
-    let (success, code) = dsn_execute(dsn, args, monitor_slug, environment, monitor_config);
+    let (success, code) = execute_checkin(args, monitor_slug, environment, monitor_config)?;
 
     if !success {
         return Err(QuietExit(code.unwrap_or(1)).into());

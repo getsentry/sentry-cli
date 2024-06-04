@@ -13,8 +13,9 @@ use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
 use username::get_user_name;
 use uuid::Uuid;
 
+use crate::commands::send_event::send_raw_event;
 use crate::config::Config;
-use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
+use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
 const BASH_SCRIPT: &str = include_str!("../bashsupport.sh");
@@ -198,7 +199,7 @@ fn send_event(
         ..Default::default()
     });
 
-    let id = with_sentry_client(config.get_dsn()?, |c| c.capture_event(event, None));
+    let id = send_raw_event(event)?;
     println!("{id}");
 
     Ok(())
