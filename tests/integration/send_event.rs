@@ -1,8 +1,8 @@
-use crate::integration::register_test;
+use crate::integration::{self, EndpointOptions};
 
 #[test]
 fn command_send_event_help() {
-    register_test("send_event/send_event-help.trycmd");
+    integration::register_test("send_event/send_event-help.trycmd");
 }
 
 // I have no idea why this is timing out on Windows.
@@ -11,15 +11,19 @@ fn command_send_event_help() {
 #[cfg(not(windows))]
 #[test]
 fn command_send_event_raw() {
-    register_test("send_event/send_event-raw.trycmd");
+    let _server =
+        integration::mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 200));
+    integration::register_test("send_event/send_event-raw.trycmd");
 }
 
 #[test]
 fn command_send_event_file() {
-    register_test("send_event/send_event-file.trycmd");
+    let _server =
+        integration::mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 200));
+    integration::register_test("send_event/send_event-file.trycmd");
 }
 
 #[test]
 fn command_send_event_raw_fail() {
-    register_test("send_event/send_event-raw-fail.trycmd");
+    integration::register_test("send_event/send_event-raw-fail.trycmd");
 }

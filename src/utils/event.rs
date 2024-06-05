@@ -1,17 +1,12 @@
 use std::borrow::Cow;
 use std::fs;
 use std::io::{BufRead, BufReader};
-use std::time::Duration;
 
 use anyhow::{Context, Result};
 use chrono::Utc;
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
-use sentry::types::Dsn;
-use sentry::{apply_defaults, Client, ClientOptions};
-
-use crate::constants::USER_AGENT;
 
 lazy_static! {
     static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();
@@ -67,28 +62,4 @@ pub fn get_sdk_info() -> Cow<'static, ClientSdkInfo> {
         integrations: Vec::new(),
         packages: Vec::new(),
     })
-}
-
-/// Executes the callback with an isolate sentry client on an empty isolate scope.
-///
-/// Use the client's API to capture exceptions or manual events. The client will automatically drop
-/// after the callback has finished and drain its queue with a timeout of 2 seconds. The return
-/// value of the callback is passed through to the caller.
-pub fn with_sentry_client<F, R>(dsn: Dsn, callback: F) -> R
-where
-    F: FnOnce(&Client) -> R,
-{
-    let client = Client::from_config((
-        dsn,
-        apply_defaults(ClientOptions {
-            // TODO: do we want to eventually set `debug` based on the CLI log-level?
-            // debug: true,
-            user_agent: USER_AGENT.into(),
-            ..Default::default()
-        }),
-    ));
-
-    let rv = callback(&client);
-    client.close(Some(Duration::from_secs(2)));
-    rv
 }

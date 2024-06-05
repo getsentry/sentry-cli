@@ -21,9 +21,10 @@ impl EnvelopesApi {
             .map_err(|_| ApiErrorKind::DsnMissing.into())
     }
 
-    pub fn send_envelope(&self, envelope: Envelope) -> ApiResult<ApiResponse> {
+    pub fn send_envelope(&self, envelope: impl Into<Envelope>) -> ApiResult<ApiResponse> {
         let mut body = vec![];
         envelope
+            .into()
             .to_writer(&mut body)
             .map_err(|e| ApiError::with_source(ApiErrorKind::CannotSerializeEnvelope, e))?;
         let url = self.dsn.envelope_api_url();
