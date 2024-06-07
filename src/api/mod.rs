@@ -6,6 +6,7 @@
 pub mod envelopes_api;
 
 mod connection_manager;
+mod data_types;
 mod encoding;
 mod errors;
 mod pagination;
@@ -35,7 +36,7 @@ use log::{debug, info, warn};
 use parking_lot::Mutex;
 use regex::{Captures, Regex};
 use sentry::protocol::{Exception, Values};
-use serde::de::{DeserializeOwned, Deserializer};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
@@ -57,6 +58,8 @@ use self::pagination::Pagination;
 use connection_manager::CurlConnectionManager;
 use encoding::{PathArg, QueryArg};
 use errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
+
+pub use self::data_types::*;
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
@@ -2379,211 +2382,6 @@ impl Deploy {
             Some(name) => name,
         }
     }
-}
-
-#[derive(Debug, Deserialize, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-pub enum ChunkHashAlgorithm {
-    #[serde(rename = "sha1")]
-    Sha1,
-}
-
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
-pub enum ChunkCompression {
-    /// No compression should be applied
-    #[default]
-    Uncompressed = 0,
-    /// GZIP compression (including header)
-    Gzip = 10,
-    /// Brotli compression
-    Brotli = 20,
-}
-
-impl ChunkCompression {
-    fn field_name(self) -> &'static str {
-        match self {
-            ChunkCompression::Uncompressed => "file",
-            ChunkCompression::Gzip => "file_gzip",
-            ChunkCompression::Brotli => "file_brotli",
-        }
-    }
-}
-
-impl fmt::Display for ChunkCompression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            ChunkCompression::Uncompressed => write!(f, "uncompressed"),
-            ChunkCompression::Gzip => write!(f, "gzip"),
-            ChunkCompression::Brotli => write!(f, "brotli"),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for ChunkCompression {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(match String::deserialize(deserializer)?.as_str() {
-            "gzip" => ChunkCompression::Gzip,
-            "brotli" => ChunkCompression::Brotli,
-            // We do not know this compression, so we assume no compression
-            _ => ChunkCompression::Uncompressed,
-        })
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ChunkUploadCapability {
-    /// Chunked upload of debug files
-    DebugFiles,
-
-    /// Chunked upload of release files
-    ReleaseFiles,
-
-    /// Chunked upload of standalone artifact bundles
-    ArtifactBundles,
-
-    /// Like `ArtifactBundles`, but with deduplicated chunk
-    /// upload.
-    ArtifactBundlesV2,
-
-    /// Upload of PDBs and debug id overrides
-    Pdbs,
-
-    /// Upload of Portable PDBs
-    PortablePdbs,
-
-    /// Uploads of source archives
-    Sources,
-
-    /// Upload of BCSymbolMap and PList auxiliary DIFs
-    BcSymbolmap,
-
-    /// Upload of il2cpp line mappings
-    Il2Cpp,
-
-    /// Any other unsupported capability (ignored)
-    Unknown,
-}
-
-impl<'de> Deserialize<'de> for ChunkUploadCapability {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(match String::deserialize(deserializer)?.as_str() {
-            "debug_files" => ChunkUploadCapability::DebugFiles,
-            "release_files" => ChunkUploadCapability::ReleaseFiles,
-            "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
-            "artifact_bundles_v2" => ChunkUploadCapability::ArtifactBundlesV2,
-            "pdbs" => ChunkUploadCapability::Pdbs,
-            "portablepdbs" => ChunkUploadCapability::PortablePdbs,
-            "sources" => ChunkUploadCapability::Sources,
-            "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
-            "il2cpp" => ChunkUploadCapability::Il2Cpp,
-            _ => ChunkUploadCapability::Unknown,
-        })
-    }
-}
-
-fn default_chunk_upload_accept() -> Vec<ChunkUploadCapability> {
-    vec![ChunkUploadCapability::DebugFiles]
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChunkUploadOptions {
-    pub url: String,
-    #[serde(rename = "chunksPerRequest")]
-    pub max_chunks: u64,
-    #[serde(rename = "maxRequestSize")]
-    pub max_size: u64,
-    #[serde(default)]
-    pub max_file_size: u64,
-    #[serde(default)]
-    pub max_wait: u64,
-    pub hash_algorithm: ChunkHashAlgorithm,
-    pub chunk_size: u64,
-    pub concurrency: u8,
-    #[serde(default)]
-    pub compression: Vec<ChunkCompression>,
-    #[serde(default = "default_chunk_upload_accept")]
-    pub accept: Vec<ChunkUploadCapability>,
-}
-
-impl ChunkUploadOptions {
-    /// Returns whether the given capability is accepted by the chunk upload endpoint.
-    pub fn supports(&self, capability: ChunkUploadCapability) -> bool {
-        self.accept.contains(&capability)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub enum ChunkedFileState {
-    #[serde(rename = "error")]
-    Error,
-    #[serde(rename = "not_found")]
-    NotFound,
-    #[serde(rename = "created")]
-    Created,
-    #[serde(rename = "assembling")]
-    Assembling,
-    #[serde(rename = "ok")]
-    Ok,
-}
-
-impl ChunkedFileState {
-    pub fn is_finished(self) -> bool {
-        self == ChunkedFileState::Error || self == ChunkedFileState::Ok
-    }
-
-    pub fn is_pending(self) -> bool {
-        !self.is_finished()
-    }
-
-    pub fn is_err(self) -> bool {
-        self == ChunkedFileState::Error || self == ChunkedFileState::NotFound
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct ChunkedDifRequest<'a> {
-    pub name: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub debug_id: Option<DebugId>,
-    pub chunks: &'a [Digest],
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChunkedDifResponse {
-    pub state: ChunkedFileState,
-    pub missing_chunks: Vec<Digest>,
-    pub detail: Option<String>,
-    pub dif: Option<DebugInfoFile>,
-}
-
-pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;
-pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
-
-#[derive(Debug, Serialize)]
-pub struct ChunkedArtifactRequest<'a> {
-    pub checksum: Digest,
-    pub chunks: &'a [Digest],
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub projects: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dist: Option<&'a str>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AssembleArtifactsResponse {
-    pub state: ChunkedFileState,
-    pub missing_chunks: Vec<Digest>,
-    pub detail: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]
