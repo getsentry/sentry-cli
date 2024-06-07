@@ -140,7 +140,7 @@ fn execute_checkin(
     };
 
     let envelopes_api = EnvelopesApi::try_new()?;
-    envelopes_api.send_envelope(open_checkin.into())?;
+    envelopes_api.send_envelope(open_checkin)?;
 
     let (success, code, elapsed) = run_program(args, monitor_slug);
 
@@ -161,7 +161,7 @@ fn execute_checkin(
         monitor_config: None,
     };
 
-    envelopes_api.send_envelope(close_checkin.into())?;
+    envelopes_api.send_envelope(close_checkin)?;
     Ok((success, code))
 }
 
