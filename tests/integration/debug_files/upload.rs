@@ -23,14 +23,6 @@ fn command_debug_files_upload() {
         )
         .with_response_file("debug_files/post-difs-assemble.json"),
     );
-    let _reprocessing = mock_endpoint(
-        EndpointOptions::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/reprocessing/",
-            200,
-        )
-        .with_response_body("[]"),
-    );
     register_test("debug_files/debug_files-upload.trycmd");
 }
 
@@ -54,14 +46,6 @@ fn command_debug_files_upload_pdb() {
                 }
             }"#,
         ),
-    );
-    let _reprocessing = mock_endpoint(
-        EndpointOptions::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/reprocessing/",
-            200,
-        )
-        .with_response_body("[]"),
     );
     register_test("debug_files/debug_files-upload-pdb.trycmd");
     register_test("debug_files/debug_files-upload-pdb-include-sources.trycmd");
@@ -88,14 +72,6 @@ fn command_debug_files_upload_pdb_embedded_sources() {
             }"#,
         ),
     );
-    let _reprocessing = mock_endpoint(
-        EndpointOptions::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/reprocessing/",
-            200,
-        )
-        .with_response_body("[]"),
-    );
     register_test("debug_files/debug_files-upload-pdb-embedded-sources.trycmd");
 }
 
@@ -119,14 +95,6 @@ fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
                 }
             }"#,
         ),
-    );
-    let _reprocessing = mock_endpoint(
-        EndpointOptions::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/reprocessing/",
-            200,
-        )
-        .with_response_body("[]"),
     );
     register_test("debug_files/debug_files-upload-dll-embedded-ppdb-with-sources.trycmd");
 }
@@ -152,14 +120,6 @@ fn command_debug_files_upload_mixed_embedded_sources() {
             }"#,
         ),
     );
-    let _reprocessing = mock_endpoint(
-        EndpointOptions::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/reprocessing/",
-            200,
-        )
-        .with_response_body("[]"),
-    );
     // TODO this isn't tested properly at the moment, because `indicatif` ProgressBar (at least at the current version)
     //      swallows debug logs printed while the progress bar is active and the session is not attended.
     //      See how it's supposed to look like `debug_files-bundle_sources-mixed-embedded-sources.trycmd` and try it out
@@ -182,21 +142,4 @@ fn command_debug_files_upload_no_upload() {
         .with_response_file("debug_files/post-difs-assemble.json"),
     );
     register_test("debug_files/debug_files-upload-no-upload.trycmd");
-}
-
-#[test]
-fn command_debug_files_upload_no_reprocessing() {
-    let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        EndpointOptions::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
-        )
-        .with_response_file("debug_files/post-difs-assemble.json"),
-    );
-    register_test("debug_files/debug_files-upload-no-reprocessing.trycmd");
 }
