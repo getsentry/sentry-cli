@@ -56,7 +56,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let max_rows = std::cmp::min(
         issues.len(),
-        *matches.get_one("max_rows").unwrap_or(&std::usize::MAX),
+        *matches.get_one("max_rows").unwrap_or(&usize::MAX),
     );
 
     if let Some(issues) = issues.get(..max_rows) {

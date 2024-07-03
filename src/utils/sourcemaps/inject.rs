@@ -109,11 +109,9 @@ impl fmt::Display for InjectReport {
 /// Fixes up a minified JS source file with a debug id.
 ///
 /// This changes the source file in several ways:
-/// 1. The source code snippet
-/// `<CODE_SNIPPET>[<debug_id>]`
-/// is inserted at the earliest possible position, which is after an
-/// optional hashbang, followed by a
-/// block of comments, empty lines, and an optional `"use […]";` or `'use […]';` pragma.
+/// 1. The source code snippet `<CODE_SNIPPET>[<debug_id>]` is inserted at the earliest possible position,
+///    which is after an optional hashbang, followed by a block of comments, empty lines,
+///    and an optional `"use […]";` or `'use […]';` pragma.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
 ///
 /// This function returns a [`SourceMap`] that maps locations in the injected file
@@ -160,12 +158,10 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
 /// Fixes up a minified JS source file with a debug id without messing with mappings.
 ///
 /// This changes the source file in several ways:
-/// 1. The source code snippet
-/// `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
+/// 1. The source code snippet `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
-/// 3. The last source mapping comment (a comment starting with
-/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
-/// the very end of the file, after the debug id comment from 2.
+/// 3. The last source mapping comment (a comment starting with `//# sourceMappingURL=` or `//@ sourceMappingURL=`)
+///    is moved to the very end of the file, after the debug id comment from 2.
 ///
 /// This function is useful in cases where a source file's corresponding sourcemap is
 /// not available. In such a case, [`fixup_js_file`] might mess up the mappings by inserting

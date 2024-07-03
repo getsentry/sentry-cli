@@ -47,7 +47,7 @@ pub fn execute(_matches: &ArgMatches) -> Result<()> {
             .add(&organization.id)
             .add(&organization.name)
             .add(&organization.slug)
-            .add(&organization.date_created.format("%F"))
+            .add(organization.date_created.format("%F"))
             .add(organization.is_early_adopter)
             .add(organization.require_2fa);
     }
