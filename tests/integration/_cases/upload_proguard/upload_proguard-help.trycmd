@@ -31,12 +31,10 @@ Options:
       --quiet                        Do not print any output while preserving correct exit code.
                                      This flag is currently implemented only for selected
                                      subcommands. [aliases: silent]
-      --no-reprocessing              Do not trigger reprocessing after upload.
       --no-upload                    Disable the actual upload.
                                      This runs all steps for the processing but does not trigger the
-                                     upload (this also automatically disables reprocessing).  This
-                                     is useful if you just want to verify the mapping files and
-                                     write the proguard UUIDs into a properties file.
+                                     upload.  This is useful if you just want to verify the mapping
+                                     files and write the proguard UUIDs into a properties file.
       --write-properties <PATH>      Write the UUIDs for the processed mapping files into the given
                                      properties file.
       --require-one                  Requires at least one file to upload or the command will error.
