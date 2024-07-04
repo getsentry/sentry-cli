@@ -1,3 +1,5 @@
+#![allow(dead_code)] // `hash_algorithm` is never used
+
 use serde::Deserialize;
 
 use super::{ChunkCompression, ChunkHashAlgorithm, ChunkUploadCapability};
