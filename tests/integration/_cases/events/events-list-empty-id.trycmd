@@ -1,0 +1,6 @@
+```
+$ sentry-cli events list --org 123 --project 1234
+? success
+No events found
+
+```

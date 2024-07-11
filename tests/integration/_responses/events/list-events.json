@@ -1,0 +1,66 @@
+[
+  {
+    "id": "id1",
+    "event.type": "error",
+    "groupID": "1234",
+    "eventID": "12345612345612345612345612345612",
+    "projectID": "1",
+    "message": "Test Error Message",
+    "title": "Test Error Title",
+    "location": "location.py",
+    "culprit": "/culprit/",
+    "user": {
+      "id": null,
+      "email": null,
+      "username": null,
+      "ip_address": null,
+      "name": null,
+      "data": null
+    },
+    "tags": [
+      {
+        "key": "environment",
+        "value": "[rpf"
+      },
+      {
+        "key": "handled",
+        "value": "yes"
+      },
+      {
+        "key": "level",
+        "value": "error"
+      }
+    ],
+    "platform": "python",
+    "dateCreated": "2024-07-10T16:45:57Z",
+    "crashFile": null
+  },
+  {
+    "id": "id2",
+    "event.type": "error",
+    "groupID": "12345",
+    "eventID": "12345671234567123456712345671234",
+    "projectID": "1",
+    "message": "Test Error Message 2",
+    "title": "Test Error Title 2",
+    "location": "location.py",
+    "culprit": "/culprit/",
+    "user": {
+      "id": null,
+      "email": null,
+      "username": null,
+      "ip_address": null,
+      "name": null,
+      "data": null
+    },
+    "tags": [
+      {
+        "key": "environment",
+        "value": "prod"
+      }
+    ],
+    "platform": "python",
+    "dateCreated": "2024-07-11T16:45:57Z",
+    "crashFile": null
+  }
+]

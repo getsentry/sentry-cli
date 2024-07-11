@@ -24,8 +24,8 @@ pub fn make_command(mut command: Command) -> Command {
         .about("Manage events on Sentry.")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .org_arg()
-        .project_arg(true);
+        .org_arg_with_id()
+        .project_arg_with_id(true);
     each_subcommand!(add_subcommand);
     command
 }

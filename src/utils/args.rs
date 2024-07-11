@@ -76,7 +76,9 @@ pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
 
 pub trait ArgExt: Sized {
     fn org_arg(self) -> Self;
+    fn org_arg_with_id(self) -> Self;
     fn project_arg(self, multiple: bool) -> Self;
+    fn project_arg_with_id(self, multiple: bool) -> Self;
     fn release_arg(self) -> Self;
     fn version_arg(self, global: bool) -> Self;
 }
@@ -94,6 +96,19 @@ impl<'a: 'b, 'b> ArgExt for Command {
         )
     }
 
+    fn org_arg_with_id(self) -> Command {
+        self.arg(
+            Arg::new("org")
+                .value_name("ORG")
+                .long("org")
+                .short('o')
+                .value_parser(validate_org)
+                .global(true)
+                .help("The organization id or slug."),
+        )
+    }
+
+
     fn project_arg(self, multiple: bool) -> Command {
         self.arg(
             Arg::new("project")
@@ -108,6 +123,23 @@ impl<'a: 'b, 'b> ArgExt for Command {
                     ArgAction::Set
                 })
                 .help("The project slug."),
+        )
+    }
+
+    fn project_arg_with_id(self, multiple: bool) -> Command {
+        self.arg(
+            Arg::new("project")
+                .value_name("PROJECT")
+                .long("project")
+                .short('p')
+                .value_parser(validate_project)
+                .global(true)
+                .action(if multiple {
+                    ArgAction::Append
+                } else {
+                    ArgAction::Set
+                })
+                .help("The project id or slug."),
         )
     }
 
