@@ -21,16 +21,11 @@ fn doesnt_fail_with_empty_response() {
 #[test]
 fn doesnt_fail_with_empty_response_id() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
-            "GET",
-            "/api/0/projects/123/1234/events/?cursor=",
-            200,
-        )
-        .with_response_body("[]"),
+        EndpointOptions::new("GET", "/api/0/projects/123/1234/events/?cursor=", 200)
+            .with_response_body("[]"),
     );
     register_test("events/events-list-empty-id.trycmd");
 }
-
 
 #[test]
 fn command_events_list() {
@@ -48,12 +43,8 @@ fn command_events_list() {
 #[test]
 fn command_events_list_id() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
-            "GET",
-            "/api/0/projects/123/1234/events/?cursor=",
-            200,
-        )
-        .with_response_file("events/list-events.json"),
+        EndpointOptions::new("GET", "/api/0/projects/123/1234/events/?cursor=", 200)
+            .with_response_file("events/list-events.json"),
     );
     register_test("events/events-list-id.trycmd");
 }

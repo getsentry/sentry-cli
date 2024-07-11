@@ -108,7 +108,6 @@ impl<'a: 'b, 'b> ArgExt for Command {
         )
     }
 
-
     fn project_arg(self, multiple: bool) -> Command {
         self.arg(
             Arg::new("project")
