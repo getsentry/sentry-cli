@@ -27,7 +27,7 @@ clap = { version = "4.1.6", default-features = false, features = [
 ] }
 clap_complete = "4.4.3"
 console = "0.15.5"
-curl = { version = "0.4.44", features = ["static-curl", "static-ssl"] }
+curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
 dirs = "4.0.0"
 dotenv = "0.15.0"
 elementtree = "1.2.3"
