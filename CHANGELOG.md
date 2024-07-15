@@ -7,15 +7,7 @@
 ### Various fixes & improvements
 
 - build: Bump `curl` to `0.4.46` in `Cargo.toml` (#2099) by @szokeasaurusrex
-- Remove references/calls to legacy Reprocessing (#1998) by @Swatinem
-- Fix new clippy lints (#2096) by @Swatinem
-- ref(api): Move chunk data types to submodule (#2086) by @szokeasaurusrex
-- ref(api): Send events using EnvelopesApi instead of sentry-core (#2083) by @elramen
-- ref(api): Use EnvelopesApi instead of the sentry-core client (#2081) by @elramen
-- meta: Delete `stale.yml` workflow (#2076) by @szokeasaurusrex
 - build: Update `curl-sys` (#2075) by @szokeasaurusrex
-- docs: Clarify why we use `truncate(false)` (#2073) by @szokeasaurusrex
-- Split out progress bar logic from API (#2041) by @szokeasaurusrex
 
 ## 2.32.1
 
