@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.32.2
+
+### Various fixes & improvements
+
+- build: Bump `curl` to `0.4.46` in `Cargo.toml` (#2099) by @szokeasaurusrex
+- build: Update `curl-sys` (#2075) by @szokeasaurusrex
+
 ## 2.32.1
 
 Release performed for technical reasons. This release is identical to 2.32.0.
