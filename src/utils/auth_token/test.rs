@@ -67,10 +67,11 @@ fn test_valid_org_auth_token_missing_url() {
 
 // User auth token tests ----------------------------------------------------
 
-#[test]
-fn test_valid_user_auth_token() {
-    let good_token =
-        String::from("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30");
+#[rstest]
+#[case::no_prefix("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30")]
+#[case::with_prefix("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")]
+fn test_valid_user_auth_token(#[case] token_str: &'static str) {
+    let good_token = String::from(token_str);
 
     testing_logger::setup();
     let token = AuthToken::from(good_token.clone());
@@ -138,6 +139,11 @@ fn test_valid_user_auth_token() {
 #[case::invalid_hex("c66aee1348a6g7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30")]
 #[case::sixty_three_characters("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c3")]
 #[case::sixty_five_characters("c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c300")]
+#[case::prefix_only("sntryu_")]
+#[case::prefix_sixty_three_characters(
+    "sntryu_c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c3"
+)]
+#[case::wrong_prefix("sntryt_c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30")]
 fn test_unknown_auth_token(#[case] token_str: &'static str) {
     testing_logger::setup();
     let token = AuthToken::from(token_str.to_owned());
