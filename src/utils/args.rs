@@ -90,7 +90,7 @@ impl<'a: 'b, 'b> ArgExt for Command {
                 .short('o')
                 .value_parser(validate_org)
                 .global(true)
-                .help("The organization slug"),
+                .help("The organization id or slug."),
         )
     }
 
@@ -107,7 +107,7 @@ impl<'a: 'b, 'b> ArgExt for Command {
                 } else {
                     ArgAction::Set
                 })
-                .help("The project slug."),
+                .help("The project id or slug."),
         )
     }
 

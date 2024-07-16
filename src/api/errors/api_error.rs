@@ -24,7 +24,7 @@ pub(in crate::api) enum ApiErrorKind {
     OrganizationNotFound,
     #[error("resource not found")]
     ResourceNotFound,
-    #[error("Project not found. Please check that you entered the project and organization slugs correctly.")]
+    #[error("Project not found. Please check that you entered the project and organization ids or slugs correctly.")]
     ProjectNotFound,
     #[error("release not found")]
     ReleaseNotFound,
