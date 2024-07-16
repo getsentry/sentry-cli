@@ -28,7 +28,7 @@ Options:
           Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
 
   -p, --project <PROJECT>
-          The project id or slug..
+          The project id or slug.
 
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.

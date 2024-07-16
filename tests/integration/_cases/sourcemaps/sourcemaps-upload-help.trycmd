@@ -15,7 +15,7 @@ Options:
           Custom headers that should be attached to all requests
           in key:value format.
   -p, --project <PROJECT>
-          The project id or slug..
+          The project id or slug.
   -u, --url-prefix <PREFIX>
           The URL prefix to prepend to all filenames.
       --auth-token <AUTH_TOKEN>

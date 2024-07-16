@@ -14,7 +14,7 @@ Options:
       --finalize                 Immediately finalize the release. (sets it to released)
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
-  -p, --project <PROJECT>        The project id or slug..
+  -p, --project <PROJECT>        The project id or slug.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]

@@ -10,7 +10,7 @@ Options:
   -U, --show-user                Display the Users column.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
-  -p, --project <PROJECT>        The project id or slug..
+  -p, --project <PROJECT>        The project id or slug.
   -T, --show-tags                Display the Tags column.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
       --max-rows <MAX_ROWS>      Maximum number of rows to print.

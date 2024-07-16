@@ -14,7 +14,7 @@ Options:
   -o, --org <ORG>                The organization id or slug.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
-  -p, --project <PROJECT>        The project id or slug..
+  -p, --project <PROJECT>        The project id or slug.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
   -r, --release <RELEASE>        The release slug.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
