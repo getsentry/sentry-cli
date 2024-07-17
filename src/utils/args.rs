@@ -4,7 +4,10 @@ use clap::{Arg, ArgAction, Command};
 
 fn validate_org(v: &str) -> Result<String, String> {
     if v.contains('/') || v == "." || v == ".." || v.contains(' ') {
-        Err("Invalid value for organization. Use the URL slug and not the name!".to_string())
+        Err(
+            "Invalid value for organization. Use the URL slug or the ID and not the name!"
+                .to_string(),
+        )
     } else {
         Ok(v.to_owned())
     }
@@ -19,7 +22,7 @@ pub fn validate_project(v: &str) -> Result<String, String> {
         || v.contains('\t')
         || v.contains('\r')
     {
-        Err("Invalid value for project. Use the URL slug and not the name!".to_string())
+        Err("Invalid value for project. Use the URL slug or the ID and not the name!".to_string())
     } else {
         Ok(v.to_owned())
     }
@@ -90,7 +93,7 @@ impl<'a: 'b, 'b> ArgExt for Command {
                 .short('o')
                 .value_parser(validate_org)
                 .global(true)
-                .help("The organization slug"),
+                .help("The organization ID or slug."),
         )
     }
 
@@ -107,7 +110,7 @@ impl<'a: 'b, 'b> ArgExt for Command {
                 } else {
                     ArgAction::Set
                 })
-                .help("The project slug."),
+                .help("The project ID or slug."),
         )
     }
 

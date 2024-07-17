@@ -339,7 +339,7 @@ impl Config {
                 .get_from(Some("defaults"), "org")
                 .map(str::to_owned)
                 .ok_or_else(|| {
-                    format_err!("An organization slug is required (provide with --org)")
+                    format_err!("An organization ID or slug is required (provide with --org)")
                 }),
             (None, Some(cli_org)) => Ok(cli_org),
             (Some(token_org), None) => Ok(token_org.to_string()),
@@ -407,7 +407,7 @@ impl Config {
                     .get_from(Some("defaults"), "project")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| format_err!("A project slug is required (provide with --project)"))
+            .ok_or_else(|| format_err!("A project ID or slug is required (provide with --project)"))
     }
 
     /// Return the default pipeline env.

@@ -9,10 +9,10 @@ Arguments:
   [PATH]...  A path to search recursively for symbol files.
 
 Options:
-  -o, --org <ORG>                The organization slug
+  -o, --org <ORG>                The organization ID or slug.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
-  -p, --project <PROJECT>        The project slug.
+  -p, --project <PROJECT>        The project ID or slug.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
   -t, --type <TYPE>              Only consider debug information files of the given type.  By
                                  default, all types are considered. [possible values: bcsymbolmap,
