@@ -188,7 +188,7 @@ pub fn upload_chunks(
     // The upload is executed in parallel batches. Each batch aggregates objects
     // until it exceeds the maximum size configured in ChunkUploadOptions. We
     // keep track of the overall progress and potential errors. If an error
-    // ocurrs, all subsequent requests will be cancelled and the error returned.
+    // occurs, all subsequent requests will be cancelled and the error returned.
     // Otherwise, the after every successful update, the overall progress is
     // updated and rendered.
     let batches: Vec<_> = chunks

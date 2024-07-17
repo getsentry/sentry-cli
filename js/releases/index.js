@@ -141,8 +141,8 @@ class Releases {
    *   rewrite: false,            // preprocess sourcemaps before uploading
    *   sourceMapReference: true,  // add a source map reference to source files
    *   dedupe: true,              // deduplicate already uploaded files
-   *   stripPrefix: [],           // remove certain prefices from filenames
-   *   stripCommonPrefix: false,  // guess common prefices to remove from filenames
+   *   stripPrefix: [],           // remove certain prefixes from filenames
+   *   stripCommonPrefix: false,  // guess common prefixes to remove from filenames
    *   validate: false,           // validate source maps and cancel the upload on error
    *   urlPrefix: '',             // add a prefix source map urls after stripping them
    *   urlSuffix: '',             // add a suffix source map urls after stripping them
@@ -159,7 +159,7 @@ class Releases {
   async uploadSourceMaps(release, options) {
     if (!options || !options.include || !Array.isArray(options.include)) {
       throw new Error(
-        '`options.include` must be a vaild array of paths and/or path descriptor objects.'
+        '`options.include` must be a valid array of paths and/or path descriptor objects.'
       );
     }
 
@@ -246,7 +246,7 @@ class Releases {
    */
   async newDeploy(release, options) {
     if (!options || !options.env) {
-      throw new Error('options.env must be a vaild name');
+      throw new Error('options.env must be a valid name');
     }
     const args = ['releases', 'deploys', release, 'new'];
     return this.execute(helper.prepareCommand(args, DEPLOYS_SCHEMA, options), null);

@@ -407,7 +407,7 @@ impl<'a> DifSource<'a> {
     /// file name.
     fn get_relative_fs(base: &Path, path: &Path) -> Option<ByteView<'static>> {
         // Use parent() to get to the directory and then move relative from
-        // there. ByteView will internally cannonicalize the path and resolve
+        // there. ByteView will internally canonicalize the path and resolve
         // symlinks.
         base.parent()
             .and_then(|p| ByteView::open(p.join(path)).ok())
@@ -896,7 +896,7 @@ fn collect_object_dif<'a>(
 
         // Invoke logic to retrieve attachments specific to the kind
         // of object file. These are used for processing. Since only
-        // dSYMs equire processing currently, all other kinds are
+        // dSYMs require processing currently, all other kinds are
         // skipped.
         let attachments = match object.file_format() {
             FileFormat::MachO => find_uuid_plists(&object, &mut source),
