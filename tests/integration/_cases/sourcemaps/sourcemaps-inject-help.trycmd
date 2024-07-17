@@ -18,7 +18,7 @@ Options:
           Ignores all files and folders matching the given glob
 
   -o, --org <ORG>
-          The organization id or slug.
+          The organization ID or slug.
 
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
@@ -28,7 +28,7 @@ Options:
           Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
 
   -p, --project <PROJECT>
-          The project id or slug.
+          The project ID or slug.
 
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
