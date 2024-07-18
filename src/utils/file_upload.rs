@@ -118,7 +118,7 @@ pub struct SourceFile {
     pub path: PathBuf,
     pub contents: Vec<u8>,
     pub ty: SourceFileType,
-    /// A map of headers attatched to the source file.
+    /// A map of headers attached to the source file.
     ///
     /// Headers that `sentry-cli` knows about are
     /// * "debug-id" for a file's debug id
@@ -199,7 +199,7 @@ impl<'a> FileUpload<'a> {
         }
 
         // Do not permit uploads of more than 20k files if the server does not
-        // support artifact bundles.  This is a termporary downside protection to
+        // support artifact bundles.  This is a temporary downside protection to
         // protect users from uploading more sources than we support.
         if self.files.len() > 20_000 {
             bail!(

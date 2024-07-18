@@ -146,7 +146,7 @@ pub fn load_dotenv() -> DotenvResult<()> {
     }
     .map_or_else(
         |error| {
-            // We only propogate errors if the .env file was found and failed to load.
+            // We only propagate errors if the .env file was found and failed to load.
             if error.not_found() {
                 Ok(())
             } else {

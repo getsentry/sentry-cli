@@ -454,7 +454,7 @@ impl<'a> AuthenticatedApi<'a> {
         self.api.put(path, body)
     }
 
-    /// Convinience method to call self.api.request.
+    /// Convenience method to call self.api.request.
     fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         self.api.request(method, url, None)
     }
@@ -496,15 +496,15 @@ impl<'a> AuthenticatedApi<'a> {
                 )
             };
 
-            let mut checkums_qs = String::new();
+            let mut checksums_qs = String::new();
             for checksum in checksums.iter() {
-                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+                checksums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
             }
             // We have a 16kb buffer for reach request configured in nginx,
             // so do not even bother trying if it's too long.
             // (16_384 limit still leaves us with 384 bytes for the url itself).
-            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
-                path.push_str(&checkums_qs);
+            if !checksums_qs.is_empty() && checksums_qs.len() <= 16_000 {
+                path.push_str(&checksums_qs);
             }
 
             let resp = self.get(&path)?;

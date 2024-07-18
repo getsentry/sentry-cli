@@ -135,7 +135,7 @@ fn fetch_release_artifacts(org: &str, project: &str, release: &str) -> Result<Ve
 }
 
 // Try to find an artifact which matches the path part of the url extracted from the stacktrace frame,
-// prefixed with the default `~/`, which is a "glob-like" pattern for matchin any hostname.
+// prefixed with the default `~/`, which is a "glob-like" pattern for matching any hostname.
 fn find_matching_artifact(artifacts: &[Artifact], path: &str) -> Result<Artifact> {
     let full_match = artifacts.iter().find(|a| a.name == path);
     let partial_match = artifacts
@@ -348,7 +348,7 @@ fn resolve_sourcemap_url(abs_path: &str, sourcemap_location: &str) -> Result<Str
         .map_err(|e| e.into())
 }
 
-// Unify url to be prefixed with the default `~/`, which is a "glob-like" pattern for matchin any hostname.
+// Unify url to be prefixed with the default `~/`, which is a "glob-like" pattern for matching any hostname.
 //
 // We only need the `pathname` portion of the url, so if it's absolute, just extract it.
 // If it's relative however, parse any random url (example.com) and join it with our relative url,
