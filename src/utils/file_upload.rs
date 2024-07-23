@@ -9,13 +9,16 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Result};
 use console::style;
+use log::info;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
-use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
+use symbolic::debuginfo::sourcebundle::{
+    SourceBundleErrorKind, SourceBundleWriter, SourceFileInfo, SourceFileType,
+};
 use url::Url;
 
 use crate::api::NewRelease;
@@ -519,7 +522,17 @@ fn build_artifact_bundle(
         }
 
         let bundle_path = url_to_bundle_path(&file.url)?;
-        bundle.add_file(bundle_path, file.contents.as_slice(), info)?;
+        if let Err(e) = bundle.add_file(bundle_path, file.contents.as_slice(), info) {
+            if e.kind() == SourceBundleErrorKind::ReadFailed {
+                info!(
+                    "Skipping {} because it is not valid UTF-8.",
+                    file.path.display()
+                );
+                continue;
+            } else {
+                return Err(e.into());
+            }
+        }
     }
 
     bundle.finish()?;
@@ -673,7 +686,7 @@ mod tests {
         let hash = Sha1::from(buf);
         assert_eq!(
             hash.digest().to_string(),
-            "d38fb9915de70eec2aa2d0c380b344d89ef540f0"
+            "f0e25ae149b711c510148e022ebc883ad62c7c4c"
         );
     }
 }
