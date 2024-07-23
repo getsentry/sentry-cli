@@ -6,12 +6,12 @@
 
 ### Various fixes & improvements
 
-- build: Downgrade symbolic-debuginfo to 12.8.0 (#2108) by @szokeasaurusrex
+- Recognize new format user tokens (prefixed with `sntryu_`) (#2100) by @szokeasaurusrex
+- Fix regression in `files upload` (#2107)
 - docs: Fix typos (#2102) by @kianmeng
 - docs(id-support): Document that -p and -o arguments accept slugs and IDs (#2101) by @iamrajjoshi
 - chore(deps): bump tar from 6.1.13 to 6.2.1 (#2027) by @dependabot
 - build(deps): bump braces from 3.0.2 to 3.0.3 (#2088) by @dependabot
-- feat(auth): Recognize new format user tokens (#2100) by @szokeasaurusrex
 - build(deps): bump ws from 7.5.9 to 7.5.10 (#2091) by @dependabot
 
 ## 2.32.2
