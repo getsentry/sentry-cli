@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Result};
 use console::style;
+use log::info;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
@@ -523,8 +524,10 @@ fn build_artifact_bundle(
         let bundle_path = url_to_bundle_path(&file.url)?;
         if let Err(e) = bundle.add_file(bundle_path, file.contents.as_slice(), info) {
             if e.kind() == SourceBundleErrorKind::ReadFailed {
-                // This is a non-UTF8 file; it might be an asset which is not intended for inclusion in the
-                // sourcebundle. We silently skip it.
+                info!(
+                    "Skipping {} because it is not valid UTF-8.",
+                    file.path.display()
+                );
                 continue;
             } else {
                 return Err(e.into());
