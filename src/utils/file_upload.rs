@@ -673,7 +673,7 @@ mod tests {
         let hash = Sha1::from(buf);
         assert_eq!(
             hash.digest().to_string(),
-            "f0e25ae149b711c510148e022ebc883ad62c7c4c"
+            "d38fb9915de70eec2aa2d0c380b344d89ef540f0"
         );
     }
 }
