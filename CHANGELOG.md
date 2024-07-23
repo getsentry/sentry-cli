@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.33.0
+
+### Various fixes & improvements
+
+- Recognize new format user tokens (prefixed with `sntryu_`) (#2100) by @szokeasaurusrex
+- Fix regression in `files upload` (#2107)
+- docs: Fix typos (#2102) by @kianmeng
+- docs(id-support): Document that -p and -o arguments accept slugs and IDs (#2101) by @iamrajjoshi
+- chore(deps): bump tar from 6.1.13 to 6.2.1 (#2027) by @dependabot
+- build(deps): bump braces from 3.0.2 to 3.0.3 (#2088) by @dependabot
+- build(deps): bump ws from 7.5.9 to 7.5.10 (#2091) by @dependabot
+
 ## 2.32.2
 
 ### Various fixes & improvements
