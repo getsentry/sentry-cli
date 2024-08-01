@@ -1,8 +1,8 @@
 //! This module implements the root command of the CLI tool.
 
-use std::env;
 use std::io;
 use std::process;
+use std::{env, iter};
 
 use anyhow::{bail, Result};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
@@ -12,6 +12,7 @@ use log::{debug, info, set_logger, set_max_level, LevelFilter};
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
+use crate::utils::auth_token;
 use crate::utils::auth_token::AuthToken;
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
@@ -281,7 +282,15 @@ pub fn execute() -> Result<()> {
     info!(
         "sentry-cli was invoked with the following command line: {}",
         env::args()
-            .map(|a| format!("\"{a}\""))
+            // Check whether the previous argument is "--auth-token"
+            .zip(iter::once(false).chain(env::args().map(|arg| arg == "--auth-token")))
+            .map(|(a, is_auth_token_arg)| {
+                // Redact anything that comes after --auth-token or looks like a token
+                if is_auth_token_arg || auth_token::looks_like_auth_token(&a) {
+                    return String::from("(redacted)");
+                }
+                format!("\"{a}\"")
+            })
             .collect::<Vec<String>>()
             .join(" ")
     );

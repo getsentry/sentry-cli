@@ -1,7 +1,6 @@
-use super::{AuthTokenParseError, Result};
+use super::{AuthTokenParseError, Result, USER_TOKEN_PREFIX};
 
 const USER_TOKEN_BYTES: usize = 32;
-const USER_TOKEN_PREFIX: &str = "sntryu_";
 
 /// Represents a valid User Auth Token.
 #[derive(Debug, Clone)]
