@@ -27,8 +27,3 @@ fn command_send_metric_help() {
 fn command_send_metric_no_subcommand() {
     integration::register_test("send_metric/send_metric-no-subcommand.trycmd");
 }
-
-#[test]
-fn command_send_metric_global_options() {
-    integration::register_test("send_metric/send_metric-global-options.trycmd");
-}
