@@ -26,7 +26,7 @@ pub(in crate::api) enum ApiErrorKind {
     ResourceNotFound,
     #[error("Project not found. Please check that you entered the project and organization IDs or slugs correctly.")]
     ProjectNotFound,
-    #[error("release not found")]
+    #[error("Release not found. Ensure that you configured the correct release, project, and organization.")]
     ReleaseNotFound,
     #[error("chunk upload endpoint not supported by sentry server")]
     ChunkUploadNotSupported,
