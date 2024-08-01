@@ -24,6 +24,12 @@ impl AuthToken {
     fn as_str(&self) -> &str {
         self.0.as_str()
     }
+
+    /// Returns whether the auth token follows a recognized format. If this function returns false,
+    /// that indicates that the auth token might not be valid, since it failed our soft validation.
+    pub fn format_recognized(&self) -> bool {
+        !matches!(self.0, AuthTokenInner::Unknown(_))
+    }
 }
 
 impl From<String> for AuthToken {
@@ -72,9 +78,6 @@ impl AuthTokenInner {
         } else if let Ok(user_auth_token) = UserAuthToken::try_from(auth_string.clone()) {
             AuthTokenInner::User(user_auth_token)
         } else {
-            log::warn!(
-                "Unrecognized auth token format!\n\tHint: Did you copy your token correctly?"
-            );
             AuthTokenInner::Unknown(auth_string)
         }
     }

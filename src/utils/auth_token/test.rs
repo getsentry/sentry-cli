@@ -2,20 +2,6 @@
 
 use super::AuthToken;
 use rstest::rstest;
-use testing_logger::CapturedLog;
-
-/// Asserts that the logs vector is empty.
-#[allow(clippy::ptr_arg)] // This function signature is required by testing_logger
-fn assert_no_logs(logs: &Vec<CapturedLog>) {
-    assert!(logs.is_empty());
-}
-
-/// Asserts that the logs vector contains exactly one warning.
-#[allow(clippy::ptr_arg)] // This function signature is required by testing_logger
-fn assert_one_warning(logs: &Vec<CapturedLog>) {
-    assert_eq!(logs.len(), 1);
-    assert_eq!(logs[0].level, log::Level::Warn);
-}
 
 // Org auth token tests -----------------------------------------------------
 
@@ -28,7 +14,6 @@ fn test_valid_org_auth_token() {
             lQ5ETt61cHhvJa35fxvxARsDXeVrd0pu4/smF4sRieA",
     );
 
-    testing_logger::setup();
     let token = AuthToken::from(good_token.clone());
 
     assert!(token.payload().is_some());
@@ -39,7 +24,7 @@ fn test_valid_org_auth_token() {
 
     assert_eq!(good_token, token.to_string());
 
-    testing_logger::validate(assert_no_logs);
+    assert!(token.format_recognized());
 }
 
 #[test]
@@ -51,7 +36,6 @@ fn test_valid_org_auth_token_missing_url() {
             lQ5ETt61cHhvJa35fxvxARsDXeVrd0pu4/smF4sRieA",
     );
 
-    testing_logger::setup();
     let token = AuthToken::from(good_token.clone());
 
     assert!(token.payload().is_some());
@@ -62,7 +46,7 @@ fn test_valid_org_auth_token_missing_url() {
 
     assert_eq!(good_token, token.to_string());
 
-    testing_logger::validate(assert_no_logs);
+    assert!(token.format_recognized());
 }
 
 // User auth token tests ----------------------------------------------------
@@ -73,13 +57,12 @@ fn test_valid_org_auth_token_missing_url() {
 fn test_valid_user_auth_token(#[case] token_str: &'static str) {
     let good_token = String::from(token_str);
 
-    testing_logger::setup();
     let token = AuthToken::from(good_token.clone());
 
     assert!(token.payload().is_none());
     assert_eq!(good_token, token.to_string());
 
-    testing_logger::validate(assert_no_logs);
+    assert!(token.format_recognized());
 }
 
 // Unknown auth token tests -------------------------------------------------
@@ -145,11 +128,10 @@ fn test_valid_user_auth_token(#[case] token_str: &'static str) {
 )]
 #[case::wrong_prefix("sntryt_c66aee1348a6e7a0993145d71cf8fa529ed09ee13dd5177b5f692e9f6ca38c30")]
 fn test_unknown_auth_token(#[case] token_str: &'static str) {
-    testing_logger::setup();
     let token = AuthToken::from(token_str.to_owned());
 
     assert_eq!(token_str, token.to_string());
     assert!(token.payload().is_none());
 
-    testing_logger::validate(assert_one_warning);
+    assert!(!token.format_recognized());
 }

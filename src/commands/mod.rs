@@ -17,6 +17,7 @@ use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
+use crate::utils::value_parsers::auth_token_parser;
 
 mod derive_parser;
 
@@ -165,7 +166,7 @@ fn app() -> Command {
                 .value_name("AUTH_TOKEN")
                 .long("auth-token")
                 .global(true)
-                .value_parser(value_parser!(AuthToken))
+                .value_parser(auth_token_parser)
                 .help("Use the given Sentry auth token."),
         )
         .arg(

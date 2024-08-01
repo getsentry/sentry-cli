@@ -87,7 +87,6 @@ mockito = "0.31.1"
 predicates = "2.1.5"
 rstest = "0.18.2"
 tempfile = "3.8.1"
-testing_logger = "0.1.1"
 trycmd = "0.14.11"
 
 [features]

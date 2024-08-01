@@ -1,6 +1,6 @@
 use crate::utils::auth_token::AuthToken;
-use crate::utils::value_parsers::kv_parser;
-use clap::{command, value_parser, ArgAction::SetTrue, Parser, Subcommand};
+use crate::utils::value_parsers::{auth_token_parser, kv_parser};
+use clap::{command, ArgAction::SetTrue, Parser, Subcommand};
 
 use super::send_metric::SendMetricArgs;
 
@@ -13,7 +13,7 @@ pub(super) struct SentryCLI {
     #[arg(help = "Custom headers that should be attached to all requests{n}in key:value format")]
     pub(super) headers: Vec<(String, String)>,
 
-    #[arg(global=true, long, value_parser=value_parser!(AuthToken))]
+    #[arg(global=true, long, value_parser=auth_token_parser)]
     #[arg(help = "Use the given Sentry auth token")]
     pub(super) auth_token: Option<AuthToken>,
 
