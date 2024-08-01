@@ -37,6 +37,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use regex::{Captures, Regex};
+use secrecy::ExposeSecret;
 use sentry::protocol::{Exception, Values};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -1687,7 +1688,10 @@ impl ApiRequest {
             }
             Auth::Token(ref token) => {
                 debug!("using token authentication");
-                self.with_header("Authorization", &format!("Bearer {token}"))
+                self.with_header(
+                    "Authorization",
+                    &format!("Bearer {}", token.raw().expose_secret()),
+                )
             }
         }
     }
