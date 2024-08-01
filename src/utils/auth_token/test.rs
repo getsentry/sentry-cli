@@ -2,7 +2,7 @@
 
 use super::AuthToken;
 use rstest::rstest;
-
+use secrecy::ExposeSecret;
 // Org auth token tests -----------------------------------------------------
 
 #[test]
@@ -22,7 +22,7 @@ fn test_valid_org_auth_token() {
     assert_eq!(payload.org, "sentry");
     assert_eq!(payload.url, "http://localhost:8000");
 
-    assert_eq!(good_token, token.to_string());
+    assert_eq!(good_token, token.raw().expose_secret().clone());
 
     assert!(token.format_recognized());
 }
@@ -44,7 +44,7 @@ fn test_valid_org_auth_token_missing_url() {
     assert_eq!(payload.org, "sentry");
     assert!(payload.url.is_empty());
 
-    assert_eq!(good_token, token.to_string());
+    assert_eq!(good_token, token.raw().expose_secret().clone());
 
     assert!(token.format_recognized());
 }
@@ -60,7 +60,7 @@ fn test_valid_user_auth_token(#[case] token_str: &'static str) {
     let token = AuthToken::from(good_token.clone());
 
     assert!(token.payload().is_none());
-    assert_eq!(good_token, token.to_string());
+    assert_eq!(good_token, token.raw().expose_secret().clone());
 
     assert!(token.format_recognized());
 }
@@ -130,7 +130,7 @@ fn test_valid_user_auth_token(#[case] token_str: &'static str) {
 fn test_unknown_auth_token(#[case] token_str: &'static str) {
     let token = AuthToken::from(token_str.to_owned());
 
-    assert_eq!(token_str, token.to_string());
+    assert_eq!(token_str, token.raw().expose_secret().clone());
     assert!(token.payload().is_none());
 
     assert!(!token.format_recognized());

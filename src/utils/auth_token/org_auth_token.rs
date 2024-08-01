@@ -1,4 +1,5 @@
 use super::{AuthTokenParseError, Result, ORG_AUTH_TOKEN_PREFIX};
+use secrecy::SecretString;
 use serde::{Deserialize, Deserializer};
 
 const ORG_TOKEN_SECRET_BYTES: usize = 32;
@@ -6,7 +7,7 @@ const ORG_TOKEN_SECRET_BYTES: usize = 32;
 /// Represents a valid org auth token.
 #[derive(Debug, Clone)]
 pub struct OrgAuthToken {
-    auth_string: String,
+    auth_string: SecretString,
     pub payload: AuthTokenPayload,
 }
 
@@ -75,6 +76,8 @@ impl OrgAuthToken {
             return Err(AuthTokenParseError);
         }
 
+        let auth_string = auth_string.into();
+
         Ok(OrgAuthToken {
             auth_string,
             payload,
@@ -82,7 +85,7 @@ impl OrgAuthToken {
     }
 
     /// Retrieves a reference to the auth token string.
-    pub fn as_str(&self) -> &str {
+    pub fn raw(&self) -> &SecretString {
         &self.auth_string
     }
 }

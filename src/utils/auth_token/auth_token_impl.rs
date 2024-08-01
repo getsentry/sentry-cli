@@ -2,7 +2,7 @@
 
 use super::{AuthTokenPayload, ORG_AUTH_TOKEN_PREFIX, USER_TOKEN_PREFIX};
 use super::{OrgAuthToken, UserAuthToken};
-use std::fmt::{Display, Formatter, Result};
+use secrecy::SecretString;
 
 /// Represents a (soft) validated Sentry auth token.
 #[derive(Debug, Clone)]
@@ -21,8 +21,8 @@ impl AuthToken {
     }
 
     /// Retrieves a reference to the auth token string.
-    fn as_str(&self) -> &str {
-        self.0.as_str()
+    pub fn raw(&self) -> &SecretString {
+        self.0.raw()
     }
 
     /// Returns whether the auth token follows a recognized format. If this function returns false,
@@ -48,14 +48,6 @@ impl From<&str> for AuthToken {
     }
 }
 
-impl Display for AuthToken {
-    /// Displays the auth token string.
-    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
-        write!(f, "{}", self.as_str())?;
-        Ok(())
-    }
-}
-
 /// Inner representation of AuthToken type, containing all possible auth token types.
 #[derive(Debug, Clone)]
 enum AuthTokenInner {
@@ -66,7 +58,7 @@ enum AuthTokenInner {
     User(UserAuthToken),
 
     /// Represents an auth token that has an unrecognized format.
-    Unknown(String),
+    Unknown(SecretString),
 }
 
 impl AuthTokenInner {
@@ -78,7 +70,7 @@ impl AuthTokenInner {
         } else if let Ok(user_auth_token) = UserAuthToken::try_from(auth_string.clone()) {
             AuthTokenInner::User(user_auth_token)
         } else {
-            AuthTokenInner::Unknown(auth_string)
+            AuthTokenInner::Unknown(auth_string.into())
         }
     }
 
@@ -92,10 +84,10 @@ impl AuthTokenInner {
     }
 
     /// Retrieves a reference to the auth token string.
-    fn as_str(&self) -> &str {
+    fn raw(&self) -> &SecretString {
         match self {
-            AuthTokenInner::Org(ref org_auth_token) => org_auth_token.as_str(),
-            AuthTokenInner::User(user_auth_token) => user_auth_token.as_str(),
+            AuthTokenInner::Org(ref org_auth_token) => org_auth_token.raw(),
+            AuthTokenInner::User(user_auth_token) => user_auth_token.raw(),
             AuthTokenInner::Unknown(auth_string) => auth_string,
         }
     }

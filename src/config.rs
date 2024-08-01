@@ -12,6 +12,7 @@ use ini::Ini;
 use lazy_static::lazy_static;
 use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
+use secrecy::ExposeSecret;
 use sentry::types::Dsn;
 
 use crate::constants::CONFIG_INI_FILE_PATH;
@@ -181,8 +182,11 @@ impl Config {
                     self.cached_base_url = token_url.to_string();
                 }
 
-                self.ini
-                    .set_to(Some("auth"), "token".into(), val.to_string());
+                self.ini.set_to(
+                    Some("auth"),
+                    "token".into(),
+                    val.raw().expose_secret().clone(),
+                );
             }
             Some(Auth::Key(ref val)) => {
                 self.ini

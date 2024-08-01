@@ -1,10 +1,11 @@
 use super::{AuthTokenParseError, Result, USER_TOKEN_PREFIX};
+use secrecy::SecretString;
 
 const USER_TOKEN_BYTES: usize = 32;
 
 /// Represents a valid User Auth Token.
 #[derive(Debug, Clone)]
-pub struct UserAuthToken(String);
+pub struct UserAuthToken(SecretString);
 
 impl UserAuthToken {
     /// Constructs a new UserAuthToken from a string. Returns an error if the string is not a valid user auth token.
@@ -16,14 +17,14 @@ impl UserAuthToken {
         let bytes = data_encoding::HEXLOWER_PERMISSIVE.decode(secret_portion.as_bytes());
 
         if bytes.is_ok() && bytes.unwrap().len() == USER_TOKEN_BYTES {
-            Ok(UserAuthToken(auth_string))
+            Ok(UserAuthToken(auth_string.into()))
         } else {
             Err(AuthTokenParseError)
         }
     }
 
     /// Retrieves a reference to the auth token string.
-    pub fn as_str(&self) -> &str {
+    pub fn raw(&self) -> &SecretString {
         &self.0
     }
 }
