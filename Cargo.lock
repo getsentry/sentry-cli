@@ -1052,9 +1052,9 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
 name = "gimli"
-version = "0.30.0"
+version = "0.31.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e2e1d97fbe9722ba9bbd0c97051c2956e726562b61f86a25a4360398a40edfc9"
+checksum = "32085ea23f3234fc7846555e85283ba4de91e21016dc0455a16286d87a292d64"
 dependencies = [
  "fallible-iterator 0.3.0",
  "stable_deref_trait",
@@ -2785,9 +2785,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "symbolic"
-version = "12.9.2"
+version = "12.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85aabcf85c883278298596217d678c8d3ca256445d732eac59303ce04863c46f"
+checksum = "6d4e155af9f06f8b44963cdb05ad7c9884f424dc040f08adc5a1bb4960937d1d"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2797,9 +2797,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-common"
-version = "12.9.2"
+version = "12.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "71297dc3e250f7dbdf8adb99e235da783d690f5819fdeb4cce39d9cfb0aca9f1"
+checksum = "16629323a4ec5268ad23a575110a724ad4544aae623451de600c747bf87b36cf"
 dependencies = [
  "debugid",
  "memmap2",
@@ -2810,9 +2810,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "12.9.2"
+version = "12.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abdc791ca87a69a5d09913d87f1e5ac95229be414ec0ff6c0fe2ddff6199f3b6"
+checksum = "f629454e4787591257c96c6c7c676c17f792ef8290638699714152140580717d"
 dependencies = [
  "debugid",
  "dmsort",
@@ -2820,7 +2820,7 @@ dependencies = [
  "elsa",
  "fallible-iterator 0.3.0",
  "flate2",
- "gimli 0.30.0",
+ "gimli 0.31.0",
  "goblin",
  "lazy_static",
  "nom",
@@ -2837,15 +2837,15 @@ dependencies = [
  "symbolic-ppdb",
  "thiserror",
  "wasmparser",
- "zip 2.1.1",
+ "zip 2.1.6",
  "zstd 0.13.1",
 ]
 
 [[package]]
 name = "symbolic-il2cpp"
-version = "12.9.2"
+version = "12.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88cc2a0a415e3cb2dfb900f6f5b3abf5ccd356c236927b36b3d09046175acbde"
+checksum = "7c5cc3da426cd0a0ea91b3a0e722fda69377a23fa1601d7c55f3cc0533e02b9b"
 dependencies = [
  "indexmap",
  "serde_json",
@@ -2855,9 +2855,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-ppdb"
-version = "12.9.2"
+version = "12.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92ccffa1e6b313c007dddcc3a91166a64055a0a956e1429ee179a808fa3b2c62"
+checksum = "2c6eaa9dc4774d5e0a9df62a3145d814b3a9ebcbcf37e973bc51c57bcb9eacc7"
 dependencies = [
  "flate2",
  "indexmap",
@@ -2871,9 +2871,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-symcache"
-version = "12.9.2"
+version = "12.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cb772d8bea63f0cc1cbb0690bbd3d955a27746e380954d7e1a30e88d7aaecd5"
+checksum = "ee38ad1bcc90849a49d3c860e3e44331be798101a92e19a1e2a169384cbc6528"
 dependencies = [
  "indexmap",
  "symbolic-common",
@@ -3275,9 +3275,9 @@ checksum = "af190c94f2773fdb3729c55b007a722abb5384da03bc0986df4c289bf5567e96"
 
 [[package]]
 name = "wasmparser"
-version = "0.209.1"
+version = "0.214.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "07035cc9a9b41e62d3bb3a3815a66ab87c993c06fe1cf6b2a3f2a18499d937db"
+checksum = "5309c1090e3e84dad0d382f42064e9933fdaedb87e468cc239f0eabea73ddcb6"
 dependencies = [
  "ahash 0.8.11",
  "bitflags 2.6.0",
@@ -3624,9 +3624,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "2.1.1"
+version = "2.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dd56a4d5921bc2f99947ac5b3abe5f510b1be7376fdc5e9fce4a23c6a93e87c"
+checksum = "40dd8c92efc296286ce1fbd16657c5dbefff44f1b4ca01cc5f517d8b7b3d3e2e"
 dependencies = [
  "arbitrary",
  "crc32fast",
