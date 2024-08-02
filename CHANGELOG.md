@@ -4,19 +4,21 @@
 
 ## 2.33.1
 
-### Various fixes & improvements
+### Security fix
 
-- meta: Revert upload-artifact bump (#2110) (#2119) by @szokeasaurusrex
-- fix: Improve token redaction in CLI arg logging (#2118) by @szokeasaurusrex
+This release contains a fix for a bug where auth tokens would, under the following circumstances, be logged to `stdout`:
+  - The auth token was passed as a command line argument to Sentry CLI (via `--auth-token`)
+  - The log level was set to `info` or `debug`
+    - The default log level is `warn`, so users using the default log level were unaffected by this bug
+
+We now redact the `--auth-token` argument and anything else that looks like it might be an auth token when logging the arguments that the Sentry CLI was called with (see #2115 and #2118 for details).
+
+### Other fixes & improvements
+
 - ref(token): Use secrecy crate to store auth token (#2116) by @szokeasaurusrex
-- test(tokens): Add test to ensure tokens redacted (#2115) by @szokeasaurusrex
-- fix: Redact auth tokens when logging CLI args (#2115) by @szokeasaurusrex
-- test: Delete apparently-unnecessary test (#2114) by @szokeasaurusrex
-- ref(token): Separate validation warning from parsing (#2113) by @szokeasaurusrex
 - fix: Improve "project not found" message (#2112) by @szokeasaurusrex
 - fix: Improve "release not found" message (#2112) by @szokeasaurusrex
 - Fall back to co-location heuristic if sourcemap url appears remote (#1871) by @brettdh
-- all-repos: update actions/upload-artifact to v4 (#2110) by @joshuarli
 - fix(sourcebundle): Skip non-UTF8 files (#2109) by @loewenheim
 
 ## 2.33.0
