@@ -2,6 +2,23 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.33.1
+
+### Various fixes & improvements
+
+- meta: Revert upload-artifact bump (#2110) (#2119) by @szokeasaurusrex
+- fix: Improve token redaction in CLI arg logging (#2118) by @szokeasaurusrex
+- ref(token): Use secrecy crate to store auth token (#2116) by @szokeasaurusrex
+- test(tokens): Add test to ensure tokens redacted (#2115) by @szokeasaurusrex
+- fix: Redact auth tokens when logging CLI args (#2115) by @szokeasaurusrex
+- test: Delete apparently-unnecessary test (#2114) by @szokeasaurusrex
+- ref(token): Separate validation warning from parsing (#2113) by @szokeasaurusrex
+- fix: Improve "project not found" message (#2112) by @szokeasaurusrex
+- fix: Improve "release not found" message (#2112) by @szokeasaurusrex
+- Fall back to co-location heuristic if sourcemap url appears remote (#1871) by @brettdh
+- all-repos: update actions/upload-artifact to v4 (#2110) by @joshuarli
+- fix(sourcebundle): Skip non-UTF8 files (#2109) by @loewenheim
+
 ## 2.33.0
 
 ### Various fixes & improvements
