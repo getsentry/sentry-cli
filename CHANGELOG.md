@@ -2,6 +2,25 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.33.1
+
+### Security fix
+
+This release contains a fix for a bug where auth tokens would, under the following circumstances, be logged to `stdout`:
+  - The auth token was passed as a command line argument to Sentry CLI (via `--auth-token`)
+  - The log level was set to `info` or `debug`
+    - The default log level is `warn`, so users using the default log level were unaffected by this bug
+
+We now redact the `--auth-token` argument and anything else that looks like it might be an auth token when logging the arguments that the Sentry CLI was called with (see #2115 and #2118 for details).
+
+### Other fixes & improvements
+
+- ref(token): Use secrecy crate to store auth token (#2116) by @szokeasaurusrex
+- fix: Improve "project not found" message (#2112) by @szokeasaurusrex
+- fix: Improve "release not found" message (#2112) by @szokeasaurusrex
+- Fall back to co-location heuristic if sourcemap url appears remote (#1871) by @brettdh
+- fix(sourcebundle): Skip non-UTF8 files (#2109) by @loewenheim
+
 ## 2.33.0
 
 ### Various fixes & improvements
