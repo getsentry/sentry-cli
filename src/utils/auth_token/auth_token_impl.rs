@@ -1,6 +1,6 @@
 //! Defines the AuthToken type, which stores a Sentry auth token.
 
-use super::{AuthTokenPayload, ORG_AUTH_TOKEN_PREFIX, USER_TOKEN_PREFIX};
+use super::AuthTokenPayload;
 use super::{OrgAuthToken, UserAuthToken};
 use secrecy::SecretString;
 
@@ -91,13 +91,4 @@ impl AuthTokenInner {
             AuthTokenInner::Unknown(auth_string) => auth_string,
         }
     }
-}
-
-/// Returns whether a given string looks like it might be an auth token.
-/// Specifically, we say a string looks like an auth token when it starts with one of the auth
-/// token prefixes (sntrys_ or sntryu_) or passes the auth token soft validation.
-pub fn looks_like_auth_token(s: &str) -> bool {
-    s.starts_with(ORG_AUTH_TOKEN_PREFIX)
-        || s.starts_with(USER_TOKEN_PREFIX)
-        || AuthToken::from(s).format_recognized()
 }

@@ -240,3 +240,8 @@ pub fn assert_endpoints(mocks: &[Mock]) {
 pub fn token_redacted() {
     register_test("token-redacted.trycmd");
 }
+
+#[test]
+pub fn token_redacted_2() {
+    register_test("token-redacted-2.trycmd");
+}

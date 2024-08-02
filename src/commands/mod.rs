@@ -1,19 +1,18 @@
 //! This module implements the root command of the CLI tool.
 
-use std::io;
-use std::process;
-use std::{env, iter};
-
 use anyhow::{bail, Result};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
+use std::borrow::Cow;
+use std::io;
+use std::process;
+use std::{env, iter};
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
-use crate::utils::auth_token;
-use crate::utils::auth_token::AuthToken;
+use crate::utils::auth_token::{redact_token_from_string, AuthToken};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
@@ -82,6 +81,9 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "repos",
     "sourcemaps",
 ];
+
+/// The long auth token argument (--auth-token).
+const AUTH_TOKEN_ARG: &str = "auth-token";
 
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
@@ -165,7 +167,7 @@ fn app() -> Command {
         .arg(
             Arg::new("auth_token")
                 .value_name("AUTH_TOKEN")
-                .long("auth-token")
+                .long(AUTH_TOKEN_ARG)
                 .global(true)
                 .value_parser(auth_token_parser)
                 .help("Use the given Sentry auth token."),
@@ -283,15 +285,25 @@ pub fn execute() -> Result<()> {
         "sentry-cli was invoked with the following command line: {}",
         env::args()
             // Check whether the previous argument is "--auth-token"
-            .zip(iter::once(false).chain(env::args().map(|arg| arg == "--auth-token")))
+            .zip(
+                iter::once(false)
+                    .chain(env::args().map(|arg| arg == format!("--{AUTH_TOKEN_ARG}")))
+            )
             .map(|(a, is_auth_token_arg)| {
-                // Redact anything that comes after --auth-token or looks like a token
-                if is_auth_token_arg || auth_token::looks_like_auth_token(&a) {
-                    return String::from("(redacted)");
-                }
-                format!("\"{a}\"")
+                let redact_replacement = "[REDACTED]";
+
+                // Redact anything that comes after --auth-token
+                let redacted = if is_auth_token_arg {
+                    Cow::Borrowed(redact_replacement)
+                } else if a.starts_with(&format!("--{AUTH_TOKEN_ARG}=")) {
+                    Cow::Owned(format!("--{AUTH_TOKEN_ARG}={redact_replacement}"))
+                } else {
+                    redact_token_from_string(&a, redact_replacement)
+                };
+
+                format!("\"{redacted}\"")
             })
-            .collect::<Vec<String>>()
+            .collect::<Vec<_>>()
             .join(" ")
     );
 

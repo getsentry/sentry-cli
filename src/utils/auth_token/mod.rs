@@ -3,10 +3,12 @@
 mod auth_token_impl;
 mod error;
 mod org_auth_token;
+mod redacting;
 mod user_auth_token;
 
-pub use auth_token_impl::{looks_like_auth_token, AuthToken};
+pub use auth_token_impl::AuthToken;
 pub use org_auth_token::AuthTokenPayload;
+pub use redacting::redact_token_from_string;
 
 use error::{AuthTokenParseError, Result};
 use org_auth_token::OrgAuthToken;

@@ -3,7 +3,7 @@ $ sentry-cli sourcemaps upload --auth-token not-following-token-format -o asdf -
 ? failed
 [..]
 [..]
-[..]INFO[..] sentry-cli was invoked with the following command line: "[..]" "sourcemaps" "upload" "--auth-token" (redacted) "-o" "asdf" "-p" (redacted) "./" "--log-level=info"
+[..]INFO[..] sentry-cli was invoked with the following command line: "[..]" "sourcemaps" "upload" "--auth-token" "[REDACTED]" "-o" "asdf" "-p" "[REDACTED]" "./" "--log-level=info"
 ...
 
 ```
