@@ -1,9 +1,7 @@
 ```
 $ sentry-cli --auth-token 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 --url http://example.com sourcemaps upload test_path
 ? failed
-error: Two different url values supplied: `http://localhost:8000` (from token), `http://example.com`.
-
-Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
-Please attach the full debug log to all bug reports.
+[..]WARN[..] Using http://localhost:8000 (embedded in token) rather than manually-configured URL http://example.com. To use http://example.com, please provide an auth token for this URL.
+...
 
 ```
