@@ -120,7 +120,7 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     }
 
     if let Some(url) = matches.get_one::<String>("url") {
-        config.set_base_url(url)?;
+        config.set_base_url(url);
     }
 
     if let Some(headers) = matches.get_many::<String>("headers") {

@@ -71,13 +71,16 @@ impl Config {
             .map(|td| td.url.as_str())
             .unwrap_or_default();
 
-        let url = match (default_url.as_str(), token_url) {
-            (_, "") => default_url,
-            _ if default_url == token_url => default_url,
-            (DEFAULT_URL | "", _) => String::from(token_url),
-            _ => bail!(
-                "Two different url values supplied: `{token_url}` (from token), `{default_url}`."
-            ),
+        let url = if token_url.is_empty() {
+            default_url
+        } else {
+            if !default_url.is_empty() {
+                log::warn!(
+                    "Using {token_url} (embedded in token) rather than manually-configured URL {default_url}. \
+                    To use {default_url}, please provide an auth token for this URL."
+                );
+            }
+            token_url.into()
         };
 
         Ok(Config {
@@ -211,7 +214,7 @@ impl Config {
     }
 
     /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) -> Result<()> {
+    pub fn set_base_url(&mut self, url: &str) {
         let token_url = self
             .cached_token_data
             .as_ref()
@@ -219,13 +222,15 @@ impl Config {
             .unwrap_or_default();
 
         if !token_url.is_empty() && url != token_url {
-            bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
+            log::warn!(
+                "Using {token_url} (embedded in token) rather than manually-configured URL {url}. \
+                To use {url}, please provide an auth token for this URL."
+            );
+        } else {
+            url.clone_into(&mut self.cached_base_url);
+            self.ini
+                .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
         }
-
-        url.clone_into(&mut self.cached_base_url);
-        self.ini
-            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
-        Ok(())
     }
 
     /// Sets headers that should be attached to all requests
