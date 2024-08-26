@@ -95,7 +95,6 @@ fn preexecute_hooks() -> Result<bool> {
     #[cfg(target_os = "macos")]
     fn sentry_react_native_xcode_wrap() -> Result<bool> {
         if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
-            env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
             if &val == "1" {
                 crate::commands::react_native::xcode::wrap_call()?;
                 return Ok(true);
