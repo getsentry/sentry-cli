@@ -7,6 +7,7 @@
 ### Various fixes & improvements
 
 - build: Bump symbolic to `12.10.1` (#2134) by @szokeasaurusrex
+  - This includes an upstream bugfix for a bug that prevented debug file uploading with sources when any of the sources were not valid UTF-8.
 - fix(debugIds): Always instantiate global `Error` class in debugId injection snippet (#2132) by @Lms24
 
 ## 2.34.0
