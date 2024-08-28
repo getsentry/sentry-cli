@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.34.0
+
+### Various fixes & improvements
+
+- fix(react-native): Fix RN 0.75 node binary build fail (#2131) by @krystofwoldrich
+- feat: Prefer org auth token URL over manually provided URL (#2122) by @szokeasaurusrex
+- meta: Update version pin README.md (#2123) by @szokeasaurusrex
+- build: Update symbolic dependency to 12.10.0 (#2120) by @trzeciak
+
 ## 2.33.1
 
 ### Security fix
