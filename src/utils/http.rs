@@ -7,6 +7,7 @@ use regex::Regex;
 pub const HTTP_STATUS_502_BAD_GATEWAY: u32 = 502;
 pub const HTTP_STATUS_503_SERVICE_UNAVAILABLE: u32 = 503;
 pub const HTTP_STATUS_504_GATEWAY_TIMEOUT: u32 = 504;
+pub const HTTP_STATUS_507_INSUFFICIENT_STORAGE: u32 = 507;
 
 lazy_static! {
     static ref LINK_TOKEN_RE: Regex = Regex::new(
