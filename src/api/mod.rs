@@ -1411,6 +1411,15 @@ impl<'a> RegionSpecificApi<'a> {
         form.part("file").file(file).add()?;
         self.request(Method::Post, &path)?
             .with_form_data(form)?
+            .with_retry(
+                self.api.api.config.get_max_retry_count().map_err(|e| {
+                    ApiError::with_source(
+                        ApiErrorKind::ErrorPreparingRequest,
+                        e.context("Could not parse retry count"),
+                    )
+                })?,
+                &[http::HTTP_STATUS_507_INSUFFICIENT_STORAGE],
+            )?
             .progress_bar_mode(ProgressBarMode::Request)?
             .send()?
             .convert()

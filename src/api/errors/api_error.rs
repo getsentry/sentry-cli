@@ -44,6 +44,8 @@ pub(in crate::api) enum ApiErrorKind {
         "DSN missing. Please set the `SENTRY_DSN` environment variable to your project's DSN."
     )]
     DsnMissing,
+    #[error("Error preparing request")]
+    ErrorPreparingRequest,
 }
 
 impl fmt::Display for ApiError {
