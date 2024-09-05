@@ -65,21 +65,16 @@ impl Config {
             _ => None, // get_default_auth never returns Auth::Token variant
         };
 
-        let default_url = get_default_url(&ini);
+        let manually_configured_url = configured_url(&ini);
         let token_url = token_embedded_data
             .as_ref()
             .map(|td| td.url.as_str())
             .unwrap_or_default();
 
         let url = if token_url.is_empty() {
-            default_url
+            manually_configured_url.unwrap_or_else(|| DEFAULT_URL.to_string())
         } else {
-            if !default_url.is_empty() {
-                log::warn!(
-                    "Using {token_url} (embedded in token) rather than manually-configured URL {default_url}. \
-                    To use {default_url}, please provide an auth token for this URL."
-                );
-            }
+            warn_about_conflicting_urls(token_url, manually_configured_url.as_deref());
             token_url.into()
         };
 
@@ -535,6 +530,18 @@ impl Config {
     }
 }
 
+fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<&str>) {
+    if let Some(manually_configured_url) = manually_configured_url {
+        if manually_configured_url != token_url {
+            warn!(
+                "Using {token_url} (embedded in token) rather than manually-configured URL \
+                {manually_configured_url}. To use {manually_configured_url}, please provide an  \
+                auth token for {manually_configured_url}."
+            );
+        }
+    }
+}
+
 fn find_global_config_file() -> Result<PathBuf> {
     let home_dir_file = dirs::home_dir().map(|p| p.join(CONFIG_RC_FILE_NAME));
     let config_dir_file = dirs::config_dir().map(|p| p.join(CONFIG_INI_FILE_PATH));
@@ -694,14 +701,13 @@ fn get_default_auth(ini: &Ini) -> Option<Auth> {
     }
 }
 
-fn get_default_url(ini: &Ini) -> String {
-    if let Ok(val) = env::var("SENTRY_URL") {
-        val
-    } else if let Some(val) = ini.get_from(Some("defaults"), "url") {
-        val.to_owned()
-    } else {
-        DEFAULT_URL.to_owned()
-    }
+/// Returns the URL configured in the SENTRY_URL environment variable or provided ini (in that
+/// order of precedence), or returns None if neither is set.
+fn configured_url(ini: &Ini) -> Option<String> {
+    env::var("SENTRY_URL").ok().or_else(|| {
+        ini.get_from(Some("defaults"), "url")
+            .map(|url| url.to_owned())
+    })
 }
 
 fn get_default_headers(ini: &Ini) -> Option<Vec<String>> {
