@@ -6,7 +6,6 @@
 
 ### Various fixes & improvements
 
-- ci: Downgrade to `actions/download-artifact@v3` (#2144) by @szokeasaurusrex
 - fix: Only warn about mismatched URLs when they are different (#2143) by @szokeasaurusrex
 - feat(proguard): Retry `upload-proguard` on 507 status (#2141) by @szokeasaurusrex
 
@@ -15,7 +14,8 @@
 ### Various fixes & improvements
 
 - build: Bump symbolic to `12.10.1` (#2134) by @szokeasaurusrex
-  - This includes an upstream bugfix for a bug that prevented debug file uploading with sources when any of the sources were not valid UTF-8.
+    - This includes an upstream bugfix for a bug that prevented debug file uploading with sources when any of the
+      sources were not valid UTF-8.
 - fix(debugIds): Always instantiate global `Error` class in debugId injection snippet (#2132) by @Lms24
 
 ## 2.34.0
@@ -32,11 +32,13 @@
 ### Security fix
 
 This release contains a fix for a bug where auth tokens would, under the following circumstances, be logged to `stdout`:
-  - The auth token was passed as a command line argument to Sentry CLI (via `--auth-token`)
-  - The log level was set to `info` or `debug`
+
+- The auth token was passed as a command line argument to Sentry CLI (via `--auth-token`)
+- The log level was set to `info` or `debug`
     - The default log level is `warn`, so users using the default log level were unaffected by this bug
 
-We now redact the `--auth-token` argument and anything else that looks like it might be an auth token when logging the arguments that the Sentry CLI was called with (see #2115 and #2118 for details).
+We now redact the `--auth-token` argument and anything else that looks like it might be an auth token when logging the
+arguments that the Sentry CLI was called with (see #2115 and #2118 for details).
 
 ### Other fixes & improvements
 
@@ -94,7 +96,9 @@ Release performed for technical reasons. This release is identical to 2.32.0.
 
 ## 2.31.0
 
-With this change, dSYM uploads to the legacy endpoint and release file uploads are routed to the region URL directly (e.g. to https://us.sentry.io instead of https://sentry.io). This change only affects users using the CLI to interact with SaaS Sentry; everything stays the same for self-hosted users.
+With this change, dSYM uploads to the legacy endpoint and release file uploads are routed to the region URL directly (
+e.g. to https://us.sentry.io instead of https://sentry.io). This change only affects users using the CLI to interact
+with SaaS Sentry; everything stays the same for self-hosted users.
 
 ### Other changes
 
@@ -112,7 +116,7 @@ Release made for technical reasons. There are no code changes in this version.
 
 ### Various fixes & improvements
 
- - fix: Handle .env errors (#1987) by @szokeasaurusrex
+- fix: Handle .env errors (#1987) by @szokeasaurusrex
 
 ## 2.30.2
 
@@ -128,24 +132,37 @@ This release re-enables Python releases. There are no code changes.
 
 ### Cron Monitor Changes
 
-The `monitors run` subcommand now no longer accepts `--auth-token` or other means of authentication using token-based auth. It is now required to use DSN based auth to monitor cron jobs using the sentry-cli.
+The `monitors run` subcommand now no longer accepts `--auth-token` or other means of authentication using token-based
+auth. It is now required to use DSN based auth to monitor cron jobs using the sentry-cli.
 
 ## 2.29.1
 
 Updated version 2.29.0 changelog. No code changes.
 
 ## 2.29.0
+
 ### Source maps fixes
-This release fixes the behavior of `sourcemaps inject` and `sourcemaps upload`. We now treat minified and non-minified source files the same way in both commands, which was always the desired behavior, and is also consistent with our JS bundler plugins.
 
-**Please be aware that from now on, `sourcemaps inject` will inject debug IDs into all JS source files at the path provided to the command.** If you only wish for some of the files to have debug IDs injected, you need to modify the path(s) passed to `sourcemaps inject` or you need to use the `--ignore` or `--ignore-file` options to exclude the files you do not wish to inject the debug IDs into.
+This release fixes the behavior of `sourcemaps inject` and `sourcemaps upload`. We now treat minified and non-minified
+source files the same way in both commands, which was always the desired behavior, and is also consistent with our JS
+bundler plugins.
 
-In the `sourcemaps upload` command, we have eliminated the "Minified Scripts" section in the Source Maps Upload Report. Instead, these minified scripts will appear under "Scripts."
+**Please be aware that from now on, `sourcemaps inject` will inject debug IDs into all JS source files at the path
+provided to the command.** If you only wish for some of the files to have debug IDs injected, you need to modify the
+path(s) passed to `sourcemaps inject` or you need to use the `--ignore` or `--ignore-file` options to exclude the files
+you do not wish to inject the debug IDs into.
+
+In the `sourcemaps upload` command, we have eliminated the "Minified Scripts" section in the Source Maps Upload Report.
+Instead, these minified scripts will appear under "Scripts."
 
 ### Auth token validation
-Sentry CLI now validates that you have provided an auth token whenever you run a command that requires authentication to succeed. If you fail to provide an auth token when running such a command, the Sentry CLI will exit with an error message explaining that the auth token is required but missing.
+
+Sentry CLI now validates that you have provided an auth token whenever you run a command that requires authentication to
+succeed. If you fail to provide an auth token when running such a command, the Sentry CLI will exit with an error
+message explaining that the auth token is required but missing.
 
 ### Other fixes & improvements
+
 - fix(sourcemaps): Add `.cjs` and `.mjs` to default `sourcemaps upload` extensions (#1961) by @szokeasaurusrex
 - fix(xcode): Only parse Plist when required during RN source maps upload (#1940) by @krystofwoldrich
 - fix(files): Fail when deleting all files fails with 404 error (#1949) by @szokeasaurusrex
@@ -160,13 +177,18 @@ Sentry CLI now validates that you have provided an auth token whenever you run a
 ## 2.28.5
 
 ### Various fixes & improvements
+
 - fix(deploys): Use `--project` argument (#1930) by @szokeasaurusrex
 
 ## 2.28.0
 
 ### New features
+
 - New cron monitor configuration options (#1922) by @szokeasaurusrex
-  - The `sentry-cli monitors run` command now has two new command line arguments: `--failure-issue-threshold` and `--recovery-threshold`. These arguments allow the user to specify the number of consecutive failed checkins that trigger an issue to be created and the number of successful checkins that trigger the issue to be resolved, respectively.
+    - The `sentry-cli monitors run` command now has two new command line arguments: `--failure-issue-threshold` and
+      `--recovery-threshold`. These arguments allow the user to specify the number of consecutive failed checkins that
+      trigger an issue to be created and the number of successful checkins that trigger the issue to be resolved,
+      respectively.
 
 ### Various fixes & improvements
 
@@ -175,11 +197,14 @@ Sentry CLI now validates that you have provided an auth token whenever you run a
 ## 2.27.0
 
 ### Improvements
+
 - Prefer `--url` argument over empty auth token URL (#1914) by @szokeasaurusrex
 - feat(xcode): Print redirected output file path when going to the background (#1920) by @krystofwoldrich
 
 ### Fixes
-- Correct error message for querying events/issues on non-existing project. The message now states that the project could not be found, instead of stating that the organization could not be found. (#1916) by @szokeasaurusrex
+
+- Correct error message for querying events/issues on non-existing project. The message now states that the project
+  could not be found, instead of stating that the organization could not be found. (#1916) by @szokeasaurusrex
 
 ### Other
 
@@ -204,7 +229,7 @@ Sentry CLI now validates that you have provided an auth token whenever you run a
 ## 2.25.1
 
 - fix: Upload Xcode debug files and source maps background upload (#1896) by @krystofwoldrich
-  - revert: Fixed a `curl` issue on Windows (#1815) by @xpirt
+    - revert: Fixed a `curl` issue on Windows (#1815) by @xpirt
 
 ## 2.25.0
 
@@ -216,7 +241,8 @@ Sentry CLI now validates that you have provided an auth token whenever you run a
 
 ### Various fixes & improvements
 
-- Revert #1885, which was causing an [error in the `sentry-cli login` command](https://github.com/getsentry/sentry-cli/issues/1888) (#1889) by @szokeasaurusrex
+- Revert #1885, which was causing an [error in the
+  `sentry-cli login` command](https://github.com/getsentry/sentry-cli/issues/1888) (#1889) by @szokeasaurusrex
 
 ## 2.24.0
 
@@ -318,8 +344,10 @@ This release contains no changes and was done for technical purposes.
 
 - feat: `login` now opens the org auth token creation page (#1737) by @loewenheim
 - feat: Debug IDs are now supported in Hermes bundles (#1667) by @krystofwoldrich
-- feat: The root sourcemap for RAM bundles is now uploaded, improving support for preloaded modules (#1743) by @krystofwoldrich
-- feat: Commands with a `--wait` flag now also have a `--wait-for <SECS>` option that additionally puts a limit on the wait time. (#1748) by @loewenheim
+- feat: The root sourcemap for RAM bundles is now uploaded, improving support for preloaded modules (#1743) by
+  @krystofwoldrich
+- feat: Commands with a `--wait` flag now also have a `--wait-for <SECS>` option that additionally puts a limit on the
+  wait time. (#1748) by @loewenheim
 - deps: `symbolic` updated to 12.4.1 (#1749) by @loewenheim
 
 ## 2.20.7
@@ -453,7 +481,8 @@ This release contains no changes and was done for technical purposes.
 ### Various fixes & improvements
 
 - feat(js): Skip null as option same as undefined (#1579) by @mitsuhiko
-- Add command `sentry-cli debug-files bundle-jvm` for bundling Java (and other JVM based languages) sources (#1551) by @adinauer
+- Add command `sentry-cli debug-files bundle-jvm` for bundling Java (and other JVM based languages) sources (#1551) by
+  @adinauer
 
 ## 2.17.2
 
@@ -521,7 +550,8 @@ This release contains no changes and was done for technical purposes.
 - feat: Implement new chunk based upload for standalone artifact bundles (#1490)
 - feat: Inject sourcemap debug ids by default when performing `sourcemaps upload` and print injection report (#1513)
 - ref: Use recursive walk instead of globbing when looking for `sourcemaps inject` files (#1504)
-- ref: When injecting sourcemap debug ids, make sure that `sourceMappingURL` comment is always kept at the end of a file (#1511)
+- ref: When injecting sourcemap debug ids, make sure that `sourceMappingURL` comment is always kept at the end of a
+  file (#1511)
 
 ## 2.14.4
 
@@ -704,7 +734,8 @@ This release contains no changes and was done for technical purposes.
 
 _Problem statement:_
 
-Uploading source maps is a common source of frustration. Source maps are also one of the great value adds to our in product experience. We want to automate supporting customers with frequent issues.
+Uploading source maps is a common source of frustration. Source maps are also one of the great value adds to our in
+product experience. We want to automate supporting customers with frequent issues.
 
 https://docs.sentry.io/platforms/javascript/sourcemaps/troubleshooting_js/
 
@@ -712,7 +743,8 @@ _Outcome: _
 
 Developers will be provided with a tool to help them discover any issues they may have when uploading source maps
 
-Sentry support will have a tool and docs to suggest to customers to hopefully first discover issues, and second at least know what their problem is NOT.
+Sentry support will have a tool and docs to suggest to customers to hopefully first discover issues, and second at least
+know what their problem is NOT.
 
 _Key measurements:_
 
@@ -729,7 +761,7 @@ This is something users would run locally so I do not think we can track usage e
 - Verify your source maps are built correctly
 - Verify your source maps work locally
 - Verify your source files are not too large
-  - this is a fuzzy requirement today in sentry
+    - this is a fuzzy requirement today in sentry
 - Verify artifacts are not gzipped
 - Verify workers are sharing the same volume as web (if running self-hosted Sentry via Docker)
 - Should spit out an easily readable and easily copy and paste - to put into ZenDesk or elsewhere for support colleagues
@@ -741,15 +773,15 @@ https://github.com/getsentry/rust-sourcemap/tree/master/cli
 - In sentry error incorrect source map location
 - this helps when producing sourcemaps locally then line and column
 - this verify that it resolves locally
-  - if yes then it is a problem in between on sentry server side or upload
-  - 1st Verifies what you upload to sentry is exactly what you upload to sentry
-  - 2nd step from “y-tho” ensure previous steps are not for waste
+    - if yes then it is a problem in between on sentry server side or upload
+    - 1st Verifies what you upload to sentry is exactly what you upload to sentry
+    - 2nd step from “y-tho” ensure previous steps are not for waste
 - What is being automated?
-  - on release page you have your files (release artificats)
-    - download
-    - manually check the line number matches the error
-    - if correct then data is correct
-    - then you know an error with cli and not with the source maps that were uploaded
+    - on release page you have your files (release artificats)
+        - download
+        - manually check the line number matches the error
+        - if correct then data is correct
+        - then you know an error with cli and not with the source maps that were uploaded
 
 By: @kamilogorek (#1235)
 
@@ -798,8 +830,10 @@ By: @kamilogorek (#1235)
 This is the first, long-overdue major release in over 5 years of sentry-cli's life.
 Some APIs were removed, some reworked, some newly added.
 
-Most of introduced API changes are backward compatible through hidden aliases, so there is no immediate need for users developing 3rd party tools to make all the changes immediatelly.
-We do however encourage everyone to do it sooner or later, as deprecated items will be removed in the next major releases.
+Most of introduced API changes are backward compatible through hidden aliases, so there is no immediate need for users
+developing 3rd party tools to make all the changes immediatelly.
+We do however encourage everyone to do it sooner or later, as deprecated items will be removed in the next major
+releases.
 
 Breaking changes are denotated with _(breaking)_ tag, and appropriate required changes are provided for each entry.
 
@@ -810,29 +844,39 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 - feat: Add `files` command, which was extracted from `releases files` subcommand.
 - feat: Add `sourcemaps upload` command, which was extracted from `releases files upload-sourcemaps` subcommand.
 - feat: Add `sourcemaps resolve` command.
-- feat: Allow for specifying global `--header` argument, which supports multiple occurences, to configure outgoing requests
-- feat: Implement global `--quiet`/`--silent` flags to allow silencing `stdout` output (This flag is currently implemented only for selected subcommands)
+- feat: Allow for specifying global `--header` argument, which supports multiple occurences, to configure outgoing
+  requests
+- feat: Implement global `--quiet`/`--silent` flags to allow silencing `stdout` output (This flag is currently
+  implemented only for selected subcommands)
 
 ### Removed APIs
 
 - ref: Remove `react-native codepush` subcommand (use `react-native appcenter` instead) _(breaking)_
-- ref: Remove `react-native-gradle` and `react-native-xcode` commands (use `react-native gradle` and `react-native xcode` instead) _(breaking)_
+- ref: Remove `react-native-gradle` and `react-native-xcode` commands (use `react-native gradle` and
+  `react-native xcode` instead) _(breaking)_
 - ref: Remove `crash_reporting` related code and `with_crash_reporting` crate feature (no required changes) _(breaking)_
-- ref: Remove `SENTRY_NO_PROGRESS_BAR` env var in favor of `SENTRYCLI_NO_PROGRESS_BAR` (rename env variable) _(breaking)_
+- ref: Remove `SENTRY_NO_PROGRESS_BAR` env var in favor of `SENTRYCLI_NO_PROGRESS_BAR` (rename env variable) _(
+  breaking)_
 - ref: Hide `difutil id` subcommand (use `debug-files check` instead)
 - ref: Hide `upload-dsym` command (use `debug-files upload` instead)
 - ref: Make `releases upload-sourcemaps --rewrite` a default behavior now
-- ~ref: Remove `upload-dsym` command (use `debug-files upload` instead) _(breaking)_~ _restored in 2.0.2 as hidden alias_
-- ~ref: Remove `difutil id` subcommand (use `debug-files check` instead) _(breaking)_~ _restored in 2.0.2 as hidden alias_
-- ~ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_~ - _restored in 2.0.3 as hidden command_
-- ~ref: Remove `bash-hook` command (use `1.x` if you still need the functionality) _(breaking)_~ - _restored in 2.0.3 as hidden command_
+- ~ref: Remove `upload-dsym` command (use `debug-files upload` instead) _(breaking)_~ _restored in 2.0.2 as hidden
+  alias_
+- ~ref: Remove `difutil id` subcommand (use `debug-files check` instead) _(breaking)_~ _restored in 2.0.2 as hidden
+  alias_
+- ~ref: Remove `monitors` command (support for this feature has been dropped) _(breaking)_~ - _restored in 2.0.3 as
+  hidden command_
+- ~ref: Remove `bash-hook` command (use `1.x` if you still need the functionality) _(breaking)_~ - _restored in 2.0.3 as
+  hidden command_
 
 ### Breaking Changes
 
 - ref: Update minimal required `node` version to `v12` (update node version) _(breaking)_
 - ref: Rename `--header` argument of `releases files upload` command to `--file-header` (rename flag) _(breaking)_
-- ref: Rename `CUSTOM_HEADER` to `SENTRY_HEADER` and `defaults.custom_header` to `http.header` (rename env variable or update config file) _(breaking)_
-- ref: Make `ignore-empty` for `releases set-commits` a default behavior and hide `--ignore-empty` flag (remove `--ignore-empty` usage) _(breaking)_
+- ref: Rename `CUSTOM_HEADER` to `SENTRY_HEADER` and `defaults.custom_header` to `http.header` (rename env variable or
+  update config file) _(breaking)_
+- ref: Make `ignore-empty` for `releases set-commits` a default behavior and hide `--ignore-empty` flag (remove
+  `--ignore-empty` usage) _(breaking)_
 
 ### Various fixes & improvements
 
@@ -979,7 +1023,8 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 
 ## sentry-cli 1.67.0
 
-- feat: Add `--ignore-empty` flag to `releases set-commit` command, that will not bail command when no patchset is created (#993)
+- feat: Add `--ignore-empty` flag to `releases set-commit` command, that will not bail command when no patchset is
+  created (#993)
 - feat: Add `--raw` and `--delimiter` flags to `releases list` command (#994)
 
 ## sentry-cli 1.66.0
@@ -1041,9 +1086,11 @@ Breaking changes are denotated with _(breaking)_ tag, and appropriate required c
 - fix: Add missing underscores for template in bash hook (#872)
 - feat: macOS builds for `arm64` and universal binaries (#873)
 
-Sentry-cli will not upgrade to the `arm64` build automatically, if you're currently running on Rosetta 2. To install the `arm64` version:
+Sentry-cli will not upgrade to the `arm64` build automatically, if you're currently running on Rosetta 2. To install the
+`arm64` version:
 
-- Please ensure that your terminal and shell both run natively without emulation. You can check this by running `uname -m` in your terminal.
+- Please ensure that your terminal and shell both run natively without emulation. You can check this by running
+  `uname -m` in your terminal.
 - Remove your existing installation of `sentry-cli`.
 - Follow the [Installation Instructions](https://github.com/getsentry/sentry-cli#installation) for a fresh installation.
 
@@ -1160,7 +1207,8 @@ or use selective version resolution: https://classic.yarnpkg.com/en/docs/selecti
 ## sentry-cli 1.51.0
 
 - feat: Add `dist` option to `react-native appcenter` command (#653)
-- ref: Notify user about missing `sudo` command instead of incorrect "No such file or directory" when updating/uninstalling `sentry-cli` (#656)
+- ref: Notify user about missing `sudo` command instead of incorrect "No such file or directory" when
+  updating/uninstalling `sentry-cli` (#656)
 - fix: Remove redundant `Closing connection 0` warnings after every HTTP request (#657)
 - fix: Update release structure for XCode React Native calls (#660)
 
@@ -1470,8 +1518,10 @@ sending native events.
 
 ## sentry-cli 1.30.0
 
-- Improve the upload for debug information files. It is now faster, allows to resume after network errors, and supports much larger files.
-- Add commands to upload Breakpad and ELF (Linux) symbols. See our [documentation page](https://docs.sentry.io/learn/cli/dif/) for more information.
+- Improve the upload for debug information files. It is now faster, allows to resume after network errors, and supports
+  much larger files.
+- Add commands to upload Breakpad and ELF (Linux) symbols. See
+  our [documentation page](https://docs.sentry.io/learn/cli/dif/) for more information.
 - Fix JavaScript tests on Windows
 
 ## sentry-cli 1.29.1
@@ -1480,13 +1530,16 @@ sending native events.
 
 ## sentry-cli 1.29.0
 
-- **BREAKING**: Drop support for Node 0.12. Please pin version `1.28.4` or install sentry-cli using a [different method](https://docs.sentry.io/learn/cli/installation/#automatic-installation) if you still require Node 0.12.
+- **BREAKING**: Drop support for Node 0.12. Please pin version `1.28.4` or install sentry-cli using
+  a [different method](https://docs.sentry.io/learn/cli/installation/#automatic-installation) if you still require Node
+  0.12.
 - Fix NPM installation behind proxies
 - Remove console output when using the JS interface
 
 ## sentry-cli 1.28.4
 
-- Revert `Info.plist` handling to pre-`1.27.1` as it was causing issues when the `"Preprocess Info.plist File"` setting was turned on in Xcode
+- Revert `Info.plist` handling to pre-`1.27.1` as it was causing issues when the `"Preprocess Info.plist File"` setting
+  was turned on in Xcode
 - Include CA certificates in the Docker container
 
 ## sentry-cli 1.28.3
@@ -1495,8 +1548,10 @@ sending native events.
 
 ## sentry-cli 1.28.2
 
-- Fixed use of `SENTRYCLI_CDNURL` to override the npm download URL. See the [documentation](https://docs.sentry.io/learn/cli/installation/#installation-via-npm) for more information
-- Better handling of environment variables and config files. Please let us know if one of your configuration files or environments doesn't get recognized anymore after the update
+- Fixed use of `SENTRYCLI_CDNURL` to override the npm download URL. See
+  the [documentation](https://docs.sentry.io/learn/cli/installation/#installation-via-npm) for more information
+- Better handling of environment variables and config files. Please let us know if one of your configuration files or
+  environments doesn't get recognized anymore after the update
 - The official docker image is now smaller and does not require dependencies anymore
 - Replaced confusing errors when using `codepush` with hints to resolve the error
 
