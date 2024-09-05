@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.35.0
+
+### Various fixes & improvements
+
+- ci: Downgrade to `actions/download-artifact@v3` (#2144) by @szokeasaurusrex
+- fix: Only warn about mismatched URLs when they are different (#2143) by @szokeasaurusrex
+- chore(deps): bump micromatch from 4.0.5 to 4.0.8 (#2133) by @dependabot
+- chore(deps): bump actions/download-artifact from 2 to 4.1.7 in /.github/workflows (#2139) by @dependabot
+- feat(proguard): Retry `upload-proguard` on 507 status (#2141) by @szokeasaurusrex
+
 ## 2.34.1
 
 ### Various fixes & improvements
