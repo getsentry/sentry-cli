@@ -91,7 +91,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let mut out = output_path.unwrap_or(parent_path).join(filename);
             match index {
                 0 => out.set_extension("src.zip"),
-                index => out.set_extension(&format!("{index}.src.zip")),
+                index => out.set_extension(format!("{index}.src.zip")),
             };
 
             fs::create_dir_all(out.parent().unwrap())?;

@@ -583,7 +583,7 @@ pub fn show_notification(title: &str, message: &str) -> Result<()> {
     }
 
     SCRIPT
-        .execute_with_params(NotificationParams { title, message })
+        .execute_with_params::<_, ()>(NotificationParams { title, message })
         .context("Failed to display Xcode notification")?;
 
     Ok(())
