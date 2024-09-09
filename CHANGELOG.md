@@ -6,8 +6,8 @@
 
 ### Various fixes & improvements
 
-- feat: Log when file not added to source bundle (#2146) by @szokeasaurusrex
-- ref: Fix new clippy lints (#2151) by @szokeasaurusrex
+- Log when file not added to source bundle (#2146) by @szokeasaurusrex
+- Bump Symbolic to `12.11.0`. This fixes a bug where uploading source files sometimes failed when any of the files were not UTF-8 encoded
 
 ## 2.35.0
 
