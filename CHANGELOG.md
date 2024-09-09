@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.0
+
+### Various fixes & improvements
+
+- feat: Log when file not added to source bundle (#2146) by @szokeasaurusrex
+- ref: Fix new clippy lints (#2151) by @szokeasaurusrex
+
 ## 2.35.0
 
 ### Various fixes & improvements
