@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.0
+
+### Various fixes & improvements
+
+- Log when file not added to source bundle (#2146) by @szokeasaurusrex
+- Bump Symbolic to `12.11.0`. This fixes a bug where uploading source files sometimes failed when any of the files were not UTF-8 encoded
+
 ## 2.35.0
 
 ### Various fixes & improvements
