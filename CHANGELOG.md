@@ -6,7 +6,7 @@
 
 ### Various fixes & improvements
 
-- build: Downgrade `curl-sys` (#2152) by @szokeasaurusrex
+- Fix [a bug](https://github.com/getsentry/sentry-cli/issues/2148) where background Xcode uploads sometimes failed
 
 ## 2.36.0
 
