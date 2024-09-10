@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.1
+
+### Various fixes & improvements
+
+- Fix [a bug](https://github.com/getsentry/sentry-cli/issues/2148) where background Xcode uploads sometimes failed
+
 ## 2.36.0
 
 ### Various fixes & improvements
