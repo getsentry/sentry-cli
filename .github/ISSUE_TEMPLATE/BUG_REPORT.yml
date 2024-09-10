@@ -5,9 +5,9 @@ body:
   - type: markdown
     attributes:
       value: |
-        To help us understand and resolve your issue, please provide the following information:
+        To help us understand and resolve your issue, please provide the following information.
 
-        ## Environment
+        ### Environment
   - type: input
     id: cli-version
     attributes:
@@ -29,8 +29,6 @@ body:
         - label: Linux (aarch64)
         - label: Windows (i686)
         - label: Windows (x86_64)
-    validations:
-      required: true
   - type: input
     id: os-version
     attributes:
@@ -42,7 +40,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Reproduction Steps
+        
+        ### Reproduction Steps
   - type: input
     attributes:
       label: Link to reproduction repository
@@ -68,7 +67,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        ## Results
+        
+        ### Results
   - type: textarea
     attributes:
       label: Expected Results
