@@ -1,15 +1,15 @@
 ```
 $ sentry-cli send-metric
 ? failed
-Send a metric to Sentry.
+[DEPRECATED] Send a metric to Sentry.
 
 Usage: sentry-cli[EXE] send-metric [OPTIONS] <COMMAND>
 
 Commands:
-  increment     Increment a counter metric
-  distribution  Update a distribution metric with the provided value
-  gauge         Update a gauge metric with the provided value
-  set           Update a set metric with the provided value
+  increment     [DEPRECATED] Increment a counter metric
+  distribution  [DEPRECATED] Update a distribution metric with the provided value
+  gauge         [DEPRECATED] Update a gauge metric with the provided value
+  set           [DEPRECATED] Update a set metric with the provided value
   help          Print this message or the help of the given subcommand(s)
 
 Options:
