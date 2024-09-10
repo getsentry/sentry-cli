@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.1
+
+### Various fixes & improvements
+
+- build: Downgrade `curl-sys` (#2152) by @szokeasaurusrex
+
 ## 2.36.0
 
 ### Various fixes & improvements
