@@ -168,8 +168,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          # nonrelease prefix means this isn't a github release asset
-          name: nonrelease-artifact-pkg-node
+          name: artifact-pkg-node
           path: '*.tgz'
           if-no-files-found: 'error'
 
@@ -190,8 +189,8 @@ jobs:
       - run: python3 -m pip install build && python3 -m build
       - uses: actions/upload-artifact@v4
         with:
-          # nonrelease prefix means this isn't a github release asset
-          name: nonrelease-artifact-python-base
+          # internal prefix means this won't be included in the merged artifact for craft
+          name: internal-artifact-python-base
           path: dist/*
           if-no-files-found: 'error'
 
@@ -210,13 +209,12 @@ jobs:
           path: binaries
       - uses: actions/download-artifact@v4
         with:
-          name: nonrelease-artifact-python-base
+          name: internal-artifact-python-base
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
       - uses: actions/upload-artifact@v4
         with:
-          # nonrelease prefix means this isn't a github release asset
-          name: nonrelease-artifact-pkg-python
+          name: artifact-pkg-python
           path: dist/*
           if-no-files-found: 'error'
 
@@ -263,11 +261,11 @@ jobs:
   merge:
     name: Create Release Artifact
     runs-on: ubuntu-latest
-    needs: [linux, macos, macos_universal, windows, npm-distributions]
+    needs: [linux, macos, macos_universal, windows, npm-distributions, node, python]
     steps:
       - uses: actions/upload-artifact/merge@v4
         with:
           # Craft expects release assets to be a single artifact named after the sha.
           name: ${{ github.sha }}
           pattern: artifact-*
-          delete-merged: true
+          # delete-merged: true
