@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-linux
+          name: artifact-bin-linux-${{ matrix.arch }}
           path: sentry-cli-Linux-${{ matrix.arch }}
           if-no-files-found: 'error'
 
@@ -79,7 +79,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-macos
+          name: artifact-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
           if-no-files-found: 'error'
 
@@ -137,7 +137,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-windows
+          name: artifact-bin-windows-${{ matrix.arch }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
           if-no-files-found: 'error'
 
