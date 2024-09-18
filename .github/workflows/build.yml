@@ -2,8 +2,8 @@ name: Release Build
 
 on:
   push:
-#    branches:
-#      - release/**
+    branches:
+      - release/**
 
 jobs:
   linux:
