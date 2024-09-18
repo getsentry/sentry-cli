@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: artifact-macos
+          pattern: artifact-bin-macos-*
 
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
