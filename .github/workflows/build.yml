@@ -191,8 +191,7 @@ jobs:
       - run: python3 -m pip install build && python3 -m build
       - uses: actions/upload-artifact@v4
         with:
-          # internal prefix means this won't be included in the merged artifact for craft
-          name: internal-artifact-python-base
+          name: artifact-python-base
           path: dist/*
           if-no-files-found: 'error'
 
@@ -212,7 +211,7 @@ jobs:
           path: binaries
       - uses: actions/download-artifact@v4
         with:
-          name: internal-artifact-python-base
+          name: artifact-python-base
           merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
@@ -256,11 +255,15 @@ jobs:
             npm pack
             cd -
           done
+
       - name: Upload packaged npm binary distributions
         uses: actions/upload-artifact@v4
         with:
           name: artifact-npm-binary-distributions
-          path: npm-binary-distributions/*/*.tgz
+          path: |
+            npm-binary-distributions/darwin/*.tgz
+            npm-binary-distributions/linux-*/*.tgz
+            npm-binary-distributions/win*/*.tgz
           if-no-files-found: 'error'
 
   merge:
@@ -273,4 +276,4 @@ jobs:
           # Craft expects release assets to be a single artifact named after the sha.
           name: ${{ github.sha }}
           pattern: artifact-*
-          # delete-merged: true
+          delete-merged: true
