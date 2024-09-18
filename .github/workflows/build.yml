@@ -250,18 +250,20 @@ jobs:
         run: chmod +x npm-binary-distributions/*/bin/sentry-cli
       - name: Package distribution packages
         run: |
-          mkdir flattened
           for dir in npm-binary-distributions/*; do
             cd $dir
             npm pack
-            mv *.tgz ../../flattened
             cd -
           done
+
       - name: Upload packaged npm binary distributions
         uses: actions/upload-artifact@v4
         with:
           name: artifact-npm-binary-distributions
-          path: flattened/*.tgz
+          path: |
+            npm-binary-distributions/darwin/*.tgz
+            npm-binary-distributions/linux-*/*.tgz
+            npm-binary-distributions/win*/*.tgz
           if-no-files-found: 'error'
 
   merge:
