@@ -260,10 +260,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifact-npm-binary-distributions
-          path: |
-            npm-binary-distributions/darwin/*.tgz
-            npm-binary-distributions/linux-*/*.tgz
-            npm-binary-distributions/win*/*.tgz
+          path: npm-binary-distributions/*/*.tgz
           if-no-files-found: 'error'
 
   merge:
