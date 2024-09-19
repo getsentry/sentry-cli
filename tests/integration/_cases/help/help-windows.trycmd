@@ -26,7 +26,6 @@ Commands:
   repos            Manage repositories on Sentry.
   send-event       Send a manual event to Sentry.
   send-envelope    Send a stored envelope to Sentry.
-  send-metric      Send a metric to Sentry.
   sourcemaps       Manage sourcemaps for Sentry releases.
   upload-proguard  Upload ProGuard mapping files to a project.
   help             Print this message or the help of the given subcommand(s)
