@@ -2360,7 +2360,7 @@ impl fmt::Display for Repo {
 }
 
 #[derive(Serialize, Deserialize, Debug, Default)]
-pub struct Deploy {
+pub struct Deploy<'d> {
     #[serde(rename = "environment")]
     pub env: String,
     pub name: Option<String>,
@@ -2369,9 +2369,11 @@ pub struct Deploy {
     pub started: Option<DateTime<Utc>>,
     #[serde(rename = "dateFinished")]
     pub finished: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub projects: Option<Vec<Cow<'d, str>>>,
 }
 
-impl Deploy {
+impl<'d> Deploy<'d> {
     /// Returns the name of this deploy, defaulting to `"unnamed"`.
     pub fn name(&self) -> &str {
         match self.name.as_deref() {
