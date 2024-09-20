@@ -2362,9 +2362,9 @@ impl fmt::Display for Repo {
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Deploy<'d> {
     #[serde(rename = "environment")]
-    pub env: String,
-    pub name: Option<String>,
-    pub url: Option<String>,
+    pub env: Cow<'d, str>,
+    pub name: Option<Cow<'d, str>>,
+    pub url: Option<Cow<'d, str>>,
     #[serde(rename = "dateStarted")]
     pub started: Option<DateTime<Utc>>,
     #[serde(rename = "dateFinished")]
