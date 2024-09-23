@@ -2,12 +2,6 @@
 
 'use strict';
 
-// TODO(v3): Remove this file
-
-console.log(
-  'DEPRECATION NOTICE: The Sentry CLI install script has been deprecated. The package now uses "optionalDependencies" instead to install architecture-compatible binaries distributed over npm.'
-);
-
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -198,7 +192,7 @@ function validateChecksum(tempPath, name) {
 async function downloadBinary() {
   const arch = os.arch();
   const platform = os.platform();
-  const outputPath = helper.getPath();
+  const outputPath = helper.getFallbackBinaryPath();
 
   if (process.env.SENTRYCLI_USE_LOCAL === '1') {
     try {
@@ -323,14 +317,33 @@ if (process.env.SENTRYCLI_SKIP_DOWNLOAD === '1') {
   process.exit(0);
 }
 
-(async () => {
-  try {
-    await downloadBinary();
-    await checkVersion();
-    process.exit(0);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.error(e.toString());
-    process.exit(1);
-  }
-})();
+const { packageName: distributionPackageName, subpath: distributionSubpath } =
+  helper.getDistributionForThisPlatform();
+
+if (distributionPackageName === undefined) {
+  helper.throwUnsupportedPlatformError();
+}
+
+try {
+  require.resolve(`${distributionPackageName}/${distributionSubpath}`);
+  // If the `resolve` call succeeds it means a binary was installed successfully via optional dependencies so we can skip the manual postinstall download.
+  process.exit(0);
+} catch (e) {
+  // Optional dependencies likely didn't get installed - proceed with fallback downloading manually
+  // Log message inspired by esbuild: https://github.com/evanw/esbuild/blob/914f6080c77cfe32a54888caa51ca6ea13873ce9/lib/npm/node-install.ts#L253
+  logger.log(
+    `Sentry CLI failed to locate the "${distributionPackageName}" package after installation!
+
+This can happen if you use an option to disable optional dependencies during installation, like "--no-optional", "--ignore-optional", or "--omit=optional". Sentry CLI uses the "optionalDependencies" package.json feature to install the correct binary for your platform and operating system. This post-install script will now try to work around this by manually downloading the Sentry CLI binary from the Sentry CDN. If this fails, you need to remove the "--no-optional", "--ignore-optional", and "--omit=optional" flags for Sentry CLI to work.`
+  );
+
+  downloadBinary()
+    .then(() => checkVersion())
+    .then(() => {
+      process.exit(0);
+    })
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    });
+}

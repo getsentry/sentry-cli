@@ -16,7 +16,7 @@ $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-hermes-
 > Upload type: artifact bundle
 
 Source Map Upload Report
-  Minified Scripts
+  Scripts
     ~/main.jsbundle (sourcemap at main.jsbundle.map, debug id 6bf97754-15b7-4f17-a726-b2a617eb588c)
   Source Maps
     ~/main.jsbundle.map (debug id 6bf97754-15b7-4f17-a726-b2a617eb588c)

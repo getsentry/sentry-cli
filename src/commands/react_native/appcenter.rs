@@ -180,7 +180,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.rewrite(&[here_str])?;
     processor.add_sourcemap_references()?;
 
-    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 
     let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
     let wait = matches.get_flag("wait") || wait_for_secs.is_some();

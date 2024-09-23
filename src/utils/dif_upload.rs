@@ -78,8 +78,8 @@ impl<'a> Iterator for DifChunks<'a> {
 /// [`DifMatch`] instead of this instead.
 enum ParsedDif<'a> {
     Object(Box<Object<'a>>),
-    BcSymbolMap(BcSymbolMap<'a>),
-    UuidMap(UuidMapping),
+    BcSymbolMap,
+    UuidMap,
     Il2Cpp,
 }
 
@@ -98,7 +98,7 @@ impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
 /// disposed along with a `DifMatch` once it is dropped.
 #[derive(Debug)]
 enum DifBacking {
-    Temp(TempFile),
+    Temp,
 }
 
 /// A handle to a debug information file found by `DifUpload`.
@@ -125,7 +125,7 @@ impl<'data> DifMatch<'data> {
         })?;
 
         Ok(DifMatch {
-            _backing: Some(DifBacking::Temp(temp_file)),
+            _backing: Some(DifBacking::Temp),
             dif,
             name: name.into(),
             debug_id,
@@ -145,7 +145,7 @@ impl<'data> DifMatch<'data> {
         let dif = SelfCell::try_new(buffer, |_| Ok::<_, anyhow::Error>(ParsedDif::Il2Cpp))?;
 
         Ok(DifMatch {
-            _backing: Some(DifBacking::Temp(temp_file)),
+            _backing: Some(DifBacking::Temp),
             dif,
             name: name.into(),
             debug_id,
@@ -158,7 +158,7 @@ impl<'data> DifMatch<'data> {
     /// Normally the filename should be the `uuid` with `.bcsymbolmap` appended to it.
     fn from_bcsymbolmap(uuid: DebugId, name: String, data: ByteView<'static>) -> Result<Self> {
         let dif = SelfCell::try_new(data, |buf| {
-            BcSymbolMap::parse(unsafe { &*buf }).map(ParsedDif::BcSymbolMap)
+            BcSymbolMap::parse(unsafe { &*buf }).map(|_| ParsedDif::BcSymbolMap)
         })?;
 
         Ok(Self {
@@ -172,7 +172,7 @@ impl<'data> DifMatch<'data> {
 
     fn from_plist(uuid: DebugId, name: String, data: ByteView<'static>) -> Result<Self> {
         let dif = SelfCell::try_new(data, |buf| {
-            UuidMapping::parse_plist(uuid, unsafe { &*buf }).map(ParsedDif::UuidMap)
+            UuidMapping::parse_plist(uuid, unsafe { &*buf }).map(|_| ParsedDif::UuidMap)
         })?;
 
         Ok(Self {
@@ -205,8 +205,8 @@ impl<'data> DifMatch<'data> {
     pub fn object(&self) -> Option<&Object<'data>> {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => Some(obj),
-            ParsedDif::BcSymbolMap(_) => None,
-            ParsedDif::UuidMap(_) => None,
+            ParsedDif::BcSymbolMap => None,
+            ParsedDif::UuidMap => None,
             ParsedDif::Il2Cpp => None,
         }
     }
@@ -214,8 +214,8 @@ impl<'data> DifMatch<'data> {
     pub fn format(&self) -> DifFormat {
         match self.dif.get() {
             ParsedDif::Object(ref object) => DifFormat::Object(object.file_format()),
-            ParsedDif::BcSymbolMap(_) => DifFormat::BcSymbolMap,
-            ParsedDif::UuidMap(_) => DifFormat::PList,
+            ParsedDif::BcSymbolMap => DifFormat::BcSymbolMap,
+            ParsedDif::UuidMap => DifFormat::PList,
             ParsedDif::Il2Cpp => DifFormat::Il2Cpp,
         }
     }
@@ -224,8 +224,8 @@ impl<'data> DifMatch<'data> {
     pub fn data(&self) -> &[u8] {
         match self.dif.get() {
             ParsedDif::Object(ref obj) => obj.data(),
-            ParsedDif::BcSymbolMap(_) => self.dif.owner(),
-            ParsedDif::UuidMap(_) => self.dif.owner(),
+            ParsedDif::BcSymbolMap => self.dif.owner(),
+            ParsedDif::UuidMap => self.dif.owner(),
             ParsedDif::Il2Cpp => self.dif.owner(),
         }
     }
@@ -407,7 +407,7 @@ impl<'a> DifSource<'a> {
     /// file name.
     fn get_relative_fs(base: &Path, path: &Path) -> Option<ByteView<'static>> {
         // Use parent() to get to the directory and then move relative from
-        // there. ByteView will internally cannonicalize the path and resolve
+        // there. ByteView will internally canonicalize the path and resolve
         // symlinks.
         base.parent()
             .and_then(|p| ByteView::open(p.join(path)).ok())
@@ -896,7 +896,7 @@ fn collect_object_dif<'a>(
 
         // Invoke logic to retrieve attachments specific to the kind
         // of object file. These are used for processing. Since only
-        // dSYMs equire processing currently, all other kinds are
+        // dSYMs require processing currently, all other kinds are
         // skipped.
         let attachments = match object.file_format() {
             FileFormat::MachO => find_uuid_plists(&object, &mut source),
@@ -906,6 +906,7 @@ fn collect_object_dif<'a>(
         // We retain the buffer and the borrowed object in a new SelfCell. This is
         // incredibly unsafe, but in our case it is fine, since the SelfCell owns the same
         // buffer that was used to retrieve the object.
+        #[allow(clippy::missing_transmute_annotations)]
         let cell = unsafe {
             SelfCell::from_raw(
                 buffer.clone(),
@@ -1184,8 +1185,9 @@ fn create_source_bundles<'a>(
         // Resolve source files from the object and write their contents into the archive. Skip to
         // upload this bundle if no source could be written. This can happen if there is no file or
         // line information in the object file, or if none of the files could be resolved.
-        let written =
-            writer.write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
+        let written = writer
+            .with_skipped_file_callback(|skipped_info| info!("{skipped_info}"))
+            .write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
             debug!("No sources found for {}", name);
             continue;
@@ -1274,7 +1276,9 @@ fn try_assemble_difs<'data, 'm>(
         .iter()
         .map(|d| d.to_assemble(options.pdbs_allowed))
         .collect();
-    let response = api.assemble_difs(&options.org, &options.project, &request)?;
+    let response = api
+        .authenticated()?
+        .assemble_difs(&options.org, &options.project, &request)?;
 
     // We map all DIFs by their checksum, so we can access them faster when
     // iterating through the server response below. Since the caller will invoke
@@ -1424,7 +1428,9 @@ fn poll_dif_assemble(
         .map(|d| d.to_assemble(options.pdbs_allowed))
         .collect();
     let response = loop {
-        let response = api.assemble_difs(&options.org, &options.project, &request)?;
+        let response =
+            api.authenticated()?
+                .assemble_difs(&options.org, &options.project, &request)?;
 
         let chunks_missing = response
             .values()
@@ -1511,8 +1517,8 @@ fn poll_dif_assemble(
                     symbolic::debuginfo::ObjectKind::None => String::new(),
                     k => format!(" {k:#}"),
                 },
-                ParsedDif::BcSymbolMap(_) => String::from("bcsymbolmap"),
-                ParsedDif::UuidMap(_) => String::from("uuidmap"),
+                ParsedDif::BcSymbolMap => String::from("bcsymbolmap"),
+                ParsedDif::UuidMap => String::from("uuidmap"),
                 ParsedDif::Il2Cpp => String::from("il2cpp"),
             };
 
@@ -1628,7 +1634,11 @@ fn get_missing_difs<'data>(
     let api = Api::current();
     let missing_checksums = {
         let checksums = objects.iter().map(HashedDifMatch::checksum);
-        api.find_missing_dif_checksums(&options.org, &options.project, checksums)?
+        api.authenticated()?.find_missing_dif_checksums(
+            &options.org,
+            &options.project,
+            checksums,
+        )?
     };
 
     let missing = objects
@@ -1679,7 +1689,11 @@ fn upload_in_batches(
         let archive = create_batch_archive(batch)?;
 
         println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(api.upload_dif_archive(&options.org, &options.project, archive.path())?);
+        dsyms.extend(
+            api.authenticated()?
+                .region_specific(&options.org)
+                .upload_dif_archive(&options.project, archive.path())?,
+        );
     }
 
     Ok(dsyms)
@@ -1864,17 +1878,6 @@ impl DifUpload {
         self
     }
 
-    /// Add a `DebugId` to filter for.
-    ///
-    /// By default, all DebugIds will be included.
-    pub fn filter_id<I>(&mut self, id: I) -> &mut Self
-    where
-        I: Into<DebugId>,
-    {
-        self.ids.insert(id.into());
-        self
-    }
-
     /// Add `DebugId`s to filter for.
     ///
     /// By default, all DebugIds will be included. If `ids` is empty, this will
@@ -1898,48 +1901,11 @@ impl DifUpload {
         self
     }
 
-    /// Add `FileFormat`s to filter for.
-    ///
-    /// By default, all object formats will be included. If `formats` is empty, this
-    /// will not be changed.
-    pub fn filter_formats<I>(&mut self, formats: I) -> &mut Self
-    where
-        I: IntoIterator<Item = DifFormat>,
-    {
-        self.formats.extend(formats);
-        self
-    }
-
     /// Add an `ObjectFeature` to filter for.
     ///
     /// By default, all object features will be included.
     pub fn filter_features(&mut self, features: ObjectDifFeatures) -> &mut Self {
         self.features = features;
-        self
-    }
-
-    /// Add a file extension to filter for.
-    ///
-    /// By default, all file extensions will be included.
-    pub fn filter_extension<S>(&mut self, extension: S) -> &mut Self
-    where
-        S: Into<OsString>,
-    {
-        self.extensions.insert(extension.into());
-        self
-    }
-
-    /// Add a file extension to filter for.
-    ///
-    /// By default, all file extensions will be included.
-    pub fn filter_extensions<I>(&mut self, extensions: I) -> &mut Self
-    where
-        I: IntoIterator,
-        I::Item: Into<OsString>,
-    {
-        for extension in extensions {
-            self.extensions.insert(extension.into());
-        }
         self
     }
 
@@ -2018,7 +1984,7 @@ impl DifUpload {
         }
 
         let api = Api::current();
-        if let Some(ref chunk_options) = api.get_chunk_upload_options(&self.org)? {
+        if let Some(ref chunk_options) = api.authenticated()?.get_chunk_upload_options(&self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;
             }

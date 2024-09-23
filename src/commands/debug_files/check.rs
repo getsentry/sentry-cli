@@ -43,6 +43,14 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path = Path::new(matches.get_one::<String>("path").unwrap());
 
+    if path.is_dir() {
+        anyhow::bail!(
+            "This command can only check individual debug files, but the provided \
+            path leads to a directory. Please a pass a path to an individual file, \
+            instead!"
+        );
+    }
+
     // which types should we consider?
     let ty = matches
         .get_one::<String>("type")

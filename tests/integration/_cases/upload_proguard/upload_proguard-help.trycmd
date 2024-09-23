@@ -9,10 +9,10 @@ Arguments:
   [PATH]...  The path to the mapping files.
 
 Options:
-  -o, --org <ORG>                    The organization slug
+  -o, --org <ORG>                    The organization ID or slug.
       --header <KEY:VALUE>           Custom headers that should be attached to all requests
                                      in key:value format.
-  -p, --project <PROJECT>            The project slug.
+  -p, --project <PROJECT>            The project ID or slug.
       --auth-token <AUTH_TOKEN>      Use the given Sentry auth token.
       --version <VERSION>            Optionally associate the mapping files with a human readable
                                      version.
@@ -31,13 +31,10 @@ Options:
       --quiet                        Do not print any output while preserving correct exit code.
                                      This flag is currently implemented only for selected
                                      subcommands. [aliases: silent]
-      --no-reprocessing              Do not trigger reprocessing after upload.
       --no-upload                    Disable the actual upload.
                                      This runs all steps for the processing but does not trigger the
-                                     upload (this also automatically disables reprocessing).  This
-                                     is useful if you just want to verify the mapping files and
-                                     write the proguard UUIDs into a properties file.
-      --android-manifest <PATH>      Read version and version code from an Android manifest file.
+                                     upload.  This is useful if you just want to verify the mapping
+                                     files and write the proguard UUIDs into a properties file.
       --write-properties <PATH>      Write the UUIDs for the processed mapping files into the given
                                      properties file.
       --require-one                  Requires at least one file to upload or the command will error.

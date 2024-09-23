@@ -10,13 +10,11 @@ use log::info;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::FileFormat;
 
-use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
-use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::system::QuietExit;
 use crate::utils::xcode::{InfoPlist, MayDetach};
 
@@ -143,19 +141,12 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-            Arg::new("no_reprocessing")
-                .long("no-reprocessing")
-                .action(ArgAction::SetTrue)
-                .help("Do not trigger reprocessing after uploading."),
-        )
-        .arg(
             Arg::new("no_upload")
                 .long("no-upload")
                 .action(ArgAction::SetTrue)
                 .help(
                     "Disable the actual upload.{n}This runs all steps for the \
-                    processing but does not trigger the upload (this also \
-                    automatically disables reprocessing).  This is useful if you \
+                    processing but does not trigger the upload.  This is useful if you \
                     just want to verify the setup or skip the upload in tests.",
                 ),
         )
@@ -304,7 +295,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // Try to resolve the Info.plist either by path or from Xcode
-    let info_plist = match matches.get_one::<String>("info_plist") {
+    // TODO: maybe remove this completely?
+    let _info_plist = match matches.get_one::<String>("info_plist") {
         Some(path) => Some(InfoPlist::from_path(path)?),
         None => InfoPlist::discover_from_env()?,
     };
@@ -322,43 +314,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         // Execute the upload
         let (uploaded, has_processing_errors) = upload.upload()?;
-        let api = Api::current();
-
-        // Associate the dSYMs with the Info.plist data, if available
-        if let Some(ref info_plist) = info_plist {
-            let progress_style = ProgressStyle::default_spinner()
-                .template("{spinner} Associating dSYMs with {msg}...");
-
-            let pb = ProgressBar::new_spinner();
-            pb.enable_steady_tick(100);
-            pb.set_style(progress_style);
-            pb.set_message(&info_plist.to_string());
-
-            let checksums = uploaded.iter().map(|dif| dif.checksum.clone()).collect();
-            let response = api.associate_apple_dsyms(&org, &project, info_plist, checksums)?;
-            pb.finish_and_clear();
-
-            if let Some(association) = response {
-                if association.associated_dsyms.is_empty() {
-                    println!("{} No new debug symbols to associate.", style(">").dim());
-                } else {
-                    println!(
-                        "{} Associated {} debug symbols with the build.",
-                        style(">").dim(),
-                        style(association.associated_dsyms.len()).yellow()
-                    );
-                }
-            } else {
-                info!("Server does not support dSYM associations. Ignoring.");
-            }
-        }
-
-        // Trigger reprocessing only if requested by user
-        if matches.get_flag("no_reprocessing") {
-            println!("{} skipped reprocessing", style(">").dim());
-        } else if !api.trigger_reprocessing(&org, &project)? {
-            println!("{} Server does not support reprocessing.", style(">").dim());
-        }
 
         // Did we miss explicitly requested symbols?
         if matches.get_flag("require_all") {

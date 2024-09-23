@@ -1,0 +1,7 @@
+```
+$ sentry-cli debug-files check tests/
+? failed
+error: This command can only check individual debug files, but the provided path leads to a directory. Please a pass a path to an individual file, instead!
+...
+
+```

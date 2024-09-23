@@ -9,10 +9,10 @@ Arguments:
   [PATH]...  A path to search recursively for symbol files.
 
 Options:
-  -o, --org <ORG>                The organization slug
+  -o, --org <ORG>                The organization ID or slug.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
-  -p, --project <PROJECT>        The project slug.
+  -p, --project <PROJECT>        The project ID or slug.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
   -t, --type <TYPE>              Only consider debug information files of the given type.  By
                                  default, all types are considered. [possible values: bcsymbolmap,
@@ -48,12 +48,10 @@ Options:
                                  Providing this information will associate the debug symbols with a
                                  specific ITC application and build in Sentry.  Note that if you
                                  provide the plist explicitly it must already be processed.
-      --no-reprocessing          Do not trigger reprocessing after uploading.
       --no-upload                Disable the actual upload.
                                  This runs all steps for the processing but does not trigger the
-                                 upload (this also automatically disables reprocessing).  This is
-                                 useful if you just want to verify the setup or skip the upload in
-                                 tests.
+                                 upload.  This is useful if you just want to verify the setup or
+                                 skip the upload in tests.
       --force-foreground         Wait for the process to finish.
                                  By default, the upload process will detach and continue in the
                                  background when triggered from Xcode.  When an error happens, a

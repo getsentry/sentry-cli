@@ -12,56 +12,25 @@ use ini::Ini;
 use lazy_static::lazy_static;
 use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
+use secrecy::ExposeSecret;
 use sentry::types::Dsn;
-use serde::Deserialize;
 
+use crate::constants::CONFIG_INI_FILE_PATH;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
+use crate::utils::auth_token::AuthToken;
+use crate::utils::auth_token::AuthTokenPayload;
 use crate::utils::http::is_absolute_url;
+
+#[cfg(target_os = "macos")]
+use crate::utils::xcode;
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
     Key(String),
-    Token(String),
-}
-
-/// Data parsed from an "org auth token".
-#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
-struct TokenData {
-    /// An org slug.
-    org: String,
-    /// A base Sentry URL.
-    url: Option<String>,
-}
-
-impl TokenData {
-    /// Attempt to extract data from an "org auth token".
-    ///
-    /// Org auth tokens start with `sntrys` and contain BASE64-encoded
-    /// data between two underscores.
-    ///
-    /// Attempting to decode a valid org auth token results in `Ok(Some(data))`.
-    /// Attempting to decode an org auth token that contains invalid data returns an error.
-    /// Attempting to decode any other token returns Ok(None).
-    fn decode(token: &str) -> Result<Option<Self>> {
-        const ORG_TOKEN_PREFIX: &str = "sntrys_";
-
-        let Some(rest) = token.strip_prefix(ORG_TOKEN_PREFIX) else {
-            return Ok(None);
-        };
-
-        let Some((encoded, _)) = rest.split_once('_') else {
-            bail!("no closing _");
-        };
-
-        let json = data_encoding::BASE64
-            .decode(encoded.as_bytes())
-            .context("invalid base64 data")?;
-
-        Ok(serde_json::from_slice(&json)?)
-    }
+    Token(AuthToken),
 }
 
 lazy_static! {
@@ -78,7 +47,7 @@ pub struct Config {
     cached_headers: Option<Vec<String>>,
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
-    cached_token_data: Option<TokenData>,
+    cached_token_data: Option<AuthTokenPayload>,
 }
 
 impl Config {
@@ -92,23 +61,22 @@ impl Config {
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
-            Some(Auth::Token(ref token)) => TokenData::decode(token)
-                .context(format!("Failed to parse org auth token {token}"))?,
-            _ => None,
+            Some(Auth::Token(ref token)) => token.payload().cloned(),
+            _ => None, // get_default_auth never returns Auth::Token variant
         };
 
-        let mut url = get_default_url(&ini);
+        let manually_configured_url = configured_url(&ini);
+        let token_url = token_embedded_data
+            .as_ref()
+            .map(|td| td.url.as_str())
+            .unwrap_or_default();
 
-        if let Some(token_url) = token_embedded_data.as_ref().and_then(|td| td.url.as_ref()) {
-            if url == DEFAULT_URL || url.is_empty() {
-                url = token_url.clone();
-            } else if url != *token_url {
-                bail!(
-                    "Two different url values supplied: `{}` (from token), `{url}`.",
-                    token_url,
-                );
-            }
-        }
+        let url = if token_url.is_empty() {
+            manually_configured_url.unwrap_or_else(|| DEFAULT_URL.to_string())
+        } else {
+            warn_about_conflicting_urls(token_url, manually_configured_url.as_deref());
+            token_url.into()
+        };
 
         Ok(Config {
             filename,
@@ -206,19 +174,17 @@ impl Config {
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
-                self.cached_token_data = TokenData::decode(val)
-                    .context(format!("Failed to parse org auth token {val}"))?;
+                self.cached_token_data = val.payload().cloned();
 
-                if let Some(token_url) = self
-                    .cached_token_data
-                    .as_ref()
-                    .and_then(|td| td.url.as_ref())
-                {
-                    self.cached_base_url = token_url.clone();
+                if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.url.as_str()) {
+                    self.cached_base_url = token_url.to_string();
                 }
 
-                self.ini
-                    .set_to(Some("auth"), "token".into(), val.to_string());
+                self.ini.set_to(
+                    Some("auth"),
+                    "token".into(),
+                    val.raw().expose_secret().clone(),
+                );
             }
             Some(Auth::Key(ref val)) => {
                 self.ini
@@ -243,20 +209,23 @@ impl Config {
     }
 
     /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) -> Result<()> {
-        if let Some(token_url) = self
+    pub fn set_base_url(&mut self, url: &str) {
+        let token_url = self
             .cached_token_data
             .as_ref()
-            .and_then(|td| td.url.as_ref())
-        {
-            if url != token_url {
-                bail!("Two different url values supplied: `{token_url}` (from token), `{url}`.");
-            }
+            .map(|td| td.url.as_str())
+            .unwrap_or_default();
+
+        if !token_url.is_empty() && url != token_url {
+            log::warn!(
+                "Using {token_url} (embedded in token) rather than manually-configured URL {url}. \
+                To use {url}, please provide an auth token for this URL."
+            );
+        } else {
+            url.clone_into(&mut self.cached_base_url);
+            self.ini
+                .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
         }
-        self.cached_base_url = url.to_owned();
-        self.ini
-            .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
-        Ok(())
     }
 
     /// Sets headers that should be attached to all requests
@@ -374,7 +343,7 @@ impl Config {
                 .get_from(Some("defaults"), "org")
                 .map(str::to_owned)
                 .ok_or_else(|| {
-                    format_err!("An organization slug is required (provide with --org)")
+                    format_err!("An organization ID or slug is required (provide with --org)")
                 }),
             (None, Some(cli_org)) => Ok(cli_org),
             (Some(token_org), None) => Ok(token_org.to_string()),
@@ -442,7 +411,7 @@ impl Config {
                     .get_from(Some("defaults"), "project")
                     .map(str::to_owned)
             })
-            .ok_or_else(|| format_err!("A project slug is required (provide with --project)"))
+            .ok_or_else(|| format_err!("A project ID or slug is required (provide with --project)"))
     }
 
     /// Return the default pipeline env.
@@ -470,7 +439,9 @@ impl Config {
         )
     }
 
-    /// Returns true if notifications should be displayed
+    /// Returns true if notifications should be displayed.
+    /// We only use this function in the macOS binary.
+    #[cfg(target_os = "macos")]
     pub fn show_notifications(&self) -> Result<bool> {
         Ok(self
             .ini
@@ -559,13 +530,27 @@ impl Config {
     }
 }
 
+fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<&str>) {
+    if let Some(manually_configured_url) = manually_configured_url {
+        if manually_configured_url != token_url {
+            warn!(
+                "Using {token_url} (embedded in token) rather than manually-configured URL \
+                {manually_configured_url}. To use {manually_configured_url}, please provide an  \
+                auth token for {manually_configured_url}."
+            );
+        }
+    }
+}
+
 fn find_global_config_file() -> Result<PathBuf> {
-    dirs::home_dir()
+    let home_dir_file = dirs::home_dir().map(|p| p.join(CONFIG_RC_FILE_NAME));
+    let config_dir_file = dirs::config_dir().map(|p| p.join(CONFIG_INI_FILE_PATH));
+    home_dir_file
+        .clone()
+        .filter(|p| p.exists())
+        .or(config_dir_file.filter(|p| p.exists()))
+        .or(home_dir_file)
         .ok_or_else(|| format_err!("Could not find home dir"))
-        .map(|mut path| {
-            path.push(CONFIG_RC_FILE_NAME);
-            path
-        })
 }
 
 fn find_project_config_file() -> Option<PathBuf> {
@@ -612,6 +597,15 @@ fn load_global_config_file() -> Result<(PathBuf, Ini)> {
     }
 }
 
+fn failed_local_config_load_message(file_desc: &str) -> String {
+    let msg = format!("Failed to load {file_desc}.");
+    #[cfg(target_os = "macos")]
+    if xcode::launched_from_xcode() {
+        return msg + (" Hint: Please ensure that ${SRCROOT}/.sentryclirc is added to the Input Files of this Xcode Build Phases script.");
+    }
+    msg
+}
+
 fn load_cli_config() -> Result<(PathBuf, Ini)> {
     let (global_filename, mut rv) = load_global_config_file()?;
 
@@ -621,8 +615,8 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
             CONFIG_RC_FILE_NAME,
             project_config_path.display()
         );
-        let mut f =
-            fs::File::open(&project_config_path).context(format!("Failed to load {file_desc}"))?;
+        let mut f = fs::File::open(&project_config_path)
+            .context(failed_local_config_load_message(&file_desc))?;
         let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
         for (section, props) in ini.iter() {
             for (key, value) in props.iter() {
@@ -695,11 +689,11 @@ impl Clone for Config {
 #[allow(clippy::manual_map)]
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
-        Some(Auth::Token(val))
+        Some(Auth::Token(val.into()))
     } else if let Ok(val) = env::var("SENTRY_API_KEY") {
         Some(Auth::Key(val))
     } else if let Some(val) = ini.get_from(Some("auth"), "token") {
-        Some(Auth::Token(val.to_owned()))
+        Some(Auth::Token(val.into()))
     } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
         Some(Auth::Key(val.to_owned()))
     } else {
@@ -707,14 +701,13 @@ fn get_default_auth(ini: &Ini) -> Option<Auth> {
     }
 }
 
-fn get_default_url(ini: &Ini) -> String {
-    if let Ok(val) = env::var("SENTRY_URL") {
-        val
-    } else if let Some(val) = ini.get_from(Some("defaults"), "url") {
-        val.to_owned()
-    } else {
-        DEFAULT_URL.to_owned()
-    }
+/// Returns the URL configured in the SENTRY_URL environment variable or provided ini (in that
+/// order of precedence), or returns None if neither is set.
+fn configured_url(ini: &Ini) -> Option<String> {
+    env::var("SENTRY_URL").ok().or_else(|| {
+        ini.get_from(Some("defaults"), "url")
+            .map(|url| url.to_owned())
+    })
 }
 
 fn get_default_headers(ini: &Ini) -> Option<Vec<String>> {
@@ -761,19 +754,6 @@ mod tests {
     use log::LevelFilter;
 
     use super::*;
-
-    #[test]
-    fn test_decode_token_data() {
-        let token = "sntrys_eyJ1cmwiOiJodHRwczovL3NlbnRyeS5pbyIsIm9yZyI6InRlc3Qtb3JnIn0=_foobarthisdoesntmatter";
-
-        assert_eq!(
-            TokenData::decode(token).unwrap().unwrap(),
-            TokenData {
-                org: "test-org".to_string(),
-                url: Some("https://sentry.io".to_string()),
-            }
-        );
-    }
 
     #[test]
     fn test_get_api_endpoint() {

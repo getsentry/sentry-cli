@@ -1,74 +1,73 @@
 ```
 $ sentry-cli upload-dsym --help
 ? success
-sentry-cli[EXE]-upload-dsym 
 Upload debugging information files.
 
-USAGE:
-    sentry-cli[EXE] upload-dsym [OPTIONS] [PATH]...
+Usage: sentry-cli upload-dsym [OPTIONS] [PATH]...
 
-ARGS:
-    <PATH>...    A path to search recursively for symbol files.
+Arguments:
+  [PATH]...  A path to search recursively for symbol files.
 
-OPTIONS:
-        --auth-token <AUTH_TOKEN>    Use the given Sentry auth token.
-        --derived-data               Search for debug symbols in Xcode's derived data.
-        --force-foreground           Wait for the process to finish.
-                                     By default, the upload process will detach and continue in the
-                                     background when triggered from Xcode.  When an error happens, a
-                                     dialog is shown.  If this parameter is passed Xcode will wait
-                                     for the process to finish before the build finishes and output
-                                     will be shown in the Xcode build output.
-    -h, --help                       Print help information
-        --id <ID>                    Search for specific debug identifiers.
-        --include-sources            Include sources from the local file system and upload them as
-                                     source bundles.
-        --info-plist <PATH>          Optional path to the Info.plist.
-                                     We will try to find this automatically if run from Xcode.
-                                     Providing this information will associate the debug symbols
-                                     with a specific ITC application and build in Sentry.  Note that
-                                     if you provide the plist explicitly it must already be
-                                     processed.
-        --log-level <LOG_LEVEL>      Set the log output verbosity. [possible values: trace, debug,
-                                     info, warn, error]
-        --no-debug                   Do not scan for debugging information. This will usually
-                                     exclude debug companion files. They might still be uploaded, if
-                                     they contain additional processable information (see other
-                                     flags).
-        --no-reprocessing            Do not trigger reprocessing after uploading.
-        --no-sources                 Do not scan for source information. This will usually exclude
-                                     source bundle files. They might still be uploaded, if they
-                                     contain additional processable information (see other flags).
-        --no-unwind                  Do not scan for stack unwinding information. Specify this flag
-                                     for builds with disabled FPO, or when stackwalking occurs on
-                                     the device. This usually excludes executables and dynamic
-                                     libraries. They might still be uploaded, if they contain
-                                     additional processable information (see other flags).
-        --no-upload                  Disable the actual upload.
-                                     This runs all steps for the processing but does not trigger the
-                                     upload (this also automatically disables reprocessing).  This
-                                     is useful if you just want to verify the setup or skip the
-                                     upload in tests.
-        --no-zips                    Do not search in ZIP files.
-    -o, --org <ORG>                  The organization slug
-    -p, --project <PROJECT>          The project slug.
-        --quiet                      Do not print any output while preserving correct exit code.
-                                     This flag is currently implemented only for selected
-                                     subcommands. [aliases: silent]
-        --require-all                Errors if not all identifiers specified with --id could be
-                                     found.
-        --symbol-maps <PATH>         Optional path to BCSymbolMap files which are used to resolve
-                                     hidden symbols in dSYM files downloaded from iTunes Connect.
-                                     This requires the dsymutil tool to be available.  This should
-                                     not be used when using the App Store Connect integration, the
-                                     .bcsymbolmap files needed for the integration are uploaded
-                                     without this option if they are found in the PATH searched for
-                                     symbol files.
-    -t, --type <TYPE>                Only consider debug information files of the given type.  By
-                                     default, all types are considered. [possible values: dsym, elf,
-                                     breakpad, pdb, pe, sourcebundle, bcsymbolmap]
-        --wait                       Wait for the server to fully process uploaded files. Errors can
-                                     only be displayed if --wait is specified, but this will
-                                     significantly slow down the upload process.
+Options:
+  -o, --org <ORG>                The organization ID or slug.
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+  -p, --project <PROJECT>        The project ID or slug.
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+  -t, --type <TYPE>              Only consider debug information files of the given type.  By
+                                 default, all types are considered. [possible values: bcsymbolmap,
+                                 breakpad, dsym, elf, jvm, pdb, pe, portablepdb, sourcebundle, wasm]
+      --no-unwind                Do not scan for stack unwinding information. Specify this flag for
+                                 builds with disabled FPO, or when stackwalking occurs on the
+                                 device. This usually excludes executables and dynamic libraries.
+                                 They might still be uploaded, if they contain additional
+                                 processable information (see other flags).
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --no-debug                 Do not scan for debugging information. This will usually exclude
+                                 debug companion files. They might still be uploaded, if they
+                                 contain additional processable information (see other flags).
+      --no-sources               Do not scan for source information. This will usually exclude
+                                 source bundle files. They might still be uploaded, if they contain
+                                 additional processable information (see other flags).
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: silent]
+      --id <ID>                  Search for specific debug identifiers.
+      --require-all              Errors if not all identifiers specified with --id could be found.
+      --symbol-maps <PATH>       Optional path to BCSymbolMap files which are used to resolve hidden
+                                 symbols in dSYM files downloaded from iTunes Connect.  This
+                                 requires the dsymutil tool to be available.  This should not be
+                                 used when using the App Store Connect integration, the .bcsymbolmap
+                                 files needed for the integration are uploaded without this option
+                                 if they are found in the PATH searched for symbol files.
+      --derived-data             Search for debug symbols in Xcode's derived data.
+      --no-zips                  Do not search in ZIP files.
+      --info-plist <PATH>        Optional path to the Info.plist.
+                                 We will try to find this automatically if run from Xcode.
+                                 Providing this information will associate the debug symbols with a
+                                 specific ITC application and build in Sentry.  Note that if you
+                                 provide the plist explicitly it must already be processed.
+      --no-upload                Disable the actual upload.
+                                 This runs all steps for the processing but does not trigger the
+                                 upload.  This is useful if you just want to verify the setup or
+                                 skip the upload in tests.
+      --force-foreground         Wait for the process to finish.
+                                 By default, the upload process will detach and continue in the
+                                 background when triggered from Xcode.  When an error happens, a
+                                 dialog is shown.  If this parameter is passed Xcode will wait for
+                                 the process to finish before the build finishes and output will be
+                                 shown in the Xcode build output.
+      --include-sources          Include sources from the local file system and upload them as
+                                 source bundles.
+      --wait                     Wait for the server to fully process uploaded files. Errors can
+                                 only be displayed if --wait or --wait-for is specified, but this
+                                 will significantly slow down the upload process.
+      --wait-for <SECS>          Wait for the server to fully process uploaded files, but at most
+                                 for the given number of seconds. Errors can only be displayed if
+                                 --wait or --wait-for is specified, but this will significantly slow
+                                 down the upload process.
+      --il2cpp-mapping           Compute il2cpp line mappings and upload them along with sources.
+  -h, --help                     Print help
 
 ```

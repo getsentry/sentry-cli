@@ -1,6 +1,8 @@
 'use strict';
 
 const os = require('os');
+const path = require('path');
+const fs = require('fs');
 const childProcess = require('child_process');
 
 const BINARY_DISTRIBUTIONS = [
@@ -12,6 +14,23 @@ const BINARY_DISTRIBUTIONS = [
   { packageName: '@sentry/cli-win32-x64', subpath: 'bin/sentry-cli.exe' },
   { packageName: '@sentry/cli-win32-i686', subpath: 'bin/sentry-cli.exe' },
 ];
+
+/**
+ * This convoluted function resolves the path to the manually downloaded fallback
+ * `sentry-cli` binary in a way that can't be analysed by @vercel/nft.
+ *
+ * Without this, the binary can be detected as an asset and included by bundlers
+ * that use @vercel/nft.
+ *
+ * @returns {string} The path to the sentry-cli binary
+ */
+function getFallbackBinaryPath() {
+  const parts = [];
+  parts.push(__dirname);
+  parts.push('..');
+  parts.push(`sentry-cli${process.platform === 'win32' ? '.exe' : ''}`);
+  return path.resolve(...parts);
+}
 
 function getDistributionForThisPlatform() {
   const arch = os.arch();
@@ -39,6 +58,8 @@ function getDistributionForThisPlatform() {
   } else if (platform === 'win32') {
     switch (arch) {
       case 'x64':
+      // Windows arm64 can run x64 binaries
+      case 'arm64':
         packageName = '@sentry/cli-win32-x64';
         break;
       case 'x86':
@@ -67,11 +88,25 @@ function getDistributionForThisPlatform() {
 }
 
 /**
- * This convoluted function resolves the path to the `sentry-cli` binary in a
- * way that can't be analysed by @vercel/nft.
+ * Throws an error with a message stating that Sentry CLI doesn't support the current platform.
  *
- * Without this, the binary can be detected as an asset and included by bundlers
- * that use @vercel/nft.
+ * @returns {never} nothing. It throws.
+ */
+function throwUnsupportedPlatformError() {
+  throw new Error(
+    `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
+
+Sentry CLI supports:
+- Darwin (macOS)
+- Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
+- Windows x64, x86, and ia32 architectures`
+  );
+}
+
+/**
+ * Tries to find the installed Sentry CLI binary - either by looking into the relevant
+ * optional dependencies or by trying to resolve the fallback binary.
+ *
  * @returns {string} The path to the sentry-cli binary
  */
 function getBinaryPath() {
@@ -82,14 +117,13 @@ function getBinaryPath() {
   const { packageName, subpath } = getDistributionForThisPlatform();
 
   if (packageName === undefined) {
-    throw new Error(
-      `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
+    throwUnsupportedPlatformError();
+  }
 
-Sentry CLI supports:
-- Darwin (macOS)
-- Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
-- Windows x64, x86, and ia32 architectures`
-    );
+  let fallbackBinaryPath = getFallbackBinaryPath();
+  if (fs.existsSync(fallbackBinaryPath)) {
+    // Since the fallback got installed, the optional dependencies likely didn't get installed, so we just default to the fallback.
+    return fallbackBinaryPath;
   }
 
   let compatibleBinaryPath;
@@ -115,7 +149,7 @@ To fix this, avoid copying the "node_modules" folder, and instead freshly instal
     } else {
       throw new Error(`Sentry CLI binary for this platform/architecture not found!
 
-It seems like none of the "@sentry/cli" package's optional dependencies got installed. Please make sure your package manager is configured to install optional dependencies. If you are using npm to install your dependencies, please don't set the "--no-optional" or "--omit=optional" flags. Sentry CLI needs the "optionalDependencies" feature in order to install its binary.`);
+It seems like none of the "@sentry/cli" package's optional dependencies got installed. Please make sure your package manager is configured to install optional dependencies. If you are using npm to install your dependencies, please don't set the "--no-optional", "--ignore-optional", or "--omit=optional" flags. Sentry CLI needs the "optionalDependencies" feature in order to install its binary.`);
     }
   }
 
@@ -123,10 +157,10 @@ It seems like none of the "@sentry/cli" package's optional dependencies got inst
 }
 
 /**
- * Absolute path to the sentry-cli binary (platform dependent).
- * @type {string}
+ * Will be used as the binary path when defined with `mockBinaryPath`.
+ * @type {string | undefined}
  */
-let binaryPath = getBinaryPath();
+let mockedBinaryPath;
 
 /**
  * Overrides the default binary path with a mock value, useful for testing.
@@ -136,7 +170,7 @@ let binaryPath = getBinaryPath();
  */
 // TODO(v3): Remove this function
 function mockBinaryPath(mockPath) {
-  binaryPath = mockPath;
+  mockedBinaryPath = mockPath;
 }
 
 /**
@@ -222,7 +256,7 @@ function prepareCommand(command, schema, options) {
  * @returns {string}
  */
 function getPath() {
-  return binaryPath;
+  return mockedBinaryPath !== undefined ? mockedBinaryPath : getBinaryPath();
 }
 
 /**
@@ -318,4 +352,7 @@ module.exports = {
   mockBinaryPath,
   prepareCommand,
   serializeOptions,
+  getDistributionForThisPlatform,
+  throwUnsupportedPlatformError,
+  getFallbackBinaryPath,
 };

@@ -14,7 +14,7 @@ use uuid::Uuid;
 use crate::api::Api;
 use crate::api::AssociateProguard;
 use crate::config::Config;
-use crate::utils::android::{dump_proguard_uuids_as_properties, AndroidManifest};
+use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
 use crate::utils::fs::{get_sha1_checksum, TempFile};
 use crate::utils::system::QuietExit;
@@ -84,19 +84,12 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-            Arg::new("no_reprocessing")
-                .long("no-reprocessing")
-                .action(ArgAction::SetTrue)
-                .help("Do not trigger reprocessing after upload."),
-        )
-        .arg(
             Arg::new("no_upload")
                 .long("no-upload")
                 .action(ArgAction::SetTrue)
                 .help(
                     "Disable the actual upload.{n}This runs all steps for the \
-                    processing but does not trigger the upload (this also \
-                    automatically disables reprocessing).  This is useful if you \
+                    processing but does not trigger the upload.  This is useful if you \
                     just want to verify the mapping files and write the \
                     proguard UUIDs into a properties file.",
                 ),
@@ -106,6 +99,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("android-manifest")
                 .value_name("PATH")
                 .conflicts_with("app_id")
+                .hide(true)
                 .help("Read version and version code from an Android manifest file."),
         )
         .arg(
@@ -141,7 +135,6 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let api = Api::current();
 
     let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
@@ -151,12 +144,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
     let mut mappings = vec![];
     let mut all_checksums = vec![];
-
-    let android_manifest = if let Some(path) = matches.get_one::<String>("android_manifest") {
-        Some(AndroidManifest::from_path(path)?)
-    } else {
-        None
-    };
 
     let forced_uuid = matches.get_one::<Uuid>("uuid");
     if forced_uuid.is_some() && paths.len() != 1 {
@@ -248,7 +235,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         org, project
     );
 
-    let rv = api.upload_dif_archive(&org, &project, tf.path())?;
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
+    let rv = authenticated_api
+        .region_specific(&org)
+        .upload_dif_archive(&project, tf.path())?;
     println!(
         "{} Uploaded a total of {} new mapping files",
         style(">").dim(),
@@ -261,12 +253,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    // update the uuids
-    if let Some(android_manifest) = android_manifest {
-        api.associate_android_proguard_mappings(&org, &project, &android_manifest, all_checksums)?;
-
     // if values are given associate
-    } else if let Some(app_id) = matches.get_one::<String>("app_id") {
+    if let Some(app_id) = matches.get_one::<String>("app_id") {
         let version = matches.get_one::<String>("version").unwrap().to_owned();
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
@@ -281,7 +269,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         for mapping in &mappings {
             let uuid = forced_uuid.unwrap_or(&mapping.uuid);
-            api.associate_proguard_mappings(
+            authenticated_api.associate_proguard_mappings(
                 &org,
                 &project,
                 &AssociateProguard {
@@ -290,18 +278,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 },
             )?;
         }
-    }
-
-    // If wanted trigger reprocessing
-    if !matches.get_flag("no_reprocessing") && !matches.get_flag("no_upload") {
-        if !api.trigger_reprocessing(&org, &project)? {
-            println!(
-                "{} Server does not support reprocessing. Not triggering.",
-                style(">").dim()
-            );
-        }
-    } else {
-        println!("{} skipped reprocessing", style(">").dim());
     }
 
     Ok(())

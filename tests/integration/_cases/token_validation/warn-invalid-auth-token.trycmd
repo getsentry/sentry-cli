@@ -1,0 +1,7 @@
+```
+$ sentry-cli --auth-token not_a_valid_auth_token --version
+? success
+[..]WARN[..] Unrecognized auth token format. Ensure you copied your token correctly.
+...
+
+```

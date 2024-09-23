@@ -162,3 +162,17 @@ fn command_sourcemaps_upload_hermes_bundle_with_referencing_debug_id() {
         mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
     register_test("sourcemaps/sourcemaps-upload-file-hermes-bundle-reference-debug-id.trycmd");
 }
+
+#[test]
+fn command_sourcemaps_upload_cjs_mjs() {
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-cjs-mjs.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_upload_complex_extension() {
+    let _upload_endpoints =
+        mock_common_upload_endpoints(ServerBehavior::Modern, Default::default());
+    register_test("sourcemaps/sourcemaps-upload-complex-extension.trycmd");
+}

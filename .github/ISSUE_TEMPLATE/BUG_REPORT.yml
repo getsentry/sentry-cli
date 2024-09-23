@@ -1,0 +1,97 @@
+name: 🐞 Bug Report
+description: Report a bug in this repo
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        To help us understand and resolve your issue, please provide the following information:
+
+        ## Environment
+  - type: input
+    id: cli-version
+    attributes:
+      label: CLI Version
+      description: In which version(s) of the CLI did you encounter the issue?
+    validations:
+      required: true
+  - type: checkboxes
+    id: os
+    attributes:
+      label: Operating System and Architecture
+      description: On which operating system(s) and architecture(s) did you encounter the issue? Please select all that apply.
+      options:
+        - label: macOS (arm64)
+        - label: macOS (x86_64)
+        - label: Linux (i686)
+        - label: Linux (x86_64)
+        - label: Linux (armv7)
+        - label: Linux (aarch64)
+        - label: Windows (i686)
+        - label: Windows (x86_64)
+    validations:
+      required: true
+  - type: input
+    id: os-version
+    attributes:
+      label: Operating System Version
+      description: Which version of the operating system are you using?
+      placeholder: e.g. macOS 14.0.0, Ubuntu 20.04, or Windows 10
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Reproduction Steps
+  - type: input
+    attributes:
+      label: Link to reproduction repository
+      description: Please link to a repository that demonstrates the issue, if possible. Providing this information will help us help you faster!
+  - type: input
+    attributes:
+      label: CLI Command
+      description: What command did you run when you encountered the issue? (if applicable)
+      placeholder: sentry-cli <command> [options] --log-level=debug
+  - type: textarea
+    attributes:
+      label: Exact Reproduction Steps
+      description: What are the **exact** steps you took to encounter the issue?
+      placeholder: |
+        For example:
+          1. Clone the repository provided above
+          2. Launch a terminal window inside the repository
+          3. Install the dependencies with `npm install`
+          4. Run the command provided above
+        Help us help you! Please be as specific as possible.
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        ## Results
+  - type: textarea
+    attributes:
+      label: Expected Results
+      description: What did you expect would happen when you ran the command?
+      placeholder: e.g. I expected the CLI to upload the source maps to Sentry and display a success message.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual Results
+      description: What actually happened when you ran the command?
+      placeholder: e.g. The CLI displayed an error message and exited with a non-zero status code.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Logs
+      description: |
+        Please provide the full log output from the CLI. If possible, run the CLI with `--log-level=debug`.
+        **Remember to remove any sensitive information!**
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: |
+        **Thank you for your report!** We will investigate the issue and respond as soon as possible.

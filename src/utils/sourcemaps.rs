@@ -21,7 +21,6 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
 use crate::api::Api;
-use crate::utils::enc::decode_unknown_string;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
@@ -36,20 +35,6 @@ pub mod inject;
 ///
 /// Data URLs are used to embed sourcemaps directly in javascript source files.
 const DATA_PREAMBLE: &str = "data:application/json;base64,";
-
-fn is_likely_minified_js(code: &[u8]) -> bool {
-    // if we have a debug id or source maps location reference, this is a minified file
-    if let Ok(code) = std::str::from_utf8(code) {
-        if discover_debug_id(code).is_some() || discover_sourcemaps_location(code).is_some() {
-            return true;
-        }
-    }
-    if let Ok(code_str) = decode_unknown_string(code) {
-        might_be_minified::analyze_str(&code_str).is_likely_minified()
-    } else {
-        false
-    }
-}
 
 fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
@@ -97,7 +82,7 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
 }
 
 pub fn get_sourcemap_ref_from_headers(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
-    get_sourcemap_reference_from_headers(file.headers.iter().map(|(k, v)| (k, v)))
+    get_sourcemap_reference_from_headers(file.headers.iter())
         .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
 }
 
@@ -226,17 +211,13 @@ fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
     if extensions.is_empty() {
         return true;
     }
-    url.rsplit('/')
-        .next()
-        .and_then(|filename| {
-            let mut splitter = filename.rsplit('.');
-            let rv = splitter.next();
-            // need another segment
-            splitter.next()?;
-            rv
-        })
-        .map(|ext| extensions.contains(&ext))
-        .unwrap_or(false)
+
+    match url.rsplit('/').next() {
+        Some(filename) => extensions
+            .iter()
+            .any(|ext| filename.ends_with(&format!(".{ext}"))),
+        None => false,
+    }
 }
 
 /// Return true iff url is a remote url (not a local path or embedded sourcemap).
@@ -245,6 +226,19 @@ fn is_remote_url(url: &str) -> bool {
         Ok(url) => url.scheme() != "data",
         Err(_) => false,
     };
+}
+
+/// Return true if url appears to be a URL path.
+/// Most often, a URL path will begin with `/`,
+/// particularly in the case of static asset collection and hosting,
+/// but such a path is very unlikely to exist in the local filesystem.
+fn is_url_path(url: &str) -> bool {
+    url.starts_with('/') && !Path::new(url).exists()
+}
+
+/// Return true iff url is probably not a local file path.
+fn is_remote_sourcemap(url: &str) -> bool {
+    is_remote_url(url) || is_url_path(url)
 }
 
 impl SourceMapProcessor {
@@ -300,20 +294,6 @@ impl SourceMapProcessor {
                 && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
             {
                 (SourceFileType::IndexedRamBundle, None)
-            } else if file
-                .path
-                .file_name()
-                .and_then(OsStr::to_str)
-                .map(|x| x.contains(".min."))
-                .unwrap_or(false)
-                || is_likely_minified_js(&file.contents)
-            {
-                (
-                    SourceFileType::MinifiedSource,
-                    std::str::from_utf8(&file.contents)
-                        .ok()
-                        .and_then(discover_debug_id),
-                )
             } else if is_hermes_bytecode(&file.contents) {
                 // This is actually a big hack:
                 // For the react-native Hermes case, we skip uploading the bytecode bundle,
@@ -323,7 +303,24 @@ impl SourceMapProcessor {
                 file.contents.clear();
                 (SourceFileType::MinifiedSource, None)
             } else {
-                (SourceFileType::Source, None)
+                // Here, we use MinifiedSource for historical reasons. We used to guess whether
+                // a JS file was a minified file or a source file, and we would treat these files
+                // differently when uploading or injecting them. However, the desired behavior is
+                // and has always been to treat all JS files the same, since users should be
+                // responsible for providing the file paths for only files they would like to have
+                // uploaded or injected. The minified file guessing furthermore was not reliable,
+                // since minification is not a necessary step in the JS build process.
+                //
+                // We use MinifiedSource here rather than Source because we want to treat all JS
+                // files the way we used to treat minified files only. To use Source, we would need
+                // to analyze all possible code paths that check this value, and update those as
+                // well. To keep the change minimal, we use MinifiedSource here.
+                (
+                    SourceFileType::MinifiedSource,
+                    std::str::from_utf8(&file.contents)
+                        .ok()
+                        .and_then(discover_debug_id),
+                )
             };
 
             let mut source_file = SourceFile {
@@ -378,7 +375,8 @@ impl SourceMapProcessor {
             // that can't be resolved to a source map file.
             // Instead, we pretend we failed to discover the location, and we fall back to
             // guessing the source map location based on the source location.
-            let location = discover_sourcemaps_location(contents).filter(|loc| !is_remote_url(loc));
+            let location =
+                discover_sourcemaps_location(contents).filter(|loc| !is_remote_sourcemap(loc));
             let sourcemap_reference = match location {
                 Some(url) => SourceMapReference::from_url(url.to_string()),
                 None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
@@ -409,22 +407,18 @@ impl SourceMapProcessor {
 
         println!();
         println!("{}", style(title).dim().bold());
-        let mut sect = None;
+        let mut current_section = None;
 
         for source in sources {
-            if Some(source.ty) != sect {
-                println!(
-                    "  {}",
-                    style(match source.ty {
-                        SourceFileType::Source => "Scripts",
-                        SourceFileType::MinifiedSource => "Minified Scripts",
-                        SourceFileType::SourceMap => "Source Maps",
-                        SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
-                    })
-                    .yellow()
-                    .bold()
-                );
-                sect = Some(source.ty);
+            let section_title = match source.ty {
+                SourceFileType::Source | SourceFileType::MinifiedSource => "Scripts",
+                SourceFileType::SourceMap => "Source Maps",
+                SourceFileType::IndexedRamBundle => "Indexed RAM Bundles (expanded)",
+            };
+
+            if Some(section_title) != current_section {
+                println!("  {}", style(section_title).yellow().bold());
+                current_section = Some(section_title);
             }
 
             if source.already_uploaded {
@@ -437,7 +431,7 @@ impl SourceMapProcessor {
 
             let mut pieces = Vec::new();
 
-            if source.ty == SourceFileType::MinifiedSource {
+            if [SourceFileType::Source, SourceFileType::MinifiedSource].contains(&source.ty) {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
                     let sm_url = sm_ref.get_url();
                     if sm_url.starts_with("data:") {
@@ -797,12 +791,14 @@ impl SourceMapProcessor {
 
         let api = Api::current();
 
-        if let Ok(artifacts) = api.list_release_files_by_checksum(
-            context.org,
-            context.project,
-            release,
-            &sources_checksums,
-        ) {
+        if let Ok(artifacts) = api.authenticated().and_then(|api| {
+            api.list_release_files_by_checksum(
+                context.org,
+                context.project,
+                release,
+                &sources_checksums,
+            )
+        }) {
             let already_uploaded_checksums: HashSet<_> = artifacts
                 .into_iter()
                 .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())
@@ -953,8 +949,9 @@ impl SourceMapProcessor {
                             bail!("Invalid embedded sourcemap in source file {source_url}");
                         };
 
-                        let mut sourcemap = SourceMap::from_slice(&decoded)
-                            .context("Invalid embedded sourcemap in source file {source_url}")?;
+                        let mut sourcemap = SourceMap::from_slice(&decoded).with_context(|| {
+                            format!("Invalid embedded sourcemap in source file {source_url}")
+                        })?;
 
                         let debug_id = sourcemap
                             .get_debug_id()
@@ -1221,5 +1218,6 @@ mod tests {
         assert!(!url_matches_extension("foo.mjs", &["js"][..]));
         assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
         assert!(!url_matches_extension("js", &["js"][..]));
+        assert!(url_matches_extension("foo.test.js", &["test.js"][..]));
     }
 }

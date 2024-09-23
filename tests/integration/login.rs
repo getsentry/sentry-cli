@@ -9,3 +9,8 @@ fn command_login_help() {
 fn command_login() {
     register_test("login/login.trycmd");
 }
+
+#[test]
+fn command_login_with_token() {
+    register_test("login/login-with-token.trycmd");
+}

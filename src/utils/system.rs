@@ -1,65 +1,19 @@
 use std::borrow::Cow;
 use std::env;
+#[cfg(target_os = "macos")]
 use std::process;
 
 use anyhow::{Error, Result};
 use console::style;
+use dotenv::Result as DotenvResult;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use crate::config::Config;
-#[cfg(not(windows))]
-use crate::utils::xcode::launched_from_xcode;
 
-#[cfg(not(windows))]
-pub fn run_or_interrupt<F>(f: F)
-where
-    F: FnOnce() + Send + 'static,
-{
-    // See: https://github.com/getsentry/sentry-cli/pull/1104
-    if launched_from_xcode() {
-        f();
-        return;
-    }
-
-    let (tx, rx) = crossbeam_channel::bounded(100);
-    let mut signals = signal_hook::iterator::Signals::new([
-        signal_hook::consts::SIGTERM,
-        signal_hook::consts::SIGINT,
-    ])
-    .unwrap();
-
-    {
-        let tx = tx.clone();
-        std::thread::spawn(move || {
-            f();
-            tx.send(0).ok();
-        });
-    }
-
-    std::thread::spawn(move || {
-        for signal in signals.forever() {
-            tx.send(signal).ok();
-        }
-    });
-
-    if let Ok(signal) = rx.recv() {
-        if signal == signal_hook::consts::SIGINT {
-            eprintln!("Interrupted!");
-        }
-    }
-}
-
-#[cfg(windows)]
-pub fn run_or_interrupt<F>(f: F)
-where
-    F: FnOnce(),
-    F: Send + 'static,
-{
-    f();
-}
-
-/// Propagate an exit status outwarts
+/// Propagate an exit status outwarts.
+/// We only use this function in the macOS binary.
+#[cfg(target_os = "macos")]
 pub fn propagate_exit_status(status: process::ExitStatus) {
     if !status.success() {
         if let Some(code) = status.code() {
@@ -177,15 +131,28 @@ pub fn init_backtrace() {
 pub struct QuietExit(pub i32);
 
 /// Loads a .env file
-pub fn load_dotenv() {
-    if env::var("SENTRY_LOAD_DOTENV")
-        .map(|x| x.as_str() == "1")
-        .unwrap_or(true)
-    {
-        if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
-            dotenv::from_path(path).ok();
-        } else {
-            dotenv::dotenv().ok();
-        }
+pub fn load_dotenv() -> DotenvResult<()> {
+    let load_dotenv_unset = env::var("SENTRY_LOAD_DOTENV")
+        .map(|x| x.as_str() != "1")
+        .unwrap_or(false);
+
+    if load_dotenv_unset {
+        return Ok(());
     }
+
+    match env::var("SENTRY_DOTENV_PATH") {
+        Ok(path) => dotenv::from_path(path),
+        Err(_) => dotenv::dotenv().map(|_| ()),
+    }
+    .map_or_else(
+        |error| {
+            // We only propagate errors if the .env file was found and failed to load.
+            if error.not_found() {
+                Ok(())
+            } else {
+                Err(error)
+            }
+        },
+        |_| Ok(()),
+    )
 }

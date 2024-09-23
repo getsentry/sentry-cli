@@ -52,7 +52,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
     let api = Api::current();
-    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 
     let context = &UploadContext {
         org: &org,

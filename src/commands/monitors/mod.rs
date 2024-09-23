@@ -21,7 +21,7 @@ pub fn make_command(mut command: Command) -> Command {
     }
 
     command = command
-        .about("Manage monitors on Sentry [beta].")
+        .about("Manage cron monitors on Sentry.")
         .subcommand_required(true)
         .arg_required_else_help(true);
 

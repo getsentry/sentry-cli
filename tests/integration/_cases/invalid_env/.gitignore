@@ -1,0 +1,2 @@
+# We explicitly want to include invalid-env.in, since the contents are static.
+!invalid-env.in

@@ -1,20 +1,16 @@
 use chrono_tz::Tz;
-use log::warn;
 use std::process;
 use std::time::{Duration, Instant};
 use uuid::Uuid;
 
 use anyhow::Result;
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 
 use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus, MonitorConfig, MonitorSchedule};
-use sentry::types::Dsn;
 
-use crate::api::{Api, ApiCreateMonitorCheckIn, ApiMonitorCheckInStatus, ApiUpdateMonitorCheckIn};
-use crate::config::Config;
-use crate::utils::event::with_sentry_client;
-use crate::utils::system::{print_error, QuietExit};
+use crate::api::envelopes_api::EnvelopesApi;
+use crate::utils::system::QuietExit;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -28,16 +24,9 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("environment")
                 .short('e')
+                .long("environment")
                 .default_value("production")
                 .help("Specify the environment of the monitor."),
-        )
-        .arg(
-            Arg::new("allow_failure")
-                .short('f')
-                .long("allow-failure")
-                .action(ArgAction::SetTrue)
-                .help("Run provided command even when Sentry reports an error.")
-                .hide(true),
         )
         .arg(
             Arg::new("args")
@@ -86,6 +75,28 @@ pub fn make_command(command: Command) -> Command {
                     execution schedule's timezone. Requires --schedule.",
                 ),
         )
+        .arg(
+            Arg::new("failure_issue_threshold")
+                .long("failure-issue-threshold")
+                .value_parser(clap::value_parser!(u64).range(1..))
+                .requires("schedule")
+                .help(
+                    "The number of consecutive missed or error check-ins that trigger an \
+                     issue. Requires --schedule.",
+                ),
+        )
+        .arg(
+            Arg::new("recovery_threshold")
+                .long("recovery-threshold")
+                .value_parser(clap::value_parser!(u64).range(1..))
+                .requires("schedule")
+                .help(
+                    "The number of consecutive successful check-ins that resolve an \
+                     issue. Requires --schedule.",
+                ),
+        )
+        // Hide auth token from --help output
+        .arg(Arg::new("auth_token").long("auth-token").hide(true))
 }
 
 fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Duration) {
@@ -111,13 +122,12 @@ fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Du
     (success, code, elapsed)
 }
 
-fn dsn_execute(
-    dsn: Dsn,
+fn execute_checkin(
     args: Vec<&String>,
     monitor_slug: &str,
     environment: &str,
     monitor_config: Option<MonitorConfig>,
-) -> (bool, Option<i32>) {
+) -> Result<(bool, Option<i32>)> {
     let check_in_id = Uuid::new_v4();
 
     let open_checkin = MonitorCheckIn {
@@ -129,7 +139,8 @@ fn dsn_execute(
         monitor_config,
     };
 
-    with_sentry_client(dsn.clone(), |c| c.send_envelope(open_checkin.into()));
+    let envelopes_api = EnvelopesApi::try_new()?;
+    envelopes_api.send_envelope(open_checkin)?;
 
     let (success, code, elapsed) = run_program(args, monitor_slug);
 
@@ -150,54 +161,8 @@ fn dsn_execute(
         monitor_config: None,
     };
 
-    with_sentry_client(dsn, |c| c.send_envelope(close_checkin.into()));
-
-    (success, code)
-}
-
-fn token_execute(
-    args: Vec<&String>,
-    monitor_slug: &str,
-    environment: &str,
-) -> (bool, Option<i32>, Option<anyhow::Error>) {
-    let api = Api::current();
-    let monitor_checkin = api.create_monitor_checkin(
-        &monitor_slug.to_owned(),
-        &ApiCreateMonitorCheckIn {
-            status: ApiMonitorCheckInStatus::InProgress,
-            environment: environment.to_string(),
-        },
-    );
-
-    let (success, code, elapsed) = run_program(args, monitor_slug);
-
-    match monitor_checkin {
-        Ok(checkin) => {
-            let status = if success {
-                ApiMonitorCheckInStatus::Ok
-            } else {
-                ApiMonitorCheckInStatus::Error
-            };
-
-            let duration = Some(elapsed.as_secs() * 1000 + u64::from(elapsed.subsec_millis()));
-
-            api.update_monitor_checkin(
-                &monitor_slug.to_owned(),
-                &checkin.id,
-                &ApiUpdateMonitorCheckIn {
-                    status: Some(status),
-                    duration,
-                    environment: Some(environment.to_string()),
-                },
-            )
-            .ok();
-        }
-        Err(e) => {
-            return (success, code, Some(e.into()));
-        }
-    }
-
-    (success, code, None)
+    envelopes_api.send_envelope(close_checkin)?;
+    Ok((success, code))
 }
 
 fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfig>> {
@@ -210,46 +175,18 @@ fn parse_monitor_config_args(matches: &ArgMatches) -> Result<Option<MonitorConfi
         checkin_margin: matches.get_one("checkin_margin").copied(),
         max_runtime: matches.get_one("max_runtime").copied(),
         timezone: matches.get_one("timezone").map(Tz::to_string),
+        failure_issue_threshold: matches.get_one("failure_issue_threshold").copied(),
+        recovery_threshold: matches.get_one("recovery_threshold").copied(),
     }))
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let config = Config::current();
-    let dsn = config.get_dsn().ok();
-
-    // Token based auth is deprecated, prefer DSN style auth for monitor checkins.
-    // Using token based auth *DOES NOT WORK* when using slugs.
-    if dsn.is_none() {
-        warn!("Token auth is deprecated for cron monitor checkins and will be removed in the next major version.");
-        warn!("Please use DSN auth.");
-    }
-
     let args: Vec<_> = matches.get_many::<String>("args").unwrap().collect();
     let monitor_slug = matches.get_one::<String>("monitor_slug").unwrap();
     let environment = matches.get_one::<String>("environment").unwrap();
     let monitor_config = parse_monitor_config_args(matches)?;
 
-    let (success, code) = match dsn {
-        // Use envelope API when dsn is provided. This is the prefered way to create check-ins,
-        // and the legacy API will be removed in the next major CLI version.
-        Some(dsn) => dsn_execute(dsn, args, monitor_slug, environment, monitor_config),
-        // Use legacy API when DSN is not provided
-        None => {
-            if monitor_config.is_some() {
-                anyhow::bail!("Crons monitor upserts are only supported with DSN auth. Please try again with \
-                               DSN auth or repeat the command without the `schedule` argument.");
-            }
-            let (success, code, err) = token_execute(args, monitor_slug, environment);
-            if let Some(e) = err {
-                if matches.get_flag("allow_failure") {
-                    print_error(&e);
-                } else {
-                    return Err(e);
-                }
-            }
-            (success, code)
-        }
-    };
+    let (success, code) = execute_checkin(args, monitor_slug, environment, monitor_config)?;
 
     if !success {
         return Err(QuietExit(code.unwrap_or(1)).into());

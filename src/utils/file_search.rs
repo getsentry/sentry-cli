@@ -45,14 +45,6 @@ impl ReleaseFileSearch {
         self
     }
 
-    pub fn extension<E>(&mut self, extension: E) -> &mut Self
-    where
-        E: Into<String>,
-    {
-        self.extensions.insert(extension.into());
-        self
-    }
-
     pub fn extensions<E>(&mut self, extensions: E) -> &mut Self
     where
         E: IntoIterator,
@@ -61,14 +53,6 @@ impl ReleaseFileSearch {
         for extension in extensions {
             self.extensions.insert(extension.into());
         }
-        self
-    }
-
-    pub fn ignore<I>(&mut self, ignore: I) -> &mut Self
-    where
-        I: Into<String>,
-    {
-        self.ignores.insert(ignore.into());
         self
     }
 
@@ -130,7 +114,7 @@ impl ReleaseFileSearch {
         if !&self.extensions.is_empty() {
             let mut types_builder = TypesBuilder::new();
             for ext in &self.extensions {
-                let ext_name = ext.replace('.', "__");
+                let ext_name = ext.replace('.', "");
                 types_builder.add(&ext_name, &format!("*.{ext}"))?;
             }
             builder.types(types_builder.select("all").build()?);

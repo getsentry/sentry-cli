@@ -10,7 +10,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::warn;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
-use crate::api::{Api, ProgressBarMode};
+use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::validate_distribution;
@@ -19,6 +19,7 @@ use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, UploadContext,
 };
 use crate::utils::fs::{decompress_gzip_content, is_gzip_compressed, path_as_url};
+use crate::utils::progress::ProgressBarMode;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -127,7 +128,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
     let api = Api::current();
-    let chunk_upload_options = api.get_chunk_upload_options(&org)?;
+    let authenticated_api = api.authenticated()?;
+    let chunk_upload_options = authenticated_api.get_chunk_upload_options(&org)?;
 
     let dist = matches.get_one::<String>("dist").map(String::as_str);
     let mut headers = BTreeMap::new();
@@ -238,19 +240,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             });
         }
 
-        if let Some(artifact) = api.upload_release_file(
-            context,
-            &contents,
-            name,
-            Some(
-                headers
-                    .iter()
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect::<Vec<_>>()
-                    .as_slice(),
-            ),
-            ProgressBarMode::Request,
-        )? {
+        if let Some(artifact) = authenticated_api
+            .region_specific(context.org)
+            .upload_release_file(
+                context,
+                &contents,
+                name,
+                Some(
+                    headers
+                        .iter()
+                        .map(|(k, v)| (k.clone(), v.clone()))
+                        .collect::<Vec<_>>()
+                        .as_slice(),
+                ),
+                ProgressBarMode::Request,
+            )?
+        {
             println!("A {}  ({} bytes)", artifact.sha1, artifact.size);
         } else {
             bail!("File already present!");

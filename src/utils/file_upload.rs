@@ -9,21 +9,24 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Result};
 use console::style;
+use log::info;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
-use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileInfo, SourceFileType};
+use symbolic::debuginfo::sourcebundle::{
+    SourceBundleErrorKind, SourceBundleWriter, SourceFileInfo, SourceFileType,
+};
 use url::Url;
 
 use crate::api::NewRelease;
-use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions, ProgressBarMode};
+use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
-use crate::utils::progress::{ProgressBar, ProgressStyle};
+use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
@@ -63,7 +66,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
 
     if let Some(version) = context.release {
         let api = Api::current();
-        api.new_release(
+        api.authenticated()?.new_release(
             context.org,
             &NewRelease {
                 version: version.to_string(),
@@ -118,7 +121,7 @@ pub struct SourceFile {
     pub path: PathBuf,
     pub contents: Vec<u8>,
     pub ty: SourceFileType,
-    /// A map of headers attatched to the source file.
+    /// A map of headers attached to the source file.
     ///
     /// Headers that `sentry-cli` knows about are
     /// * "debug-id" for a file's debug id
@@ -142,11 +145,6 @@ impl SourceFile {
     /// Sets the value of the "debug-id" header.
     pub fn set_debug_id(&mut self, debug_id: String) {
         self.headers.insert("debug-id".to_string(), debug_id);
-    }
-
-    /// Returns the value of the "Sourcemap" header.
-    pub fn sourcemap_reference(&self) -> Option<&String> {
-        self.headers.get("Sourcemap")
     }
 
     /// Sets the value of the "Sourcemap" header.
@@ -204,7 +202,7 @@ impl<'a> FileUpload<'a> {
         }
 
         // Do not permit uploads of more than 20k files if the server does not
-        // support artifact bundles.  This is a termporary downside protection to
+        // support artifact bundles.  This is a temporary downside protection to
         // protect users from uploading more sources than we support.
         if self.files.len() > 20_000 {
             bail!(
@@ -236,6 +234,7 @@ fn upload_files_parallel(
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
+        .authenticated()?
         .list_release_files(context.org, context.project, release)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
@@ -270,6 +269,7 @@ fn upload_files_parallel(
             .enumerate()
             .map(|(index, (_, file))| -> Result<()> {
                 let api = Api::current();
+                let authenticated_api = api.authenticated()?;
                 let mode = ProgressBarMode::Shared((
                     pb.clone(),
                     file.contents.len() as u64,
@@ -280,23 +280,26 @@ fn upload_files_parallel(
                 if let Some(old_id) =
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
-                    api.delete_release_file(context.org, context.project, release, old_id)
+                    authenticated_api
+                        .delete_release_file(context.org, context.project, release, old_id)
                         .ok();
                 }
 
-                api.upload_release_file(
-                    context,
-                    &file.contents,
-                    &file.url,
-                    Some(
-                        file.headers
-                            .iter()
-                            .map(|(k, v)| (k.clone(), v.clone()))
-                            .collect::<Vec<_>>()
-                            .as_slice(),
-                    ),
-                    mode,
-                )?;
+                authenticated_api
+                    .region_specific(context.org)
+                    .upload_release_file(
+                        context,
+                        &file.contents,
+                        &file.url,
+                        Some(
+                            file.headers
+                                .iter()
+                                .map(|(k, v)| (k.clone(), v.clone()))
+                                .collect::<Vec<_>>()
+                                .as_slice(),
+                        ),
+                        mode,
+                    )?;
 
                 Ok(())
             })
@@ -331,13 +334,14 @@ fn poll_assemble(
     let max_wait = context.max_wait.min(options_max_wait);
 
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
     let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
         || options.supports(ChunkUploadCapability::ArtifactBundlesV2))
         && context.project.is_some();
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
         let response = if use_artifact_bundle {
-            api.assemble_artifact_bundle(
+            authenticated_api.assemble_artifact_bundle(
                 context.org,
                 vec![context.project.unwrap().to_string()],
                 checksum,
@@ -346,7 +350,12 @@ fn poll_assemble(
                 context.dist,
             )?
         } else {
-            api.assemble_release_artifacts(context.org, context.release()?, checksum, chunks)?
+            authenticated_api.assemble_release_artifacts(
+                context.org,
+                context.release()?,
+                checksum,
+                chunks,
+            )?
         };
 
         // Poll until there is a response, unless the user has specified to skip polling. In
@@ -422,7 +431,7 @@ fn upload_files_chunked(
     // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
     if options.supports(ChunkUploadCapability::ArtifactBundlesV2) && context.project.is_some() {
         let api = Api::current();
-        let response = api.assemble_artifact_bundle(
+        let response = api.authenticated()?.assemble_artifact_bundle(
             context.org,
             vec![context.project.unwrap().to_string()],
             checksum,
@@ -513,7 +522,17 @@ fn build_artifact_bundle(
         }
 
         let bundle_path = url_to_bundle_path(&file.url)?;
-        bundle.add_file(bundle_path, file.contents.as_slice(), info)?;
+        if let Err(e) = bundle.add_file(bundle_path, file.contents.as_slice(), info) {
+            if e.kind() == SourceBundleErrorKind::ReadFailed {
+                info!(
+                    "Skipping {} because it is not valid UTF-8.",
+                    file.path.display()
+                );
+                continue;
+            } else {
+                return Err(e.into());
+            }
+        }
     }
 
     bundle.finish()?;
@@ -667,7 +686,7 @@ mod tests {
         let hash = Sha1::from(buf);
         assert_eq!(
             hash.digest().to_string(),
-            "d38fb9915de70eec2aa2d0c380b344d89ef540f0"
+            "f0e25ae149b711c510148e022ebc883ad62c7c4c"
         );
     }
 }

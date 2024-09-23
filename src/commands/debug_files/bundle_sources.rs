@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use log::warn;
+use log::{info, warn};
 use symbolic::debuginfo::sourcebundle::SourceBundleWriter;
 
 use crate::utils::dif::DifFile;
@@ -91,7 +91,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let mut out = output_path.unwrap_or(parent_path).join(filename);
             match index {
                 0 => out.set_extension("src.zip"),
-                index => out.set_extension(&format!("{index}.src.zip")),
+                index => out.set_extension(format!("{index}.src.zip")),
             };
 
             fs::create_dir_all(out.parent().unwrap())?;
@@ -100,11 +100,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             // Resolve source files from the object and write their contents into the archive. Skip to
             // upload this bundle if no source could be written. This can happen if there is no file or
             // line information in the object file, or if none of the files could be resolved.
-            let written = writer.write_object_with_filter(
-                &object,
-                &filename.to_string_lossy(),
-                filter_bad_sources,
-            )?;
+            let written = writer
+                .with_skipped_file_callback(|skipped_info| info!("{skipped_info}"))
+                .write_object_with_filter(
+                    &object,
+                    &filename.to_string_lossy(),
+                    filter_bad_sources,
+                )?;
 
             if !written {
                 eprintln!("skipped {orig_path} (no files found)");

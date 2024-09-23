@@ -4,6 +4,7 @@ mod deploys;
 mod events;
 mod help;
 mod info;
+mod invalid_env;
 mod issues;
 mod login;
 mod monitors;
@@ -14,34 +15,45 @@ mod react_native;
 mod releases;
 mod send_envelope;
 mod send_event;
+mod send_metric;
 mod sourcemaps;
+mod token_validation;
 mod uninstall;
 mod update;
 mod upload_dif;
+mod upload_dsym;
 mod upload_proguard;
 
 use std::fs;
 use std::io;
 use std::path::Path;
 
-use mockito::{mock, server_url, Matcher, Mock};
+use mockito::{self, mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
-pub fn register_test(path: &str) -> TestCases {
+pub fn register_test_without_token(path: &str) -> TestCases {
     let test_case = TestCases::new();
+    let server_addr = mockito::server_address();
     test_case
         .env("SENTRY_INTEGRATION_TEST", "1")
         .env("SENTRY_DUMP_RESPONSES", "dump") // reused default directory of `trycmd` output dumps
         .env("SENTRY_URL", server_url())
-        .env("SENTRY_AUTH_TOKEN", "lolnope")
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
-        .env("SENTRY_DSN", format!("https://test@{}/1337", server_url()))
+        .env("SENTRY_DSN", format!("http://test@{}/1337", server_addr))
         .case(format!("tests/integration/_cases/{path}"));
     test_case.insert_var("[VERSION]", VERSION).unwrap();
+    test_case
+}
+pub fn register_test(path: &str) -> TestCases {
+    let auth_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
+    let test_case = register_test_without_token(path);
+    test_case.env("SENTRY_AUTH_TOKEN", auth_token);
+
     test_case
 }
 pub struct EndpointOptions {
@@ -51,6 +63,7 @@ pub struct EndpointOptions {
     pub response_body: Option<String>,
     pub response_file: Option<String>,
     pub matcher: Option<Matcher>,
+    pub header_matcher: Option<(&'static str, Matcher)>,
 }
 
 impl EndpointOptions {
@@ -62,6 +75,7 @@ impl EndpointOptions {
             response_body: None,
             response_file: None,
             matcher: None,
+            header_matcher: None,
         }
     }
 
@@ -82,6 +96,13 @@ impl EndpointOptions {
         self.matcher = Some(matcher);
         self
     }
+
+    /// Matches a header of the mock endpoint. The header must be present and its value must
+    /// match the provided matcher in order for the endpoint to be reached.
+    pub fn with_header_matcher(mut self, key: &'static str, matcher: Matcher) -> Self {
+        self.header_matcher = Some((key, matcher));
+        self
+    }
 }
 
 pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
@@ -99,6 +120,10 @@ pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
 
     if let Some(matcher) = opts.matcher {
         mock = mock.match_body(matcher);
+    }
+
+    if let Some((key, matcher)) = opts.header_matcher {
+        mock = mock.match_header(key, matcher);
     }
 
     mock.create()
@@ -209,4 +234,14 @@ pub fn assert_endpoints(mocks: &[Mock]) {
     for mock in mocks {
         mock.assert();
     }
+}
+
+#[test]
+pub fn token_redacted() {
+    register_test("token-redacted.trycmd");
+}
+
+#[test]
+pub fn token_redacted_2() {
+    register_test("token-redacted-2.trycmd");
 }

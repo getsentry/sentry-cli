@@ -1,3 +1,4 @@
+use parking_lot::RwLock;
 use std::env;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -5,7 +6,7 @@ use std::time::Instant;
 
 use crate::utils::logging;
 
-pub use indicatif::{ProgressDrawTarget, ProgressStyle};
+pub use indicatif::ProgressStyle;
 
 pub fn is_progress_bar_visible() -> bool {
     env::var("SENTRY_NO_PROGRESS_BAR") != Ok("1".into())
@@ -35,16 +36,6 @@ impl ProgressBar {
 
     pub fn hidden() -> Self {
         indicatif::ProgressBar::hidden().into()
-    }
-
-    pub fn finish(&self) {
-        self.inner.finish();
-        logging::set_progress_bar(None);
-    }
-
-    pub fn finish_with_message(&self, msg: &str) {
-        self.inner.finish_with_message(msg);
-        logging::set_progress_bar(None);
     }
 
     pub fn finish_with_duration(&self, op: &str) {
@@ -80,5 +71,30 @@ impl Deref for ProgressBar {
 
     fn deref(&self) -> &Self::Target {
         &self.inner
+    }
+}
+
+#[derive(Clone)]
+pub enum ProgressBarMode {
+    Disabled,
+    Request,
+    Response,
+    Shared((Arc<ProgressBar>, u64, usize, Arc<RwLock<Vec<u64>>>)),
+}
+
+impl ProgressBarMode {
+    /// Returns if progress bars are generally enabled.
+    pub fn active(&self) -> bool {
+        !matches!(*self, ProgressBarMode::Disabled)
+    }
+
+    /// Returns whether a progress bar should be displayed during upload.
+    pub fn request(&self) -> bool {
+        matches!(*self, ProgressBarMode::Request)
+    }
+
+    /// Returns whether a progress bar should be displayed during download.
+    pub fn response(&self) -> bool {
+        matches!(*self, ProgressBarMode::Response)
     }
 }

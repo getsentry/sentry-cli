@@ -3,22 +3,22 @@ use std::env;
 use std::path::PathBuf;
 use std::time::SystemTime;
 
-use anyhow::{format_err, Result};
+use anyhow::{anyhow, format_err, Result};
 use chrono::{DateTime, Utc};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
-use log::{debug, warn};
+use log::warn;
 use sentry::protocol::{Event, Level, LogEntry, User};
-use sentry::types::{Dsn, Uuid};
-use sentry::Envelope;
+use sentry::types::Uuid;
+use sentry::{apply_defaults, Client, ClientOptions, Envelope};
 use serde_json::Value;
 use username::get_user_name;
 
-use crate::commands::send_envelope::send_raw_envelope;
-use crate::config::Config;
+use crate::api::envelopes_api::EnvelopesApi;
+use crate::constants::USER_AGENT;
 use crate::utils::args::{get_timestamp, validate_distribution};
-use crate::utils::event::{attach_logfile, get_sdk_info, with_sentry_client};
+use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
 pub fn make_command(command: Command) -> Command {
@@ -159,14 +159,20 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-fn send_raw_event(event: Event<'static>, dsn: Dsn) -> Uuid {
-    debug!("{:?}", event);
-    with_sentry_client(dsn, |c| c.capture_event(event, None))
+pub(super) fn send_raw_event(event: Event<'static>) -> Result<Uuid> {
+    let client = Client::from_config(apply_defaults(ClientOptions {
+        user_agent: USER_AGENT.into(),
+        ..Default::default()
+    }));
+    let event = client
+        .prepare_event(event, None)
+        .ok_or(anyhow!("Event dropped during preparation"))?;
+    let event_id = event.event_id;
+    EnvelopesApi::try_new()?.send_envelope(event)?;
+    Ok(event_id)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let config = Config::current();
-    let dsn = config.get_dsn()?;
     let raw = matches.get_flag("raw");
 
     if let Some(path) = matches.get_one::<String>("path") {
@@ -200,11 +206,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 writeln!(buf, r#"{{"type":"event","length":{}}}"#, raw_event.len())?;
                 buf.extend(raw_event);
                 let envelope = Envelope::from_bytes_raw(buf)?;
-                send_raw_envelope(envelope, dsn.clone());
+                EnvelopesApi::try_new()?.send_envelope(envelope)?;
                 id
             } else {
                 let event: Event = serde_json::from_slice(&raw_event)?;
-                send_raw_event(event, dsn.clone())
+                send_raw_event(event)?
             };
 
             println!("Event from file {} dispatched: {}", path.display(), id);
@@ -319,8 +325,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         attach_logfile(&mut event, logfile, matches.get_flag("with_categories"))?;
     }
 
-    let id = send_raw_event(event, dsn);
-    println!("Event dispatched: {id}");
+    let id = send_raw_event(event)?;
+    println!("Event dispatched.\nEvent id: {id}");
 
     Ok(())
 }

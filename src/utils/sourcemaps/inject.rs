@@ -14,7 +14,7 @@ use magic_string::{GenerateDecodedMapOptions, MagicString};
 use sentry::types::DebugId;
 use sourcemap::SourceMap;
 
-const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}();"#;
+const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}();"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
 
@@ -24,7 +24,7 @@ lazy_static! {
     // 2. a block of line comments, block comments, and empty lines,
     // 3. and an optional `"use strict";` statement.`
     static ref PRE_INJECT_RE: Regex = Regex::new(
-        r#"^(#!.*[\n\r])?(?:\s*|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';[\n\r]?)?"#
+        r#"^(#!.*[\n\r])?(?:\s+|/\*(?:.|\r|\n)*?\*/|//.*[\n\r])*(?:"[^"]*";|'[^']*';[\n\r]?)?"#
     )
     .unwrap();
 }
@@ -109,11 +109,9 @@ impl fmt::Display for InjectReport {
 /// Fixes up a minified JS source file with a debug id.
 ///
 /// This changes the source file in several ways:
-/// 1. The source code snippet
-/// `<CODE_SNIPPET>[<debug_id>]`
-/// is inserted at the earliest possible position, which is after an
-/// optional hashbang, followed by a
-/// block of comments, empty lines, and an optional `"use […]";` or `'use […]';` pragma.
+/// 1. The source code snippet `<CODE_SNIPPET>[<debug_id>]` is inserted at the earliest possible position,
+///    which is after an optional hashbang, followed by a block of comments, empty lines,
+///    and an optional `"use […]";` or `'use […]';` pragma.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
 ///
 /// This function returns a [`SourceMap`] that maps locations in the injected file
@@ -160,12 +158,10 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
 /// Fixes up a minified JS source file with a debug id without messing with mappings.
 ///
 /// This changes the source file in several ways:
-/// 1. The source code snippet
-/// `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
+/// 1. The source code snippet `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
 /// 2. A comment of the form `//# debugId=<debug_id>` is appended to the file.
-/// 3. The last source mapping comment (a comment starting with
-/// `//# sourceMappingURL=` or `//@ sourceMappingURL=`) is moved to
-/// the very end of the file, after the debug id comment from 2.
+/// 3. The last source mapping comment (a comment starting with `//# sourceMappingURL=` or `//@ sourceMappingURL=`)
+///    is moved to the very end of the file, after the debug id comment from 2.
 ///
 /// This function is useful in cases where a source file's corresponding sourcemap is
 /// not available. In such a case, [`fixup_js_file`] might mess up the mappings by inserting
@@ -327,14 +323,13 @@ some line
 something else"#;
 
         let debug_id = DebugId::default();
-
         let mut source = Vec::from(source);
 
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"//# sourceMappingURL=fake1
 
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
 some line
 //# sourceMappingURL=fake2
 //# sourceMappingURL=real
@@ -388,7 +383,7 @@ something else"#;
 
 
 
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
 some line
 //# sourceMappingURL=fake
 //# sourceMappingURL=fake
@@ -426,7 +421,6 @@ some line
 something else"#;
 
         let debug_id = DebugId::default();
-
         let mut source = Vec::from(source);
 
         fixup_js_file(&mut source, debug_id).unwrap();
@@ -436,7 +430,7 @@ something else"#;
 
   // some other comment
 "use strict";
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
  rest of the line
 'use strict';
 some line
@@ -463,7 +457,6 @@ some line
 something else"#;
 
         let debug_id = DebugId::default();
-
         let mut source = Vec::from(source);
 
         fixup_js_file(&mut source, debug_id).unwrap();
@@ -473,7 +466,7 @@ something else"#;
 
   // some other comment
 "use strict";
-!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
+!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();
  rest of the line
 (this.foo=this.bar||[]).push([[2],[function(e,t,n){"use strict"; […] }
 some line

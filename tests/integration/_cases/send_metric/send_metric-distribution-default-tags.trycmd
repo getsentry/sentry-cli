@@ -1,0 +1,10 @@
+```
+$ sentry-cli send-metric distribution -n testMetric -v 1 --log-level debug
+? success
+...
+{}
+{"type":"statsd","length":[..]}
+testMetric@none:1|d|#environment:def_env,release:def_release|T[..]
+...
+
+```

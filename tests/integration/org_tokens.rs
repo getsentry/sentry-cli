@@ -24,3 +24,8 @@ fn org_token_org_match() {
 fn org_token_url_works() {
     register_test("org_tokens/url-works.trycmd");
 }
+
+#[test]
+fn org_token_url_mismatch_empty_token() {
+    register_test("org_tokens/url-mismatch-empty-token.trycmd");
+}

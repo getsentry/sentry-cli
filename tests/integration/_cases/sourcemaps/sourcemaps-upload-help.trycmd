@@ -10,12 +10,12 @@ Arguments:
 
 Options:
   -o, --org <ORG>
-          The organization slug
+          The organization ID or slug.
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
           in key:value format.
   -p, --project <PROJECT>
-          The project slug.
+          The project ID or slug.
   -u, --url-prefix <PREFIX>
           The URL prefix to prepend to all filenames.
       --auth-token <AUTH_TOKEN>
@@ -81,7 +81,7 @@ Options:
           Set the file extensions that are considered for upload. This overrides the default
           extensions. To add an extension, all default extensions must be repeated. Specify once per
           extension.
-          Defaults to: `--ext=js --ext=map --ext=jsbundle --ext=bundle`
+          Defaults to: `--ext=js --ext=cjs --ext=mjs --ext=map --ext=jsbundle --ext=bundle`
   -s, --strict
           Fail with a non-zero exit code if the specified source map file cannot be uploaded.
   -h, --help

@@ -1,21 +1,25 @@
 //! This module implements the root command of the CLI tool.
 
-use std::env;
-use std::io;
-use std::process;
-
 use anyhow::{bail, Result};
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
+use std::borrow::Cow;
+use std::io;
+use std::process;
+use std::{env, iter};
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
+use crate::utils::auth_token::{redact_token_from_string, AuthToken};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
+use crate::utils::value_parsers::auth_token_parser;
+
+mod derive_parser;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -35,6 +39,7 @@ macro_rules! each_subcommand {
         $mac!(repos);
         $mac!(send_event);
         $mac!(send_envelope);
+        $mac!(send_metric);
         $mac!(sourcemaps);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);
@@ -77,6 +82,9 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "sourcemaps",
 ];
 
+/// The long auth token argument (--auth-token).
+const AUTH_TOKEN_ARG: &str = "auth-token";
+
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
     generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
 }
@@ -87,7 +95,6 @@ fn preexecute_hooks() -> Result<bool> {
     #[cfg(target_os = "macos")]
     fn sentry_react_native_xcode_wrap() -> Result<bool> {
         if let Ok(val) = env::var("__SENTRY_RN_WRAP_XCODE_CALL") {
-            env::remove_var("__SENTRY_RN_WRAP_XCODE_CALL");
             if &val == "1" {
                 crate::commands::react_native::xcode::wrap_call()?;
                 return Ok(true);
@@ -107,12 +114,12 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         config.set_auth(Auth::Key(api_key.to_owned()))?;
     }
 
-    if let Some(auth_token) = matches.get_one::<String>("auth_token") {
+    if let Some(auth_token) = matches.get_one::<AuthToken>("auth_token") {
         config.set_auth(Auth::Token(auth_token.to_owned()))?;
     }
 
     if let Some(url) = matches.get_one::<String>("url") {
-        config.set_base_url(url)?;
+        config.set_base_url(url);
     }
 
     if let Some(headers) = matches.get_many::<String>("headers") {
@@ -159,8 +166,9 @@ fn app() -> Command {
         .arg(
             Arg::new("auth_token")
                 .value_name("AUTH_TOKEN")
-                .long("auth-token")
+                .long(AUTH_TOKEN_ARG)
                 .global(true)
+                .value_parser(auth_token_parser)
                 .help("Use the given Sentry auth token."),
         )
         .arg(
@@ -275,8 +283,26 @@ pub fn execute() -> Result<()> {
     info!(
         "sentry-cli was invoked with the following command line: {}",
         env::args()
-            .map(|a| format!("\"{a}\""))
-            .collect::<Vec<String>>()
+            // Check whether the previous argument is "--auth-token"
+            .zip(
+                iter::once(false)
+                    .chain(env::args().map(|arg| arg == format!("--{AUTH_TOKEN_ARG}")))
+            )
+            .map(|(a, is_auth_token_arg)| {
+                let redact_replacement = "[REDACTED]";
+
+                // Redact anything that comes after --auth-token
+                let redacted = if is_auth_token_arg {
+                    Cow::Borrowed(redact_replacement)
+                } else if a.starts_with(&format!("--{AUTH_TOKEN_ARG}=")) {
+                    Cow::Owned(format!("--{AUTH_TOKEN_ARG}={redact_replacement}"))
+                } else {
+                    redact_token_from_string(&a, redact_replacement)
+                };
+
+                format!("\"{redacted}\"")
+            })
+            .collect::<Vec<_>>()
             .join(" ")
     );
 
@@ -306,12 +332,20 @@ pub fn execute() -> Result<()> {
 
 fn setup() {
     init_backtrace();
-    load_dotenv();
+
+    // Store the result of loading the dotenv file. We must load the dotenv file
+    // before setting the log level, as the log level can be set in the dotenv
+    // file, but we should only log a warning after setting the log level.
+    let load_dotenv_result = load_dotenv();
 
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
     set_max_level(LevelFilter::Debug);
     set_logger(&Logger).unwrap();
+
+    if let Err(e) = load_dotenv_result {
+        log::warn!("Failed to load .env file: {}", e);
+    }
 }
 
 /// Executes the command line application and exits the process.

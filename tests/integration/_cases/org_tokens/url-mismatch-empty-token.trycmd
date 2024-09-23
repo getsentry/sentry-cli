@@ -1,0 +1,8 @@
+This auth token has an empty URL. We expect the --url argument to take precedence here
+```
+$ sentry-cli --auth-token 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 --url https://sentry.example.com info
+? failed
+Sentry Server: https://sentry.example.com
+...
+
+```

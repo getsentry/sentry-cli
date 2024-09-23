@@ -1,7 +1,17 @@
+#![allow(dead_code)] // a ton of fields might be unused
+
 //! This module implements the API access to the Sentry API as well
 //! as some other APIs we interact with.  In particular it can talk
 //! to the GitHub API to figure out if there are new releases of the
 //! sentry-cli tool.
+
+pub mod envelopes_api;
+
+mod connection_manager;
+mod data_types;
+mod encoding;
+mod errors;
+mod pagination;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -11,25 +21,25 @@ use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
-use std::str::FromStr;
 use std::sync::Arc;
 use std::{env, fmt};
 
 use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
 use brotli2::write::BrotliEncoder;
-use chrono::{DateTime, Duration, FixedOffset, Utc};
+#[cfg(target_os = "macos")]
+use chrono::Duration;
+use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
 use flate2::write::GzEncoder;
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
-use parking_lot::{Mutex, RwLock};
-use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
+use parking_lot::Mutex;
 use regex::{Captures, Regex};
+use secrecy::ExposeSecret;
 use sentry::protocol::{Exception, Values};
-use sentry::types::Dsn;
-use serde::de::{DeserializeOwned, Deserializer};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
@@ -37,285 +47,51 @@ use symbolic::debuginfo::ObjectKind;
 use url::Url;
 use uuid::Uuid;
 
+use crate::api::errors::ProjectRenamedError;
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
-use crate::utils::android::AndroidManifest;
+use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::UploadContext;
-use crate::utils::http::{self, is_absolute_url, parse_link_header};
-use crate::utils::progress::ProgressBar;
+use crate::utils::http::{self, is_absolute_url};
+use crate::utils::progress::{ProgressBar, ProgressBarMode};
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
-use crate::utils::xcode::InfoPlist;
 
-// Based on https://docs.rs/percent-encoding/1.0.1/src/percent_encoding/lib.rs.html#104
-// WHATWG Spec: https://url.spec.whatwg.org/#percent-encoded-bytes
-// RFC3986 Reserved Characters: https://www.rfc-editor.org/rfc/rfc3986#section-2.2
-const QUERY_ENCODE_SET: AsciiSet = CONTROLS
-    .add(b' ')
-    .add(b'"')
-    .add(b'#')
-    .add(b'<')
-    .add(b'>')
-    .add(b'+');
-const PATH_SEGMENT_ENCODE_SET: AsciiSet = QUERY_ENCODE_SET
-    .add(b'`')
-    .add(b'?')
-    .add(b'{')
-    .add(b'}')
-    .add(b'%')
-    .add(b'/');
+use self::pagination::Pagination;
+use connection_manager::CurlConnectionManager;
+use encoding::{PathArg, QueryArg};
+use errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
 
-/// Wrapper that escapes arguments for URL path segments.
-pub struct PathArg<A: fmt::Display>(A);
-
-/// Wrapper that escapes arguments for URL query segments.
-pub struct QueryArg<A: fmt::Display>(A);
-
-struct CurlConnectionManager;
-
-impl r2d2::ManageConnection for CurlConnectionManager {
-    type Connection = curl::easy::Easy;
-    type Error = curl::Error;
-
-    fn connect(&self) -> Result<curl::easy::Easy, curl::Error> {
-        Ok(curl::easy::Easy::new())
-    }
-
-    fn is_valid(&self, _conn: &mut curl::easy::Easy) -> Result<(), curl::Error> {
-        Ok(())
-    }
-
-    fn has_broken(&self, _conn: &mut curl::easy::Easy) -> bool {
-        false
-    }
-}
+pub use self::data_types::*;
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
 }
 
-#[derive(Debug, Clone)]
-pub struct Link {
-    results: bool,
-    cursor: String,
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct Pagination {
-    next: Option<Link>,
-}
-
-impl Pagination {
-    pub fn into_next_cursor(self) -> Option<String> {
-        self.next
-            .and_then(|x| if x.results { Some(x.cursor) } else { None })
-    }
-}
-
-impl FromStr for Pagination {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Pagination, ()> {
-        let mut rv = Pagination::default();
-        for item in parse_link_header(s) {
-            let target = match item.get("rel") {
-                Some(&"next") => &mut rv.next,
-                _ => continue,
-            };
-
-            *target = Some(Link {
-                results: item.get("results") == Some(&"true"),
-                cursor: (*item.get("cursor").unwrap_or(&"")).to_string(),
-            });
-        }
-
-        Ok(rv)
-    }
-}
-
-impl<A: fmt::Display> fmt::Display for QueryArg<A> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        utf8_percent_encode(&format!("{}", self.0), &QUERY_ENCODE_SET).fmt(f)
-    }
-}
-
-impl<A: fmt::Display> fmt::Display for PathArg<A> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // if we put values into the path we need to url encode them.  However
-        // special care needs to be taken for any slash character or path
-        // segments that would end up as ".." or "." for security reasons.
-        // Since we cannot handle slashes there we just replace them with the
-        // unicode replacement character as a quick workaround.  This will
-        // typically result in 404s from the server.
-        let mut val = format!("{}", self.0).replace('/', "\u{fffd}");
-        if val == ".." || val == "." {
-            val = "\u{fffd}".into();
-        }
-        utf8_percent_encode(&val, &PATH_SEGMENT_ENCODE_SET).fmt(f)
-    }
-}
-
-#[derive(Clone)]
-pub enum ProgressBarMode {
-    Disabled,
-    Request,
-    Response,
-    Both,
-    Shared((Arc<ProgressBar>, u64, usize, Arc<RwLock<Vec<u64>>>)),
-}
-
-impl ProgressBarMode {
-    /// Returns if progress bars are generally enabled.
-    pub fn active(&self) -> bool {
-        !matches!(*self, ProgressBarMode::Disabled)
-    }
-
-    /// Returns whether a progress bar should be displayed during upload.
-    pub fn request(&self) -> bool {
-        matches!(*self, ProgressBarMode::Request | ProgressBarMode::Both)
-    }
-
-    /// Returns whether a progress bar should be displayed during download.
-    pub fn response(&self) -> bool {
-        matches!(*self, ProgressBarMode::Response | ProgressBarMode::Both)
-    }
-}
-
 /// Helper for the API access.
+/// Implements the low-level API access methods, and provides high-level implementations for interacting
+/// with portions of the API that do not require authentication via an auth token.
 pub struct Api {
     config: Arc<Config>,
     pool: r2d2::Pool<CurlConnectionManager>,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub struct SentryError {
-    status: u32,
-    detail: Option<String>,
-    extra: Option<serde_json::Value>,
+/// Wrapper for Api that ensures Auth is provided. AuthenticatedApi provides implementations of high-level
+/// functions that make API requests requiring authentication via auth token.
+pub struct AuthenticatedApi<'a> {
+    api: &'a Api,
 }
 
-impl fmt::Display for SentryError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let detail = self.detail.as_deref().unwrap_or("");
-        write!(
-            f,
-            "sentry reported an error: {} (http status: {})",
-            if detail.is_empty() {
-                match self.status {
-                    400 => "bad request",
-                    401 => "unauthorized",
-                    404 => "not found",
-                    500 => "internal server error",
-                    502 => "bad gateway",
-                    504 => "gateway timeout",
-                    _ => "unknown error",
-                }
-            } else {
-                detail
-            },
-            self.status
-        )?;
-        if let Some(ref extra) = self.extra {
-            write!(f, "\n  {extra:?}")?;
-        }
-        Ok(())
-    }
+pub struct RegionSpecificApi<'a> {
+    api: &'a AuthenticatedApi<'a>,
+    org: &'a str,
+    region_url: Option<Box<str>>,
 }
-
-#[derive(Clone, Debug, thiserror::Error)]
-#[error("project was renamed to '{0}'\nPlease use this slug in your .sentryclirc file, sentry.properties file or in the CLI --project parameter")]
-pub struct ProjectRenamedError(String);
-
-/// Represents API errors.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, thiserror::Error)]
-pub enum ApiErrorKind {
-    #[error("could not serialize value as JSON")]
-    CannotSerializeAsJson,
-    #[error("could not parse JSON response")]
-    BadJson,
-    #[error("not a JSON response")]
-    NotJson,
-    #[error("request failed because API URL was incorrectly formatted")]
-    BadApiUrl,
-    #[error("organization not found")]
-    OrganizationNotFound,
-    #[error("resource not found")]
-    ResourceNotFound,
-    #[error("project not found")]
-    ProjectNotFound,
-    #[error("release not found")]
-    ReleaseNotFound,
-    #[error("chunk upload endpoint not supported by sentry server")]
-    ChunkUploadNotSupported,
-    #[error("API request failed")]
-    RequestFailed,
-    #[error("could not compress data")]
-    CompressionFailed,
-    #[error("region overrides cannot be applied to absolute urls")]
-    InvalidRegionRequest,
-}
-
-#[derive(Debug, thiserror::Error)]
-pub struct ApiError {
-    inner: ApiErrorKind,
-    #[source]
-    source: Option<anyhow::Error>,
-}
-
-impl fmt::Display for ApiError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.inner, f)
-    }
-}
-
-impl ApiError {
-    pub fn with_source<E: Into<anyhow::Error>>(kind: ApiErrorKind, source: E) -> ApiError {
-        ApiError {
-            inner: kind,
-            source: Some(source.into()),
-        }
-    }
-
-    pub fn kind(&self) -> ApiErrorKind {
-        self.inner
-    }
-
-    fn set_source<E: Into<anyhow::Error>>(mut self, source: E) -> ApiError {
-        self.source = Some(source.into());
-        self
-    }
-}
-
-impl From<ApiErrorKind> for ApiError {
-    fn from(kind: ApiErrorKind) -> ApiError {
-        ApiError {
-            inner: kind,
-            source: None,
-        }
-    }
-}
-
-impl From<curl::Error> for ApiError {
-    fn from(err: curl::Error) -> ApiError {
-        ApiError::from(ApiErrorKind::RequestFailed).set_source(err)
-    }
-}
-
-impl From<curl::FormError> for ApiError {
-    fn from(err: curl::FormError) -> ApiError {
-        ApiError::from(ApiErrorKind::RequestFailed).set_source(err)
-    }
-}
-
-/// Shortcut alias for results of this module.
-pub type ApiResult<T> = Result<T, ApiError>;
 
 /// Represents an HTTP method that is used by the API.
 #[derive(Eq, PartialEq, Debug)]
 pub enum Method {
     Get,
-    Head,
     Post,
     Put,
     Delete,
@@ -325,7 +101,6 @@ impl fmt::Display for Method {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             Method::Get => write!(f, "GET"),
-            Method::Head => write!(f, "HEAD"),
             Method::Post => write!(f, "POST"),
             Method::Put => write!(f, "PUT"),
             Method::Delete => write!(f, "DELETE"),
@@ -355,11 +130,19 @@ pub struct ApiResponse {
     body: Option<Vec<u8>>,
 }
 
+impl<'a> TryFrom<&'a Api> for AuthenticatedApi<'a> {
+    type Error = ApiError;
+
+    fn try_from(api: &'a Api) -> ApiResult<AuthenticatedApi<'a>> {
+        match api.config.get_auth() {
+            Some(_) => Ok(AuthenticatedApi { api }),
+            None => Err(ApiErrorKind::AuthMissing.into()),
+        }
+    }
+}
+
 impl Api {
     /// Returns the current api for the thread.
-    ///
-    /// Threads other than the main thread must call `Api::reset` when
-    /// shutting down to prevent `process::exit` from hanging afterwards.
     pub fn current() -> Arc<Api> {
         let mut api_opt = API.lock();
         if let Some(ref api) = *api_opt {
@@ -387,44 +170,41 @@ impl Api {
         *API.lock() = None;
     }
 
+    /// Creates an AuthenticatedApi referencing this Api instance if an auth token is available.
+    /// If an auth token is not available, returns an error.
+    pub fn authenticated(&self) -> ApiResult<AuthenticatedApi> {
+        self.try_into()
+    }
+
     // Low Level Methods
 
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
-        let (url, auth) = self.resolve_base_url_and_auth(url, None)?;
-        self.construct_api_request(method, &url, auth)
-    }
-
-    /// Like `request`, but constructs a new `ApiRequest` using the base URL
-    /// plus a region prefix for requests that must be routed to a region.
-    pub fn region_request(
+    fn request(
         &self,
         method: Method,
         url: &str,
-        region: &Region,
+        region_url: Option<&str>,
     ) -> ApiResult<ApiRequest> {
-        let (url, auth) = self.resolve_base_url_and_auth(url, Some(region))?;
+        let (url, auth) = self.resolve_base_url_and_auth(url, region_url)?;
         self.construct_api_request(method, &url, auth)
     }
 
     fn resolve_base_url_and_auth(
         &self,
         url: &str,
-        region: Option<&Region>,
+        region_url: Option<&str>,
     ) -> ApiResult<(String, Option<&Auth>)> {
-        if is_absolute_url(url) && region.is_some() {
+        if is_absolute_url(url) && region_url.is_some() {
             return Err(ApiErrorKind::InvalidRegionRequest.into());
         }
 
         let (url, auth) = if is_absolute_url(url) {
             (Cow::Borrowed(url), None)
         } else {
-            let host_override = region.map(|rg| rg.url.as_str());
-
             (
-                Cow::Owned(match self.config.get_api_endpoint(url, host_override) {
+                Cow::Owned(match self.config.get_api_endpoint(url, region_url) {
                     Ok(rv) => rv,
                     Err(err) => return Err(ApiError::with_source(ApiErrorKind::BadApiUrl, err)),
                 }),
@@ -473,58 +253,33 @@ impl Api {
         ApiRequest::create(handle, &method, url, auth, env, headers)
     }
 
-    /// Convenience method that performs a request using DSN as authentication method.
-    pub fn request_with_dsn_auth<S: Serialize>(
-        &self,
-        method: Method,
-        url: &str,
-        dsn: Dsn,
-        body: Option<&S>,
-    ) -> ApiResult<ApiResponse> {
-        // We resolve an absolute URL to skip default authentication flow.
-        let url = self
-            .config
-            .get_api_endpoint(url, None)
-            .map_err(|err| ApiError::with_source(ApiErrorKind::BadApiUrl, err))?;
-
-        let mut request = self
-            .request(method, &url)?
-            .with_header("Authorization", &format!("DSN {dsn}"))?;
-
-        if let Some(body) = body {
-            request = request.with_json_body(body)?;
-        }
-
-        request.send()
-    }
-
     /// Convenience method that performs a `GET` request.
-    pub fn get(&self, path: &str) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, path)?.send()
+    fn get(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.request(Method::Get, path, None)?.send()
     }
 
     /// Convenience method that performs a `DELETE` request.
-    pub fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
-        self.request(Method::Delete, path)?.send()
+    fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.request(Method::Delete, path, None)?.send()
     }
 
     /// Convenience method that performs a `POST` request with JSON data.
-    pub fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.request(Method::Post, path)?
+    fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.request(Method::Post, path, None)?
             .with_json_body(body)?
             .send()
     }
 
     /// Convenience method that performs a `PUT` request with JSON data.
-    pub fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
-        self.request(Method::Put, path)?
+    fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.request(Method::Put, path, None)?
             .with_json_body(body)?
             .send()
     }
 
     /// Convenience method that downloads a file into the given file object.
     pub fn download(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, url)?
+        self.request(Method::Get, url, None)?
             .follow_location(true)?
             .send_into(dst)
     }
@@ -532,18 +287,19 @@ impl Api {
     /// Convenience method that downloads a file into the given file object
     /// and show a progress bar
     pub fn download_with_progress(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
-        self.request(Method::Get, url)?
+        self.request(Method::Get, url, None)?
             .follow_location(true)?
             .progress_bar_mode(ProgressBarMode::Response)?
             .send_into(dst)
     }
 
     /// Convenience method that waits for a few seconds until a resource
-    /// becomes available.
+    /// becomes available. We only use this in the macOS binary.
+    #[cfg(target_os = "macos")]
     pub fn wait_until_available(&self, url: &str, duration: Duration) -> ApiResult<bool> {
         let started = Utc::now();
         loop {
-            match self.request(Method::Get, url)?.send() {
+            match self.request(Method::Get, url, None)?.send() {
                 Ok(_) => return Ok(true),
                 Err(err) => {
                     if err.kind() != ApiErrorKind::RequestFailed {
@@ -559,6 +315,152 @@ impl Api {
     }
 
     // High Level Methods
+
+    /// Finds the latest release for sentry-cli on GitHub.
+    pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
+        let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
+
+        // Prefer universal binary on macOS
+        let arch = match PLATFORM {
+            "darwin" => "universal",
+            _ => ARCH,
+        };
+
+        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), arch, EXT);
+        info!("Looking for file named: {}", ref_name);
+
+        if resp.status() == 200 {
+            let info: RegistryRelease = resp.convert()?;
+            for (filename, download_url) in info.file_urls {
+                info!("Found asset {}", filename);
+                if filename == ref_name {
+                    return Ok(Some(SentryCliRelease {
+                        version: info.version,
+                        download_url,
+                    }));
+                }
+            }
+            warn!("Unable to find release file");
+            Ok(None)
+        } else {
+            info!("Release registry returned {}", resp.status());
+            Ok(None)
+        }
+    }
+
+    /// Compresses a file with the given compression.
+    fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
+        Ok(match compression {
+            ChunkCompression::Brotli => {
+                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Gzip => {
+                let mut encoder = GzEncoder::new(Vec::new(), Default::default());
+                encoder.write_all(data)?;
+                encoder.finish()?
+            }
+
+            ChunkCompression::Uncompressed => data.into(),
+        })
+    }
+
+    /// Upload a batch of file chunks.
+    pub fn upload_chunks<'data, I, T>(
+        &self,
+        url: &str,
+        chunks: I,
+        progress_bar_mode: ProgressBarMode,
+        compression: ChunkCompression,
+    ) -> ApiResult<()>
+    where
+        I: IntoIterator<Item = &'data T>,
+        T: AsRef<(Digest, &'data [u8])> + 'data,
+    {
+        // Curl stores a raw pointer to the stringified checksum internally. We first
+        // transform all checksums to string and keep them in scope until the request
+        // has completed. The original iterator is not needed anymore after this.
+        let stringified_chunks: Vec<_> = chunks
+            .into_iter()
+            .map(T::as_ref)
+            .map(|&(checksum, data)| (checksum.to_string(), data))
+            .collect();
+
+        let mut form = curl::easy::Form::new();
+        for (ref checksum, data) in stringified_chunks {
+            let name = compression.field_name();
+            let buffer = Api::compress(data, compression)
+                .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
+            form.part(name).buffer(&checksum, buffer).add()?
+        }
+
+        let request = self
+            .request(Method::Post, url, None)?
+            .with_form_data(form)?
+            .with_retry(
+                self.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .progress_bar_mode(progress_bar_mode)?;
+
+        // The request is performed to an absolute URL. Thus, `Self::request()` will
+        // not add the authorization header, by default. Since the URL is guaranteed
+        // to be a Sentry-compatible endpoint, we force the Authorization header at
+        // this point.
+        let request = match Config::current().get_auth() {
+            // Make sure that we don't authenticate a request
+            // that has been already authenticated
+            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
+            _ => request,
+        };
+
+        // Handle 301 or 302 requests as a missing project
+        let resp = request.send()?;
+        match resp.status() {
+            301 | 302 => Err(ApiErrorKind::ProjectNotFound.into()),
+            _ => {
+                resp.into_result()?;
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<'a> AuthenticatedApi<'a> {
+    // Pass through low-level methods to API.
+
+    /// Convenience method to call self.api.get.
+    fn get(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.api.get(path)
+    }
+
+    /// Convenience method to call self.api.delete.
+    fn delete(&self, path: &str) -> ApiResult<ApiResponse> {
+        self.api.delete(path)
+    }
+
+    /// Convenience method to call self.api.post.
+    fn post<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.api.post(path, body)
+    }
+
+    /// Convenience method to call self.api.put.
+    fn put<S: Serialize>(&self, path: &str, body: &S) -> ApiResult<ApiResponse> {
+        self.api.put(path, body)
+    }
+
+    /// Convenience method to call self.api.request.
+    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        self.api.request(method, url, None)
+    }
+
+    // High-level method implementations
 
     /// Performs an API request to verify the authentication status of the
     /// current token.
@@ -595,15 +497,15 @@ impl Api {
                 )
             };
 
-            let mut checkums_qs = String::new();
+            let mut checksums_qs = String::new();
             for checksum in checksums.iter() {
-                checkums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
+                checksums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
             }
             // We have a 16kb buffer for reach request configured in nginx,
             // so do not even bother trying if it's too long.
             // (16_384 limit still leaves us with 384 bytes for the url itself).
-            if !checkums_qs.is_empty() && checkums_qs.len() <= 16_000 {
-                path.push_str(&checkums_qs);
+            if !checksums_qs.is_empty() && checksums_qs.len() <= 16_000 {
+                path.push_str(&checksums_qs);
             }
 
             let resp = self.get(&path)?;
@@ -662,7 +564,7 @@ impl Api {
             )
         };
 
-        let resp = self.download(&path, file_desc)?;
+        let resp = self.api.download(&path, file_desc)?;
         if resp.status() == 404 {
             resp.convert_rnf(ApiErrorKind::ResourceNotFound)
         } else {
@@ -744,7 +646,7 @@ impl Api {
         org: &str,
         project: Option<&str>,
         version: &str,
-    ) -> ApiResult<bool> {
+    ) -> ApiResult<()> {
         let path = if let Some(project) = project {
             format!(
                 "/projects/{}/{}/files/source-maps/?name={}",
@@ -760,82 +662,7 @@ impl Api {
             )
         };
 
-        let resp = self.delete(&path)?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
-    }
-
-    /// Uploads a new release file.  The file is loaded directly from the file
-    /// system and uploaded as `name`.
-    pub fn upload_release_file(
-        &self,
-        context: &UploadContext,
-        contents: &[u8],
-        name: &str,
-        headers: Option<&[(String, String)]>,
-        progress_bar_mode: ProgressBarMode,
-    ) -> ApiResult<Option<Artifact>> {
-        let release = context
-            .release()
-            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
-
-        let path = if let Some(project) = context.project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(project),
-                PathArg(release)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(release)
-            )
-        };
-        let mut form = curl::easy::Form::new();
-
-        let filename = Path::new(name)
-            .file_name()
-            .and_then(OsStr::to_str)
-            .unwrap_or("unknown.bin");
-        form.part("file")
-            .buffer(filename, contents.to_vec())
-            .add()?;
-        form.part("name").contents(name.as_bytes()).add()?;
-        if let Some(dist) = context.dist {
-            form.part("dist").contents(dist.as_bytes()).add()?;
-        }
-
-        if let Some(headers) = headers {
-            for (key, value) in headers {
-                form.part("header")
-                    .contents(format!("{key}:{value}").as_bytes())
-                    .add()?;
-            }
-        }
-
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_form_data(form)?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .progress_bar_mode(progress_bar_mode)?
-            .send()?;
-        if resp.status() == 409 {
-            Ok(None)
-        } else {
-            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
-        }
+        self.delete(&path)?.into_result().map(|_| ())
     }
 
     /// Creates a new release.
@@ -1083,38 +910,6 @@ impl Api {
         .map(|_| true)
     }
 
-    /// Finds the latest release for sentry-cli on GitHub.
-    pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
-        let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
-
-        // Prefer universal binary on macOS
-        let arch = match PLATFORM {
-            "darwin" => "universal",
-            _ => ARCH,
-        };
-
-        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), arch, EXT);
-        info!("Looking for file named: {}", ref_name);
-
-        if resp.status() == 200 {
-            let info: RegistryRelease = resp.convert()?;
-            for (filename, download_url) in info.file_urls {
-                info!("Found asset {}", filename);
-                if filename == ref_name {
-                    return Ok(Some(SentryCliRelease {
-                        version: info.version,
-                        download_url,
-                    }));
-                }
-            }
-            warn!("Unable to find release file");
-            Ok(None)
-        } else {
-            info!("Release registry returned {}", resp.status());
-            Ok(None)
-        }
-    }
-
     /// Given a list of checksums for DIFs, this returns a list of those
     /// that do not exist for the project yet.
     pub fn find_missing_dif_checksums<I>(
@@ -1141,27 +936,6 @@ impl Api {
 
         let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
         Ok(state.missing)
-    }
-
-    /// Uploads a ZIP archive containing DIFs from the given path.
-    pub fn upload_dif_archive(
-        &self,
-        org: &str,
-        project: &str,
-        file: &Path,
-    ) -> ApiResult<Vec<DebugInfoFile>> {
-        let path = format!(
-            "/projects/{}/{}/files/dsyms/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let mut form = curl::easy::Form::new();
-        form.part("file").file(file).add()?;
-        self.request(Method::Post, &path)?
-            .with_form_data(form)?
-            .progress_bar_mode(ProgressBarMode::Request)?
-            .send()?
-            .convert()
     }
 
     /// Get the server configuration for chunked file uploads.
@@ -1198,7 +972,7 @@ impl Api {
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1231,7 +1005,7 @@ impl Api {
                 dist: None,
             })?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1262,7 +1036,7 @@ impl Api {
                 dist,
             })?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count().unwrap(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1271,133 +1045,6 @@ impl Api {
             )?
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
-    /// Compresses a file with the given compression.
-    fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
-        Ok(match compression {
-            ChunkCompression::Brotli => {
-                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
-                encoder.write_all(data)?;
-                encoder.finish()?
-            }
-
-            ChunkCompression::Gzip => {
-                let mut encoder = GzEncoder::new(Vec::new(), Default::default());
-                encoder.write_all(data)?;
-                encoder.finish()?
-            }
-
-            ChunkCompression::Uncompressed => data.into(),
-        })
-    }
-
-    /// Upload a batch of file chunks.
-    pub fn upload_chunks<'data, I, T>(
-        &self,
-        url: &str,
-        chunks: I,
-        progress_bar_mode: ProgressBarMode,
-        compression: ChunkCompression,
-    ) -> ApiResult<()>
-    where
-        I: IntoIterator<Item = &'data T>,
-        T: AsRef<(Digest, &'data [u8])> + 'data,
-    {
-        // Curl stores a raw pointer to the stringified checksum internally. We first
-        // transform all checksums to string and keep them in scope until the request
-        // has completed. The original iterator is not needed anymore after this.
-        let stringified_chunks: Vec<_> = chunks
-            .into_iter()
-            .map(T::as_ref)
-            .map(|&(checksum, data)| (checksum.to_string(), data))
-            .collect();
-
-        let mut form = curl::easy::Form::new();
-        for (ref checksum, data) in stringified_chunks {
-            let name = compression.field_name();
-            let buffer = Api::compress(data, compression)
-                .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
-            form.part(name).buffer(&checksum, buffer).add()?
-        }
-
-        let request = self
-            .request(Method::Post, url)?
-            .with_form_data(form)?
-            .with_retry(
-                self.config.get_max_retry_count().unwrap(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )?
-            .progress_bar_mode(progress_bar_mode)?;
-
-        // The request is performed to an absolute URL. Thus, `Self::request()` will
-        // not add the authorization header, by default. Since the URL is guaranteed
-        // to be a Sentry-compatible endpoint, we force the Authorization header at
-        // this point.
-        let request = match Config::current().get_auth() {
-            // Make sure that we don't authenticate a request
-            // that has been already authenticated
-            Some(auth) if !request.is_authenticated => request.with_auth(auth)?,
-            _ => request,
-        };
-
-        // Handle 301 or 302 requests as a missing project
-        let resp = request.send()?;
-        match resp.status() {
-            301 | 302 => Err(ApiErrorKind::ProjectNotFound.into()),
-            _ => {
-                resp.into_result()?;
-                Ok(())
-            }
-        }
-    }
-
-    /// Associate apple debug symbols with a build
-    pub fn associate_apple_dsyms(
-        &self,
-        org: &str,
-        project: &str,
-        info_plist: &InfoPlist,
-        checksums: Vec<String>,
-    ) -> ApiResult<Option<AssociateDsymsResponse>> {
-        self.associate_dsyms(
-            org,
-            project,
-            &AssociateDsyms {
-                platform: "apple".to_string(),
-                checksums,
-                name: info_plist.name().to_string(),
-                app_id: info_plist.bundle_id().to_string(),
-                version: info_plist.version().to_string(),
-                build: Some(info_plist.build().to_string()),
-            },
-        )
-    }
-
-    /// Associate proguard mappings with an android app
-    pub fn associate_android_proguard_mappings(
-        &self,
-        org: &str,
-        project: &str,
-        manifest: &AndroidManifest,
-        checksums: Vec<String>,
-    ) -> ApiResult<Option<AssociateDsymsResponse>> {
-        self.associate_dsyms(
-            org,
-            project,
-            &AssociateDsyms {
-                platform: "android".to_string(),
-                checksums,
-                name: manifest.name(),
-                app_id: manifest.package().to_string(),
-                version: manifest.version_name().to_string(),
-                build: Some(manifest.version_code().to_string()),
-            },
-        )
     }
 
     pub fn associate_proguard_mappings(
@@ -1430,57 +1077,6 @@ impl Api {
         }
     }
 
-    /// Associate arbitrary debug symbols with a build
-    pub fn associate_dsyms(
-        &self,
-        org: &str,
-        project: &str,
-        data: &AssociateDsyms,
-    ) -> ApiResult<Option<AssociateDsymsResponse>> {
-        // in case we have no checksums to send up the server does not actually
-        // let us associate anything.  This generally makes sense but means that
-        // from the client side we need to deal with this separately.  In this
-        // case we just pretend we did a request that did nothing.
-        if data.checksums.is_empty() {
-            return Ok(Some(AssociateDsymsResponse {
-                associated_dsyms: vec![],
-            }));
-        }
-
-        let path = format!(
-            "/projects/{}/{}/files/dsyms/associate/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_json_body(data)?
-            .send()?;
-        if resp.status() == 404 {
-            Ok(None)
-        } else {
-            resp.convert()
-        }
-    }
-
-    /// Triggers reprocessing for a project
-    pub fn trigger_reprocessing(&self, org: &str, project: &str) -> ApiResult<bool> {
-        let path = format!(
-            "/projects/{}/{}/reprocessing/",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_header("Content-Length", "0")?
-            .send()?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
-    }
-
     /// List all organizations associated with the authenticated token
     /// in the given `Region`. If no `Region` is provided, we assume
     /// we're issuing a request to a monolith deployment.
@@ -1490,7 +1086,9 @@ impl Api {
         loop {
             let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
             let resp = if let Some(rg) = region {
-                self.region_request(Method::Get, current_path, rg)?.send()?
+                self.api
+                    .request(Method::Get, current_path, Some(&rg.url))?
+                    .send()?
             } else {
                 self.get(current_path)?
             };
@@ -1557,40 +1155,6 @@ impl Api {
         Ok(rv)
     }
 
-    /// Create a new checkin for a monitor
-    pub fn create_monitor_checkin(
-        &self,
-        monitor_slug: &String,
-        checkin: &ApiCreateMonitorCheckIn,
-    ) -> ApiResult<ApiMonitorCheckIn> {
-        let path = &format!("/monitors/{}/checkins/", PathArg(monitor_slug),);
-        let resp = self.post(path, checkin)?;
-        if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-        resp.convert()
-    }
-
-    /// Update a checkin for a monitor
-    pub fn update_monitor_checkin(
-        &self,
-        monitor_slug: &String,
-        checkin_id: &Uuid,
-        checkin: &ApiUpdateMonitorCheckIn,
-    ) -> ApiResult<ApiMonitorCheckIn> {
-        let path = &format!(
-            "/monitors/{}/checkins/{}/",
-            PathArg(monitor_slug),
-            PathArg(checkin_id),
-        );
-        let resp = self.put(path, checkin)?;
-
-        if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-        resp.convert()
-    }
-
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
         let mut rv = vec![];
@@ -1642,7 +1206,7 @@ impl Api {
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
-                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                    return Err(ApiErrorKind::ProjectNotFound.into());
                 } else {
                     break;
                 }
@@ -1695,7 +1259,7 @@ impl Api {
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
-                    return Err(ApiErrorKind::OrganizationNotFound.into());
+                    return Err(ApiErrorKind::ProjectNotFound.into());
                 } else {
                     break;
                 }
@@ -1772,6 +1336,162 @@ impl Api {
             Ok(None)
         } else {
             resp.convert()
+        }
+    }
+
+    fn get_region_url(&self, org: &str) -> ApiResult<String> {
+        self.get(&format!("/organizations/{org}/region/"))
+            .and_then(|resp| resp.convert::<Region>())
+            .map(|region| region.url)
+    }
+
+    pub fn region_specific(&'a self, org: &'a str) -> RegionSpecificApi<'a> {
+        let base_url = self.api.config.get_base_url();
+        if base_url.is_err()
+            || base_url.expect("base_url should not be error") != DEFAULT_URL.trim_end_matches('/')
+        {
+            // Do not specify a region URL unless the URL is configured to https://sentry.io (i.e. the default).
+            return RegionSpecificApi {
+                api: self,
+                org,
+                region_url: None,
+            };
+        }
+
+        let region_url = match self
+            .api
+            .config
+            .get_auth()
+            .expect("auth should not be None for authenticated API!")
+        {
+            Auth::Token(token) => match token.payload() {
+                Some(payload) => Some(payload.region_url.clone().into()),
+                None => {
+                    let region_url = self.get_region_url(org);
+                    if let Err(err) = &region_url {
+                        log::warn!("Failed to get region URL due to following error: {err}");
+                        log::info!("Failling back to the default region.");
+                    }
+
+                    region_url.ok().map(|url| url.into())
+                }
+            },
+            Auth::Key(_) => {
+                log::warn!(
+                    "Auth key is not supported for region-specific API. Falling back to default region."
+                );
+
+                None
+            }
+        };
+
+        RegionSpecificApi {
+            api: self,
+            org,
+            region_url,
+        }
+    }
+}
+
+impl<'a> RegionSpecificApi<'a> {
+    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+        self.api
+            .api
+            .request(method, url, self.region_url.as_deref())
+    }
+
+    /// Uploads a ZIP archive containing DIFs from the given path.
+    pub fn upload_dif_archive(&self, project: &str, file: &Path) -> ApiResult<Vec<DebugInfoFile>> {
+        let path = format!(
+            "/projects/{}/{}/files/dsyms/",
+            PathArg(self.org),
+            PathArg(project)
+        );
+        let mut form = curl::easy::Form::new();
+        form.part("file").file(file).add()?;
+        self.request(Method::Post, &path)?
+            .with_form_data(form)?
+            .with_retry(
+                self.api.api.config.get_max_retry_count().map_err(|e| {
+                    ApiError::with_source(
+                        ApiErrorKind::ErrorPreparingRequest,
+                        e.context("Could not parse retry count"),
+                    )
+                })?,
+                &[http::HTTP_STATUS_507_INSUFFICIENT_STORAGE],
+            )?
+            .progress_bar_mode(ProgressBarMode::Request)?
+            .send()?
+            .convert()
+    }
+
+    /// Uploads a new release file.  The file is loaded directly from the file
+    /// system and uploaded as `name`.
+    pub fn upload_release_file(
+        &self,
+        context: &UploadContext,
+        contents: &[u8],
+        name: &str,
+        headers: Option<&[(String, String)]>,
+        progress_bar_mode: ProgressBarMode,
+    ) -> ApiResult<Option<Artifact>> {
+        let release = context
+            .release()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
+
+        let path = if let Some(project) = context.project {
+            format!(
+                "/projects/{}/{}/releases/{}/files/",
+                PathArg(context.org),
+                PathArg(project),
+                PathArg(release)
+            )
+        } else {
+            format!(
+                "/organizations/{}/releases/{}/files/",
+                PathArg(context.org),
+                PathArg(release)
+            )
+        };
+        let mut form = curl::easy::Form::new();
+
+        let filename = Path::new(name)
+            .file_name()
+            .and_then(OsStr::to_str)
+            .unwrap_or("unknown.bin");
+        form.part("file")
+            .buffer(filename, contents.to_vec())
+            .add()?;
+        form.part("name").contents(name.as_bytes()).add()?;
+        if let Some(dist) = context.dist {
+            form.part("dist").contents(dist.as_bytes()).add()?;
+        }
+
+        if let Some(headers) = headers {
+            for (key, value) in headers {
+                form.part("header")
+                    .contents(format!("{key}:{value}").as_bytes())
+                    .add()?;
+            }
+        }
+
+        let resp = self
+            .request(Method::Post, &path)?
+            .with_form_data(form)?
+            .with_retry(
+                self.api.api.config.get_max_retry_count().unwrap(),
+                &[
+                    http::HTTP_STATUS_502_BAD_GATEWAY,
+                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+                ],
+            )?
+            .progress_bar_mode(progress_bar_mode)?
+            .send()?;
+        if resp.status() == 409 {
+            Ok(None)
+        } else {
+            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
         }
     }
 }
@@ -1940,11 +1660,6 @@ impl ApiRequest {
 
         match method {
             Method::Get => handle.get(true)?,
-            Method::Head => {
-                handle.get(true)?;
-                handle.custom_request("HEAD")?;
-                handle.nobody(true)?;
-            }
             Method::Post => handle.custom_request("POST")?,
             Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,
@@ -1982,7 +1697,10 @@ impl ApiRequest {
             }
             Auth::Token(ref token) => {
                 debug!("using token authentication");
-                self.with_header("Authorization", &format!("Bearer {token}"))
+                self.with_header(
+                    "Authorization",
+                    &format!("Bearer {}", token.raw().expose_secret()),
+                )
             }
         }
     }
@@ -2002,6 +1720,11 @@ impl ApiRequest {
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
+        Ok(self)
+    }
+
+    pub fn with_body(mut self, body: Vec<u8>) -> ApiResult<Self> {
+        self.body = Some(body);
         Ok(self)
     }
 
@@ -2183,7 +1906,7 @@ impl ApiResponse {
     }
 
     /// Like convert but produces resource not found errors.
-    pub fn convert_rnf<T: DeserializeOwned>(self, res_err: ApiErrorKind) -> ApiResult<T> {
+    fn convert_rnf<T: DeserializeOwned>(self, res_err: ApiErrorKind) -> ApiResult<T> {
         match self.status() {
             301 | 302 if res_err == ApiErrorKind::ProjectNotFound => {
                 #[derive(Deserialize, Debug)]
@@ -2324,16 +2047,6 @@ pub struct Artifact {
 }
 
 impl Artifact {
-    pub fn get_header<'a>(&'a self, key: &str) -> Option<&'a str> {
-        let ikey = key.to_lowercase();
-        for (k, v) in &self.headers {
-            if k.to_lowercase() == ikey {
-                return Some(v.as_str());
-            }
-        }
-        None
-    }
-
     pub fn get_sourcemap_reference(&self) -> Option<&str> {
         get_sourcemap_reference_from_headers(self.headers.iter())
     }
@@ -2487,17 +2200,6 @@ impl DebugInfoFile {
 }
 
 #[derive(Debug, Serialize)]
-pub struct AssociateDsyms {
-    pub platform: String,
-    pub checksums: Vec<String>,
-    pub name: String,
-    #[serde(rename = "appId")]
-    pub app_id: String,
-    pub version: String,
-    pub build: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
 pub struct AssociateProguard {
     pub release_name: String,
     pub proguard_uuid: String,
@@ -2585,12 +2287,6 @@ impl IssueFilter {
     }
 }
 
-#[derive(Deserialize)]
-pub struct AssociateDsymsResponse {
-    #[serde(rename = "associatedDsymFiles")]
-    pub associated_dsyms: Vec<DebugInfoFile>,
-}
-
 #[derive(Deserialize, Debug)]
 pub struct Organization {
     pub id: String,
@@ -2636,39 +2332,6 @@ pub struct Monitor {
     pub status: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ApiMonitorCheckInStatus {
-    Unknown,
-    Ok,
-    InProgress,
-    Error,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct ApiMonitorCheckIn {
-    pub id: Uuid,
-    pub status: Option<ApiMonitorCheckInStatus>,
-    pub duration: Option<u64>,
-    pub environment: Option<String>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ApiCreateMonitorCheckIn {
-    pub status: ApiMonitorCheckInStatus,
-    pub environment: String,
-}
-
-#[derive(Debug, Serialize, Default)]
-pub struct ApiUpdateMonitorCheckIn {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<ApiMonitorCheckInStatus>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub duration: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub environment: Option<String>,
-}
-
 #[derive(Deserialize, Debug)]
 pub struct RepoProvider {
     pub id: String,
@@ -2694,233 +2357,6 @@ impl fmt::Display for Repo {
         }
         Ok(())
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, Default)]
-pub struct Deploy {
-    #[serde(rename = "environment")]
-    pub env: String,
-    pub name: Option<String>,
-    pub url: Option<String>,
-    #[serde(rename = "dateStarted")]
-    pub started: Option<DateTime<Utc>>,
-    #[serde(rename = "dateFinished")]
-    pub finished: Option<DateTime<Utc>>,
-}
-
-impl Deploy {
-    /// Returns the name of this deploy, defaulting to `"unnamed"`.
-    pub fn name(&self) -> &str {
-        match self.name.as_deref() {
-            Some("") | None => "unnamed",
-            Some(name) => name,
-        }
-    }
-}
-
-#[derive(Debug, Deserialize, Clone, Copy, Eq, PartialEq, Ord, PartialOrd)]
-pub enum ChunkHashAlgorithm {
-    #[serde(rename = "sha1")]
-    Sha1,
-}
-
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
-pub enum ChunkCompression {
-    /// No compression should be applied
-    #[default]
-    Uncompressed = 0,
-    /// GZIP compression (including header)
-    Gzip = 10,
-    /// Brotli compression
-    Brotli = 20,
-}
-
-impl ChunkCompression {
-    fn field_name(self) -> &'static str {
-        match self {
-            ChunkCompression::Uncompressed => "file",
-            ChunkCompression::Gzip => "file_gzip",
-            ChunkCompression::Brotli => "file_brotli",
-        }
-    }
-}
-
-impl fmt::Display for ChunkCompression {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match *self {
-            ChunkCompression::Uncompressed => write!(f, "uncompressed"),
-            ChunkCompression::Gzip => write!(f, "gzip"),
-            ChunkCompression::Brotli => write!(f, "brotli"),
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for ChunkCompression {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(match String::deserialize(deserializer)?.as_str() {
-            "gzip" => ChunkCompression::Gzip,
-            "brotli" => ChunkCompression::Brotli,
-            // We do not know this compression, so we assume no compression
-            _ => ChunkCompression::Uncompressed,
-        })
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum ChunkUploadCapability {
-    /// Chunked upload of debug files
-    DebugFiles,
-
-    /// Chunked upload of release files
-    ReleaseFiles,
-
-    /// Chunked upload of standalone artifact bundles
-    ArtifactBundles,
-
-    /// Like `ArtifactBundles`, but with deduplicated chunk
-    /// upload.
-    ArtifactBundlesV2,
-
-    /// Upload of PDBs and debug id overrides
-    Pdbs,
-
-    /// Upload of Portable PDBs
-    PortablePdbs,
-
-    /// Uploads of source archives
-    Sources,
-
-    /// Upload of BCSymbolMap and PList auxiliary DIFs
-    BcSymbolmap,
-
-    /// Upload of il2cpp line mappings
-    Il2Cpp,
-
-    /// Any other unsupported capability (ignored)
-    Unknown,
-}
-
-impl<'de> Deserialize<'de> for ChunkUploadCapability {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(match String::deserialize(deserializer)?.as_str() {
-            "debug_files" => ChunkUploadCapability::DebugFiles,
-            "release_files" => ChunkUploadCapability::ReleaseFiles,
-            "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
-            "artifact_bundles_v2" => ChunkUploadCapability::ArtifactBundlesV2,
-            "pdbs" => ChunkUploadCapability::Pdbs,
-            "portablepdbs" => ChunkUploadCapability::PortablePdbs,
-            "sources" => ChunkUploadCapability::Sources,
-            "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
-            "il2cpp" => ChunkUploadCapability::Il2Cpp,
-            _ => ChunkUploadCapability::Unknown,
-        })
-    }
-}
-
-fn default_chunk_upload_accept() -> Vec<ChunkUploadCapability> {
-    vec![ChunkUploadCapability::DebugFiles]
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChunkUploadOptions {
-    pub url: String,
-    #[serde(rename = "chunksPerRequest")]
-    pub max_chunks: u64,
-    #[serde(rename = "maxRequestSize")]
-    pub max_size: u64,
-    #[serde(default)]
-    pub max_file_size: u64,
-    #[serde(default)]
-    pub max_wait: u64,
-    pub hash_algorithm: ChunkHashAlgorithm,
-    pub chunk_size: u64,
-    pub concurrency: u8,
-    #[serde(default)]
-    pub compression: Vec<ChunkCompression>,
-    #[serde(default = "default_chunk_upload_accept")]
-    pub accept: Vec<ChunkUploadCapability>,
-}
-
-impl ChunkUploadOptions {
-    /// Returns whether the given capability is accepted by the chunk upload endpoint.
-    pub fn supports(&self, capability: ChunkUploadCapability) -> bool {
-        self.accept.contains(&capability)
-    }
-}
-
-#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Hash, Ord, PartialOrd)]
-pub enum ChunkedFileState {
-    #[serde(rename = "error")]
-    Error,
-    #[serde(rename = "not_found")]
-    NotFound,
-    #[serde(rename = "created")]
-    Created,
-    #[serde(rename = "assembling")]
-    Assembling,
-    #[serde(rename = "ok")]
-    Ok,
-}
-
-impl ChunkedFileState {
-    pub fn is_finished(self) -> bool {
-        self == ChunkedFileState::Error || self == ChunkedFileState::Ok
-    }
-
-    pub fn is_pending(self) -> bool {
-        !self.is_finished()
-    }
-
-    pub fn is_err(self) -> bool {
-        self == ChunkedFileState::Error || self == ChunkedFileState::NotFound
-    }
-}
-
-#[derive(Debug, Serialize)]
-pub struct ChunkedDifRequest<'a> {
-    pub name: &'a str,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub debug_id: Option<DebugId>,
-    pub chunks: &'a [Digest],
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ChunkedDifResponse {
-    pub state: ChunkedFileState,
-    pub missing_chunks: Vec<Digest>,
-    pub detail: Option<String>,
-    pub dif: Option<DebugInfoFile>,
-}
-
-pub type AssembleDifsRequest<'a> = HashMap<Digest, ChunkedDifRequest<'a>>;
-pub type AssembleDifsResponse = HashMap<Digest, ChunkedDifResponse>;
-
-#[derive(Debug, Serialize)]
-pub struct ChunkedArtifactRequest<'a> {
-    pub checksum: Digest,
-    pub chunks: &'a [Digest],
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub projects: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub version: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub dist: Option<&'a str>,
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AssembleArtifactsResponse {
-    pub state: ChunkedFileState,
-    pub missing_chunks: Vec<Digest>,
-    pub detail: Option<String>,
 }
 
 #[derive(Debug, Serialize, Clone)]

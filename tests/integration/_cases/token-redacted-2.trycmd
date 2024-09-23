@@ -1,0 +1,9 @@
+```
+$ sentry-cli sourcemaps upload --auth-token=not-following-token-format -o asdf --project=sntrys_project_looks_like_token ./file-sntryu_looks-like-token --log-level=info
+? failed
+[..]
+[..]
+[..]INFO[..] sentry-cli was invoked with the following command line: "[..]" "sourcemaps" "upload" "--auth-token=[REDACTED]" "-o" "asdf" "--project=[REDACTED]" "./file-[REDACTED]" "--log-level=info"
+...
+
+```

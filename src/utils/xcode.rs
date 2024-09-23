@@ -21,7 +21,9 @@ use {
     unix_daemonize::{daemonize_redirect, ChdirMode},
 };
 
-use crate::utils::fs::{SeekRead, TempFile};
+use crate::utils::fs::SeekRead;
+#[cfg(target_os = "macos")]
+use crate::utils::fs::TempFile;
 use crate::utils::system::expand_vars;
 
 #[derive(Deserialize, Debug)]
@@ -359,6 +361,7 @@ impl InfoPlist {
         &self.version
     }
 
+    #[cfg(target_os = "macos")] // only used in macOS binary
     pub fn build(&self) -> &str {
         &self.build
     }
@@ -376,6 +379,7 @@ impl InfoPlist {
 /// the xcode console and continue in the background.  This becomes
 /// a dummy shim for non xcode runs or platforms.
 pub struct MayDetach<'a> {
+    #[cfg(target_os = "macos")] // only used in macOS binary
     output_file: Option<TempFile>,
     #[allow(dead_code)]
     task_name: &'a str,
@@ -383,13 +387,20 @@ pub struct MayDetach<'a> {
 
 impl<'a> MayDetach<'a> {
     fn new(task_name: &'a str) -> MayDetach<'a> {
-        MayDetach {
-            output_file: None,
-            task_name,
+        #[cfg(target_os = "macos")]
+        {
+            MayDetach {
+                output_file: None,
+                task_name,
+            }
         }
+
+        #[cfg(not(target_os = "macos"))]
+        MayDetach { task_name }
     }
 
-    /// Returns true if we are deteached from xcode
+    /// Returns true if we are deteached from xcode.
+    #[cfg(target_os = "macos")]
     pub fn is_detached(&self) -> bool {
         self.output_file.is_some()
     }
@@ -403,9 +414,12 @@ impl<'a> MayDetach<'a> {
             return Ok(false);
         }
 
-        println!("Continuing in background.");
-        show_notification("Sentry", &format!("{} starting", self.task_name))?;
         let output_file = TempFile::create()?;
+
+        println!("Continuing in background.");
+        println!("Output is redirected to {}", output_file.path().display());
+        show_notification("Sentry", &format!("{} starting", self.task_name))?;
+
         daemonize_redirect(
             Some(output_file.path()),
             Some(output_file.path()),
@@ -499,12 +513,6 @@ pub fn launched_from_xcode() -> bool {
     false
 }
 
-/// Returns true if we were invoked from xcode
-#[cfg(not(target_os = "macos"))]
-pub fn launched_from_xcode() -> bool {
-    false
-}
-
 /// Shows a dialog in xcode and blocks.  The dialog will have a title and a
 /// message as well as the buttons "Show details" and "Ignore".  Returns
 /// `true` if the `show details` button has been pressed.
@@ -575,7 +583,7 @@ pub fn show_notification(title: &str, message: &str) -> Result<()> {
     }
 
     SCRIPT
-        .execute_with_params(NotificationParams { title, message })
+        .execute_with_params::<_, ()>(NotificationParams { title, message })
         .context("Failed to display Xcode notification")?;
 
     Ok(())

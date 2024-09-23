@@ -11,21 +11,22 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(_matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
+    let authenticated_api = api.authenticated()?;
 
     // Query regions available to the current CLI user
-    let regions = api.list_available_regions()?;
+    let regions = authenticated_api.list_available_regions()?;
 
     let mut organizations: Vec<Organization> = vec![];
     debug!("Available regions: {:?}", regions);
 
     // Self-hosted instances won't have a region instance or prefix, so we
     // need to check before fanning out.
-    if regions.len() > 1 {
+    if !regions.is_empty() {
         for region in regions {
-            organizations.append(&mut api.list_organizations(Some(&region))?)
+            organizations.append(&mut authenticated_api.list_organizations(Some(&region))?)
         }
     } else {
-        organizations.append(&mut api.list_organizations(None)?)
+        organizations.append(&mut authenticated_api.list_organizations(None)?)
     }
 
     organizations.sort_by_key(|o| o.name.clone().to_lowercase());
@@ -46,7 +47,7 @@ pub fn execute(_matches: &ArgMatches) -> Result<()> {
             .add(&organization.id)
             .add(&organization.name)
             .add(&organization.slug)
-            .add(&organization.date_created.format("%F"))
+            .add(organization.date_created.format("%F"))
             .add(organization.is_early_adopter)
             .add(organization.require_2fa);
     }

@@ -1,3 +1,5 @@
+#![allow(dead_code)] // a ton of functions/fields might be unused based on the `managed` feature
+
 use std::env;
 use std::fs;
 use std::io;
@@ -169,11 +171,7 @@ impl SentryCliUpdateInfo {
 pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
     let api = Api::current();
     Ok(SentryCliUpdateInfo {
-        latest_release: if let Ok(release) = api.get_latest_sentrycli_release() {
-            release
-        } else {
-            None
-        },
+        latest_release: api.get_latest_sentrycli_release().unwrap_or_default(),
     })
 }
 
