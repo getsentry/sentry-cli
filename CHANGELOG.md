@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.2
+
+### Various fixes & improvements
+
+- fix(deploys): Honor `--project` in `deploys new` subcommand (#2160) by @szokeasaurusrex
+- ref(metrics): Deprecate `send-metric` commands (#2154) by @szokeasaurusrex
+
 ## 2.36.1
 
 ### Various fixes & improvements
