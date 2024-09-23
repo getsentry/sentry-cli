@@ -6,7 +6,6 @@
 
 ### Various fixes & improvements
 
-- ref(api): Separate `Deploy` struct into separate submodule (#2161) by @szokeasaurusrex
 - fix(deploys): Honor `--project` in `deploys new` subcommand (#2160) by @szokeasaurusrex
 - ref(metrics): Deprecate `send-metric` commands (#2154) by @szokeasaurusrex
 
