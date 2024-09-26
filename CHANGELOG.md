@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.3
+
+### Various fixes & improvements
+
+- build: Upgrade `curl-sys` (#2164) by @szokeasaurusrex
+- ci: update actions/upload-artifact to v4 with merge (#2158) by @joshuarli
+
 ## 2.36.2
 
 ### Various fixes & improvements
