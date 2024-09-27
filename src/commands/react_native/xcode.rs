@@ -22,7 +22,7 @@ use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::TempFile;
 use crate::utils::sourcemaps::SourceMapProcessor;
 use crate::utils::system::propagate_exit_status;
-use crate::utils::xcode::{InfoPlist, MayDetach};
+use crate::utils::xcode::InfoPlist;
 
 #[derive(Serialize, Deserialize, Default, Debug)]
 struct SourceMapReport {
@@ -207,197 +207,197 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let hermesc = find_hermesc();
     info!("Using hermesc interpreter '{}'", &hermesc);
 
-    MayDetach::wrap("React native symbol handling", |md| {
-        let bundle_path;
-        let sourcemap_path;
-        let bundle_url;
-        let sourcemap_url;
-        let bundle_file;
-        let sourcemap_file;
+    let bundle_path;
+    let sourcemap_path;
+    let bundle_url;
+    let sourcemap_url;
+    let bundle_file;
+    let sourcemap_file;
 
-        // If we have a fetch URL we need to fetch them from there now.  In that
-        // case we do indeed fetch it right from the running packager and then
-        // store it in temporary files for later consumption.
-        if let Some(url) = fetch_url {
-            if !matches.get_flag("force_foreground") {
-                md.may_detach()?;
-            }
-            let api = Api::current();
-            let url = url.trim_end_matches('/');
-            bundle_file = TempFile::create()?;
-            bundle_path = bundle_file.path().to_path_buf();
-            bundle_url = "~/index.ios.bundle".to_string();
-            sourcemap_file = TempFile::create()?;
-            sourcemap_path = sourcemap_file.path().to_path_buf();
-            sourcemap_url = "~/index.ios.map".to_string();
+    // If we have a fetch URL we need to fetch them from there now.  In that
+    // case we do indeed fetch it right from the running packager and then
+    // store it in temporary files for later consumption.
+    if let Some(url) = fetch_url {
+        let api = Api::current();
+        let url = url.trim_end_matches('/');
+        bundle_file = TempFile::create()?;
+        bundle_path = bundle_file.path().to_path_buf();
+        bundle_url = "~/index.ios.bundle".to_string();
+        sourcemap_file = TempFile::create()?;
+        sourcemap_path = sourcemap_file.path().to_path_buf();
+        sourcemap_url = "~/index.ios.map".to_string();
 
-            // wait up to 10 seconds for the server to be up.
-            if !api.wait_until_available(url, Duration::seconds(10))? {
-                bail!("Error: react-native packager did not respond in time");
-            }
-
-            api.download(
-                &format!("{url}/index.ios.bundle?platform=ios&dev=true"),
-                &mut bundle_file.open()?,
-            )?;
-            api.download(
-                &format!("{url}/index.ios.map?platform=ios&dev=true"),
-                &mut sourcemap_file.open()?,
-            )?;
-
-        // This is the case where we need to hook into the release process to
-        // collect sourcemaps when they are generated.
-        //
-        // this invokes via an indirection of sentry-cli our wrap_call() below.
-        // What is happening behind the scenes is that we switch out NODE_BINARY
-        // for ourselves which is what the react-native build script normally
-        // invokes.  Because we export __SENTRY_RN_WRAP_XCODE_CALL=1, the main
-        // sentry-cli script will invoke our wrap_call() function below.
-        //
-        // That will then attempt to figure out that a react-native bundle is
-        // happening to the build script, parse out the arguments, add additional
-        // arguments if needed and then report the parsed arguments to a temporary
-        // JSON file we load back below.
-        //
-        // We do the same for Hermes Compiler to retrieve the bundle file and
-        // the same for the combine source maps for the final Hermes source map.
-        //
-        // With that we we then have all the information we need to invoke the
-        // upload process.
-        } else {
-            let mut command = process::Command::new(&script);
-            command
-                .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
-                .env("SENTRY_RN_REAL_NODE_BINARY", &node)
-                .env(
-                    "SENTRY_RN_SOURCEMAP_REPORT",
-                    report_file.path().to_str().unwrap(),
-                )
-                .env("__SENTRY_RN_WRAP_XCODE_CALL", "1");
-
-            if is_hermes_enabled(&hermesc) {
-                command
-                    .env("HERMES_CLI_PATH", env::current_exe()?.to_str().unwrap())
-                    .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc);
-            }
-
-            let rv = command.spawn()?.wait()?;
-            propagate_exit_status(rv);
-
-            if !matches.get_flag("force_foreground") {
-                md.may_detach()?;
-            }
-            let mut f = fs::File::open(report_file.path())?;
-            let report: SourceMapReport = serde_json::from_reader(&mut f).unwrap_or_else(|_| {
-                let format_err = format!(
-                    "File {} doesn't contain a valid JSON data.",
-                    report_file.path().display()
-                );
-                panic!("{}", format_err);
-            });
-            let (Some(packager_bundle_path), Some(packager_sourcemap_path)) =
-                (report.packager_bundle_path, report.packager_sourcemap_path)
-            else {
-                println!("Warning: build produced no packager sourcemaps.");
-                return Ok(());
-            };
-
-            // If Hermes emitted source map we have to use it
-            if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) =
-                (report.hermes_bundle_path, report.hermes_sourcemap_path)
-            {
-                bundle_path = hermes_bundle_path.clone();
-                sourcemap_path = hermes_sourcemap_path.clone();
-                println!("Using Hermes bundle and combined source map.");
-
-            // If Hermes emitted only bundle or Hermes was disabled use packager bundle and source map
-            } else {
-                bundle_path = packager_bundle_path;
-                sourcemap_path = packager_sourcemap_path;
-                println!("Using React Native Packager bundle and source map.");
-            }
-            bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
-            sourcemap_url = format!(
-                "~/{}",
-                sourcemap_path.file_name().unwrap().to_string_lossy()
-            );
+        // wait up to 10 seconds for the server to be up.
+        if !api.wait_until_available(url, Duration::seconds(10))? {
+            bail!("Error: react-native packager did not respond in time");
         }
 
-        // now that we have all the data, we can now process and upload the
-        // sourcemaps.
-        println!("Processing react-native sourcemaps for Sentry upload.");
-        info!("  bundle path: {}", bundle_path.display());
-        info!("  sourcemap path: {}", sourcemap_path.display());
-
-        let mut processor = SourceMapProcessor::new();
-        processor.add(&bundle_url, ReleaseFileSearch::collect_file(bundle_path)?)?;
-        processor.add(
-            &sourcemap_url,
-            ReleaseFileSearch::collect_file(sourcemap_path)?,
+        api.download(
+            &format!("{url}/index.ios.bundle?platform=ios&dev=true"),
+            &mut bundle_file.open()?,
         )?;
-        processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
-        processor.add_sourcemap_references()?;
-        processor.add_debug_id_references()?;
+        api.download(
+            &format!("{url}/index.ios.map?platform=ios&dev=true"),
+            &mut sourcemap_file.open()?,
+        )?;
 
-        let api = Api::current();
-        let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
+    // This is the case where we need to hook into the release process to
+    // collect sourcemaps when they are generated.
+    //
+    // this invokes via an indirection of sentry-cli our wrap_call() below.
+    // What is happening behind the scenes is that we switch out NODE_BINARY
+    // for ourselves which is what the react-native build script normally
+    // invokes.  Because we export __SENTRY_RN_WRAP_XCODE_CALL=1, the main
+    // sentry-cli script will invoke our wrap_call() function below.
+    //
+    // That will then attempt to figure out that a react-native bundle is
+    // happening to the build script, parse out the arguments, add additional
+    // arguments if needed and then report the parsed arguments to a temporary
+    // JSON file we load back below.
+    //
+    // We do the same for Hermes Compiler to retrieve the bundle file and
+    // the same for the combine source maps for the final Hermes source map.
+    //
+    // With that we we then have all the information we need to invoke the
+    // upload process.
+    } else {
+        let mut command = process::Command::new(&script);
+        command
+            .env("NODE_BINARY", env::current_exe()?.to_str().unwrap())
+            .env("SENTRY_RN_REAL_NODE_BINARY", &node)
+            .env(
+                "SENTRY_RN_SOURCEMAP_REPORT",
+                report_file.path().to_str().unwrap(),
+            )
+            .env("__SENTRY_RN_WRAP_XCODE_CALL", "1");
 
-        let dist_from_env = env::var("SENTRY_DIST");
-        let release_from_env = env::var("SENTRY_RELEASE");
+        if is_hermes_enabled(&hermesc) {
+            command
+                .env("HERMES_CLI_PATH", env::current_exe()?.to_str().unwrap())
+                .env("SENTRY_RN_REAL_HERMES_CLI_PATH", &hermesc);
+        }
 
-        let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
-        let wait = matches.get_flag("wait") || wait_for_secs.is_some();
-        let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, std::time::Duration::from_secs);
+        let rv = command.spawn()?.wait()?;
+        propagate_exit_status(rv);
 
-        if dist_from_env.is_err()
-            && release_from_env.is_err()
-            && matches.get_flag("no_auto_release")
+        let mut f = fs::File::open(report_file.path())?;
+        let report: SourceMapReport = serde_json::from_reader(&mut f).unwrap_or_else(|_| {
+            let format_err = format!(
+                "File {} doesn't contain a valid JSON data.",
+                report_file.path().display()
+            );
+            panic!("{}", format_err);
+        });
+        let (Some(packager_bundle_path), Some(packager_sourcemap_path)) =
+            (report.packager_bundle_path, report.packager_sourcemap_path)
+        else {
+            println!("Warning: build produced no packager sourcemaps.");
+            return Ok(());
+        };
+
+        // If Hermes emitted source map we have to use it
+        if let (Some(hermes_bundle_path), Some(hermes_sourcemap_path)) =
+            (report.hermes_bundle_path, report.hermes_sourcemap_path)
         {
-            processor.upload(&UploadContext {
-                org: &org,
-                project: Some(&project),
-                release: None,
-                dist: None,
-                note: None,
-                wait,
-                max_wait,
-                dedupe: false,
-                chunk_upload_options: chunk_upload_options.as_ref(),
-            })?;
+            bundle_path = hermes_bundle_path.clone();
+            sourcemap_path = hermes_sourcemap_path.clone();
+            println!("Using Hermes bundle and combined source map.");
+
+        // If Hermes emitted only bundle or Hermes was disabled use packager bundle and source map
         } else {
-            let (dist, release_name) = match (&dist_from_env, &release_from_env) {
-                (Err(_), Err(_)) => {
-                    // Neither environment variable is present, attempt to parse Info.plist
-                    info!("Parsing Info.plist");
-                    match InfoPlist::discover_from_env() {
-                        Ok(Some(plist)) => {
-                            // Successfully discovered and parsed Info.plist
-                            let dist_string = plist.build().to_string();
-                            let release_string = format!(
-                                "{}@{}+{}",
-                                plist.bundle_id(),
-                                plist.version(),
-                                dist_string
-                            );
-                            info!("Parse result from Info.plist: {:?}", &plist);
-                            (Some(dist_string), Some(release_string))
-                        }
-                        _ => {
-                            bail!("Info.plist was not found or an parsing error occurred");
-                        }
+            bundle_path = packager_bundle_path;
+            sourcemap_path = packager_sourcemap_path;
+            println!("Using React Native Packager bundle and source map.");
+        }
+        bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
+        sourcemap_url = format!(
+            "~/{}",
+            sourcemap_path.file_name().unwrap().to_string_lossy()
+        );
+    }
+
+    // now that we have all the data, we can now process and upload the
+    // sourcemaps.
+    println!("Processing react-native sourcemaps for Sentry upload.");
+    info!("  bundle path: {}", bundle_path.display());
+    info!("  sourcemap path: {}", sourcemap_path.display());
+
+    let mut processor = SourceMapProcessor::new();
+    processor.add(&bundle_url, ReleaseFileSearch::collect_file(bundle_path)?)?;
+    processor.add(
+        &sourcemap_url,
+        ReleaseFileSearch::collect_file(sourcemap_path)?,
+    )?;
+    processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
+    processor.add_sourcemap_references()?;
+    processor.add_debug_id_references()?;
+
+    let api = Api::current();
+    let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
+
+    let dist_from_env = env::var("SENTRY_DIST");
+    let release_from_env = env::var("SENTRY_RELEASE");
+
+    let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
+    let wait = matches.get_flag("wait") || wait_for_secs.is_some();
+    let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, std::time::Duration::from_secs);
+
+    if dist_from_env.is_err() && release_from_env.is_err() && matches.get_flag("no_auto_release") {
+        processor.upload(&UploadContext {
+            org: &org,
+            project: Some(&project),
+            release: None,
+            dist: None,
+            note: None,
+            wait,
+            max_wait,
+            dedupe: false,
+            chunk_upload_options: chunk_upload_options.as_ref(),
+        })?;
+    } else {
+        let (dist, release_name) = match (&dist_from_env, &release_from_env) {
+            (Err(_), Err(_)) => {
+                // Neither environment variable is present, attempt to parse Info.plist
+                info!("Parsing Info.plist");
+                match InfoPlist::discover_from_env() {
+                    Ok(Some(plist)) => {
+                        // Successfully discovered and parsed Info.plist
+                        let dist_string = plist.build().to_string();
+                        let release_string =
+                            format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist_string);
+                        info!("Parse result from Info.plist: {:?}", &plist);
+                        (Some(dist_string), Some(release_string))
+                    }
+                    _ => {
+                        bail!("Info.plist was not found or an parsing error occurred");
                     }
                 }
-                // At least one environment variable is present, use the values from the environment
-                _ => (dist_from_env.ok(), release_from_env.ok()),
-            };
+            }
+            // At least one environment variable is present, use the values from the environment
+            _ => (dist_from_env.ok(), release_from_env.ok()),
+        };
 
-            match matches.get_many::<String>("dist") {
-                None => {
+        match matches.get_many::<String>("dist") {
+            None => {
+                processor.upload(&UploadContext {
+                    org: &org,
+                    project: Some(&project),
+                    release: release_name.as_deref(),
+                    dist: dist.as_deref(),
+                    note: None,
+                    wait,
+                    max_wait,
+                    dedupe: false,
+                    chunk_upload_options: chunk_upload_options.as_ref(),
+                })?;
+            }
+            Some(dists) => {
+                for dist in dists {
                     processor.upload(&UploadContext {
                         org: &org,
                         project: Some(&project),
                         release: release_name.as_deref(),
-                        dist: dist.as_deref(),
+                        dist: Some(dist),
                         note: None,
                         wait,
                         max_wait,
@@ -405,26 +405,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         chunk_upload_options: chunk_upload_options.as_ref(),
                     })?;
                 }
-                Some(dists) => {
-                    for dist in dists {
-                        processor.upload(&UploadContext {
-                            org: &org,
-                            project: Some(&project),
-                            release: release_name.as_deref(),
-                            dist: Some(dist),
-                            note: None,
-                            wait,
-                            max_wait,
-                            dedupe: false,
-                            chunk_upload_options: chunk_upload_options.as_ref(),
-                        })?;
-                    }
-                }
             }
         }
+    }
 
-        Ok(())
-    })
+    Ok(())
 }
 
 pub fn wrap_call() -> Result<()> {
