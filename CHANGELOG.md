@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.4
+
+### Various fixes & improvements
+
+- fix(crons): Run `monitors run` program on check-in failure (#2171) by @szokeasaurusrex
+- build: Upgrade `curl-sys` (#2164) by @szokeasaurusrex
+- ci: update actions/upload-artifact to v4 with merge (#2158) by @joshuarli
+
 ## 2.36.2
 
 ### Various fixes & improvements
