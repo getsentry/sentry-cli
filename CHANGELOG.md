@@ -4,11 +4,13 @@
 
 ## 2.36.4
 
-### Various fixes & improvements
+This releases fixes includes a bugfix (#2171 by @szokeasaurusrex) for #2169. The bug caused any command run with `sentry-cli monitors run` to not be executed whenever sending the cron checkin to Sentry failed, e.g. during a Sentry outage or due to some other network failure. With the bugfix, we log the error and execute the program even when there was an error sending the checkin.
 
-- fix(crons): Run `monitors run` program on check-in failure (#2171) by @szokeasaurusrex
+**We recommend that all users using `sentry-cli monitors run` upgrade to Sentry CLI version 2.36.4 immediately.**
+
+### Other fixes & improvements
+
 - build: Upgrade `curl-sys` (#2164) by @szokeasaurusrex
-- ci: update actions/upload-artifact to v4 with merge (#2158) by @joshuarli
 
 ## 2.36.2
 
