@@ -12,6 +12,18 @@ fn command_monitors_run() {
 }
 
 #[test]
+fn command_monitors_run_server_error() {
+    let _server =
+        integration::mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 500));
+
+    #[cfg(not(windows))]
+    integration::register_test("monitors/monitors-run-server-error.trycmd");
+
+    #[cfg(windows)]
+    integration::register_test("monitors/monitors-run-server-error-win.trycmd");
+}
+
+#[test]
 fn command_monitors_run_token_auth() {
     let _server = integration::mock_endpoint(
         EndpointOptions::new("POST", "/api/0/monitors/foo-monitor/checkins/", 200)
