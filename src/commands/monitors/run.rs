@@ -140,7 +140,11 @@ fn execute_checkin(
     };
 
     let envelopes_api = EnvelopesApi::try_new()?;
-    envelopes_api.send_envelope(open_checkin)?;
+    
+    if let Err(e) = envelopes_api.send_envelope(open_checkin) {
+        log::error!("Failed to send in-progress check-in envelope: {e}");
+        log::info!("Continuing to run program...");
+    }
 
     let (success, code, elapsed) = run_program(args, monitor_slug);
 
@@ -161,7 +165,11 @@ fn execute_checkin(
         monitor_config: None,
     };
 
-    envelopes_api.send_envelope(close_checkin)?;
+    if let Err(e) = envelopes_api.send_envelope(close_checkin) {
+        log::error!("Failed to send final check-in envelope: {e}");
+        log::info!("Continuing to exit with program's exit code...");
+    }
+
     Ok((success, code))
 }
 

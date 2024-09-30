@@ -1,0 +1,8 @@
+```
+$ sentry-cli monitors run foo-monitor -- cmd.exe /C echo 123
+? success
+[..]ERROR[..]Failed to send in-progress check-in envelope[..]
+123
+[..]ERROR[..]Failed to send final check-in envelope[..]
+
+```
