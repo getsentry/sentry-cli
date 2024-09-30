@@ -11,6 +11,7 @@ use sentry::protocol::{MonitorCheckIn, MonitorCheckInStatus, MonitorConfig, Moni
 
 use crate::api::envelopes_api::EnvelopesApi;
 use crate::utils::system::QuietExit;
+use crate::utils::value_parsers::auth_token_parser;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -96,7 +97,12 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         // Hide auth token from --help output
-        .arg(Arg::new("auth_token").long("auth-token").hide(true))
+        .arg(
+            Arg::new("auth_token")
+                .long("auth-token")
+                .value_parser(auth_token_parser)
+                .hide(true),
+        )
 }
 
 fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Duration) {
@@ -140,7 +146,7 @@ fn execute_checkin(
     };
 
     let envelopes_api = EnvelopesApi::try_new()?;
-    
+
     if let Err(e) = envelopes_api.send_envelope(open_checkin) {
         log::error!("Failed to send in-progress check-in envelope: {e}");
         log::info!("Continuing to run program...");
