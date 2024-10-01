@@ -7,7 +7,15 @@
 ### Various fixes & improvements
 
 - Revert "ci: update actions/upload-artifact to v4 with merge" (#2173) by @szokeasaurusrex
-- fix(crons): Run `monitors run` program on check-in failure (#2171) by @szokeasaurusrex
+
+## 2.36.4
+
+This releases fixes includes a bugfix (#2171 by @szokeasaurusrex) for #2169. The bug caused any command run with
+`sentry-cli monitors run` to not be executed whenever sending the cron checkin to Sentry failed, e.g. during a Sentry
+outage or due to some other network failure. With the bugfix, we log the error and execute the program even when there
+was an error sending the checkin.
+
+**We recommend that all users using `sentry-cli monitors run` upgrade to Sentry CLI version 2.36.4 immediately.**
 
 ## 2.36.3
 
