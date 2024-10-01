@@ -8,8 +8,12 @@
 
 - Revert "ci: update actions/upload-artifact to v4 with merge" (#2173) by @szokeasaurusrex
 - fix(crons): Run `monitors run` program on check-in failure (#2171) by @szokeasaurusrex
+
+## 2.36.3
+
+### Various fixes & improvements
+
 - build: Upgrade `curl-sys` (#2164) by @szokeasaurusrex
-- ci: update actions/upload-artifact to v4 with merge (#2158) by @joshuarli
 
 ## 2.36.2
 
@@ -29,7 +33,8 @@
 ### Various fixes & improvements
 
 - Log when file not added to source bundle (#2146) by @szokeasaurusrex
-- Bump Symbolic to `12.11.0`. This fixes a bug where uploading source files sometimes failed when any of the files were not UTF-8 encoded
+- Bump Symbolic to `12.11.0`. This fixes a bug where uploading source files sometimes failed when any of the files were
+  not UTF-8 encoded
 
 ## 2.35.0
 
