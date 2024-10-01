@@ -2,8 +2,8 @@ name: Release Build
 
 on:
   push:
-    branches:
-      - release/**
+#    branches:
+#      - release/**
 
 jobs:
   linux:
@@ -191,7 +191,7 @@ jobs:
       - run: python3 -m pip install build && python3 -m build
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-python-base
+          name: nonrelease-artifact-python-base
           path: dist/*
           if-no-files-found: 'error'
 
@@ -211,7 +211,7 @@ jobs:
           path: binaries
       - uses: actions/download-artifact@v4
         with:
-          name: artifact-python-base
+          name: nonrelease-artifact-python-base
           merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
