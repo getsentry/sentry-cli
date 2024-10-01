@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.5
+
+### Various fixes & improvements
+
+- Revert "ci: update actions/upload-artifact to v4 with merge" (#2173) by @szokeasaurusrex
+- fix(crons): Run `monitors run` program on check-in failure (#2171) by @szokeasaurusrex
+- build: Upgrade `curl-sys` (#2164) by @szokeasaurusrex
+- ci: update actions/upload-artifact to v4 with merge (#2158) by @joshuarli
+
 ## 2.36.2
 
 ### Various fixes & improvements
