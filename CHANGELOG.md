@@ -2,6 +2,26 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.5
+
+There are no code changes in this release. It is a re-release of 2.36.4, which we are making because 2.36.4 and 2.36.3
+failed to publish to PyPI.
+
+## 2.36.4
+
+This releases fixes includes a bugfix (#2171 by @szokeasaurusrex) for #2169. The bug caused any command run with
+`sentry-cli monitors run` to not be executed whenever sending the cron checkin to Sentry failed, e.g. during a Sentry
+outage or due to some other network failure. With the bugfix, we log the error and execute the program even when there
+was an error sending the checkin.
+
+**We recommend that all users using `sentry-cli monitors run` upgrade to Sentry CLI version 2.36.4 immediately.**
+
+## 2.36.3
+
+### Various fixes & improvements
+
+- build: Upgrade `curl-sys` (#2164) by @szokeasaurusrex
+
 ## 2.36.2
 
 ### Various fixes & improvements
@@ -20,7 +40,8 @@
 ### Various fixes & improvements
 
 - Log when file not added to source bundle (#2146) by @szokeasaurusrex
-- Bump Symbolic to `12.11.0`. This fixes a bug where uploading source files sometimes failed when any of the files were not UTF-8 encoded
+- Bump Symbolic to `12.11.0`. This fixes a bug where uploading source files sometimes failed when any of the files were
+  not UTF-8 encoded
 
 ## 2.35.0
 
