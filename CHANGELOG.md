@@ -4,9 +4,7 @@
 
 ## 2.36.6
 
-### Various fixes & improvements
-
-- fix(ci): upload-artifact v4 retry (#2176) by @joshuarli
+There are no code changes in this release. It is being performed to test an update to the release build process.
 
 ## 2.36.5
 
