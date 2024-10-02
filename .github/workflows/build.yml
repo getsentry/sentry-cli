@@ -39,10 +39,11 @@ jobs:
       - name: Rename Binary
         run: mv target/*/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-bin-linux-${{ matrix.arch }}
           path: sentry-cli-Linux-${{ matrix.arch }}
+          if-no-files-found: 'error'
 
   macos:
     strategy:
@@ -76,10 +77,11 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
+          if-no-files-found: 'error'
 
   macos_universal:
     needs: macos
@@ -87,17 +89,19 @@ jobs:
     runs-on: macos-latest
 
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}
+          pattern: artifact-bin-macos-*
+          merge-multiple: true
 
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
 
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-bin-macos-universal
           path: sentry-cli-Darwin-universal
+          if-no-files-found: 'error'
 
   windows:
     strategy:
@@ -132,10 +136,11 @@ jobs:
       - name: Rename Binary
         run: mv target/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-bin-windows-${{ matrix.arch }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
+          if-no-files-found: 'error'
 
   node:
     name: NPM Package
@@ -150,9 +155,10 @@ jobs:
           node-version: '20.10.0'
 
       - name: Download compiled binaries
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}
+          pattern: artifact-bin-*
+          merge-multiple: true
 
       - name: Calculate and store checksums
         shell: bash
@@ -162,10 +168,11 @@ jobs:
 
       - run: npm pack
 
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-pkg-node
           path: '*.tgz'
+          if-no-files-found: 'error'
 
   python-base:
     name: python (base)
@@ -182,10 +189,11 @@ jobs:
         with:
           python-version: '3.11'
       - run: python3 -m pip install build && python3 -m build
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}-python-base
+          name: python-base
           path: dist/*
+          if-no-files-found: 'error'
 
   python:
     name: python
@@ -196,19 +204,22 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}
+          pattern: artifact-bin-*
+          merge-multiple: true
           path: binaries
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}-python-base
+          name: python-base
+          merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
-      - uses: actions/upload-artifact@v3.1.1
+      - uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-pkg-python
           path: dist/*
+          if-no-files-found: 'error'
 
   npm-distributions:
     name: 'Build NPM distributions'
@@ -219,9 +230,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20.10.0'
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
-          name: ${{ github.sha }}
+          pattern: artifact-bin-*
+          merge-multiple: true
           path: binary-artifacts
       - name: Move binaries into distribution packages
         run: |
@@ -243,8 +255,22 @@ jobs:
             npm pack
             cd -
           done
+
       - name: Upload packaged npm binary distributions
-        uses: actions/upload-artifact@v3.1.1
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ github.sha }}
+          name: artifact-npm-binary-distributions
           path: npm-binary-distributions/*/*.tgz
+          if-no-files-found: 'error'
+
+  merge:
+    name: Create Release Artifact
+    runs-on: ubuntu-latest
+    needs: [linux, macos, macos_universal, windows, npm-distributions, node, python]
+    steps:
+      - uses: actions/upload-artifact/merge@v4
+        with:
+          # Craft expects release assets to be a single artifact named after the sha.
+          name: ${{ github.sha }}
+          pattern: artifact-*
+          delete-merged: true
