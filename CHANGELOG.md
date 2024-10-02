@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.6
+
+There are no code changes in this release. It is being performed to test an update to the release build process.
+
 ## 2.36.5
 
 There are no code changes in this release. It is a re-release of 2.36.4, which we are making because 2.36.4 and 2.36.3
