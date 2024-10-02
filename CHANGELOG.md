@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.36.6
+
+### Various fixes & improvements
+
+- fix(ci): upload-artifact v4 retry (#2176) by @joshuarli
+
 ## 2.36.5
 
 There are no code changes in this release. It is a re-release of 2.36.4, which we are making because 2.36.4 and 2.36.3
