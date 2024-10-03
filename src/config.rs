@@ -439,17 +439,6 @@ impl Config {
         )
     }
 
-    /// Returns true if notifications should be displayed.
-    /// We only use this function in the macOS binary.
-    #[cfg(target_os = "macos")]
-    pub fn show_notifications(&self) -> Result<bool> {
-        Ok(self
-            .ini
-            .get_from(Some("ui"), "show_notifications")
-            .map(|x| x == "true")
-            .unwrap_or(true))
-    }
-
     /// Returns the maximum DIF upload size
     pub fn get_max_dif_archive_size(&self) -> u64 {
         let key = "max_upload_size";

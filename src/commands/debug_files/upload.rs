@@ -16,7 +16,7 @@ use crate::utils::args::ArgExt;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
 use crate::utils::system::QuietExit;
-use crate::utils::xcode::{InfoPlist, MayDetach};
+use crate::utils::xcode::InfoPlist;
 
 static DERIVED_DATA_FOLDER: &str = "Library/Developer/Xcode/DerivedData";
 
@@ -152,15 +152,12 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(
             Arg::new("force_foreground")
+                .hide(true)
                 .long("force-foreground")
                 .action(ArgAction::SetTrue)
                 .help(
-                    "Wait for the process to finish.{n}\
-                    By default, the upload process will detach and continue in the \
-                    background when triggered from Xcode.  When an error happens, \
-                    a dialog is shown.  If this parameter is passed Xcode will wait \
-                    for the process to finish before the build finishes and output \
-                    will be shown in the Xcode build output.",
+                    "DEPRECATED: Foreground uploads are now the default behavior.{n}\
+                    This flag has no effect and will be removed in a future version.",
                 ),
         )
         .arg(
@@ -306,45 +303,38 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
-    MayDetach::wrap("Debug symbol upload", |handle| {
-        // Optionally detach if run from Xcode
-        if !matches.get_flag("force_foreground") {
-            handle.may_detach()?;
-        }
+    // Execute the upload
+    let (uploaded, has_processing_errors) = upload.upload()?;
 
-        // Execute the upload
-        let (uploaded, has_processing_errors) = upload.upload()?;
+    // Did we miss explicitly requested symbols?
+    if matches.get_flag("require_all") {
+        let required_ids: BTreeSet<DebugId> = matches
+            .get_many::<DebugId>("ids")
+            .unwrap_or_default()
+            .cloned()
+            .collect();
 
-        // Did we miss explicitly requested symbols?
-        if matches.get_flag("require_all") {
-            let required_ids: BTreeSet<DebugId> = matches
-                .get_many::<DebugId>("ids")
-                .unwrap_or_default()
-                .cloned()
-                .collect();
+        let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();
+        let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
 
-            let found_ids = uploaded.into_iter().map(|dif| dif.id()).collect();
-            let missing_ids: Vec<_> = required_ids.difference(&found_ids).collect();
-
-            if !missing_ids.is_empty() {
-                eprintln!();
-                eprintln!("{}", style("Error: Some symbols could not be found!").red());
-                eprintln!("The following symbols are still missing:");
-                for id in missing_ids {
-                    println!("  {id}");
-                }
-
-                return Err(QuietExit(1).into());
-            }
-        }
-
-        // report a non 0 status code if the server encountered issues.
-        if has_processing_errors {
+        if !missing_ids.is_empty() {
             eprintln!();
-            eprintln!("{}", style("Error: some symbols did not process correctly"));
+            eprintln!("{}", style("Error: Some symbols could not be found!").red());
+            eprintln!("The following symbols are still missing:");
+            for id in missing_ids {
+                println!("  {id}");
+            }
+
             return Err(QuietExit(1).into());
         }
+    }
 
-        Ok(())
-    })
+    // report a non 0 status code if the server encountered issues.
+    if has_processing_errors {
+        eprintln!();
+        eprintln!("{}", style("Error: some symbols did not process correctly"));
+        return Err(QuietExit(1).into());
+    }
+
+    Ok(())
 }

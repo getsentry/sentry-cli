@@ -15,15 +15,9 @@ use regex::Regex;
 use serde::Deserialize;
 
 #[cfg(target_os = "macos")]
-use {
-    libc::getpid,
-    mac_process_info, osascript,
-    unix_daemonize::{daemonize_redirect, ChdirMode},
-};
+use {libc::getpid, mac_process_info};
 
 use crate::utils::fs::SeekRead;
-#[cfg(target_os = "macos")]
-use crate::utils::fs::TempFile;
 use crate::utils::system::expand_vars;
 
 #[derive(Deserialize, Debug)]
@@ -375,121 +369,6 @@ impl InfoPlist {
     }
 }
 
-/// Helper struct that allows the current execution to detach from
-/// the xcode console and continue in the background.  This becomes
-/// a dummy shim for non xcode runs or platforms.
-pub struct MayDetach<'a> {
-    #[cfg(target_os = "macos")] // only used in macOS binary
-    output_file: Option<TempFile>,
-    #[allow(dead_code)]
-    task_name: &'a str,
-}
-
-impl<'a> MayDetach<'a> {
-    fn new(task_name: &'a str) -> MayDetach<'a> {
-        #[cfg(target_os = "macos")]
-        {
-            MayDetach {
-                output_file: None,
-                task_name,
-            }
-        }
-
-        #[cfg(not(target_os = "macos"))]
-        MayDetach { task_name }
-    }
-
-    /// Returns true if we are deteached from xcode.
-    #[cfg(target_os = "macos")]
-    pub fn is_detached(&self) -> bool {
-        self.output_file.is_some()
-    }
-
-    /// If we are launched from xcode this detaches us from the xcode console
-    /// and continues execution in the background.  From this moment on output
-    /// is captured and the user is notified with notifications.
-    #[cfg(target_os = "macos")]
-    pub fn may_detach(&mut self) -> Result<bool> {
-        if !launched_from_xcode() {
-            return Ok(false);
-        }
-
-        let output_file = TempFile::create()?;
-
-        println!("Continuing in background.");
-        println!("Output is redirected to {}", output_file.path().display());
-        show_notification("Sentry", &format!("{} starting", self.task_name))?;
-
-        daemonize_redirect(
-            Some(output_file.path()),
-            Some(output_file.path()),
-            ChdirMode::NoChdir,
-        )
-        .unwrap();
-        self.output_file = Some(output_file);
-        Ok(true)
-    }
-
-    /// For non mac platforms this just never detaches.
-    #[cfg(not(target_os = "macos"))]
-    pub fn may_detach(&mut self) -> Result<bool> {
-        Ok(false)
-    }
-
-    /// Wraps the execution of a code block.  Does not detach until someone
-    /// calls into `may_detach`.
-    #[cfg(target_os = "macos")]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach<'_>) -> Result<T>>(
-        task_name: &'a str,
-        f: F,
-    ) -> Result<T> {
-        use std::time::Duration;
-
-        let mut md = MayDetach::new(task_name);
-        match f(&mut md) {
-            Ok(x) => {
-                md.show_done()?;
-                Ok(x)
-            }
-            Err(err) => {
-                if let Some(ref output_file) = md.output_file {
-                    crate::utils::system::print_error(&err);
-                    if md.show_critical_info()? {
-                        open::that(output_file.path())?;
-                        std::thread::sleep(Duration::from_millis(5000));
-                    }
-                }
-                Err(err)
-            }
-        }
-    }
-
-    /// Dummy wrap call that never detaches for non mac platforms.
-    #[cfg(not(target_os = "macos"))]
-    pub fn wrap<T, F: FnOnce(&mut MayDetach) -> Result<T>>(task_name: &'a str, f: F) -> Result<T> {
-        f(&mut MayDetach::new(task_name))
-    }
-
-    #[cfg(target_os = "macos")]
-    fn show_critical_info(&self) -> Result<bool> {
-        show_critical_info(
-            &format!("{} failed", self.task_name),
-            "The Sentry build step failed while running in the background. \
-             You can ignore this error or view details to attempt to resolve \
-             it. Ignoring it might cause your crashes not to be handled \
-             properly.",
-        )
-    }
-
-    #[cfg(target_os = "macos")]
-    fn show_done(&self) -> Result<()> {
-        if self.is_detached() {
-            show_notification("Sentry", &format!("{} finished", self.task_name))?;
-        }
-        Ok(())
-    }
-}
-
 /// Returns true if we were invoked from xcode
 #[cfg(target_os = "macos")]
 pub fn launched_from_xcode() -> bool {
@@ -511,82 +390,6 @@ pub fn launched_from_xcode() -> bool {
     }
 
     false
-}
-
-/// Shows a dialog in xcode and blocks.  The dialog will have a title and a
-/// message as well as the buttons "Show details" and "Ignore".  Returns
-/// `true` if the `show details` button has been pressed.
-#[cfg(target_os = "macos")]
-pub fn show_critical_info(title: &str, message: &str) -> Result<bool> {
-    use serde::Serialize;
-
-    lazy_static! {
-        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
-            "
-            var App = Application('XCode');
-            App.includeStandardAdditions = true;
-            return App.displayAlert($params.title, {
-                message: $params.message,
-                as: \"critical\",
-                buttons: [\"Show details\", \"Ignore\"]
-            });
-        "
-        );
-    }
-
-    #[derive(Serialize)]
-    struct AlertParams<'a> {
-        title: &'a str,
-        message: &'a str,
-    }
-
-    #[derive(Debug, Deserialize)]
-    struct AlertResult {
-        #[serde(rename = "buttonReturned")]
-        button: String,
-    }
-
-    let rv: AlertResult = SCRIPT
-        .execute_with_params(AlertParams { title, message })
-        .context("Failed to display Xcode dialog")?;
-
-    Ok(&rv.button != "Ignore")
-}
-
-/// Shows a notification in xcode
-#[cfg(target_os = "macos")]
-pub fn show_notification(title: &str, message: &str) -> Result<()> {
-    use crate::config::Config;
-    use serde::Serialize;
-
-    lazy_static! {
-        static ref SCRIPT: osascript::JavaScript = osascript::JavaScript::new(
-            "
-            var App = Application.currentApplication();
-            App.includeStandardAdditions = true;
-            App.displayNotification($params.message, {
-                withTitle: $params.title
-            });
-        "
-        );
-    }
-
-    let config = Config::current();
-    if !config.show_notifications()? {
-        return Ok(());
-    }
-
-    #[derive(Serialize)]
-    struct NotificationParams<'a> {
-        title: &'a str,
-        message: &'a str,
-    }
-
-    SCRIPT
-        .execute_with_params::<_, ()>(NotificationParams { title, message })
-        .context("Failed to display Xcode notification")?;
-
-    Ok(())
 }
 
 #[test]

@@ -52,12 +52,6 @@ Options:
                                  This runs all steps for the processing but does not trigger the
                                  upload.  This is useful if you just want to verify the setup or
                                  skip the upload in tests.
-      --force-foreground         Wait for the process to finish.
-                                 By default, the upload process will detach and continue in the
-                                 background when triggered from Xcode.  When an error happens, a
-                                 dialog is shown.  If this parameter is passed Xcode will wait for
-                                 the process to finish before the build finishes and output will be
-                                 shown in the Xcode build output.
       --include-sources          Include sources from the local file system and upload them as
                                  source bundles.
       --wait                     Wait for the server to fully process uploaded files. Errors can
