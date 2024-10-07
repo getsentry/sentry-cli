@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::str::{self, FromStr};
 use std::time::Duration;
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Error, Result};
 use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use itertools::Itertools;
@@ -303,6 +303,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Ok(());
     }
 
+    upload_debug_symbols(matches, upload)
+}
+
+// Execute the upload
+/// Executes the upload of debug symbols, possibly detaching the process.
+fn upload_debug_symbols(matches: &ArgMatches, mut upload: DifUpload) -> Result<(), Error> {
     // Execute the upload
     let (uploaded, has_processing_errors) = upload.upload()?;
 
