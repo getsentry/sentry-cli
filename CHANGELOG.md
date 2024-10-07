@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.37.0
+
+All Xcode uploads are now executed in the foreground, which should allow for easier debugging of any problems that occur while uploading files during the build process, since errors will be logged directly within Xcode.
+
+With this change, the `--force-foreground` flag is no longer needed, since we always upload in the foreground. The flag is now a deprecated no-op.
+
 ## 2.36.6
 
 There are no code changes in this release. It is being performed to test an update to the release build process.
