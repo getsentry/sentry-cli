@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.37.0
+
+### Various fixes & improvements
+
+- feat(xcode): All uploads in foreground (#2168) by @szokeasaurusrex
+
 ## 2.36.6
 
 There are no code changes in this release. It is being performed to test an update to the release build process.
