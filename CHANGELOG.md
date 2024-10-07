@@ -4,9 +4,9 @@
 
 ## 2.37.0
 
-### Various fixes & improvements
+All Xcode uploads are now executed in the foreground, which should allow for easier debugging of any problems that occur while uploading files during the build process, since errors will be logged directly within Xcode.
 
-- feat(xcode): All uploads in foreground (#2168) by @szokeasaurusrex
+With this change, the `--force-foreground` flag is no longer needed, since we always upload in the foreground. The flag is now a deprecated no-op.
 
 ## 2.36.6
 
