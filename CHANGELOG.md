@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.38.0
+
+### Various fixes & improvements
+
+- feat(errors): Print backtrace when `RUST_BACKTRACE=1` (#2189) by @szokeasaurusrex
+- fix(crons): Don't panic when passing `--auth-token` (#2172) by @szokeasaurusrex
+
 ## 2.37.0
 
 All Xcode uploads are now executed in the foreground, which should allow for easier debugging of any problems that occur while uploading files during the build process, since errors will be logged directly within Xcode.
