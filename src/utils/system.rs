@@ -76,10 +76,8 @@ pub fn print_error(err: &Error) {
         clap_err.exit();
     }
 
-    eprintln!("{} {}", style("error:").red(), err);
-    err.chain()
-        .skip(1)
-        .for_each(|cause| eprintln!("  {} {}", style("caused by:").dim(), cause));
+    // Debug style for error includes cause chain and backtrace (if available).
+    eprintln!("{} {:?}", style("error:").red(), err);
 
     if Config::current_opt().map_or(true, |config| {
         config.get_log_level() < log::LevelFilter::Info
