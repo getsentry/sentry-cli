@@ -2,7 +2,9 @@
 $ sentry-cli releases delete wat-release
 ? failed
 error: API request failed
-  caused by: sentry reported an error: This release is referenced by active issues and cannot be removed. (http status: 400)
+
+Caused by:
+[..]sentry reported an error: This release is referenced by active issues and cannot be removed. (http status: 400)
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
 Please attach the full debug log to all bug reports.
