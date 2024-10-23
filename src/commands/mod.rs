@@ -349,7 +349,7 @@ fn setup() {
 }
 
 /// Executes the command line application and exits the process.
-pub fn main() {
+pub fn main() -> ! {
     setup();
 
     let exit_code = match execute() {
