@@ -4,6 +4,6 @@ mod config;
 mod constants;
 mod utils;
 
-pub fn main() {
+pub fn main() -> ! {
     commands::main()
 }
