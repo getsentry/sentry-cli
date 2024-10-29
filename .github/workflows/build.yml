@@ -38,4 +38,4 @@ jobs:
           args: --release --locked
 
       - name: Check release binary
-        run: .\target\release\sentry-cli.exe --help || exit 1
+        run: .\target\release\sentry-cli.exe --help
