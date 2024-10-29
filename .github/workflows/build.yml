@@ -133,6 +133,9 @@ jobs:
           command: build
           args: --release --locked
 
+      - name: Check release binary
+        run: .\target\release\sentry-cli.exe --help || exit 1
+
       - name: Rename Binary
         run: mv target/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
