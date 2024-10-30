@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.38.1
+
+### Various fixes & improvements
+
+- meta: Remove `.vscode` directory from version control (#2208) by @szokeasaurusrex
+- build(windows): Statically link CRT on Windows (#2203) by @szokeasaurusrex
+- ref: Update `main` to indicate it does not return (#2192) by @szokeasaurusrex
+- ref: Indicate that `commands::main` does not return (#2191) by @szokeasaurusrex
+
 ## 2.38.0
 
 ### Various fixes & improvements
