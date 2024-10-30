@@ -10,3 +10,5 @@ yarn-error.log
 
 /sentry-cli
 /sentry-cli.exe
+
+.vscode/
