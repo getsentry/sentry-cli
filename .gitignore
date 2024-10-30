@@ -1,6 +1,5 @@
 target
 .DS_Store
-.cargo
 node_modules
 coverage
 dist
