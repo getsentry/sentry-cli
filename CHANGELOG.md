@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.38.2
+
+### Various fixes & improvements
+
+- deps: Update symbolic to 12.12.0 (#2210) by @loewenheim
+
 ## 2.38.1
 
 ### Various fixes & improvements
