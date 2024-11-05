@@ -62,9 +62,3 @@ let _assemble = mock_endpoint(
     .with_response_file("debug_files/post-difs-assemble.json"),
 );
 ```
-
-If you don't know what APIs will be hit during your test, register the test as normal, using `register_test` helper,
-and run it in isolation, eg. `cargo test command_debug_files_upload`.
-This will store all original API responses under `dump/` directory (controlled via. `SENTRY_DUMP_RESPONSES` env property set
-in `tests/integration/mod`), where all path separators `/` are replaced with double underscore `__`.
-This way you can simply copy the JSON files to `_responses` directory and update the data as needed.

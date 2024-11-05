@@ -39,7 +39,6 @@ pub fn register_test_without_token(path: &str) -> TestCases {
     let server_addr = mockito::server_address();
     test_case
         .env("SENTRY_INTEGRATION_TEST", "1")
-        .env("SENTRY_DUMP_RESPONSES", "dump") // reused default directory of `trycmd` output dumps
         .env("SENTRY_URL", server_url())
         .env("SENTRY_ORG", "wat-org")
         .env("SENTRY_PROJECT", "wat-project")
