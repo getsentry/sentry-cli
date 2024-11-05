@@ -15,12 +15,12 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fs::{create_dir_all, File};
+use std::fmt;
+use std::fs::File;
 use std::io::{self, Read, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::{env, fmt};
 
 use anyhow::{Context, Result};
 use backoff::backoff::Backoff;
@@ -42,7 +42,6 @@ use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
-use url::Url;
 use uuid::Uuid;
 
 use crate::api::errors::ProjectRenamedError;
@@ -1841,15 +1840,6 @@ impl ApiResponse {
         if let Some(ref body) = self.body {
             let body = String::from_utf8_lossy(body);
             debug!("body: {}", body);
-
-            // Internal helper for making it easier to write integration tests.
-            // Should not be used publicly, as it may be removed without prior warning.
-            // Accepts a relative or absolute path to the directory where responses should be stored.
-            if let Ok(dir) = env::var("SENTRY_DUMP_RESPONSES") {
-                if let Err(err) = dump_response(dir, &self.url, body.into_owned()) {
-                    debug!("Could not dump a response: {}", err);
-                };
-            }
         }
         if self.ok() {
             return Ok(self);
@@ -1989,23 +1979,6 @@ fn log_headers(is_response: bool, data: &[u8]) {
             debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }
     }
-}
-
-fn dump_response(mut dir: String, url: &str, body: String) -> Result<()> {
-    if dir.starts_with('~') {
-        dir = format!(
-            "{}{}",
-            dirs::home_dir().unwrap_or_default().display(),
-            dir.trim_start_matches('~')
-        );
-    }
-    let filename = Url::parse(url)?.path().trim_matches('/').replace('/', "__");
-    create_dir_all(&dir)?;
-    let filepath = format!("{}/{}.json", &dir, filename);
-    let mut file = File::create(&filepath)?;
-    file.write_all(&body.into_bytes())?;
-    debug!("Response dumped to: {}", &filepath);
-    Ok(())
 }
 
 #[derive(Debug, Deserialize)]
