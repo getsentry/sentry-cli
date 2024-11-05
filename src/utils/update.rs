@@ -57,8 +57,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "managed"))]
-#[cfg(not(windows))]
+#[cfg(not(any(feature = "managed", windows)))]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     if elevate {
         println!("Need to sudo to overwrite {}", exe.display());
