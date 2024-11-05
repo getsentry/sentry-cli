@@ -284,6 +284,7 @@ impl Api {
 
     /// Convenience method that downloads a file into the given file object
     /// and show a progress bar
+    #[cfg(not(feature = "managed"))]
     pub fn download_with_progress(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
         self.request(Method::Get, url, None)?
             .follow_location(true)?
@@ -329,12 +330,13 @@ impl Api {
 
         if resp.status() == 200 {
             let info: RegistryRelease = resp.convert()?;
-            for (filename, download_url) in info.file_urls {
+            for (filename, _download_url) in info.file_urls {
                 info!("Found asset {}", filename);
                 if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
                         version: info.version,
-                        download_url,
+                        #[cfg(not(feature = "managed"))]
+                        download_url: _download_url,
                     }));
                 }
             }
@@ -2164,6 +2166,7 @@ struct RegistryRelease {
 /// Information about sentry CLI releases
 pub struct SentryCliRelease {
     pub version: String,
+    #[cfg(not(feature = "managed"))]
     pub download_url: String,
 }
 

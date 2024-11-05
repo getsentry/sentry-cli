@@ -1,12 +1,14 @@
-#![allow(dead_code)] // a ton of functions/fields might be unused based on the `managed` feature
-
+#[cfg(not(feature = "managed"))]
 use std::env;
 use std::fs;
 use std::io;
 use std::io::Write;
+#[cfg(not(feature = "managed"))]
 use std::path::Path;
 
-use anyhow::{bail, format_err, Result};
+#[cfg(not(feature = "managed"))]
+use anyhow::bail;
+use anyhow::{format_err, Result};
 use chrono::{DateTime, Duration, Utc};
 use console::{style, user_attended};
 use if_chain::if_chain;
@@ -17,8 +19,11 @@ use serde::{Deserialize, Serialize};
 use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
 use crate::constants::{APP_NAME, VERSION};
+#[cfg(not(feature = "managed"))]
 use crate::utils::fs::{is_writable, set_executable_mode};
-use crate::utils::system::{is_homebrew_install, is_npm_install, QuietExit};
+#[cfg(not(feature = "managed"))]
+use crate::utils::system::QuietExit;
+use crate::utils::system::{is_homebrew_install, is_npm_install};
 
 #[cfg(windows)]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
@@ -52,6 +57,7 @@ fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "managed"))]
 #[cfg(not(windows))]
 fn rename_exe(exe: &Path, downloaded_path: &Path, elevate: bool) -> Result<()> {
     if elevate {
@@ -119,6 +125,7 @@ impl SentryCliUpdateInfo {
         self.latest_release.is_some()
     }
 
+    #[cfg(not(feature = "managed"))]
     pub fn is_latest_version(&self) -> bool {
         self.latest_version() == VERSION
     }
@@ -135,6 +142,7 @@ impl SentryCliUpdateInfo {
         }
     }
 
+    #[cfg(not(feature = "managed"))]
     pub fn download_url(&self) -> Result<&str> {
         if let Some(ref rel) = self.latest_release {
             Ok(rel.download_url.as_str())
@@ -143,6 +151,7 @@ impl SentryCliUpdateInfo {
         }
     }
 
+    #[cfg(not(feature = "managed"))]
     pub fn download(&self) -> Result<()> {
         let exe = env::current_exe()?;
         let elevate = !is_writable(&exe);
@@ -175,10 +184,12 @@ pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
     })
 }
 
+#[cfg(not(feature = "managed"))]
 pub fn can_update_sentrycli() -> bool {
     !is_homebrew_install() && !is_npm_install()
 }
 
+#[cfg(not(feature = "managed"))]
 pub fn assert_updatable() -> Result<()> {
     if is_homebrew_install() {
         println!("This installation of sentry-cli is managed through homebrew");

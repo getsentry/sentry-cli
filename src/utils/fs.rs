@@ -124,6 +124,7 @@ impl Drop for TempFile {
 }
 
 /// Checks if a path is writable.
+#[cfg(not(feature = "managed"))]
 pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
     fs::OpenOptions::new()
         .write(true)
@@ -134,6 +135,7 @@ pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
 
 /// Set the mode of a path to 755 if we're on a Unix machine, otherwise
 /// don't do anything with the given path.
+#[cfg(not(feature = "managed"))]
 pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<()> {
     #[cfg(not(windows))]
     fn exec<P: AsRef<Path>>(path: P) -> io::Result<()> {
