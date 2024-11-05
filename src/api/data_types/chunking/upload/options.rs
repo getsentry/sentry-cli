@@ -1,5 +1,3 @@
-#![allow(dead_code)] // `hash_algorithm` is never used
-
 use serde::Deserialize;
 
 use super::{ChunkCompression, ChunkHashAlgorithm, ChunkUploadCapability};
@@ -16,6 +14,7 @@ pub struct ChunkUploadOptions {
     pub max_file_size: u64,
     #[serde(default)]
     pub max_wait: u64,
+    #[expect(dead_code)]
     pub hash_algorithm: ChunkHashAlgorithm,
     pub chunk_size: u64,
     pub concurrency: u8,
