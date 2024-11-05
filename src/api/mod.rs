@@ -2023,7 +2023,7 @@ pub struct AuthDetails {
 #[derive(Deserialize, Debug)]
 pub struct User {
     pub email: String,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub id: String,
 }
 
@@ -2107,7 +2107,7 @@ pub struct UpdatedRelease {
 #[derive(Debug, Deserialize)]
 pub struct ReleaseInfo {
     pub version: String,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub url: Option<String>,
     #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
@@ -2172,7 +2172,7 @@ pub struct DebugInfoData {
     #[serde(default, rename = "type")]
     pub kind: Option<ObjectKind>,
     #[serde(default)]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub features: Vec<String>,
 }
 
@@ -2189,7 +2189,7 @@ pub struct DebugInfoFile {
     #[serde(rename = "cpuName")]
     pub cpu_name: String,
     #[serde(rename = "sha1")]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub checksum: String,
     #[serde(default)]
     pub data: DebugInfoData,
@@ -2301,17 +2301,17 @@ pub struct Organization {
     #[serde(rename = "require2FA")]
     pub require_2fa: bool,
     #[serde(rename = "requireEmailVerification")]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub require_email_verification: bool,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub features: Vec<String>,
 }
 
 #[derive(Deserialize, Debug)]
 pub struct Team {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub id: String,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub slug: String,
     pub name: String,
 }
@@ -2319,7 +2319,7 @@ pub struct Team {
 #[derive(Deserialize, Debug)]
 pub struct ProjectSlugAndName {
     pub slug: String,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub name: String,
 }
 
@@ -2351,10 +2351,10 @@ pub struct Repo {
     pub name: String,
     pub url: Option<String>,
     pub provider: RepoProvider,
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub status: String,
     #[serde(rename = "dateCreated")]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub date_created: DateTime<Utc>,
 }
 
@@ -2396,7 +2396,7 @@ pub struct ProcessedEvent {
     #[serde(default)]
     pub title: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub project: Option<u64>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub release: Option<String>,
@@ -2459,7 +2459,7 @@ impl fmt::Display for ProcessedEventTag {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct Region {
-    #[allow(dead_code)]
+    #[expect(dead_code)]
     pub name: String,
     pub url: String,
 }
