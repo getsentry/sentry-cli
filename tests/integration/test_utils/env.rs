@@ -23,3 +23,10 @@ pub fn set_auth_token(setter: impl FnOnce(&'static str, Cow<'static, str>)) {
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".into(),
     );
 }
+
+/// Set all environment variables, including the auth token and the environments
+/// set by `set`.
+pub fn set_all(mut setter: impl FnMut(&'static str, Cow<'static, str>)) {
+    set(&mut setter);
+    set_auth_token(setter);
+}
