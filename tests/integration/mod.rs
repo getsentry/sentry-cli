@@ -17,6 +17,7 @@ mod send_envelope;
 mod send_event;
 mod send_metric;
 mod sourcemaps;
+mod test_utils;
 mod token_validation;
 mod uninstall;
 mod update;
@@ -31,27 +32,28 @@ use std::path::Path;
 use mockito::{self, mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
+use test_utils::env;
+
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub fn register_test_without_token(path: &str) -> TestCases {
     let test_case = TestCases::new();
-    let server_addr = mockito::server_address();
-    test_case
-        .env("SENTRY_INTEGRATION_TEST", "1")
-        .env("SENTRY_URL", server_url())
-        .env("SENTRY_ORG", "wat-org")
-        .env("SENTRY_PROJECT", "wat-project")
-        .env("SENTRY_DSN", format!("http://test@{}/1337", server_addr))
-        .case(format!("tests/integration/_cases/{path}"));
+
+    env::set(|k, v| {
+        test_case.env(k, v);
+    });
+
+    test_case.case(format!("tests/integration/_cases/{path}"));
     test_case.insert_var("[VERSION]", VERSION).unwrap();
     test_case
 }
 pub fn register_test(path: &str) -> TestCases {
-    let auth_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
     let test_case = register_test_without_token(path);
-    test_case.env("SENTRY_AUTH_TOKEN", auth_token);
+
+    env::set_auth_token(|k, v| {
+        test_case.env(k, v);
+    });
 
     test_case
 }
