@@ -108,7 +108,6 @@ impl fmt::Display for Method {
 /// Represents an API request.  This can be customized before
 /// sending but only sent once.
 pub struct ApiRequest {
-    url: String,
     handle: r2d2::PooledConnection<CurlConnectionManager>,
     headers: curl::easy::List,
     is_authenticated: bool,
@@ -121,7 +120,6 @@ pub struct ApiRequest {
 /// Represents an API response.
 #[derive(Clone, Debug)]
 pub struct ApiResponse {
-    url: String,
     status: u32,
     headers: Vec<String>,
     body: Option<Vec<u8>>,
@@ -1667,7 +1665,6 @@ impl ApiRequest {
         handle.url(url)?;
 
         let request = ApiRequest {
-            url: url.to_owned(),
             handle,
             headers,
             is_authenticated: false,
@@ -1774,12 +1771,10 @@ impl ApiRequest {
         let headers = self.get_headers();
         self.handle.http_headers(headers)?;
         let body = self.body.as_deref();
-        let url = self.url.clone();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
         debug!("response status: {}", status);
         Ok(ApiResponse {
-            url,
             status,
             headers,
             body: None,
