@@ -17,6 +17,7 @@ mod send_envelope;
 mod send_event;
 mod send_metric;
 mod sourcemaps;
+mod test_utils;
 mod token_validation;
 mod uninstall;
 mod update;
@@ -27,52 +28,33 @@ mod upload_proguard;
 use std::borrow::Cow;
 use std::fs;
 use std::io;
-use std::iter;
 use std::path::Path;
 
 use mockito::{self, mock, server_url, Matcher, Mock};
 use trycmd::TestCases;
 
+use test_utils::env;
+
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// Static environment variables that are always set for integration tests.
-const STATIC_ENV_VARS: [(&str, &str); 3] = [
-    ("SENTRY_INTEGRATION_TEST", "1"),
-    ("SENTRY_ORG", "wat-org"),
-    ("SENTRY_PROJECT", "wat-project"),
-];
-
-/// Iterator of environment variables that should be set for integration tests.
-fn env_vars() -> impl Iterator<Item = (impl Into<String>, impl Into<String>)> {
-    let server_addr = mockito::server_address();
-
-    STATIC_ENV_VARS
-        .into_iter()
-        .map(|(k, v)| (Cow::from(k), Cow::from(v)))
-        .chain(iter::once(("SENTRY_URL".into(), server_url().into())))
-        .chain(iter::once((
-            "SENTRY_DSN".into(),
-            format!("http://test@{}/1337", server_addr).into(),
-        )))
-}
 
 pub fn register_test_without_token(path: &str) -> TestCases {
     let test_case = TestCases::new();
 
-    for (key, value) in env_vars() {
-        test_case.env(key, value);
-    }
+    env::set(|k, v| {
+        test_case.env(k, v);
+    });
 
     test_case.case(format!("tests/integration/_cases/{path}"));
     test_case.insert_var("[VERSION]", VERSION).unwrap();
     test_case
 }
 pub fn register_test(path: &str) -> TestCases {
-    let auth_token = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-
     let test_case = register_test_without_token(path);
-    test_case.env("SENTRY_AUTH_TOKEN", auth_token);
+
+    env::set_auth_token(|k, v| {
+        test_case.env(k, v);
+    });
 
     test_case
 }
