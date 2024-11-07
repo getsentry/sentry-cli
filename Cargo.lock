@@ -273,6 +273,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
 
 [[package]]
+name = "bitvec"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1bc2832c24239b0141d5674bb9174f9d68a8b5b3f2753311927c172ca46f7e9c"
+dependencies = [
+ "funty",
+ "radium",
+ "tap",
+ "wyz",
+]
+
+[[package]]
 name = "block-buffer"
 version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -944,6 +956,12 @@ checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
 ]
+
+[[package]]
+name = "funty"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e6d5a32815ae3f33302d95fdcb2ce17862f8c65363dcfd29360480ba1001fc9c"
 
 [[package]]
 name = "futures"
@@ -2079,6 +2097,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "radium"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
+
+[[package]]
 name = "rand"
 version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2259,6 +2283,12 @@ name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "719b953e2095829ee67db738b3bfa9fa368c94900df327b3f07fe6e794d2fe1f"
+
+[[package]]
+name = "rustc-hash"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
 
 [[package]]
 name = "rustc_version"
@@ -2774,14 +2804,16 @@ dependencies = [
 
 [[package]]
 name = "sourcemap"
-version = "7.1.1"
+version = "9.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e7768edd06c02535e0d50653968f46e1e0d3aa54742190d35dd9466f59de9c71"
+checksum = "86721155737d89818020dc35713595c6e7b21016073c101e6590c47ca58c2d16"
 dependencies = [
  "base64-simd",
+ "bitvec",
  "data-encoding",
  "debugid",
  "if_chain",
+ "rustc-hash",
  "rustc_version 0.2.3",
  "scroll 0.10.2",
  "serde",
@@ -2824,9 +2856,9 @@ checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
 name = "symbolic"
-version = "12.12.0"
+version = "12.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f1bab0fb15cc737693cce21fb00fbfa32056d09cacc76798c30dd159124652b"
+checksum = "c35fab6a1d4ce7c408ef9fe7305882831f62a88c2375c18dbd61b13aa08de9cc"
 dependencies = [
  "symbolic-common",
  "symbolic-debuginfo",
@@ -2836,9 +2868,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-common"
-version = "12.12.0"
+version = "12.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "366f1b4c6baf6cfefc234bbd4899535fca0b06c74443039a73f6dfb2fad88d77"
+checksum = "3d4d73159efebfb389d819fd479afb2dbd57dcb3e3f4b7fcfa0e675f5a46c1cb"
 dependencies = [
  "debugid",
  "memmap2",
@@ -2849,9 +2881,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-debuginfo"
-version = "12.12.0"
+version = "12.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b62666383cb5187432e8ce2d9e3cf748a897f006168e184cac79c17dc38d0be4"
+checksum = "ae995dfbe053daa5eaa1f49fc9af1d9c7469a4e82cd79073048ac1250f08e3f7"
 dependencies = [
  "debugid",
  "elementtree",
@@ -2881,9 +2913,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-il2cpp"
-version = "12.12.0"
+version = "12.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ae580c7191cdc2ffe566854268aa66c24109a7bf779dde80114268927f56ddf1"
+checksum = "e60c81e644fb01f89fb5ba896095cf88e6dad3524cda5cef68da419a6e7ee53a"
 dependencies = [
  "indexmap",
  "serde_json",
@@ -2893,9 +2925,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-ppdb"
-version = "12.12.0"
+version = "12.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "094c16e8da6db1d44613ce1516136ae012542b5493791f4b01e3307c0b71a669"
+checksum = "4e7dd2fb720ae89293253b60cd701c3a1de556a3b54ec9170ca2098789a994b1"
 dependencies = [
  "flate2",
  "indexmap",
@@ -2909,9 +2941,9 @@ dependencies = [
 
 [[package]]
 name = "symbolic-symcache"
-version = "12.12.0"
+version = "12.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d66c04975d39379db031b03bb43bce0d07df0bda17eeeac22398548af355567"
+checksum = "9e1a85de7ce4139066d9479e0dd40c121c1ecb3082d77a28cbf93785c9c862b0"
 dependencies = [
  "indexmap",
  "symbolic-common",
@@ -2943,6 +2975,12 @@ dependencies = [
  "quote",
  "unicode-ident",
 ]
+
+[[package]]
+name = "tap"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
 name = "tempfile"
@@ -3618,6 +3656,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "59b5e5f6c299a3c7890b876a2a587f3115162487e704907d9b6cd29473052ba1"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "wyz"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "05f360fc0b24296329c78fda852a1e9ae82de9cf7b27dae4b7f62f118f77b9ed"
+dependencies = [
+ "tap",
 ]
 
 [[package]]
