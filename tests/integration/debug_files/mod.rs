@@ -1,17 +1,21 @@
 use crate::integration::register_test;
 
 mod bundle_jvm;
-mod bundle_sources;
-mod check;
-mod print_sources;
 mod upload;
 
 #[test]
 fn command_debug_files_help() {
-    register_test("debug_files/debug_files-help.trycmd");
+    register_test("debug_files/*.trycmd");
 }
 
+#[cfg(not(windows))]
 #[test]
-fn command_debug_files_no_subcommand() {
-    register_test("debug_files/debug_files-no-subcommand.trycmd");
+fn command_debug_files_not_windows() {
+    register_test("debug_files/not_windows/*.trycmd");
+}
+
+#[cfg(windows)]
+#[test]
+fn command_debug_files_windows() {
+    register_test("debug_files/windows/*.trycmd");
 }
