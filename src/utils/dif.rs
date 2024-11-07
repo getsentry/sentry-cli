@@ -246,7 +246,7 @@ impl DifFile<'static> {
     }
 
     pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<Self> {
-        let open = || match ty {
+        let res = match ty {
             Some(DifType::Dsym) => DifFile::open_object(&path, FileFormat::MachO),
             Some(DifType::Elf) => DifFile::open_object(&path, FileFormat::Elf),
             Some(DifType::Pe) => DifFile::open_object(&path, FileFormat::Pe),
@@ -260,7 +260,7 @@ impl DifFile<'static> {
             None => DifFile::try_open(&path),
         };
 
-        open().with_context(|| format!("Failed to open file at {}", path.as_ref().display()))
+        res.with_context(|| format!("Failed to open file at {}", path.as_ref().display()))
     }
 }
 
