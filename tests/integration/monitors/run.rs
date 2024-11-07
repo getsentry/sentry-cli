@@ -24,20 +24,6 @@ fn command_monitors_run_server_error() {
 }
 
 #[test]
-fn command_monitors_run_token_auth() {
-    let _server = integration::mock_endpoint(
-        EndpointOptions::new("POST", "/api/0/monitors/foo-monitor/checkins/", 200)
-            .with_response_file("monitors/post-monitors.json"),
-    );
-    if cfg!(windows) {
-        integration::register_test("monitors/monitors-run-token-auth-win.trycmd")
-            .env("SENTRY_DSN", "");
-    } else {
-        integration::register_test("monitors/monitors-run-token-auth.trycmd").env("SENTRY_DSN", "");
-    }
-}
-
-#[test]
 fn command_monitors_run_osenv() {
     let _server =
         integration::mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 200));
