@@ -1,0 +1,23 @@
+```
+$ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_debugid_alias
+? success
+> Found 2 files
+> Analyzing 2 sources
+> Rewriting sources
+> Adding source map references
+> Bundled 2 files for upload
+> Bundle ID: d6d9d529-9161-584d-94e4-f63b58f1fb26
+> Uploaded files to Sentry
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Project: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+
+Source Map Upload Report
+  Scripts
+    ~/server/chunks/1.js (sourcemap at 1.js.map, debug id 2297b93d-928d-421e-8910-127c786382da)
+  Source Maps
+    ~/server/chunks/1.js.map (debug id 2297b93d-928d-421e-8910-127c786382da)
+
