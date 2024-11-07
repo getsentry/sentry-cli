@@ -3,11 +3,6 @@ use crate::integration::{
 };
 
 #[test]
-fn command_upload_proguard_help() {
-    register_test("upload_proguard/upload_proguard-help.trycmd");
-}
-
-#[test]
 fn command_upload_proguard() {
     let _dsyms = mock_endpoint(
         EndpointOptions::new(
@@ -17,12 +12,7 @@ fn command_upload_proguard() {
         )
         .with_response_body("[]"),
     );
-    register_test("upload_proguard/upload_proguard.trycmd");
-}
-
-#[test]
-fn command_upload_proguard_no_upload() {
-    register_test("upload_proguard/upload_proguard-no-upload.trycmd");
+    register_test("upload_proguard/*.trycmd");
 }
 
 #[test]
