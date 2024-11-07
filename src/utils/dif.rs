@@ -2,7 +2,7 @@ use std::fmt;
 use std::path::Path;
 use std::str;
 
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Context, Error, Result};
 use proguard::ProguardMapping;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
@@ -193,7 +193,7 @@ pub enum DifFile<'a> {
 
 impl DifFile<'static> {
     fn open_proguard<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let data = ByteView::open(path).map_err(Error::new)?;
+        let data = ByteView::open(&path)?;
         let pg = SelfCell::new(data, |d| SelfProguard(ProguardMapping::new(unsafe { &*d })));
 
         if pg.get().is_valid() {
@@ -204,7 +204,7 @@ impl DifFile<'static> {
     }
 
     fn open_object<P: AsRef<Path>>(path: P, format: FileFormat) -> Result<Self> {
-        let data = ByteView::open(path).map_err(Error::new)?;
+        let data = ByteView::open(&path)?;
         let archive = SelfCell::try_new(data, |d| Archive::parse(unsafe { &*d }))?;
 
         if archive.get().file_format() != format {
@@ -217,7 +217,7 @@ impl DifFile<'static> {
     fn try_open<P: AsRef<Path>>(path: P) -> Result<Self> {
         // Try to open the file and map it into memory first. This will
         // return an error if the file does not exist.
-        let data = ByteView::open(&path).map_err(Error::new)?;
+        let data = ByteView::open(&path)?;
 
         // First try to open a (fat) object file. We only support a couple of
         // sub types, so for unsupported files we throw an error.
@@ -246,19 +246,21 @@ impl DifFile<'static> {
     }
 
     pub fn open_path<P: AsRef<Path>>(path: P, ty: Option<DifType>) -> Result<Self> {
-        match ty {
-            Some(DifType::Dsym) => DifFile::open_object(path, FileFormat::MachO),
-            Some(DifType::Elf) => DifFile::open_object(path, FileFormat::Elf),
-            Some(DifType::Pe) => DifFile::open_object(path, FileFormat::Pe),
-            Some(DifType::Pdb) => DifFile::open_object(path, FileFormat::Pdb),
-            Some(DifType::PortablePdb) => DifFile::open_object(path, FileFormat::PortablePdb),
-            Some(DifType::SourceBundle) => DifFile::open_object(path, FileFormat::SourceBundle),
-            Some(DifType::Wasm) => DifFile::open_object(path, FileFormat::Wasm),
-            Some(DifType::Breakpad) => DifFile::open_object(path, FileFormat::Breakpad),
-            Some(DifType::Proguard) => DifFile::open_proguard(path),
-            Some(DifType::Jvm) => DifFile::open_object(path, FileFormat::SourceBundle),
-            None => DifFile::try_open(path),
-        }
+        let res = match ty {
+            Some(DifType::Dsym) => DifFile::open_object(&path, FileFormat::MachO),
+            Some(DifType::Elf) => DifFile::open_object(&path, FileFormat::Elf),
+            Some(DifType::Pe) => DifFile::open_object(&path, FileFormat::Pe),
+            Some(DifType::Pdb) => DifFile::open_object(&path, FileFormat::Pdb),
+            Some(DifType::PortablePdb) => DifFile::open_object(&path, FileFormat::PortablePdb),
+            Some(DifType::SourceBundle) => DifFile::open_object(&path, FileFormat::SourceBundle),
+            Some(DifType::Wasm) => DifFile::open_object(&path, FileFormat::Wasm),
+            Some(DifType::Breakpad) => DifFile::open_object(&path, FileFormat::Breakpad),
+            Some(DifType::Proguard) => DifFile::open_proguard(&path),
+            Some(DifType::Jvm) => DifFile::open_object(&path, FileFormat::SourceBundle),
+            None => DifFile::try_open(&path),
+        };
+
+        res.with_context(|| format!("Failed to open file at {}", path.as_ref().display()))
     }
 }
 
