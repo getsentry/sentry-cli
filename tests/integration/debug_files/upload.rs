@@ -2,15 +2,6 @@ use assert_cmd::Command;
 
 use crate::integration::{mock_endpoint, register_test, test_utils::env, EndpointOptions};
 
-// I have no idea why this is timing out on Windows.
-// I verified it manually, and this command works just fine. — Kamil
-// TODO: Fix windows timeout.
-#[cfg(not(windows))]
-#[test]
-fn command_debug_files_upload_help() {
-    register_test("debug_files/debug_files-upload-help.trycmd");
-}
-
 #[test]
 fn command_debug_files_upload() {
     let _chunk_upload = mock_endpoint(
@@ -25,7 +16,7 @@ fn command_debug_files_upload() {
         )
         .with_response_file("debug_files/post-difs-assemble.json"),
     );
-    register_test("debug_files/debug_files-upload.trycmd");
+    register_test("debug_files/upload/debug_files-upload.trycmd");
 }
 
 #[test]
@@ -49,8 +40,8 @@ fn command_debug_files_upload_pdb() {
             }"#,
         ),
     );
-    register_test("debug_files/debug_files-upload-pdb.trycmd");
-    register_test("debug_files/debug_files-upload-pdb-include-sources.trycmd");
+    register_test("debug_files/upload/debug_files-upload-pdb.trycmd");
+    register_test("debug_files/upload/debug_files-upload-pdb-include-sources.trycmd");
 }
 
 #[test]
@@ -74,7 +65,7 @@ fn command_debug_files_upload_pdb_embedded_sources() {
             }"#,
         ),
     );
-    register_test("debug_files/debug_files-upload-pdb-embedded-sources.trycmd");
+    register_test("debug_files/upload/debug_files-upload-pdb-embedded-sources.trycmd");
 }
 
 #[test]
@@ -98,7 +89,7 @@ fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
             }"#,
         ),
     );
-    register_test("debug_files/debug_files-upload-dll-embedded-ppdb-with-sources.trycmd");
+    register_test("debug_files/upload/debug_files-upload-dll-embedded-ppdb-with-sources.trycmd");
 }
 
 #[test]
@@ -126,7 +117,7 @@ fn command_debug_files_upload_mixed_embedded_sources() {
     //      swallows debug logs printed while the progress bar is active and the session is not attended.
     //      See how it's supposed to look like `debug_files-bundle_sources-mixed-embedded-sources.trycmd` and try it out
     //      after an update of `indicatif` to the latest version (currently it's blocked by some other issues).
-    register_test("debug_files/debug_files-upload-mixed-embedded-sources.trycmd");
+    register_test("debug_files/upload/debug_files-upload-mixed-embedded-sources.trycmd");
 }
 
 #[test]
@@ -143,7 +134,7 @@ fn command_debug_files_upload_no_upload() {
         )
         .with_response_file("debug_files/post-difs-assemble.json"),
     );
-    register_test("debug_files/debug_files-upload-no-upload.trycmd");
+    register_test("debug_files/upload/debug_files-upload-no-upload.trycmd");
 }
 
 #[test]
