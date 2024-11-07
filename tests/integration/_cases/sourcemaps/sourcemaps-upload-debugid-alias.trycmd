@@ -6,7 +6,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_debugid_alias
 > Rewriting sources
 > Adding source map references
 > Bundled 2 files for upload
-> Bundle ID: d6d9d529-9161-584d-94e4-f63b58f1fb26
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
 > Organization: wat-org
