@@ -11,6 +11,7 @@ mod monitors;
 mod org_tokens;
 mod organizations;
 mod projects;
+#[cfg(target_os = "macos")]
 mod react_native;
 mod releases;
 mod send_envelope;
