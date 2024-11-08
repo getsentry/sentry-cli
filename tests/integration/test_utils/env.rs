@@ -14,6 +14,7 @@ pub fn set(mut setter: impl FnMut(&'static str, Cow<'static, str>)) {
     setter("SENTRY_PROJECT", "wat-project".into());
     setter("SENTRY_URL", mockito::server_url().into());
     setter("SENTRY_DSN", dsn);
+    setter("RUST_BACKTRACE", "0".into());
 }
 
 /// Set the auth token environment variable using the provided setter function.
