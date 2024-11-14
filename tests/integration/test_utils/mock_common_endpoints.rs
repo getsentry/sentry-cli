@@ -46,8 +46,7 @@ pub fn mock_common_upload_endpoints(
             MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
                 .with_response_file("releases/get-release.json"),
         )
-        .expect_at_least(release_request_count)
-        .expect_at_most(release_request_count),
+        .expect(release_request_count),
         test_utils::mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
                 .with_response_body(chunk_upload_response),
