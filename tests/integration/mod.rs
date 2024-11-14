@@ -30,10 +30,11 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use mockito::{self, mock, server_url, Matcher, Mock};
+use mockito::{self, server_url, Mock};
 use trycmd::TestCases;
 
 use test_utils::env;
+use test_utils::{mock_endpoint, EndpointOptions};
 
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -57,78 +58,6 @@ pub fn register_test(path: &str) -> TestCases {
     });
 
     test_case
-}
-pub struct EndpointOptions {
-    pub method: String,
-    pub endpoint: String,
-    pub status: usize,
-    pub response_body: Option<String>,
-    pub response_file: Option<String>,
-    pub matcher: Option<Matcher>,
-    pub header_matcher: Option<(&'static str, Matcher)>,
-}
-
-impl EndpointOptions {
-    pub fn new(method: &str, endpoint: &str, status: usize) -> Self {
-        EndpointOptions {
-            method: method.to_owned(),
-            endpoint: endpoint.to_owned(),
-            status,
-            response_body: None,
-            response_file: None,
-            matcher: None,
-            header_matcher: None,
-        }
-    }
-
-    pub fn with_response_body<T>(mut self, body: T) -> Self
-    where
-        T: Into<String>,
-    {
-        self.response_body = Some(body.into());
-        self
-    }
-
-    pub fn with_response_file(mut self, path: &str) -> Self {
-        self.response_file = Some(format!("tests/integration/_responses/{path}"));
-        self
-    }
-
-    pub fn with_matcher(mut self, matcher: Matcher) -> Self {
-        self.matcher = Some(matcher);
-        self
-    }
-
-    /// Matches a header of the mock endpoint. The header must be present and its value must
-    /// match the provided matcher in order for the endpoint to be reached.
-    pub fn with_header_matcher(mut self, key: &'static str, matcher: Matcher) -> Self {
-        self.header_matcher = Some((key, matcher));
-        self
-    }
-}
-
-pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
-    let mut mock = mock(opts.method.as_str(), opts.endpoint.as_str())
-        .with_status(opts.status)
-        .with_header("content-type", "application/json");
-
-    if let Some(response_body) = opts.response_body {
-        mock = mock.with_body(response_body);
-    }
-
-    if let Some(response_file) = opts.response_file {
-        mock = mock.with_body_from_file(response_file);
-    }
-
-    if let Some(matcher) = opts.matcher {
-        mock = mock.match_body(matcher);
-    }
-
-    if let Some((key, matcher)) = opts.header_matcher {
-        mock = mock.match_header(key, matcher);
-    }
-
-    mock.create()
 }
 
 /// Copy files from source to destination recursively.
