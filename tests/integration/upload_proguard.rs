@@ -1,11 +1,11 @@
 use crate::integration::{
-    mock_endpoint, register_test, register_test_without_token, EndpointOptions,
+    mock_endpoint, register_test, register_test_without_token, MockEndpointBuilder,
 };
 
 #[test]
 fn command_upload_proguard() {
     let _dsyms = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/dsyms/",
             200,

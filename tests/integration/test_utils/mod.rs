@@ -3,4 +3,4 @@
 pub mod env;
 mod mocking;
 
-pub use mocking::{mock_endpoint, EndpointOptions};
+pub use mocking::{mock_endpoint, MockEndpointBuilder};

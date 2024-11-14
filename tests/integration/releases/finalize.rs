@@ -1,11 +1,11 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 use mockito::Matcher;
 use serde_json::json;
 
 #[test]
 fn successfully_creates_a_release() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "PUT",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             200,
@@ -18,7 +18,7 @@ fn successfully_creates_a_release() {
 #[test]
 fn allows_for_release_to_start_with_hyphen() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "PUT",
             "/api/0/projects/wat-org/wat-project/releases/-hyphenated-release/",
             200,
@@ -31,7 +31,7 @@ fn allows_for_release_to_start_with_hyphen() {
 #[test]
 fn release_with_custom_dates() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "PUT",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             200,

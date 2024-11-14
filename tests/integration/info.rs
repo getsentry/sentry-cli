@@ -1,7 +1,7 @@
 use mockito::server_url;
 use trycmd::TestCases;
 
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn command_info_help() {
@@ -28,7 +28,7 @@ fn command_info_no_token_backtrace() {
 #[test]
 fn command_info_basic() {
     let _server = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+        MockEndpointBuilder::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
     );
     let t = register_test("info/info-basic.trycmd");
     t.insert_var("[SERVER]", server_url()).unwrap();
@@ -37,7 +37,7 @@ fn command_info_basic() {
 #[test]
 fn command_info_no_defaults() {
     let _server = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+        MockEndpointBuilder::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
     );
     let t = register_test("info/info-json.trycmd");
     t.insert_var("[SERVER]", server_url()).unwrap();
@@ -46,7 +46,7 @@ fn command_info_no_defaults() {
 #[test]
 fn command_info_json() {
     let _server = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+        MockEndpointBuilder::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
     );
     let t = register_test("info/info-basic.trycmd");
     t.insert_var("[SERVER]", server_url()).unwrap();
@@ -55,7 +55,7 @@ fn command_info_json() {
 #[test]
 fn command_info_json_without_defaults() {
     let _server = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
+        MockEndpointBuilder::new("GET", "/api/0/", 200).with_response_file("info/get-info.json"),
     );
     let t = register_test("info/info-json-no-defaults.trycmd");
     t.env("SENTRY_ORG", "").env("SENTRY_PROJECT", "");

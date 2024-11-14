@@ -1,4 +1,4 @@
-use super::EndpointOptions;
+use super::MockEndpointBuilder;
 use crate::integration;
 use mockito::{Matcher, Mock};
 use trycmd::TestCases;
@@ -9,7 +9,7 @@ fn mock_envelopes_endpoint() -> Mock {
             .to_string(),
     );
     integration::mock_endpoint(
-        EndpointOptions::new("POST", "/api/1337/envelope/", 200)
+        MockEndpointBuilder::new("POST", "/api/1337/envelope/", 200)
             .with_header_matcher("X-Sentry-Auth", expected_auth_header),
     )
 }
@@ -37,7 +37,8 @@ fn command_send_metric_increment_no_dsn() {
 
 #[test]
 fn command_send_metric_increment_unsuccessful_api_call() {
-    let _m = integration::mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 500));
+    let _m =
+        integration::mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/", 500));
     integration::register_test(
         "send_metric/individual_config/send_metric-increment-unsuccessful-api-call.trycmd",
     );

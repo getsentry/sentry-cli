@@ -1,8 +1,8 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn successfully_deletes() {
-    let _server = mock_endpoint(EndpointOptions::new(
+    let _server = mock_endpoint(MockEndpointBuilder::new(
         "DELETE",
         "/api/0/projects/wat-org/wat-project/releases/wat-release/",
         204,
@@ -12,7 +12,7 @@ fn successfully_deletes() {
 
 #[test]
 fn allows_for_release_to_start_with_hyphen() {
-    let _server = mock_endpoint(EndpointOptions::new(
+    let _server = mock_endpoint(MockEndpointBuilder::new(
         "DELETE",
         "/api/0/projects/wat-org/wat-project/releases/-hyphenated-release/",
         204,
@@ -22,7 +22,7 @@ fn allows_for_release_to_start_with_hyphen() {
 
 #[test]
 fn informs_about_nonexisting_releases() {
-    let _server = mock_endpoint(EndpointOptions::new(
+    let _server = mock_endpoint(MockEndpointBuilder::new(
         "DELETE",
         "/api/0/projects/wat-org/wat-project/releases/whoops/",
         404,
@@ -33,7 +33,7 @@ fn informs_about_nonexisting_releases() {
 #[test]
 fn doesnt_allow_to_delete_active_releases() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "DELETE",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/",
             400,

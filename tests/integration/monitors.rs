@@ -1,15 +1,15 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn command_monitors() {
     let _list_endpoint = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/monitors/?cursor=", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/monitors/?cursor=", 200)
             .with_response_file("monitors/get-monitors.json"),
     );
     let _envelope_endpoint =
-        mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 200));
+        mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/", 200));
     let _token_endpoint = mock_endpoint(
-        EndpointOptions::new("POST", "/api/0/monitors/foo-monitor/checkins/", 200)
+        MockEndpointBuilder::new("POST", "/api/0/monitors/foo-monitor/checkins/", 200)
             .with_response_file("monitors/post-monitors.json"),
     );
 
@@ -24,7 +24,7 @@ fn command_monitors() {
 
 #[test]
 fn command_monitors_run_server_error() {
-    let _server = mock_endpoint(EndpointOptions::new("POST", "/api/1337/envelope/", 500));
+    let _server = mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/", 500));
 
     #[cfg(not(windows))]
     register_test("monitors/server_error/monitors-run-server-error.trycmd");

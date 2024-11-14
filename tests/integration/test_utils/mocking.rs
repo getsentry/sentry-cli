@@ -1,15 +1,21 @@
 use mockito::{Matcher, Mock};
 
-/// Options for creating a mock endpoint.
-pub struct EndpointOptions {
+/// Builder for a mock endpoint.
+///
+/// This struct allows for configuring a mock endpoint to be constructed in
+/// the `mock_endpoint()` function. Options can be chained together to create
+/// complex mocks.
+///
+/// The mock is only created once `mock_endpoint()` is called with the builder.
+pub struct MockEndpointBuilder {
     /// The mock object we are building.
     mock: Mock,
 }
 
-impl EndpointOptions {
+impl MockEndpointBuilder {
     /// Create a new endpoint options struct
     pub fn new(method: &str, endpoint: &str, status: usize) -> Self {
-        EndpointOptions {
+        Self {
             mock: mockito::mock(method, endpoint)
                 .with_status(status)
                 .with_header("content-type", "application/json"),
@@ -51,6 +57,6 @@ impl EndpointOptions {
 
 /// Build and return a mock endpoint with the provided configuration. The mock is automatically
 /// created and started. It is active until dropped.
-pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
+pub fn mock_endpoint(opts: MockEndpointBuilder) -> Mock {
     opts.mock.create()
 }

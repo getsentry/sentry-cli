@@ -1,15 +1,15 @@
 use assert_cmd::Command;
 
-use crate::integration::{mock_endpoint, register_test, test_utils::env, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, test_utils::env, MockEndpointBuilder};
 
 #[test]
 fn command_debug_files_upload() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
     let _assemble = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             200,
@@ -22,11 +22,11 @@ fn command_debug_files_upload() {
 #[test]
 fn command_debug_files_upload_pdb() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
     let _assemble = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             200,
@@ -47,11 +47,11 @@ fn command_debug_files_upload_pdb() {
 #[test]
 fn command_debug_files_upload_pdb_embedded_sources() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
     let _assemble = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             200,
@@ -71,11 +71,11 @@ fn command_debug_files_upload_pdb_embedded_sources() {
 #[test]
 fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
     let _assemble = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             200,
@@ -95,11 +95,11 @@ fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
 #[test]
 fn command_debug_files_upload_mixed_embedded_sources() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
     let _assemble = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             200,
@@ -123,11 +123,11 @@ fn command_debug_files_upload_mixed_embedded_sources() {
 #[test]
 fn command_debug_files_upload_no_upload() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
     let _assemble = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             200,
@@ -143,7 +143,7 @@ fn command_debug_files_upload_no_upload() {
 /// are already uploaded.
 fn ensure_correct_assemble_call() {
     let _chunk_upload = mock_endpoint(
-        EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );
 

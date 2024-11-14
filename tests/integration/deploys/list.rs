@@ -1,9 +1,9 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn command_deploys_list() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/organizations/wat-org/releases/wat-release/deploys/",
             200,

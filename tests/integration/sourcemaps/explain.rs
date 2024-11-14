@@ -1,4 +1,4 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn command_sourcemaps_explain_help() {
@@ -12,7 +12,7 @@ fn command_sourcemaps_explain() {
 
 #[test]
 fn command_sourcemaps_explain_missing_event() {
-    let _event = mock_endpoint(EndpointOptions::new(
+    let _event = mock_endpoint(MockEndpointBuilder::new(
         "GET",
         "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
         404,
@@ -23,7 +23,7 @@ fn command_sourcemaps_explain_missing_event() {
 #[test]
 fn command_sourcemaps_explain_missing_release() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -36,7 +36,7 @@ fn command_sourcemaps_explain_missing_release() {
 #[test]
 fn command_sourcemaps_explain_missing_exception() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -49,7 +49,7 @@ fn command_sourcemaps_explain_missing_exception() {
 #[test]
 fn command_sourcemaps_explain_missing_stacktrace() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -62,7 +62,7 @@ fn command_sourcemaps_explain_missing_stacktrace() {
 #[test]
 fn command_sourcemaps_explain_frame_no_inapp() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -75,7 +75,7 @@ fn command_sourcemaps_explain_frame_no_inapp() {
 #[test]
 fn command_sourcemaps_explain_frame_no_abspath() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -88,7 +88,7 @@ fn command_sourcemaps_explain_frame_no_abspath() {
 #[test]
 fn command_sourcemaps_explain_frame_no_extension() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -101,7 +101,7 @@ fn command_sourcemaps_explain_frame_no_extension() {
 #[test]
 fn command_sourcemaps_explain_frame_malformed_abspath() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -114,7 +114,7 @@ fn command_sourcemaps_explain_frame_malformed_abspath() {
 #[test]
 fn command_sourcemaps_explain_already_mapped() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -127,7 +127,7 @@ fn command_sourcemaps_explain_already_mapped() {
 #[test]
 fn command_sourcemaps_explain_no_artifacts() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -135,7 +135,7 @@ fn command_sourcemaps_explain_no_artifacts() {
         .with_response_file("sourcemaps/get-event.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -148,7 +148,7 @@ fn command_sourcemaps_explain_no_artifacts() {
 #[test]
 fn command_sourcemaps_explain_no_matching_artifact() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -156,7 +156,7 @@ fn command_sourcemaps_explain_no_matching_artifact() {
         .with_response_file("sourcemaps/get-event.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -169,7 +169,7 @@ fn command_sourcemaps_explain_no_matching_artifact() {
 #[test]
 fn command_sourcemaps_explain_partial_matching_artifact() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -177,7 +177,7 @@ fn command_sourcemaps_explain_partial_matching_artifact() {
         .with_response_file("sourcemaps/get-event.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -190,7 +190,7 @@ fn command_sourcemaps_explain_partial_matching_artifact() {
 #[test]
 fn command_sourcemaps_explain_artifact_dist_mismatch() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -198,7 +198,7 @@ fn command_sourcemaps_explain_artifact_dist_mismatch() {
         .with_response_file("sourcemaps/get-event.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -211,7 +211,7 @@ fn command_sourcemaps_explain_artifact_dist_mismatch() {
 #[test]
 fn command_sourcemaps_explain_artifact_no_dist() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -219,7 +219,7 @@ fn command_sourcemaps_explain_artifact_no_dist() {
         .with_response_file("sourcemaps/get-event.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -232,7 +232,7 @@ fn command_sourcemaps_explain_artifact_no_dist() {
 #[test]
 fn command_sourcemaps_explain_event_no_dist() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -240,7 +240,7 @@ fn command_sourcemaps_explain_event_no_dist() {
         .with_response_file("sourcemaps/get-event-missing-dist.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -253,7 +253,7 @@ fn command_sourcemaps_explain_event_no_dist() {
 #[test]
 fn command_sourcemaps_explain_detect_from_sourcemap_header() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -261,7 +261,7 @@ fn command_sourcemaps_explain_detect_from_sourcemap_header() {
         .with_response_file("sourcemaps/get-event-missing-dist.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -269,7 +269,7 @@ fn command_sourcemaps_explain_detect_from_sourcemap_header() {
         .with_response_file("sourcemaps/get-artifacts-no-sourcemap.json"),
     );
     let _file_metadata = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/6796495645/",
             200,
@@ -283,7 +283,7 @@ fn command_sourcemaps_explain_detect_from_sourcemap_header() {
 #[test]
 fn command_sourcemaps_explain_detect_from_xsourcemap_header() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -291,7 +291,7 @@ fn command_sourcemaps_explain_detect_from_xsourcemap_header() {
         .with_response_file("sourcemaps/get-event-missing-dist.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -299,7 +299,7 @@ fn command_sourcemaps_explain_detect_from_xsourcemap_header() {
         .with_response_file("sourcemaps/get-artifacts-no-sourcemap.json"),
     );
     let _file_metadata = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/6796495645/",
             200,
@@ -313,7 +313,7 @@ fn command_sourcemaps_explain_detect_from_xsourcemap_header() {
 #[test]
 fn command_sourcemaps_explain_detect_from_file_content() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -321,7 +321,7 @@ fn command_sourcemaps_explain_detect_from_file_content() {
         .with_response_file("sourcemaps/get-event-missing-dist.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -329,7 +329,7 @@ fn command_sourcemaps_explain_detect_from_file_content() {
         .with_response_file("sourcemaps/get-artifacts-no-sourcemap.json"),
     );
     let _file_metadata = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/6796495645/",
             200,
@@ -337,7 +337,7 @@ fn command_sourcemaps_explain_detect_from_file_content() {
         .with_response_file("sourcemaps/get-file-metadata-no-headers.json"),
     );
     let _file = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/6796495645/?download=1",
             200,
@@ -351,7 +351,7 @@ fn command_sourcemaps_explain_detect_from_file_content() {
 #[test]
 fn command_sourcemaps_explain_print_sourcemap() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -359,7 +359,7 @@ fn command_sourcemaps_explain_print_sourcemap() {
         .with_response_file("sourcemaps/get-event-missing-dist.json"),
     );
     let _artifacts = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/?cursor=",
             200,
@@ -367,7 +367,7 @@ fn command_sourcemaps_explain_print_sourcemap() {
         .with_response_file("sourcemaps/get-artifacts-no-dist.json"),
     );
     let _file_metadata = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/6796495645/",
             200,
@@ -375,7 +375,7 @@ fn command_sourcemaps_explain_print_sourcemap() {
         .with_response_file("sourcemaps/get-file-metadata-sourcemap-header.json"),
     );
     let _file = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/ytho-test/files/6796495646/?download=1",
             200,
@@ -389,7 +389,7 @@ fn command_sourcemaps_explain_print_sourcemap() {
 #[test]
 fn command_sourcemaps_explain_select_frame() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,
@@ -402,7 +402,7 @@ fn command_sourcemaps_explain_select_frame() {
 #[test]
 fn command_sourcemaps_explain_select_frame_out_of_range() {
     let _event = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/events/43a57a55cd5a4207ac520c03e1dee1b4/json/",
             200,

@@ -34,7 +34,7 @@ use mockito::{self, server_url, Mock};
 use trycmd::TestCases;
 
 use test_utils::env;
-use test_utils::{mock_endpoint, EndpointOptions};
+use test_utils::{mock_endpoint, MockEndpointBuilder};
 
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -138,21 +138,21 @@ pub fn mock_common_upload_endpoints(
 
     vec![
         mock_endpoint(
-            EndpointOptions::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
                 .with_response_file("releases/get-release.json"),
         )
         .expect_at_least(release_request_count)
         .expect_at_most(release_request_count),
         mock_endpoint(
-            EndpointOptions::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
                 .with_response_body(chunk_upload_response),
         ),
         mock_endpoint(
-            EndpointOptions::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
                 .with_response_body("[]"),
         ),
         mock_endpoint(
-            EndpointOptions::new("POST", assemble_endpoint, 200).with_response_body(format!(
+            MockEndpointBuilder::new("POST", assemble_endpoint, 200).with_response_body(format!(
                 r#"{{"state":"created","missingChunks":{}}}"#,
                 serde_json::to_string(&missing_chunks).unwrap()
             )),

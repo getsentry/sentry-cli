@@ -1,12 +1,12 @@
 use mockito::Matcher;
 use serde_json::json;
 
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn command_deploys_new() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/organizations/wat-org/releases/wat-release/deploys/",
             200,
@@ -23,7 +23,7 @@ fn command_deploys_new() {
 #[test]
 fn command_releases_deploys_new() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "POST",
             "/api/0/organizations/wat-org/releases/wat-release/deploys/",
             200,

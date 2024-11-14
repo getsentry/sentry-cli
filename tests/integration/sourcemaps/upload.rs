@@ -1,6 +1,6 @@
 use crate::integration::{
     assert_endpoints, mock_common_upload_endpoints, mock_endpoint, register_test, ChunkOptions,
-    EndpointOptions, ServerBehavior,
+    MockEndpointBuilder, ServerBehavior,
 };
 
 #[test]
@@ -17,7 +17,7 @@ fn command_sourcemaps_upload() {
 fn command_sourcemaps_upload_successfully_upload_file() {
     let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
             200,
@@ -33,7 +33,7 @@ fn command_sourcemaps_upload_successfully_upload_file() {
 fn command_sourcemaps_upload_skip_already_uploaded() {
     let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=&checksum=38ed853073df85147960ea3a5bced6170ec389b0&checksum=f3673e2cea68bcb86bb74254a9efaa381d74929f",
             200,
@@ -58,7 +58,7 @@ fn command_sourcemaps_upload_skip_already_uploaded() {
 fn command_sourcemaps_upload_no_dedupe() {
     let upload_endpoints = mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
             200,
@@ -105,7 +105,7 @@ fn command_sourcemaps_upload_empty() {
     let _upload_endpoints =
         mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
     let _files = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
             200,

@@ -1,4 +1,4 @@
-use crate::integration::{mock_endpoint, register_test, EndpointOptions};
+use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
 
 #[test]
 fn command_issues_list_help() {
@@ -8,7 +8,7 @@ fn command_issues_list_help() {
 #[test]
 fn doesnt_fail_with_empty_response() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/issues/?query=&cursor=",
             200,
@@ -21,7 +21,7 @@ fn doesnt_fail_with_empty_response() {
 #[test]
 fn display_issues() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/issues/?query=&cursor=",
             200,
@@ -34,7 +34,7 @@ fn display_issues() {
 #[test]
 fn display_resolved_issues() {
     let _server = mock_endpoint(
-        EndpointOptions::new(
+        MockEndpointBuilder::new(
             "GET",
             "/api/0/projects/wat-org/wat-project/issues/?query=is:resolved&cursor=",
             200,
