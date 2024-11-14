@@ -1,6 +1,6 @@
 //! A collection of utilities for integration tests.
 
 pub mod env;
-mod mocking;
+mod mock_endpoint_builder;
 
-pub use mocking::{mock_endpoint, MockEndpointBuilder};
+pub use mock_endpoint_builder::{mock_endpoint, MockEndpointBuilder};
