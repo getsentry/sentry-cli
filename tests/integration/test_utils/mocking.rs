@@ -1,13 +1,13 @@
 use mockito::{Matcher, Mock};
 
 pub struct EndpointOptions {
-    pub method: String,
-    pub endpoint: String,
-    pub status: usize,
-    pub response_body: Option<String>,
-    pub response_file: Option<String>,
-    pub matcher: Option<Matcher>,
-    pub header_matcher: Option<(&'static str, Matcher)>,
+    method: String,
+    endpoint: String,
+    status: usize,
+    response_body: Option<String>,
+    response_file: Option<String>,
+    matcher: Option<Matcher>,
+    header_matcher: Option<(&'static str, Matcher)>,
 }
 
 impl EndpointOptions {
