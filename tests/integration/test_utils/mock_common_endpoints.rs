@@ -1,19 +1,8 @@
-use mockito::Mock;
-
 use crate::integration::test_utils::MockEndpointBuilder;
-
-pub fn mock_common_upload_endpoints(
-    behavior: ServerBehavior,
-    chunk_options: ChunkOptions,
-) -> Vec<Mock> {
-    common_upload_endpoints(behavior, chunk_options)
-        .map(super::mock_endpoint)
-        .collect()
-}
 
 /// Returns an iterator over builders for the common upload endpoints.
 /// These can be used to generate mocks for the upload endpoints.
-fn common_upload_endpoints(
+pub(super) fn common_upload_endpoints(
     behavior: ServerBehavior,
     chunk_options: ChunkOptions,
 ) -> impl Iterator<Item = MockEndpointBuilder> {

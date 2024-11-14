@@ -1,6 +1,4 @@
-use crate::integration::{
-    copy_recursively, mock_common_upload_endpoints, register_test, ServerBehavior,
-};
+use crate::integration::{copy_recursively, ServerBehavior, TestManager};
 use std::fs::{create_dir, remove_dir_all, write};
 
 #[test]
@@ -16,9 +14,13 @@ fn command_bundle_jvm_out_not_found_creates_dir() {
         testcase_cwd_path.join("jvm"),
     )
     .unwrap();
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm-output-not-found.trycmd");
+
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test(
+            "debug_files/bundle_jvm/debug_files-bundle-jvm-output-not-found.trycmd",
+        )
+        .with_default_token();
 }
 
 #[test]
@@ -31,24 +33,29 @@ fn command_bundle_jvm_fails_out_is_file() {
     }
     copy_recursively("tests/integration/_fixtures/jvm/", testcase_cwd_path).unwrap();
     write(testcase_cwd_path.join("file.txt"), "some file content").unwrap();
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
 
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm-output-is-file.trycmd");
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm-output-is-file.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn command_bundle_jvm_fails_input_not_found() {
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm-input-not-found.trycmd");
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test(
+            "debug_files/bundle_jvm/debug_files-bundle-jvm-input-not-found.trycmd",
+        )
+        .with_default_token();
 }
 
 #[test]
 fn command_bundle_jvm_fails_input_is_file() {
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm-input-is-file.trycmd");
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm-input-is-file.trycmd")
+        .with_default_token();
 }
 
 #[test]
@@ -61,16 +68,19 @@ fn command_bundle_jvm_input_dir_empty() {
     }
     copy_recursively("tests/integration/_fixtures/jvm/", testcase_cwd_path).unwrap();
     create_dir(testcase_cwd_path.join("empty-dir")).unwrap();
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm-input-dir-empty.trycmd");
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test(
+            "debug_files/bundle_jvm/debug_files-bundle-jvm-input-dir-empty.trycmd",
+        )
+        .with_default_token();
 }
 
 #[test]
 fn command_bundle_jvm_fails_invalid_uuid() {
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm-invalid-uuid.trycmd");
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm-invalid-uuid.trycmd");
 }
 
 #[test]
@@ -81,7 +91,8 @@ fn command_bundle_jvm() {
         remove_dir_all(testcase_cwd_path).unwrap();
     }
     copy_recursively("tests/integration/_fixtures/jvm/", testcase_cwd_path).unwrap();
-    let _upload_endpoints =
-        mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default());
-    register_test("debug_files/bundle_jvm/debug_files-bundle-jvm.trycmd");
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
+        .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm.trycmd")
+        .with_default_token();
 }

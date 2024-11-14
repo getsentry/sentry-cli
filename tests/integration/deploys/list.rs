@@ -1,14 +1,16 @@
-use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
+use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
 fn command_deploys_list() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new(
-            "GET",
-            "/api/0/organizations/wat-org/releases/wat-release/deploys/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "GET",
+                "/api/0/organizations/wat-org/releases/wat-release/deploys/",
+                200,
+            )
+            .with_response_file("deploys/get-deploys.json"),
         )
-        .with_response_file("deploys/get-deploys.json"),
-    );
-    register_test("deploys/deploys-list.trycmd");
+        .register_trycmd_test("deploys/deploys-list.trycmd")
+        .with_default_token();
 }

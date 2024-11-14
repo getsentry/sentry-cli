@@ -1,4 +1,4 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 mod explain;
 mod inject;
@@ -7,10 +7,10 @@ mod upload;
 
 #[test]
 fn command_sourcemaps_help() {
-    register_test("sourcemaps/sourcemaps-help.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-help.trycmd");
 }
 
 #[test]
 fn command_sourcemaps_no_subcommand() {
-    register_test("sourcemaps/sourcemaps-no-subcommand.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-no-subcommand.trycmd");
 }

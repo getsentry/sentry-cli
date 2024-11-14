@@ -1,10 +1,10 @@
 use std::fs::{self, remove_dir_all};
 
-use crate::integration::{copy_recursively, register_test};
+use crate::integration::{copy_recursively, TestManager};
 
 #[test]
 fn command_sourcemaps_inject_help() {
-    register_test("sourcemaps/sourcemaps-inject-help.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-help.trycmd");
 }
 
 #[test]
@@ -15,7 +15,7 @@ fn command_sourcemaps_inject_output() {
     }
     copy_recursively("tests/integration/_fixtures/inject/", testcase_cwd_path).unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject.trycmd");
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn command_sourcemaps_inject_output_nomappings() {
     )
     .unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-nomappings.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-nomappings.trycmd");
 }
 
 #[test]
@@ -41,7 +41,7 @@ fn command_sourcemaps_inject_output_nofiles() {
     }
     fs::create_dir_all(std::path::Path::new(testcase_cwd_path).join("nonexisting")).unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-nofiles.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-nofiles.trycmd");
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn command_sourcemaps_inject_output_embedded() {
     )
     .unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-embedded.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-embedded.trycmd");
 }
 
 #[test]
@@ -73,7 +73,7 @@ fn command_sourcemaps_inject_output_split() {
     )
     .unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-split.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-split.trycmd");
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn command_sourcemaps_inject_output_split_ambiguous() {
     )
     .unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-split-ambiguous.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-split-ambiguous.trycmd");
 }
 
 #[test]
@@ -104,7 +104,7 @@ fn command_sourcemaps_inject_bundlers() {
     )
     .unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-bundlers.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-bundlers.trycmd");
 
     // IIFE tests
     for bundler in ["esbuild", "rollup", "rspack", "vite", "webpack"] {
@@ -160,7 +160,7 @@ fn command_sourcemaps_inject_not_compiled() {
     )
     .unwrap();
 
-    register_test("sourcemaps/sourcemaps-inject-not-compiled.trycmd");
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-not-compiled.trycmd");
 
     let file_contents = fs::read_to_string(format!("{testcase_cwd_path}not-compiled.js")).unwrap();
     assert!(file_contents.contains("//# debugId="));
@@ -168,5 +168,6 @@ fn command_sourcemaps_inject_not_compiled() {
 
 #[test]
 fn command_sourcemaps_inject_complex_extension() {
-    register_test("sourcemaps/sourcemaps-inject-complex-extension.trycmd");
+    TestManager::new()
+        .register_trycmd_test("sourcemaps/sourcemaps-inject-complex-extension.trycmd");
 }

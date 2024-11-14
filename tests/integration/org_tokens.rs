@@ -1,6 +1,6 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn org_token() {
-    register_test("org_tokens/*.trycmd");
+    TestManager::new().register_trycmd_test("org_tokens/*.trycmd");
 }

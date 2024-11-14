@@ -1,6 +1,6 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn command_update() {
-    register_test("update/*.trycmd");
+    TestManager::new().register_trycmd_test("update/*.trycmd");
 }

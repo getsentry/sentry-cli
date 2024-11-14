@@ -1,21 +1,21 @@
-use crate::integration::{
-    mock_endpoint, register_test, register_test_without_token, MockEndpointBuilder,
-};
+use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
 fn command_upload_proguard() {
-    let _dsyms = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/dsyms/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/dsyms/",
+                200,
+            )
+            .with_response_body("[]"),
         )
-        .with_response_body("[]"),
-    );
-    register_test("upload_proguard/*.trycmd");
+        .register_trycmd_test("upload_proguard/*.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn command_upload_proguard_no_upload_no_auth_token() {
-    register_test_without_token("upload_proguard/upload_proguard-no-upload.trycmd");
+    TestManager::new().register_trycmd_test("upload_proguard/upload_proguard-no-upload.trycmd");
 }

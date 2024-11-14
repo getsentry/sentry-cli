@@ -1,4 +1,4 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 mod delete;
 mod finalize;
@@ -8,10 +8,10 @@ mod new;
 
 #[test]
 fn command_releases_help() {
-    register_test("releases/releases-help.trycmd");
+    TestManager::new().register_trycmd_test("releases/releases-help.trycmd");
 }
 
 #[test]
 fn command_releases_no_subcommand() {
-    register_test("releases/releases-no-subcommand.trycmd");
+    TestManager::new().register_trycmd_test("releases/releases-no-subcommand.trycmd");
 }

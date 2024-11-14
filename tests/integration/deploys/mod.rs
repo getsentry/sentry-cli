@@ -1,14 +1,14 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 mod list;
 mod new;
 
 #[test]
 fn command_deploys_help() {
-    register_test("deploys/deploys-help.trycmd");
+    TestManager::new().register_trycmd_test("deploys/deploys-help.trycmd");
 }
 
 #[test]
 fn command_deploys_no_subcommand() {
-    register_test("deploys/deploys-no-subcommand.trycmd");
+    TestManager::new().register_trycmd_test("deploys/deploys-no-subcommand.trycmd");
 }

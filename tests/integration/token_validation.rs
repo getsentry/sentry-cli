@@ -1,6 +1,6 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn test_warn_invalid_auth_token() {
-    register_test("token_validation/*.trycmd");
+    TestManager::new().register_trycmd_test("token_validation/*.trycmd");
 }

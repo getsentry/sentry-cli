@@ -1,6 +1,6 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn command_login() {
-    register_test("login/*.trycmd");
+    TestManager::new().register_trycmd_test("login/*.trycmd");
 }

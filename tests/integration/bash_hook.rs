@@ -1,6 +1,6 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn command_bash_hook() {
-    register_test("bash_hook/*.trycmd");
+    TestManager::new().register_trycmd_test("bash_hook/*.trycmd");
 }

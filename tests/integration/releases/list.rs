@@ -1,55 +1,67 @@
-use crate::integration::{mock_endpoint, register_test, MockEndpointBuilder};
+use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
 fn displays_releases() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
-            .with_response_file("releases/get-releases.json"),
-    );
-    register_test("releases/releases-list.trycmd");
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
+                .with_response_file("releases/get-releases.json"),
+        )
+        .register_trycmd_test("releases/releases-list.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn displays_releases_with_projects() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
-            .with_response_file("releases/get-releases.json"),
-    );
-    register_test("releases/releases-list-with-projects.trycmd");
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
+                .with_response_file("releases/get-releases.json"),
+        )
+        .register_trycmd_test("releases/releases-list-with-projects.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn doesnt_fail_with_empty_response() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
-            .with_response_body("[]"),
-    );
-    register_test("releases/releases-list-empty.trycmd");
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
+                .with_response_body("[]"),
+        )
+        .register_trycmd_test("releases/releases-list-empty.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn can_override_org() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/projects/whynot/wat-project/releases/", 200)
-            .with_response_file("releases/get-releases.json"),
-    );
-    register_test("releases/releases-list-override-org.trycmd");
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/projects/whynot/wat-project/releases/", 200)
+                .with_response_file("releases/get-releases.json"),
+        )
+        .register_trycmd_test("releases/releases-list-override-org.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn displays_releases_in_raw_mode() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
-            .with_response_file("releases/get-releases.json"),
-    );
-    register_test("releases/releases-list-raw.trycmd");
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
+                .with_response_file("releases/get-releases.json"),
+        )
+        .register_trycmd_test("releases/releases-list-raw.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn displays_releases_in_raw_mode_with_delimiter() {
-    let _server = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
-            .with_response_file("releases/get-releases.json"),
-    );
-    register_test("releases/releases-list-raw-delimiter.trycmd");
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/", 200)
+                .with_response_file("releases/get-releases.json"),
+        )
+        .register_trycmd_test("releases/releases-list-raw-delimiter.trycmd")
+        .with_default_token();
 }

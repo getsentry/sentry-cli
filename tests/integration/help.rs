@@ -1,9 +1,11 @@
-use crate::integration::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn command_help() {
+    let manager = TestManager::new();
+
     #[cfg(not(windows))]
-    register_test("help/help.trycmd");
+    manager.register_trycmd_test("help/help.trycmd");
     #[cfg(windows)]
-    register_test("help/help-windows.trycmd");
+    manager.register_trycmd_test("help/help-windows.trycmd");
 }

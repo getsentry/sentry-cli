@@ -1,6 +1,6 @@
-use super::register_test;
+use crate::integration::TestManager;
 
 #[test]
 fn test_invalid_env() {
-    register_test("invalid_env/invalid-env.trycmd");
+    TestManager::new().register_trycmd_test("invalid_env/invalid-env.trycmd");
 }

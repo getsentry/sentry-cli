@@ -1,140 +1,153 @@
 use assert_cmd::Command;
 
-use crate::integration::{mock_endpoint, register_test, test_utils::env, MockEndpointBuilder};
+use crate::integration::{test_utils::env, MockEndpointBuilder, TestManager};
 
 #[test]
 fn command_debug_files_upload() {
-    let _chunk_upload = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
         )
-        .with_response_file("debug_files/post-difs-assemble.json"),
-    );
-    register_test("debug_files/upload/debug_files-upload.trycmd");
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_response_file("debug_files/post-difs-assemble.json"),
+        )
+        .register_trycmd_test("debug_files/upload/debug_files-upload.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn command_debug_files_upload_pdb() {
-    let _chunk_upload = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
         )
-        .with_response_body(
-            r#"{
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_response_body(
+                r#"{
                 "5f81d6becc51980870acc9f6636ab53d26160763": {
                     "state": "ok",
                     "missingChunks": []
                 }
             }"#,
-        ),
-    );
-    register_test("debug_files/upload/debug_files-upload-pdb.trycmd");
-    register_test("debug_files/upload/debug_files-upload-pdb-include-sources.trycmd");
+            ),
+        )
+        .register_trycmd_test("debug_files/upload/debug_files-upload-pdb.trycmd")
+        .register_trycmd_test("debug_files/upload/debug_files-upload-pdb-include-sources.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn command_debug_files_upload_pdb_embedded_sources() {
-    let _chunk_upload = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
         )
-        .with_response_body(
-            r#"{
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_response_body(
+                r#"{
                 "50dd9456dc89cdbc767337da512bdb36b15db6b2": {
                     "state": "ok",
                     "missingChunks": []
                 }
             }"#,
-        ),
-    );
-    register_test("debug_files/upload/debug_files-upload-pdb-embedded-sources.trycmd");
+            ),
+        )
+        .register_trycmd_test("debug_files/upload/debug_files-upload-pdb-embedded-sources.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
-    let _chunk_upload = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
         )
-        .with_response_body(
-            r#"{
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_response_body(
+                r#"{
                 "fc1c9e58a65bd4eaf973bbb7e7a7cc01bfdaf15e": {
                     "state": "ok",
                     "missingChunks": []
                 }
             }"#,
-        ),
-    );
-    register_test("debug_files/upload/debug_files-upload-dll-embedded-ppdb-with-sources.trycmd");
+            ),
+        )
+        .register_trycmd_test(
+            "debug_files/upload/debug_files-upload-dll-embedded-ppdb-with-sources.trycmd",
+        )
+        .with_default_token();
 }
 
 #[test]
 fn command_debug_files_upload_mixed_embedded_sources() {
-    let _chunk_upload = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
         )
-        .with_response_body(
-            r#"{
-                "21b76b717dbbd8c89e42d92b29667ac87aa3c124": {
-                    "state": "ok",
-                    "missingChunks": []
-                }
-            }"#,
-        ),
-    );
-    // TODO this isn't tested properly at the moment, because `indicatif` ProgressBar (at least at the current version)
-    //      swallows debug logs printed while the progress bar is active and the session is not attended.
-    //      See how it's supposed to look like `debug_files-bundle_sources-mixed-embedded-sources.trycmd` and try it out
-    //      after an update of `indicatif` to the latest version (currently it's blocked by some other issues).
-    register_test("debug_files/upload/debug_files-upload-mixed-embedded-sources.trycmd");
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_response_body(
+                r#"{
+                    "21b76b717dbbd8c89e42d92b29667ac87aa3c124": {
+                        "state": "ok",
+                        "missingChunks": []
+                    }
+                }"#,
+            ),
+        )
+        // TODO this isn't tested properly at the moment, because `indicatif` ProgressBar (at least at the current version)
+        //      swallows debug logs printed while the progress bar is active and the session is not attended.
+        //      See how it's supposed to look like `debug_files-bundle_sources-mixed-embedded-sources.trycmd` and try it out
+        //      after an update of `indicatif` to the latest version (currently it's blocked by some other issues).
+        .register_trycmd_test("debug_files/upload/debug_files-upload-mixed-embedded-sources.trycmd")
+        .with_default_token();
 }
 
 #[test]
 fn command_debug_files_upload_no_upload() {
-    let _chunk_upload = mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-    let _assemble = mock_endpoint(
-        MockEndpointBuilder::new(
-            "POST",
-            "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-            200,
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
         )
-        .with_response_file("debug_files/post-difs-assemble.json"),
-    );
-    register_test("debug_files/upload/debug_files-upload-no-upload.trycmd");
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_response_file("debug_files/post-difs-assemble.json"),
+        )
+        .register_trycmd_test("debug_files/upload/debug_files-upload-no-upload.trycmd");
 }
 
 #[test]
@@ -142,7 +155,7 @@ fn command_debug_files_upload_no_upload() {
 /// The mock assemble endpoint returns a 200 response simulating the case where all chunks
 /// are already uploaded.
 fn ensure_correct_assemble_call() {
-    let _chunk_upload = mock_endpoint(
+    let _manager = TestManager::new().mock_endpoint(
         MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
             .with_response_file("debug_files/get-chunk-upload.json"),
     );

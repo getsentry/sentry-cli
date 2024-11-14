@@ -69,10 +69,9 @@ impl MockEndpointBuilder {
         self.mock = self.mock.expect(hits);
         self
     }
-}
 
-/// Build and return a mock endpoint with the provided configuration. The mock is automatically
-/// created and started. It is active until dropped.
-pub fn mock_endpoint(opts: MockEndpointBuilder) -> Mock {
-    opts.mock.create()
+    /// Create and return the mock endpoint.
+    pub(super) fn create(self) -> Mock {
+        self.mock.create()
+    }
 }
