@@ -1,11 +1,22 @@
-use crate::integration::test_utils::{self, MockEndpointBuilder};
 use mockito::Mock;
 
-// Endpoints need to be bound, as they need to live long enough for test to finish
+use crate::integration::test_utils::MockEndpointBuilder;
+
 pub fn mock_common_upload_endpoints(
     behavior: ServerBehavior,
     chunk_options: ChunkOptions,
 ) -> Vec<Mock> {
+    common_upload_endpoints(behavior, chunk_options)
+        .map(super::mock_endpoint)
+        .collect()
+}
+
+/// Returns an iterator over builders for the common upload endpoints.
+/// These can be used to generate mocks for the upload endpoints.
+fn common_upload_endpoints(
+    behavior: ServerBehavior,
+    chunk_options: ChunkOptions,
+) -> impl Iterator<Item = MockEndpointBuilder> {
     let ChunkOptions {
         chunk_size,
         missing_chunks,
@@ -42,27 +53,21 @@ pub fn mock_common_upload_endpoints(
     );
 
     vec![
-        test_utils::mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
-                .with_response_file("releases/get-release.json"),
-        )
-        .expect(release_request_count),
-        test_utils::mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-                .with_response_body(chunk_upload_response),
-        ),
-        test_utils::mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
-                .with_response_body("[]"),
-        ),
-        test_utils::mock_endpoint(
-            MockEndpointBuilder::new("POST", assemble_endpoint, 200).with_response_body(format!(
+        MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+            .with_response_file("releases/get-release.json")
+            .expect(release_request_count),
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            .with_response_body(chunk_upload_response),
+        MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            .with_response_body("[]"),
+        MockEndpointBuilder::new("POST", assemble_endpoint, 200)
+            .with_response_body(format!(
                 r#"{{"state":"created","missingChunks":{}}}"#,
                 serde_json::to_string(&missing_chunks).unwrap()
-            )),
-        )
-        .expect_at_least(1),
+            ))
+            .expect_at_least(1),
     ]
+    .into_iter()
 }
 
 pub enum ServerBehavior {

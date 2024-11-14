@@ -53,6 +53,22 @@ impl MockEndpointBuilder {
         self.mock = self.mock.match_header(key, matcher);
         self
     }
+
+    /// Expect the mock endpoint to be hit at least `hits` times.
+    ///
+    /// This expectation is only checked when the created mock is asserted.
+    pub fn expect_at_least(mut self, hits: usize) -> Self {
+        self.mock = self.mock.expect_at_least(hits);
+        self
+    }
+
+    /// Expect the mock endpoint to be hit exactly `hits` times.
+    ///
+    /// This expectation is only checked when the created mock is asserted.
+    pub fn expect(mut self, hits: usize) -> Self {
+        self.mock = self.mock.expect(hits);
+        self
+    }
 }
 
 /// Build and return a mock endpoint with the provided configuration. The mock is automatically
