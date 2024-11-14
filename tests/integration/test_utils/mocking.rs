@@ -1,74 +1,56 @@
 use mockito::{Matcher, Mock};
 
+/// Options for creating a mock endpoint.
 pub struct EndpointOptions {
-    method: String,
-    endpoint: String,
-    status: usize,
-    response_body: Option<String>,
-    response_file: Option<String>,
-    matcher: Option<Matcher>,
-    header_matcher: Option<(&'static str, Matcher)>,
+    /// The mock object we are building.
+    mock: Mock,
 }
 
 impl EndpointOptions {
+    /// Create a new endpoint options struct
     pub fn new(method: &str, endpoint: &str, status: usize) -> Self {
         EndpointOptions {
-            method: method.to_owned(),
-            endpoint: endpoint.to_owned(),
-            status,
-            response_body: None,
-            response_file: None,
-            matcher: None,
-            header_matcher: None,
+            mock: mockito::mock(method, endpoint)
+                .with_status(status)
+                .with_header("content-type", "application/json"),
         }
     }
 
+    /// Set the response body of the mock endpoint.
     pub fn with_response_body<T>(mut self, body: T) -> Self
     where
         T: Into<String>,
     {
-        self.response_body = Some(body.into());
+        self.mock = self.mock.with_body(body.into());
         self
     }
 
+    /// Set the response body of the mock endpoint to a file with the given path.
+    /// The path is relative to the `tests/integration/_responses` directory.
     pub fn with_response_file(mut self, path: &str) -> Self {
-        self.response_file = Some(format!("tests/integration/_responses/{path}"));
+        let response_file = format!("tests/integration/_responses/{path}");
+
+        self.mock = self.mock.with_body_from_file(response_file);
         self
     }
 
+    /// Set the matcher for the response body of the mock endpoint. The mock will only
+    /// respond to requests if the response body matches the matcher.
     pub fn with_matcher(mut self, matcher: Matcher) -> Self {
-        self.matcher = Some(matcher);
+        self.mock = self.mock.match_body(matcher);
         self
     }
 
     /// Matches a header of the mock endpoint. The header must be present and its value must
     /// match the provided matcher in order for the endpoint to be reached.
     pub fn with_header_matcher(mut self, key: &'static str, matcher: Matcher) -> Self {
-        self.header_matcher = Some((key, matcher));
+        self.mock = self.mock.match_header(key, matcher);
         self
     }
 }
 
+/// Build and return a mock endpoint with the provided configuration. The mock is automatically
+/// created and started. It is active until dropped.
 pub fn mock_endpoint(opts: EndpointOptions) -> Mock {
-    let mut mock = mockito::mock(opts.method.as_str(), opts.endpoint.as_str())
-        .with_status(opts.status)
-        .with_header("content-type", "application/json");
-
-    if let Some(response_body) = opts.response_body {
-        mock = mock.with_body(response_body);
-    }
-
-    if let Some(response_file) = opts.response_file {
-        mock = mock.with_body_from_file(response_file);
-    }
-
-    if let Some(matcher) = opts.matcher {
-        mock = mock.match_body(matcher);
-    }
-
-    if let Some((key, matcher)) = opts.header_matcher {
-        mock = mock.match_header(key, matcher);
-    }
-
-    mock.create()
+    opts.mock.create()
 }
