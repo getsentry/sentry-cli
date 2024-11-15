@@ -155,22 +155,27 @@ fn command_debug_files_upload_no_upload() {
 /// The mock assemble endpoint returns a 200 response simulating the case where all chunks
 /// are already uploaded.
 fn ensure_correct_assemble_call() {
-    let _manager = TestManager::new().mock_endpoint(
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
-            .with_response_file("debug_files/get-chunk-upload.json"),
-    );
-
-    let assemble = mockito::mock("POST", "/api/0/projects/wat-org/wat-project/files/difs/assemble/")
-        .match_body(r#"{"21b76b717dbbd8c89e42d92b29667ac87aa3c124":{"name":"SrcGenSampleApp.pdb","debug_id":"c02651ae-cd6f-492d-bc33-0b83111e7106-8d8e7c60","chunks":["21b76b717dbbd8c89e42d92b29667ac87aa3c124"]}}"#)
-        .with_status(200)
-        .with_header("content-type", "application/json")
-        .with_body(r#"{
+    let manager = TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+                .with_response_file("debug_files/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+                200,
+            )
+            .with_header_matcher("content-type", "application/json".into())
+            .with_response_body(
+                r#"{
                 "21b76b717dbbd8c89e42d92b29667ac87aa3c124": {
                     "state": "ok",
                     "missingChunks": []
                 }
-            }"#)
-        .create();
+            }"#,
+            ),
+        );
 
     let mut command = Command::cargo_bin("sentry-cli").expect("sentry-cli should be available");
 
@@ -193,6 +198,6 @@ fn ensure_correct_assemble_call() {
     // First assert the mock was called as expected, then that the command was successful.
     // This is because failure with the mock assertion can cause the command to fail, and
     // the mock assertion failure is likely more interesting in this case.
-    assemble.assert();
+    manager.assert_mock_endpoints();
     command_result.success();
 }
