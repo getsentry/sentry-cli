@@ -1,8 +1,11 @@
+use std::fmt::Display;
+
 use crate::integration::test_utils::MockEndpointBuilder;
 
 /// Returns an iterator over builders for the common upload endpoints.
 /// These can be used to generate mocks for the upload endpoints.
 pub(super) fn common_upload_endpoints(
+    server_url: impl Display,
     behavior: ServerBehavior,
     chunk_options: ChunkOptions,
 ) -> impl Iterator<Item = MockEndpointBuilder> {
@@ -37,8 +40,7 @@ pub(super) fn common_upload_endpoints(
             \"hashAlgorithm\": \"sha1\",
             \"accept\": [{}]
           }}",
-        mockito::server_url(),
-        accept,
+        server_url, accept,
     );
 
     vec![

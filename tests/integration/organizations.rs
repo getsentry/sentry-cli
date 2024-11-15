@@ -1,9 +1,8 @@
-use mockito::server_url;
-
 use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
 fn command_organizations() {
+    let manager = TestManager::new();
     let region_response = format!(
         r#"{{
             "regions": [{{
@@ -11,10 +10,10 @@ fn command_organizations() {
                 "url": "{}"
             }}]
         }}"#,
-        server_url(),
+        manager.server_url(),
     );
 
-    TestManager::new()
+    manager
         // Mocks are for the organizations list command.
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/?cursor=", 200)

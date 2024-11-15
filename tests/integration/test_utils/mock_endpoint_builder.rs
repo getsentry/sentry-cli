@@ -1,4 +1,4 @@
-use mockito::{Matcher, Mock};
+use mockito::{Matcher, Mock, ServerGuard};
 
 /// Builder for a mock endpoint.
 ///
@@ -8,17 +8,21 @@ use mockito::{Matcher, Mock};
 ///
 /// The mock is only created once `mock_endpoint()` is called with the builder.
 pub struct MockEndpointBuilder {
-    /// The mock object we are building.
-    mock: Mock,
+    /// Function which takes a mockito::ServerGuard and builds the configured mock
+    /// on that server.
+    builder: Box<dyn FnOnce(&mut ServerGuard) -> Mock>,
 }
 
 impl MockEndpointBuilder {
     /// Create a new endpoint options struct
-    pub fn new(method: &str, endpoint: &str, status: usize) -> Self {
+    pub fn new(method: &'static str, endpoint: &'static str, status: usize) -> Self {
         Self {
-            mock: mockito::mock(method, endpoint)
-                .with_status(status)
-                .with_header("content-type", "application/json"),
+            builder: Box::new(move |server| {
+                server
+                    .mock(method, endpoint)
+                    .with_status(status)
+                    .with_header("content-type", "application/json")
+            }),
         }
     }
 
@@ -27,7 +31,8 @@ impl MockEndpointBuilder {
     where
         T: Into<String>,
     {
-        self.mock = self.mock.with_body(body.into());
+        let body = body.into();
+        self.builder = Box::new(|server| (self.builder)(server).with_body(body));
         self
     }
 
@@ -36,21 +41,21 @@ impl MockEndpointBuilder {
     pub fn with_response_file(mut self, path: &str) -> Self {
         let response_file = format!("tests/integration/_responses/{path}");
 
-        self.mock = self.mock.with_body_from_file(response_file);
+        self.builder = Box::new(|server| (self.builder)(server).with_body_from_file(response_file));
         self
     }
 
     /// Set the matcher for the response body of the mock endpoint. The mock will only
     /// respond to requests if the response body matches the matcher.
     pub fn with_matcher(mut self, matcher: Matcher) -> Self {
-        self.mock = self.mock.match_body(matcher);
+        self.builder = Box::new(|server| (self.builder)(server).match_body(matcher));
         self
     }
 
     /// Matches a header of the mock endpoint. The header must be present and its value must
     /// match the provided matcher in order for the endpoint to be reached.
     pub fn with_header_matcher(mut self, key: &'static str, matcher: Matcher) -> Self {
-        self.mock = self.mock.match_header(key, matcher);
+        self.builder = Box::new(move |server| (self.builder)(server).match_header(key, matcher));
         self
     }
 
@@ -58,7 +63,7 @@ impl MockEndpointBuilder {
     ///
     /// This expectation is only checked when the created mock is asserted.
     pub fn expect_at_least(mut self, hits: usize) -> Self {
-        self.mock = self.mock.expect_at_least(hits);
+        self.builder = Box::new(move |server| (self.builder)(server).expect_at_least(hits));
         self
     }
 
@@ -66,12 +71,12 @@ impl MockEndpointBuilder {
     ///
     /// This expectation is only checked when the created mock is asserted.
     pub fn expect(mut self, hits: usize) -> Self {
-        self.mock = self.mock.expect(hits);
+        self.builder = Box::new(move |server| (self.builder)(server).expect(hits));
         self
     }
 
-    /// Create and return the mock endpoint.
-    pub(super) fn create(self) -> Mock {
-        self.mock.create()
+    /// Create and return the mock endpoint on the given server.
+    pub(super) fn create(self, server: &mut ServerGuard) -> Mock {
+        (self.builder)(server).create()
     }
 }
