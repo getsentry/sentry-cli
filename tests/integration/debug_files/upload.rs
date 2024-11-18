@@ -184,7 +184,7 @@ fn ensure_correct_assemble_call() {
             .split(' '),
     );
 
-    env::set_all(|k, v| {
+    env::set_all(manager.server_info(), |k, v| {
         command.env(k, v.as_ref());
     });
 

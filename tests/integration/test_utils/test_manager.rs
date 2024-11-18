@@ -1,12 +1,12 @@
 use std::fmt::Display;
 
-use mockito::Mock;
+use mockito::{Mock, Server, ServerGuard};
 use thiserror::Error;
 use trycmd::TestCases;
 
 use crate::integration::{env, MockEndpointBuilder, VERSION};
 
-use super::{mock_common_endpoints, ChunkOptions, ServerBehavior};
+use super::{mock_common_endpoints, ChunkOptions, MockServerInfo, ServerBehavior};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -20,19 +20,23 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Allows for mocking endpoints and registering different types of tests.
 pub struct TestManager {
     mocks: Vec<Mock>,
+    server: ServerGuard,
 }
 
 impl TestManager {
     /// Create a new `TestManager`.
     /// The test manager has no mocked endpoints by default.
     pub fn new() -> Self {
-        Self { mocks: vec![] }
+        Self {
+            mocks: vec![],
+            server: Server::new(),
+        }
     }
 
     /// Create a mock endpoint on the mockito test server with the given options.
     /// Returns the updated `TestManager` with the new mock endpoint.
     pub fn mock_endpoint(mut self, opts: MockEndpointBuilder) -> Self {
-        self.mocks.push(opts.create());
+        self.mocks.push(opts.create(&mut self.server));
         self
     }
 
@@ -42,7 +46,7 @@ impl TestManager {
         behavior: ServerBehavior,
         chunk_options: ChunkOptions,
     ) -> Self {
-        mock_common_endpoints::common_upload_endpoints(behavior, chunk_options)
+        mock_common_endpoints::common_upload_endpoints(self.server_url(), behavior, chunk_options)
             .fold(self, |manager, builder| manager.mock_endpoint(builder))
     }
 
@@ -61,6 +65,21 @@ impl TestManager {
     /// Further configuration can be done with the `TrycmdTestManager`.
     pub fn register_trycmd_test(self, path: impl Display) -> TrycmdTestManager {
         TrycmdTestManager::new(self, path)
+    }
+
+    /// Get the URL of the mock server.
+    pub fn server_url(&self) -> String {
+        self.server().url()
+    }
+
+    /// Get information about mock server, needed for setting environment variables.
+    pub fn server_info(&self) -> MockServerInfo {
+        self.server().into()
+    }
+
+    /// Get reference to the mockito server.
+    fn server(&self) -> &ServerGuard {
+        &self.server
     }
 }
 
@@ -111,8 +130,7 @@ impl TrycmdTestManager {
 
     /// Insert the server variable into the test case.
     pub fn with_server_var(self) -> Result<Self> {
-        self.test_case
-            .insert_var("[SERVER]", mockito::server_url())?;
+        self.test_case.insert_var("[SERVER]", self.server().url())?;
         Ok(self)
     }
 
@@ -127,12 +145,16 @@ impl TrycmdTestManager {
     fn new(manager: TestManager, path: impl Display) -> Self {
         let test_case = TestCases::new();
 
-        env::set(|k, v| {
+        env::set(manager.server_info(), |k, v| {
             test_case.env(k, v);
         });
 
         test_case.insert_var("[VERSION]", VERSION).unwrap();
 
         Self { manager, test_case }.register_trycmd_test(path)
+    }
+
+    fn server(&self) -> &ServerGuard {
+        self.manager.server()
     }
 }
