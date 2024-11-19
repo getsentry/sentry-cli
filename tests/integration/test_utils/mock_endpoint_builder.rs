@@ -52,7 +52,8 @@ impl MockEndpointBuilder {
 
     /// Set the matcher for the response body of the mock endpoint. The mock will only
     /// respond to requests if the response body matches the matcher.
-    pub fn with_matcher(mut self, matcher: Matcher) -> Self {
+    pub fn with_matcher(mut self, matcher: impl Into<Matcher>) -> Self {
+        let matcher = matcher.into();
         self.builder = Box::new(|server| (self.builder)(server).match_body(matcher));
         self
     }
