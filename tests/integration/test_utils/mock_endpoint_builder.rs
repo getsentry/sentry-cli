@@ -1,4 +1,4 @@
-use mockito::{Matcher, Mock, ServerGuard};
+use mockito::{IntoHeaderName, Matcher, Mock, ServerGuard};
 
 /// Builder for a mock endpoint.
 ///
@@ -60,7 +60,13 @@ impl MockEndpointBuilder {
 
     /// Matches a header of the mock endpoint. The header must be present and its value must
     /// match the provided matcher in order for the endpoint to be reached.
-    pub fn with_header_matcher(mut self, key: &'static str, matcher: Matcher) -> Self {
+    pub fn with_header_matcher(
+        mut self,
+        key: impl IntoHeaderName,
+        matcher: impl Into<Matcher>,
+    ) -> Self {
+        let key = key.into_header_name();
+        let matcher = matcher.into();
         self.builder = Box::new(move |server| (self.builder)(server).match_header(key, matcher));
         self
     }

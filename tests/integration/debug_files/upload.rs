@@ -159,7 +159,7 @@ fn ensure_correct_assemble_call() {
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
             )
-            .with_header_matcher("content-type", "application/json".into())
+            .with_header_matcher("content-type", "application/json")
             .with_response_body(
                 r#"{
                 "21b76b717dbbd8c89e42d92b29667ac87aa3c124": {
