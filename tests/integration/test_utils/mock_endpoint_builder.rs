@@ -35,9 +35,8 @@ impl MockEndpointBuilder {
     /// Set the response body of the mock endpoint.
     pub fn with_response_body<T>(mut self, body: T) -> Self
     where
-        T: Into<String>,
+        T: AsRef<[u8]> + 'static,
     {
-        let body = body.into();
         self.builder = Box::new(|server| (self.builder)(server).with_body(body));
         self
     }
