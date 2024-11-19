@@ -7,13 +7,13 @@ use crate::integration::{MockEndpointBuilder, TestManager};
 #[test]
 fn command_send_event_not_windows() {
     TestManager::new()
-        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/", 200))
+        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/"))
         .register_trycmd_test("send_event/not_windows/*.trycmd");
 }
 
 #[test]
 fn command_send_event() {
     TestManager::new()
-        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/", 200))
+        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/"))
         .register_trycmd_test("send_event/*.trycmd");
 }

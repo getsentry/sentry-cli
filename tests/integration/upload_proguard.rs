@@ -4,12 +4,8 @@ use crate::integration::{MockEndpointBuilder, TestManager};
 fn command_upload_proguard() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "POST",
-                "/api/0/projects/wat-org/wat-project/files/dsyms/",
-                200,
-            )
-            .with_response_body("[]"),
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/files/dsyms/")
+                .with_response_body("[]"),
         )
         .register_trycmd_test("upload_proguard/*.trycmd")
         .with_default_token();

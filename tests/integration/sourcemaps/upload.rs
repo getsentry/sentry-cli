@@ -18,7 +18,6 @@ fn command_sourcemaps_upload_successfully_upload_file() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=&checksum=38ed853073df85147960ea3a5bced6170ec389b0",
-                200,
             )
             .with_response_body("[]"),
         )
@@ -35,7 +34,6 @@ fn command_sourcemaps_upload_skip_already_uploaded() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=&checksum=38ed853073df85147960ea3a5bced6170ec389b0&checksum=f3673e2cea68bcb86bb74254a9efaa381d74929f",
-                200,
             )
             .with_response_body(
                 r#"[{
@@ -95,7 +93,6 @@ fn command_sourcemaps_upload_empty() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
-                200,
             )
             .with_response_body("[]"),
         )

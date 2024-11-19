@@ -7,7 +7,6 @@ fn shows_release_details() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-                200,
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -22,7 +21,6 @@ fn shows_release_details_with_projects_and_commits() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-                200,
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -30,7 +28,6 @@ fn shows_release_details_with_projects_and_commits() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/commits/",
-                200,
             )
             .with_response_file("releases/get-release-commits.json"),
         )
@@ -45,7 +42,6 @@ fn doesnt_print_output_with_quiet_flag() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-                200,
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -60,7 +56,6 @@ fn doesnt_print_output_with_silent_flag() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-                200,
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -71,11 +66,13 @@ fn doesnt_print_output_with_silent_flag() {
 #[test]
 fn preserve_valid_exit_code_with_quiet_flag() {
     TestManager::new()
-        .mock_endpoint(MockEndpointBuilder::new(
-            "GET",
-            "/api/0/projects/wat-org/wat-project/releases/unknown-release/",
-            404,
-        ))
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "GET",
+                "/api/0/projects/wat-org/wat-project/releases/unknown-release/",
+            )
+            .with_status(404),
+        )
         .register_trycmd_test("releases/releases-info-quiet-failed.trycmd")
         .with_default_token();
 }
@@ -83,11 +80,13 @@ fn preserve_valid_exit_code_with_quiet_flag() {
 #[test]
 fn exits_if_no_release_found() {
     TestManager::new()
-        .mock_endpoint(MockEndpointBuilder::new(
-            "GET",
-            "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            404,
-        ))
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "GET",
+                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
+            )
+            .with_status(404),
+        )
         .register_trycmd_test("releases/releases-info-not-found.trycmd")
         .with_default_token();
 }

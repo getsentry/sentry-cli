@@ -44,14 +44,15 @@ pub(super) fn common_upload_endpoints(
     );
 
     vec![
-        MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+        MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+            .with_status(208)
             .with_response_file("releases/get-release.json")
             .expect(release_request_count),
-        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
             .with_response_body(chunk_upload_response),
-        MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/", 200)
+        MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
             .with_response_body("[]"),
-        MockEndpointBuilder::new("POST", assemble_endpoint, 200)
+        MockEndpointBuilder::new("POST", assemble_endpoint)
             .with_response_body(format!(
                 r#"{{"state":"created","missingChunks":{}}}"#,
                 serde_json::to_string(&missing_chunks).unwrap()

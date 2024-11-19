@@ -12,7 +12,8 @@ fn command_releases_new_help() {
 fn creates_release() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 201)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(201)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::PartialJson(json!({
                     "version": "new-release",
@@ -27,7 +28,8 @@ fn creates_release() {
 fn allows_for_release_to_start_with_hyphen() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 201)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(201)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::PartialJson(json!({
                     "version": "-hyphenated-release",
@@ -42,7 +44,8 @@ fn allows_for_release_to_start_with_hyphen() {
 fn creates_release_with_project() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 201)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(201)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::PartialJson(json!({
                     "version": "new-release",
@@ -57,7 +60,8 @@ fn creates_release_with_project() {
 fn allows_for_release_with_project_to_start_with_hyphen() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 201)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(201)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::PartialJson(json!({
                     "version": "-hyphenated-release",
@@ -72,7 +76,8 @@ fn allows_for_release_with_project_to_start_with_hyphen() {
 fn creates_release_even_if_one_already_exists() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(208)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::PartialJson(json!({
                     "version": "wat-release",
@@ -87,7 +92,8 @@ fn creates_release_even_if_one_already_exists() {
 fn creates_release_with_custom_url() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(208)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::PartialJson(json!({
                     "version": "wat-release",
@@ -103,7 +109,8 @@ fn creates_release_with_custom_url() {
 fn creates_release_which_is_instantly_finalized() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/", 208)
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/releases/")
+                .with_status(208)
                 .with_response_file("releases/get-release.json")
                 .with_matcher(Matcher::AllOf(vec![
                     Matcher::PartialJson(json!({

@@ -9,7 +9,6 @@ fn successfully_creates_a_release() {
             MockEndpointBuilder::new(
                 "PUT",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-                200,
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -24,7 +23,6 @@ fn allows_for_release_to_start_with_hyphen() {
             MockEndpointBuilder::new(
                 "PUT",
                 "/api/0/projects/wat-org/wat-project/releases/-hyphenated-release/",
-                200,
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -39,7 +37,6 @@ fn release_with_custom_dates() {
             MockEndpointBuilder::new(
                 "PUT",
                 "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-                200,
             )
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::PartialJson(json!({

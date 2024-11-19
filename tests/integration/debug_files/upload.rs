@@ -6,14 +6,13 @@ use crate::integration::{test_utils::env, MockEndpointBuilder, TestManager};
 fn command_debug_files_upload() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_response_file("debug_files/post-difs-assemble.json"),
         )
@@ -25,14 +24,13 @@ fn command_debug_files_upload() {
 fn command_debug_files_upload_pdb() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_response_body(
                 r#"{
@@ -52,14 +50,13 @@ fn command_debug_files_upload_pdb() {
 fn command_debug_files_upload_pdb_embedded_sources() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_response_body(
                 r#"{
@@ -78,14 +75,13 @@ fn command_debug_files_upload_pdb_embedded_sources() {
 fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_response_body(
                 r#"{
@@ -106,14 +102,13 @@ fn command_debug_files_upload_dll_embedded_ppdb_with_sources() {
 fn command_debug_files_upload_mixed_embedded_sources() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_response_body(
                 r#"{
@@ -136,14 +131,13 @@ fn command_debug_files_upload_mixed_embedded_sources() {
 fn command_debug_files_upload_no_upload() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_response_file("debug_files/post-difs-assemble.json"),
         )
@@ -157,14 +151,13 @@ fn command_debug_files_upload_no_upload() {
 fn ensure_correct_assemble_call() {
     let manager = TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
-                200,
             )
             .with_header_matcher("content-type", "application/json".into())
             .with_response_body(

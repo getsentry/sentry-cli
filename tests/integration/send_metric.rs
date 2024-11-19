@@ -9,7 +9,7 @@ fn envelopes_endpoint_builder() -> MockEndpointBuilder {
             .to_string(),
     );
 
-    MockEndpointBuilder::new("POST", "/api/1337/envelope/", 200)
+    MockEndpointBuilder::new("POST", "/api/1337/envelope/")
         .with_header_matcher("X-Sentry-Auth", expected_auth_header)
 }
 
@@ -41,7 +41,7 @@ fn command_send_metric_increment_no_dsn() {
 #[test]
 fn command_send_metric_increment_unsuccessful_api_call() {
     TestManager::new()
-        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/", 500))
+        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/").with_status(500))
         .register_trycmd_test(
             "send_metric/individual_config/send_metric-increment-unsuccessful-api-call.trycmd",
         );

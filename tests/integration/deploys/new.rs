@@ -10,7 +10,6 @@ fn command_deploys_new() {
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/organizations/wat-org/releases/wat-release/deploys/",
-                200,
             )
             .with_response_file("deploys/post-deploys.json")
             .with_matcher(Matcher::PartialJson(json!({
@@ -29,7 +28,6 @@ fn command_releases_deploys_new() {
             MockEndpointBuilder::new(
                 "POST",
                 "/api/0/organizations/wat-org/releases/wat-release/deploys/",
-                200,
             )
             .with_response_file("deploys/post-deploys.json")
             .with_matcher(Matcher::PartialJson(json!({

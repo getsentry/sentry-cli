@@ -16,11 +16,11 @@ fn command_organizations() {
     manager
         // Mocks are for the organizations list command.
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/?cursor=", 200)
+            MockEndpointBuilder::new("GET", "/api/0/organizations/?cursor=")
                 .with_response_file("organizations/get-organizations.json"),
         )
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/users/me/regions/", 200)
+            MockEndpointBuilder::new("GET", "/api/0/users/me/regions/")
                 .with_response_body(region_response),
         )
         .register_trycmd_test("organizations/*.trycmd")

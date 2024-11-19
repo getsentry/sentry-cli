@@ -28,8 +28,7 @@ fn command_info_no_token_backtrace() {
 fn command_info_basic() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/", 200)
-                .with_response_file("info/get-info.json"),
+            MockEndpointBuilder::new("GET", "/api/0/").with_response_file("info/get-info.json"),
         )
         .register_trycmd_test("info/info-basic.trycmd")
         .with_default_token()
@@ -41,8 +40,7 @@ fn command_info_basic() {
 fn command_info_no_defaults() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/", 200)
-                .with_response_file("info/get-info.json"),
+            MockEndpointBuilder::new("GET", "/api/0/").with_response_file("info/get-info.json"),
         )
         .register_trycmd_test("info/info-json.trycmd")
         .with_default_token()
@@ -54,8 +52,7 @@ fn command_info_no_defaults() {
 fn command_info_json() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/", 200)
-                .with_response_file("info/get-info.json"),
+            MockEndpointBuilder::new("GET", "/api/0/").with_response_file("info/get-info.json"),
         )
         .register_trycmd_test("info/info-basic.trycmd")
         .with_default_token()
@@ -67,8 +64,7 @@ fn command_info_json() {
 fn command_info_json_without_defaults() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/", 200)
-                .with_response_file("info/get-info.json"),
+            MockEndpointBuilder::new("GET", "/api/0/").with_response_file("info/get-info.json"),
         )
         .register_trycmd_test("info/info-json-no-defaults.trycmd")
         .env("SENTRY_ORG", "")

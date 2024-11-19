@@ -12,7 +12,6 @@ fn doesnt_fail_with_empty_response() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/issues/?query=&cursor=",
-                200,
             )
             .with_response_body("[]"),
         )
@@ -27,7 +26,6 @@ fn display_issues() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/issues/?query=&cursor=",
-                200,
             )
             .with_response_file("issues/get-issues.json"),
         )
@@ -42,7 +40,6 @@ fn display_resolved_issues() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/projects/wat-org/wat-project/issues/?query=is:resolved&cursor=",
-                200,
             )
             .with_response_file("issues/get-resolved-issues.json"),
         )

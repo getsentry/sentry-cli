@@ -15,15 +15,21 @@ pub struct MockEndpointBuilder {
 
 impl MockEndpointBuilder {
     /// Create a new endpoint options struct
-    pub fn new(method: &'static str, endpoint: &'static str, status: usize) -> Self {
+    pub fn new(method: &'static str, endpoint: &'static str) -> Self {
         Self {
             builder: Box::new(move |server| {
                 server
                     .mock(method, endpoint)
-                    .with_status(status)
                     .with_header("content-type", "application/json")
             }),
         }
+    }
+
+    /// Set the status code of the mock endpoint.
+    /// The default status code (if this method is not called) is 200.
+    pub fn with_status(mut self, status: usize) -> Self {
+        self.builder = Box::new(move |server| (self.builder)(server).with_status(status));
+        self
     }
 
     /// Set the response body of the mock endpoint.

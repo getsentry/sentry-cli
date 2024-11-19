@@ -7,7 +7,6 @@ fn command_deploys_list() {
             MockEndpointBuilder::new(
                 "GET",
                 "/api/0/organizations/wat-org/releases/wat-release/deploys/",
-                200,
             )
             .with_response_file("deploys/get-deploys.json"),
         )
