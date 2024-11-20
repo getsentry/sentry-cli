@@ -6,7 +6,7 @@ use anyhow::{bail, Error, Result};
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use log::{debug, info};
+use log::info;
 use proguard::ProguardMapping;
 use symbolic::common::ByteView;
 use uuid::Uuid;
@@ -16,7 +16,7 @@ use crate::api::AssociateProguard;
 use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
-use crate::utils::fs::{get_sha1_checksum, TempFile};
+use crate::utils::fs::TempFile;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
@@ -135,7 +135,6 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-
     let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
@@ -143,7 +142,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     };
     let mut mappings = vec![];
-    let mut all_checksums = vec![];
 
     let forced_uuid = matches.get_one::<Uuid>("uuid");
     if forced_uuid.is_some() && paths.len() != 1 {
@@ -168,10 +166,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                          does not contain any line information."
                     );
                 } else {
-                    let mut f = fs::File::open(path)?;
-                    let sha = get_sha1_checksum(&mut f)?.to_string();
-                    debug!("SHA1 for mapping file '{}': '{}'", path, sha);
-                    all_checksums.push(sha);
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
                         size: md.len(),
