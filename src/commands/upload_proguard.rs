@@ -1,5 +1,7 @@
+use std::env;
 use std::fs;
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::{bail, Error, Result};
@@ -17,14 +19,21 @@ use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
 use crate::utils::fs::TempFile;
+use crate::utils::proguard_upload;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 #[derive(Debug)]
-struct MappingRef {
+pub struct MappingRef {
     pub path: PathBuf,
     pub size: u64,
     pub uuid: Uuid,
+}
+
+impl AsRef<Path> for MappingRef {
+    fn as_ref(&self) -> &Path {
+        &self.path
+    }
 }
 
 pub fn make_command(command: Command) -> Command {
@@ -188,62 +197,80 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    if mappings.is_empty() && matches.get_flag("require_one") {
-        println!();
-        eprintln!("{}", style("error: found no mapping files to upload").red());
-        return Err(QuietExit(1).into());
-    }
-
-    println!("{} compressing mappings", style(">").dim());
-    let tf = TempFile::create()?;
-    {
-        let mut zip = zip::ZipWriter::new(tf.open()?);
-        for mapping in &mappings {
-            let pb = make_byte_progress_bar(mapping.size);
-            zip.start_file(
-                format!("proguard/{}.txt", mapping.uuid),
-                zip::write::FileOptions::default(),
-            )?;
-            copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
-            pb.finish_and_clear();
-        }
-    }
-
-    // write UUIDs into the mapping file.
-    if let Some(p) = matches.get_one::<String>("write_properties") {
-        let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
-        dump_proguard_uuids_as_properties(p, &uuids)?;
-    }
-
-    if matches.get_flag("no_upload") {
-        println!("{} skipping upload.", style(">").dim());
-        return Ok(());
-    }
-
-    println!("{} uploading mappings", style(">").dim());
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
-    info!(
-        "Issuing a command for Organization: {} Project: {}",
-        org, project
-    );
+    let chunk_upload_options =
+        if env::var("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD") == Ok("1".into()) {
+            authenticated_api.get_chunk_upload_options(&org)?
+        } else {
+            // Only attempt chunk uploading if env var is set.
+            None
+        };
 
-    let api = Api::current();
-    let authenticated_api = api.authenticated()?;
+    if let Some(chunk_upload_options) = chunk_upload_options {
+        log::warn!(
+            "EXPERIMENTAL FEATURE: Uploading proguard mappings using chunked uploading. \
+             Some functionality may be unavailable when using chunked uploading. Please unset \
+             the SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD variable if you encounter any \
+             problems."
+        );
+        proguard_upload::chunk_upload(&mappings, &chunk_upload_options, &org, &project)?;
+    } else {
+        if mappings.is_empty() && matches.get_flag("require_one") {
+            println!();
+            eprintln!("{}", style("error: found no mapping files to upload").red());
+            return Err(QuietExit(1).into());
+        }
 
-    let rv = authenticated_api
-        .region_specific(&org)
-        .upload_dif_archive(&project, tf.path())?;
-    println!(
-        "{} Uploaded a total of {} new mapping files",
-        style(">").dim(),
-        style(rv.len()).yellow()
-    );
-    if !rv.is_empty() {
-        println!("Newly uploaded debug symbols:");
-        for df in rv {
-            println!("  {}", style(&df.id()).dim());
+        println!("{} compressing mappings", style(">").dim());
+        let tf = TempFile::create()?;
+        {
+            let mut zip = zip::ZipWriter::new(tf.open()?);
+            for mapping in &mappings {
+                let pb = make_byte_progress_bar(mapping.size);
+                zip.start_file(
+                    format!("proguard/{}.txt", mapping.uuid),
+                    zip::write::FileOptions::default(),
+                )?;
+                copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
+                pb.finish_and_clear();
+            }
+        }
+
+        // write UUIDs into the mapping file.
+        if let Some(p) = matches.get_one::<String>("write_properties") {
+            let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
+            dump_proguard_uuids_as_properties(p, &uuids)?;
+        }
+
+        if matches.get_flag("no_upload") {
+            println!("{} skipping upload.", style(">").dim());
+            return Ok(());
+        }
+
+        println!("{} uploading mappings", style(">").dim());
+
+        info!(
+            "Issuing a command for Organization: {} Project: {}",
+            org, project
+        );
+
+        let rv = authenticated_api
+            .region_specific(&org)
+            .upload_dif_archive(&project, tf.path())?;
+        println!(
+            "{} Uploaded a total of {} new mapping files",
+            style(">").dim(),
+            style(rv.len()).yellow()
+        );
+        if !rv.is_empty() {
+            println!("Newly uploaded debug symbols:");
+            for df in rv {
+                println!("  {}", style(&df.id()).dim());
+            }
         }
     }
 
