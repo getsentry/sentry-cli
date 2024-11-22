@@ -4,10 +4,26 @@
 
 ## 2.39.0
 
-### Various fixes & improvements
+### Features/improvements
 
 - feat(proguard): Introduce experimental chunk uploading feature (#2264) by @szokeasaurusrex
+- feat: Read debug IDs from `debugId` field in sourcemaps (#2222)
+
+### Various fixes & improvements
+
 - ref(proguard): Delete pointless code (#2263) by @szokeasaurusrex
+- fix: Improve error handling in dif.rs (#2225)
+- ci: Run codeql-analysis on all PRs (#2224)
+- build: Add `assert_cmd` as a dev dependency
+- ref(api): Remove dead code (#2217)
+- ref: Remove `SENTRY_DUMP_REPONSE` environment variable (#2212)
+- ref(utils): Remove `allow(dead_code)` from update utils (#2216)
+- ref(api): Remove blanket `allow(dead_code)` (#2215)
+- ref(api): Only allow dead code where needed (#2213)
+
+<details>
+<summary><h3>Changes to tests</h3></summary>
+  
 - ref(test): Broaden `with_header_matcher` types (#2261) by @szokeasaurusrex
 - ref(test): Accept `impl Into<Matcher>` for `with_matcher` (#2260) by @szokeasaurusrex
 - ref(test): Align `with_reponse_body` parameter to `mockito` (#2259) by @szokeasaurusrex
@@ -30,8 +46,23 @@
 - test(send-metric): Batch tests together (#2241) by @szokeasaurusrex
 - test(react_native): Bubble up `target_os` (#2240) by @szokeasaurusrex
 - test(projects): Batch tests together (#2239) by @szokeasaurusrex
+- test(monitors): Batch monitors tests (#2236)
+- test(monitors): Delete unneeded monitors test (#2237)
+- test(organizations): Batch tests together (#2238)
+- test(events): Batch tests together (#2235)
+- test(debug-files): Batch tests together (#2234)
+- test: batch token validation tests (#2231)
+- test: batch upload-proguard tests (#2233)
+- test: batch update tests (#2232)
+- test: Batch org token tests together (#2229)
+- test: Batch `bash_hook` tests together (#2226)
+- test: batch login tests (#2228)
+- test: Batch send envelope tests together (#2227)
+- test(debug-files): Add test for `assemble` endpoint call
+- ref(tests): Decouple test env vars from trycmd code
 
-_Plus 23 more_
+</details>
+
 
 ## 2.38.2
 
