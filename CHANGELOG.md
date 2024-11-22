@@ -2,6 +2,37 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.39.0
+
+### Various fixes & improvements
+
+- feat(proguard): Introduce experimental chunk uploading feature (#2264) by @szokeasaurusrex
+- ref(proguard): Delete pointless code (#2263) by @szokeasaurusrex
+- ref(test): Broaden `with_header_matcher` types (#2261) by @szokeasaurusrex
+- ref(test): Accept `impl Into<Matcher>` for `with_matcher` (#2260) by @szokeasaurusrex
+- ref(test): Align `with_reponse_body` parameter to `mockito` (#2259) by @szokeasaurusrex
+- ref(test): Make mock builder status default to `200` (#2258) by @szokeasaurusrex
+- ref(test): Change chunk upload options org (#2257) by @szokeasaurusrex
+- ref(test): Bump `mockito` mocking library (#2254) by @szokeasaurusrex
+- ref(test): Use `TestManager` in new chunk upload test (#2253) by @szokeasaurusrex
+- ref(test): Add `TestManager` struct for uniform test setup (#2252) by @szokeasaurusrex
+- ref(tests): `mock_common_endpoints` refactor (#2251) by @szokeasaurusrex
+- ref(tests): Simplify `mock_common_upload_endpoints` (#2250) by @szokeasaurusrex
+- ref(tests): Extract `mock_common_upload_endpoints` into module (#2249) by @szokeasaurusrex
+- ref(tests): Rename `mocking` to `mock_endpoint_builder` (#2248) by @szokeasaurusrex
+- ref: Fix typo in tests (#2243) by @szokeasaurusrex
+- ref(test): Rename `EndpointOptions` to `MockEndpointBuilder` (#2247) by @szokeasaurusrex
+- ref(test): Refactor `EndpointOptions` (#2246) by @szokeasaurusrex
+- ref(test): Privatize struct fields of `EndpointOptions` (#2245) by @szokeasaurusrex
+- ref(test): Move mock endpoint code to module (#2244) by @szokeasaurusrex
+- test: batch send-event tests (#2230) by @szokeasaurusrex
+- test: Run `trycmd` tests with `RUST_BACKTRACE=0` (#2242) by @szokeasaurusrex
+- test(send-metric): Batch tests together (#2241) by @szokeasaurusrex
+- test(react_native): Bubble up `target_os` (#2240) by @szokeasaurusrex
+- test(projects): Batch tests together (#2239) by @szokeasaurusrex
+
+_Plus 23 more_
+
 ## 2.38.2
 
 ### Various fixes & improvements
