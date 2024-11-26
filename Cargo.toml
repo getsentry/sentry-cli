@@ -68,8 +68,8 @@ sentry = { version = "0.34.0", default-features = false, features = [
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
 sha1_smol = { version = "1.0.0", features = ["serde"] }
-sourcemap = { version = "9.0.1", features = ["ram_bundle"] }
-symbolic = { version = "12.12.1", features = ["debuginfo-serde", "il2cpp"] }
+sourcemap = { version = "9.1.2", features = ["ram_bundle"] }
+symbolic = { version = "12.12.3", features = ["debuginfo-serde", "il2cpp"] }
 thiserror = "1.0.38"
 url = "2.3.1"
 username = "0.2.0"
