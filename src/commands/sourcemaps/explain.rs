@@ -228,15 +228,13 @@ fn fetch_release_artifact_file_metadata(
         release,
         &artifact.id,
     )?;
-    #[expect(clippy::manual_inspect)]
     file_metadata
         .ok_or_else(|| format_err!("Could not retrieve file metadata: {}", &artifact.id))
-        .map(|f| {
+        .inspect(|_| {
             success(format!(
                 "Successfully fetched {} file metadata from the server.",
                 artifact.name
-            ));
-            f
+            ))
         })
 }
 
