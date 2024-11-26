@@ -23,6 +23,8 @@ use crate::utils::proguard_upload;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
+const CHUNK_UPLOAD_ENV_VAR: &str = "SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD";
+
 #[derive(Debug)]
 pub struct MappingRef {
     pub path: PathBuf,
@@ -206,11 +208,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let authenticated_api;
     let (org, project);
 
-    if env::var("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD") == Ok("1".into()) {
+    if env::var(CHUNK_UPLOAD_ENV_VAR) == Ok("1".into()) {
         log::warn!(
             "EXPERIMENTAL FEATURE: Uploading proguard mappings using chunked uploading. \
              Some functionality may be unavailable when using chunked uploading. Please unset \
-             the SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD variable if you encounter any \
+             the {CHUNK_UPLOAD_ENV_VAR} variable if you encounter any \
              problems."
         );
 
@@ -224,7 +226,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 options.ok_or_else(|| {
                     anyhow::anyhow!(
                         "server does not support chunked uploading. unset \
-                         SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD to continue."
+                         {CHUNK_UPLOAD_ENV_VAR} to continue."
                     )
                 })
             })?;
