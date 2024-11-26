@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.39.1
+
+### Various fixes & improvements
+
+- fix(sourcemaps): Correctly read files with debug_id and debugId (#2268) by @loewenheim
+- build: Remove unused dependencies (#2255) by @szokeasaurusrex
+- ref(proguard): Define environment variable name in constant (#2265) by @szokeasaurusrex
+- ref(test): Remove redundant line (#2266) by @szokeasaurusrex
+- fix(proguard): Wait until chunks are assembled (#2267) by @szokeasaurusrex
+
 ## 2.39.0
 
 ### Features/improvements
