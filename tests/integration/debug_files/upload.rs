@@ -181,11 +181,6 @@ fn ensure_correct_assemble_call() {
         command.env(k, v.as_ref());
     });
 
-    command.env(
-        "SENTRY_AUTH_TOKEN",
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-    );
-
     let command_result = command.assert();
 
     // First assert the mock was called as expected, then that the command was successful.
