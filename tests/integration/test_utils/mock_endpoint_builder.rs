@@ -1,4 +1,4 @@
-use mockito::{IntoHeaderName, Matcher, Mock, ServerGuard};
+use mockito::{IntoHeaderName, Matcher, Mock, Request, ServerGuard};
 
 /// Builder for a mock endpoint.
 ///
@@ -38,6 +38,17 @@ impl MockEndpointBuilder {
         T: AsRef<[u8]> + 'static,
     {
         self.builder = Box::new(|server| (self.builder)(server).with_body(body));
+        self
+    }
+
+    /// Set the response body of the mock endpoint using a function that takes
+    /// the request and returns the response body.
+    /// This function can also be used to perform arbitrary assertions on the request.
+    pub fn with_response_fn(
+        mut self,
+        callback: impl Fn(&Request) -> Vec<u8> + Send + Sync + 'static,
+    ) -> Self {
+        self.builder = Box::new(|server| (self.builder)(server).with_body_from_request(callback));
         self
     }
 
