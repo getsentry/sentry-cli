@@ -2,10 +2,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::LazyLock;
 use std::{fs, str};
 
-use assert_cmd::Command;
 use regex::bytes::Regex;
 
-use crate::integration::{test_utils::env, MockEndpointBuilder, TestManager};
+use crate::integration::{AssertCommand, MockEndpointBuilder, TestManager};
 
 /// This regex is used to extract the boundary from the content-type header.
 /// We need to match the boundary, since it changes with each request.
@@ -165,7 +164,7 @@ fn command_debug_files_upload_no_upload() {
 /// The mock assemble endpoint returns a 200 response simulating the case where all chunks
 /// are already uploaded.
 fn ensure_correct_assemble_call() {
-    let manager = TestManager::new()
+    TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
@@ -184,26 +183,13 @@ fn ensure_correct_assemble_call() {
                 }
             }"#,
             ),
-        );
-
-    let mut command = Command::cargo_bin("sentry-cli").expect("sentry-cli should be available");
-
-    command.args(
-        "debug-files upload --include-sources tests/integration/_fixtures/SrcGenSampleApp.pdb"
-            .split(' '),
-    );
-
-    env::set_all(manager.server_info(), |k, v| {
-        command.env(k, v.as_ref());
-    });
-
-    let command_result = command.assert();
-
-    // First assert the mock was called as expected, then that the command was successful.
-    // This is because failure with the mock assertion can cause the command to fail, and
-    // the mock assertion failure is likely more interesting in this case.
-    manager.assert_mock_endpoints();
-    command_result.success();
+        )
+        .assert_cmd(
+            "debug-files upload --include-sources tests/integration/_fixtures/SrcGenSampleApp.pdb"
+                .split(' '),
+        )
+        .with_default_token()
+        .run_and_assert(AssertCommand::Success);
 }
 
 #[test]
@@ -217,7 +203,7 @@ fn ensure_correct_chunk_upload() {
         fs::read("tests/integration/_expected_requests/debug_files/upload/chunk_upload.bin")
             .expect("expected chunk body file should be present");
 
-    let manager = TestManager::new()
+    TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("debug_files/get-chunk-upload.json"),
@@ -291,24 +277,11 @@ fn ensure_correct_chunk_upload() {
                 .into()
             })
             .expect(2),
-        );
-
-    let mut command = Command::cargo_bin("sentry-cli").expect("sentry-cli should be available");
-
-    command.args(
-        "debug-files upload --include-sources tests/integration/_fixtures/SrcGenSampleApp.pdb"
-            .split(' '),
-    );
-
-    env::set_all(manager.server_info(), |k, v| {
-        command.env(k, v.as_ref());
-    });
-
-    let command_result = command.assert();
-
-    // First assert the mock was called as expected, then that the command was successful.
-    // This is because failure with the mock assertion can cause the command to fail, and
-    // the mock assertion failure is likely more interesting in this case.
-    manager.assert_mock_endpoints();
-    command_result.success();
+        )
+        .assert_cmd(
+            "debug-files upload --include-sources tests/integration/_fixtures/SrcGenSampleApp.pdb"
+                .split(' '),
+        )
+        .with_default_token()
+        .run_and_assert(AssertCommand::Success);
 }

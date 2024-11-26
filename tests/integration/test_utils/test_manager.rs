@@ -1,5 +1,7 @@
+use std::ffi::OsStr;
 use std::fmt::Display;
 
+use assert_cmd::Command;
 use mockito::{Mock, Server, ServerGuard};
 use thiserror::Error;
 use trycmd::TestCases;
@@ -65,6 +67,19 @@ impl TestManager {
     /// Further configuration can be done with the `TrycmdTestManager`.
     pub fn register_trycmd_test(self, path: impl Display) -> TrycmdTestManager {
         TrycmdTestManager::new(self, path)
+    }
+
+    /// Define an assert_cmd test.
+    /// The args contain the command line arguments which will be passed to `sentry-cli`.
+    /// The test is run when the appropriate function is called on the returned
+    /// `AssertCmdTestManager`.
+    /// The test manager handles setting the environment variables for the test.
+    pub fn assert_cmd<I, S>(self, args: I) -> AssertCmdTestManager
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        AssertCmdTestManager::new(self, args)
     }
 
     /// Get the URL of the mock server.
@@ -156,5 +171,63 @@ impl TrycmdTestManager {
 
     fn server(&self) -> &ServerGuard {
         self.manager.server()
+    }
+}
+
+pub struct AssertCmdTestManager {
+    manager: TestManager,
+    command: Command,
+}
+
+/// The type of assertion to perform on the command result.
+// Currently we only assert success, but we may add other assertions
+// (e.g. failure or skip) in the future.
+pub enum AssertCommand {
+    /// Assert that the command succeeds (i.e. returns a `0` exit code).
+    Success,
+}
+
+impl AssertCmdTestManager {
+    /// Set the auth token environment variable to a fake value.
+    /// This may be needed when running a Sentry CLI command that checks that
+    /// an auth token is set. No token is set by default.
+    pub fn with_default_token(mut self) -> Self {
+        env::set_auth_token(|k, v| {
+            self.command.env(k, v.as_ref());
+        });
+
+        self
+    }
+
+    /// Run the command and perform assertions.
+    ///
+    /// This function asserts both the mocks and the command result.
+    /// The mocks are asserted first, since a failure in the mocks
+    /// could cause the command to fail. The function consumes the
+    /// `AssertCmdTestManager`, as it should not be used after this call.
+    ///
+    /// Panics if any assertions fail.
+    pub fn run_and_assert(mut self, assert: AssertCommand) {
+        let command_result = self.command.assert();
+        self.manager.assert_mock_endpoints();
+
+        match assert {
+            AssertCommand::Success => command_result.success(),
+        };
+    }
+
+    fn new<I, S>(manager: TestManager, args: I) -> Self
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<OsStr>,
+    {
+        let mut command = Command::cargo_bin("sentry-cli").expect("sentry-cli should be available");
+        command.args(args);
+
+        env::set(manager.server_info(), |k, v| {
+            command.env(k, v.as_ref());
+        });
+
+        Self { manager, command }
     }
 }
