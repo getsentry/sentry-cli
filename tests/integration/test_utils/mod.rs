@@ -1,5 +1,6 @@
 //! A collection of utilities for integration tests.
 
+pub mod chunk_upload;
 pub mod env;
 
 mod mock_common_endpoints;
