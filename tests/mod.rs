@@ -1,1 +1,2 @@
+mod collections;
 mod integration;
