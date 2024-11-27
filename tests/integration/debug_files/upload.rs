@@ -4,7 +4,7 @@ use std::{fs, str};
 
 use regex::bytes::Regex;
 
-use crate::integration::{AssertCommand, MockEndpointBuilder, TestManager};
+use crate::integration::{chunk_upload, AssertCommand, MockEndpointBuilder, TestManager};
 
 /// This regex is used to extract the boundary from the content-type header.
 /// We need to match the boundary, since it changes with each request.
@@ -282,6 +282,101 @@ fn ensure_correct_chunk_upload() {
             "debug-files upload --include-sources tests/integration/_fixtures/SrcGenSampleApp.pdb"
                 .split(' '),
         )
+        .with_default_token()
+        .run_and_assert(AssertCommand::Success);
+}
+
+#[test]
+/// This test verifies a correct chunk upload of multiple debug files.
+fn chunk_upload_multiple_files() {
+    let expected_chunk_body = fs::read(
+        "tests/integration/_expected_requests/debug_files/upload/chunk_upload_multiple_files.bin",
+    )
+    .expect("expected chunk body file should be present");
+    // This is the boundary used in the expected request file.
+    // It was randomly generated when the expected request was recorded.
+    let boundary_of_expected_request = "------------------------b26LKrHFvpOPfwMoDhYNY8";
+
+    let is_first_assemble_call = AtomicBool::new(true);
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("debug_files/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_fn(move |request| {
+                    let boundary = chunk_upload::boundary_from_request(request)
+                        .expect("content-type header should be a valid multipart/form-data header");
+
+                    let body = request.body().expect("body should be readable");
+
+                    let chunks = chunk_upload::split_chunk_body(body, boundary)
+                        .expect("body should be a valid multipart/form-data body");
+
+                    let expected_chunks = chunk_upload::split_chunk_body(
+                        &expected_chunk_body,
+                        boundary_of_expected_request,
+                    )
+                    .expect("expected chunk body is a valid multipart/form-data body");
+
+                    // Using assert! because in case of failure, the output with assert_eq!
+                    // is too long to be useful.
+                    assert!(
+                        chunks == expected_chunks,
+                        "Uploaded chunks differ from the expected chunks"
+                    );
+
+                    vec![]
+                }),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+            )
+            .with_header_matcher("content-type", "application/json")
+            .with_response_fn(move |_| {
+                if is_first_assemble_call.swap(false, Ordering::Relaxed) {
+                    r#"{
+                        "6e217f035ed538d4d6c14129baad5cb52e680e74": {
+                            "state": "not_found",
+                            "missingChunks": ["6e217f035ed538d4d6c14129baad5cb52e680e74"]
+                        },
+                        "500848b7815119669a292f2ae1f44af11d7aa2d3": {
+                            "state": "not_found",
+                            "missingChunks": ["500848b7815119669a292f2ae1f44af11d7aa2d3"]
+                        },
+                        "fc27d95861d56fe16a2b66150e31652b76e8c678": {
+                            "state": "not_found",
+                            "missingChunks": ["fc27d95861d56fe16a2b66150e31652b76e8c678"]
+                        }
+                    }"#
+                } else {
+                    r#"{
+                        "6e217f035ed538d4d6c14129baad5cb52e680e74": {
+                            "state": "created",
+                            "missingChunks": []
+                        },
+                        "500848b7815119669a292f2ae1f44af11d7aa2d3": {
+                            "state": "created",
+                            "missingChunks": []
+                        },
+                        "fc27d95861d56fe16a2b66150e31652b76e8c678": {
+                            "state": "created",
+                            "missingChunks": []
+                        }
+                    }"#
+                }
+                .into()
+            })
+            .expect(2),
+        )
+        .assert_cmd(vec![
+            "debug-files",
+            "upload",
+            "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files",
+        ])
         .with_default_token()
         .run_and_assert(AssertCommand::Success);
 }
