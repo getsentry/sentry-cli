@@ -171,7 +171,7 @@ pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
 
 /// Returns the SHA1 hash for the entire input, as well as each chunk of it. The
 /// `chunk_size` must be a power of two.
-pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<Digest>)> {
+pub fn get_sha1_checksums(data: &[u8], chunk_size: usize) -> Result<(Digest, Vec<Digest>)> {
     if !chunk_size.is_power_of_two() {
         bail!("Chunk size must be a power of two");
     }
@@ -179,7 +179,7 @@ pub fn get_sha1_checksums(data: &[u8], chunk_size: u64) -> Result<(Digest, Vec<D
     let mut total_sha = Sha1::new();
     let mut chunks = Vec::new();
 
-    for chunk in data.chunks(chunk_size as usize) {
+    for chunk in data.chunks(chunk_size) {
         let mut chunk_sha = Sha1::new();
         chunk_sha.update(chunk);
         total_sha.update(chunk);

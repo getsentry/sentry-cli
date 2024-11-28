@@ -38,7 +38,7 @@ impl ChunkedMapping {
         let raw_data = fs::read(mapping)?;
         let file_name = format!("/proguard/{}.txt", mapping.uuid);
 
-        let (hash, chunk_hashes) = get_sha1_checksums(&raw_data, chunk_size)?;
+        let (hash, chunk_hashes) = get_sha1_checksums(&raw_data, chunk_size as usize)?;
         Ok(Self {
             raw_data,
             hash,

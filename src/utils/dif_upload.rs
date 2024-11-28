@@ -332,7 +332,7 @@ impl<'data> ChunkedDifMatch<'data> {
     /// Slices the DIF into chunks of `chunk_size` bytes each, and computes SHA1
     /// checksums for every chunk as well as the entire DIF.
     pub fn from(inner: DifMatch<'data>, chunk_size: u64) -> Result<Self> {
-        let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size)?;
+        let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size as usize)?;
         Ok(ChunkedDifMatch {
             inner: HashedDifMatch { inner, checksum },
             chunks,
