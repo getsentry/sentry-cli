@@ -5,6 +5,10 @@
 //!
 //! See `BatchedSliceExt::batches` for more information.
 
+mod types;
+
+pub use types::{Chunked, MissingObjectsInfo};
+
 use std::sync::Arc;
 use std::time::Duration;
 

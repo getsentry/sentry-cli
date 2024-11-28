@@ -12,7 +12,6 @@ use std::mem::transmute;
 use std::ops::Deref;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
-use std::slice::{Chunks, Iter};
 use std::str;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -39,10 +38,11 @@ use crate::api::{
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{
-    upload_chunks, BatchedSliceExt, Chunk, ItemSize, ASSEMBLE_POLL_INTERVAL,
+    upload_chunks, BatchedSliceExt, Chunk, Chunked, ItemSize, MissingObjectsInfo,
+    ASSEMBLE_POLL_INTERVAL,
 };
 use crate::utils::dif::ObjectDifFeatures;
-use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempDir, TempFile};
+use crate::utils::fs::{get_sha1_checksum, TempDir, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
@@ -51,25 +51,6 @@ pub use crate::api::DebugInfoFile;
 
 /// Fallback maximum number of chunks in a batch for the legacy upload.
 static MAX_CHUNKS: u64 = 64;
-
-/// An iterator over chunks of data in a `ChunkedDifMatch` object.
-///
-/// This struct is returned by `ChunkedDifMatch::chunks`.
-struct DifChunks<'a> {
-    checksums: Iter<'a, Digest>,
-    iter: Chunks<'a, u8>,
-}
-
-impl<'a> Iterator for DifChunks<'a> {
-    type Item = Chunk<'a>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match (self.checksums.next(), self.iter.next()) {
-            (Some(checksum), Some(data)) => Some(Chunk((*checksum, data))),
-            (_, _) => None,
-        }
-    }
-}
 
 /// A Debug Information File.
 ///
@@ -286,6 +267,40 @@ impl fmt::Debug for DifMatch<'_> {
     }
 }
 
+impl AsRef<[u8]> for DifMatch<'_> {
+    fn as_ref(&self) -> &[u8] {
+        self.data()
+    }
+}
+
+trait ToAssemble {
+    fn to_assemble(&self, with_debug_id: bool) -> (Digest, ChunkedDifRequest<'_>);
+}
+
+impl ToAssemble for Chunked<DifMatch<'_>> {
+    /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
+    // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
+    // present, which is kind of a protocol bug.  Not supplying it means more recent
+    // sentry-cli versions keep working with ancient versions of sentry by not
+    // triggering this protocol bug in most common situations.
+    // See: https://github.com/getsentry/sentry-cli/issues/980
+    // See: https://github.com/getsentry/sentry-cli/issues/1056
+    fn to_assemble(&self, with_debug_id: bool) -> (Digest, ChunkedDifRequest<'_>) {
+        (
+            self.checksum(),
+            ChunkedDifRequest {
+                name: self.object().file_name(),
+                debug_id: if with_debug_id {
+                    self.object().debug_id
+                } else {
+                    None
+                },
+                chunks: self.chunk_hashes(),
+            },
+        )
+    }
+}
+
 /// A `DifMatch` with computed SHA1 checksum.
 #[derive(Debug)]
 struct HashedDifMatch<'data> {
@@ -315,72 +330,6 @@ impl<'data> Deref for HashedDifMatch<'data> {
 }
 
 impl ItemSize for HashedDifMatch<'_> {
-    fn size(&self) -> u64 {
-        self.deref().size()
-    }
-}
-
-/// A chunked `DifMatch` with computed SHA1 checksums.
-#[derive(Debug)]
-struct ChunkedDifMatch<'data> {
-    inner: HashedDifMatch<'data>,
-    chunks: Vec<Digest>,
-    chunk_size: u64,
-}
-
-impl<'data> ChunkedDifMatch<'data> {
-    /// Slices the DIF into chunks of `chunk_size` bytes each, and computes SHA1
-    /// checksums for every chunk as well as the entire DIF.
-    pub fn from(inner: DifMatch<'data>, chunk_size: u64) -> Result<Self> {
-        let (checksum, chunks) = get_sha1_checksums(inner.data(), chunk_size as usize)?;
-        Ok(ChunkedDifMatch {
-            inner: HashedDifMatch { inner, checksum },
-            chunks,
-            chunk_size,
-        })
-    }
-
-    /// Returns an iterator over all chunk checksums.
-    pub fn checksums(&self) -> Iter<'_, Digest> {
-        self.chunks.iter()
-    }
-
-    /// Returns an iterator over all `DifChunk`s.
-    pub fn chunks(&self) -> DifChunks<'_> {
-        DifChunks {
-            checksums: self.checksums(),
-            iter: self.data().chunks(self.chunk_size as usize),
-        }
-    }
-
-    /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
-    // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
-    // present, which is kind of a protocol bug.  Not supplying it means more recent
-    // sentry-cli versions keep working with ancient versions of sentry by not
-    // triggering this protocol bug in most common situations.
-    // See: https://github.com/getsentry/sentry-cli/issues/980
-    // See: https://github.com/getsentry/sentry-cli/issues/1056
-    pub fn to_assemble(&self, with_debug_id: bool) -> (Digest, ChunkedDifRequest<'_>) {
-        (
-            self.checksum(),
-            ChunkedDifRequest {
-                name: self.file_name(),
-                debug_id: if with_debug_id { self.debug_id } else { None },
-                chunks: &self.chunks,
-            },
-        )
-    }
-}
-
-impl<'data> Deref for ChunkedDifMatch<'data> {
-    type Target = HashedDifMatch<'data>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl ItemSize for ChunkedDifMatch<'_> {
     fn size(&self) -> u64 {
         self.deref().size()
     }
@@ -468,10 +417,6 @@ impl DifSource<'_> {
         }
     }
 }
-
-/// Information returned by `assemble_difs` containing flat lists of incomplete
-/// DIFs and their missing chunks.
-type MissingDifsInfo<'data, 'm> = (Vec<&'m ChunkedDifMatch<'data>>, Vec<Chunk<'m>>);
 
 /// Verifies that the given path contains a ZIP file and opens it.
 fn try_open_zip<P>(path: P) -> Result<Option<ZipFileArchive>>
@@ -1268,9 +1213,9 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
 /// The returned value contains separate vectors for incomplete DIFs and
 /// missing chunks for convenience.
 fn try_assemble_difs<'data, 'm>(
-    difs: &'m [ChunkedDifMatch<'data>],
+    difs: &'m [Chunked<DifMatch<'data>>],
     options: &DifUpload,
-) -> Result<MissingDifsInfo<'data, 'm>> {
+) -> Result<MissingObjectsInfo<'m, DifMatch<'data>>> {
     let api = Api::current();
     let request = difs
         .iter()
@@ -1288,7 +1233,7 @@ fn try_assemble_difs<'data, 'm>(
     // nicer.
     let difs_by_checksum = difs
         .iter()
-        .map(|m| (m.checksum, m))
+        .map(|m| (m.checksum(), m))
         .collect::<BTreeMap<_, _>>();
 
     let mut difs = Vec::new();
@@ -1317,7 +1262,7 @@ fn try_assemble_difs<'data, 'm>(
                 // will have to call `try_assemble_difs` again after uploading
                 // them.
                 let mut missing_chunks = chunked_match
-                    .chunks()
+                    .iter_chunks()
                     .filter(|&Chunk((c, _))| file_response.missing_chunks.contains(&c))
                     .peekable();
 
@@ -1346,11 +1291,11 @@ fn try_assemble_difs<'data, 'm>(
 /// `chunk_options`.
 ///
 /// This function blocks until all chunks have been uploaded.
-fn upload_missing_chunks(
-    missing_info: &MissingDifsInfo<'_, '_>,
+fn upload_missing_chunks<T>(
+    missing_info: &MissingObjectsInfo<'_, T>,
     chunk_options: &ChunkUploadOptions,
 ) -> Result<()> {
-    let (difs, chunks) = missing_info;
+    let (objects, chunks) = missing_info;
 
     // Chunks might be empty if errors occurred in a previous upload. We do
     // not need to render a progress bar or perform an upload in this case.
@@ -1362,8 +1307,8 @@ fn upload_missing_chunks(
         "{} Uploading {} missing debug information file{}...\
          \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
         style(">").dim(),
-        style(difs.len().to_string()).yellow(),
-        if difs.len() == 1 { "" } else { "s" }
+        style(objects.len().to_string()).yellow(),
+        if objects.len() == 1 { "" } else { "s" }
     ));
 
     upload_chunks(chunks, chunk_options, progress_style)?;
@@ -1371,8 +1316,8 @@ fn upload_missing_chunks(
     println!(
         "{} Uploaded {} missing debug information {}",
         style(">").dim(),
-        style(difs.len().to_string()).yellow(),
-        match difs.len() {
+        style(objects.len().to_string()).yellow(),
+        match objects.len() {
             1 => "file",
             _ => "files",
         }
@@ -1408,7 +1353,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 /// This function assumes that all chunks have been uploaded successfully. If there are still
 /// missing chunks in the assemble response, this likely indicates a bug in the server.
 fn poll_dif_assemble(
-    difs: &[&ChunkedDifMatch<'_>],
+    difs: &[&Chunked<DifMatch<'_>>],
     options: &DifUpload,
 ) -> Result<(Vec<DebugInfoFile>, bool)> {
     let progress_style = ProgressStyle::default_bar().template(
@@ -1490,7 +1435,7 @@ fn poll_dif_assemble(
             .to_owned()
     });
 
-    let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum, m)).collect();
+    let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum(), m)).collect();
 
     for &(checksum, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
@@ -1512,6 +1457,7 @@ fn poll_dif_assemble(
             // If we skip waiting for the server to finish processing, there
             // are pending entries. We only expect results that have been
             // uploaded in the first place, so we can skip everything else.
+            let dif = dif.object();
             let kind = match dif.dif.get() {
                 ParsedDif::Object(ref object) => match object.kind() {
                     symbolic::debuginfo::ObjectKind::None => String::new(),
@@ -1550,7 +1496,7 @@ fn poll_dif_assemble(
             .ok_or_else(|| format_err!("Server returned unexpected checksum"))?;
         errored.push((dif, error));
     }
-    errored.sort_by_key(|x| x.0.file_name());
+    errored.sort_by_key(|x| x.0.object().file_name());
 
     let has_errors = !errored.is_empty();
     for (dif, error) in errored {
@@ -1560,7 +1506,7 @@ fn poll_dif_assemble(
             _ => Some("An unknown error occurred"),
         };
 
-        println!("  {:>7} {}", style("ERROR").red(), dif.file_name());
+        println!("  {:>7} {}", style("ERROR").red(), dif.object().file_name());
         render_detail(&error.detail, fallback);
     }
 
@@ -1600,7 +1546,7 @@ fn upload_difs_chunked(
 
     // Calculate checksums and chunks
     let chunked = prepare_difs(processed, |m| {
-        ChunkedDifMatch::from(m, chunk_options.chunk_size)
+        Chunked::from(m, chunk_options.chunk_size as usize)
     })?;
 
     // Upload missing chunks to the server and remember incomplete difs
