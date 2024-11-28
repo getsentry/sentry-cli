@@ -1212,12 +1212,16 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
 ///
 /// The returned value contains separate vectors for incomplete DIFs and
 /// missing chunks for convenience.
-fn try_assemble_difs<'data, 'm>(
-    difs: &'m [Chunked<DifMatch<'data>>],
+fn try_assemble<'m, T>(
+    objects: &'m [Chunked<T>],
     options: &DifUpload,
-) -> Result<MissingObjectsInfo<'m, DifMatch<'data>>> {
+) -> Result<MissingObjectsInfo<'m, T>>
+where
+    T: AsRef<[u8]>,
+    Chunked<T>: ToAssemble,
+{
     let api = Api::current();
-    let request = difs
+    let request = objects
         .iter()
         .map(|d| d.to_assemble(options.pdbs_allowed))
         .collect();
@@ -1231,7 +1235,7 @@ fn try_assemble_difs<'data, 'm>(
     // performed twice with the same data. While this is redundant, it is also
     // fast enough and keeping it here makes the `try_assemble_difs` interface
     // nicer.
-    let difs_by_checksum = difs
+    let difs_by_checksum = objects
         .iter()
         .map(|m| (m.checksum(), m))
         .collect::<BTreeMap<_, _>>();
@@ -1550,7 +1554,7 @@ fn upload_difs_chunked(
     })?;
 
     // Upload missing chunks to the server and remember incomplete difs
-    let missing_info = try_assemble_difs(&chunked, options)?;
+    let missing_info = try_assemble(&chunked, options)?;
     upload_missing_chunks(&missing_info, chunk_options)?;
 
     // Only if DIFs were missing, poll until assembling is complete
