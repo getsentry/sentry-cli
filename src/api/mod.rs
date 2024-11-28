@@ -1390,7 +1390,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 }
 
-impl<'a> RegionSpecificApi<'a> {
+impl RegionSpecificApi<'_> {
     fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         self.api
             .api

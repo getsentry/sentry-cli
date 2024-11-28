@@ -17,7 +17,7 @@ pub enum GitReference<'a> {
     Symbolic(&'a str),
 }
 
-impl<'a> fmt::Display for GitReference<'a> {
+impl fmt::Display for GitReference<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             GitReference::Commit(ref c) => write!(f, "{c}"),

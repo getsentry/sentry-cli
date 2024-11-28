@@ -148,7 +148,7 @@ impl<'data> AsRef<(Digest, &'data [u8])> for Chunk<'data> {
     }
 }
 
-impl<'data> ItemSize for Chunk<'data> {
+impl ItemSize for Chunk<'_> {
     fn size(&self) -> u64 {
         (self.0).1.len() as u64
     }

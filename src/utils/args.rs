@@ -84,7 +84,7 @@ pub trait ArgExt: Sized {
     fn version_arg(self, global: bool) -> Self;
 }
 
-impl<'a: 'b, 'b> ArgExt for Command {
+impl ArgExt for Command {
     fn org_arg(self) -> Command {
         self.arg(
             Arg::new("org")

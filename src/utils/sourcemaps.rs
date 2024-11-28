@@ -222,10 +222,10 @@ fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
 
 /// Return true iff url is a remote url (not a local path or embedded sourcemap).
 fn is_remote_url(url: &str) -> bool {
-    return match Url::parse(url) {
+    match Url::parse(url) {
         Ok(url) => url.scheme() != "data",
         Err(_) => false,
-    };
+    }
 }
 
 /// Return true if url appears to be a URL path.

@@ -86,7 +86,7 @@ enum ParsedDif<'a> {
 impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
     type Ref = ParsedDif<'data>;
 
-    fn as_self(&'slf self) -> &Self::Ref {
+    fn as_self(&'slf self) -> &'slf Self::Ref {
         self
     }
 }
@@ -275,7 +275,7 @@ impl<'data> DifMatch<'data> {
     }
 }
 
-impl<'data> fmt::Debug for DifMatch<'data> {
+impl fmt::Debug for DifMatch<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("DifMatch")
             .field("name", &self.name)
@@ -314,7 +314,7 @@ impl<'data> Deref for HashedDifMatch<'data> {
     }
 }
 
-impl<'data> ItemSize for HashedDifMatch<'data> {
+impl ItemSize for HashedDifMatch<'_> {
     fn size(&self) -> u64 {
         self.deref().size()
     }
@@ -380,7 +380,7 @@ impl<'data> Deref for ChunkedDifMatch<'data> {
     }
 }
 
-impl<'data> ItemSize for ChunkedDifMatch<'data> {
+impl ItemSize for ChunkedDifMatch<'_> {
     fn size(&self) -> u64 {
         self.deref().size()
     }
@@ -402,7 +402,7 @@ enum DifSource<'a> {
     Zip(&'a mut ZipFileArchive, &'a str),
 }
 
-impl<'a> DifSource<'a> {
+impl DifSource<'_> {
     /// Resolves a file relative to the directory of `base`, stripping of the
     /// file name.
     fn get_relative_fs(base: &Path, path: &Path) -> Option<ByteView<'static>> {

@@ -18,7 +18,7 @@ pub struct Deploy<'d> {
     pub projects: Option<Vec<Cow<'d, str>>>,
 }
 
-impl<'d> Deploy<'d> {
+impl Deploy<'_> {
     /// Returns the name of this deploy, defaulting to `"unnamed"`.
     pub fn name(&self) -> &str {
         match self.name.as_deref() {

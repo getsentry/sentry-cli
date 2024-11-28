@@ -93,7 +93,7 @@ pub struct UploadContext<'a> {
     pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
 }
 
-impl<'a> UploadContext<'a> {
+impl UploadContext<'_> {
     pub fn release(&self) -> Result<&str> {
         self.release
             .ok_or_else(|| anyhow!("A release slug is required (provide with --release)"))

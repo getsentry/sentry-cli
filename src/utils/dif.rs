@@ -181,7 +181,7 @@ impl<'a> std::ops::Deref for SelfProguard<'a> {
 impl<'slf> symbolic::common::AsSelf<'slf> for SelfProguard<'_> {
     type Ref = SelfProguard<'slf>;
 
-    fn as_self(&'slf self) -> &Self::Ref {
+    fn as_self(&'slf self) -> &'slf Self::Ref {
         self
     }
 }
