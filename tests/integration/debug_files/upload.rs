@@ -289,13 +289,14 @@ fn ensure_correct_chunk_upload() {
 #[test]
 /// This test verifies a correct chunk upload of multiple debug files.
 fn chunk_upload_multiple_files() {
+    /// This is the boundary used in the expected request file.
+    /// It was randomly generated when the expected request was recorded.
+    const EXPECTED_REQUEST_BOUNDARY: &str = "------------------------b26LKrHFvpOPfwMoDhYNY8";
+
     let expected_chunk_body = fs::read(
         "tests/integration/_expected_requests/debug_files/upload/chunk_upload_multiple_files.bin",
     )
     .expect("expected chunk body file should be present");
-    // This is the boundary used in the expected request file.
-    // It was randomly generated when the expected request was recorded.
-    let boundary_of_expected_request = "------------------------b26LKrHFvpOPfwMoDhYNY8";
 
     let is_first_assemble_call = AtomicBool::new(true);
     TestManager::new()
@@ -316,7 +317,7 @@ fn chunk_upload_multiple_files() {
 
                     let expected_chunks = chunk_upload::split_chunk_body(
                         &expected_chunk_body,
-                        boundary_of_expected_request,
+                        EXPECTED_REQUEST_BOUNDARY,
                     )
                     .expect("expected chunk body is a valid multipart/form-data body");
 
