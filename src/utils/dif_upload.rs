@@ -4,7 +4,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
-use std::fmt::{self, Display};
+use std::fmt::{self, Display, Formatter};
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Read, Seek, Write};
 use std::iter::IntoIterator;
@@ -38,7 +38,7 @@ use crate::api::{
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{
-    upload_chunks, BatchedSliceExt, Chunk, Chunked, ItemSize, MissingObjectsInfo,
+    upload_chunks, BatchedSliceExt, Chunk, Chunked, ItemSize, MissingObjectsInfo, Named,
     ASSEMBLE_POLL_INTERVAL,
 };
 use crate::utils::dif::ObjectDifFeatures;
@@ -270,6 +270,44 @@ impl fmt::Debug for DifMatch<'_> {
 impl AsRef<[u8]> for DifMatch<'_> {
     fn as_ref(&self) -> &[u8] {
         self.data()
+    }
+}
+
+impl Display for DifMatch<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let kind = match self.dif.get() {
+            ParsedDif::Object(ref object) => match object.kind() {
+                symbolic::debuginfo::ObjectKind::None => String::new(),
+                k => format!(" {k:#}"),
+            },
+            ParsedDif::BcSymbolMap => String::from("bcsymbolmap"),
+            ParsedDif::UuidMap => String::from("uuidmap"),
+            ParsedDif::Il2Cpp => String::from("il2cpp"),
+        };
+
+        write!(
+            f,
+            "{} ({}; {}{})",
+            style(self.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
+            self.name,
+            self.object()
+                .map(|object| {
+                    let arch = object.arch();
+                    match arch {
+                        Arch::Unknown => String::new(),
+                        _ => arch.to_string(),
+                    }
+                })
+                .unwrap_or_default(),
+            kind,
+        )
+    }
+}
+
+impl Named for DifMatch<'_> {
+    /// A DIF's name is its file name.
+    fn name(&self) -> &str {
+        self.file_name()
     }
 }
 
@@ -1361,23 +1399,27 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 ///
 /// This function assumes that all chunks have been uploaded successfully. If there are still
 /// missing chunks in the assemble response, this likely indicates a bug in the server.
-fn poll_dif_assemble(
-    difs: &[&Chunked<DifMatch<'_>>],
+fn poll_assemble<T>(
+    chunked_objects: &[&Chunked<T>],
     options: &DifUpload,
-) -> Result<(Vec<DebugInfoFile>, bool)> {
+) -> Result<(Vec<DebugInfoFile>, bool)>
+where
+    T: Display + Named,
+    Chunked<T>: IntoAssembleRequest,
+{
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
          \n{wide_bar}  {pos}/{len}",
     );
 
     let api = Api::current();
-    let pb = ProgressBar::new(difs.len());
+    let pb = ProgressBar::new(chunked_objects.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
     let assemble_start = Instant::now();
 
-    let request = difs
+    let request = chunked_objects
         .iter()
         .map(|d| d.assemble_request(options.pdbs_allowed))
         .collect();
@@ -1413,7 +1455,7 @@ fn poll_dif_assemble(
             .filter(|&(_, r)| r.state.is_pending())
             .count();
 
-        pb.set_position((difs.len() - pending) as u64);
+        pb.set_position((chunked_objects.len() - pending) as u64);
 
         if pending == 0 {
             break response;
@@ -1444,7 +1486,8 @@ fn poll_dif_assemble(
             .to_owned()
     });
 
-    let difs_by_checksum: BTreeMap<_, _> = difs.iter().map(|m| (m.checksum(), m)).collect();
+    let objects_by_checksum: BTreeMap<_, _> =
+        chunked_objects.iter().map(|m| (m.checksum(), m)).collect();
 
     for &(checksum, ref success) in &successes {
         // Silently skip all OK entries without a "dif" record since the server
@@ -1462,37 +1505,11 @@ fn poll_dif_assemble(
             );
 
             render_detail(&success.detail, None);
-        } else if let Some(dif) = difs_by_checksum.get(&checksum) {
+        } else if let Some(object) = objects_by_checksum.get(&checksum) {
             // If we skip waiting for the server to finish processing, there
             // are pending entries. We only expect results that have been
             // uploaded in the first place, so we can skip everything else.
-            let dif = dif.object();
-            let kind = match dif.dif.get() {
-                ParsedDif::Object(ref object) => match object.kind() {
-                    symbolic::debuginfo::ObjectKind::None => String::new(),
-                    k => format!(" {k:#}"),
-                },
-                ParsedDif::BcSymbolMap => String::from("bcsymbolmap"),
-                ParsedDif::UuidMap => String::from("uuidmap"),
-                ParsedDif::Il2Cpp => String::from("il2cpp"),
-            };
-
-            println!(
-                "  {:>8} {} ({}; {}{})",
-                style("UPLOADED").yellow(),
-                style(dif.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
-                dif.name,
-                dif.object()
-                    .map(|object| {
-                        let arch = object.arch();
-                        match arch {
-                            Arch::Unknown => String::new(),
-                            _ => arch.to_string(),
-                        }
-                    })
-                    .unwrap_or_default(),
-                kind,
-            );
+            println!("  {:>8} {}", style("UPLOADED").yellow(), object);
         }
         // All other entries will be in the `errors` list.
     }
@@ -1500,22 +1517,22 @@ fn poll_dif_assemble(
     // Print a summary of all errors at the bottom.
     let mut errored = vec![];
     for (checksum, error) in errors {
-        let dif = difs_by_checksum
+        let object = objects_by_checksum
             .get(&checksum)
             .ok_or_else(|| format_err!("Server returned unexpected checksum"))?;
-        errored.push((dif, error));
+        errored.push((object, error));
     }
-    errored.sort_by_key(|x| x.0.object().file_name());
+    errored.sort_by_key(|x| x.0.name());
 
     let has_errors = !errored.is_empty();
-    for (dif, error) in errored {
+    for (object, error) in errored {
         let fallback = match error.state {
             ChunkedFileState::Assembling => Some("The file is still processing and not ready yet"),
             ChunkedFileState::NotFound => Some("The file could not be saved"),
             _ => Some("An unknown error occurred"),
         };
 
-        println!("  {:>7} {}", style("ERROR").red(), dif.object().file_name());
+        println!("  {:>7} {}", style("ERROR").red(), object.name());
         render_detail(&error.detail, fallback);
     }
 
@@ -1565,7 +1582,7 @@ fn upload_difs_chunked(
     // Only if DIFs were missing, poll until assembling is complete
     let (missing_difs, _) = missing_info;
     if !missing_difs.is_empty() {
-        poll_dif_assemble(&missing_difs, options)
+        poll_assemble(&missing_difs, options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",

@@ -7,7 +7,7 @@
 
 mod types;
 
-pub use types::{Chunked, MissingObjectsInfo};
+pub use types::{Chunked, MissingObjectsInfo, Named};
 
 use std::sync::Arc;
 use std::time::Duration;

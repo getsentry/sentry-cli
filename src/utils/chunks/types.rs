@@ -1,5 +1,7 @@
 //! Contains data types used in the chunk upload process.
 
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use anyhow::Result;
 use sha1_smol::Digest;
 
@@ -9,6 +11,12 @@ use crate::utils::fs;
 /// Information returned by `assemble_difs` containing flat lists of incomplete
 /// objects and their missing chunks.
 pub type MissingObjectsInfo<'m, T> = (Vec<&'m Chunked<T>>, Vec<Chunk<'m>>);
+
+/// A trait for objects that have a name.
+pub trait Named {
+    /// Returns the name of the object.
+    fn name(&self) -> &str;
+}
 
 /// Chunked arbitrary data with computed SHA1 checksums.
 pub struct Chunked<T> {
@@ -67,5 +75,23 @@ where
             .chunks(self.chunk_size)
             .zip(self.chunk_hashes().iter())
             .map(|(data, checksum)| Chunk((*checksum, data)))
+    }
+}
+
+impl<T> Display for Chunked<T>
+where
+    T: Display,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{}", self.object())
+    }
+}
+
+impl<T> Named for Chunked<T>
+where
+    T: Named,
+{
+    fn name(&self) -> &str {
+        self.object().name()
     }
 }
