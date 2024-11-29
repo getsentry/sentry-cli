@@ -273,19 +273,24 @@ impl AsRef<[u8]> for DifMatch<'_> {
     }
 }
 
-trait ToAssemble {
-    fn to_assemble(&self, with_debug_id: bool) -> (Digest, ChunkedDifRequest<'_>);
+/// A tuple which can be collected into a mapping of checksums to
+/// `ChunkedDifRequest`s. The collected mapping can be sent in a
+/// request to the assemble endpoint.
+type AssembleRequest<'a> = (Digest, ChunkedDifRequest<'a>);
+
+trait IntoAssembleRequest {
+    /// Creates an `AssembleRequest` tuple for this object.
+    fn assemble_request(&self, with_debug_id: bool) -> AssembleRequest<'_>;
 }
 
-impl ToAssemble for Chunked<DifMatch<'_>> {
-    /// Creates a tuple which can be collected into a `ChunkedDifRequest`.
+impl IntoAssembleRequest for Chunked<DifMatch<'_>> {
     // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
     // present, which is kind of a protocol bug.  Not supplying it means more recent
     // sentry-cli versions keep working with ancient versions of sentry by not
     // triggering this protocol bug in most common situations.
     // See: https://github.com/getsentry/sentry-cli/issues/980
     // See: https://github.com/getsentry/sentry-cli/issues/1056
-    fn to_assemble(&self, with_debug_id: bool) -> (Digest, ChunkedDifRequest<'_>) {
+    fn assemble_request(&self, with_debug_id: bool) -> AssembleRequest<'_> {
         (
             self.checksum(),
             ChunkedDifRequest {
@@ -1218,12 +1223,12 @@ fn try_assemble<'m, T>(
 ) -> Result<MissingObjectsInfo<'m, T>>
 where
     T: AsRef<[u8]>,
-    Chunked<T>: ToAssemble,
+    Chunked<T>: IntoAssembleRequest,
 {
     let api = Api::current();
     let request = objects
         .iter()
-        .map(|d| d.to_assemble(options.pdbs_allowed))
+        .map(|d| d.assemble_request(options.pdbs_allowed))
         .collect();
     let response = api
         .authenticated()?
@@ -1374,7 +1379,7 @@ fn poll_dif_assemble(
 
     let request = difs
         .iter()
-        .map(|d| d.to_assemble(options.pdbs_allowed))
+        .map(|d| d.assemble_request(options.pdbs_allowed))
         .collect();
     let response = loop {
         let response =
