@@ -12,8 +12,8 @@ use crate::utils::fs;
 /// objects and their missing chunks.
 pub type MissingObjectsInfo<'m, T> = (Vec<&'m Chunked<T>>, Vec<Chunk<'m>>);
 
-/// A trait for objects that have a name.
-pub trait Named {
+/// A trait for objects that can be assembled via the `assemble_difs` endpoint.
+pub trait Assemblable {
     /// Returns the name of the object.
     fn name(&self) -> &str;
 }
@@ -87,9 +87,9 @@ where
     }
 }
 
-impl<T> Named for Chunked<T>
+impl<T> Assemblable for Chunked<T>
 where
-    T: Named,
+    T: Assemblable,
 {
     fn name(&self) -> &str {
         self.object().name()

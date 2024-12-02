@@ -38,7 +38,7 @@ use crate::api::{
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{
-    upload_chunks, BatchedSliceExt, Chunk, Chunked, ItemSize, MissingObjectsInfo, Named,
+    upload_chunks, Assemblable, BatchedSliceExt, Chunk, Chunked, ItemSize, MissingObjectsInfo,
     ASSEMBLE_POLL_INTERVAL,
 };
 use crate::utils::dif::ObjectDifFeatures;
@@ -304,7 +304,7 @@ impl Display for DifMatch<'_> {
     }
 }
 
-impl Named for DifMatch<'_> {
+impl Assemblable for DifMatch<'_> {
     /// A DIF's name is its file name.
     fn name(&self) -> &str {
         self.file_name()
@@ -1404,7 +1404,7 @@ fn poll_assemble<T>(
     options: &DifUpload,
 ) -> Result<(Vec<DebugInfoFile>, bool)>
 where
-    T: Display + Named,
+    T: Display + Assemblable,
     Chunked<T>: IntoAssembleRequest,
 {
     let progress_style = ProgressStyle::default_bar().template(
