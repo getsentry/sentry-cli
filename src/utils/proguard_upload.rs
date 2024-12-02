@@ -58,16 +58,8 @@ impl ChunkedMapping {
 
 impl<'a> From<&'a ChunkedMapping> for ChunkedDifRequest<'a> {
     fn from(value: &'a ChunkedMapping) -> Self {
-        ChunkedDifRequest {
-            name: &value.file_name,
-            debug_id: None,
-            chunks: &value.chunk_hashes,
-        }
+        ChunkedDifRequest::new(&value.file_name, &value.chunk_hashes, value.hash)
     }
-}
-
-fn to_assemble(chunked: &ChunkedMapping) -> (Digest, ChunkedDifRequest<'_>) {
-    (chunked.hash, chunked.into())
 }
 
 /// Uploads a set of Proguard mappings to Sentry.
@@ -99,7 +91,7 @@ pub fn chunk_upload(
 
     println!("Waiting for server to assemble uploaded mappings...");
 
-    let assemble_request = chunked_mappings.iter().map(to_assemble).collect();
+    let assemble_request = chunked_mappings.iter().collect();
     let start = Instant::now();
     while Instant::now().duration_since(start) < ASSEMBLE_POLL_TIMEOUT {
         let all_assembled = Api::current()

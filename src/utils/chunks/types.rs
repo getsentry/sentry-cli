@@ -4,7 +4,9 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use anyhow::Result;
 use sha1_smol::Digest;
+use symbolic::common::DebugId;
 
+use crate::api::ChunkedDifRequest;
 use crate::utils::chunks::Chunk;
 use crate::utils::fs;
 
@@ -16,6 +18,10 @@ pub type MissingObjectsInfo<'m, T> = (Vec<&'m Chunked<T>>, Vec<Chunk<'m>>);
 pub trait Assemblable {
     /// Returns the name of the object.
     fn name(&self) -> &str;
+
+    /// Returns the debug ID of the object.
+    /// Types which do not have a debug ID should return `None`.
+    fn debug_id(&self) -> Option<DebugId>;
 }
 
 /// Chunked arbitrary data with computed SHA1 checksums.
@@ -93,5 +99,19 @@ where
 {
     fn name(&self) -> &str {
         self.object().name()
+    }
+
+    fn debug_id(&self) -> Option<DebugId> {
+        self.object().debug_id()
+    }
+}
+
+impl<'c, T> From<&'c Chunked<T>> for ChunkedDifRequest<'c>
+where
+    T: Assemblable,
+{
+    fn from(value: &'c Chunked<T>) -> Self {
+        Self::new(value.name(), value.chunk_hashes(), value.checksum())
+            .with_debug_id(value.debug_id())
     }
 }

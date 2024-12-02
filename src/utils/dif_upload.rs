@@ -33,7 +33,7 @@ use zip::result::ZipError;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
 
 use crate::api::{
-    Api, ChunkUploadCapability, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState,
+    Api, AssembleDifsRequest, ChunkUploadCapability, ChunkUploadOptions, ChunkedFileState,
 };
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
@@ -309,38 +309,9 @@ impl Assemblable for DifMatch<'_> {
     fn name(&self) -> &str {
         self.file_name()
     }
-}
 
-/// A tuple which can be collected into a mapping of checksums to
-/// `ChunkedDifRequest`s. The collected mapping can be sent in a
-/// request to the assemble endpoint.
-type AssembleRequest<'a> = (Digest, ChunkedDifRequest<'a>);
-
-trait IntoAssembleRequest {
-    /// Creates an `AssembleRequest` tuple for this object.
-    fn assemble_request(&self, with_debug_id: bool) -> AssembleRequest<'_>;
-}
-
-impl IntoAssembleRequest for Chunked<DifMatch<'_>> {
-    // Some(...) for debug_id can only be done if the ChunkedUploadCapability::Pdbs is
-    // present, which is kind of a protocol bug.  Not supplying it means more recent
-    // sentry-cli versions keep working with ancient versions of sentry by not
-    // triggering this protocol bug in most common situations.
-    // See: https://github.com/getsentry/sentry-cli/issues/980
-    // See: https://github.com/getsentry/sentry-cli/issues/1056
-    fn assemble_request(&self, with_debug_id: bool) -> AssembleRequest<'_> {
-        (
-            self.checksum(),
-            ChunkedDifRequest {
-                name: self.object().file_name(),
-                debug_id: if with_debug_id {
-                    self.object().debug_id
-                } else {
-                    None
-                },
-                chunks: self.chunk_hashes(),
-            },
-        )
+    fn debug_id(&self) -> Option<DebugId> {
+        self.debug_id
     }
 }
 
@@ -1260,14 +1231,15 @@ fn try_assemble<'m, T>(
     options: &DifUpload,
 ) -> Result<MissingObjectsInfo<'m, T>>
 where
-    T: AsRef<[u8]>,
-    Chunked<T>: IntoAssembleRequest,
+    T: AsRef<[u8]> + Assemblable,
 {
     let api = Api::current();
-    let request = objects
-        .iter()
-        .map(|d| d.assemble_request(options.pdbs_allowed))
-        .collect();
+    let mut request: AssembleDifsRequest<'_> = objects.iter().collect();
+
+    if !options.pdbs_allowed {
+        request.strip_debug_ids();
+    }
+
     let response = api
         .authenticated()?
         .assemble_difs(&options.org, &options.project, &request)?;
@@ -1405,7 +1377,6 @@ fn poll_assemble<T>(
 ) -> Result<(Vec<DebugInfoFile>, bool)>
 where
     T: Display + Assemblable,
-    Chunked<T>: IntoAssembleRequest,
 {
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Processing files...\
@@ -1419,10 +1390,11 @@ where
 
     let assemble_start = Instant::now();
 
-    let request = chunked_objects
-        .iter()
-        .map(|d| d.assemble_request(options.pdbs_allowed))
-        .collect();
+    let mut request: AssembleDifsRequest<'_> = chunked_objects.iter().copied().collect();
+    if !options.pdbs_allowed {
+        request.strip_debug_ids();
+    }
+
     let response = loop {
         let response =
             api.authenticated()?
