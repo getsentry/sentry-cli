@@ -4,12 +4,12 @@ use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 
+use ::proguard::ProguardMapping;
 use anyhow::{bail, Error, Result};
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use log::info;
-use proguard::ProguardMapping;
 use symbolic::common::ByteView;
 use uuid::Uuid;
 
@@ -19,7 +19,7 @@ use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
 use crate::utils::fs::TempFile;
-use crate::utils::proguard_upload;
+use crate::utils::proguard;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
@@ -230,7 +230,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 })
             })?;
 
-        proguard_upload::chunk_upload(&mappings, &chunk_upload_options, &org, &project)?;
+        proguard::chunk_upload(&mappings, &chunk_upload_options, &org, &project)?;
     } else {
         if mappings.is_empty() && matches.get_flag("require_one") {
             println!();

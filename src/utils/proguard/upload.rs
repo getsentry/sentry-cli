@@ -11,11 +11,11 @@ use anyhow::Result;
 use indicatif::ProgressStyle;
 use sha1_smol::Digest;
 
-use super::chunks;
-use super::chunks::Chunk;
-use super::fs::get_sha1_checksums;
 use crate::api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState};
 use crate::commands::upload_proguard::MappingRef;
+use crate::utils::chunks;
+use crate::utils::chunks::Chunk;
+use crate::utils::fs::get_sha1_checksums;
 
 /// How often to poll the server for the status of the assembled mappings.
 const ASSEMBLE_POLL_INTERVAL: Duration = Duration::from_secs(1);

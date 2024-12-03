@@ -16,7 +16,7 @@ pub mod http;
 pub mod logging;
 pub mod metrics;
 pub mod progress;
-pub mod proguard_upload;
+pub mod proguard;
 pub mod releases;
 pub mod retry;
 pub mod sourcemaps;
