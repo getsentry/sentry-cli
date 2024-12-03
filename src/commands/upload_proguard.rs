@@ -167,9 +167,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // request to figure out if any of the checksums are missing.  We just ship
     // them all up.
     for path in &paths {
-        match fs::metadata(path) {
-            Ok(md) => {
-                let byteview = ByteView::open(path).map_err(Error::new)?;
+        match ByteView::open(path) {
+            Ok(byteview) => {
                 let mapping = ProguardMapping::new(&byteview);
                 if !mapping.has_line_info() {
                     eprintln!(
@@ -179,7 +178,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 } else {
                     mappings.push(MappingRef {
                         path: PathBuf::from(path),
-                        size: md.len(),
+                        size: byteview.len() as u64,
                         uuid: forced_uuid.copied().unwrap_or_else(|| mapping.uuid()),
                     });
                 }
