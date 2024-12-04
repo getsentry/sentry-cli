@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 /// A trait representing options for chunk uploads.
 pub trait ChunkOptions {
     /// Determines whether we need to strip debug_ids from the requests.
@@ -11,4 +13,10 @@ pub trait ChunkOptions {
 
     /// Returns the project that we are uploading to.
     fn project(&self) -> &str;
+
+    /// Returns whether we should wait for assembling to complete.
+    fn should_wait(&self) -> bool;
+
+    /// Returns the maximum wait time for the upload to complete.
+    fn max_wait(&self) -> Duration;
 }

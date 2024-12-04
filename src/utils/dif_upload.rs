@@ -1374,7 +1374,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 /// missing chunks in the assemble response, this likely indicates a bug in the server.
 fn poll_assemble<T>(
     chunked_objects: &[&Chunked<T>],
-    options: &DifUpload,
+    options: &impl ChunkOptions,
 ) -> Result<(Vec<DebugInfoFile>, bool)>
 where
     T: Display + Assemblable,
@@ -1392,14 +1392,14 @@ where
     let assemble_start = Instant::now();
 
     let mut request: AssembleDifsRequest<'_> = chunked_objects.iter().copied().collect();
-    if !options.pdbs_allowed {
+    if options.should_strip_debug_ids() {
         request.strip_debug_ids();
     }
 
     let response = loop {
         let response =
             api.authenticated()?
-                .assemble_difs(&options.org, &options.project, &request)?;
+                .assemble_difs(options.org(), options.project(), &request)?;
 
         let chunks_missing = response
             .values()
@@ -1415,11 +1415,11 @@ where
         // Poll until there is a response, unless the user has specified to skip polling. In
         // that case, we return the potentially partial response from the server. This might
         // still contain a cached error.
-        if !options.wait {
+        if !options.should_wait() {
             break response;
         }
 
-        if assemble_start.elapsed() > options.max_wait {
+        if assemble_start.elapsed() > options.max_wait() {
             break response;
         }
 
@@ -1446,7 +1446,7 @@ where
 
     let (errors, mut successes): (Vec<_>, _) = response
         .into_iter()
-        .partition(|(_, r)| r.state.is_err() || options.wait && r.state.is_pending());
+        .partition(|(_, r)| r.state.is_err() || options.should_wait() && r.state.is_pending());
 
     // Print a summary of all successes first, so that errors show up at the
     // bottom for the user
@@ -2107,5 +2107,13 @@ impl ChunkOptions for DifUpload {
 
     fn project(&self) -> &str {
         &self.project
+    }
+
+    fn should_wait(&self) -> bool {
+        self.wait
+    }
+
+    fn max_wait(&self) -> Duration {
+        self.max_wait
     }
 }
