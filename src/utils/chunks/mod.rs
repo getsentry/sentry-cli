@@ -19,7 +19,7 @@ use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
 use sha1_smol::Digest;
 
-use crate::api::{Api, ChunkUploadOptions};
+use crate::api::{Api, ChunkServerOptions};
 use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 
 /// Timeout for polling all assemble endpoints.
@@ -164,7 +164,7 @@ impl ItemSize for Chunk<'_> {
 /// This function blocks until all chunks have been uploaded.
 pub fn upload_chunks(
     chunks: &[Chunk<'_>],
-    chunk_options: &ChunkUploadOptions,
+    chunk_options: &ChunkServerOptions,
     progress_style: ProgressStyle,
 ) -> Result<()> {
     let total_bytes = chunks.iter().map(|&Chunk((_, data))| data.len()).sum();
@@ -190,7 +190,7 @@ pub fn upload_chunks(
     info!("using '{}' compression for chunk upload", compression);
 
     // The upload is executed in parallel batches. Each batch aggregates objects
-    // until it exceeds the maximum size configured in ChunkUploadOptions. We
+    // until it exceeds the maximum size configured in ChunkServerOptions. We
     // keep track of the overall progress and potential errors. If an error
     // occurs, all subsequent requests will be cancelled and the error returned.
     // Otherwise, the after every successful update, the overall progress is

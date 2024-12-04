@@ -22,7 +22,7 @@ use symbolic::debuginfo::sourcebundle::{
 use url::Url;
 
 use crate::api::NewRelease;
-use crate::api::{Api, ChunkUploadCapability, ChunkUploadOptions};
+use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
@@ -90,7 +90,7 @@ pub struct UploadContext<'a> {
     pub wait: bool,
     pub max_wait: Duration,
     pub dedupe: bool,
-    pub chunk_upload_options: Option<&'a ChunkUploadOptions>,
+    pub chunk_upload_options: Option<&'a ChunkServerOptions>,
 }
 
 impl UploadContext<'_> {
@@ -317,7 +317,7 @@ fn poll_assemble(
     checksum: Digest,
     chunks: &[Digest],
     context: &UploadContext,
-    options: &ChunkUploadOptions,
+    options: &ChunkServerOptions,
 ) -> Result<()> {
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
@@ -400,7 +400,7 @@ fn poll_assemble(
 fn upload_files_chunked(
     context: &UploadContext,
     files: &SourceFiles,
-    options: &ChunkUploadOptions,
+    options: &ChunkServerOptions,
 ) -> Result<()> {
     let archive = build_artifact_bundle(context, files, None)?;
 

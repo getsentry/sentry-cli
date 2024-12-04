@@ -34,7 +34,7 @@ use zip::result::ZipError;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
 
 use crate::api::{
-    Api, AssembleDifsRequest, ChunkUploadCapability, ChunkUploadOptions, ChunkedFileState,
+    Api, AssembleDifsRequest, ChunkServerOptions, ChunkUploadCapability, ChunkedFileState,
 };
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
@@ -1313,7 +1313,7 @@ where
 /// This function blocks until all chunks have been uploaded.
 fn upload_missing_chunks<T>(
     missing_info: &MissingObjectsInfo<'_, T>,
-    chunk_options: &ChunkUploadOptions,
+    chunk_options: &ChunkServerOptions,
 ) -> Result<()> {
     let (objects, chunks) = missing_info;
 
@@ -1519,7 +1519,7 @@ where
 /// Uploads debug info files using the chunk-upload endpoint.
 fn upload_difs_chunked(
     options: &DifUpload,
-    chunk_options: &ChunkUploadOptions,
+    chunk_options: &ChunkServerOptions,
 ) -> Result<(Vec<DebugInfoFile>, bool)> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;

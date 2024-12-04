@@ -2,9 +2,10 @@ use serde::Deserialize;
 
 use super::{ChunkCompression, ChunkHashAlgorithm, ChunkUploadCapability};
 
+/// Chunk upload options which are set by the Sentry server.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ChunkUploadOptions {
+pub struct ChunkServerOptions {
     pub url: String,
     #[serde(rename = "chunksPerRequest")]
     pub max_chunks: u64,
@@ -24,7 +25,7 @@ pub struct ChunkUploadOptions {
     pub accept: Vec<ChunkUploadCapability>,
 }
 
-impl ChunkUploadOptions {
+impl ChunkServerOptions {
     /// Returns whether the given capability is accepted by the chunk upload endpoint.
     pub fn supports(&self, capability: ChunkUploadCapability) -> bool {
         self.accept.contains(&capability)

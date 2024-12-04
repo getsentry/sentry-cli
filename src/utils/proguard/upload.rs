@@ -10,7 +10,7 @@ use std::time::{Duration, Instant};
 use anyhow::Result;
 use indicatif::ProgressStyle;
 
-use crate::api::{Api, ChunkUploadOptions, ChunkedFileState};
+use crate::api::{Api, ChunkServerOptions, ChunkedFileState};
 use crate::utils::chunks;
 use crate::utils::chunks::Chunked;
 use crate::utils::proguard::ProguardMapping;
@@ -28,7 +28,7 @@ const ASSEMBLE_POLL_TIMEOUT: Duration = Duration::from_secs(120);
 /// Returns an error if the mappings fail to assemble, or if the timeout is reached.
 pub fn chunk_upload(
     mappings: &[ProguardMapping<'_>],
-    chunk_upload_options: &ChunkUploadOptions,
+    chunk_upload_options: &ChunkServerOptions,
     org: &str,
     project: &str,
 ) -> Result<()> {
