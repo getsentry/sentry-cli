@@ -4,17 +4,15 @@
 //! Proguard mappings, while we work on a more permanent solution, which will
 //! work for all different types of debug files.
 
-use std::borrow::Cow;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use anyhow::Result;
 use indicatif::ProgressStyle;
-use sha1_smol::Digest;
 
-use crate::api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState};
-use crate::utils::chunks::{self, Chunk};
-use crate::utils::fs::get_sha1_checksums;
+use crate::api::{Api, ChunkUploadOptions, ChunkedFileState};
+use crate::utils::chunks;
+use crate::utils::chunks::Chunked;
 use crate::utils::proguard::ProguardMapping;
 
 /// How often to poll the server for the status of the assembled mappings.
@@ -25,43 +23,6 @@ const ASSEMBLE_POLL_INTERVAL: Duration = Duration::from_secs(1);
 // usually was almost instantaneous, so this should probably be enough time.
 const ASSEMBLE_POLL_TIMEOUT: Duration = Duration::from_secs(120);
 
-struct ChunkedMapping {
-    raw_data: Vec<u8>,
-    hash: Digest,
-    chunk_hashes: Vec<Digest>,
-    file_name: String,
-    chunk_size: usize,
-}
-
-impl ChunkedMapping {
-    fn try_from_mapping(mapping: &ProguardMapping, chunk_size: u64) -> Result<Self> {
-        let raw_data = mapping.as_ref().to_vec();
-        let file_name = format!("/proguard/{}.txt", mapping.uuid());
-
-        let (hash, chunk_hashes) = get_sha1_checksums(&raw_data, chunk_size as usize)?;
-        Ok(Self {
-            raw_data,
-            hash,
-            chunk_hashes,
-            file_name,
-            chunk_size: chunk_size.try_into()?,
-        })
-    }
-
-    fn chunks(&self) -> impl Iterator<Item = Chunk<'_>> {
-        self.raw_data
-            .chunks(self.chunk_size)
-            .zip(self.chunk_hashes.iter())
-            .map(|(chunk, hash)| Chunk((*hash, chunk)))
-    }
-}
-
-impl<'a> From<&'a ChunkedMapping> for ChunkedDifRequest<'a> {
-    fn from(value: &'a ChunkedMapping) -> Self {
-        ChunkedDifRequest::new(Cow::from(&value.file_name), &value.chunk_hashes, value.hash)
-    }
-}
-
 /// Uploads a set of Proguard mappings to Sentry.
 /// Blocks until the mappings have been assembled (up to ASSEMBLE_POLL_TIMEOUT).
 /// Returns an error if the mappings fail to assemble, or if the timeout is reached.
@@ -71,17 +32,19 @@ pub fn chunk_upload(
     org: &str,
     project: &str,
 ) -> Result<()> {
-    let chunked_mappings: Vec<ChunkedMapping> = mappings
+    let chunked_mappings = mappings
         .iter()
-        .map(|mapping| ChunkedMapping::try_from_mapping(mapping, chunk_upload_options.chunk_size))
-        .collect::<Result<_>>()?;
+        .map(|mapping| Chunked::from(mapping, chunk_upload_options.chunk_size as usize))
+        .collect::<Result<Vec<_>>>()?;
 
     let progress_style = ProgressStyle::default_bar().template(
         "Uploading Proguard mappings...\
              \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
     );
 
-    let chunks = chunked_mappings.iter().flat_map(|mapping| mapping.chunks());
+    let chunks = chunked_mappings
+        .iter()
+        .flat_map(|mapping| mapping.iter_chunks());
 
     chunks::upload_chunks(
         &chunks.collect::<Vec<_>>(),

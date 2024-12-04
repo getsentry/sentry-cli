@@ -1,6 +1,10 @@
-use symbolic::common::ByteView;
+use std::borrow::Cow;
+
+use symbolic::common::{ByteView, DebugId};
 use thiserror::Error;
 use uuid::Uuid;
+
+use crate::utils::chunks::Assemblable;
 
 #[derive(Debug, Error)]
 pub enum ProguardMappingError {
@@ -60,5 +64,15 @@ impl<'a> TryFrom<ByteView<'a>> for ProguardMapping<'a> {
 impl AsRef<[u8]> for ProguardMapping<'_> {
     fn as_ref(&self) -> &[u8] {
         self.bytes.as_ref()
+    }
+}
+
+impl Assemblable for ProguardMapping<'_> {
+    fn name(&self) -> Cow<str> {
+        format!("proguard/{}.txt", self.uuid).into()
+    }
+
+    fn debug_id(&self) -> Option<DebugId> {
+        None
     }
 }

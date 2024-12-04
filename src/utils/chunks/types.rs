@@ -94,6 +94,19 @@ where
     }
 }
 
+impl<T> Assemblable for &T
+where
+    T: Assemblable,
+{
+    fn name(&self) -> Cow<str> {
+        (*self).name()
+    }
+
+    fn debug_id(&self) -> Option<DebugId> {
+        (*self).debug_id()
+    }
+}
+
 impl<T> Assemblable for Chunked<T>
 where
     T: Assemblable,
