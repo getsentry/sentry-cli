@@ -39,8 +39,8 @@ use crate::api::{
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{
-    upload_chunks, Assemblable, BatchedSliceExt, Chunk, Chunked, ItemSize, MissingObjectsInfo,
-    ASSEMBLE_POLL_INTERVAL,
+    upload_chunks, Assemblable, BatchedSliceExt, Chunk, ChunkOptions, Chunked, ItemSize,
+    MissingObjectsInfo, ASSEMBLE_POLL_INTERVAL,
 };
 use crate::utils::dif::ObjectDifFeatures;
 use crate::utils::fs::{get_sha1_checksum, TempDir, TempFile};
@@ -1229,7 +1229,7 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
 /// missing chunks for convenience.
 fn try_assemble<'m, T>(
     objects: &'m [Chunked<T>],
-    options: &DifUpload,
+    options: &impl ChunkOptions,
 ) -> Result<MissingObjectsInfo<'m, T>>
 where
     T: AsRef<[u8]> + Assemblable,
@@ -1237,13 +1237,13 @@ where
     let api = Api::current();
     let mut request: AssembleDifsRequest<'_> = objects.iter().collect();
 
-    if !options.pdbs_allowed {
+    if options.should_strip_debug_ids() {
         request.strip_debug_ids();
     }
 
-    let response = api
-        .authenticated()?
-        .assemble_difs(&options.org, &options.project, &request)?;
+    let response =
+        api.authenticated()?
+            .assemble_difs(options.org(), options.project(), &request)?;
 
     // We map all DIFs by their checksum, so we can access them faster when
     // iterating through the server response below. Since the caller will invoke
@@ -2088,5 +2088,24 @@ impl DifUpload {
         }
 
         true
+    }
+}
+
+impl ChunkOptions for DifUpload {
+    fn should_strip_debug_ids(&self) -> bool {
+        // We need to strip the debug_ids whenever the server does not support
+        // chunked uploading of PDBs, to maintain backwards compatibility.
+        //
+        // See: https://github.com/getsentry/sentry-cli/issues/980
+        // See: https://github.com/getsentry/sentry-cli/issues/1056
+        !self.pdbs_allowed
+    }
+
+    fn org(&self) -> &str {
+        &self.org
+    }
+
+    fn project(&self) -> &str {
+        &self.project
     }
 }

@@ -6,8 +6,10 @@
 //! See `BatchedSliceExt::batches` for more information.
 
 mod types;
+mod upload;
 
 pub use types::{Assemblable, Chunked, MissingObjectsInfo};
+pub use upload::ChunkOptions;
 
 use std::sync::Arc;
 use std::time::Duration;
