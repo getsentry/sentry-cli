@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
@@ -10,7 +11,7 @@ use super::ChunkedFileState;
 
 #[derive(Debug, Serialize)]
 pub struct ChunkedDifRequest<'a> {
-    pub name: &'a str,
+    pub name: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub debug_id: Option<DebugId>,
     pub chunks: &'a [Digest],
@@ -21,7 +22,7 @@ pub struct ChunkedDifRequest<'a> {
 impl<'a> ChunkedDifRequest<'a> {
     /// Create a new ChunkedDifRequest with the given name, chunk hashes,
     /// and total hash for the entire file.
-    pub fn new(name: &'a str, chunks: &'a [Digest], hash: Digest) -> Self {
+    pub fn new(name: Cow<'a, str>, chunks: &'a [Digest], hash: Digest) -> Self {
         Self {
             name,
             chunks,

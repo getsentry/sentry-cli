@@ -1,6 +1,7 @@
 //! Searches, processes and uploads debug information files (DIFs). See
 //! `DifUpload` for more information.
 
+use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 use std::ffi::{OsStr, OsString};
@@ -306,8 +307,8 @@ impl Display for DifMatch<'_> {
 
 impl Assemblable for DifMatch<'_> {
     /// A DIF's name is its file name.
-    fn name(&self) -> &str {
-        self.file_name()
+    fn name(&self) -> Cow<str> {
+        self.file_name().into()
     }
 
     fn debug_id(&self) -> Option<DebugId> {

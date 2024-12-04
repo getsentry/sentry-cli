@@ -4,6 +4,7 @@
 //! Proguard mappings, while we work on a more permanent solution, which will
 //! work for all different types of debug files.
 
+use std::borrow::Cow;
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -57,7 +58,7 @@ impl ChunkedMapping {
 
 impl<'a> From<&'a ChunkedMapping> for ChunkedDifRequest<'a> {
     fn from(value: &'a ChunkedMapping) -> Self {
-        ChunkedDifRequest::new(&value.file_name, &value.chunk_hashes, value.hash)
+        ChunkedDifRequest::new(Cow::from(&value.file_name), &value.chunk_hashes, value.hash)
     }
 }
 

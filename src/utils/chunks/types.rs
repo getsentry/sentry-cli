@@ -1,5 +1,6 @@
 //! Contains data types used in the chunk upload process.
 
+use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use anyhow::Result;
@@ -17,7 +18,7 @@ pub type MissingObjectsInfo<'m, T> = (Vec<&'m Chunked<T>>, Vec<Chunk<'m>>);
 /// A trait for objects that can be assembled via the `assemble_difs` endpoint.
 pub trait Assemblable {
     /// Returns the name of the object.
-    fn name(&self) -> &str;
+    fn name(&self) -> Cow<'_, str>;
 
     /// Returns the debug ID of the object.
     /// Types which do not have a debug ID should return `None`.
@@ -97,7 +98,7 @@ impl<T> Assemblable for Chunked<T>
 where
     T: Assemblable,
 {
-    fn name(&self) -> &str {
+    fn name(&self) -> Cow<'_, str> {
         self.object().name()
     }
 
