@@ -1,10 +1,6 @@
 use std::env;
-use std::fs;
 use std::io;
-use std::path::Path;
-use std::path::PathBuf;
 
-use ::proguard::ProguardMapping;
 use anyhow::{bail, Error, Result};
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
@@ -20,23 +16,11 @@ use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
 use crate::utils::fs::TempFile;
 use crate::utils::proguard;
+use crate::utils::proguard::ProguardMapping;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 const CHUNK_UPLOAD_ENV_VAR: &str = "SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD";
-
-#[derive(Debug)]
-pub struct MappingRef {
-    pub path: PathBuf,
-    pub size: u64,
-    pub uuid: Uuid,
-}
-
-impl AsRef<Path> for MappingRef {
-    fn as_ref(&self) -> &Path {
-        &self.path
-    }
-}
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -168,21 +152,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // them all up.
     for path in &paths {
         match ByteView::open(path) {
-            Ok(byteview) => {
-                let mapping = ProguardMapping::new(&byteview);
-                if !mapping.has_line_info() {
-                    eprintln!(
-                        "warning: proguard mapping '{path}' was ignored because it \
-                         does not contain any line information."
-                    );
-                } else {
-                    mappings.push(MappingRef {
-                        path: PathBuf::from(path),
-                        size: byteview.len() as u64,
-                        uuid: forced_uuid.copied().unwrap_or_else(|| mapping.uuid()),
-                    });
-                }
-            }
+            Ok(byteview) => match ProguardMapping::try_from(byteview) {
+                Ok(mapping) => mappings.push(mapping),
+                Err(e) => eprintln!("warning: ignoring proguard mapping '{path}': {e}"),
+            },
             Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
                 eprintln!(
                     "warning: proguard mapping '{path}' does not exist. This \
@@ -195,6 +168,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     Error::from(err).context(format!("failed to open proguard mapping '{path}'"))
                 );
             }
+        }
+    }
+
+    if let Some(&uuid) = forced_uuid {
+        // There should only be one mapping if we are forcing a UUID.
+        // This is checked earlier.
+        for mapping in &mut mappings {
+            mapping.force_uuid(uuid);
         }
     }
 
@@ -243,19 +224,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         {
             let mut zip = zip::ZipWriter::new(tf.open()?);
             for mapping in &mappings {
-                let pb = make_byte_progress_bar(mapping.size);
+                let pb = make_byte_progress_bar(mapping.len() as u64);
                 zip.start_file(
-                    format!("proguard/{}.txt", mapping.uuid),
+                    format!("proguard/{}.txt", mapping.uuid()),
                     zip::write::FileOptions::default(),
                 )?;
-                copy_with_progress(&pb, &mut fs::File::open(&mapping.path)?, &mut zip)?;
+                copy_with_progress(&pb, &mut mapping.as_ref(), &mut zip)?;
                 pb.finish_and_clear();
             }
         }
 
         // write UUIDs into the mapping file.
         if let Some(p) = matches.get_one::<String>("write_properties") {
-            let uuids: Vec<_> = mappings.iter().map(|x| x.uuid).collect();
+            let uuids: Vec<_> = mappings.iter().map(|x| x.uuid()).collect();
             dump_proguard_uuids_as_properties(p, &uuids)?;
         }
 
@@ -305,7 +286,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
 
         for mapping in &mappings {
-            let uuid = forced_uuid.unwrap_or(&mapping.uuid);
+            let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
             authenticated_api.associate_proguard_mappings(
                 &org,
                 &project,

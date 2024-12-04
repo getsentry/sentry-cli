@@ -4,18 +4,17 @@
 //! Proguard mappings, while we work on a more permanent solution, which will
 //! work for all different types of debug files.
 
+use std::thread;
 use std::time::{Duration, Instant};
-use std::{fs, thread};
 
 use anyhow::Result;
 use indicatif::ProgressStyle;
 use sha1_smol::Digest;
 
 use crate::api::{Api, ChunkUploadOptions, ChunkedDifRequest, ChunkedFileState};
-use crate::commands::upload_proguard::MappingRef;
-use crate::utils::chunks;
-use crate::utils::chunks::Chunk;
+use crate::utils::chunks::{self, Chunk};
 use crate::utils::fs::get_sha1_checksums;
+use crate::utils::proguard::ProguardMapping;
 
 /// How often to poll the server for the status of the assembled mappings.
 const ASSEMBLE_POLL_INTERVAL: Duration = Duration::from_secs(1);
@@ -34,9 +33,9 @@ struct ChunkedMapping {
 }
 
 impl ChunkedMapping {
-    fn try_from_mapping(mapping: &MappingRef, chunk_size: u64) -> Result<Self> {
-        let raw_data = fs::read(mapping)?;
-        let file_name = format!("/proguard/{}.txt", mapping.uuid);
+    fn try_from_mapping(mapping: &ProguardMapping, chunk_size: u64) -> Result<Self> {
+        let raw_data = mapping.as_ref().to_vec();
+        let file_name = format!("/proguard/{}.txt", mapping.uuid());
 
         let (hash, chunk_hashes) = get_sha1_checksums(&raw_data, chunk_size as usize)?;
         Ok(Self {
@@ -66,14 +65,14 @@ impl<'a> From<&'a ChunkedMapping> for ChunkedDifRequest<'a> {
 /// Blocks until the mappings have been assembled (up to ASSEMBLE_POLL_TIMEOUT).
 /// Returns an error if the mappings fail to assemble, or if the timeout is reached.
 pub fn chunk_upload(
-    paths: &[MappingRef],
+    mappings: &[ProguardMapping<'_>],
     chunk_upload_options: &ChunkUploadOptions,
     org: &str,
     project: &str,
 ) -> Result<()> {
-    let chunked_mappings: Vec<ChunkedMapping> = paths
+    let chunked_mappings: Vec<ChunkedMapping> = mappings
         .iter()
-        .map(|path| ChunkedMapping::try_from_mapping(path, chunk_upload_options.chunk_size))
+        .map(|mapping| ChunkedMapping::try_from_mapping(mapping, chunk_upload_options.chunk_size))
         .collect::<Result<_>>()?;
 
     let progress_style = ProgressStyle::default_bar().template(
