@@ -1517,45 +1517,43 @@ where
 }
 
 /// Uploads debug info files using the chunk-upload endpoint.
-fn upload_difs_chunked(
-    options: &DifUpload,
-    chunk_options: &ChunkServerOptions,
-) -> Result<(Vec<DebugInfoFile>, bool)> {
+fn upload_difs_chunked(options: ChunkedDifUpload) -> Result<(Vec<DebugInfoFile>, bool)> {
     // Search for debug files in the file system and ZIPs
-    let found = search_difs(options)?;
+    let found = search_difs(&options.dif_upload)?;
     if found.is_empty() {
         println!("{} No debug information files found", style(">").dim());
         return Ok(Default::default());
     }
 
     // Try to resolve BCSymbolMaps
-    let symbol_map = options.symbol_map.as_deref();
+    let symbol_map = options.dif_upload.symbol_map.as_deref();
     let mut processed = process_symbol_maps(found, symbol_map)?;
 
-    if options.upload_il2cpp_mappings {
+    if options.dif_upload.upload_il2cpp_mappings {
         let il2cpp_mappings = create_il2cpp_mappings(&processed)?;
         processed.extend(il2cpp_mappings);
     }
 
     // Resolve source code context if specified
-    if options.include_sources {
-        let source_bundles = create_source_bundles(&processed, options.upload_il2cpp_mappings)?;
+    if options.dif_upload.include_sources {
+        let source_bundles =
+            create_source_bundles(&processed, options.dif_upload.upload_il2cpp_mappings)?;
         processed.extend(source_bundles);
     }
 
     // Calculate checksums and chunks
     let chunked = prepare_difs(processed, |m| {
-        Chunked::from(m, chunk_options.chunk_size as usize)
+        Chunked::from(m, options.server_options().chunk_size as usize)
     })?;
 
     // Upload missing chunks to the server and remember incomplete difs
-    let missing_info = try_assemble(&chunked, options)?;
-    upload_missing_chunks(&missing_info, chunk_options)?;
+    let missing_info = try_assemble(&chunked, &options)?;
+    upload_missing_chunks(&missing_info, options.server_options())?;
 
     // Only if DIFs were missing, poll until assembling is complete
     let (missing_difs, _) = missing_info;
     if !missing_difs.is_empty() {
-        poll_assemble(&missing_difs, options)
+        poll_assemble(&missing_difs, &options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
@@ -1922,14 +1920,14 @@ impl DifUpload {
     ///
     /// The okay part of the return value is `(files, has_errors)`.  The
     /// latter can be used to indicate a fail state from the upload.
-    pub fn upload(&mut self) -> Result<(Vec<DebugInfoFile>, bool)> {
+    pub fn upload(mut self) -> Result<(Vec<DebugInfoFile>, bool)> {
         if self.paths.is_empty() {
             println!("{}: No paths were provided.", style("Warning").yellow());
             return Ok(Default::default());
         }
 
         let api = Api::current();
-        if let Some(ref chunk_options) = api.authenticated()?.get_chunk_upload_options(&self.org)? {
+        if let Some(chunk_options) = api.authenticated()?.get_chunk_upload_options(&self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;
             }
@@ -1947,12 +1945,13 @@ impl DifUpload {
 
             if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
                 self.validate_capabilities();
-                return upload_difs_chunked(self, chunk_options);
+                let options = ChunkedDifUpload::new(self, chunk_options);
+                return upload_difs_chunked(options);
             }
         }
 
         self.validate_capabilities();
-        Ok((upload_difs_batched(self)?, false))
+        Ok((upload_difs_batched(&self)?, false))
     }
 
     /// Validate that the server supports all requested capabilities.
@@ -2091,29 +2090,47 @@ impl DifUpload {
     }
 }
 
-impl ChunkOptions for DifUpload {
+struct ChunkedDifUpload {
+    dif_upload: DifUpload,
+    server_options: ChunkServerOptions,
+}
+
+impl ChunkedDifUpload {
+    fn new(dif_upload: DifUpload, server_options: ChunkServerOptions) -> Self {
+        Self {
+            dif_upload,
+            server_options,
+        }
+    }
+}
+
+impl ChunkOptions for ChunkedDifUpload {
     fn should_strip_debug_ids(&self) -> bool {
         // We need to strip the debug_ids whenever the server does not support
         // chunked uploading of PDBs, to maintain backwards compatibility.
         //
         // See: https://github.com/getsentry/sentry-cli/issues/980
         // See: https://github.com/getsentry/sentry-cli/issues/1056
-        !self.pdbs_allowed
+        !self.dif_upload.pdbs_allowed
     }
 
     fn org(&self) -> &str {
-        &self.org
+        &self.dif_upload.org
     }
 
     fn project(&self) -> &str {
-        &self.project
+        &self.dif_upload.project
     }
 
     fn should_wait(&self) -> bool {
-        self.wait
+        self.dif_upload.wait
     }
 
     fn max_wait(&self) -> Duration {
-        self.max_wait
+        self.dif_upload.max_wait
+    }
+
+    fn server_options(&self) -> &ChunkServerOptions {
+        &self.server_options
     }
 }
