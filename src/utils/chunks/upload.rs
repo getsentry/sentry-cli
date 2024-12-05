@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, fmt::Display, thread, time::Instant};
+use std::collections::BTreeMap;
+use std::fmt::Display;
+use std::thread;
+use std::time::Instant;
 
 use anyhow::Result;
 use indicatif::ProgressStyle;

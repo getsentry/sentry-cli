@@ -4,19 +4,13 @@
 //! Proguard mappings, while we work on a more permanent solution, which will
 //! work for all different types of debug files.
 
-use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Result;
-use indicatif::ProgressStyle;
 
-use crate::api::{Api, ChunkServerOptions, ChunkedFileState};
-use crate::utils::chunks;
-use crate::utils::chunks::Chunked;
+use crate::api::ChunkServerOptions;
+use crate::utils::chunks::{upload_chunked_objects, ChunkOptions, Chunked};
 use crate::utils::proguard::ProguardMapping;
-
-/// How often to poll the server for the status of the assembled mappings.
-const ASSEMBLE_POLL_INTERVAL: Duration = Duration::from_secs(1);
 
 /// How long to wait for the server to assemble the mappings before giving up.
 // 120 seconds was chosen somewhat arbitrarily, but in my testing, assembly
@@ -28,7 +22,7 @@ const ASSEMBLE_POLL_TIMEOUT: Duration = Duration::from_secs(120);
 /// Returns an error if the mappings fail to assemble, or if the timeout is reached.
 pub fn chunk_upload(
     mappings: &[ProguardMapping<'_>],
-    chunk_upload_options: &ChunkServerOptions,
+    chunk_upload_options: ChunkServerOptions,
     org: &str,
     project: &str,
 ) -> Result<()> {
@@ -37,48 +31,14 @@ pub fn chunk_upload(
         .map(|mapping| Chunked::from(mapping, chunk_upload_options.chunk_size as usize))
         .collect::<Result<Vec<_>>>()?;
 
-    let progress_style = ProgressStyle::default_bar().template(
-        "Uploading Proguard mappings...\
-             \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
-    );
+    let options =
+        ChunkOptions::new(chunk_upload_options, org, project).with_max_wait(ASSEMBLE_POLL_TIMEOUT);
 
-    let chunks = chunked_mappings
-        .iter()
-        .flat_map(|mapping| mapping.iter_chunks());
+    let (_, has_processing_errors) = upload_chunked_objects(&chunked_mappings, options)?;
 
-    chunks::upload_chunks(
-        &chunks.collect::<Vec<_>>(),
-        chunk_upload_options,
-        progress_style,
-    )?;
-
-    println!("Waiting for server to assemble uploaded mappings...");
-
-    let assemble_request = chunked_mappings.iter().collect();
-    let start = Instant::now();
-    while Instant::now().duration_since(start) < ASSEMBLE_POLL_TIMEOUT {
-        let all_assembled = Api::current()
-            .authenticated()?
-            .assemble_difs(org, project, &assemble_request)?
-            .values()
-            .map(|response| match response.state {
-                ChunkedFileState::Error => anyhow::bail!("Error: {response:?}"),
-                ChunkedFileState::NotFound => anyhow::bail!("File not found: {response:?}"),
-                ChunkedFileState::Ok | ChunkedFileState::Created | ChunkedFileState::Assembling => {
-                    Ok(response)
-                }
-            })
-            .collect::<Result<Vec<_>>>()?
-            .iter()
-            .all(|response| matches!(response.state, ChunkedFileState::Ok));
-
-        if all_assembled {
-            println!("Server finished assembling mappings.");
-            return Ok(());
-        }
-
-        thread::sleep(ASSEMBLE_POLL_INTERVAL);
+    if has_processing_errors {
+        Err(anyhow::anyhow!("Some symbols did not process correctly"))
+    } else {
+        Ok(())
     }
-
-    anyhow::bail!("Timed out waiting for server to assemble uploaded mappings.")
 }
