@@ -30,6 +30,16 @@ impl ChunkServerOptions {
     pub fn supports(&self, capability: ChunkUploadCapability) -> bool {
         self.accept.contains(&capability)
     }
+
+    /// Determines whether we need to strip debug_ids from the requests. We need
+    /// to strip the debug_ids whenever the server does not support chunked
+    /// uploading of PDBs, to maintain backwards compatibility.
+    ///
+    /// See: https://github.com/getsentry/sentry-cli/issues/980
+    /// See: https://github.com/getsentry/sentry-cli/issues/1056
+    pub fn should_strip_debug_ids(&self) -> bool {
+        !self.supports(ChunkUploadCapability::DebugFiles)
+    }
 }
 
 fn default_chunk_upload_accept() -> Vec<ChunkUploadCapability> {

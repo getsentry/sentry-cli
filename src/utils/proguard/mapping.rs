@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use symbolic::common::{ByteView, DebugId};
 use thiserror::Error;
@@ -74,5 +75,11 @@ impl Assemblable for ProguardMapping<'_> {
 
     fn debug_id(&self) -> Option<DebugId> {
         None
+    }
+}
+
+impl Display for ProguardMapping<'_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "{} (Proguard mapping)", self.uuid)
     }
 }

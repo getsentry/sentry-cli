@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Display;
-use std::thread;
 use std::time::{Duration, Instant};
+use std::{cmp, thread};
 
 use anyhow::Result;
 use indicatif::ProgressStyle;
@@ -13,6 +13,10 @@ use crate::utils::progress::ProgressBar;
 /// A trait representing options for chunk uploads.
 /// The trait also provides the `upload_chunked_objects` method, which
 /// executes the upload given the options and a list of chunked objects.
+/// New code should use `GenericChunkOptions` where possible, instead of
+/// creating custom implementations of this trait.
+/// The trait exists for backwards compatibility with older code, in
+/// particular by allowing DifUpload to be used as ChunkOptions.
 pub trait ChunkOptions: Sized {
     /// Determines whether we need to strip debug_ids from the requests.
     /// When this function returns `true`, the caller is responsible for stripping
@@ -349,5 +353,69 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
         if !line.is_empty() {
             println!("        {}", console::style(line).dim());
         }
+    }
+}
+
+/// A struct representing options for chunk uploads. This implementation
+/// of `ChunkOptions` should be general enough to be used for any chunk upload.
+pub struct GenericChunkOptions<'a> {
+    server_options: ChunkServerOptions,
+    org: &'a str,
+    project: &'a str,
+
+    /// The maximum wait time for the upload to complete.
+    /// If set to zero, we do not wait for the upload to complete.
+    /// If the server_options.max_wait is set to a smaller nonzero value,
+    /// we use that value instead.
+    max_wait: Duration,
+}
+
+impl<'a> GenericChunkOptions<'a> {
+    /// Create a new `GenericChunkOptions` instance, with the provided server options,
+    /// organization, and project, and no wait time for the upload to complete.
+    pub fn new(server_options: ChunkServerOptions, org: &'a str, project: &'a str) -> Self {
+        Self {
+            server_options,
+            org,
+            project,
+            max_wait: Duration::ZERO,
+        }
+    }
+
+    /// Set the maximum wait time for the assembly to complete.
+    pub fn set_max_wait(&mut self, max_wait: Duration) {
+        self.max_wait = max_wait;
+    }
+}
+
+impl ChunkOptions for GenericChunkOptions<'_> {
+    fn should_strip_debug_ids(&self) -> bool {
+        self.server_options.should_strip_debug_ids()
+    }
+
+    fn org(&self) -> &str {
+        self.org
+    }
+
+    fn project(&self) -> &str {
+        self.project
+    }
+
+    fn should_wait(&self) -> bool {
+        !self.max_wait().is_zero()
+    }
+
+    fn max_wait(&self) -> Duration {
+        // If the server specifies a max wait time (indicated by a nonzero value),
+        // we use the minimum of the user-specified max wait time and the server's
+        // max wait time.
+        match self.server_options.max_wait {
+            0 => self.max_wait,
+            server_max_wait => cmp::min(self.max_wait, Duration::from_secs(server_max_wait)),
+        }
+    }
+
+    fn server_options(&self) -> &ChunkServerOptions {
+        &self.server_options
     }
 }

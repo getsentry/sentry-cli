@@ -211,7 +211,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 })
             })?;
 
-        proguard::chunk_upload(&mappings, &chunk_upload_options, &org, &project)?;
+        proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
     } else {
         if mappings.is_empty() && matches.get_flag("require_one") {
             println!();
