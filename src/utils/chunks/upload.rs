@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use crate::api::ChunkServerOptions;
+
 /// A trait representing options for chunk uploads.
 pub trait ChunkOptions {
     /// Determines whether we need to strip debug_ids from the requests.
@@ -19,4 +21,7 @@ pub trait ChunkOptions {
 
     /// Returns the maximum wait time for the upload to complete.
     fn max_wait(&self) -> Duration;
+
+    /// Returns the server options for the chunk upload.
+    fn server_options(&self) -> &ChunkServerOptions;
 }
