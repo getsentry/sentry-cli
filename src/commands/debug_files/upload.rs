@@ -226,7 +226,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
 
     // Build generic upload parameters
-    let mut upload = DifUpload::new(org.clone(), project.clone());
+    let mut upload = DifUpload::new(&org, &project);
     upload
         .wait(wait)
         .max_wait(max_wait)

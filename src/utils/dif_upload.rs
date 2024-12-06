@@ -1579,11 +1579,8 @@ fn get_missing_difs<'data>(
     let api = Api::current();
     let missing_checksums = {
         let checksums = objects.iter().map(HashedDifMatch::checksum);
-        api.authenticated()?.find_missing_dif_checksums(
-            &options.org,
-            &options.project,
-            checksums,
-        )?
+        api.authenticated()?
+            .find_missing_dif_checksums(options.org, options.project, checksums)?
     };
 
     let missing = objects
@@ -1636,8 +1633,8 @@ fn upload_in_batches(
         println!("{} Uploading debug symbol files", style(">").dim());
         dsyms.extend(
             api.authenticated()?
-                .region_specific(&options.org)
-                .upload_dif_archive(&options.project, archive.path())?,
+                .region_specific(options.org)
+                .upload_dif_archive(options.project, archive.path())?,
         );
     }
 
@@ -1739,9 +1736,9 @@ pub enum DifFormat {
 /// uploader will first try to locate BCSymbolMaps and generate new dSYMs with
 /// resolved symbols.
 #[derive(Debug, Default)]
-pub struct DifUpload {
-    org: String,
-    project: String,
+pub struct DifUpload<'a> {
+    org: &'a str,
+    project: &'a str,
     paths: Vec<PathBuf>,
     ids: BTreeSet<DebugId>,
     formats: BTreeSet<DifFormat>,
@@ -1761,7 +1758,7 @@ pub struct DifUpload {
     il2cpp_mappings_allowed: bool,
 }
 
-impl DifUpload {
+impl<'a> DifUpload<'a> {
     /// Creates a new `DifUpload` with default parameters.
     ///
     /// To use it, also add paths using `DifUpload::search_path`. It will scan
@@ -1778,7 +1775,7 @@ impl DifUpload {
     ///     .search_path(".")
     ///     .upload()?;
     /// ```
-    pub fn new(org: String, project: String) -> Self {
+    pub fn new(org: &'a str, project: &'a str) -> Self {
         DifUpload {
             org,
             project,
@@ -1929,7 +1926,7 @@ impl DifUpload {
         }
 
         let api = Api::current();
-        if let Some(ref chunk_options) = api.authenticated()?.get_chunk_upload_options(&self.org)? {
+        if let Some(ref chunk_options) = api.authenticated()?.get_chunk_upload_options(self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;
             }
@@ -2091,7 +2088,7 @@ impl DifUpload {
     }
 }
 
-impl ChunkOptions for DifUpload {
+impl ChunkOptions for DifUpload<'_> {
     fn should_strip_debug_ids(&self) -> bool {
         // We need to strip the debug_ids whenever the server does not support
         // chunked uploading of PDBs, to maintain backwards compatibility.
@@ -2102,11 +2099,11 @@ impl ChunkOptions for DifUpload {
     }
 
     fn org(&self) -> &str {
-        &self.org
+        self.org
     }
 
     fn project(&self) -> &str {
-        &self.project
+        self.project
     }
 
     fn should_wait(&self) -> bool {
