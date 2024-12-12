@@ -254,4 +254,42 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn sha1_checksums_power_of_two() {
+        let data = b"this is some binary data for the test";
+        let (total_sha, chunks) = get_sha1_checksums(data, 16)
+            .expect("Method should not fail because 16 is a power of two");
+
+        assert_eq!(
+            total_sha.to_string(),
+            "8e2f54f899107ad16af3f0bc8cc6e39a0fd9299e"
+        );
+
+        let chunks_str = chunks.iter().map(|c| c.to_string()).collect::<Vec<_>>();
+
+        assert_eq!(
+            chunks_str,
+            vec![
+                "aba4463482b4960f67a3b49ee5114b5d5e80bc28",
+                "048509d362da6a10e180bf18c7c80752e3d4f44f",
+                "81d55bec0f2bb3c521dcd40663cd525bb4808054"
+            ]
+        );
+    }
+
+    #[test]
+    fn sha1_checksums_not_power_of_two() {
+        let data = b"this is some binary data for the test";
+
+        get_sha1_checksums(data, 17)
+            .expect_err("Method should fail because 17 is not a power of two");
+    }
+
+    #[test]
+    fn sha1_checksums_zero() {
+        let data = b"this is some binary data for the test";
+        get_sha1_checksums(data, 0)
+            .expect_err("Method should fail because 0 is not a power of two");
+    }
 }
