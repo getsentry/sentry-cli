@@ -271,7 +271,7 @@ where
                 dif.data.kind.map(|c| format!(" {c:#}")).unwrap_or_default()
             );
 
-            render_detail(&success.detail, None);
+            render_detail(success.detail.as_deref(), None);
         } else if let Some(object) = objects_by_checksum.get(&checksum) {
             // If we skip waiting for the server to finish processing, there
             // are pending entries. We only expect results that have been
@@ -300,7 +300,7 @@ where
         };
 
         println!("  {:>7} {}", console::style("ERROR").red(), object.name());
-        render_detail(&error.detail, fallback);
+        render_detail(error.detail.as_deref(), fallback);
     }
 
     // Return only successful uploads
@@ -312,17 +312,8 @@ where
 
 /// Renders the given detail string to the command line. If the `detail` is
 /// either missing or empty, the optional fallback will be used.
-fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
-    let mut string = match *detail {
-        Some(ref string) => string.as_str(),
-        None => "",
-    };
-
-    if string.is_empty() {
-        if let Some(fallback) = fallback {
-            string = fallback;
-        }
-    }
+fn render_detail(detail: Option<&str>, fallback: Option<&str>) {
+    let string = detail.or(fallback).unwrap_or_default();
 
     for line in string.lines() {
         if !line.is_empty() {
