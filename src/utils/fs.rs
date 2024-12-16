@@ -170,10 +170,10 @@ pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
 }
 
 /// Returns the SHA1 hash for the entire input, as well as each chunk of it. The
-/// `chunk_size` must be a power of two.
+/// `chunk_size` must be non-zero.
 pub fn get_sha1_checksums(data: &[u8], chunk_size: usize) -> Result<(Digest, Vec<Digest>)> {
-    if !chunk_size.is_power_of_two() {
-        bail!("Chunk size must be a power of two");
+    if chunk_size == 0 {
+        bail!("Chunk size may not be zero.");
     }
 
     let mut total_sha = Sha1::new();
@@ -253,5 +253,58 @@ mod tests {
         assert!(!path.exists(), "{} didn't get deleted", path.display());
 
         Ok(())
+    }
+
+    #[test]
+    fn sha1_checksums_power_of_two() {
+        let data = b"this is some binary data for the test";
+        let (total_sha, chunks) =
+            get_sha1_checksums(data, 16).expect("Method should not fail because 16 is not zero");
+
+        assert_eq!(
+            total_sha.to_string(),
+            "8e2f54f899107ad16af3f0bc8cc6e39a0fd9299e"
+        );
+
+        let chunks_str = chunks.iter().map(|c| c.to_string()).collect::<Vec<_>>();
+
+        assert_eq!(
+            chunks_str,
+            vec![
+                "aba4463482b4960f67a3b49ee5114b5d5e80bc28",
+                "048509d362da6a10e180bf18c7c80752e3d4f44f",
+                "81d55bec0f2bb3c521dcd40663cd525bb4808054"
+            ]
+        );
+    }
+
+    #[test]
+    fn sha1_checksums_not_power_of_two() {
+        let data = b"this is some binary data for the test";
+
+        let (total_sha, chunks) =
+            get_sha1_checksums(data, 17).expect("Method should not fail because 17 is not zero");
+
+        assert_eq!(
+            total_sha.to_string(),
+            "8e2f54f899107ad16af3f0bc8cc6e39a0fd9299e"
+        );
+
+        let chunks_str = chunks.iter().map(|c| c.to_string()).collect::<Vec<_>>();
+
+        assert_eq!(
+            chunks_str,
+            vec![
+                "d84b7535763d088169943895014c8db840ee80bc",
+                "7e65be6f54369a71b98aacf5fccc4daec1da6fe0",
+                "665de1f2775ca0b64d3ceda7c1b4bd15e32a73ed"
+            ]
+        );
+    }
+
+    #[test]
+    fn sha1_checksums_zero() {
+        let data = b"this is some binary data for the test";
+        get_sha1_checksums(data, 0).expect_err("Method should fail because 0 is zero");
     }
 }
