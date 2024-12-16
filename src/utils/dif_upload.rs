@@ -1229,7 +1229,7 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
 /// missing chunks for convenience.
 fn try_assemble<'m, T>(
     objects: &'m [Chunked<T>],
-    options: &impl ChunkOptions,
+    options: &ChunkOptions<'_>,
 ) -> Result<MissingObjectsInfo<'m, T>>
 where
     T: AsRef<[u8]> + Assemblable,
@@ -1374,7 +1374,7 @@ fn render_detail(detail: &Option<String>, fallback: Option<&str>) {
 /// missing chunks in the assemble response, this likely indicates a bug in the server.
 fn poll_assemble<T>(
     chunked_objects: &[&Chunked<T>],
-    options: &impl ChunkOptions,
+    options: &ChunkOptions<'_>,
 ) -> Result<(Vec<DebugInfoFile>, bool)>
 where
     T: Display + Assemblable,
@@ -1408,7 +1408,7 @@ where
         if chunks_missing {
             return Err(format_err!(
                 "Some uploaded files are now missing on the server. Please retry by running \
-                 `sentry-cli upload-dif` again. If this problem persists, please report a bug.",
+        `sentry-cli upload-dif` again. If this problem persists, please report a bug.",
             ));
         }
 
@@ -1518,11 +1518,11 @@ where
 
 /// Uploads debug info files using the chunk-upload endpoint.
 fn upload_difs_chunked(
-    options: &DifUpload,
-    chunk_options: &ChunkServerOptions,
+    options: DifUpload,
+    chunk_options: ChunkServerOptions,
 ) -> Result<(Vec<DebugInfoFile>, bool)> {
     // Search for debug files in the file system and ZIPs
-    let found = search_difs(options)?;
+    let found = search_difs(&options)?;
     if found.is_empty() {
         println!("{} No debug information files found", style(">").dim());
         return Ok(Default::default());
@@ -1548,14 +1548,16 @@ fn upload_difs_chunked(
         Chunked::from(m, chunk_options.chunk_size as usize)
     })?;
 
+    let options = options.into_chunk_options(chunk_options);
+
     // Upload missing chunks to the server and remember incomplete difs
-    let missing_info = try_assemble(&chunked, options)?;
-    upload_missing_chunks(&missing_info, chunk_options)?;
+    let missing_info = try_assemble(&chunked, &options)?;
+    upload_missing_chunks(&missing_info, options.server_options())?;
 
     // Only if DIFs were missing, poll until assembling is complete
     let (missing_difs, _) = missing_info;
     if !missing_difs.is_empty() {
-        poll_assemble(&missing_difs, options)
+        poll_assemble(&missing_difs, &options)
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
@@ -1919,14 +1921,14 @@ impl<'a> DifUpload<'a> {
     ///
     /// The okay part of the return value is `(files, has_errors)`.  The
     /// latter can be used to indicate a fail state from the upload.
-    pub fn upload(&mut self) -> Result<(Vec<DebugInfoFile>, bool)> {
+    pub fn upload(mut self) -> Result<(Vec<DebugInfoFile>, bool)> {
         if self.paths.is_empty() {
             println!("{}: No paths were provided.", style("Warning").yellow());
             return Ok(Default::default());
         }
 
         let api = Api::current();
-        if let Some(ref chunk_options) = api.authenticated()?.get_chunk_upload_options(self.org)? {
+        if let Some(chunk_options) = api.authenticated()?.get_chunk_upload_options(self.org)? {
             if chunk_options.max_file_size > 0 {
                 self.max_file_size = chunk_options.max_file_size;
             }
@@ -1949,7 +1951,7 @@ impl<'a> DifUpload<'a> {
         }
 
         self.validate_capabilities();
-        Ok((upload_difs_batched(self)?, false))
+        Ok((upload_difs_batched(&self)?, false))
     }
 
     /// Validate that the server supports all requested capabilities.
@@ -2086,31 +2088,18 @@ impl<'a> DifUpload<'a> {
 
         true
     }
-}
 
-impl ChunkOptions for DifUpload<'_> {
-    fn should_strip_debug_ids(&self) -> bool {
-        // We need to strip the debug_ids whenever the server does not support
-        // chunked uploading of PDBs, to maintain backwards compatibility.
-        //
-        // See: https://github.com/getsentry/sentry-cli/issues/980
-        // See: https://github.com/getsentry/sentry-cli/issues/1056
-        !self.pdbs_allowed
-    }
+    fn into_chunk_options(self, server_options: ChunkServerOptions) -> ChunkOptions<'a> {
+        let options = ChunkOptions::new(server_options, self.org, self.project);
 
-    fn org(&self) -> &str {
-        self.org
-    }
-
-    fn project(&self) -> &str {
-        self.project
-    }
-
-    fn should_wait(&self) -> bool {
-        self.wait
-    }
-
-    fn max_wait(&self) -> Duration {
-        self.max_wait
+        // Only add wait time if self.wait is true. On DifUpload, max_wait may be
+        // set even when self.wait is false; on ChunkOptions, the absence of a
+        // specific max_wait means we should not wait, and there is no separate
+        // flag for whether to wait.
+        if self.wait {
+            options.with_max_wait(self.max_wait)
+        } else {
+            options
+        }
     }
 }
