@@ -7,9 +7,11 @@
 
 mod options;
 mod types;
+mod upload;
 
 pub use options::ChunkOptions;
 pub use types::{Assemblable, Chunked, MissingObjectsInfo};
+pub use upload::upload_chunked_objects;
 
 use std::sync::Arc;
 use std::time::Duration;
