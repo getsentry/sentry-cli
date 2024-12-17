@@ -201,8 +201,8 @@ where
 
         if chunks_missing {
             anyhow::bail!(
-                "Some uploaded files are now missing on the server. Please retry by running \
-        `sentry-cli upload-dif` again. If this problem persists, please report a bug.",
+                "Some uploaded files are now missing on the server. Please try rerunning \
+                the command. If this problem persists, please report a bug.",
             );
         }
 
