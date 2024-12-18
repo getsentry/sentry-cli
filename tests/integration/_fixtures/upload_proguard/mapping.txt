@@ -1,0 +1,4 @@
+HelloWorld -> HelloWorld:
+# {"fileName":"HelloWorld.java","id":"sourceFile"}
+    1:1:void <init>() -> <init>
+    3:4:void main(java.lang.String[]) -> main
