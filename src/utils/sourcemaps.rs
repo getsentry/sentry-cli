@@ -440,7 +440,7 @@ impl SourceMapProcessor {
                         pieces.push(format!("sourcemap at {}", style(sm_url).cyan()));
                     };
                 } else {
-                    pieces.push("no sourcemap ref".into());
+                    pieces.push("no sourcemap found".into());
                 }
             }
 
