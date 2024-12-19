@@ -1,2 +1,5 @@
+[build]
+rustflags = ["-C", "force-unwind-tables"] # Make backtraces work.
+
 [target.'cfg(all(windows, target_env = "msvc"))']
 rustflags = ["-C", "target-feature=+crt-static"]

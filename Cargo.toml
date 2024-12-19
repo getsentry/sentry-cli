@@ -113,7 +113,7 @@ winapi = "0.3.9"
 [profile.release]
 opt-level = "z"
 panic = "abort"
-strip = true      # Strip symbols from the binary.
-codegen-units = 1 # Parallel compilation prevents some optimizations.
+strip = "debuginfo" # Only strip debuginfo (not symbols) to keep backtraces useful.
+codegen-units = 1   # Parallel compilation prevents some optimizations.
 # We do not enable link-time optimizations (lto) because they cause the
 # CLI to timeout when run in Xcode Cloud.
