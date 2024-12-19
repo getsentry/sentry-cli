@@ -111,7 +111,7 @@ winapi = "0.3.9"
 
 # We optimize the release build for size.
 [profile.release]
-opt-level = "z"
+opt-level = 2       # I obtained the smallest binary size with opt-level 2 on my system.
 panic = "abort"
 strip = "debuginfo" # Only strip debuginfo (not symbols) to keep backtraces useful.
 codegen-units = 1   # Parallel compilation prevents some optimizations.
