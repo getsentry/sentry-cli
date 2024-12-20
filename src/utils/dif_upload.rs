@@ -27,6 +27,7 @@ use symbolic::debuginfo::pe::PeObject;
 use symbolic::debuginfo::sourcebundle::{SourceBundleWriter, SourceFileDescriptor};
 use symbolic::debuginfo::{Archive, FileEntry, FileFormat, Object};
 use symbolic::il2cpp::ObjectLineMapping;
+use thiserror::Error;
 use walkdir::WalkDir;
 use which::which;
 use zip::result::ZipError;
@@ -767,7 +768,8 @@ fn collect_auxdif<'a>(
     };
 
     // Skip this file if we don't want to process it.
-    if !options.validate_dif(&dif) {
+    if let Err(e) = options.validate_dif(&dif) {
+        debug!("Skipping dif {name}: {e}");
         return None;
     }
 
@@ -836,7 +838,9 @@ fn collect_object_dif<'a>(
         // If this is a PE file with an embedded Portable PDB, we extract and process the PPDB separately.
         if let Object::Pe(pe) = &object {
             if let Ok(Some(ppdb_dif)) = extract_embedded_ppdb(pe, name.as_str()) {
-                if options.validate_dif(&ppdb_dif) {
+                if let Err(e) = options.validate_dif(&ppdb_dif) {
+                    debug!("Skipping ppdb dif: {e}");
+                } else {
                     collected.push(ppdb_dif);
                 }
             }
@@ -878,7 +882,9 @@ fn collect_object_dif<'a>(
         };
 
         // Skip this file if we don't want to process it.
-        if !options.validate_dif(&dif) {
+        if let Err(e) = options.validate_dif(&dif) {
+            debug!("Skipping dif {name}: {e}");
+            // TODO: Check if we have a size error, and error if so.
             continue;
         }
 
@@ -1394,6 +1400,24 @@ pub enum DifFormat {
     Il2Cpp,
 }
 
+#[derive(Debug, Error)]
+enum DifValidationError<'s> {
+    #[error("{dif_name} has an invalid format")]
+    InvalidFormat { dif_name: &'s str },
+    #[error("{dif_name} has invalid features")]
+    InvalidFeatures { dif_name: &'s str },
+    #[error("{dif_name} has an invalid debug id")]
+    InvalidDebugId { dif_name: &'s str },
+    #[error(
+        "Size of {dif_name} is {size} bytes, which exceeds the maximum size of {max_size} bytes"
+    )]
+    SizeTooLarge {
+        dif_name: &'s str,
+        size: usize,
+        max_size: u64,
+    },
+}
+
 /// Searches, processes and uploads debug information files (DIFs).
 ///
 /// This struct is created with the `DifUpload::new` function. Then, set
@@ -1745,33 +1769,34 @@ impl<'a> DifUpload<'a> {
     /// This takes all the filters configured in the [`DifUpload`] into account and returns
     /// whether a file should be skipped or not.  It also takes care of logging such a skip
     /// if required.
-    fn validate_dif(&self, dif: &DifMatch) -> bool {
+    fn validate_dif<'d>(&self, dif: &'d DifMatch) -> Result<(), DifValidationError<'d>> {
         // Skip if we didn't want this kind of DIF.
+        let dif_name = &dif.name;
         if !self.valid_format(dif.format()) {
-            debug!("skipping {} because of format", dif.name);
-            return false;
+            return Err(DifValidationError::InvalidFormat { dif_name });
         }
 
         // Skip if this DIF does not have features we want.
         if !self.valid_features(dif) {
-            debug!("skipping {} because of features", dif.name);
-            return false;
+            return Err(DifValidationError::InvalidFeatures { dif_name });
         }
 
         // Skip if this DIF has no DebugId or we are only looking for certain IDs.
         let id = dif.debug_id.unwrap_or_default();
         if id.is_nil() || !self.valid_id(id) {
-            debug!("skipping {} because of debugid", dif.name);
-            return false;
+            return Err(DifValidationError::InvalidDebugId { dif_name });
         }
 
         // Skip if file exceeds the maximum allowed file size.
         if !self.valid_size(&dif.name, dif.data().len()) {
-            debug!("skipping {} because of size", dif.name);
-            return false;
+            return Err(DifValidationError::SizeTooLarge {
+                dif_name,
+                size: dif.data().len(),
+                max_size: self.max_file_size,
+            });
         }
 
-        true
+        Ok(())
     }
 
     fn into_chunk_options(self, server_options: ChunkServerOptions) -> ChunkOptions<'a> {
