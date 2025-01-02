@@ -1,6 +1,8 @@
 //! Searches, processes and uploads debug information files (DIFs). See
 //! `DifUpload` for more information.
 
+mod error;
+
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
@@ -32,6 +34,7 @@ use which::which;
 use zip::result::ZipError;
 use zip::{write::FileOptions, ZipArchive, ZipWriter};
 
+use self::error::ValidationError;
 use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
@@ -767,7 +770,8 @@ fn collect_auxdif<'a>(
     };
 
     // Skip this file if we don't want to process it.
-    if !options.validate_dif(&dif) {
+    if let Err(e) = options.validate_dif(&dif) {
+        error::handle(&name, &e);
         return None;
     }
 
@@ -836,7 +840,9 @@ fn collect_object_dif<'a>(
         // If this is a PE file with an embedded Portable PDB, we extract and process the PPDB separately.
         if let Object::Pe(pe) = &object {
             if let Ok(Some(ppdb_dif)) = extract_embedded_ppdb(pe, name.as_str()) {
-                if options.validate_dif(&ppdb_dif) {
+                if let Err(e) = options.validate_dif(&ppdb_dif) {
+                    error::handle(&ppdb_dif.name, &e);
+                } else {
                     collected.push(ppdb_dif);
                 }
             }
@@ -878,7 +884,8 @@ fn collect_object_dif<'a>(
         };
 
         // Skip this file if we don't want to process it.
-        if !options.validate_dif(&dif) {
+        if let Err(e) = options.validate_dif(&dif) {
+            error::handle(&name, &e);
             continue;
         }
 
@@ -1745,33 +1752,25 @@ impl<'a> DifUpload<'a> {
     /// This takes all the filters configured in the [`DifUpload`] into account and returns
     /// whether a file should be skipped or not.  It also takes care of logging such a skip
     /// if required.
-    fn validate_dif(&self, dif: &DifMatch) -> bool {
-        // Skip if we didn't want this kind of DIF.
+    fn validate_dif(&self, dif: &DifMatch) -> Result<(), ValidationError> {
         if !self.valid_format(dif.format()) {
-            debug!("skipping {} because of format", dif.name);
-            return false;
+            return Err(ValidationError::InvalidFormat);
         }
 
-        // Skip if this DIF does not have features we want.
         if !self.valid_features(dif) {
-            debug!("skipping {} because of features", dif.name);
-            return false;
+            return Err(ValidationError::InvalidFeatures);
         }
 
-        // Skip if this DIF has no DebugId or we are only looking for certain IDs.
         let id = dif.debug_id.unwrap_or_default();
         if id.is_nil() || !self.valid_id(id) {
-            debug!("skipping {} because of debugid", dif.name);
-            return false;
+            return Err(ValidationError::InvalidDebugId);
         }
 
-        // Skip if file exceeds the maximum allowed file size.
         if !self.valid_size(&dif.name, dif.data().len()) {
-            debug!("skipping {} because of size", dif.name);
-            return false;
+            return Err(ValidationError::TooLarge);
         }
 
-        true
+        Ok(())
     }
 
     fn into_chunk_options(self, server_options: ChunkServerOptions) -> ChunkOptions<'a> {
