@@ -20,7 +20,6 @@ use std::time::Duration;
 
 use anyhow::{bail, format_err, Error, Result};
 use console::style;
-use indicatif::HumanBytes;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
 use symbolic::common::{Arch, AsSelf, ByteView, DebugId, SelfCell, Uuid};
@@ -1730,21 +1729,13 @@ impl<'a> DifUpload<'a> {
     }
 
     /// Checks if a file is too large and logs skip message if so.
-    fn valid_size(&self, name: &str, size: usize) -> bool {
+    fn valid_size(&self, size: usize) -> bool {
         let file_size: Result<u64, _> = size.try_into();
-        let too_large = match file_size {
-            Ok(file_size) => file_size > self.max_file_size,
-            Err(_) => true,
-        };
-        if too_large {
-            warn!(
-                "Skipping debug file since it exceeds {}: {} ({})",
-                HumanBytes(self.max_file_size),
-                name,
-                HumanBytes(file_size.unwrap_or(u64::MAX)),
-            );
+
+        match file_size {
+            Ok(file_size) => file_size <= self.max_file_size,
+            Err(_) => false, // Definitely too big
         }
-        !too_large
     }
 
     /// Validates DIF on whether it should be processed.
@@ -1766,8 +1757,11 @@ impl<'a> DifUpload<'a> {
             return Err(ValidationError::InvalidDebugId);
         }
 
-        if !self.valid_size(&dif.name, dif.data().len()) {
-            return Err(ValidationError::TooLarge);
+        if !self.valid_size(dif.data().len()) {
+            return Err(ValidationError::TooLarge {
+                size: dif.data().len(),
+                max_size: self.max_file_size,
+            });
         }
 
         Ok(())
