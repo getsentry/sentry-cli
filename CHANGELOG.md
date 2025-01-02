@@ -2,6 +2,37 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.40.0
+
+### Various fixes & improvements
+
+- build: Change release `opt-level` (#2325) by @szokeasaurusrex
+- build: Make backtraces useable in release builds (#2324) by @szokeasaurusrex
+- ref(sourcemaps): Reword "no sourcemap ref" (#2320) by @szokeasaurusrex
+- test(proguard): Add chunk upload tests (#2322) by @szokeasaurusrex
+- ref(proguard): Use existing chunked upload logic (#2318) by @szokeasaurusrex
+- ref(chunks): Remove `upload-dif` reference from `poll_assemble` (#2321) by @szokeasaurusrex
+- ref(chunks): Make `render_detail` take `Option<&str>` (#2317) by @szokeasaurusrex
+- ref(chunks): Extract upload logic from `upload_difs_chunked` (#2316) by @szokeasaurusrex
+- ref(chunks): Rename `upload` module to `options` (#2315) by @szokeasaurusrex
+- ref(chunks): Make `ChunkOptions` a `struct` (#2314) by @szokeasaurusrex
+- fix(chunking): Remove power-of-two chunk size restriction (#2312) by @szokeasaurusrex
+- ref(dif): Use `&str` in `DifUpload` struct (#2307) by @szokeasaurusrex
+- ref(dif): Genericize `poll_assemble` (#2300) by @szokeasaurusrex
+- feat(release): Replace release bot with GH app (#2306) by @Jeffreyhung
+- feat(debugid): Update debug ID snippet to write on `globalThis` when available (#2301) by @lforst
+- fix(proguard): Add leading `/` to uploaded Proguard file name (#2304) by @szokeasaurusrex
+- ref(dif): Genericize `try_assemble` `options` parameter (#2299) by @szokeasaurusrex
+- ref(api): Rename `ChunkedUploadOptions` to indicate they are set by server (#2298) by @szokeasaurusrex
+- ref(proguard): Use `Chunked<ProguardMapping>` for proguard upload (#2296) by @szokeasaurusrex
+- ref(chunks): Make `ChunkedDifRequest` take `Cow<'_, str>` for `name` (#2295) by @szokeasaurusrex
+- ref(proguard): Replace `MappingRef` with `ProguardMapping` (#2294) by @szokeasaurusrex
+- ref(proguard): Create new `proguard` `utils` submodule (#2293) by @szokeasaurusrex
+- ref(proguard): Directly open paths as `ByteView` (#2292) by @szokeasaurusrex
+- ref(dif): Put hash in `ChunkedDifRequest` (#2290) by @szokeasaurusrex
+
+_Plus 15 more_
+
 ## 2.39.1
 
 ### Various fixes & improvements
