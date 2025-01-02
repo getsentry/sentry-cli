@@ -185,6 +185,8 @@ pub struct AssertCmdTestManager {
 pub enum AssertCommand {
     /// Assert that the command succeeds (i.e. returns a `0` exit code).
     Success,
+    /// Assert that the command fails (i.e. returns a non-zero exit code).
+    Failure,
 }
 
 impl AssertCmdTestManager {
@@ -219,6 +221,7 @@ impl AssertCmdTestManager {
 
         match assert {
             AssertCommand::Success => command_result.success(),
+            AssertCommand::Failure => command_result.failure(),
         };
     }
 
