@@ -2,6 +2,64 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.40.0
+
+### New features
+
+- feat(debugid): Update debug ID snippet to write on `globalThis` when available (#2301) by @lforst
+
+### Improvements
+
+- build: Change release opt-level (#2325) by @szokeasaurusrex
+- build: Make backtraces useable in release builds (#2324) by @szokeasaurusrex
+
+### Bug fixes
+
+- fix(chunking): Remove power-of-two chunk size restriction (#2312) by @szokeasaurusrex
+
+<details>
+<summary><h3>Non-user-facing changes</h3></summary>
+
+We made several refactors and added several tests in this release. These changes should not affect users.
+
+- ref(sourcemaps): Reword "no sourcemap ref" (#2320) by @szokeasaurusrex
+- test(proguard): Add chunk upload tests (#2322) by @szokeasaurusrex
+- ref(proguard): Use existing chunked upload logic (#2318) by @szokeasaurusrex
+- ref(chunks): Remove `upload-dif` reference from `poll_assemble` (#2321) by @szokeasaurusrex
+- ref(chunks): Make `render_detail` take `Option<&str>` (#2317) by @szokeasaurusrex
+- ref(chunks): Extract upload logic from `upload_difs_chunked` (#2316) by @szokeasaurusrex
+- ref(chunks): Rename `upload` module to `options` (#2315) by @szokeasaurusrex
+- ref(chunks): Make `ChunkOptions` a `struct` (#2314) by @szokeasaurusrex
+- ref(dif): Use `&str` in `DifUpload` struct (#2307) by @szokeasaurusrex
+- ref(dif): Genericize `poll_assemble` (#2300) by @szokeasaurusrex
+- feat(release): Replace release bot with GH app (#2306) by @Jeffreyhung
+- fix(proguard): Add leading `/` to uploaded Proguard file name (#2304) by @szokeasaurusrex
+- ref(dif): Genericize `try_assemble` `options` parameter (#2299) by @szokeasaurusrex
+- ref(api): Rename `ChunkedUploadOptions` to indicate they are set by server (#2298) by @szokeasaurusrex
+- ref(proguard): Use `Chunked<ProguardMapping>` for proguard upload (#2296) by @szokeasaurusrex
+- ref(chunks): Make `ChunkedDifRequest` take `Cow<'_, str>` for `name` (#2295) by @szokeasaurusrex
+- ref(proguard): Replace `MappingRef` with `ProguardMapping` (#2294) by @szokeasaurusrex
+- ref(proguard): Create new `proguard` `utils` submodule (#2293) by @szokeasaurusrex
+- ref(proguard): Directly open paths as `ByteView` (#2292) by @szokeasaurusrex
+- ref(dif): Put hash in `ChunkedDifRequest` (#2290) by @szokeasaurusrex
+- ref(chunks): Rename `Named` trait to `Assemblable` (#2289) by @szokeasaurusrex
+- ref(dif): Make `poll_assemble` generic (#2287) by @szokeasaurusrex
+- ref(dif): Rename `ToAssemble` trait
+- ref(dif): Make `try_assemble_dif` generic
+- ref(dif): Replace `ChunkedDifMatch` with generic `ChunkedObject`
+- ref(utils): Use `usize` in `get_sha1_checksums` signature
+- test(chunk-upload): Test chunk uploading only some chunks missing
+- ref: Fix new Clippy lints
+- test(chunk-upload): Test upload where only some files need upload (#2276)
+- test(chunk-upload): Test chunk upload with many chunks (#2275)
+- ref(test): Use constant for expected request boundary (#2277)
+- test(chunk-upload): Add a test for uploading multiple debug files (#2274)
+- ref(sourcemaps): Fix clippy lint
+- ref(test): Introduce `assert_cmd` test manager
+- test(chunk-upload): Add test for full chunk upload
+
+</details>
+
 ## 2.39.1
 
 ### Various fixes & improvements
@@ -72,7 +130,6 @@
 - ref(tests): Decouple test env vars from trycmd code
 
 </details>
-
 
 ## 2.38.2
 
@@ -159,8 +216,8 @@ was an error sending the checkin.
 ### Various fixes & improvements
 
 - build: Bump symbolic to `12.10.1` (#2134) by @szokeasaurusrex
-    - This includes an upstream bugfix for a bug that prevented debug file uploading with sources when any of the
-      sources were not valid UTF-8.
+  - This includes an upstream bugfix for a bug that prevented debug file uploading with sources when any of the
+    sources were not valid UTF-8.
 - fix(debugIds): Always instantiate global `Error` class in debugId injection snippet (#2132) by @Lms24
 
 ## 2.34.0
@@ -180,7 +237,7 @@ This release contains a fix for a bug where auth tokens would, under the followi
 
 - The auth token was passed as a command line argument to Sentry CLI (via `--auth-token`)
 - The log level was set to `info` or `debug`
-    - The default log level is `warn`, so users using the default log level were unaffected by this bug
+  - The default log level is `warn`, so users using the default log level were unaffected by this bug
 
 We now redact the `--auth-token` argument and anything else that looks like it might be an auth token when logging the
 arguments that the Sentry CLI was called with (see #2115 and #2118 for details).
@@ -330,10 +387,10 @@ message explaining that the auth token is required but missing.
 ### New features
 
 - New cron monitor configuration options (#1922) by @szokeasaurusrex
-    - The `sentry-cli monitors run` command now has two new command line arguments: `--failure-issue-threshold` and
-      `--recovery-threshold`. These arguments allow the user to specify the number of consecutive failed checkins that
-      trigger an issue to be created and the number of successful checkins that trigger the issue to be resolved,
-      respectively.
+  - The `sentry-cli monitors run` command now has two new command line arguments: `--failure-issue-threshold` and
+    `--recovery-threshold`. These arguments allow the user to specify the number of consecutive failed checkins that
+    trigger an issue to be created and the number of successful checkins that trigger the issue to be resolved,
+    respectively.
 
 ### Various fixes & improvements
 
@@ -374,7 +431,7 @@ message explaining that the auth token is required but missing.
 ## 2.25.1
 
 - fix: Upload Xcode debug files and source maps background upload (#1896) by @krystofwoldrich
-    - revert: Fixed a `curl` issue on Windows (#1815) by @xpirt
+  - revert: Fixed a `curl` issue on Windows (#1815) by @xpirt
 
 ## 2.25.0
 
@@ -906,7 +963,7 @@ This is something users would run locally so I do not think we can track usage e
 - Verify your source maps are built correctly
 - Verify your source maps work locally
 - Verify your source files are not too large
-    - this is a fuzzy requirement today in sentry
+  - this is a fuzzy requirement today in sentry
 - Verify artifacts are not gzipped
 - Verify workers are sharing the same volume as web (if running self-hosted Sentry via Docker)
 - Should spit out an easily readable and easily copy and paste - to put into ZenDesk or elsewhere for support colleagues
@@ -918,15 +975,15 @@ https://github.com/getsentry/rust-sourcemap/tree/master/cli
 - In sentry error incorrect source map location
 - this helps when producing sourcemaps locally then line and column
 - this verify that it resolves locally
-    - if yes then it is a problem in between on sentry server side or upload
-    - 1st Verifies what you upload to sentry is exactly what you upload to sentry
-    - 2nd step from “y-tho” ensure previous steps are not for waste
+  - if yes then it is a problem in between on sentry server side or upload
+  - 1st Verifies what you upload to sentry is exactly what you upload to sentry
+  - 2nd step from “y-tho” ensure previous steps are not for waste
 - What is being automated?
-    - on release page you have your files (release artificats)
-        - download
-        - manually check the line number matches the error
-        - if correct then data is correct
-        - then you know an error with cli and not with the source maps that were uploaded
+  - on release page you have your files (release artificats)
+    - download
+    - manually check the line number matches the error
+    - if correct then data is correct
+    - then you know an error with cli and not with the source maps that were uploaded
 
 By: @kamilogorek (#1235)
 
