@@ -379,11 +379,10 @@ impl Api {
         // Curl stores a raw pointer to the stringified checksum internally. We first
         // transform all checksums to string and keep them in scope until the request
         // has completed. The original iterator is not needed anymore after this.
-        let stringified_chunks: Vec<_> = chunks
+        let stringified_chunks = chunks
             .into_iter()
             .map(T::as_ref)
-            .map(|&(checksum, data)| (checksum.to_string(), data))
-            .collect();
+            .map(|&(checksum, data)| (checksum.to_string(), data));
 
         let mut form = curl::easy::Form::new();
         for (ref checksum, data) in stringified_chunks {
