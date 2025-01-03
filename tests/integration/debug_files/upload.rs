@@ -731,3 +731,19 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
         "Uploaded chunks differ from the expected chunks"
     );
 }
+
+#[test]
+fn test_dif_too_big() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("debug_files/get-chunk-upload-small-max-size.json"),
+        )
+        .assert_cmd(vec![
+            "debug-files",
+            "upload",
+            "tests/integration/_fixtures/SrcGenSampleApp.pdb",
+        ])
+        .with_default_token()
+        .run_and_assert(AssertCommand::Failure);
+}
