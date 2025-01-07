@@ -658,14 +658,14 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
 
             if Archive::peek(&buffer) != FileFormat::Unknown {
                 let mut difs =
-                    collect_object_dif(source, name, buffer, options, &mut age_overrides);
+                    collect_object_dif(source, name, buffer, options, &mut age_overrides)?;
                 collected.append(difs.as_mut());
             } else if BcSymbolMap::test(&buffer) {
-                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::BcSymbolMap) {
+                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::BcSymbolMap)? {
                     collected.push(dif);
                 }
             } else if buffer.starts_with(b"<?xml") {
-                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::UuidMap) {
+                if let Some(dif) = collect_auxdif(name, buffer, options, AuxDifKind::UuidMap)? {
                     collected.push(dif);
                 }
             };
@@ -731,7 +731,7 @@ fn collect_auxdif<'a>(
     buffer: ByteView<'static>,
     options: &DifUpload,
     kind: AuxDifKind,
-) -> Option<DifMatch<'a>> {
+) -> Result<Option<DifMatch<'a>>> {
     let file_stem = Path::new(&name)
         .file_stem()
         .map(|stem| stem.to_string_lossy())
@@ -748,7 +748,7 @@ fn collect_auxdif<'a>(
                     name = name
                 );
             }
-            return None;
+            return Ok(None);
         }
     };
     let dif_result = match kind {
@@ -764,17 +764,17 @@ fn collect_auxdif<'a>(
                 name = name,
                 err = err
             );
-            return None;
+            return Ok(None);
         }
     };
 
     // Skip this file if we don't want to process it.
     if let Err(e) = options.validate_dif(&dif) {
-        error::handle(&name, &e);
-        return None;
+        error::handle(&name, &e)?;
+        return Ok(None);
     }
 
-    Some(dif)
+    Ok(Some(dif))
 }
 
 /// Processes and [`DifSource`] which is expected to be an object file.
@@ -784,7 +784,7 @@ fn collect_object_dif<'a>(
     buffer: ByteView<'static>,
     options: &DifUpload,
     age_overrides: &mut BTreeMap<Uuid, u32>,
-) -> Vec<DifMatch<'a>> {
+) -> Result<Vec<DifMatch<'a>>> {
     let mut collected = Vec::with_capacity(2);
 
     // Try to parse a potential object file. If this is not possible,
@@ -799,7 +799,7 @@ fn collect_object_dif<'a>(
         format == FileFormat::Pe && options.valid_format(DifFormat::Object(FileFormat::Pdb));
 
     if !should_override_age && !options.valid_format(DifFormat::Object(format)) {
-        return collected;
+        return Ok(collected);
     }
 
     debug!("trying to parse dif {}", name);
@@ -807,7 +807,7 @@ fn collect_object_dif<'a>(
         Ok(archive) => archive,
         Err(e) => {
             warn!("Skipping invalid debug file {}: {}", name, e);
-            return collected;
+            return Ok(collected);
         }
     };
 
@@ -840,7 +840,7 @@ fn collect_object_dif<'a>(
         if let Object::Pe(pe) = &object {
             if let Ok(Some(ppdb_dif)) = extract_embedded_ppdb(pe, name.as_str()) {
                 if let Err(e) = options.validate_dif(&ppdb_dif) {
-                    error::handle(&ppdb_dif.name, &e);
+                    error::handle(&ppdb_dif.name, &e)?;
                 } else {
                     collected.push(ppdb_dif);
                 }
@@ -884,14 +884,14 @@ fn collect_object_dif<'a>(
 
         // Skip this file if we don't want to process it.
         if let Err(e) = options.validate_dif(&dif) {
-            error::handle(&name, &e);
+            error::handle(&name, &e)?;
             continue;
         }
 
         collected.push(dif);
     }
 
-    collected
+    Ok(collected)
 }
 
 /// Resolves BCSymbolMaps and replaces hidden symbols in a `DifMatch` using

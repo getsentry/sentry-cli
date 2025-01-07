@@ -1,5 +1,6 @@
 //! Error types for the dif_upload module.
 
+use anyhow::Result;
 use indicatif::HumanBytes;
 use thiserror::Error;
 
@@ -21,13 +22,45 @@ pub enum ValidationError {
 }
 
 /// Handles a DIF validation error by logging it to console
-/// at the appropriate log level.
-pub fn handle(dif_name: &str, error: &ValidationError) {
-    let message = format!("Skipping {}: {}", dif_name, error);
+/// at the appropriate log level. Or, if the error should stop
+/// the upload, it will return an error, that can be propagated
+/// to the caller.
+pub fn handle(dif_name: &str, error: &ValidationError) -> Result<()> {
+    let message = format!("{}: {}", dif_name, error);
     match error {
         ValidationError::InvalidFormat
         | ValidationError::InvalidFeatures
-        | ValidationError::InvalidDebugId => log::debug!("{message}"),
-        ValidationError::TooLarge { .. } => log::warn!("{message}"),
+        | ValidationError::InvalidDebugId => log::debug!("Skipping {message}"),
+        ValidationError::TooLarge { .. } => {
+            anyhow::bail!("Upload failed due to error in debug file {message}")
+        }
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use rstest::rstest;
+
+    #[rstest]
+    #[case(ValidationError::InvalidFormat)]
+    #[case(ValidationError::InvalidFeatures)]
+    #[case(ValidationError::InvalidDebugId)]
+    fn test_handle_should_not_error(#[case] error: ValidationError) {
+        let result = handle("test", &error);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_handle_should_error() {
+        let error = ValidationError::TooLarge {
+            size: 1000,
+            max_size: 100,
+        };
+        let result = handle("test", &error);
+        assert!(result.is_err());
     }
 }
