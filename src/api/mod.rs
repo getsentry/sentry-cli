@@ -5,6 +5,7 @@
 
 pub mod envelopes_api;
 
+mod compression;
 mod connection_manager;
 mod data_types;
 mod encoding;
@@ -54,6 +55,7 @@ use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 
+use self::compression::ChunkCompression;
 use self::pagination::Pagination;
 use connection_manager::CurlConnectionManager;
 use encoding::{PathArg, QueryArg};
