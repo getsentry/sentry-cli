@@ -136,7 +136,7 @@ impl ReleaseFileSearch {
 
         for result in builder.build() {
             let file = result?;
-            if file.file_type().map_or(false, |t| t.is_dir()) {
+            if file.file_type().is_some_and(|t| t.is_dir()) {
                 continue;
             }
             pb.set_message(&format!("{}", file.path().display()));

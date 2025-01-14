@@ -42,7 +42,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     // if a project is provided which is technically unnecessary for the
     // legacy upload though it will unlikely to be what users want.
     if context.project.is_some()
-        && context.chunk_upload_options.map_or(false, |x| {
+        && context.chunk_upload_options.is_some_and(|x| {
             x.supports(ChunkUploadCapability::ArtifactBundles)
                 || x.supports(ChunkUploadCapability::ArtifactBundlesV2)
         })

@@ -32,7 +32,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 fn is_dsym(path: &Path) -> bool {
-    path.extension().map_or(false, |e| e == "dSYM")
+    path.extension().is_some_and(|e| e == "dSYM")
 }
 
 fn get_sane_parent(path: &Path) -> &Path {

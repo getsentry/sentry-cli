@@ -284,7 +284,7 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
         while candidate_segments
             .peek()
             .zip(expected_segments.peek())
-            .map_or(false, |(x, y)| x == y)
+            .is_some_and(|(x, y)| x == y)
         {
             candidate_segments.next();
             expected_segments.next();

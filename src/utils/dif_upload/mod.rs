@@ -591,10 +591,7 @@ fn find_uuid_plists(
     //        └─ DWARF
     //           └─ App
     let plist_name = format!("{:X}.plist", uuid.as_hyphenated());
-    let plist = match source.get_relative(format!("../{}", &plist_name)) {
-        Some(plist) => plist,
-        None => return None,
-    };
+    let plist = source.get_relative(format!("../{}", &plist_name))?;
 
     let mut plists = BTreeMap::new();
     plists.insert(plist_name, plist);
@@ -1697,7 +1694,7 @@ impl<'a> DifUpload<'a> {
 
     /// Determines if this file extension matches the search criteria.
     fn valid_extension(&self, ext: Option<&OsStr>) -> bool {
-        self.extensions.is_empty() || ext.map_or(false, |e| self.extensions.contains(e))
+        self.extensions.is_empty() || ext.is_some_and(|e| self.extensions.contains(e))
     }
 
     /// Determines if this [`DifFormat`] matches the search criteria.
