@@ -12,6 +12,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
 use std::str::FromStr;
+use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 pub fn make_command(command: Command) -> Command {
@@ -97,7 +98,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 SourceFile {
                     url,
                     path: source.path.clone(),
-                    contents: source.contents.clone(),
+                    contents: Arc::new(source.contents.clone()),
                     ty: SourceFileType::Source,
                     headers: BTreeMap::new(),
                     messages: vec![],
