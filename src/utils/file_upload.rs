@@ -119,7 +119,7 @@ impl fmt::Display for LogLevel {
 pub struct SourceFile {
     pub url: String,
     pub path: PathBuf,
-    pub contents: Vec<u8>,
+    pub contents: Arc<Vec<u8>>,
     pub ty: SourceFileType,
     /// A map of headers attached to the source file.
     ///
@@ -134,7 +134,7 @@ pub struct SourceFile {
 impl SourceFile {
     /// Calculates and returns the SHA1 checksum of the file.
     pub fn checksum(&self) -> Result<Digest> {
-        get_sha1_checksum(&*self.contents)
+        get_sha1_checksum(&**self.contents)
     }
 
     /// Returns the value of the "debug-id" header.
@@ -670,7 +670,9 @@ mod tests {
                 let file = SourceFile {
                     url: format!("~/{name}"),
                     path: format!("tests/integration/_fixtures/{name}").into(),
-                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}")).unwrap(),
+                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
+                        .unwrap()
+                        .into(),
                     ty: SourceFileType::SourceMap,
                     headers: Default::default(),
                     messages: Default::default(),

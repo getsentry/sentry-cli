@@ -6,6 +6,7 @@ use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context, Error, Result};
 use console::style;
@@ -326,7 +327,7 @@ impl SourceMapProcessor {
             let mut source_file = SourceFile {
                 url: url.clone(),
                 path: file.path,
-                contents: file.contents,
+                contents: file.contents.into(),
                 ty,
                 headers: BTreeMap::new(),
                 messages: vec![],
@@ -569,7 +570,7 @@ impl SourceMapProcessor {
                 SourceFile {
                     url: sourcemap_source.url.clone(),
                     path: sourcemap_source.path.clone(),
-                    contents: index_sourcemap_content,
+                    contents: index_sourcemap_content.into(),
                     ty: SourceFileType::SourceMap,
                     headers: sourcemap_source.headers.clone(),
                     messages: sourcemap_source.messages.clone(),
@@ -590,7 +591,7 @@ impl SourceMapProcessor {
                 SourceFile {
                     url: source_url.clone(),
                     path: PathBuf::from(name.clone()),
-                    contents: sourceview.source().as_bytes().to_vec(),
+                    contents: sourceview.source().as_bytes().to_vec().into(),
                     ty: SourceFileType::MinifiedSource,
                     headers: BTreeMap::new(),
                     messages: vec![],
@@ -608,7 +609,7 @@ impl SourceMapProcessor {
                 SourceFile {
                     url: sourcemap_url.clone(),
                     path: PathBuf::from(sourcemap_name),
-                    contents: sourcemap_content,
+                    contents: sourcemap_content.into(),
                     ty: SourceFileType::SourceMap,
                     headers: BTreeMap::new(),
                     messages: vec![],
@@ -682,7 +683,7 @@ impl SourceMapProcessor {
                     .flatten_and_rewrite(&options)?
                     .to_writer(&mut new_source)?,
             };
-            source.contents = new_source;
+            source.contents = new_source.into();
             pb.inc(1);
         }
         pb.finish_with_duration("Rewriting");
@@ -936,7 +937,7 @@ impl SourceMapProcessor {
                     // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
                     // because that would throw off all the mappings. Instead, inject the snippet at the very end.
                     // This isn't ideal, but it's the best we can do in this case.
-                    inject::fixup_js_file_end(&mut source_file.contents, debug_id)
+                    inject::fixup_js_file_end(Arc::make_mut(&mut source_file.contents), debug_id)
                         .context(format!("Failed to process {}", source_file.path.display()))?;
                     debug_id
                 }
@@ -958,10 +959,9 @@ impl SourceMapProcessor {
                             .unwrap_or_else(|| inject::debug_id_from_bytes_hashed(&decoded));
 
                         let source_file = self.sources.get_mut(source_url).unwrap();
-                        let adjustment_map =
-                            inject::fixup_js_file(&mut source_file.contents, debug_id).context(
-                                format!("Failed to process {}", source_file.path.display()),
-                            )?;
+                        let source_file_contents = Arc::make_mut(&mut source_file.contents);
+                        let adjustment_map = inject::fixup_js_file(source_file_contents, debug_id)
+                            .context(format!("Failed to process {}", source_file.path.display()))?;
 
                         sourcemap.adjust_mappings(&adjustment_map);
                         sourcemap.set_debug_id(Some(debug_id));
@@ -972,10 +972,7 @@ impl SourceMapProcessor {
                         let encoded = data_encoding::BASE64.encode(&decoded);
                         let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
 
-                        inject::replace_sourcemap_url(
-                            &mut source_file.contents,
-                            &new_sourcemap_url,
-                        )?;
+                        inject::replace_sourcemap_url(source_file_contents, &new_sourcemap_url)?;
                         *sourcemap_url = Some(SourceMapReference::from_url(new_sourcemap_url));
 
                         debug_id
@@ -1022,19 +1019,20 @@ impl SourceMapProcessor {
                             };
 
                             let source_file = self.sources.get_mut(source_url).unwrap();
-                            let adjustment_map =
-                                inject::fixup_js_file(&mut source_file.contents, debug_id)
-                                    .context(format!(
-                                        "Failed to process {}",
-                                        source_file.path.display()
-                                    ))?;
+                            let adjustment_map = inject::fixup_js_file(
+                                Arc::make_mut(&mut source_file.contents),
+                                debug_id,
+                            )
+                            .context(format!("Failed to process {}", source_file.path.display()))?;
 
                             sourcemap.adjust_mappings(&adjustment_map);
                             sourcemap.set_debug_id(Some(debug_id));
 
                             let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
-                            sourcemap_file.contents.clear();
-                            sourcemap.to_writer(&mut sourcemap_file.contents)?;
+                            let sourcemap_file_contents =
+                                Arc::make_mut(&mut sourcemap_file.contents);
+                            sourcemap_file_contents.clear();
+                            sourcemap.to_writer(sourcemap_file_contents)?;
 
                             sourcemap_file.set_debug_id(debug_id.to_string());
 
@@ -1069,11 +1067,11 @@ impl SourceMapProcessor {
                             // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
                             // because that would throw off all the mappings. Instead, inject the snippet at the very end.
                             // This isn't ideal, but it's the best we can do in this case.
-                            inject::fixup_js_file_end(&mut source_file.contents, debug_id)
-                                .context(format!(
-                                    "Failed to process {}",
-                                    source_file.path.display()
-                                ))?;
+                            inject::fixup_js_file_end(
+                                Arc::make_mut(&mut source_file.contents),
+                                debug_id,
+                            )
+                            .context(format!("Failed to process {}", source_file.path.display()))?;
 
                             debug_id
                         }

@@ -3,6 +3,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::io::Read;
 use std::path::Path;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Result};
@@ -205,7 +206,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     SourceFile {
                         url,
                         path: source.path.clone(),
-                        contents: source.contents.clone(),
+                        contents: Arc::new(source.contents.clone()),
                         ty: SourceFileType::Source,
                         headers: headers.clone(),
                         messages: vec![],
