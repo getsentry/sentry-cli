@@ -1,16 +1,18 @@
 use std::fmt;
 
-use serde::{Deserialize, Deserializer};
+use serde::Deserialize;
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Default, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum ChunkCompression {
-    /// No compression should be applied
-    #[default]
-    Uncompressed = 0,
     /// GZIP compression (including header)
     Gzip = 10,
     /// Brotli compression
     Brotli = 20,
+    /// No compression should be applied
+    #[default]
+    #[serde(other)]
+    Uncompressed = 0,
 }
 
 impl ChunkCompression {
@@ -30,19 +32,5 @@ impl fmt::Display for ChunkCompression {
             ChunkCompression::Gzip => write!(f, "gzip"),
             ChunkCompression::Brotli => write!(f, "brotli"),
         }
-    }
-}
-
-impl<'de> Deserialize<'de> for ChunkCompression {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        Ok(match String::deserialize(deserializer)?.as_str() {
-            "gzip" => ChunkCompression::Gzip,
-            "brotli" => ChunkCompression::Brotli,
-            // We do not know this compression, so we assume no compression
-            _ => ChunkCompression::Uncompressed,
-        })
     }
 }
