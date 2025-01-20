@@ -224,14 +224,14 @@ pub fn make_command(command: Command) -> Command {
                      uploaded.",
                 ),
         )
-        // NOTE: Hidden until we decide to expose it publicly
         .arg(
             Arg::new("use_artifact_bundle")
                 .long("use-artifact-bundle")
                 .action(ArgAction::SetTrue)
                 .help(
-                    "Use new Artifact Bundles upload, that enables the use of Debug IDs \
-                    for Source Maps discovery.",
+                    "[DEPRECATED] Force artifact bundles to be used for upload, even when not \
+                    supported by the server. This option has always only been intended for \
+                    internal use, and it is now officially deprecated.",
                 )
                 .hide(true),
         )
@@ -429,6 +429,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if matches.get_flag("use_artifact_bundle")
         || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
     {
+        log::warn!("The --use-artifact-bundle option and the SENTRY_FORCE_ARTIFACT_BUNDLES environment variable \
+                    are both deprecated, and both will be removed in the next major version.");
+
         if let Some(ref mut options) = chunk_upload_options {
             if !options.supports(ChunkUploadCapability::ArtifactBundles) {
                 options.accept.push(ChunkUploadCapability::ArtifactBundles);
