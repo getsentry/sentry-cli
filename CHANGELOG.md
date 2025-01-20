@@ -2,6 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.41.0
+
+### Various fixes & improvements
+
+- build: Bump `symbolic` to `12.13.3` (#2346) by @szokeasaurusrex
+- ref(api): Replace custom deserializer with derive (#2337) by @szokeasaurusrex
+- ref(sourcemaps): Reduce sourcemap upload memory usage (#2343) by @szokeasaurusrex
+- build: Update `memmap2` (#2340) by @szokeasaurusrex
+- ref: Fix new clippy lints (#2341) by @szokeasaurusrex
+- feat(dif): Fail `debug-files upload` when file is too big (#2331) by @szokeasaurusrex
+- ref(dif): Handle "too big" error with warning (#2330) by @szokeasaurusrex
+- ref(dif): Create type for DIF validation errors (#2329) by @szokeasaurusrex
+- ref(api): Remove unnecessary `collect` (#2333) by @szokeasaurusrex
+
 ## 2.40.0
 
 ### New features
