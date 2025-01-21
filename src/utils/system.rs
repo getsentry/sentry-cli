@@ -5,7 +5,7 @@ use std::process;
 
 use anyhow::{Error, Result};
 use console::style;
-use dotenv::Result as DotenvResult;
+use dotenvy::Result as DotenvResult;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
@@ -139,8 +139,8 @@ pub fn load_dotenv() -> DotenvResult<()> {
     }
 
     match env::var("SENTRY_DOTENV_PATH") {
-        Ok(path) => dotenv::from_path(path),
-        Err(_) => dotenv::dotenv().map(|_| ()),
+        Ok(path) => dotenvy::from_path(path),
+        Err(_) => dotenvy::dotenv().map(|_| ()),
     }
     .map_or_else(
         |error| {
