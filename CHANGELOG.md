@@ -7,6 +7,7 @@
 ### Various fixes & improvements
 
 - build: Replace `dotenv` with `dotenvy` (#2351) by @szokeasaurusrex
+    - This fixes a problem where multiline env variables were not supported in `.env` files
 
 ## 2.41.0
 
