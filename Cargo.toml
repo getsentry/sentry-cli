@@ -28,7 +28,7 @@ clap_complete = "4.4.3"
 console = "0.15.5"
 curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
 dirs = "4.0.0"
-dotenv = "0.15.0"
+dotenvy = "0.15.7"
 elementtree = "1.2.3"
 flate2 = { version = "1.0.25", default-features = false, features = [
   "rust_backend",
