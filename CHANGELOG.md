@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.41.1
+
+### Various fixes & improvements
+
+- build: Replace `dotenv` with `dotenvy` (#2351) by @szokeasaurusrex
+    - This fixes a problem where multiline env variables were not supported in `.env` files
+
 ## 2.41.0
 
 ### Various fixes & improvements
