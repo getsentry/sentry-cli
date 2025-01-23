@@ -11,7 +11,7 @@ use regex::{Captures, Regex};
 
 use crate::config::Config;
 
-/// Propagate an exit status outwarts.
+/// Propagate an exit status outwards.
 /// We only use this function in the macOS binary.
 #[cfg(target_os = "macos")]
 pub fn propagate_exit_status(status: process::ExitStatus) {
