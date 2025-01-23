@@ -10,6 +10,7 @@ pub fn kv_parser(s: &str) -> Result<(String, String)> {
 }
 
 /// Parse an AuthToken, and warn if the format is unrecognized
+#[expect(clippy::unnecessary_wraps)]
 pub fn auth_token_parser(s: &str) -> Result<AuthToken, Infallible> {
     let token = AuthToken::from(s);
     if !token.format_recognized() {

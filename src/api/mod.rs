@@ -1718,6 +1718,7 @@ impl ApiRequest {
         Ok(self)
     }
 
+    #[expect(clippy::unnecessary_wraps)]
     pub fn with_body(mut self, body: Vec<u8>) -> ApiResult<Self> {
         self.body = Some(body);
         Ok(self)
@@ -1739,11 +1740,13 @@ impl ApiRequest {
     }
 
     /// enables a progress bar.
+    #[expect(clippy::unnecessary_wraps)]
     pub fn progress_bar_mode(mut self, mode: ProgressBarMode) -> ApiResult<Self> {
         self.progress_bar_mode = mode;
         Ok(self)
     }
 
+    #[expect(clippy::unnecessary_wraps)]
     pub fn with_retry(
         mut self,
         max_retries: u32,

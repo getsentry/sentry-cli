@@ -176,6 +176,7 @@ impl SentryCliUpdateInfo {
     }
 }
 
+#[expect(clippy::unnecessary_wraps)]
 pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
     let api = Api::current();
     Ok(SentryCliUpdateInfo {

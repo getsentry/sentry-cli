@@ -33,6 +33,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 /// Returns the zero indexed position from matches
+#[expect(clippy::unnecessary_wraps)]
 fn lookup_pos(matches: &ArgMatches) -> Option<(u32, u32)> {
     Some((
         matches.get_one::<u32>("line").map_or(0, |x| x - 1),

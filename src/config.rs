@@ -58,6 +58,7 @@ impl Config {
     }
 
     /// Creates Config based on provided config file.
+    #[expect(clippy::unnecessary_wraps)]
     pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
@@ -167,6 +168,7 @@ impl Config {
     }
 
     /// Updates the auth info
+    #[expect(clippy::unnecessary_wraps)]
     pub fn set_auth(&mut self, auth: Auth) -> Result<()> {
         self.cached_auth = Some(auth);
 

@@ -1,3 +1,5 @@
+#![warn(clippy::unnecessary_wraps)]
+
 mod api;
 mod commands;
 mod config;
