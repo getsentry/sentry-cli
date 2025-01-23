@@ -10,7 +10,6 @@ rust-version = "1.80"
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }
 backoff = "0.4.0"
-backtrace = "0.3.67"
 brotli2 = "0.3.2"
 bytecount = "0.6.3"
 chrono = { version = "0.4.31", features = ["serde"] }
