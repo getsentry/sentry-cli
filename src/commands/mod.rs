@@ -15,7 +15,7 @@ use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::auth_token::{redact_token_from_string, AuthToken};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
-use crate::utils::system::{init_backtrace, load_dotenv, print_error, QuietExit};
+use crate::utils::system::{load_dotenv, print_error, set_panic_hook, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
 
@@ -331,7 +331,7 @@ pub fn execute() -> Result<()> {
 }
 
 fn setup() {
-    init_backtrace();
+    set_panic_hook();
 
     // Store the result of loading the dotenv file. We must load the dotenv file
     // before setting the log level, as the log level can be set in the dotenv

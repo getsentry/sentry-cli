@@ -2567,7 +2567,6 @@ dependencies = [
  "anylog",
  "assert_cmd",
  "backoff",
- "backtrace",
  "brotli2",
  "bytecount",
  "chrono",

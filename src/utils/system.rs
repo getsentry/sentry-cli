@@ -1,7 +1,10 @@
+use std::any::Any;
+use std::backtrace::Backtrace;
 use std::borrow::Cow;
-use std::env;
+use std::panic::{self, Location, PanicHookInfo};
 #[cfg(target_os = "macos")]
 use std::process;
+use std::{env, thread};
 
 use anyhow::{Error, Result};
 use console::style;
@@ -91,36 +94,11 @@ pub fn print_error(err: &Error) {
     }
 }
 
-/// Initializes the backtrace support
-pub fn init_backtrace() {
-    std::panic::set_hook(Box::new(|info| {
-        let backtrace = backtrace::Backtrace::new();
-
-        let thread = std::thread::current();
-        let thread = thread.name().unwrap_or("unnamed");
-
-        let msg = match info.payload().downcast_ref::<&'static str>() {
-            Some(s) => *s,
-            None => match info.payload().downcast_ref::<String>() {
-                Some(s) => &**s,
-                None => "Box<Any>",
-            },
-        };
-
-        match info.location() {
-            Some(location) => {
-                eprintln!(
-                    "thread '{}' panicked at '{}': {}:{}\n\n{:?}",
-                    thread,
-                    msg,
-                    location.file(),
-                    location.line(),
-                    backtrace
-                );
-            }
-            None => eprintln!("thread '{thread}' panicked at '{msg}'{backtrace:?}"),
-        }
-    }));
+/// Sets the panic hook to use our custom panic hook.
+///
+/// See [panic_hook] for more details on how the custom panic hook behaves.
+pub fn set_panic_hook() {
+    panic::set_hook(Box::new(panic_hook));
 }
 
 /// Indicates that sentry-cli should quit without printing anything.
@@ -153,4 +131,65 @@ pub fn load_dotenv() -> DotenvResult<()> {
         },
         |_| Ok(()),
     )
+}
+
+/// Custom panic hook for Sentry CLI
+///
+/// This custom panic hook captures a more user-friendly panic message, which indicates
+/// that the panic is an internal error in the Sentry CLI, and which directs users to
+/// open a bug report issue when encountering a panic.
+///
+/// The panic captures and prints a backtrace, regardless of whether the RUST_BACKTRACE
+/// environment variable is set.
+fn panic_hook(info: &PanicHookInfo) {
+    const PANIC_MESSAGE: &str = "Uh-oh! 😬 Sentry CLI has just crashed due to an internal error. \
+        Please open a bug report issue at https://github.com/getsentry/sentry-cli/issues/new?template=BUG_REPORT.yml. 🐞";
+
+    eprintln!(
+        "{}\n\n{}\n\n{}",
+        console::style("🔥 Internal Error in Sentry CLI 🔥")
+            .bold()
+            .red(),
+        PANIC_MESSAGE,
+        display_technical_details(info, &Backtrace::force_capture())
+    );
+}
+
+/// Generates the "technical details" section of the panic message
+fn display_technical_details(info: &PanicHookInfo, backtrace: &Backtrace) -> String {
+    format!(
+        "🔬 Technical Details 🔬\n\n{} panicked at {}:\n{}\n\nStack Backtrace:\n{}",
+        display_thread_details(),
+        display_panic_location(info.location()),
+        display_panic_payload(info.payload()),
+        backtrace
+    )
+}
+
+/// Formats the current thread name for display in the panic message
+fn display_thread_details() -> String {
+    match thread::current().name() {
+        Some(name) => format!("thread '{}'", name),
+        None => "unknown thread".into(),
+    }
+}
+
+/// Formats the panic location for display in the panic message
+fn display_panic_location(location: Option<&Location>) -> String {
+    if let Some(location) = location {
+        location.to_string()
+    } else {
+        "unknown location".into()
+    }
+}
+
+/// Formats the panic payload for display in the panic message
+fn display_panic_payload(payload: &dyn Any) -> &str {
+    if let Some(&payload) = payload.downcast_ref() {
+        payload
+    } else if let Some(payload) = payload.downcast_ref::<String>() {
+        payload.as_str()
+    } else {
+        ""
+    }
 }
