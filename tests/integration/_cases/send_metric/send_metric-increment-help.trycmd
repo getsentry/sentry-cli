@@ -33,9 +33,7 @@ Options:
           [default: 1]
 
       --log-level <LOG_LEVEL>
-          Set the log output verbosity.
-[..]
-          [possible values: trace, debug, info, warn, error]
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently

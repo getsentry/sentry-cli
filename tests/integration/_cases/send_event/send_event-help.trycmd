@@ -38,9 +38,7 @@ Options:
           Set the distribution.
 
       --log-level <LOG_LEVEL>
-          Set the log output verbosity.
-          
-          [possible values: trace, debug, info, warn, error]
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
   -E, --env <ENVIRONMENT>
           Send with a specific environment.

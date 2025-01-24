@@ -1,6 +1,6 @@
 //! This module implements the root command of the CLI tool.
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::{value_parser, Arg, ArgAction, ArgMatches, Command};
 use clap_complete::{generate, Generator, Shell};
 use log::{debug, info, set_logger, set_max_level, LevelFilter};
@@ -130,18 +130,6 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub fn get_log_level(matches: &ArgMatches) -> Result<Option<LevelFilter>> {
-    match matches.get_one::<String>("log_level") {
-        Some(log_level) => match log_level.parse() {
-            Ok(log_level) => Ok(Some(log_level)),
-            Err(_) => {
-                bail!("Unknown log level: {}", log_level);
-            }
-        },
-        None => Ok(None),
-    }
-}
-
 fn app() -> Command {
     Command::new("sentry-cli")
         .version(VERSION)
@@ -181,10 +169,10 @@ fn app() -> Command {
             Arg::new("log_level")
                 .value_name("LOG_LEVEL")
                 .long("log-level")
-                .value_parser(["trace", "debug", "info", "warn", "error"])
+                .value_parser(value_parser!(LevelFilter))
                 .ignore_case(true)
                 .global(true)
-                .help("Set the log output verbosity."),
+                .help("Set the log output verbosity. [possible values: trace, debug, info, warn, error]"),
         )
         .arg(
             Arg::new("quiet")
@@ -254,15 +242,15 @@ pub fn execute() -> Result<()> {
     let mut cmd = app();
     cmd = add_commands(cmd);
     let matches = cmd.get_matches();
-    let log_level = get_log_level(&matches)?;
-    if let Some(log_level) = log_level {
+    let log_level = matches.get_one::<LevelFilter>("log_level");
+    if let Some(&log_level) = log_level {
         set_max_level(log_level);
     }
     let mut config = Config::from_cli_config()?;
     configure_args(&mut config, &matches)?;
     set_quiet_mode(matches.get_flag("quiet"));
 
-    if let Some(log_level) = log_level {
+    if let Some(&log_level) = log_level {
         config.set_log_level(log_level);
     }
 
