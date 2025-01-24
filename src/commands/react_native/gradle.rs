@@ -95,11 +95,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     processor.add(
         &bundle_url,
         ReleaseFileSearch::collect_file(bundle_path.clone())?,
-    )?;
+    );
     processor.add(
         &sourcemap_url,
         ReleaseFileSearch::collect_file(sourcemap_path)?,
-    )?;
+    );
 
     if let Ok(ram_bundle) = RamBundle::parse_unbundle_from_path(&bundle_path) {
         debug!("File RAM bundle found, extracting its contents...");

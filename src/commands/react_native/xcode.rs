@@ -323,11 +323,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     info!("  sourcemap path: {}", sourcemap_path.display());
 
     let mut processor = SourceMapProcessor::new();
-    processor.add(&bundle_url, ReleaseFileSearch::collect_file(bundle_path)?)?;
+    processor.add(&bundle_url, ReleaseFileSearch::collect_file(bundle_path)?);
     processor.add(
         &sourcemap_url,
         ReleaseFileSearch::collect_file(sourcemap_path)?,
-    )?;
+    );
     processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
     processor.add_sourcemap_references()?;
     processor.add_debug_id_references()?;

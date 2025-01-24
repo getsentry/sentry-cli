@@ -302,11 +302,11 @@ fn process_sources_from_bundle(
     processor.add(
         &bundle_url,
         ReleaseFileSearch::collect_file(bundle_path.clone())?,
-    )?;
+    );
     processor.add(
         &sourcemap_url,
         ReleaseFileSearch::collect_file(sourcemap_path)?,
-    )?;
+    );
 
     if let Ok(ram_bundle) = sourcemap::ram_bundle::RamBundle::parse_unbundle_from_path(&bundle_path)
     {
@@ -394,7 +394,7 @@ fn process_sources_from_paths(
         for source in sources {
             let local_path = source.path.strip_prefix(base_path).unwrap();
             let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
-            processor.add(&url, source)?;
+            processor.add(&url, source);
         }
     }
 

@@ -254,10 +254,8 @@ impl SourceMapProcessor {
     }
 
     /// Adds a new file for processing.
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<()> {
+    pub fn add(&mut self, url: &str, file: ReleaseFileMatch) {
         self.pending_sources.insert((url.to_string(), file));
-        Ok(())
     }
 
     fn flush_pending_sources(&mut self) {
