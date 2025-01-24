@@ -115,6 +115,7 @@ impl LastUpdateCheck {
     }
 }
 
+#[derive(Default)]
 pub struct SentryCliUpdateInfo {
     latest_release: Option<SentryCliRelease>,
 }
@@ -176,11 +177,10 @@ impl SentryCliUpdateInfo {
     }
 }
 
-#[expect(clippy::unnecessary_wraps)]
 pub fn get_latest_sentrycli_release() -> Result<SentryCliUpdateInfo> {
     let api = Api::current();
     Ok(SentryCliUpdateInfo {
-        latest_release: api.get_latest_sentrycli_release().unwrap_or_default(),
+        latest_release: api.get_latest_sentrycli_release()?,
     })
 }
 
@@ -224,7 +224,8 @@ fn update_nagger_impl() -> Result<()> {
 
     if check.should_run_check() {
         info!("Running update nagger update check");
-        let ui = get_latest_sentrycli_release()?;
+        // Error getting latest version in update nagger should not crash the CLI
+        let ui = get_latest_sentrycli_release().unwrap_or_default();
         if ui.have_version_info() {
             check.update_for_info(&ui);
             let mut f = fs::File::create(&path)?;
