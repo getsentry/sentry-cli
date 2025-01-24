@@ -103,6 +103,9 @@ fn preexecute_hooks() -> Result<bool> {
         Ok(false)
     }
 
+    // This function needs to return Result<bool> to remain compatible with the
+    // macOS implementation.
+    #[expect(clippy::unnecessary_wraps)]
     #[cfg(not(target_os = "macos"))]
     fn sentry_react_native_xcode_wrap() -> Result<bool> {
         Ok(false)

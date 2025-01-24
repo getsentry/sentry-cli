@@ -254,6 +254,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds a new file for processing.
+    #[expect(clippy::unnecessary_wraps)]
     pub fn add(&mut self, url: &str, file: ReleaseFileMatch) -> Result<()> {
         self.pending_sources.insert((url.to_string(), file));
         Ok(())
@@ -691,6 +692,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds sourcemap references to all minified files
+    #[expect(clippy::unnecessary_wraps)]
     pub fn add_sourcemap_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
         self.collect_sourcemap_references();
@@ -710,6 +712,7 @@ impl SourceMapProcessor {
 
     /// Adds debug id to the source file headers from the linked source map.
     /// This is used for files we can't read debug ids from (e.g. Hermes bytecode bundles).
+    #[expect(clippy::unnecessary_wraps)]
     pub fn add_debug_id_references(&mut self) -> Result<()> {
         self.flush_pending_sources();
 
