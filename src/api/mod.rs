@@ -1718,10 +1718,9 @@ impl ApiRequest {
         Ok(self)
     }
 
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn with_body(mut self, body: Vec<u8>) -> ApiResult<Self> {
+    pub fn with_body(mut self, body: Vec<u8>) -> Self {
         self.body = Some(body);
-        Ok(self)
+        self
     }
 
     /// attaches some form data to the request.
