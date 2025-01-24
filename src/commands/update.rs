@@ -1,6 +1,6 @@
 use std::env;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};
@@ -29,7 +29,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     assert_updatable()?;
 
     let exe = env::current_exe()?;
-    let update = get_latest_sentrycli_release()?;
+    let update = get_latest_sentrycli_release()
+        .with_context(|| "Error getting latest Sentry CLI version.")?;
     if !update.have_version_info() {
         bail!("Could not get the latest release version.");
     }
