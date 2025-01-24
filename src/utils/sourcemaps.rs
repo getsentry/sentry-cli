@@ -708,8 +708,7 @@ impl SourceMapProcessor {
 
     /// Adds debug id to the source file headers from the linked source map.
     /// This is used for files we can't read debug ids from (e.g. Hermes bytecode bundles).
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn add_debug_id_references(&mut self) -> Result<()> {
+    pub fn add_debug_id_references(&mut self) {
         self.flush_pending_sources();
 
         for source in self.sources.values_mut() {
@@ -763,7 +762,6 @@ impl SourceMapProcessor {
                 );
             }
         }
-        Ok(())
     }
 
     /// Flags the collected sources whether they have already been uploaded before
