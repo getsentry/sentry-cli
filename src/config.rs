@@ -54,12 +54,11 @@ impl Config {
     /// Loads the CLI config from the default location and returns it.
     pub fn from_cli_config() -> Result<Config> {
         let (filename, ini) = load_cli_config()?;
-        Config::from_file(filename, ini)
+        Ok(Config::from_file(filename, ini))
     }
 
     /// Creates Config based on provided config file.
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn from_file(filename: PathBuf, ini: Ini) -> Result<Config> {
+    pub fn from_file(filename: PathBuf, ini: Ini) -> Self {
         let auth = get_default_auth(&ini);
         let token_embedded_data = match auth {
             Some(Auth::Token(ref token)) => token.payload().cloned(),
@@ -79,7 +78,7 @@ impl Config {
             token_url.into()
         };
 
-        Ok(Config {
+        Config {
             filename,
             process_bound: false,
             cached_auth: auth,
@@ -89,7 +88,7 @@ impl Config {
             cached_vcs_remote: get_default_vcs_remote(&ini),
             ini,
             cached_token_data: token_embedded_data,
-        })
+        }
     }
 
     /// Makes this config the process bound one that can be
@@ -117,7 +116,7 @@ impl Config {
     /// Return the global config reference.
     pub fn global() -> Result<Config> {
         let (global_filename, global_config) = load_global_config_file()?;
-        Config::from_file(global_filename, global_config)
+        Ok(Config::from_file(global_filename, global_config))
     }
 
     /// Makes a copy of the config in a closure and boxes it.
