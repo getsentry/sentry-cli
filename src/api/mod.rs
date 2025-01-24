@@ -402,7 +402,7 @@ impl Api {
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
-            )?
+            )
             .progress_bar_mode(progress_bar_mode);
 
         // The request is performed to an absolute URL. Thus, `Self::request()` will
@@ -974,7 +974,7 @@ impl<'a> AuthenticatedApi<'a> {
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
-            )?
+            )
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
@@ -1007,7 +1007,7 @@ impl<'a> AuthenticatedApi<'a> {
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
-            )?
+            )
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
@@ -1038,7 +1038,7 @@ impl<'a> AuthenticatedApi<'a> {
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
-            )?
+            )
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
@@ -1415,7 +1415,7 @@ impl RegionSpecificApi<'_> {
                     )
                 })?,
                 &[http::HTTP_STATUS_507_INSUFFICIENT_STORAGE],
-            )?
+            )
             .progress_bar_mode(ProgressBarMode::Request)
             .send()?
             .convert()
@@ -1481,7 +1481,7 @@ impl RegionSpecificApi<'_> {
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
-            )?
+            )
             .progress_bar_mode(progress_bar_mode)
             .send()?;
         if resp.status() == 409 {
@@ -1745,15 +1745,11 @@ impl ApiRequest {
         self
     }
 
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn with_retry(
-        mut self,
-        max_retries: u32,
-        retry_on_statuses: &'static [u32],
-    ) -> ApiResult<Self> {
+    pub fn with_retry(mut self, max_retries: u32, retry_on_statuses: &'static [u32]) -> Self {
         self.max_retries = max_retries;
         self.retry_on_statuses = retry_on_statuses;
-        Ok(self)
+
+        self
     }
 
     /// Get a copy of the header list
