@@ -285,7 +285,7 @@ impl Api {
     pub fn download_with_progress(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
         self.request(Method::Get, url, None)?
             .follow_location(true)?
-            .progress_bar_mode(ProgressBarMode::Response)?
+            .progress_bar_mode(ProgressBarMode::Response)
             .send_into(dst)
     }
 
@@ -403,7 +403,7 @@ impl Api {
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
             )?
-            .progress_bar_mode(progress_bar_mode)?;
+            .progress_bar_mode(progress_bar_mode);
 
         // The request is performed to an absolute URL. Thus, `Self::request()` will
         // not add the authorization header, by default. Since the URL is guaranteed
@@ -1416,7 +1416,7 @@ impl RegionSpecificApi<'_> {
                 })?,
                 &[http::HTTP_STATUS_507_INSUFFICIENT_STORAGE],
             )?
-            .progress_bar_mode(ProgressBarMode::Request)?
+            .progress_bar_mode(ProgressBarMode::Request)
             .send()?
             .convert()
     }
@@ -1482,7 +1482,7 @@ impl RegionSpecificApi<'_> {
                     http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
                 ],
             )?
-            .progress_bar_mode(progress_bar_mode)?
+            .progress_bar_mode(progress_bar_mode)
             .send()?;
         if resp.status() == 409 {
             Ok(None)
@@ -1740,10 +1740,9 @@ impl ApiRequest {
     }
 
     /// enables a progress bar.
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn progress_bar_mode(mut self, mode: ProgressBarMode) -> ApiResult<Self> {
+    pub fn progress_bar_mode(mut self, mode: ProgressBarMode) -> Self {
         self.progress_bar_mode = mode;
-        Ok(self)
+        self
     }
 
     #[expect(clippy::unnecessary_wraps)]
