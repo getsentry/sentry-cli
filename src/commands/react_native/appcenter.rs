@@ -178,7 +178,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     processor.rewrite(&[here_str])?;
-    processor.add_sourcemap_references()?;
+    processor.add_sourcemap_references();
 
     let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 

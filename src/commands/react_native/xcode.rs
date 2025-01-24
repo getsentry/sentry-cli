@@ -329,7 +329,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ReleaseFileSearch::collect_file(sourcemap_path)?,
     );
     processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
-    processor.add_sourcemap_references()?;
+    processor.add_sourcemap_references();
     processor.add_debug_id_references()?;
 
     let api = Api::current();

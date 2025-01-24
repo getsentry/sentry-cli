@@ -327,7 +327,7 @@ fn process_sources_from_bundle(
     debug!("Prefixes: {:?}", prefixes);
 
     processor.rewrite(&prefixes)?;
-    processor.add_sourcemap_references()?;
+    processor.add_sourcemap_references();
     processor.add_debug_id_references()?;
 
     Ok(())
@@ -404,7 +404,7 @@ fn process_sources_from_paths(
     }
 
     if !matches.get_flag("no_sourcemap_reference") {
-        processor.add_sourcemap_references()?;
+        processor.add_sourcemap_references();
     }
 
     if matches.get_flag("debug_id_reference") {
