@@ -692,8 +692,7 @@ impl SourceMapProcessor {
     }
 
     /// Adds sourcemap references to all minified files
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn add_sourcemap_references(&mut self) -> Result<()> {
+    pub fn add_sourcemap_references(&mut self) {
         self.flush_pending_sources();
         self.collect_sourcemap_references();
 
@@ -707,7 +706,6 @@ impl SourceMapProcessor {
                 source.set_sourcemap_reference(sourcemap.url.to_string());
             }
         }
-        Ok(())
     }
 
     /// Adds debug id to the source file headers from the linked source map.
