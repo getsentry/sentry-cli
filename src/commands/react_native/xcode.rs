@@ -330,7 +330,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
     processor.rewrite(&[base.parent().unwrap().to_str().unwrap()])?;
     processor.add_sourcemap_references();
-    processor.add_debug_id_references()?;
+    processor.add_debug_id_references();
 
     let api = Api::current();
     let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
