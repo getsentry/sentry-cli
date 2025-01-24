@@ -167,8 +167,7 @@ impl Config {
     }
 
     /// Updates the auth info
-    #[expect(clippy::unnecessary_wraps)]
-    pub fn set_auth(&mut self, auth: Auth) -> Result<()> {
+    pub fn set_auth(&mut self, auth: Auth) {
         self.cached_auth = Some(auth);
 
         self.ini.delete_from(Some("auth"), "api_key");
@@ -193,8 +192,6 @@ impl Config {
             }
             None => {}
         }
-
-        Ok(())
     }
 
     /// Returns the base url (without trailing slashes)

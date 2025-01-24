@@ -112,13 +112,13 @@ fn preexecute_hooks() -> Result<bool> {
     }
 }
 
-fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
+fn configure_args(config: &mut Config, matches: &ArgMatches) {
     if let Some(api_key) = matches.get_one::<String>("api_key") {
-        config.set_auth(Auth::Key(api_key.to_owned()))?;
+        config.set_auth(Auth::Key(api_key.to_owned()));
     }
 
     if let Some(auth_token) = matches.get_one::<AuthToken>("auth_token") {
-        config.set_auth(Auth::Token(auth_token.to_owned()))?;
+        config.set_auth(Auth::Token(auth_token.to_owned()));
     }
 
     if let Some(url) = matches.get_one::<String>("url") {
@@ -129,8 +129,6 @@ fn configure_args(config: &mut Config, matches: &ArgMatches) -> Result<()> {
         let headers = headers.map(|h| h.to_owned()).collect();
         config.set_headers(headers);
     }
-
-    Ok(())
 }
 
 fn app() -> Command {
@@ -250,7 +248,7 @@ pub fn execute() -> Result<()> {
         set_max_level(log_level);
     }
     let mut config = Config::from_cli_config()?;
-    configure_args(&mut config, &matches)?;
+    configure_args(&mut config, &matches);
     set_quiet_mode(matches.get_flag("quiet"));
 
     if let Some(&log_level) = log_level {

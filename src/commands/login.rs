@@ -21,7 +21,7 @@ pub fn make_command(command: Command) -> Command {
 
 fn update_config(config: &Config, token: AuthToken) -> Result<()> {
     let mut new_cfg = config.clone();
-    new_cfg.set_auth(Auth::Token(token))?;
+    new_cfg.set_auth(Auth::Token(token));
     new_cfg.save()?;
     Ok(())
 }
@@ -69,7 +69,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         };
 
         let test_cfg = config.make_copy(|cfg| {
-            cfg.set_auth(Auth::Token(token.clone()))?;
+            cfg.set_auth(Auth::Token(token.clone()));
             Ok(())
         })?;
 
