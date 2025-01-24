@@ -171,7 +171,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                    ext == OsStr::new("bundle");
                 then {
                     let url = format!("~/{filename}");
-                    processor.add(&url, ReleaseFileSearch::collect_file(entry.path())?)?;
+                    processor.add(&url, ReleaseFileSearch::collect_file(entry.path())?);
                 }
             }
         }

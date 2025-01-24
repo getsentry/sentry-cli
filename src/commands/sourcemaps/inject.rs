@@ -103,7 +103,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .collect_files()?;
         for source in sources {
             let url = path_as_url(&source.path);
-            processor.add(&url, source)?;
+            processor.add(&url, source);
         }
     }
 
