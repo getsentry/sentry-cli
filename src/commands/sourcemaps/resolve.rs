@@ -33,12 +33,11 @@ pub fn make_command(command: Command) -> Command {
 }
 
 /// Returns the zero indexed position from matches
-#[expect(clippy::unnecessary_wraps)]
-fn lookup_pos(matches: &ArgMatches) -> Option<(u32, u32)> {
-    Some((
+fn lookup_pos(matches: &ArgMatches) -> (u32, u32) {
+    (
         matches.get_one::<u32>("line").map_or(0, |x| x - 1),
         matches.get_one::<u32>("column").map_or(0, |x| x - 1),
-    ))
+    )
 }
 
 fn count_whitespace_prefix(test: &str) -> i32 {
@@ -154,17 +153,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!();
 
     // perform a lookup
-    if let Some((line, column)) = lookup_pos(matches) {
-        println!(
-            "Searching for token nearest to line {}, column {} in the minified file:\n",
-            line + 1,
-            column + 1
-        );
-        if let Some(token) = sm.lookup_token(line, column) {
-            print_token(&token);
-        } else {
-            println!("  - no token found!");
-        }
+    let (line, column) = lookup_pos(matches);
+
+    println!(
+        "Searching for token nearest to line {}, column {} in the minified file:\n",
+        line + 1,
+        column + 1
+    );
+
+    if let Some(token) = sm.lookup_token(line, column) {
+        print_token(&token);
+    } else {
+        println!("  - no token found!");
     }
 
     Ok(())
