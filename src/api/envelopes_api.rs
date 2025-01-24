@@ -33,7 +33,7 @@ impl EnvelopesApi {
         self.api
             .request(Method::Post, url.as_str(), None)?
             .with_header("X-Sentry-Auth", &auth.to_string())?
-            .with_body(body)?
+            .with_body(body)
             .send()?
             .into_result()
     }
