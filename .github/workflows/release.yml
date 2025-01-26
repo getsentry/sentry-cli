@@ -13,7 +13,7 @@ on:
         required: false
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     name: 'Release a new version'
     steps:
       - name: Get auth token
