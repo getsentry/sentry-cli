@@ -346,15 +346,14 @@ impl Config {
             (None, Some(cli_org)) => Ok(cli_org),
             (Some(token_org), None) => Ok(token_org.to_string()),
             (Some(token_org), Some(cli_org)) => {
-                if cli_org.is_empty() {
-                    return Ok(token_org.to_owned());
-                }
                 if cli_org != *token_org {
-                    return Err(format_err!(
-                        "Two different org values supplied: `{token_org}` (from token), `{cli_org}`."
-                    ));
+                    log::warn!(
+                        "Using organization `{token_org}` (embedded in token) rather \
+                        than manually-configured organization `{cli_org}`. To use \
+                        `{cli_org}`, please provide an auth token for this organization."
+                    );
                 }
-                Ok(cli_org)
+                Ok(token_org.into())
             }
         }
     }
