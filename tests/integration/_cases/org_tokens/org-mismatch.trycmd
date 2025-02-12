@@ -1,9 +1,7 @@
 ```
 $ sentry-cli --auth-token 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 sourcemaps upload --org otherorg test_path
 ? failed
-error: Two different org values supplied: `sentry` (from token), `otherorg`.
-
-Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
-Please attach the full debug log to all bug reports.
+[..]WARN[..]Using organization `sentry` (embedded in token) rather than manually-configured organization `otherorg`. To use `otherorg`, please provide an auth token for this organization.
+...
 
 ```
