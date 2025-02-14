@@ -288,7 +288,7 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
           platforms: linux/amd64,linux/aarch64
 
   merge:
