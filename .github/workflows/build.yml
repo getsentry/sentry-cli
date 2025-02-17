@@ -263,9 +263,16 @@ jobs:
           path: npm-binary-distributions/*/*.tgz
           if-no-files-found: 'error'
 
-  docker:
-    name: Docker Image
-    runs-on: ubuntu-24.04
+  platform-specific-docker:
+    name: Build Docker Image (${{ matrix.platform }})
+    strategy:
+      matrix:
+        include:
+          - platform: amd64
+            runner: ubuntu-24.04
+          - platform: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: read
       packages: write
@@ -287,9 +294,28 @@ jobs:
         with:
           context: .
           push: true
-          tags: |
-            ghcr.io/${{ github.repository }}:${{ github.sha }}
-          platforms: linux/amd64,linux/aarch64
+          platforms: linux/${{ matrix.platform }}
+          tags: ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.platform }}
+
+  multiarch-docker:
+    name: Create Multi-Architecture Docker Image
+    needs: platform-specific-docker
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create multi-architecture image
+        run: |
+          docker buildx imagetools create --push -t ghcr.io/${{ github.repository }}:${{ github.sha }} \
+            ghcr.io/${{ github.repository }}:${{ github.sha }}-amd64 \
+            ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
 
   merge:
     name: Create Release Artifact
