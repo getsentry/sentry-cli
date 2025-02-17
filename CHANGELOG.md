@@ -4,7 +4,19 @@
 
 ## 2.42.0
 
+With this release, we now build and publish multi-architecture (arm64 and aarch64) Docker images for Sentry CLI, both to the GitHub Container Registry (GHCR) and Docker Hub.
+
 ### Various fixes & improvements
+
+- feat: Only warn for token org mismatch (#2382) by @szokeasaurusrex
+- feat: Improve custom panic hook (#2355) by @szokeasaurusrex
+  - We now have better error messages when there is an internal error in Sentry CLI.
+- feat: Deprecate `--use-artifact-bundle` option (#2349) by @szokeasaurusrex
+- feat: Deprecate `useArtifactBundle` JS option (#2348) by @szokeasaurusrex
+- fix(update): Properly handle errors when getting latest CLI version (#2370) by @szokeasaurusrex
+
+<details>
+<summary><h3>Non-user-facing changes</h3></summary>
 
 - ci(docker): Add Craft targets for `docker` (#2390) by @szokeasaurusrex
 - ci(docker): Enable caching of Docker builds (#2389) by @szokeasaurusrex
@@ -14,11 +26,9 @@
 - build: Use hash instead of branch in GHCR tag (#2384) by @szokeasaurusrex
 - build: Build Docker image in CI and publish to GHCR (#2383) by @szokeasaurusrex
 - ci: Pin Actions runners' OS versions (#2353) by @szokeasaurusrex
-- feat: Only warn for token org mismatch (#2382) by @szokeasaurusrex
 - meta: Update LICENSE (#2380) by @szokeasaurusrex
 - build: Update `url` crate (#2379) by @szokeasaurusrex
 - docs: Explain why lint is disabled (#2371) by @szokeasaurusrex
-- fix(update): Properly handle errors when getting latest CLI version (#2370) by @szokeasaurusrex
 - ref(sourcemaps): Fix `unnecessary_wraps` for `add_debug_id_references` (#2369) by @szokeasaurusrex
 - ref(sourcemaps): Fix `unnecessary_wraps` for `add_sourcemap_references` (#2368) by @szokeasaurusrex
 - ref(sourcemaps): Fix `unnecessary_wraps` lint for `SourceMapsProcessor::add` (#2367) by @szokeasaurusrex
@@ -30,15 +40,17 @@
 - ref(config): Remove unneeded `Result` from `Config::from_file` (#2361) by @szokeasaurusrex
 - ref: Enable `clippy::unnecessary_wraps` lint (#2358) by @szokeasaurusrex
 - ci: Change lint action to `-D warnings` (#2359) by @szokeasaurusrex
+- ref: Simplify `--log-level` parsing (#2356) by @szokeasaurusrex
+- docs: Correct typo in doc string (#2354) by @szokeasaurusrex
 
-_Plus 5 more_
+</details>
 
 ## 2.41.1
 
 ### Various fixes & improvements
 
 - build: Replace `dotenv` with `dotenvy` (#2351) by @szokeasaurusrex
-    - This fixes a problem where multiline env variables were not supported in `.env` files
+  - This fixes a problem where multiline env variables were not supported in `.env` files
 
 ## 2.41.0
 
