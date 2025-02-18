@@ -2,6 +2,37 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.1
+
+### Various fixes & improvements
+
+- ci(docker): Don't publish to GHCR via Craft (#2392) by @szokeasaurusrex
+- ci(docker): Add Craft targets for `docker` (#2390) by @szokeasaurusrex
+- ci(docker): Enable caching of Docker builds (#2389) by @szokeasaurusrex
+- ci(docker): Remove invalid argument (#2388) by @szokeasaurusrex
+- ci(docker): Build each architecture natively (#2387) by @szokeasaurusrex
+- build(docker): Build Docker image on host architecture (#2386) by @szokeasaurusrex
+- build: Use hash instead of branch in GHCR tag (#2384) by @szokeasaurusrex
+- build: Build Docker image in CI and publish to GHCR (#2383) by @szokeasaurusrex
+- ci: Pin Actions runners' OS versions (#2353) by @szokeasaurusrex
+- feat: Only warn for token org mismatch (#2382) by @szokeasaurusrex
+- meta: Update LICENSE (#2380) by @szokeasaurusrex
+- build: Update `url` crate (#2379) by @szokeasaurusrex
+- docs: Explain why lint is disabled (#2371) by @szokeasaurusrex
+- fix(update): Properly handle errors when getting latest CLI version (#2370) by @szokeasaurusrex
+- ref(sourcemaps): Fix `unnecessary_wraps` for `add_debug_id_references` (#2369) by @szokeasaurusrex
+- ref(sourcemaps): Fix `unnecessary_wraps` for `add_sourcemap_references` (#2368) by @szokeasaurusrex
+- ref(sourcemaps): Fix `unnecessary_wraps` lint for `SourceMapsProcessor::add` (#2367) by @szokeasaurusrex
+- ref(sourcemaps): Make `lookup_pos` not return `Option` (#2366) by @szokeasaurusrex
+- ref: Make `Api::with_body` return `Self` (#2363) by @szokeasaurusrex
+- ref(api): Make `with_retry` return `Self` (#2365) by @szokeasaurusrex
+- ref(api): Make `progress_bar_mode` return `Self` (#2364) by @szokeasaurusrex
+- ref(config): Fix `unnecessary_wraps` lint for `set_auth` (#2362) by @szokeasaurusrex
+- ref(config): Remove unneeded `Result` from `Config::from_file` (#2361) by @szokeasaurusrex
+- ref: Enable `clippy::unnecessary_wraps` lint (#2358) by @szokeasaurusrex
+
+_Plus 6 more_
+
 ## 2.41.1
 
 ### Various fixes & improvements
