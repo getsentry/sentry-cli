@@ -313,7 +313,7 @@ jobs:
 
       - name: Create multi-architecture image
         run: |
-          docker buildx imagetools create --push -t ghcr.io/${{ github.repository }}:${{ github.sha }} \
+          docker buildx imagetools create -t ghcr.io/${{ github.repository }}:${{ github.sha }} \
             ghcr.io/${{ github.repository }}:${{ github.sha }}-amd64 \
             ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
 
