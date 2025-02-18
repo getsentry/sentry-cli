@@ -94,6 +94,24 @@ targets:
   - name: pypi
   - name: sentry-pypi
     internalPypiRepo: getsentry/pypi
+  - name: docker
+    id: GHCR (release)
+    source: ghcr.io/getsentry/sentry-cli
+    target: ghcr.io/getsentry/sentry-cli
+  - name: docker
+    id: GHCR (latest)
+    source: ghcr.io/getsentry/sentry-cli
+    target: ghcr.io/getsentry/sentry-cli
+    targetFormat: '{{{target}}}:latest'
+  - name: docker
+    id: Docker Hub (release)
+    source: ghcr.io/getsentry/sentry-cli
+    target: getsentry/sentry-cli
+  - name: docker
+    id: Docker Hub (latest)
+    source: ghcr.io/getsentry/sentry-cli
+    target: getsentry/sentry-cli
+    targetFormat: '{{{target}}}:latest'
 requireNames:
   - /^sentry-cli-Darwin-x86_64$/
   - /^sentry-cli-Darwin-arm64$/
