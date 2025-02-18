@@ -290,12 +290,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           platforms: linux/${{ matrix.platform }}
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.platform }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   multiarch-docker:
     name: Create Multi-Architecture Docker Image
