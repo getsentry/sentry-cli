@@ -75,7 +75,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
             },
         )?;
     } else {
-        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release)");
+        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)");
     }
     Ok(())
 }
@@ -96,7 +96,7 @@ pub struct UploadContext<'a> {
 impl UploadContext<'_> {
     pub fn release(&self) -> Result<&str> {
         self.release
-            .ok_or_else(|| anyhow!("A release slug is required (provide with --release)"))
+            .ok_or_else(|| anyhow!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
     }
 }
 
