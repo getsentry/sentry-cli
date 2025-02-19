@@ -96,7 +96,7 @@ pub struct UploadContext<'a> {
 impl UploadContext<'_> {
     pub fn release(&self) -> Result<&str> {
         self.release
-            .ok_or_else(|| anyhow!("A release slug is required (provide with --release)"))
+            .ok_or_else(|| anyhow!("A release slug is required (provide with --release) or set the SENTRY_RELEASE environment variable"))
     }
 }
 
