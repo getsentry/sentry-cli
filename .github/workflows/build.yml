@@ -296,8 +296,8 @@ jobs:
           push: true
           platforms: linux/${{ matrix.platform }}
           tags: ghcr.io/${{ github.repository }}:${{ github.sha }}-${{ matrix.platform }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=${{ matrix.platform }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
 
   multiarch-docker:
     name: Create Multi-Architecture Docker Image
