@@ -510,6 +510,8 @@ fn build_artifact_bundle(
         bundle.set_attribute("dist".to_owned(), dist.to_owned());
     }
 
+    let mut bundle_file_count = 0;
+
     for file in files.values() {
         pb.inc(1);
         pb.set_message(&file.url);
@@ -533,6 +535,7 @@ fn build_artifact_bundle(
                 return Err(e.into());
             }
         }
+        bundle_file_count += 1;
     }
 
     bundle.finish()?;
@@ -542,8 +545,8 @@ fn build_artifact_bundle(
     println!(
         "{} Bundled {} {} for upload",
         style(">").dim(),
-        style(files.len()).yellow(),
-        match files.len() {
+        style(bundle_file_count).yellow(),
+        match bundle_file_count {
             1 => "file",
             _ => "files",
         }
