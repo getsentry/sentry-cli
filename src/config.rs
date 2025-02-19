@@ -363,8 +363,12 @@ impl Config {
         matches
             .get_one::<String>("release")
             .cloned()
-            .or_else(|| env::var("SENTRY_RELEASE").ok())
-            .ok_or_else(|| format_err!("A release slug is required (provide with --release)"))
+            .or_else(|| {
+                env::var("SENTRY_RELEASE")
+                    .ok()
+                    .and_then(|v| if v.is_empty() { None } else { Some(v) })
+            })
+            .ok_or_else(|| format_err!("A release slug is required (provide with --release) or set the SENTRY_RELEASE environment variable"))
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
