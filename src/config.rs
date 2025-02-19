@@ -368,7 +368,7 @@ impl Config {
                     .ok()
                     .filter(|v| !v.is_empty())
             })
-            .ok_or_else(|| format_err!("A release slug is required (provide with --release) or set the SENTRY_RELEASE environment variable"))
+            .ok_or_else(|| format_err!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
