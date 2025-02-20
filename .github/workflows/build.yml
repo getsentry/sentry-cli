@@ -79,7 +79,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-macos-${{ matrix.arch }}
+          name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
           if-no-files-found: 'error'
 
@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: artifact-bin-macos-*
+          pattern: unsigned-bin-macos-*
           merge-multiple: true
 
       - name: Link universal binary
@@ -99,8 +99,65 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-macos-universal
+          name: unsigned-bin-macos-universal
           path: sentry-cli-Darwin-universal
+          if-no-files-found: 'error'
+
+  sign-macos-binaries:
+    strategy:
+      matrix:
+        include:
+          - arch: universal
+          - arch: x86_64
+          - arch: arm64
+
+    needs: [macos, macos_universal]
+    name: Sign & Notarize macOS Binary (${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+
+    env:
+      APPLE_CERT_PATH: /tmp/certs.p12
+      APPLE_API_KEY_PATH: /tmp/apple_key.json
+
+    steps:
+      - name: Decode Apple signing certificate and API key
+        env:
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          echo $APPLE_CERT_DATA | base64 --decode > ${{ env.APPLE_CERT_PATH }}
+          echo $APPLE_API_KEY | base64 --decode > ${{ env.APPLE_API_KEY_PATH }}
+
+      - name: Download unsigned binary
+        uses: actions/download-artifact@v4
+        with:
+          name: unsigned-bin-macos-${{ matrix.arch }}
+          path: sentry-cli-Darwin-${{ matrix.arch }}
+
+      - name: Sign binary
+        uses: indygreg/apple-code-sign-action@v1
+        with:
+          input_path: sentry-cli-Darwin-${{ matrix.arch }}
+          p12_file: ${{ env.APPLE_CERT_PATH }}
+          p12_password: ${{ secrets.APPLE_CERT_PASSWORD }}
+
+      - name: Zip signed binary
+        run: |
+          zip sentry-cli-Darwin-${{ matrix.arch }}.zip sentry-cli-Darwin-${{ matrix.arch }}
+
+      - name: Notarize binary
+        uses: indygreg/apple-code-sign-action@v1
+        with:
+          input_path: sentry-cli-Darwin-${{ matrix.arch }}.zip
+          sign: false
+          notarize: true
+          app_store_connect_api_key_json_file: ${{ env.APPLE_API_KEY_PATH }}
+
+      - name: Upload signed binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-bin-macos-${{ matrix.arch }}
+          path: sentry-cli-Darwin-${{ matrix.arch }}.zip
           if-no-files-found: 'error'
 
   windows:
