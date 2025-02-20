@@ -1,0 +1,8 @@
+```
+$ sentry-cli sourcemaps upload tests/integration/_fixtures/invalid-utf8.txt tests/integration/_fixtures/bundle.min.js.map
+? success
+...
+> Bundled 1 file for upload
+...
+
+```

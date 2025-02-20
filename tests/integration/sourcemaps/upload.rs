@@ -183,3 +183,11 @@ fn command_sourcemaps_upload_complex_extension() {
         .register_trycmd_test("sourcemaps/sourcemaps-upload-complex-extension.trycmd")
         .with_default_token();
 }
+
+#[test]
+fn command_sourcemaps_upload_skip_invalid_utf8() {
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Modern, Default::default())
+        .register_trycmd_test("sourcemaps/sourcemaps-with-invalid-utf8.trycmd")
+        .with_default_token();
+}
