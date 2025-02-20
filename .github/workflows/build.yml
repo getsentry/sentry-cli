@@ -108,10 +108,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - arch: universal
           - arch: x86_64
           - arch: arm64
 
-    needs: macos
+    needs: [macos, macos_universal]
     name: Sign & Notarize macOS Binary (${{ matrix.arch }})
     runs-on: ubuntu-24.04
 
@@ -134,12 +135,8 @@ jobs:
           name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
 
-      - name: Debug
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -Rla .
+      - name: Move binary to root
+        run: mv sentry-cli-Darwin-${{ matrix.arch }}/sentry-cli-Darwin-${{ matrix.arch }} sentry-cli-Darwin-${{ matrix.arch }}
 
       - name: Sign binary
         uses: indygreg/apple-code-sign-action@v1
