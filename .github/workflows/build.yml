@@ -105,13 +105,13 @@ jobs:
 
   sign-macos-binaries:
     strategy:
+      fail-fast: false
       matrix:
         include:
-          - arch: universal
           - arch: x86_64
           - arch: arm64
 
-    needs: [macos, macos_universal]
+    needs: macos
     name: Sign & Notarize macOS Binary (${{ matrix.arch }})
     runs-on: ubuntu-24.04
 
