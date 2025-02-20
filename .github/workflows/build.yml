@@ -134,6 +134,13 @@ jobs:
           name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
 
+      - name: Debug
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in current directory:"
+          ls -Rla .
+
       - name: Sign binary
         uses: indygreg/apple-code-sign-action@v1
         with:
