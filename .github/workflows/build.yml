@@ -147,7 +147,7 @@ jobs:
           input_path: sentry-cli-Darwin-${{ matrix.arch }}
           p12_file: ${{ env.APPLE_CERT_PATH }}
           p12_password: ${{ secrets.APPLE_CERT_PASSWORD }}
-          sign_args: --code-signature-flags runtime
+          sign_args: --for-notarization
 
       - name: Zip signed binary
         run: |
