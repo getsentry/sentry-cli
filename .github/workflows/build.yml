@@ -133,10 +133,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
-          path: sentry-cli-Darwin-${{ matrix.arch }}
 
-      - name: Move binary to root
-        run: mv sentry-cli-Darwin-${{ matrix.arch }}/sentry-cli-Darwin-${{ matrix.arch }} sentry-cli-Darwin-${{ matrix.arch }}
+      - name: Debug
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Files in current directory:"
+          ls -Rla .
 
       - name: Sign binary
         uses: indygreg/apple-code-sign-action@v1
