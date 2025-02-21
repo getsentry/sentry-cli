@@ -123,8 +123,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          path: sentry-cli
 
       - name: Decode Apple signing certificate and API key
         env:
