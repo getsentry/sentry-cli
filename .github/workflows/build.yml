@@ -121,6 +121,11 @@ jobs:
       APPLE_API_KEY_PATH: /tmp/apple_key.json
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          path: sentry-cli
+
       - name: Decode Apple signing certificate and API key
         env:
           APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
@@ -147,7 +152,7 @@ jobs:
           input_path: sentry-cli-Darwin-${{ matrix.arch }}
           p12_file: ${{ env.APPLE_CERT_PATH }}
           p12_password: ${{ secrets.APPLE_CERT_PASSWORD }}
-          sign_args: --for-notarization
+          config_file: sentry-cli/rcodesign.toml
 
       - name: Zip signed binary
         run: |
