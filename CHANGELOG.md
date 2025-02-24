@@ -2,6 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.2
+
+### Various fixes & improvements
+
+- fix(sourcemaps): Exclude skipped files from bundle file count (#2397) by @a-hariti
+- fix: warn about missing SENTRY_RELEASE when it's set to empty string (#2394) by @a-hariti
+- build(node): Bump `semver@5.*` dependencies (#2399) by @szokeasaurusrex
+- build(node): Bump `semver@6.*` (#2400) by @szokeasaurusrex
+- build(node): Bump `semver@^7.*` dependencies (#2398) by @szokeasaurusrex
+- build(node): Bump `cross-spawn@7.0.X` (#2396) by @szokeasaurusrex
+- build(node): Bump `cross-spawn@^6.0.5` (#2395) by @szokeasaurusrex
+- ci(docker): Release Docker image to GHCR (#2393) by @szokeasaurusrex
+- ci(docker): Fix caching (#2391) by @szokeasaurusrex
+
 ## 2.42.1
 
 This release is a re-release of 2.42.0. There are no code changes to the CLI. We are performing this re-release because 2.42.0 failed to publish to Docker Hub.
