@@ -124,6 +124,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install `rcodesign`
+        run: |
+          curl -L https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.29.0/apple-codesign-0.29.0-x86_64-unknown-linux-musl.tar.gz | tar -xz --strip-components=1
+          mv rcodesign /usr/local/bin/rcodesign
+
       - name: Decode Apple signing certificate and API key
         env:
           APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
@@ -145,26 +150,24 @@ jobs:
           ls -Rla .
 
       - name: Sign binary
-        uses: indygreg/apple-code-sign-action@v1
-        with:
-          input_path: sentry-cli-Darwin-${{ matrix.arch }}
-          p12_file: ${{ env.APPLE_CERT_PATH }}
-          p12_password: ${{ secrets.APPLE_CERT_PASSWORD }}
-          sign_args: |
-            --for-notarization
-            -e ./entitlements.plist
+        run: |
+          rcodesign sign \
+            --for-notarization \
+            --entitlements entitlements.plist \
+            --p12-file ${{ env.APPLE_CERT_PATH }} \
+            --p12-password ${{ secrets.APPLE_CERT_PASSWORD }} \
+            sentry-cli-Darwin-${{ matrix.arch }}
 
       - name: Zip signed binary
         run: |
           zip sentry-cli-Darwin-${{ matrix.arch }}.zip sentry-cli-Darwin-${{ matrix.arch }}
 
       - name: Notarize binary
-        uses: indygreg/apple-code-sign-action@v1
-        with:
-          input_path: sentry-cli-Darwin-${{ matrix.arch }}.zip
-          sign: false
-          notarize: true
-          app_store_connect_api_key_json_file: ${{ env.APPLE_API_KEY_PATH }}
+        run: |
+          rcodesign notary-submit \
+            --api-key-file ${{ env.APPLE_API_KEY_PATH }} \
+            --wait \
+            sentry-cli-Darwin-${{ matrix.arch }}.zip
 
       - name: Upload signed binary
         uses: actions/upload-artifact@v4
