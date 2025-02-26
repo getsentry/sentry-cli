@@ -153,7 +153,7 @@ jobs:
         run: |
           rcodesign sign \
             --for-notarization \
-            --entitlements entitlements.plist \
+            --entitlements-xml-path entitlements.plist \
             --p12-file ${{ env.APPLE_CERT_PATH }} \
             --p12-password ${{ secrets.APPLE_CERT_PASSWORD }} \
             sentry-cli-Darwin-${{ matrix.arch }}
