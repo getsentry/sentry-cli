@@ -1,4 +1,0 @@
-[default.sign.path."*"]
-
-entitlements_xml_file = "entitlements.plist"
-code_signature_flags = ["runtime"]

@@ -150,7 +150,9 @@ jobs:
           input_path: sentry-cli-Darwin-${{ matrix.arch }}
           p12_file: ${{ env.APPLE_CERT_PATH }}
           p12_password: ${{ secrets.APPLE_CERT_PASSWORD }}
-          config_file: sentry-cli/rcodesign.toml
+          sign_args: |
+            --for-notarization
+            -e entitlements.plist
 
       - name: Zip signed binary
         run: |
