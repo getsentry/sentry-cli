@@ -152,7 +152,7 @@ jobs:
           p12_password: ${{ secrets.APPLE_CERT_PASSWORD }}
           sign_args: |
             --for-notarization
-            -e entitlements.plist
+            -e ./entitlements.plist
 
       - name: Zip signed binary
         run: |
