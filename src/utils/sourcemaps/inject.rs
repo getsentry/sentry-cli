@@ -251,7 +251,9 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
 
     // At the end we do a split by MAIN_SEPARATOR as everything operates with `/` in the code but
     // `clean_path` and `join_path` uses the system separator.
-    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..])).split(std::path::MAIN_SEPARATOR).join("/")
+    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
+        .split(std::path::MAIN_SEPARATOR)
+        .join("/")
 }
 
 /// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
