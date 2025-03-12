@@ -230,6 +230,11 @@ pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
     DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
 }
 
+/// Ensures paths are always separated by `/` even on Windows
+pub fn canonicalize_path_sep_to_unix(path: &str) -> String {
+    path.replace(std::path::MAIN_SEPARATOR, "/")
+}
+
 /// Computes a normalized sourcemap URL from a source file's own URL und the relative URL of its sourcemap.
 ///
 /// Roughly, this will combine a source URL of `some/dir/source.js` and a sourcemap URL of `path/to/source.min.js`
@@ -238,7 +243,8 @@ pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
 ///
 /// Leading `./` segments will be preserved.
 pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String {
-    let base_url = source_url
+    let canonicalized_source_url = canonicalize_path_sep_to_unix(source_url);
+    let base_url = canonicalized_source_url
         .rsplit_once('/')
         .map(|(base, _)| base)
         .unwrap_or("");
@@ -251,9 +257,11 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
 
     // At the end we do a split by MAIN_SEPARATOR as everything operates with `/` in the code but
     // `clean_path` and `join_path` uses the system separator.
-    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
-        .split(std::path::MAIN_SEPARATOR)
-        .join("/")
+    canonicalize_path_sep_to_unix(&format!(
+        "{}{}",
+        &joined[..cutoff],
+        clean_path(&joined[cutoff..])
+    ))
 }
 
 /// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
@@ -486,6 +494,41 @@ something else
 
     #[test]
     fn test_normalize_sourcemap_url() {
+        // TODO: Enable the following test and make it pass
+        // Linux allows having `\` in a file name but our path helpers,
+        // specifically `join_path` and `clean_path` from `symbolic::common`,
+        // do not use `std::path::MAIN_SEPARATOR` and instead tries to guess
+        // the path style by the existence of a `\` in the path. This is
+        // problematic because it can lead to incorrect path normalization.
+        // assert_eq!(
+        //     normalize_sourcemap_url("/foo/ba\\r/baz.js", "baz.js.map"),
+        //     "/foo/ba\\r/baz.js.map"
+        // );
+
+        assert_eq!(
+            normalize_sourcemap_url(
+                &format!("foo{0}bar{0}baz.js", std::path::MAIN_SEPARATOR),
+                &format!("..{0}.{0}baz.js.map", std::path::MAIN_SEPARATOR)
+            ),
+            "foo/baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url(
+                &format!("foo{0}bar{0}baz.js", std::path::MAIN_SEPARATOR),
+                ".././baz.js.map"
+            ),
+            "foo/baz.js.map"
+        );
+
+        assert_eq!(
+            normalize_sourcemap_url(
+                "foo/bar/baz.js",
+                &format!("..{0}.{0}baz.js.map", std::path::MAIN_SEPARATOR)
+            ),
+            "foo/baz.js.map"
+        );
+
         assert_eq!(
             normalize_sourcemap_url("foo/bar/baz.js", "baz.js.map"),
             "foo/bar/baz.js.map"
