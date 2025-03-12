@@ -1055,6 +1055,7 @@ impl SourceMapProcessor {
                         } else {
                             // Case 4: We have a URL for the external sourcemap, but we can't find it.
                             // This is substantially the same as case 1.
+                            debug!("Sourcemap file {} not found", sourcemap_url);
                             // source map cannot be found, fall back to hashing the contents.
                             let source_file = self.sources.get_mut(source_url).unwrap();
                             let debug_id =
