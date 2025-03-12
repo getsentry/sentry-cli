@@ -249,7 +249,9 @@ pub fn normalize_sourcemap_url(source_url: &str, sourcemap_url: &str) -> String 
         cutoff += 2;
     }
 
-    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..]))
+    // At the end we do a split by MAIN_SEPARATOR as everything operates with `/` in the code but
+    // `clean_path` and `join_path` uses the system separator.
+    format!("{}{}", &joined[..cutoff], clean_path(&joined[cutoff..])).split(std::path::MAIN_SEPARATOR).join("/")
 }
 
 /// Returns a list of those paths among `candidate_paths` that differ from `expected_path` in
@@ -269,6 +271,7 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
             .split('/')
             .filter(|&segment| segment != ".")
             .peekable();
+
         let mut candidate_segments = candidate
             .split('/')
             .filter(|&segment| segment != ".")
