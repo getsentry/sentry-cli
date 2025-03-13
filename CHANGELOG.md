@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.3
+
+### Various fixes & improvements
+
+- fix(sourcemaps): Fix mismatches between path and URL on Windows (#2414) by @BYK
+
 ## 2.42.2
 
 ### Various fixes & improvements
