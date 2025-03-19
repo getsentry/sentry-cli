@@ -146,13 +146,6 @@ jobs:
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
 
-      - name: Debug
-        run: |
-          echo "Current directory:"
-          pwd
-          echo "Files in current directory:"
-          ls -Rla .
-
       - name: Sign binary
         run: |
           rcodesign sign \
@@ -177,7 +170,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: artifact-bin-macos-${{ matrix.arch }}
-          path: sentry-cli-Darwin-${{ matrix.arch }}.zip
+          path: sentry-cli-Darwin-${{ matrix.arch }}
           if-no-files-found: 'error'
 
   windows:
