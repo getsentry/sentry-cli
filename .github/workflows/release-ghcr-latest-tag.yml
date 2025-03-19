@@ -17,6 +17,6 @@ jobs:
 
       - name: Tag latest version
         run: |
-          docker pull ghcr.io/getsentry/sentry-cli:${{ github.sha }}
-          docker tag ghcr.io/getsentry/sentry-cli:${{ github.sha }} ghcr.io/getsentry/sentry-cli:latest
-          docker push ghcr.io/getsentry/sentry-cli:latest
+          docker buildx imagetools create \
+            -t ghcr.io/getsentry/sentry-cli:latest \
+            ghcr.io/getsentry/sentry-cli:${{ github.sha }}
