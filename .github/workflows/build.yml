@@ -134,8 +134,8 @@ jobs:
           APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
         run: |
-          echo $APPLE_CERT_DATA | base64 --decode > ${{ env.APPLE_CERT_PATH }}
-          echo $APPLE_API_KEY | base64 --decode > ${{ env.APPLE_API_KEY_PATH }}
+          echo "$APPLE_CERT_DATA" | base64 --decode > ${{ env.APPLE_CERT_PATH }}
+          echo "$APPLE_API_KEY" | base64 --decode > ${{ env.APPLE_API_KEY_PATH }}
 
       - name: Download unsigned binary
         uses: actions/download-artifact@v4
