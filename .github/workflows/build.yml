@@ -126,8 +126,12 @@ jobs:
 
       - name: Install `rcodesign`
         run: |
-          curl -L https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.29.0/apple-codesign-0.29.0-x86_64-unknown-linux-musl.tar.gz | tar -xz --strip-components=1
+          curl -L https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.29.0/apple-codesign-0.29.0-x86_64-unknown-linux-musl.tar.gz \
+            -o rcodesign.tar.gz
+          echo "dbe85cedd8ee4217b64e9a0e4c2aef92ab8bcaaa41f20bde99781ff02e600002  rcodesign.tar.gz" | sha256sum -c -
+          tar -xz --strip-components=1 -f rcodesign.tar.gz
           mv rcodesign /usr/local/bin/rcodesign
+          rm rcodesign.tar.gz
 
       - name: Decode Apple signing certificate and API key
         env:
@@ -271,7 +275,7 @@ jobs:
   python:
     name: python
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows, python-base]
+    needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -297,7 +301,7 @@ jobs:
   npm-distributions:
     name: 'Build NPM distributions'
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows]
+    needs: [linux, sign-macos-binaries, windows]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v4
@@ -395,7 +399,7 @@ jobs:
   merge:
     name: Create Release Artifact
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows, npm-distributions, node, python]
+    needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
     steps:
       - uses: actions/upload-artifact/merge@v4
         with:
