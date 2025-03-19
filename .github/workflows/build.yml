@@ -79,7 +79,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-macos-${{ matrix.arch }}
+          name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
           if-no-files-found: 'error'
 
@@ -91,7 +91,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: artifact-bin-macos-*
+          pattern: unsigned-bin-macos-*
           merge-multiple: true
 
       - name: Link universal binary
@@ -99,8 +99,78 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: artifact-bin-macos-universal
+          name: unsigned-bin-macos-universal
           path: sentry-cli-Darwin-universal
+          if-no-files-found: 'error'
+
+  sign-macos-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: universal
+          - arch: x86_64
+          - arch: arm64
+
+    needs: [macos, macos_universal]
+    name: Sign & Notarize macOS Binary (${{ matrix.arch }})
+    runs-on: ubuntu-24.04
+
+    env:
+      APPLE_CERT_PATH: /tmp/certs.p12
+      APPLE_API_KEY_PATH: /tmp/apple_key.json
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install `rcodesign`
+        run: |
+          curl -L https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.29.0/apple-codesign-0.29.0-x86_64-unknown-linux-musl.tar.gz \
+            -o rcodesign.tar.gz
+          echo "dbe85cedd8ee4217b64e9a0e4c2aef92ab8bcaaa41f20bde99781ff02e600002  rcodesign.tar.gz" | sha256sum -c -
+          tar -xz --strip-components=1 -f rcodesign.tar.gz
+          mv rcodesign /usr/local/bin/rcodesign
+          rm rcodesign.tar.gz
+
+      - name: Decode Apple signing certificate and API key
+        env:
+          APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+        run: |
+          echo "$APPLE_CERT_DATA" | base64 --decode > ${{ env.APPLE_CERT_PATH }}
+          echo "$APPLE_API_KEY" | base64 --decode > ${{ env.APPLE_API_KEY_PATH }}
+
+      - name: Download unsigned binary
+        uses: actions/download-artifact@v4
+        with:
+          name: unsigned-bin-macos-${{ matrix.arch }}
+
+      - name: Sign binary
+        run: |
+          rcodesign sign \
+            --for-notarization \
+            --entitlements-xml-path entitlements.plist \
+            --p12-file ${{ env.APPLE_CERT_PATH }} \
+            --p12-password ${{ secrets.APPLE_CERT_PASSWORD }} \
+            sentry-cli-Darwin-${{ matrix.arch }}
+
+      - name: Zip signed binary
+        run: |
+          zip sentry-cli-Darwin-${{ matrix.arch }}.zip sentry-cli-Darwin-${{ matrix.arch }}
+
+      - name: Notarize binary
+        run: |
+          rcodesign notary-submit \
+            --api-key-file ${{ env.APPLE_API_KEY_PATH }} \
+            --wait \
+            sentry-cli-Darwin-${{ matrix.arch }}.zip
+
+      - name: Upload signed binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: artifact-bin-macos-${{ matrix.arch }}
+          path: sentry-cli-Darwin-${{ matrix.arch }}
           if-no-files-found: 'error'
 
   windows:
@@ -198,7 +268,7 @@ jobs:
   python:
     name: python
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows, python-base]
+    needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -224,7 +294,7 @@ jobs:
   npm-distributions:
     name: 'Build NPM distributions'
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows]
+    needs: [linux, sign-macos-binaries, windows]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v4
@@ -322,7 +392,7 @@ jobs:
   merge:
     name: Create Release Artifact
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows, npm-distributions, node, python]
+    needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
     steps:
       - uses: actions/upload-artifact/merge@v4
         with:
