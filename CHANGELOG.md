@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.4
+
+### Various fixes & improvements
+
+- build(macos): Sign macOS binaries (#2401) by @szokeasaurusrex
+- ci(docker): Fix GHCR releases so they are multiarch (#2418) by @szokeasaurusrex
+
 ## 2.42.3
 
 ### Various fixes & improvements
