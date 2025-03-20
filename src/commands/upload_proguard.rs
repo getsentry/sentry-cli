@@ -227,7 +227,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 let pb = make_byte_progress_bar(mapping.len() as u64);
                 zip.start_file(
                     format!("proguard/{}.txt", mapping.uuid()),
-                    zip::write::FileOptions::default(),
+                    zip::write::SimpleFileOptions::default(),
                 )?;
                 copy_with_progress(&pb, &mut mapping.as_ref(), &mut zip)?;
                 pb.finish_and_clear();

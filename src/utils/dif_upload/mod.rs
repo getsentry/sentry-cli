@@ -31,7 +31,8 @@ use symbolic::il2cpp::ObjectLineMapping;
 use walkdir::WalkDir;
 use which::which;
 use zip::result::ZipError;
-use zip::{write::FileOptions, ZipArchive, ZipWriter};
+use zip::write::SimpleFileOptions;
+use zip::{ZipArchive, ZipWriter};
 
 use self::error::ValidationError;
 use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
@@ -1292,7 +1293,7 @@ fn create_batch_archive(difs: &[HashedDifMatch<'_>]) -> Result<TempFile> {
         let mut zip = ZipWriter::new(tf.open()?);
 
         for symbol in difs {
-            zip.start_file(symbol.file_name(), FileOptions::default())?;
+            zip.start_file(symbol.file_name(), SimpleFileOptions::default())?;
             copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
         }
     }
