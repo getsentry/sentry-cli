@@ -7,5 +7,6 @@ mod constants;
 mod utils;
 
 pub fn main() -> ! {
-    commands::main()
+    commands::main();
+    println!("This is unreachable, and should cause a clippy warning");
 }
