@@ -170,7 +170,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        arch: [i686, x86_64]
+        arch: [i686, x86_64, aarch64]
 
     env:
       TARGET: ${{ matrix.arch }}-pc-windows-msvc
