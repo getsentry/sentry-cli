@@ -61,18 +61,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # pin@v1
-        with:
-          toolchain: stable
-          target: ${{ matrix.target }}
-          profile: minimal
-          override: true
+      - name: Add Rustup Target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Run Cargo Build
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # pin@v1
-        with:
-          command: build
-          args: --target=${{ matrix.target }} --release --locked
+        run: cargo build --target=${{ matrix.target }} --release --locked
 
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
@@ -179,6 +172,9 @@ jobs:
       matrix:
         arch: [i686, x86_64]
 
+    env:
+      TARGET: ${{ matrix.arch }}-pc-windows-msvc
+
     name: Windows ${{ matrix.arch }}
     runs-on: windows-2019
 
@@ -191,20 +187,14 @@ jobs:
         shell: bash
         run: rustup set auto-self-update disable
 
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # pin@v1
-        with:
-          toolchain: stable-${{ matrix.arch }}-pc-windows-msvc
-          profile: minimal
-          override: true
+      - name: Add Rustup Target
+        run: rustup target add ${{ env.TARGET }}
 
       - name: Run Cargo Build
-        uses: actions-rs/cargo@844f36862e911db73fe0815f00a4a2602c279505 # pin@v1
-        with:
-          command: build
-          args: --release --locked
+        run: cargo build --target=${{ env.TARGET }} --release --locked
 
       - name: Rename Binary
-        run: mv target/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
+        run: mv target/${{ env.TARGET }}/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
       - uses: actions/upload-artifact@v4
         with:
@@ -249,12 +239,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@16499b5e05bf2e26879000db0c1d13f7e13fa3af # pin@v1
-        with:
-          toolchain: stable
-          target: x86_64-unknown-linux-musl
-          profile: minimal
-          override: true
+      - name: Add Rustup Target
+        run: rustup target add x86_64-unknown-linux-musl
       - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
