@@ -107,7 +107,7 @@ impl Drop for TempFile {
         // On Windows, we open the file handle to set "FILE_FLAG_DELETE_ON_CLOSE" so that it will be closed
         // when the last open handle to this file is gone.
         use std::os::windows::prelude::*;
-        use winapi::um::winbase::FILE_FLAG_DELETE_ON_CLOSE;
+        use windows_sys::Win32::Storage::FileSystem::FILE_FLAG_DELETE_ON_CLOSE;
         let result = fs::OpenOptions::new()
             .write(true)
             .custom_flags(FILE_FLAG_DELETE_ON_CLOSE)
