@@ -10,7 +10,6 @@ use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
 use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
-use username::get_user_name;
 use uuid::Uuid;
 
 use crate::commands::send_event;
@@ -92,7 +91,7 @@ fn send_event(
         environment: config.get_environment().map(Into::into),
         release: release.or(detect_release_name().ok()).map(Into::into),
         sdk: Some(get_sdk_info()),
-        user: get_user_name().ok().map(|n| User {
+        user: whoami::fallible::username().ok().map(|n| User {
             username: Some(n),
             ip_address: Some(Default::default()),
             ..Default::default()
