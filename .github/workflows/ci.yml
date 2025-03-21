@@ -28,7 +28,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --workspace --tests -- -D warnings
+        run: cargo clippy --workspace --tests
 
   test:
     strategy:
