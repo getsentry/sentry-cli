@@ -13,7 +13,6 @@ use sentry::protocol::{Event, Level, LogEntry, User};
 use sentry::types::Uuid;
 use sentry::{apply_defaults, Client, ClientOptions, Envelope};
 use serde_json::Value;
-use username::get_user_name;
 
 use crate::api::envelopes_api::EnvelopesApi;
 use crate::constants::USER_AGENT;
@@ -307,7 +306,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         user.ip_address.get_or_insert(Default::default());
         event.user = Some(user);
     } else {
-        event.user = get_user_name().ok().map(|n| User {
+        event.user = whoami::fallible::username().ok().map(|n| User {
             username: Some(n),
             ip_address: Some(Default::default()),
             ..Default::default()
