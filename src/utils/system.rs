@@ -27,19 +27,6 @@ pub fn propagate_exit_status(status: process::ExitStatus) {
     }
 }
 
-#[cfg(not(windows))]
-fn is_homebrew_install_result() -> Result<bool> {
-    let mut exe = env::current_exe()?.canonicalize()?;
-    exe.pop();
-    exe.set_file_name("INSTALL_RECEIPT.json");
-    Ok(exe.is_file())
-}
-
-#[cfg(windows)]
-fn is_homebrew_install_result() -> Result<bool> {
-    Ok(false)
-}
-
 fn is_npm_install_result() -> Result<bool> {
     let mut exe = env::current_exe()?.canonicalize()?;
     exe.set_file_name("package.json");
@@ -48,7 +35,14 @@ fn is_npm_install_result() -> Result<bool> {
 
 /// Checks if we were installed from homebrew
 pub fn is_homebrew_install() -> bool {
-    is_homebrew_install_result().unwrap_or(false)
+    #[cfg(not(windows))]
+    if let Ok(mut exe) = env::current_exe().and_then(|p| p.canonicalize()) {
+        exe.pop();
+        exe.set_file_name("INSTALL_RECEIPT.json");
+        return exe.is_file();
+    }
+
+    false
 }
 
 /// Checks if we were installed via npm
