@@ -54,6 +54,11 @@ WHEELS = (
         plat='win_amd64',
         exe='sentry-cli.exe',
     ),
+    Wheel(
+        src='sentry-cli-Windows-aarch64.exe',
+        plat='win_arm64',
+        exe='sentry-cli.exe',
+    ),
 )
 
 
