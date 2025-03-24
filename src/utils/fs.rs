@@ -136,21 +136,14 @@ pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
 /// Set the mode of a path to 755 if we're on a Unix machine, otherwise
 /// don't do anything with the given path.
 #[cfg(not(feature = "managed"))]
+#[cfg(not(windows))]
 pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<()> {
-    #[cfg(not(windows))]
-    fn exec<P: AsRef<Path>>(path: P) -> io::Result<()> {
-        use std::os::unix::fs::PermissionsExt;
-        let mut perm = fs::metadata(&path)?.permissions();
-        perm.set_mode(0o755);
-        fs::set_permissions(&path, perm)
-    }
+    use std::os::unix::fs::PermissionsExt;
 
-    #[cfg(windows)]
-    fn exec<P: AsRef<Path>>(_path: P) -> io::Result<()> {
-        Ok(())
-    }
+    let mut perm = fs::metadata(&path)?.permissions();
+    perm.set_mode(0o755);
+    fs::set_permissions(&path, perm)?;
 
-    exec(path)?;
     Ok(())
 }
 

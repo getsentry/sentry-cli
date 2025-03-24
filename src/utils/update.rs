@@ -20,7 +20,10 @@ use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
 use crate::constants::{APP_NAME, VERSION};
 #[cfg(not(feature = "managed"))]
-use crate::utils::fs::{is_writable, set_executable_mode};
+use crate::utils::fs::is_writable;
+#[cfg(not(windows))]
+#[cfg(not(feature = "managed"))]
+use crate::utils::fs::set_executable_mode;
 #[cfg(not(feature = "managed"))]
 use crate::utils::system::QuietExit;
 use crate::utils::system::{is_homebrew_install, is_npm_install};
@@ -171,6 +174,7 @@ impl SentryCliUpdateInfo {
             }
         };
 
+        #[cfg(not(windows))]
         set_executable_mode(&tmp_path)?;
         rename_exe(&exe, &tmp_path, elevate)?;
         Ok(())
