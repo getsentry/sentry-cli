@@ -78,10 +78,6 @@ function getDownloadUrl(platform, arch) {
     case 'darwin':
       return `${releasesUrl}-Darwin-universal`;
     case 'win32':
-      // Windows arm machines can run x64 binaries
-      if (arch === 'arm64') {
-        archString = 'x86_64';
-      }
       return `${releasesUrl}-Windows-${archString}.exe`;
     case 'linux':
     case 'freebsd':

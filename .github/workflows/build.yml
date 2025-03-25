@@ -300,6 +300,7 @@ jobs:
           mv binary-artifacts/sentry-cli-Linux-x86_64 npm-binary-distributions/linux-x64/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Windows-i686.exe npm-binary-distributions/win32-i686/bin/sentry-cli.exe
           mv binary-artifacts/sentry-cli-Windows-x86_64.exe npm-binary-distributions/win32-x64/bin/sentry-cli.exe
+          mv binary-artifacts/sentry-cli-Windows-aarch64.exe npm-binary-distributions/win32-arm64/bin/sentry-cli.exe
       - name: Remove binary placeholders
         run: rm -rf npm-binary-distributions/*/bin/.gitkeep
       - name: Make Linux binaries executable

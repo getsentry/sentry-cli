@@ -34,6 +34,9 @@ targets:
   - name: npm
     id: '@sentry/cli-win32-x64'
     includeNames: /^sentry-cli-win32-x64-\d.*\.tgz$/
+  - name: npm
+    id: '@sentry/cli-win32-arm64'
+    includeNames: /^sentry-cli-win32-arm64-\d.*\.tgz$/
 
   # Main Sentry CLI package
   - name: npm
@@ -113,5 +116,6 @@ requireNames:
   - /^sentry-cli-Linux-aarch64$/
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
+  - /^sentry-cli-Windows-aarch64.exe$/
   - /^sentry_cli-.*.tar.gz$/
   - /^sentry_cli-.*.whl$/
