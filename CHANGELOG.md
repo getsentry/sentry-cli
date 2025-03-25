@@ -2,6 +2,26 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.5-alpha
+
+### Various fixes & improvements
+
+- ci(npm): Release Windows ARM build to `npm` (#2436) by @szokeasaurusrex
+- ci: Run lint action on all target operating systems (#2360) by @szokeasaurusrex
+- ref: Simplify `is_homebrew_install` (#2434) by @szokeasaurusrex
+- build(deps): bump github/codeql-action from 3.28.12 to 3.28.13 (#2435) by @dependabot
+- ref: Simplify `set_executable_mode` (#2433) by @szokeasaurusrex
+- ci: Build for Windows ARM (#2429) by @szokeasaurusrex
+- build: Replace `username` with `whoami` (#2432) by @szokeasaurusrex
+- build: Remove direct `winapi` dependency (#2431) by @szokeasaurusrex
+- build(deps): bump actions/create-github-app-token from 1.11.0 to 1.11.7 (#2430) by @dependabot
+- ci: Auto-update GHA with Dependabot (#2428) by @szokeasaurusrex
+- ci: Update and securely pin all actions (#2427) by @szokeasaurusrex
+- ci: Remove unneeded `-D warnings` (#2425) by @szokeasaurusrex
+- ci: Stop using `actions-rs` (#2424) by @szokeasaurusrex
+- deps: Update zip to 2.4.2 (#2423) by @loewenheim
+- build: update `zip` dependency (#2421) by @szokeasaurusrex
+
 ## 2.42.4
 
 ### Various fixes & improvements
