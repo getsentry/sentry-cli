@@ -4,6 +4,10 @@
 
 ## 2.42.5-alpha
 
+This release adds a binary for Windows on ARM.
+
+We are releasing this as an alpha to test that the new Windows ARM build is published to NPM correctly.
+
 ### Various fixes & improvements
 
 - ci(npm): Release Windows ARM build to `npm` (#2436) by @szokeasaurusrex
