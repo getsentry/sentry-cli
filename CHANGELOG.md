@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.5
+
+This is a re-release of 2.45.5-alpha as a stable release. There are no code changes from 2.45.5-alpha, since the Windows ARM build for that version was published successfully.
+
 ## 2.42.5-alpha
 
 This release adds a binary for Windows on ARM.
