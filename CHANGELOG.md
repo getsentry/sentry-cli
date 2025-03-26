@@ -4,7 +4,7 @@
 
 ## 2.42.5
 
-- No documented changes.
+This is a re-release of 2.45.5-alpha as a stable release. There are no code changes from 2.45.5-alpha, since the Windows ARM build for that version was published successfully.
 
 ## 2.42.5-alpha
 
