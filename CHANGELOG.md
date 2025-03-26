@@ -2,6 +2,10 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.42.5
+
+- No documented changes.
+
 ## 2.42.5-alpha
 
 This release adds a binary for Windows on ARM.
