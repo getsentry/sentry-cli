@@ -91,3 +91,10 @@ jobs:
         if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
       - run: npm test
+
+  test_debug_files_upload:
+    runs-on: macos-15
+    steps:
+      - run: |
+          curl -sL https://sentry.io/get-cli/ | sh
+          sentry-cli debug-files upload --auth-token=1234567890 --org sentry --project cli --log-level trace .
