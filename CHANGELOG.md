@@ -2,6 +2,14 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.43.0
+
+This release explicitly deprecates the `sentry-cli debug-files upload` command's `--info-plist` argument, since the argument does nothing. If you are using the `--info-plist` argument, you should stop using it.
+
+### Various fixes & improvements
+
+- fix(debug_files): Don't call `xcodebuild` (#2443) by @szokeasaurusrex
+
 ## 2.42.5
 
 This is a re-release of 2.45.5-alpha as a stable release. There are no code changes from 2.45.5-alpha, since the Windows ARM build for that version was published successfully.
