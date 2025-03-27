@@ -4,6 +4,8 @@
 
 ## 2.43.0
 
+This release explicitly deprecates the `sentry-cli debug-files upload` command's `--info-plist` argument, since the argument does nothing. If you are using the `--info-plist` argument, you should stop using it.
+
 ### Various fixes & improvements
 
 - fix(debug_files): Don't call `xcodebuild` (#2443) by @szokeasaurusrex
