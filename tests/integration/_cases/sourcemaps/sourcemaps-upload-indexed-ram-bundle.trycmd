@@ -1,7 +1,7 @@
 ```
 $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/indexed-ram-bundle/main.jsbundle --bundle-sourcemap tests/integration/_fixtures/indexed-ram-bundle/main.jsbundle.packager.map --release=wat-release
 ? success
-> Analyzing 2 sources
+> Analyzing 1 sources
 > Rewriting sources
 > Adding source map references
 > Bundled 2107 files for upload
