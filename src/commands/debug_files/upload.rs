@@ -16,7 +16,6 @@ use crate::utils::args::ArgExt;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
 use crate::utils::system::QuietExit;
-use crate::utils::xcode::InfoPlist;
 
 static DERIVED_DATA_FOLDER: &str = "Library/Developer/Xcode/DerivedData";
 
@@ -132,12 +131,9 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("info_plist")
                 .long("info-plist")
                 .value_name("PATH")
+                .hide(true)
                 .help(
-                    "Optional path to the Info.plist.{n}We will try to find this \
-                    automatically if run from Xcode.  Providing this information \
-                    will associate the debug symbols with a specific ITC application \
-                    and build in Sentry.  Note that if you provide the plist \
-                    explicitly it must already be processed.",
+                    "This argument is deprecated. It does nothing and will be removed in a future release.",
                 ),
         )
         .arg(
@@ -208,6 +204,13 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    if matches.get_one::<String>("info_plist").is_some() {
+        log::warn!(
+            "The --info-plist argument is deprecated. \
+            It does nothing and will be removed in a future release."
+        );
+    }
+
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
@@ -290,13 +293,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         }
     }
-
-    // Try to resolve the Info.plist either by path or from Xcode
-    // TODO: maybe remove this completely?
-    let _info_plist = match matches.get_one::<String>("info_plist") {
-        Some(path) => Some(InfoPlist::from_path(path)?),
-        None => InfoPlist::discover_from_env()?,
-    };
 
     if matches.get_flag("no_upload") {
         println!("{} skipping upload.", style(">").dim());
