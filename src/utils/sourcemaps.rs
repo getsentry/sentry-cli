@@ -111,17 +111,6 @@ fn guess_sourcemap_reference(
     sourcemaps: &HashSet<String>,
     min_url: &str,
 ) -> Result<SourceMapReference> {
-    // if there is only one sourcemap in total we just assume that's the one.
-    // We just need to make sure that we fix up the reference if we need to
-    // (eg: ~/ -> /).
-    if sourcemaps.len() == 1 {
-        let original_url = sourcemaps.iter().next().unwrap();
-        return Ok(SourceMapReference {
-            url: sourcemap::make_relative_path(min_url, original_url),
-            original_url: Option::from(original_url.to_string()),
-        });
-    }
-
     let map_ext = "map";
     let (path, basename, ext) = split_url(min_url);
 
