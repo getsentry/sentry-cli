@@ -43,11 +43,6 @@ Options:
                                  if they are found in the PATH searched for symbol files.
       --derived-data             Search for debug symbols in Xcode's derived data.
       --no-zips                  Do not search in ZIP files.
-      --info-plist <PATH>        Optional path to the Info.plist.
-                                 We will try to find this automatically if run from Xcode.
-                                 Providing this information will associate the debug symbols with a
-                                 specific ITC application and build in Sentry.  Note that if you
-                                 provide the plist explicitly it must already be processed.
       --no-upload                Disable the actual upload.
                                  This runs all steps for the processing but does not trigger the
                                  upload.  This is useful if you just want to verify the setup or
