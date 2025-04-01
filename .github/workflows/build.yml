@@ -241,7 +241,7 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # 5.4.0
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # 5.5.0
         with:
           python-version: '3.11'
       - run: python3 -m pip install build && python3 -m build
@@ -257,7 +257,7 @@ jobs:
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-      - uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # 5.4.0
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # 5.5.0
         with:
           python-version: '3.11'
       - uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # 4.2.1
