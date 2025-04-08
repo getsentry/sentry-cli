@@ -111,7 +111,7 @@ pub fn load_dotenv() -> DotenvResult<()> {
     }
 
     match env::var("SENTRY_DOTENV_PATH") {
-        Ok(path) => dotenvy::from_path(path),
+        Ok(path) => load_dotenv_from_path(&*path),
         Err(_) => dotenvy::dotenv().map(|_| ()),
     }
     .map_or_else(
@@ -125,6 +125,22 @@ pub fn load_dotenv() -> DotenvResult<()> {
         },
         |_| Ok(()),
     )
+}
+
+/// Loads all env files from the given path (use comma as separator)
+fn load_dotenv_from_path(path: &str) -> DotenvResult<()> {
+    let files = path.split(",").map(|file| file.trim());
+
+    for file in files {
+        if let Err(err) = dotenvy::from_path_override(file) {
+            // We only propagate errors if the .env file was found and failed to load.
+            if !err.not_found() {
+                return Err(err);
+            }
+        }
+    }
+
+    Ok(())
 }
 
 /// Custom panic hook for Sentry CLI
