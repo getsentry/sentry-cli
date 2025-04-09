@@ -110,37 +110,35 @@ pub fn load_dotenv() -> DotenvResult<()> {
         return Ok(());
     }
 
-    match env::var("SENTRY_DOTENV_PATH") {
-        Ok(path) => load_dotenv_from_path(&*path),
-        Err(_) => dotenvy::dotenv().map(|_| ()),
+    let mut paths: Vec<String> = Vec::new();
+
+    if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
+        paths.push(path)
     }
-    .map_or_else(
-        |error| {
-            // We only propagate errors if the .env file was found and failed to load.
-            if error.not_found() {
-                Ok(())
-            } else {
-                Err(error)
-            }
-        },
-        |_| Ok(()),
-    )
-}
 
-/// Loads all env files from the given path (use comma as separator)
-fn load_dotenv_from_path(path: &str) -> DotenvResult<()> {
-    let files = path.split(",").map(|file| file.trim());
+    if let Ok (path) = env::var("SENTRY_DOTENV_PATHS") {
+        paths.extend(path.split(",").map(|file| file.trim().to_string()));
+    }
 
-    for file in files {
-        if let Err(err) = dotenvy::from_path_override(file) {
-            // We only propagate errors if the .env file was found and failed to load.
-            if !err.not_found() {
-                return Err(err);
-            }
+    // Fallback to default dotenv
+    if paths.is_empty() {
+        check_dotenv_result(dotenvy::dotenv().map(|_| ()))?;
+    } else {
+        for path in paths {
+            check_dotenv_result(dotenvy::from_path_override(path))?;
         }
     }
 
     Ok(())
+}
+
+/// Checks if DotenvResult is not found error
+fn check_dotenv_result(result: DotenvResult<()>) -> DotenvResult<()> {
+    match result {
+        Ok(_) => Ok(()),
+        Err(err) if err.not_found() => Ok(()),
+        Err(err) => Err(err),
+    }
 }
 
 /// Custom panic hook for Sentry CLI
