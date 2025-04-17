@@ -1447,6 +1447,7 @@ pub struct DifUpload<'a> {
     wait: bool,
     upload_il2cpp_mappings: bool,
     il2cpp_mappings_allowed: bool,
+    use_compression: bool,
 }
 
 impl<'a> DifUpload<'a> {
@@ -1487,6 +1488,7 @@ impl<'a> DifUpload<'a> {
             wait: false,
             upload_il2cpp_mappings: false,
             il2cpp_mappings_allowed: false,
+            use_compression: true,
         }
     }
 
@@ -1595,6 +1597,14 @@ impl<'a> DifUpload<'a> {
     /// Defaults to `false`.
     pub fn il2cpp_mapping(&mut self, il2cpp_mapping: bool) -> &mut Self {
         self.upload_il2cpp_mappings = il2cpp_mapping;
+        self
+    }
+
+    /// Sets whether compression should be used during chunk uploads.
+    ///
+    /// Defaults to `true`.
+    pub fn use_compression(&mut self, use_compression: bool) -> &mut Self {
+        self.use_compression = use_compression;
         self
     }
 
@@ -1766,7 +1776,8 @@ impl<'a> DifUpload<'a> {
     }
 
     fn into_chunk_options(self, server_options: ChunkServerOptions) -> ChunkOptions<'a> {
-        let options = ChunkOptions::new(server_options, self.org, self.project);
+        let options = ChunkOptions::new(server_options, self.org, self.project)
+            .with_use_compression(self.use_compression);
 
         // Only add wait time if self.wait is true. On DifUpload, max_wait may be
         // set even when self.wait is false; on ChunkOptions, the absence of a

@@ -201,6 +201,13 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Compute il2cpp line mappings and upload them along with sources."),
         )
+        .arg(
+            Arg::new("use_compression")
+                .long("no-compression")
+                .action(ArgAction::SetFalse)
+                .help("Don't use the compression specified by the server for chunked uploads.")
+                .hide(true),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -227,6 +234,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
     let wait = matches.get_flag("wait") || wait_for_secs.is_some();
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
+    let use_compression = matches.get_flag("use_compression");
 
     // Build generic upload parameters
     let mut upload = DifUpload::new(&org, &project);
@@ -235,7 +243,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .max_wait(max_wait)
         .search_paths(matches.get_many::<String>("paths").unwrap_or_default())
         .allow_zips(!matches.get_flag("no_zips"))
-        .filter_ids(ids);
+        .filter_ids(ids)
+        .use_compression(use_compression);
 
     // Restrict symbol types, if specified by the user
     for ty in matches

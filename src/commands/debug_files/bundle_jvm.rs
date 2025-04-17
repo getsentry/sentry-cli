@@ -6,7 +6,7 @@ use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
 use crate::utils::fs::path_as_url;
 use anyhow::{bail, Context, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use sentry::types::DebugId;
 use std::collections::BTreeMap;
 use std::fs;
@@ -46,6 +46,13 @@ pub fn make_command(command: Command) -> Command {
                 .value_parser(DebugId::from_str)
                 .help("Debug ID (UUID) to use for the source bundle."),
         )
+        .arg(
+            Arg::new("use_compression")
+                .long("no-compression")
+                .action(ArgAction::SetFalse)
+                .help("Don't use the compression specified by the server for chunked uploads.")
+                .hide(true),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -54,6 +61,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let project = config.get_project(matches).ok();
     let api = Api::current();
     let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
+    let use_compression = matches.get_flag("use_compression");
 
     let context = &UploadContext {
         org: &org,
@@ -65,6 +73,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         max_wait: DEFAULT_MAX_WAIT,
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
+        use_compression,
     };
     let path = matches.get_one::<PathBuf>("path").unwrap();
     let output_path = matches.get_one::<PathBuf>("output").unwrap();

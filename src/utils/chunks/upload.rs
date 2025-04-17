@@ -1,7 +1,7 @@
-use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::thread;
 use std::time::Instant;
+use std::{collections::BTreeMap, time::Duration};
 
 use anyhow::Result;
 use indicatif::ProgressStyle;
@@ -24,7 +24,11 @@ where
 {
     // Upload missing chunks to the server and remember incomplete objects
     let missing_info = try_assemble(chunked, &options)?;
-    upload_missing_chunks(&missing_info, options.server_options())?;
+    upload_missing_chunks(
+        &missing_info,
+        options.server_options(),
+        options.use_compression(),
+    )?;
 
     // Only if objects were missing, poll until assembling is complete
     let (missing_objects, _) = missing_info;
@@ -132,6 +136,7 @@ where
 fn upload_missing_chunks<T>(
     missing_info: &MissingObjectsInfo<'_, T>,
     chunk_options: &ChunkServerOptions,
+    use_compression: bool,
 ) -> Result<()> {
     let (objects, chunks) = missing_info;
 
@@ -148,8 +153,7 @@ fn upload_missing_chunks<T>(
         console::style(objects.len().to_string()).yellow(),
         if objects.len() == 1 { "" } else { "s" }
     ));
-
-    super::upload_chunks(chunks, chunk_options, progress_style)?;
+    super::upload_chunks(chunks, chunk_options, progress_style, use_compression)?;
 
     println!(
         "{} Uploaded {} missing debug information {}",

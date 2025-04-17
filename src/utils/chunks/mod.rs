@@ -170,6 +170,7 @@ pub fn upload_chunks(
     chunks: &[Chunk<'_>],
     chunk_options: &ChunkServerOptions,
     progress_style: ProgressStyle,
+    use_compression: bool,
 ) -> Result<()> {
     let total_bytes = chunks.iter().map(|&Chunk((_, data))| data.len()).sum();
 
@@ -183,13 +184,18 @@ pub fn upload_chunks(
     // Select the best available compression mechanism. We assume that every
     // compression algorithm has been implemented for uploading, except `Other`
     // which is used for unknown compression algorithms. In case the server
-    // does not support compression, we fall back to `Uncompressed`.
-    let compression = chunk_options
-        .compression
-        .iter()
-        .max()
-        .cloned()
-        .unwrap_or_default();
+    // does not support compression or `--no-compression` was passed,
+    // we fall back to `Uncompressed`.
+    let compression = if use_compression {
+        chunk_options
+            .compression
+            .iter()
+            .max()
+            .cloned()
+            .unwrap_or_default()
+    } else {
+        Default::default()
+    };
 
     info!("using '{}' compression for chunk upload", compression);
 

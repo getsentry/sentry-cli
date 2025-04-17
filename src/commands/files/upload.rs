@@ -121,6 +121,13 @@ pub fn make_command(command: Command) -> Command {
                     extensions must be repeated. Specify once per extension.",
                 ),
         )
+        .arg(
+            Arg::new("use_compression")
+                .long("no-compression")
+                .action(ArgAction::SetFalse)
+                .help("Don't use the compression specified by the server for chunked uploads.")
+                .hide(true),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -148,6 +155,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let wait = matches.get_flag("wait") || wait_for_secs.is_some();
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
 
+    let use_compression = matches.get_flag("use_compression");
+
     let context = &UploadContext {
         org: &org,
         project: project.as_deref(),
@@ -158,6 +167,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         max_wait,
         dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
+        use_compression,
     };
 
     let path = Path::new(matches.get_one::<String>("path").unwrap());

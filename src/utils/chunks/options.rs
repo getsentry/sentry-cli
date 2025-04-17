@@ -13,6 +13,7 @@ pub struct ChunkOptions<'a> {
     /// If the server_options.max_wait is set to a smaller nonzero value,
     /// we use that value instead.
     max_wait: Duration,
+    use_compression: bool,
 }
 
 impl<'a> ChunkOptions<'a> {
@@ -22,12 +23,19 @@ impl<'a> ChunkOptions<'a> {
             org,
             project,
             max_wait: Duration::ZERO,
+            use_compression: true,
         }
     }
 
     /// Set the maximum wait time for the assembly to complete.
     pub fn with_max_wait(mut self, max_wait: Duration) -> Self {
         self.max_wait = max_wait;
+        self
+    }
+
+    /// Set whether compression should be used for the upload.
+    pub fn with_use_compression(mut self, use_compression: bool) -> Self {
+        self.use_compression = use_compression;
         self
     }
 
@@ -59,5 +67,9 @@ impl<'a> ChunkOptions<'a> {
 
     pub fn server_options(&self) -> &ChunkServerOptions {
         &self.server_options
+    }
+
+    pub fn use_compression(&self) -> bool {
+        self.use_compression
     }
 }

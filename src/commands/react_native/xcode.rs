@@ -125,6 +125,13 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::SetTrue)
                 .help("Don't try to automatically read release from Xcode project files."),
         )
+        .arg(
+            Arg::new("use_compression")
+                .long("no-compression")
+                .action(ArgAction::SetFalse)
+                .help("Don't use the compression specified by the server for chunked uploads.")
+                .hide(true),
+        )
 }
 
 fn find_node() -> String {
@@ -341,6 +348,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
     let wait = matches.get_flag("wait") || wait_for_secs.is_some();
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, std::time::Duration::from_secs);
+    let use_compression = matches.get_flag("use_compression");
 
     if dist_from_env.is_err() && release_from_env.is_err() && matches.get_flag("no_auto_release") {
         processor.upload(&UploadContext {
@@ -353,6 +361,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             max_wait,
             dedupe: false,
             chunk_upload_options: chunk_upload_options.as_ref(),
+            use_compression,
         })?;
     } else {
         let (dist, release_name) = match (&dist_from_env, &release_from_env) {
@@ -389,6 +398,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     max_wait,
                     dedupe: false,
                     chunk_upload_options: chunk_upload_options.as_ref(),
+                    use_compression,
                 })?;
             }
             Some(dists) => {
@@ -403,6 +413,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         max_wait,
                         dedupe: false,
                         chunk_upload_options: chunk_upload_options.as_ref(),
+                        use_compression,
                     })?;
                 }
             }

@@ -91,6 +91,7 @@ pub struct UploadContext<'a> {
     pub max_wait: Duration,
     pub dedupe: bool,
     pub chunk_upload_options: Option<&'a ChunkServerOptions>,
+    pub use_compression: bool,
 }
 
 impl UploadContext<'_> {
@@ -443,7 +444,7 @@ fn upload_files_chunked(
     };
 
     if !chunks.is_empty() {
-        upload_chunks(&chunks, options, progress_style)?;
+        upload_chunks(&chunks, options, progress_style, context.use_compression)?;
         println!("{} Uploaded files to Sentry", style(">").dim());
     } else {
         println!(
@@ -665,6 +666,7 @@ mod tests {
             max_wait: DEFAULT_MAX_WAIT,
             dedupe: true,
             chunk_upload_options: None,
+            use_compression: true,
         };
 
         let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
