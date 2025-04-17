@@ -1,7 +1,7 @@
+use std::collections::BTreeMap;
 use std::fmt::Display;
 use std::thread;
 use std::time::Instant;
-use std::{collections::BTreeMap, time::Duration};
 
 use anyhow::Result;
 use indicatif::ProgressStyle;
