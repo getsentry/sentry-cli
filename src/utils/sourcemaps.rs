@@ -995,7 +995,7 @@ impl SourceMapProcessor {
                         // FIXME: This seems to be a false positive; clippy
                         // thinks we're doing `contains_key` followed by `insert`,
                         // but there's no `insert`.
-                        #[expect(clippy::map_entry)]
+                        #[allow(clippy::map_entry)]
                         if self.sources.contains_key(&sourcemap_url) {
                             // Case 3: We have an external sourcemap for the source file.
 
