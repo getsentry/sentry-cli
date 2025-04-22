@@ -140,7 +140,7 @@ fn find_matching_artifact(artifacts: &[Artifact], path: &str) -> Result<Artifact
     let full_match = artifacts.iter().find(|a| a.name == path);
     let partial_match = artifacts
         .iter()
-        .find(|a| a.name.ends_with(path.split('/').last().unwrap()));
+        .find(|a| a.name.ends_with(path.split('/').next_back().unwrap()));
 
     if full_match.is_none() {
         error(format!("Uploaded artifacts do not include entry: {path}"));

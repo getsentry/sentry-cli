@@ -136,7 +136,7 @@ pub fn get_appcenter_deployment_history(
 
 pub fn get_appcenter_package(app: &str, deployment: &str) -> Result<AppCenterPackage> {
     let history = get_appcenter_deployment_history(app, deployment)?;
-    if let Some(latest) = history.into_iter().last() {
+    if let Some(latest) = history.into_iter().next_back() {
         Ok(latest)
     } else {
         bail!("Could not find deployment {} for {}", deployment, app);
