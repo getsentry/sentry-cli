@@ -6,6 +6,7 @@ use symbolic::common::{clean_path, join_path};
 use std::fmt;
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use anyhow::Result;
 use lazy_static::lazy_static;
@@ -28,6 +29,14 @@ lazy_static! {
     )
     .unwrap();
 }
+
+/// Regex that matches a "use [...]" directive at the beginning of a JS file,
+/// possibly preceded by a block of line comments, block comments, and empty lines.
+/// The use directive itself is captured in a named group `use_directive`.
+static USE_DIRECTIVE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^(?:\s+|/\*(?s:.)*?\*/|//.*[\n\r])*(?:(?<use_directive>"use [^"]*"|'use [^']*');?[\n\r]?)"#)
+        .expect("this regex is valid")
+});
 
 fn print_section_with_debugid(
     f: &mut fmt::Formatter<'_>,
@@ -106,6 +115,49 @@ impl fmt::Display for InjectReport {
     }
 }
 
+/// Inject a debug ID code snippet and debug ID comment into compiled JS source.
+///
+/// This function takes the source as a &str and the debug ID to inject, and it returns
+/// a String containing the injected source.
+///
+/// The code snippet is injected at the very beginning of the source (on its own line),
+/// except when the source begins with a hashbang (`#!`), in which case, we inject
+/// immediately after the hashbang. If the file starts with a "use ..." statement,
+/// this statement is repeated in front of the injected snippet (on the same line).
+/// The sourcemap for the original source must be adjusted by one line to account for
+/// this injection.
+///
+/// The debug ID comment is added at the end of the file.
+pub fn inject_at_start(compiled_source: &str, debug_id: DebugId) -> String {
+    let (hashbang_portion, source_without_hasbang) = if compiled_source.starts_with("#!") {
+        compiled_source.split_at(
+            compiled_source
+                .find("\n")
+                .map(|i| i + 1)
+                .unwrap_or(compiled_source.len()),
+        )
+    } else {
+        ("", compiled_source)
+    };
+
+    let use_directive = USE_DIRECTIVE_REGEX
+        .captures(source_without_hasbang)
+        .map(|c| {
+            format!(
+                "{};",
+                c.name("use_directive")
+                    .expect("use directive always exists if regex matches")
+                    .as_str()
+            )
+        })
+        .unwrap_or_default();
+
+    let code_snippet = CODE_SNIPPET_TEMPLATE.replace(DEBUGID_PLACEHOLDER, &debug_id.to_string());
+    let debug_id_comment = format!("{DEBUGID_COMMENT_PREFIX}={debug_id}");
+
+    format!("{hashbang_portion}{use_directive}{code_snippet}\n{source_without_hasbang}\n{debug_id_comment}\n")
+}
+
 /// Fixes up a minified JS source file with a debug id.
 ///
 /// This changes the source file in several ways:
@@ -116,6 +168,7 @@ impl fmt::Display for InjectReport {
 ///
 /// This function returns a [`SourceMap`] that maps locations in the injected file
 /// to their corresponding places in the original file.
+#[deprecated(note = "New code should use `inject_start` instead")]
 pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<SourceMap> {
     let contents = std::str::from_utf8(js_contents)?;
 
@@ -164,10 +217,10 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
 ///    is moved to the very end of the file, after the debug id comment from 2.
 ///
 /// This function is useful in cases where a source file's corresponding sourcemap is
-/// not available. In such a case, [`fixup_js_file`] might mess up the mappings by inserting
-/// a line, with no opportunity to adjust the sourcemap accordingly. However, in general
-/// it is desirable to insert the code snippet as early as possible to make sure it runs
-/// even when an error is raised in the file.
+/// not available. In such a case, [`inject_at_start`] (or the deprecated [`fixup_js_file`])
+/// might mess up the mappings by inserting a line, with no opportunity to adjust the
+/// sourcemap accordingly. However, in general it is desirable to insert the code snippet
+/// as early as possible to make sure it runs even when an error is raised in the file.
 pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
     let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
 
@@ -321,6 +374,8 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use sentry::types::DebugId;
 
     use crate::utils::fs::TempFile;
@@ -338,6 +393,7 @@ something else"#;
         let debug_id = DebugId::default();
         let mut source = Vec::from(source);
 
+        #[expect(deprecated)]
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"//# sourceMappingURL=fake1
@@ -384,6 +440,7 @@ something else"#;
         let debug_id = DebugId::default();
         let mut source = std::fs::read(temp_file.path()).unwrap();
 
+        #[expect(deprecated)]
         fixup_js_file(&mut source, debug_id).unwrap();
 
         {
@@ -436,6 +493,7 @@ something else"#;
         let debug_id = DebugId::default();
         let mut source = Vec::from(source);
 
+        #[expect(deprecated)]
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"#!/bin/node
@@ -472,6 +530,7 @@ something else"#;
         let debug_id = DebugId::default();
         let mut source = Vec::from(source);
 
+        #[expect(deprecated)]
         fixup_js_file(&mut source, debug_id).unwrap();
 
         let expected = r#"#!/bin/node
@@ -645,6 +704,239 @@ more text
         assert_eq!(
             find_matching_paths(candidates, "project/code/page/index.js.map"),
             &["./project/maps/page/index.js.map"]
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_empty_source() {
+        let source = "\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_just_source() {
+        let source = "console.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "console.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_hashbang() {
+        let source = "#!/usr/bin/env node\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Hashbang
+                "#!/usr/bin/env node\n",
+                // Injected debug ID code
+                r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "console.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_use_strict() {
+        let source = "\"use strict\";\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#""use strict";!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "\"use strict\";\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_use_strict_on_same_line() {
+        let source = "\"use strict\";console.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#""use strict";!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "\"use strict\";console.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_comments() {
+        let source = "// Some comment\n/* Block comment */\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "// Some comment\n/* Block comment */\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_with_custom_use_directive() {
+        let source = "\"use custom\";\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#""use custom";!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "\"use custom\";\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_comments_before_use_strict() {
+        let source =
+            "// Some comment\n/* Block comment */\n\"use strict\";\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#""use strict";!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "// Some comment\n/* Block comment */\n\"use strict\";\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_single_quoted_use_strict() {
+        let source = "'use strict';\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#"'use strict';!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "'use strict';\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_use_strict_no_semicolon() {
+        let source = "\"use strict\"\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#""use strict";!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "\"use strict\"\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_hashbang_comments_and_use_strict() {
+        let source = "#!/usr/bin/env node\n// Some comment\n/* Block comment */\n\"use strict\";\nconsole.log('hello');\n";
+        let debug_id = DebugId::default();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Hashbang
+                "#!/usr/bin/env node\n",
+                // Injected debug ID code
+                r#""use strict";!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="00000000-0000-0000-0000-000000000000")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "// Some comment\n/* Block comment */\n\"use strict\";\nconsole.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=00000000-0000-0000-0000-000000000000\n"
+            )
+        );
+    }
+
+    #[test]
+    fn inject_debug_id_with_custom_debug_id() {
+        let source = "console.log('hello');\n";
+        let debug_id = DebugId::from_str("12345678-1234-5678-1234-567812345678").unwrap();
+        let result = inject_at_start(source, debug_id);
+        assert_eq!(
+            result,
+            concat!(
+                // Injected debug ID code
+                r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="12345678-1234-5678-1234-567812345678")}catch(e){}}();"#,
+                "\n",
+                // Original source code
+                "console.log('hello');\n",
+                // Debug ID comment
+                "\n//# debugId=12345678-1234-5678-1234-567812345678\n"
+            )
         );
     }
 }

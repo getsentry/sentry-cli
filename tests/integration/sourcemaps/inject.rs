@@ -2,7 +2,7 @@ use std::fs;
 use std::fs::remove_dir_all;
 use std::path::Path;
 
-use crate::integration::{copy_recursively, TestManager};
+use crate::integration::{copy_recursively, test_utils::AssertCommand, TestManager};
 
 #[test]
 fn command_sourcemaps_inject_help() {
@@ -170,6 +170,28 @@ fn command_sourcemaps_inject_not_compiled() {
 fn command_sourcemaps_inject_complex_extension() {
     TestManager::new()
         .register_trycmd_test("sourcemaps/sourcemaps-inject-complex-extension.trycmd");
+}
+
+#[test]
+fn command_sourcemaps_inject_indexed() {
+    const FIXTURE_PATH: &str = "tests/integration/_fixtures/inject_indexed/";
+    const TESTCASE_PATH: &str = "tests/integration/_cases/sourcemaps/sourcemaps-inject-indexed.in/";
+    const EXPECTED_OUTPUT_PATH: &str =
+        "tests/integration/_expected_outputs/sourcemaps/inject_indexed/";
+
+    // Setup the working directory
+    if std::path::Path::new(TESTCASE_PATH).exists() {
+        remove_dir_all(TESTCASE_PATH).expect("Failed to remove working directory");
+    }
+    copy_recursively(FIXTURE_PATH, TESTCASE_PATH).expect("Failed to copy inject_indexed");
+
+    // Run the inject command against the working directory
+    TestManager::new()
+        .assert_cmd(vec!["sourcemaps", "inject", TESTCASE_PATH])
+        .run_and_assert(AssertCommand::Success);
+
+    // The rest of the test just compares the actual output with the expected output
+    assert_directories_equal(TESTCASE_PATH, EXPECTED_OUTPUT_PATH);
 }
 
 /// Recursively assert that the contents of two directories are equal.

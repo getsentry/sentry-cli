@@ -1,0 +1,25 @@
+{
+  "version": 3,
+  "file": "index.js",
+  "sections": [
+    {
+      "offset": {
+        "line": 0,
+        "column": 0
+      },
+      "map": {
+        "version": 3,
+        "file": "index.js",
+        "sourceRoot": "",
+        "sources": [
+          "../src/index.ts"
+        ],
+        "names": [],
+        "mappings": ";AACA,oBAAoB;AACpB;;SAES;AACT,YAAY,CAAC;AAEb,SAAS,KAAK,CAAC,IAAY;IACvB,OAAO,UAAU,IAAI,GAAG,CAAC;AAC7B,CAAC;AAED,OAAO,CAAC,GAAG,CAAC,KAAK,CAAC,OAAO,CAAC,CAAC,CAAC",
+        "sourcesContent": [
+          "#!/usr/bin/env node\n// this is a comment\n/*and \nanother \ncomment*/\n\"use strict\";\n\nfunction greet(name: string): string {\n    return `Hello, ${name}!`;\n}\n\nconsole.log(greet(\"World\")); "
+        ]
+      }
+    }
+  ]
+}

@@ -14,7 +14,7 @@ use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sentry::types::DebugId;
 use sha1_smol::Digest;
-use sourcemap::SourceMap;
+use sourcemap::{DecodedMap, SourceMap};
 use symbolic::debuginfo::js::{
     discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
 };
@@ -947,20 +947,54 @@ impl SourceMapProcessor {
                             bail!("Invalid embedded sourcemap in source file {source_url}");
                         };
 
-                        let mut sourcemap = SourceMap::from_slice(&decoded).with_context(|| {
-                            format!("Invalid embedded sourcemap in source file {source_url}")
-                        })?;
+                        let mut sourcemap =
+                            sourcemap::decode_slice(&decoded).with_context(|| {
+                                format!("Invalid embedded sourcemap in source file {source_url}")
+                            })?;
 
                         let debug_id = sourcemap
-                            .get_debug_id()
+                            .debug_id()
                             .unwrap_or_else(|| inject::debug_id_from_bytes_hashed(&decoded));
 
                         let source_file = self.sources.get_mut(source_url).unwrap();
-                        let source_file_contents = Arc::make_mut(&mut source_file.contents);
-                        let adjustment_map = inject::fixup_js_file(source_file_contents, debug_id)
-                            .context(format!("Failed to process {}", source_file.path.display()))?;
 
-                        sourcemap.adjust_mappings(&adjustment_map);
+                        match &mut sourcemap {
+                            DecodedMap::Regular(sourcemap) => {
+                                adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                            }
+                            DecodedMap::Hermes(sourcemap) => {
+                                adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                            }
+                            DecodedMap::Index(sourcemap) => {
+                                let source_file_contents = Arc::make_mut(&mut source_file.contents);
+                                if sourcemap.adjust_sections_offset_rows(1) {
+                                    let injected = inject::inject_at_start(
+                                        str::from_utf8(source_file_contents).with_context(
+                                            || {
+                                                format!(
+                                                    "{} is not UTF-8",
+                                                    source_file.path.display()
+                                                )
+                                            },
+                                        )?,
+                                        debug_id,
+                                    );
+
+                                    source_file_contents.clear();
+                                    source_file_contents.extend(injected.as_bytes());
+                                } else {
+                                    // We can't adjust the section offset rows, so we have to inject at the end
+                                    inject::fixup_js_file_end(source_file_contents, debug_id)
+                                        .with_context(|| {
+                                            format!(
+                                                "Failed to inject debug id into {}",
+                                                source_file.path.display()
+                                            )
+                                        })?;
+                                }
+                            }
+                        }
+
                         sourcemap.set_debug_id(Some(debug_id));
 
                         decoded.clear();
@@ -969,7 +1003,10 @@ impl SourceMapProcessor {
                         let encoded = data_encoding::BASE64.encode(&decoded);
                         let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
 
-                        inject::replace_sourcemap_url(source_file_contents, &new_sourcemap_url)?;
+                        inject::replace_sourcemap_url(
+                            Arc::make_mut(&mut source_file.contents),
+                            &new_sourcemap_url,
+                        )?;
                         *sourcemap_url = Some(SourceMapReference::from_url(new_sourcemap_url));
 
                         debug_id
@@ -1000,11 +1037,12 @@ impl SourceMapProcessor {
                             let (mut sourcemap, debug_id, debug_id_fresh) = {
                                 let sourcemap_file = &self.sources[&sourcemap_url];
 
-                                let sm = SourceMap::from_slice(&sourcemap_file.contents).context(
-                                    format!("Invalid sourcemap at {}", sourcemap_file.url),
-                                )?;
+                                let sm =
+                                    sourcemap::decode_slice(&sourcemap_file.contents).context(
+                                        format!("Invalid sourcemap at {}", sourcemap_file.url),
+                                    )?;
 
-                                match sm.get_debug_id() {
+                                match sm.debug_id() {
                                     Some(debug_id) => (sm, debug_id, false),
                                     None => {
                                         let debug_id = inject::debug_id_from_bytes_hashed(
@@ -1016,13 +1054,45 @@ impl SourceMapProcessor {
                             };
 
                             let source_file = self.sources.get_mut(source_url).unwrap();
-                            let adjustment_map = inject::fixup_js_file(
-                                Arc::make_mut(&mut source_file.contents),
-                                debug_id,
-                            )
-                            .context(format!("Failed to process {}", source_file.path.display()))?;
 
-                            sourcemap.adjust_mappings(&adjustment_map);
+                            match &mut sourcemap {
+                                DecodedMap::Regular(sourcemap) => {
+                                    adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                                }
+                                DecodedMap::Hermes(sourcemap) => {
+                                    adjust_regular_sourcemap(sourcemap, source_file, debug_id)?;
+                                }
+                                DecodedMap::Index(sourcemap) => {
+                                    let source_file_contents =
+                                        Arc::make_mut(&mut source_file.contents);
+                                    if sourcemap.adjust_sections_offset_rows(1) {
+                                        let injected = inject::inject_at_start(
+                                            str::from_utf8(source_file_contents).with_context(
+                                                || {
+                                                    format!(
+                                                        "{} is not UTF-8",
+                                                        source_file.path.display()
+                                                    )
+                                                },
+                                            )?,
+                                            debug_id,
+                                        );
+
+                                        source_file_contents.clear();
+                                        source_file_contents.extend(injected.as_bytes());
+                                    } else {
+                                        // We can't adjust the section offset rows, so we have to inject at the end
+                                        inject::fixup_js_file_end(source_file_contents, debug_id)
+                                            .with_context(|| {
+                                            format!(
+                                                "Failed to inject debug id into {}",
+                                                source_file.path.display()
+                                            )
+                                        })?;
+                                    }
+                                }
+                            }
+
                             sourcemap.set_debug_id(Some(debug_id));
 
                             let sourcemap_file = self.sources.get_mut(&sourcemap_url).unwrap();
@@ -1101,6 +1171,20 @@ impl SourceMapProcessor {
 
         Ok(())
     }
+}
+
+fn adjust_regular_sourcemap(
+    sourcemap: &mut SourceMap,
+    source_file: &mut SourceFile,
+    debug_id: DebugId,
+) -> Result<()> {
+    #[expect(deprecated)]
+    let adjustment_map = inject::fixup_js_file(Arc::make_mut(&mut source_file.contents), debug_id)
+        .context(format!("Failed to process {}", source_file.path.display()))?;
+
+    sourcemap.adjust_mappings(&adjustment_map);
+
+    Ok(())
 }
 
 fn validate_script(source: &mut SourceFile) -> Result<()> {
