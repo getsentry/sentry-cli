@@ -1,6 +1,6 @@
 name: 🐞 Bug Report
 description: Report a bug in this repo
-
+labels: ["CLI", "Bug"]
 body:
   - type: markdown
     attributes:

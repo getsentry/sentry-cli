@@ -1,6 +1,7 @@
 ---
 name: 🧠 Feature Request
 about: Suggest an idea for improving this repo
+labels: ["CLI", "Feature"]
 ---
 
 <!--
