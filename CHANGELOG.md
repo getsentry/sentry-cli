@@ -7,14 +7,7 @@
 ### Various fixes & improvements
 
 - build: Bump `tokio` to `1.44.2` (#2474) by @szokeasaurusrex
-- meta: Delete "question" issue template (#2473) by @szokeasaurusrex
-- Update GH issue templates for Linear compatibility (#2471) by @stephanie-anderson
-- build(deps): bump actions/setup-node from 4.3.0 to 4.4.0 (#2465) by @dependabot
-- build(deps): bump github/codeql-action from 3.28.13 to 3.28.15 (#2453) by @dependabot
-- build(deps): bump actions/create-github-app-token from 1.12.0 to 2.0.2 (#2452) by @dependabot
 - chore: Fix nightly clippy lints (#2469) by @loewenheim
-- build(deps): bump actions/setup-python from 5.4.0 to 5.5.0 (#2449) by @dependabot
-- build(deps): bump actions/create-github-app-token from 1.11.7 to 1.12.0 (#2450) by @dependabot
 
 ## 2.43.0
 
