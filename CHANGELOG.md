@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.43.1
+
+### Various fixes & improvements
+
+- build: Bump `tokio` to `1.44.2` (#2474) by @szokeasaurusrex
+- chore: Fix nightly clippy lints (#2469) by @loewenheim
+
 ## 2.43.0
 
 This release explicitly deprecates the `sentry-cli debug-files upload` command's `--info-plist` argument, since the argument does nothing. If you are using the `--info-plist` argument, you should stop using it.
