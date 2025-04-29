@@ -195,7 +195,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             processor.upload(&UploadContext {
                 org: &org,
-                project: Some(&project),
+                projects: vec![&project],
                 release: Some(&release),
                 dist: None,
                 note: None,
@@ -214,7 +214,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
                 processor.upload(&UploadContext {
                     org: &org,
-                    project: Some(&project),
+                    projects: vec![&project],
                     release: Some(&release),
                     dist: Some(dist),
                     note: None,

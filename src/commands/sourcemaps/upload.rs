@@ -450,7 +450,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
     let upload_context = UploadContext {
         org: &org,
-        project: Some(&project),
+        projects: vec![&project],
         release: version.as_deref(),
         dist: matches.get_one::<String>("dist").map(String::as_str),
         note: matches.get_one::<String>("note").map(String::as_str),

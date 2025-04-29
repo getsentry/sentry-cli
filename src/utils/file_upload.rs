@@ -41,7 +41,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     // need to do anything here.  Artifact bundles will also only work
     // if a project is provided which is technically unnecessary for the
     // legacy upload though it will unlikely to be what users want.
-    if context.project.is_some()
+    if !context.projects.is_empty()
         && context.chunk_upload_options.is_some_and(|x| {
             x.supports(ChunkUploadCapability::ArtifactBundles)
                 || x.supports(ChunkUploadCapability::ArtifactBundlesV2)
@@ -51,7 +51,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     }
 
     // TODO: make this into an error later down the road
-    if context.project.is_none() {
+    if context.projects.is_empty() {
         eprintln!(
             "{}",
             style(
@@ -70,7 +70,11 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
             context.org,
             &NewRelease {
                 version: version.to_string(),
-                projects: context.project.map(|x| x.to_string()).into_iter().collect(),
+                projects: context
+                    .projects
+                    .iter()
+                    .map(|x| x.to_string())
+                    .collect(),
                 ..Default::default()
             },
         )?;
@@ -83,7 +87,8 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
-    pub project: Option<&'a str>,
+    // pub projects: Option<&'a str>,
+    pub projects: Vec<&'a str>,
     pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
     pub note: Option<&'a str>,
@@ -235,7 +240,11 @@ fn upload_files_parallel(
     // files that already exist.
     let release_files: HashMap<_, _> = api
         .authenticated()?
-        .list_release_files(context.org, context.project, release)?
+        .list_release_files(
+            context.org,
+            context.projects.get(0).map(|p| p.to_owned()),
+            release,
+        )?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
         .collect();
@@ -281,7 +290,12 @@ fn upload_files_parallel(
                     release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
                 {
                     authenticated_api
-                        .delete_release_file(context.org, context.project, release, old_id)
+                        .delete_release_file(
+                            context.org,
+                            context.projects.get(0).map(|p| p.to_owned()),
+                            release,
+                            old_id,
+                        )
                         .ok();
                 }
 
@@ -337,13 +351,13 @@ fn poll_assemble(
     let authenticated_api = api.authenticated()?;
     let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
         || options.supports(ChunkUploadCapability::ArtifactBundlesV2))
-        && context.project.is_some();
+        && !context.projects.is_empty();
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
         let response = if use_artifact_bundle {
             authenticated_api.assemble_artifact_bundle(
                 context.org,
-                vec![context.project.unwrap().to_string()],
+                vec![context.projects.get(0).unwrap().to_string()],
                 checksum,
                 chunks,
                 context.release,
@@ -429,11 +443,11 @@ fn upload_files_chunked(
 
     // Filter out chunks that are already on the server. This only matters if the server supports
     // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
-    if options.supports(ChunkUploadCapability::ArtifactBundlesV2) && context.project.is_some() {
+    if options.supports(ChunkUploadCapability::ArtifactBundlesV2) && !context.projects.is_empty() {
         let api = Api::current();
         let response = api.authenticated()?.assemble_artifact_bundle(
             context.org,
-            vec![context.project.unwrap().to_string()],
+            vec![context.projects.get(0).unwrap().to_string()],
             checksum,
             &checksums,
             context.release,
@@ -500,7 +514,7 @@ fn build_artifact_bundle(
     }
 
     bundle.set_attribute("org".to_owned(), context.org.to_owned());
-    if let Some(project) = context.project {
+    if let Some(project) = context.projects.get(0) {
         bundle.set_attribute("project".to_owned(), project.to_owned());
     }
     if let Some(release) = context.release {
@@ -593,7 +607,7 @@ fn print_upload_context_details(context: &UploadContext) {
     println!(
         "{} {}",
         style("> Project:").dim(),
-        style(context.project.unwrap_or("None")).yellow()
+        style(context.projects.get(0).unwrap_or(&"None")).yellow()
     );
     println!(
         "{} {}",
@@ -657,7 +671,7 @@ mod tests {
     fn build_artifact_bundle_deterministic() {
         let context = UploadContext {
             org: "wat-org",
-            project: Some("wat-project"),
+            projects: vec!["wat-project"],
             release: None,
             dist: None,
             note: None,

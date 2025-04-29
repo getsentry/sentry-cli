@@ -124,6 +124,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    println!("✅ executing ...");
     let config = Config::current();
     let release = config.get_release_with_legacy_fallback(matches)?;
     let org = config.get_org(matches)?;
@@ -150,7 +151,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let context = &UploadContext {
         org: &org,
-        project: project.as_deref(),
+        projects: project.iter().map(|p| p.as_ref()).collect(),
         release: Some(&release),
         dist,
         note: None,

@@ -345,7 +345,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if dist_from_env.is_err() && release_from_env.is_err() && matches.get_flag("no_auto_release") {
         processor.upload(&UploadContext {
             org: &org,
-            project: Some(&project),
+            projects: vec![&project],
             release: None,
             dist: None,
             note: None,
@@ -381,7 +381,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             None => {
                 processor.upload(&UploadContext {
                     org: &org,
-                    project: Some(&project),
+                    projects: vec![&project],
                     release: release_name.as_deref(),
                     dist: dist.as_deref(),
                     note: None,
@@ -395,7 +395,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 for dist in dists {
                     processor.upload(&UploadContext {
                         org: &org,
-                        project: Some(&project),
+                        projects: vec![&project],
                         release: release_name.as_deref(),
                         dist: Some(dist),
                         note: None,

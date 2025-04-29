@@ -57,7 +57,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let context = &UploadContext {
         org: &org,
-        project: project.as_deref(),
+        projects: project.iter().map(|p| p.as_ref()).collect(),
         release: None,
         dist: None,
         note: None,

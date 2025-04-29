@@ -1435,7 +1435,7 @@ impl RegionSpecificApi<'_> {
             .release()
             .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
 
-        let path = if let Some(project) = context.project {
+        let path = if let Some(project) = context.projects.get(0) {
             format!(
                 "/projects/{}/{}/releases/{}/files/",
                 PathArg(context.org),

@@ -792,7 +792,7 @@ impl SourceMapProcessor {
         if let Ok(artifacts) = api.authenticated().and_then(|api| {
             api.list_release_files_by_checksum(
                 context.org,
-                context.project,
+                context.projects.get(0).map(|p| p.to_owned()),
                 release,
                 &sources_checksums,
             )
