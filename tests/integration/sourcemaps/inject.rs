@@ -1,4 +1,6 @@
-use std::fs::{self, remove_dir_all};
+use std::fs;
+use std::fs::remove_dir_all;
+use std::path::Path;
 
 use crate::integration::{copy_recursively, TestManager};
 
@@ -16,6 +18,11 @@ fn command_sourcemaps_inject_output() {
     copy_recursively("tests/integration/_fixtures/inject/", testcase_cwd_path).unwrap();
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject",
+    );
 }
 
 #[test]
@@ -31,6 +38,11 @@ fn command_sourcemaps_inject_output_nomappings() {
     .unwrap();
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-nomappings.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-nomappings",
+    );
 }
 
 #[test]
@@ -42,6 +54,11 @@ fn command_sourcemaps_inject_output_nofiles() {
     fs::create_dir_all(std::path::Path::new(testcase_cwd_path).join("nonexisting")).unwrap();
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-nofiles.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-nofiles",
+    );
 }
 
 #[test]
@@ -59,6 +76,11 @@ fn command_sourcemaps_inject_output_embedded() {
     .unwrap();
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-embedded.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-embedded",
+    );
 }
 
 #[test]
@@ -74,6 +96,11 @@ fn command_sourcemaps_inject_output_split() {
     .unwrap();
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-split.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-split",
+    );
 }
 
 #[test]
@@ -90,6 +117,11 @@ fn command_sourcemaps_inject_output_split_ambiguous() {
     .unwrap();
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-split-ambiguous.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-split-ambiguous",
+    );
 }
 
 #[test]
@@ -106,44 +138,10 @@ fn command_sourcemaps_inject_bundlers() {
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-bundlers.trycmd");
 
-    // IIFE tests
-    for bundler in ["esbuild", "rollup", "rspack", "vite", "webpack"] {
-        let actual_code =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js")).unwrap();
-        let expected_code =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js.expected"))
-                .unwrap();
-
-        assert_eq!(actual_code, expected_code);
-
-        let actual_map =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/iife.js.map")).unwrap();
-        let expected_map = std::fs::read_to_string(format!(
-            "{testcase_cwd_path}/{bundler}/iife.js.map.expected"
-        ))
-        .unwrap();
-
-        assert_eq!(actual_map, expected_map, "IIFE, bundler: {bundler}");
-    }
-
-    // CJS tests. Not sure how to make this happen for rspack.
-    for bundler in ["esbuild", "rollup", "vite", "webpack"] {
-        let actual_code =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js")).unwrap();
-        let expected_code =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.expected"))
-                .unwrap();
-
-        assert_eq!(actual_code, expected_code);
-
-        let actual_map =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map")).unwrap();
-        let expected_map =
-            std::fs::read_to_string(format!("{testcase_cwd_path}/{bundler}/cjs.js.map.expected"))
-                .unwrap();
-
-        assert_eq!(actual_map, expected_map, "CJS, bundler: {bundler}");
-    }
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-bundlers",
+    );
 }
 
 #[test]
@@ -162,12 +160,93 @@ fn command_sourcemaps_inject_not_compiled() {
 
     TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-not-compiled.trycmd");
 
-    let file_contents = fs::read_to_string(format!("{testcase_cwd_path}not-compiled.js")).unwrap();
-    assert!(file_contents.contains("//# debugId="));
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-not-compiled",
+    );
 }
 
 #[test]
 fn command_sourcemaps_inject_complex_extension() {
     TestManager::new()
         .register_trycmd_test("sourcemaps/sourcemaps-inject-complex-extension.trycmd");
+}
+
+/// Recursively assert that the contents of two directories are equal.
+///
+/// We only support directories that contain exclusively text files.
+///
+/// Any .gitkeep files are ignored. We also normalize line endings to UNIX line endings
+/// when running the comparison on Windows.
+///
+/// Panics if there is any difference between the two directories (e.g. if there are different
+/// numbers of files, or if there are files with different contents).
+fn assert_directories_equal(actual_path: impl AsRef<Path>, expected_path: impl AsRef<Path>) {
+    let mut actual_dir: Vec<_> = fs::read_dir(&actual_path)
+        .and_then(|dir| dir.collect())
+        .unwrap_or_else(|_| {
+            panic!(
+                "error while reading actual directory: {}",
+                actual_path.as_ref().display()
+            )
+        });
+    let mut expected_dir: Vec<_> = fs::read_dir(&expected_path)
+        .and_then(|dir| {
+            dir.filter(|entry| {
+                // Filter out any .gitkeep files.
+                entry
+                    .as_ref()
+                    .map(|entry| entry.file_name() != ".gitkeep")
+                    .unwrap_or(true)
+            })
+            .collect()
+        })
+        .unwrap_or_else(|_| {
+            panic!(
+                "error while reading expected directory: {}",
+                expected_path.as_ref().display()
+            )
+        });
+
+    actual_dir.sort_unstable_by_key(|entry| entry.file_name());
+    expected_dir.sort_unstable_by_key(|entry| entry.file_name());
+
+    assert_eq!(
+        actual_dir.len(),
+        expected_dir.len(),
+        "the directories {} and {} have different numbers of files",
+        actual_path.as_ref().display(),
+        expected_path.as_ref().display()
+    );
+    for (actual_entry, expected_entry) in actual_dir.iter().zip(expected_dir.iter()) {
+        if expected_entry
+            .file_type()
+            .expect("error while reading expected file type")
+            .is_dir()
+        {
+            assert_directories_equal(actual_entry.path(), expected_entry.path());
+            continue;
+        }
+
+        let actual_contents =
+            std::fs::read_to_string(actual_entry.path()).expect("error while reading actual file");
+        let expected_contents = std::fs::read_to_string(expected_entry.path())
+            .expect("error while reading expected file");
+
+        #[cfg(windows)]
+        // The expected output is formatted with UNIX line endings.
+        let actual_contents = actual_contents.replace("\r\n", "\n");
+
+        #[cfg(windows)]
+        // The expected output is formatted with UNIX line endings.
+        let expected_contents = expected_contents.replace("\r\n", "\n");
+
+        assert_eq!(
+            actual_contents,
+            expected_contents,
+            "the contents of {} and {} differ",
+            actual_entry.path().display(),
+            expected_entry.path().display()
+        );
+    }
 }
