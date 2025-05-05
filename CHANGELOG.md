@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.44.0
+
+### Various fixes & improvements
+
+- feat(sourcemaps): Support injecting indexed sourcemaps (#2470) by @szokeasaurusrex
+- test(sourcemaps): Assert injection outputs (#2483) by @szokeasaurusrex
+
 ## 2.43.1
 
 ### Various fixes & improvements
