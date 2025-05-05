@@ -6,10 +6,6 @@
 
 ### Various fixes & improvements
 
-- build(deps): bump actions/setup-python from 5.5.0 to 5.6.0 (#2479) by @dependabot
-- build(deps): bump actions/download-artifact from 4.2.1 to 4.3.0 (#2478) by @dependabot
-- build(deps): bump github/codeql-action from 3.28.15 to 3.28.16 (#2477) by @dependabot
-- build(deps): bump docker/build-push-action from 6.15.0 to 6.16.0 (#2476) by @dependabot
 - feat(sourcemaps): Support injecting indexed sourcemaps (#2470) by @szokeasaurusrex
 - test(sourcemaps): Assert injection outputs (#2483) by @szokeasaurusrex
 
