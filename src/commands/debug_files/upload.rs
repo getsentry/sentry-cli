@@ -6,7 +6,6 @@ use anyhow::{bail, format_err, Result};
 use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use itertools::Itertools;
-use log::info;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::FileFormat;
 
@@ -218,11 +217,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<DebugId>("ids")
         .unwrap_or_default()
         .copied();
-
-    info!(
-        "Issuing a command for Organization: {} Project: {}",
-        org, project
-    );
 
     let wait_for_secs = matches.get_one::<u64>("wait_for").copied();
     let wait = matches.get_flag("wait") || wait_for_secs.is_some();

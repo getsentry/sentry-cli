@@ -5,7 +5,6 @@ use anyhow::{bail, Error, Result};
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use log::info;
 use symbolic::common::ByteView;
 use uuid::Uuid;
 
@@ -247,11 +246,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         println!("{} uploading mappings", style(">").dim());
         (org, project) = config.get_org_and_project(matches)?;
-
-        info!(
-            "Issuing a command for Organization: {} Project: {}",
-            org, project
-        );
 
         authenticated_api = api.authenticated()?;
 

@@ -7,7 +7,6 @@ use anyhow::{anyhow, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use console::style;
 use if_chain::if_chain;
-use log::info;
 
 use crate::api::Api;
 use crate::config::Config;
@@ -121,11 +120,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .unwrap_or("Staging");
     let api = Api::current();
     let print_release_name = matches.get_flag("print_release_name");
-
-    info!(
-        "Issuing a command for Organization: {} Project: {}",
-        org, project
-    );
 
     if !print_release_name {
         println!(
