@@ -244,7 +244,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if let Some(artifact) = authenticated_api
             .region_specific(context.org)
             .upload_release_file(
-                context,
+                &context.try_into()?,
                 &contents,
                 name,
                 Some(

@@ -47,7 +47,7 @@ use uuid::Uuid;
 use crate::api::errors::ProjectRenamedError;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::LegacyUploadContext;
 use crate::utils::http::{self, is_absolute_url};
 use crate::utils::progress::{ProgressBar, ProgressBarMode};
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
@@ -1425,28 +1425,24 @@ impl RegionSpecificApi<'_> {
     /// system and uploaded as `name`.
     pub fn upload_release_file(
         &self,
-        context: &UploadContext,
+        context: &LegacyUploadContext,
         contents: &[u8],
         name: &str,
         headers: Option<&[(String, String)]>,
         progress_bar_mode: ProgressBarMode,
     ) -> ApiResult<Option<Artifact>> {
-        let release = context
-            .release()
-            .map_err(|err| ApiError::with_source(ApiErrorKind::ReleaseNotFound, err))?;
-
-        let path = if let Some(project) = context.project {
+        let path = if let Some(project) = context.project() {
             format!(
                 "/projects/{}/{}/releases/{}/files/",
-                PathArg(context.org),
+                PathArg(context.org()),
                 PathArg(project),
-                PathArg(release)
+                PathArg(context.release())
             )
         } else {
             format!(
                 "/organizations/{}/releases/{}/files/",
-                PathArg(context.org),
-                PathArg(release)
+                PathArg(context.org()),
+                PathArg(context.release())
             )
         };
         let mut form = curl::easy::Form::new();
@@ -1459,7 +1455,7 @@ impl RegionSpecificApi<'_> {
             .buffer(filename, contents.to_vec())
             .add()?;
         form.part("name").contents(name.as_bytes()).add()?;
-        if let Some(dist) = context.dist {
+        if let Some(dist) = context.dist() {
             form.part("dist").contents(dist.as_bytes()).add()?;
         }
 

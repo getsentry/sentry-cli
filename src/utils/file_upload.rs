@@ -1,6 +1,6 @@
 //! Searches, processes and uploads release files.
 use std::collections::{BTreeMap, HashMap};
-use std::fmt;
+use std::fmt::{self, Display};
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::str;
@@ -19,6 +19,7 @@ use symbolic::common::ByteView;
 use symbolic::debuginfo::sourcebundle::{
     SourceBundleErrorKind, SourceBundleWriter, SourceFileInfo, SourceFileType,
 };
+use thiserror::Error;
 use url::Url;
 
 use crate::api::NewRelease;
@@ -97,6 +98,104 @@ impl UploadContext<'_> {
     pub fn release(&self) -> Result<&str> {
         self.release
             .ok_or_else(|| anyhow!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
+    }
+}
+
+#[derive(Debug, Error)]
+pub enum LegacyUploadContextError {
+    #[error("a release is required for this upload")]
+    ReleaseMissing,
+}
+
+/// Represents the context for legacy release uploads.
+///
+/// `LegacyUploadContext` contains information needed for legacy (non-chunked)
+/// uploads. Legacy uploads are primarily used when uploading to old self-hosted
+/// Sentry servers, which do not support receiving chunked uploads.
+///
+/// Unlike chunked uploads, legacy uploads require a release to be set,
+/// and do not need to have chunk-upload-related fields.
+#[derive(Debug, Default)]
+pub struct LegacyUploadContext<'a> {
+    org: &'a str,
+    project: Option<&'a str>,
+    release: &'a str,
+    dist: Option<&'a str>,
+}
+
+impl LegacyUploadContext<'_> {
+    pub fn org(&self) -> &str {
+        self.org
+    }
+
+    pub fn project(&self) -> Option<&str> {
+        self.project
+    }
+
+    pub fn release(&self) -> &str {
+        self.release
+    }
+
+    pub fn dist(&self) -> Option<&str> {
+        self.dist
+    }
+}
+
+impl Display for LegacyUploadContext<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(
+            f,
+            "{} {}",
+            style("> Organization:").dim(),
+            style(self.org).yellow()
+        )?;
+        writeln!(
+            f,
+            "{} {}",
+            style("> Project:").dim(),
+            style(self.project.unwrap_or("None")).yellow()
+        )?;
+        writeln!(
+            f,
+            "{} {}",
+            style("> Release:").dim(),
+            style(self.release).yellow()
+        )?;
+        writeln!(
+            f,
+            "{} {}",
+            style("> Dist:").dim(),
+            style(self.dist.unwrap_or("None")).yellow()
+        )?;
+        write!(
+            f,
+            "{} {}",
+            style("> Upload type:").dim(),
+            style("single file/legacy upload").yellow()
+        )
+    }
+}
+
+impl<'a> TryFrom<&'a UploadContext<'_>> for LegacyUploadContext<'a> {
+    type Error = LegacyUploadContextError;
+
+    fn try_from(value: &'a UploadContext) -> Result<Self, Self::Error> {
+        let &UploadContext {
+            org,
+            project,
+            release,
+            dist,
+            ..
+        } = value;
+
+        let release = release.ok_or(LegacyUploadContextError::ReleaseMissing)?;
+
+        Ok(Self {
+            org,
+            project,
+            release,
+            dist,
+        })
     }
 }
 
@@ -215,7 +314,19 @@ impl<'a> FileUpload<'a> {
             .context
             .chunk_upload_options
             .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
-        upload_files_parallel(self.context, &self.files, concurrency)
+
+        let legacy_context = &self.context.try_into().map_err(|e| {
+            anyhow::anyhow!(
+                "Error while performing legacy upload: {e}. \
+                    If you would like to upload files {}, you need to upgrade your Sentry server \
+                    or switch to our SaaS offering.",
+                match e {
+                    LegacyUploadContextError::ReleaseMissing => "without specifying a release",
+                }
+            )
+        })?;
+
+        upload_files_parallel(legacy_context, &self.files, concurrency)
     }
 
     pub fn build_jvm_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
@@ -224,18 +335,18 @@ impl<'a> FileUpload<'a> {
 }
 
 fn upload_files_parallel(
-    context: &UploadContext,
+    context: &LegacyUploadContext,
     files: &SourceFiles,
     num_threads: usize,
 ) -> Result<()> {
     let api = Api::current();
-    let release = context.release()?;
+    let release = context.release();
 
     // get a list of release files first so we know the file IDs of
     // files that already exist.
     let release_files: HashMap<_, _> = api
         .authenticated()?
-        .list_release_files(context.org, context.project, release)?
+        .list_release_files(context.org, context.project(), release)?
         .into_iter()
         .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
         .collect();
@@ -308,7 +419,7 @@ fn upload_files_parallel(
 
     pb.finish_and_clear();
 
-    print_upload_context_details(context);
+    println!("{}", context);
 
     Ok(())
 }
