@@ -1,5 +1,5 @@
 name: 🐞 Bug Report
-description: Report a bug in this repo
+description: Report a bug in Sentry CLI
 labels: ["CLI", "Bug"]
 body:
   - type: markdown
@@ -93,5 +93,6 @@ body:
       required: true
   - type: markdown
     attributes:
-      value: |
-        **Thank you for your report!** We will investigate the issue and respond as soon as possible.
+      value: |-
+        ## Thanks 🙏
+        Check our [triage docs](https://open.sentry.io/triage/) for what to expect next.
