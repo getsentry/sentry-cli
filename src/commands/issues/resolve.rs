@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use log::info;
 
 use crate::api::{Api, IssueChanges, IssueFilter};
 use crate::config::Config;
@@ -20,11 +19,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
     let filter = IssueFilter::get_filter_from_matches(matches)?;
     let mut changes: IssueChanges = Default::default();
-
-    info!(
-        "Issuing a command for Organization: {} Project: {}",
-        org, project
-    );
 
     if matches.get_flag("next_release") {
         changes.new_status = Some("resolvedInNextRelease".into());

@@ -170,11 +170,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     .canonicalize()?;
 
-    info!(
-        "Issuing a command for Organization: {} Project: {}",
-        org, project
-    );
-
     // if we allow fetching and we detect a simulator run, then we need to switch
     // to simulator mode.
     let fetch_url;

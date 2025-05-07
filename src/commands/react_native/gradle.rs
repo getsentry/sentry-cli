@@ -82,11 +82,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
     let bundle_url = format!("~/{}", bundle_path.file_name().unwrap().to_string_lossy());
 
-    info!(
-        "Issuing a command for Organization: {} Project: {}",
-        org, project
-    );
-
     println!("Processing react-native sourcemaps for Sentry upload.");
     info!("  bundle path: {}", bundle_path.display());
     info!("  sourcemap path: {}", sourcemap_path.display());
