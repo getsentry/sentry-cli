@@ -70,7 +70,8 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
-    let (org, project) = config.get_org_and_project(matches)?;
+    let org = config.get_org(matches)?;
+    let projects = config.get_projects(matches)?;
     let api = Api::current();
     let base = env::current_dir()?;
 
@@ -123,7 +124,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             processor.upload(&UploadContext {
                 org: &org,
-                project: Some(&project),
+                projects: &projects,
                 release: Some(version),
                 dist: Some(dist),
                 note: None,
@@ -137,7 +138,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Debug Id Upload
         processor.upload(&UploadContext {
             org: &org,
-            project: Some(&project),
+            projects: &projects,
             release: None,
             dist: None,
             note: None,

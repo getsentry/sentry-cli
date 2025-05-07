@@ -10,7 +10,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_debugid_alias
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
 > Organization: wat-org
-> Project: wat-project
+> Projects: wat-project
 > Release: None
 > Dist: None
 > Upload type: artifact bundle
