@@ -1,0 +1,11 @@
+name: Blank Issue
+description: Blank Issue. Reserved for maintainers.
+labels: ["CLI"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Please describe the issue.
+    validations:
+      required: true
