@@ -15,7 +15,7 @@ Processing react-native sourcemaps for Sentry upload.
 > Uploaded files to Sentry
 > File upload complete (processing pending on server)
 > Organization: wat-org
-> Project: wat-project
+> Projects: wat-project
 > Release: test-release
 > Dist: test-dist
 > Upload type: artifact bundle

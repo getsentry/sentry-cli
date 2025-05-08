@@ -1445,6 +1445,7 @@ impl RegionSpecificApi<'_> {
                 PathArg(context.release())
             )
         };
+
         let mut form = curl::easy::Form::new();
 
         let filename = Path::new(name)

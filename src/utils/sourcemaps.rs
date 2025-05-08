@@ -769,13 +769,16 @@ impl SourceMapProcessor {
     fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) -> usize {
         let mut files_needing_upload = self.sources.len();
 
-        // TODO: this endpoint does not exist for non release based uploads
         if !context.dedupe {
             return files_needing_upload;
         }
-        let release = match context.release {
-            Some(release) => release,
-            None => return files_needing_upload,
+
+        // This endpoint only supports at most one project, and a release is required.
+        // If the upload contains multiple projects or no release, we do not use deduplication.
+        let (project, release) = match (context.projects, context.release) {
+            ([project], Some(release)) => (Some(project.as_str()), release),
+            ([], Some(release)) => (None, release),
+            _ => return files_needing_upload,
         };
 
         let mut sources_checksums: Vec<_> = self
@@ -790,12 +793,7 @@ impl SourceMapProcessor {
         let api = Api::current();
 
         if let Ok(artifacts) = api.authenticated().and_then(|api| {
-            api.list_release_files_by_checksum(
-                context.org,
-                context.project,
-                release,
-                &sources_checksums,
-            )
+            api.list_release_files_by_checksum(context.org, project, release, &sources_checksums)
         }) {
             let already_uploaded_checksums: HashSet<_> = artifacts
                 .into_iter()
@@ -852,7 +850,6 @@ impl SourceMapProcessor {
                 }
             }
         }
-
         let files_needing_upload = self.flag_uploaded_sources(context);
         if files_needing_upload > 0 {
             let mut uploader = FileUpload::new(context);

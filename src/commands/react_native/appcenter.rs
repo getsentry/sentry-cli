@@ -111,7 +111,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
-    let (org, project) = config.get_org_and_project(matches)?;
+    let org = config.get_org(matches)?;
+    let projects = config.get_projects(matches)?;
     let app = matches.get_one::<String>("app_name").unwrap();
     let platform = matches.get_one::<String>("platform").unwrap();
     let deployment = matches
@@ -189,7 +190,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             processor.upload(&UploadContext {
                 org: &org,
-                project: Some(&project),
+                projects: &projects,
                 release: Some(&release),
                 dist: None,
                 note: None,
@@ -208,7 +209,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
                 processor.upload(&UploadContext {
                     org: &org,
-                    project: Some(&project),
+                    projects: &projects,
                     release: Some(&release),
                     dist: Some(dist),
                     note: None,

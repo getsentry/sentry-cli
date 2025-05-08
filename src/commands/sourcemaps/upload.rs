@@ -421,7 +421,8 @@ fn process_sources_from_paths(
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let version = config.get_release_with_legacy_fallback(matches).ok();
-    let (org, project) = config.get_org_and_project(matches)?;
+    let org = config.get_org(matches)?;
+    let projects = config.get_projects(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
     let mut chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
@@ -450,7 +451,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let max_wait = wait_for_secs.map_or(DEFAULT_MAX_WAIT, Duration::from_secs);
     let upload_context = UploadContext {
         org: &org,
-        project: Some(&project),
+        projects: &projects,
         release: version.as_deref(),
         dist: matches.get_one::<String>("dist").map(String::as_str),
         note: matches.get_one::<String>("note").map(String::as_str),
