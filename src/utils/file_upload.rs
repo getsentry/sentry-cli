@@ -454,7 +454,7 @@ fn poll_assemble(
         let response = if use_artifact_bundle {
             authenticated_api.assemble_artifact_bundle(
                 context.org,
-                vec![context.project.unwrap().to_string()],
+                &[context.project.unwrap().to_string()],
                 checksum,
                 chunks,
                 context.release,
@@ -544,7 +544,7 @@ fn upload_files_chunked(
         let api = Api::current();
         let response = api.authenticated()?.assemble_artifact_bundle(
             context.org,
-            vec![context.project.unwrap().to_string()],
+            &[context.project.unwrap().to_string()],
             checksum,
             &checksums,
             context.release,

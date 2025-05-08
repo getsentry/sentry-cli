@@ -996,7 +996,7 @@ impl<'a> AuthenticatedApi<'a> {
             .with_json_body(&ChunkedArtifactRequest {
                 checksum,
                 chunks,
-                projects: Vec::new(),
+                projects: &[],
                 version: None,
                 dist: None,
             })?
@@ -1015,7 +1015,7 @@ impl<'a> AuthenticatedApi<'a> {
     pub fn assemble_artifact_bundle(
         &self,
         org: &str,
-        projects: Vec<String>,
+        projects: &[String],
         checksum: Digest,
         chunks: &[Digest],
         version: Option<&str>,
