@@ -6,9 +6,8 @@ use std::panic::{self, Location, PanicHookInfo};
 use std::process;
 use std::{env, thread};
 
-use anyhow::{Error, Result};
+use anyhow::{Context as _, Error, Result};
 use console::style;
-use dotenvy::Result as DotenvResult;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
@@ -101,7 +100,7 @@ pub fn set_panic_hook() {
 pub struct QuietExit(pub i32);
 
 /// Loads a .env file
-pub fn load_dotenv() -> DotenvResult<()> {
+pub fn load_dotenv() -> Result<()> {
     let load_dotenv_unset = env::var("SENTRY_LOAD_DOTENV")
         .map(|x| x.as_str() != "1")
         .unwrap_or(false);
@@ -110,35 +109,29 @@ pub fn load_dotenv() -> DotenvResult<()> {
         return Ok(());
     }
 
-    let mut paths: Vec<String> = Vec::new();
-
-    if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
-        paths.push(path)
-    }
-
-    if let Ok (path) = env::var("SENTRY_DOTENV_PATHS") {
-        paths.extend(path.split(",").map(|file| file.trim().to_string()));
-    }
-
-    // Fallback to default dotenv
-    if paths.is_empty() {
-        check_dotenv_result(dotenvy::dotenv().map(|_| ()))?;
+    let custom_dotenv_paths: &[_] = if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
+        &[path]
+    } else if let Ok(paths) = env::var("SENTRY_DOTENV_PATHS") {
+        &paths
+            .split(",")
+            .map(|path| path.trim())
+            .filter(|path| !path.is_empty())
+            .map(|path| path.to_string())
+            .collect::<Vec<_>>()
     } else {
-        for path in paths {
-            check_dotenv_result(dotenvy::from_path_override(path))?;
-        }
+        // Fallback to default dotenv
+        dotenvy::dotenv()
+            .map_or_else(|e| if e.not_found() { Ok(()) } else { Err(e) }, |_| Ok(()))
+            .context("We found a .env file, but failed to load it.")?;
+        return Ok(());
+    };
+
+    for path in custom_dotenv_paths {
+        dotenvy::from_path_override(path)
+            .with_context(|| format!("Failed to load custom .env file: {}", path))?;
     }
 
     Ok(())
-}
-
-/// Checks if DotenvResult is not found error
-fn check_dotenv_result(result: DotenvResult<()>) -> DotenvResult<()> {
-    match result {
-        Ok(_) => Ok(()),
-        Err(err) if err.not_found() => Ok(()),
-        Err(err) => Err(err),
-    }
 }
 
 /// Custom panic hook for Sentry CLI
