@@ -2,6 +2,19 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.45.0
+
+### Various fixes & improvements
+
+- ref: Rename `fixup_js_file_end` (#2475) by @szokeasaurusrex
+- feat(sourcemaps): Multi-project sourcemaps upload (#2497) by @szokeasaurusrex
+- ref: Use slice instead of vec for assemble artifact request (#2498) by @szokeasaurusrex
+- ref: Separate `LegacyUploadContext` for legacy uploads (#2494) by @szokeasaurusrex
+- feat: Remove organization and project info log (#2490) by @szokeasaurusrex
+- chore: update issue templates (#2493) by @stephanie-anderson
+- build(deps): bump actions/create-github-app-token from 2.0.2 to 2.0.6 (#2485) by @dependabot
+- build(deps): bump github/codeql-action from 3.28.16 to 3.28.17 (#2486) by @dependabot
+
 ## 2.44.0
 
 ### Various fixes & improvements
