@@ -334,6 +334,7 @@ impl<'a> FileUpload<'a> {
     }
 }
 
+#[deprecated]
 fn upload_files_parallel(
     context: &LegacyUploadContext,
     files: &SourceFiles,

@@ -11,6 +11,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(Arg::new("version").long("version").hide(true))
 }
 
+#[deprecated]
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let release = config.get_release_with_legacy_fallback(matches)?;
