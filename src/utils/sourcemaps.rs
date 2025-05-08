@@ -931,7 +931,7 @@ impl SourceMapProcessor {
                     // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
                     // because that would throw off all the mappings. Instead, inject the snippet at the very end.
                     // This isn't ideal, but it's the best we can do in this case.
-                    inject::fixup_js_file_end(Arc::make_mut(&mut source_file.contents), debug_id)
+                    inject::inject_at_end(Arc::make_mut(&mut source_file.contents), debug_id)
                         .context(format!("Failed to process {}", source_file.path.display()))?;
                     debug_id
                 }
@@ -981,7 +981,7 @@ impl SourceMapProcessor {
                                     source_file_contents.extend(injected.as_bytes());
                                 } else {
                                     // We can't adjust the section offset rows, so we have to inject at the end
-                                    inject::fixup_js_file_end(source_file_contents, debug_id)
+                                    inject::inject_at_end(source_file_contents, debug_id)
                                         .with_context(|| {
                                             format!(
                                                 "Failed to inject debug id into {}",
@@ -1079,13 +1079,13 @@ impl SourceMapProcessor {
                                         source_file_contents.extend(injected.as_bytes());
                                     } else {
                                         // We can't adjust the section offset rows, so we have to inject at the end
-                                        inject::fixup_js_file_end(source_file_contents, debug_id)
+                                        inject::inject_at_end(source_file_contents, debug_id)
                                             .with_context(|| {
-                                            format!(
-                                                "Failed to inject debug id into {}",
-                                                source_file.path.display()
-                                            )
-                                        })?;
+                                                format!(
+                                                    "Failed to inject debug id into {}",
+                                                    source_file.path.display()
+                                                )
+                                            })?;
                                     }
                                 }
                             }
@@ -1131,7 +1131,7 @@ impl SourceMapProcessor {
                             // If we don't have a sourcemap, it's not safe to inject the code snippet at the beginning,
                             // because that would throw off all the mappings. Instead, inject the snippet at the very end.
                             // This isn't ideal, but it's the best we can do in this case.
-                            inject::fixup_js_file_end(
+                            inject::inject_at_end(
                                 Arc::make_mut(&mut source_file.contents),
                                 debug_id,
                             )

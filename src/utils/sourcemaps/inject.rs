@@ -208,7 +208,7 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
     Ok(SourceMap::from_slice(map.as_bytes()).unwrap())
 }
 
-/// Fixes up a minified JS source file with a debug id without messing with mappings.
+/// Inject a minified JS source file with a debug id without changing mappings.
 ///
 /// This changes the source file in several ways:
 /// 1. The source code snippet `<CODE_SNIPPET>[<debug_id>]` is appended to the file.
@@ -221,7 +221,7 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
 /// might mess up the mappings by inserting a line, with no opportunity to adjust the
 /// sourcemap accordingly. However, in general it is desirable to insert the code snippet
 /// as early as possible to make sure it runs even when an error is raised in the file.
-pub fn fixup_js_file_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
+pub fn inject_at_end(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<()> {
     let mut js_lines = js_contents.lines().collect::<Result<Vec<_>, _>>()?;
 
     js_contents.clear();
