@@ -2,6 +2,23 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.45.0
+
+### New feature
+- feat(sourcemaps): Multi-project sourcemaps upload (#2497) by @szokeasaurusrex
+   - Sourcemaps can now be uploaded to multiple projects at once by passing each project to the `sentry-cli sourcemaps upload` command, like so:
+     ```sh
+     sentry-cli sourcemaps upload -p project1 -p project2 /path/to/sourcemaps
+     ```
+  - Note that users on old versions of self-hosted Sentry may need to upgrade their self-hosted server to a newer version to take advantage of multi-project uploads.
+
+### Various fixes & improvements
+
+- ref: Rename `fixup_js_file_end` (#2475) by @szokeasaurusrex
+- ref: Use slice instead of vec for assemble artifact request (#2498) by @szokeasaurusrex
+- ref: Separate `LegacyUploadContext` for legacy uploads (#2494) by @szokeasaurusrex
+- feat: Remove organization and project info log (#2490) by @szokeasaurusrex
+
 ## 2.44.0
 
 ### Various fixes & improvements
