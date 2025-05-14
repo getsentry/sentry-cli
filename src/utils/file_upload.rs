@@ -1,5 +1,6 @@
 //! Searches, processes and uploads release files.
 use std::collections::{BTreeMap, HashMap};
+use std::ffi::OsStr;
 use std::fmt::{self, Display};
 use std::io::BufWriter;
 use std::path::PathBuf;
@@ -16,6 +17,7 @@ use rayon::ThreadPoolBuilder;
 use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
+use symbolic::debuginfo::js;
 use symbolic::debuginfo::sourcebundle::{
     SourceBundleErrorKind, SourceBundleWriter, SourceFileInfo, SourceFileType,
 };
@@ -28,6 +30,8 @@ use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
+
+use super::file_search::ReleaseFileMatch;
 
 /// Fallback concurrency for release file uploads.
 static DEFAULT_CONCURRENCY: usize = 4;
@@ -239,6 +243,68 @@ pub struct SourceFile {
 }
 
 impl SourceFile {
+    pub fn from_release_file_match(url: &str, mut file: ReleaseFileMatch) -> SourceFile {
+        let (ty, debug_id) = if sourcemap::is_sourcemap_slice(&file.contents) {
+            (
+                SourceFileType::SourceMap,
+                std::str::from_utf8(&file.contents)
+                    .ok()
+                    .and_then(js::discover_sourcemap_embedded_debug_id),
+            )
+        } else if file
+            .path
+            .file_name()
+            .and_then(OsStr::to_str)
+            .map(|x| x.ends_with("bundle"))
+            .unwrap_or(false)
+            && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
+        {
+            (SourceFileType::IndexedRamBundle, None)
+        } else if is_hermes_bytecode(&file.contents) {
+            // This is actually a big hack:
+            // For the react-native Hermes case, we skip uploading the bytecode bundle,
+            // and rather flag it as an empty "minified source". That way, it
+            // will get a SourceMap reference, and the server side processor
+            // should deal with it accordingly.
+            file.contents.clear();
+            (SourceFileType::MinifiedSource, None)
+        } else {
+            // Here, we use MinifiedSource for historical reasons. We used to guess whether
+            // a JS file was a minified file or a source file, and we would treat these files
+            // differently when uploading or injecting them. However, the desired behavior is
+            // and has always been to treat all JS files the same, since users should be
+            // responsible for providing the file paths for only files they would like to have
+            // uploaded or injected. The minified file guessing furthermore was not reliable,
+            // since minification is not a necessary step in the JS build process.
+            //
+            // We use MinifiedSource here rather than Source because we want to treat all JS
+            // files the way we used to treat minified files only. To use Source, we would need
+            // to analyze all possible code paths that check this value, and update those as
+            // well. To keep the change minimal, we use MinifiedSource here.
+            (
+                SourceFileType::MinifiedSource,
+                std::str::from_utf8(&file.contents)
+                    .ok()
+                    .and_then(js::discover_debug_id),
+            )
+        };
+
+        let mut source_file = SourceFile {
+            url: url.into(),
+            path: file.path,
+            contents: file.contents.into(),
+            ty,
+            headers: BTreeMap::new(),
+            messages: vec![],
+            already_uploaded: false,
+        };
+
+        if let Some(debug_id) = debug_id {
+            source_file.set_debug_id(debug_id.to_string());
+        }
+        source_file
+    }
+
     /// Calculates and returns the SHA1 checksum of the file.
     pub fn checksum(&self) -> Result<Digest> {
         get_sha1_checksum(&**self.contents)
@@ -751,6 +817,13 @@ fn print_upload_context_details(context: &UploadContext) {
         style("> Upload type:").dim(),
         style(upload_type).yellow()
     );
+}
+
+fn is_hermes_bytecode(slice: &[u8]) -> bool {
+    // The hermes bytecode format magic is defined here:
+    // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
+    const HERMES_MAGIC: [u8; 8] = [0xC6, 0x1F, 0xBC, 0x03, 0xC1, 0x03, 0x19, 0x1F];
+    slice.starts_with(&HERMES_MAGIC)
 }
 
 #[cfg(test)]

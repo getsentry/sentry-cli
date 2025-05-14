@@ -12,7 +12,7 @@ use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::{validate_distribution, ArgExt};
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::{SourceFile, UploadContext};
 use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
@@ -92,16 +92,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         &bundle_url,
         ReleaseFileSearch::collect_file(bundle_path.clone())?,
     );
-    processor.add(
-        &sourcemap_url,
-        ReleaseFileSearch::collect_file(sourcemap_path)?,
-    );
+
+    let sourcemap_match = ReleaseFileSearch::collect_file(sourcemap_path.clone())?;
 
     if let Ok(ram_bundle) = RamBundle::parse_unbundle_from_path(&bundle_path) {
         debug!("File RAM bundle found, extracting its contents...");
-        processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
+        let sourcemap_source = SourceFile::from_release_file_match(&sourcemap_url, sourcemap_match);
+        processor.unpack_ram_bundle(&ram_bundle, &bundle_url, &sourcemap_source)?;
     } else {
         debug!("Non-file bundle found");
+        processor.add(&sourcemap_url, sourcemap_match);
     }
 
     processor.rewrite(&[base.to_str().unwrap()])?;

@@ -1,6 +1,5 @@
 //! Provides sourcemap validation functionality.
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::ffi::OsStr;
 use std::io::Write;
 use std::mem;
 use std::path::{Path, PathBuf};
@@ -15,9 +14,7 @@ use log::{debug, info, warn};
 use sentry::types::DebugId;
 use sha1_smol::Digest;
 use sourcemap::{DecodedMap, SourceMap};
-use symbolic::debuginfo::js::{
-    discover_debug_id, discover_sourcemap_embedded_debug_id, discover_sourcemaps_location,
-};
+use symbolic::debuginfo::js::discover_sourcemaps_location;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
@@ -111,49 +108,40 @@ fn guess_sourcemap_reference(
     sourcemaps: &HashSet<String>,
     min_url: &str,
 ) -> Result<SourceMapReference> {
-    // if there is only one sourcemap in total we just assume that's the one.
-    // We just need to make sure that we fix up the reference if we need to
-    // (eg: ~/ -> /).
-    if sourcemaps.len() == 1 {
-        let original_url = sourcemaps.iter().next().unwrap();
-        return Ok(SourceMapReference {
-            url: sourcemap::make_relative_path(min_url, original_url),
-            original_url: Option::from(original_url.to_string()),
-        });
-    }
-
     let map_ext = "map";
     let (path, basename, ext) = split_url(min_url);
 
     // foo.min.js -> foo.map
-    if sourcemaps.contains(&unsplit_url(path, basename, Some("map"))) {
-        return Ok(SourceMapReference::from_url(unsplit_url(
-            None,
-            basename,
-            Some("map"),
-        )));
+    let url_with_path = unsplit_url(path, basename, Some("map"));
+    if sourcemaps.contains(&url_with_path) {
+        return Ok(
+            SourceMapReference::from_url(unsplit_url(None, basename, Some("map")))
+                .with_original_url(url_with_path),
+        );
     }
 
     if let Some(ext) = ext.as_ref() {
         // foo.min.js -> foo.min.js.map
         let new_ext = format!("{ext}.{map_ext}");
-        if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
-            return Ok(SourceMapReference::from_url(unsplit_url(
-                None,
-                basename,
-                Some(&new_ext),
-            )));
+        let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+        if sourcemaps.contains(&url_with_path) {
+            return Ok(
+                SourceMapReference::from_url(unsplit_url(None, basename, Some(&new_ext)))
+                    .with_original_url(url_with_path),
+            );
         }
 
         // foo.min.js -> foo.js.map
         if let Some(rest) = ext.strip_prefix("min.") {
             let new_ext = format!("{rest}.{map_ext}");
-            if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
+            let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+            if sourcemaps.contains(&url_with_path) {
                 return Ok(SourceMapReference::from_url(unsplit_url(
                     None,
                     basename,
                     Some(&new_ext),
-                )));
+                ))
+                .with_original_url(url_with_path));
             }
         }
 
@@ -163,12 +151,14 @@ fn guess_sourcemap_reference(
             let parts_len = parts.len();
             parts[parts_len - 1] = map_ext;
             let new_ext = parts.join(".");
-            if sourcemaps.contains(&unsplit_url(path, basename, Some(&new_ext))) {
+            let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+            if sourcemaps.contains(&url_with_path) {
                 return Ok(SourceMapReference::from_url(unsplit_url(
                     None,
                     basename,
                     Some(&new_ext),
-                )));
+                ))
+                .with_original_url(url_with_path));
             }
         }
     }
@@ -192,6 +182,11 @@ impl SourceMapReference {
             original_url: None,
         }
     }
+
+    fn with_original_url(mut self, original_url: String) -> Self {
+        self.original_url = Some(original_url);
+        self
+    }
 }
 
 pub struct SourceMapProcessor {
@@ -199,13 +194,6 @@ pub struct SourceMapProcessor {
     sources: SourceFiles,
     sourcemap_references: HashMap<String, Option<SourceMapReference>>,
     debug_ids: HashMap<String, DebugId>,
-}
-
-fn is_hermes_bytecode(slice: &[u8]) -> bool {
-    // The hermes bytecode format magic is defined here:
-    // https://github.com/facebook/hermes/blob/5243222ef1d92b7393d00599fc5cff01d189a88a/include/hermes/BCGen/HBC/BytecodeFileFormat.h#L24-L25
-    const HERMES_MAGIC: [u8; 8] = [0xC6, 0x1F, 0xBC, 0x03, 0xC1, 0x03, 0x19, 0x1F];
-    slice.starts_with(&HERMES_MAGIC)
 }
 
 fn url_matches_extension(url: &str, extensions: &[&str]) -> bool {
@@ -275,73 +263,23 @@ impl SourceMapProcessor {
             style(">").dim(),
             style(self.pending_sources.len()).yellow()
         );
-        for (url, mut file) in self.pending_sources.drain() {
+        for (url, file) in mem::take(&mut self.pending_sources) {
             pb.set_message(&url);
-
-            let (ty, debug_id) = if sourcemap::is_sourcemap_slice(&file.contents) {
-                (
-                    SourceFileType::SourceMap,
-                    std::str::from_utf8(&file.contents)
-                        .ok()
-                        .and_then(discover_sourcemap_embedded_debug_id),
-                )
-            } else if file
-                .path
-                .file_name()
-                .and_then(OsStr::to_str)
-                .map(|x| x.ends_with("bundle"))
-                .unwrap_or(false)
-                && sourcemap::ram_bundle::is_ram_bundle_slice(&file.contents)
-            {
-                (SourceFileType::IndexedRamBundle, None)
-            } else if is_hermes_bytecode(&file.contents) {
-                // This is actually a big hack:
-                // For the react-native Hermes case, we skip uploading the bytecode bundle,
-                // and rather flag it as an empty "minified source". That way, it
-                // will get a SourceMap reference, and the server side processor
-                // should deal with it accordingly.
-                file.contents.clear();
-                (SourceFileType::MinifiedSource, None)
-            } else {
-                // Here, we use MinifiedSource for historical reasons. We used to guess whether
-                // a JS file was a minified file or a source file, and we would treat these files
-                // differently when uploading or injecting them. However, the desired behavior is
-                // and has always been to treat all JS files the same, since users should be
-                // responsible for providing the file paths for only files they would like to have
-                // uploaded or injected. The minified file guessing furthermore was not reliable,
-                // since minification is not a necessary step in the JS build process.
-                //
-                // We use MinifiedSource here rather than Source because we want to treat all JS
-                // files the way we used to treat minified files only. To use Source, we would need
-                // to analyze all possible code paths that check this value, and update those as
-                // well. To keep the change minimal, we use MinifiedSource here.
-                (
-                    SourceFileType::MinifiedSource,
-                    std::str::from_utf8(&file.contents)
-                        .ok()
-                        .and_then(discover_debug_id),
-                )
-            };
-
-            let mut source_file = SourceFile {
-                url: url.clone(),
-                path: file.path,
-                contents: file.contents.into(),
-                ty,
-                headers: BTreeMap::new(),
-                messages: vec![],
-                already_uploaded: false,
-            };
-
-            if let Some(debug_id) = debug_id {
-                source_file.set_debug_id(debug_id.to_string());
-                self.debug_ids.insert(url.clone(), debug_id);
-            }
-
-            self.sources.insert(url.clone(), source_file);
+            self.add_file_to_sources(SourceFile::from_release_file_match(&url, file));
             pb.inc(1);
         }
         pb.finish_with_duration("Analyzing");
+    }
+
+    /// Adds a given source_file to sources, also inserting its debug_id if present
+    /// and parsable as a DebugId.
+    fn add_file_to_sources(&mut self, source_file: SourceFile) {
+        let source_file_url = source_file.url.clone();
+        if let Some(debug_id) = source_file.debug_id().and_then(|id| id.parse().ok()) {
+            self.debug_ids.insert(source_file_url.clone(), debug_id);
+        }
+
+        self.sources.insert(source_file_url, source_file);
     }
 
     /// Collect references to sourcemaps in minified source files
@@ -510,43 +448,12 @@ impl SourceMapProcessor {
         &mut self,
         ram_bundle: &sourcemap::ram_bundle::RamBundle,
         bundle_source_url: &str,
+        sourcemap_source: &SourceFile,
     ) -> Result<()> {
         // We need this to flush all pending sourcemaps
         self.flush_pending_sources();
 
-        debug!("Trying to guess the sourcemap reference");
-        let sourcemaps_references = self
-            .sources
-            .values()
-            .filter(|x| x.ty == SourceFileType::SourceMap)
-            .map(|x| x.url.to_string())
-            .collect();
-
-        let sourcemap_url =
-            match guess_sourcemap_reference(&sourcemaps_references, bundle_source_url) {
-                Ok(filename) => {
-                    let (path, _, _) = split_url(bundle_source_url);
-                    unsplit_url(path, &filename.url, None)
-                }
-                Err(_) => {
-                    warn!("Sourcemap reference for {} not found!", bundle_source_url);
-                    return Ok(());
-                }
-            };
-        debug!(
-            "Sourcemap reference for {} found: {}",
-            bundle_source_url, sourcemap_url
-        );
-
-        let Some(sourcemap_source) = self.sources.get(&sourcemap_url) else {
-            warn!(
-                "Cannot find the sourcemap for the RAM bundle using the URL: {}, skipping",
-                sourcemap_url
-            );
-            return Ok(());
-        };
         let sourcemap_content = &sourcemap_source.contents;
-
         let sourcemap_index = match sourcemap::decode_slice(sourcemap_content)? {
             sourcemap::DecodedMap::Index(sourcemap_index) => sourcemap_index,
             _ => {
@@ -565,7 +472,7 @@ impl SourceMapProcessor {
             let mut index_sourcemap_content: Vec<u8> = vec![];
             index_section.to_writer(&mut index_sourcemap_content)?;
             self.sources.insert(
-                sourcemap_url.clone(),
+                sourcemap_source.url.clone(),
                 SourceFile {
                     url: sourcemap_source.url.clone(),
                     path: sourcemap_source.path.clone(),
@@ -620,7 +527,9 @@ impl SourceMapProcessor {
     }
 
     /// Replaces indexed RAM bundle entries with their expanded sources and sourcemaps
-    pub fn unpack_indexed_ram_bundles(&mut self) -> Result<()> {
+    pub fn unpack_indexed_ram_bundles(&mut self, sourcemap_source: &SourceFile) -> Result<()> {
+        self.flush_pending_sources();
+
         let mut ram_bundles = Vec::new();
 
         // Drain RAM bundles from self.sources
@@ -637,7 +546,7 @@ impl SourceMapProcessor {
             let ram_bundle = sourcemap::ram_bundle::RamBundle::parse_indexed_from_slice(
                 &bundle_source.contents,
             )?;
-            self.unpack_ram_bundle(&ram_bundle, &bundle_source.url)?;
+            self.unpack_ram_bundle(&ram_bundle, &bundle_source.url, sourcemap_source)?;
         }
         Ok(())
     }
@@ -649,8 +558,6 @@ impl SourceMapProcessor {
         self.flush_pending_sources();
 
         println!("{} Rewriting sources", style(">").dim());
-
-        self.unpack_indexed_ram_bundles()?;
 
         let progress_style = ProgressStyle::default_bar().template(&format!(
             "{} {{msg}}\n{{wide_bar}} {{pos}}/{{len}}",

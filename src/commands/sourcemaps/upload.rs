@@ -13,7 +13,7 @@ use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::validate_distribution;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::UploadContext;
+use crate::utils::file_upload::{SourceFile, UploadContext};
 use crate::utils::fs::path_as_url;
 use crate::utils::sourcemaps::SourceMapProcessor;
 
@@ -303,21 +303,23 @@ fn process_sources_from_bundle(
         &bundle_url,
         ReleaseFileSearch::collect_file(bundle_path.clone())?,
     );
-    processor.add(
-        &sourcemap_url,
-        ReleaseFileSearch::collect_file(sourcemap_path)?,
-    );
+    let sourcemap_match = ReleaseFileSearch::collect_file(sourcemap_path)?;
 
     if let Ok(ram_bundle) = sourcemap::ram_bundle::RamBundle::parse_unbundle_from_path(&bundle_path)
     {
         debug!("File RAM bundle found, extracting its contents...");
         // For file ("unbundle") RAM bundles we need to explicitly unpack it, otherwise we cannot detect it
         // reliably inside "processor.rewrite()"
-        processor.unpack_ram_bundle(&ram_bundle, &bundle_url)?;
+
+        let sourcemap_source = SourceFile::from_release_file_match(&sourcemap_url, sourcemap_match);
+        processor.unpack_ram_bundle(&ram_bundle, &bundle_url, &sourcemap_source)?;
     } else if sourcemap::ram_bundle::RamBundle::parse_indexed_from_path(&bundle_path).is_ok() {
         debug!("Indexed RAM bundle found");
+        let sourcemap_source = SourceFile::from_release_file_match(&sourcemap_url, sourcemap_match);
+        processor.unpack_indexed_ram_bundles(&sourcemap_source)?;
     } else {
         warn!("Regular bundle found");
+        processor.add(&sourcemap_url, sourcemap_match);
     }
 
     let mut prefixes = get_prefixes_from_args(matches);
