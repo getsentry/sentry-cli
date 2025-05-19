@@ -6,9 +6,8 @@ use std::panic::{self, Location, PanicHookInfo};
 use std::process;
 use std::{env, thread};
 
-use anyhow::{Error, Result};
+use anyhow::{Context as _, Error, Result};
 use console::style;
-use dotenvy::Result as DotenvResult;
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
@@ -101,7 +100,7 @@ pub fn set_panic_hook() {
 pub struct QuietExit(pub i32);
 
 /// Loads a .env file
-pub fn load_dotenv() -> DotenvResult<()> {
+pub fn load_dotenv() -> Result<()> {
     let load_dotenv_unset = env::var("SENTRY_LOAD_DOTENV")
         .map(|x| x.as_str() != "1")
         .unwrap_or(false);
@@ -110,21 +109,29 @@ pub fn load_dotenv() -> DotenvResult<()> {
         return Ok(());
     }
 
-    match env::var("SENTRY_DOTENV_PATH") {
-        Ok(path) => dotenvy::from_path(path),
-        Err(_) => dotenvy::dotenv().map(|_| ()),
+    let custom_dotenv_paths: &[_] = if let Ok(path) = env::var("SENTRY_DOTENV_PATH") {
+        &[path]
+    } else if let Ok(paths) = env::var("SENTRY_DOTENV_PATHS") {
+        &paths
+            .split(",")
+            .map(|path| path.trim())
+            .filter(|path| !path.is_empty())
+            .map(|path| path.to_string())
+            .collect::<Vec<_>>()
+    } else {
+        // Fallback to default dotenv
+        dotenvy::dotenv()
+            .map_or_else(|e| if e.not_found() { Ok(()) } else { Err(e) }, |_| Ok(()))
+            .context("We found a .env file, but failed to load it.")?;
+        return Ok(());
+    };
+
+    for path in custom_dotenv_paths {
+        dotenvy::from_path_override(path)
+            .with_context(|| format!("Failed to load custom .env file: {}", path))?;
     }
-    .map_or_else(
-        |error| {
-            // We only propagate errors if the .env file was found and failed to load.
-            if error.not_found() {
-                Ok(())
-            } else {
-                Err(error)
-            }
-        },
-        |_| Ok(()),
-    )
+
+    Ok(())
 }
 
 /// Custom panic hook for Sentry CLI
