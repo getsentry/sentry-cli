@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
+use console::style;
 
 use crate::utils::args::ArgExt;
 
@@ -25,7 +26,8 @@ pub fn make_command(mut command: Command) -> Command {
     }
 
     command = command
-        .about("Manage release artifacts.")
+        .about("[DEPRECATED] Manage release artifacts.")
+        .hide(true)
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()
@@ -42,6 +44,9 @@ pub fn make_command(mut command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    eprintln!("{}", style("⚠ DEPRECATION NOTICE: This functionality will be removed in a future version of `sentry-cli`. \
+        Use the `sourcemaps` command instead.").yellow());
+
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =

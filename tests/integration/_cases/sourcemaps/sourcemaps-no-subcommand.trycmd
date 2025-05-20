@@ -6,7 +6,6 @@ Manage sourcemaps for Sentry releases.
 Usage: sentry-cli[EXE] sourcemaps [OPTIONS] <COMMAND>
 
 Commands:
-  explain  Explain why sourcemaps are not working for a given event.
   inject   Fixes up JavaScript source files and sourcemaps with debug ids.
   resolve  Resolve sourcemap for a given line/column position.
   upload   Upload sourcemaps for a release.

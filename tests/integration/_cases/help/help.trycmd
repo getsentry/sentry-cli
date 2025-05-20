@@ -14,7 +14,6 @@ Commands:
   debug-files      Locate, analyze or upload debug information files. [aliases: dif]
   deploys          Manage deployments for Sentry releases.
   events           Manage events on Sentry.
-  files            Manage release artifacts.
   info             Print information about the configuration and verify authentication.
   issues           Manage issues in Sentry.
   login            Authenticate with the Sentry server.
