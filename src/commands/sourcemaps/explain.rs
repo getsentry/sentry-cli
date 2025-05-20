@@ -16,7 +16,8 @@ use super::resolve::print_source;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Explain why sourcemaps are not working for a given event.")
+        .about("[DEPRECATED] Explain why sourcemaps are not working for a given event.")
+        .hide(true)
         .alias("why")
         .arg(
             Arg::new("event")

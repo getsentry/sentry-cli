@@ -24,7 +24,8 @@ use crate::utils::progress::ProgressBarMode;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Upload files for a release.")
+        .about("[DEPRECATED] Upload files for a release.")
+        .hide(true)
         // Backward compatibility with `releases files <VERSION>` commands.
         .arg(Arg::new("version").long("version").hide(true))
         .arg(

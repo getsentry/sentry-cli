@@ -8,7 +8,8 @@ use crate::config::Config;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Delete a release file.")
+        .about("[DEPRECATED] Delete a release file.")
+        .hide(true)
         // Backward compatibility with `releases files <VERSION>` commands.
         .arg(Arg::new("version").long("version").hide(true))
         .arg(

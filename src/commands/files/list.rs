@@ -6,7 +6,8 @@ use crate::{api::Api, config::Config, utils::formatting::Table};
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("List all release files.")
+        .about("[DEPRECATED] List all release files.")
+        .hide(true)
         // Backward compatibility with `releases files <VERSION>` commands.
         .arg(Arg::new("version").long("version").hide(true))
 }

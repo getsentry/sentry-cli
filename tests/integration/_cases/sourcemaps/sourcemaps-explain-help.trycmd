@@ -1,7 +1,7 @@
 ```
 $ sentry-cli sourcemaps explain --help
 ? success
-Explain why sourcemaps are not working for a given event.
+[DEPRECATED] Explain why sourcemaps are not working for a given event.
 
 Usage: sentry-cli[EXE] sourcemaps explain [OPTIONS] <EVENT_ID>
 
