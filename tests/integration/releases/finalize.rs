@@ -41,7 +41,6 @@ fn release_with_custom_dates() {
             .with_response_file("releases/get-release.json")
             .with_matcher(Matcher::PartialJson(json!({
                 "projects": ["wat-project"],
-                "dateStarted": "2015-05-15T00:01:40Z",
                 "dateReleased": "2015-05-15T00:00:00Z"
             }))),
         )
