@@ -71,12 +71,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let output_path = matches.get_one::<String>("output").map(Path::new);
 
     for orig_path in matches.get_many::<String>("paths").unwrap() {
+        let orig_path: &Path = orig_path.as_ref();
         let canonical_path = get_canonical_path(orig_path)?;
 
         let archive = match DifFile::open_path(&canonical_path, None)? {
             DifFile::Archive(archive) => archive,
             _ => {
-                warn!("Cannot build source bundles from {}", orig_path);
+                warn!("Cannot build source bundles from {}", orig_path.display());
                 continue;
             }
         };
@@ -88,7 +89,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         for (index, object) in archive.get().objects().enumerate() {
             let object = object?;
 
-            let mut out = output_path.unwrap_or(parent_path).join(filename);
+            let mut out = output_path.unwrap_or(parent_path).join(
+                orig_path
+                    .file_name()
+                    .expect("orig_path should have a file name"),
+            );
             match index {
                 0 => out.set_extension("src.zip"),
                 index => out.set_extension(format!("{index}.src.zip")),
@@ -109,7 +114,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 )?;
 
             if !written {
-                eprintln!("skipped {orig_path} (no files found)");
+                eprintln!("skipped {} (no files found)", orig_path.display());
                 fs::remove_file(&out)?;
                 continue;
             } else {
