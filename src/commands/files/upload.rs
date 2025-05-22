@@ -124,6 +124,7 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
+#[deprecated]
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let release = config.get_release_with_legacy_fallback(matches)?;
