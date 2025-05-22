@@ -20,9 +20,10 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("started")
                 .long("started")
+                .hide(true)
                 .value_parser(get_timestamp)
                 .value_name("TIMESTAMP")
-                .help("Set the release start date."),
+                .help("[DEPRECATED] This value is ignored."),
         )
         .arg(
             Arg::new("released")
@@ -38,13 +39,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let version = matches.get_one::<String>("version").unwrap();
 
+    if matches.get_one::<DateTime<Utc>>("started").is_some() {
+        log::warn!(
+            "The --started flag is deprecated. Its value is ignored, \
+            and the argument will be completely removed in a future version."
+        );
+    }
+
     api.authenticated()?.update_release(
         &config.get_org(matches)?,
         version,
         &UpdatedRelease {
             projects: config.get_projects(matches).ok(),
             url: matches.get_one::<String>("url").cloned(),
-            date_started: matches.get_one::<DateTime<Utc>>("started").copied(),
             date_released: Some(
                 matches
                     .get_one::<DateTime<Utc>>("released")

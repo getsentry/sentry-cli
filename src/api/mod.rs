@@ -2054,8 +2054,6 @@ pub struct UpdatedRelease {
     pub projects: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
-    #[serde(rename = "dateStarted", skip_serializing_if = "Option::is_none")]
-    pub date_started: Option<DateTime<Utc>>,
     #[serde(rename = "dateReleased", skip_serializing_if = "Option::is_none")]
     pub date_released: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
