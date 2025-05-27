@@ -65,6 +65,13 @@ lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
 }
 
+const RETRY_STATUS_CODES: &[u32] = &[
+    http::HTTP_STATUS_502_BAD_GATEWAY,
+    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
+    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
+    http::HTTP_STATUS_507_INSUFFICIENT_STORAGE,
+];
+
 /// Helper for the API access.
 /// Implements the low-level API access methods, and provides high-level implementations for interacting
 /// with portions of the API that do not require authentication via an auth token.
@@ -113,8 +120,6 @@ pub struct ApiRequest {
     is_authenticated: bool,
     body: Option<Vec<u8>>,
     progress_bar_mode: ProgressBarMode,
-    max_retries: u32,
-    retry_on_statuses: &'static [u32],
 }
 
 /// Represents an API response.
@@ -395,14 +400,6 @@ impl Api {
         let request = self
             .request(Method::Post, url, None)?
             .with_form_data(form)?
-            .with_retry(
-                self.config.max_retries(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )
             .progress_bar_mode(progress_bar_mode);
 
         // The request is performed to an absolute URL. Thus, `Self::request()` will
@@ -967,14 +964,6 @@ impl<'a> AuthenticatedApi<'a> {
 
         self.request(Method::Post, &url)?
             .with_json_body(request)?
-            .with_retry(
-                self.api.config.max_retries(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
@@ -1000,14 +989,6 @@ impl<'a> AuthenticatedApi<'a> {
                 version: None,
                 dist: None,
             })?
-            .with_retry(
-                self.api.config.max_retries(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
@@ -1031,14 +1012,6 @@ impl<'a> AuthenticatedApi<'a> {
                 version,
                 dist,
             })?
-            .with_retry(
-                self.api.config.max_retries(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
@@ -1407,10 +1380,6 @@ impl RegionSpecificApi<'_> {
         form.part("file").file(file).add()?;
         self.request(Method::Post, &path)?
             .with_form_data(form)?
-            .with_retry(
-                self.api.api.config.max_retries(),
-                &[http::HTTP_STATUS_507_INSUFFICIENT_STORAGE],
-            )
             .progress_bar_mode(ProgressBarMode::Request)
             .send()?
             .convert()
@@ -1466,14 +1435,6 @@ impl RegionSpecificApi<'_> {
         let resp = self
             .request(Method::Post, &path)?
             .with_form_data(form)?
-            .with_retry(
-                self.api.api.config.max_retries(),
-                &[
-                    http::HTTP_STATUS_502_BAD_GATEWAY,
-                    http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
-                    http::HTTP_STATUS_504_GATEWAY_TIMEOUT,
-                ],
-            )
             .progress_bar_mode(progress_bar_mode)
             .send()?;
         if resp.status() == 409 {
@@ -1661,8 +1622,6 @@ impl ApiRequest {
             is_authenticated: false,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
-            max_retries: 0,
-            retry_on_statuses: &[],
         };
 
         let request = match auth {
@@ -1736,13 +1695,6 @@ impl ApiRequest {
         self
     }
 
-    pub fn with_retry(mut self, max_retries: u32, retry_on_statuses: &'static [u32]) -> Self {
-        self.max_retries = max_retries;
-        self.retry_on_statuses = retry_on_statuses;
-
-        self
-    }
-
     /// Get a copy of the header list
     fn get_headers(&self) -> curl::easy::List {
         let mut result = curl::easy::List::new();
@@ -1771,18 +1723,17 @@ impl ApiRequest {
 
     /// Sends the request and reads the response body into the response object.
     pub fn send(mut self) -> ApiResult<ApiResponse> {
+        let max_retries = Config::current().max_retries();
+
         let mut backoff = get_default_backoff();
         let mut retry_number = 0;
 
         loop {
             let mut out = vec![];
-            debug!(
-                "retry number {}, max retries: {}",
-                retry_number, self.max_retries,
-            );
+            debug!("retry number {retry_number}, max retries: {max_retries}",);
 
             let mut rv = self.send_into(&mut out)?;
-            if retry_number >= self.max_retries || !self.retry_on_statuses.contains(&rv.status) {
+            if retry_number >= max_retries || !RETRY_STATUS_CODES.contains(&rv.status) {
                 rv.body = Some(out);
                 return Ok(rv);
             }
