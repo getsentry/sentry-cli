@@ -8,11 +8,6 @@
 
 - feat: Mark `react-native appcenter` as deprecated (#2522) by @chromy
 - docs: Fix typo "the the" -> "the" (#2519) by @chromy
-
-## 2.46.0-alpha
-
-### Various fixes & improvements
-
 - feat(npm): Add support for installing `npm` package on Android (#2524) by @szokeasaurusrex
 - feat: Retry all HTTP requests (#2523) by @szokeasaurusrex
 - ref: Only obtain max retry count once (#2521) by @szokeasaurusrex
