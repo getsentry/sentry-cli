@@ -18,6 +18,7 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
+#[allow(clippy::unnecessary_wraps)]
 pub fn execute(_matches: &ArgMatches) -> Result<()> {
     println!("Uploading mobile app files to a project is not yet implemented.");
 
