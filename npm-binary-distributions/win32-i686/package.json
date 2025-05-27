@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli-win32-i686",
-  "version": "2.46.0-alpha",
+  "version": "2.46.0",
   "description": "The windows x86 and ia32 distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "BSD-3-Clause",
