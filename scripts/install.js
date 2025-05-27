@@ -81,6 +81,7 @@ function getDownloadUrl(platform, arch) {
       return `${releasesUrl}-Windows-${archString}.exe`;
     case 'linux':
     case 'freebsd':
+    case 'android':
       return `${releasesUrl}-Linux-${archString}`;
     default:
       return null;

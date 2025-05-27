@@ -12,7 +12,8 @@
   },
   "os": [
     "linux",
-    "freebsd"
+    "freebsd",
+    "android"
   ],
   "cpu": [
     "arm"
