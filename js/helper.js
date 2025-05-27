@@ -40,7 +40,7 @@ function getDistributionForThisPlatform() {
   let packageName = undefined;
   if (platform === 'darwin') {
     packageName = '@sentry/cli-darwin';
-  } else if (platform === 'linux' || platform === 'freebsd') {
+  } else if (platform === 'linux' || platform === 'freebsd' || platform === 'android') {
     switch (arch) {
       case 'x64':
         packageName = '@sentry/cli-linux-x64';
@@ -79,6 +79,7 @@ function getDistributionForThisPlatform() {
     case 'darwin':
     case 'linux':
     case 'freebsd':
+    case 'android':
       subpath = 'bin/sentry-cli';
       break;
     default:
