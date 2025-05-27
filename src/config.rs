@@ -53,6 +53,7 @@ pub struct Config {
     cached_log_level: log::LevelFilter,
     cached_vcs_remote: String,
     cached_token_data: Option<AuthTokenPayload>,
+    max_retries: u32,
 }
 
 impl Config {
@@ -91,6 +92,7 @@ impl Config {
             cached_headers: get_default_headers(&ini),
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
+            max_retries: get_max_retries(&ini),
             ini,
             cached_token_data: token_embedded_data,
         }
@@ -468,27 +470,8 @@ impl Config {
     }
 
     /// Returns the configured maximum number of retries for failed HTTP requests.
-    pub fn get_max_retry_count(&self) -> u32 {
-        match max_retries_from_env() {
-            Ok(Some(val)) => return val,
-            Ok(None) => (),
-            Err(e) => {
-                warn!(
-                    "Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {}",
-                    e
-                );
-            }
-        };
-
-        match max_retries_from_ini(&self.ini) {
-            Ok(Some(val)) => return val,
-            Ok(None) => (),
-            Err(e) => {
-                warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {}", e);
-            }
-        };
-
-        DEFAULT_RETRIES
+    pub fn max_retries(&self) -> u32 {
+        self.max_retries
     }
 
     /// Return the DSN
@@ -537,6 +520,32 @@ impl Config {
                 false
             }
     }
+}
+
+/// Obtains the maximum number of retries from the environment or the ini file.
+/// Environment variable takes precedence over the ini file. If neither is set,
+/// the default value is returned.
+fn get_max_retries(ini: &Ini) -> u32 {
+    match max_retries_from_env() {
+        Ok(Some(val)) => return val,
+        Ok(None) => (),
+        Err(e) => {
+            warn!(
+                "Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {}",
+                e
+            );
+        }
+    };
+
+    match max_retries_from_ini(ini) {
+        Ok(Some(val)) => return val,
+        Ok(None) => (),
+        Err(e) => {
+            warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {}", e);
+        }
+    };
+
+    DEFAULT_RETRIES
 }
 
 /// Computes the maximum number of retries from the `SENTRY_HTTP_MAX_RETRIES` environment variable.
@@ -709,6 +718,7 @@ impl Clone for Config {
             cached_log_level: self.cached_log_level,
             cached_vcs_remote: self.cached_vcs_remote.clone(),
             cached_token_data: self.cached_token_data.clone(),
+            max_retries: self.max_retries,
         }
     }
 }
@@ -794,6 +804,7 @@ mod tests {
             cached_log_level: LevelFilter::Off,
             cached_vcs_remote: String::new(),
             cached_token_data: None,
+            max_retries: 0,
         };
 
         assert_eq!(
