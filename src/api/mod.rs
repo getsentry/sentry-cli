@@ -396,7 +396,7 @@ impl Api {
             .request(Method::Post, url, None)?
             .with_form_data(form)?
             .with_retry(
-                self.config.get_max_retry_count().unwrap(),
+                self.config.get_max_retry_count(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -968,7 +968,7 @@ impl<'a> AuthenticatedApi<'a> {
         self.request(Method::Post, &url)?
             .with_json_body(request)?
             .with_retry(
-                self.api.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1001,7 +1001,7 @@ impl<'a> AuthenticatedApi<'a> {
                 dist: None,
             })?
             .with_retry(
-                self.api.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1032,7 +1032,7 @@ impl<'a> AuthenticatedApi<'a> {
                 dist,
             })?
             .with_retry(
-                self.api.config.get_max_retry_count().unwrap(),
+                self.api.config.get_max_retry_count(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,
@@ -1408,12 +1408,7 @@ impl RegionSpecificApi<'_> {
         self.request(Method::Post, &path)?
             .with_form_data(form)?
             .with_retry(
-                self.api.api.config.get_max_retry_count().map_err(|e| {
-                    ApiError::with_source(
-                        ApiErrorKind::ErrorPreparingRequest,
-                        e.context("Could not parse retry count"),
-                    )
-                })?,
+                self.api.api.config.get_max_retry_count(),
                 &[http::HTTP_STATUS_507_INSUFFICIENT_STORAGE],
             )
             .progress_bar_mode(ProgressBarMode::Request)
@@ -1472,7 +1467,7 @@ impl RegionSpecificApi<'_> {
             .request(Method::Post, &path)?
             .with_form_data(form)?
             .with_retry(
-                self.api.api.config.get_max_retry_count().unwrap(),
+                self.api.api.config.get_max_retry_count(),
                 &[
                     http::HTTP_STATUS_502_BAD_GATEWAY,
                     http::HTTP_STATUS_503_SERVICE_UNAVAILABLE,

@@ -1,8 +1,10 @@
 //! This module implements config access.
 use std::env;
+use std::env::VarError;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io;
+use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -25,6 +27,9 @@ use crate::utils::http::is_absolute_url;
 
 #[cfg(target_os = "macos")]
 use crate::utils::xcode;
+
+const MAX_RETRIES_ENV_VAR: &str = "SENTRY_HTTP_MAX_RETRIES";
+const MAX_RETRIES_INI_KEY: &str = "max_retries";
 
 /// Represents the auth information
 #[derive(Debug, Clone)]
@@ -462,14 +467,28 @@ impl Config {
             .unwrap_or(DEFAULT_MAX_DIF_ITEM_SIZE)
     }
 
-    pub fn get_max_retry_count(&self) -> Result<u32> {
-        if env::var_os("SENTRY_HTTP_MAX_RETRIES").is_some() {
-            Ok(env::var("SENTRY_HTTP_MAX_RETRIES")?.parse()?)
-        } else if let Some(val) = self.ini.get_from(Some("http"), "max_retries") {
-            Ok(val.parse()?)
-        } else {
-            Ok(DEFAULT_RETRIES)
-        }
+    /// Returns the configured maximum number of retries for failed HTTP requests.
+    pub fn get_max_retry_count(&self) -> u32 {
+        match max_retries_from_env() {
+            Ok(Some(val)) => return val,
+            Ok(None) => (),
+            Err(e) => {
+                warn!(
+                    "Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {}",
+                    e
+                );
+            }
+        };
+
+        match max_retries_from_ini(&self.ini) {
+            Ok(Some(val)) => return val,
+            Ok(None) => (),
+            Err(e) => {
+                warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {}", e);
+            }
+        };
+
+        DEFAULT_RETRIES
     }
 
     /// Return the DSN
@@ -518,6 +537,24 @@ impl Config {
                 false
             }
     }
+}
+
+/// Computes the maximum number of retries from the `SENTRY_HTTP_MAX_RETRIES` environment variable.
+/// Returns `Ok(None)` if the environment variable is not set, other errors are returned as is.
+fn max_retries_from_env() -> Result<Option<u32>> {
+    match env::var(MAX_RETRIES_ENV_VAR) {
+        Ok(val) => Ok(Some(val.parse()?)),
+        Err(VarError::NotPresent) => Ok(None),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// Computes the maximum number of retries from the `max_retries` ini key.
+/// Returns `Ok(None)` if the key is not set, other errors are returned as is.
+fn max_retries_from_ini(ini: &Ini) -> Result<Option<u32>, ParseIntError> {
+    ini.get_from(Some("http"), MAX_RETRIES_INI_KEY)
+        .map(|val| val.parse())
+        .transpose()
 }
 
 fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<&str>) {
