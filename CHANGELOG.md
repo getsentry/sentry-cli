@@ -2,6 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.46.0-alpha
+
+### Various fixes & improvements
+
+- feat(npm): Add support for installing `npm` package on Android (#2524) by @szokeasaurusrex
+- feat: Retry all HTTP requests (#2523) by @szokeasaurusrex
+- ref: Only obtain max retry count once (#2521) by @szokeasaurusrex
+- fix: Don't error if invalid value supplied for max retries (#2520) by @szokeasaurusrex
+- fix: Explicitly deprecate `--started` flag (#2515) by @szokeasaurusrex
+- fix: Use `orig_path` for bundle sources output file name (#2514) by @szokeasaurusrex
+- feat: Mark all `files` subcommands as deprecated. (#2512) by @Swatinem
+- Support multiple files in SENTRY_DOTENV_PATH (#2454) by @Kinqdos
+- fix(sourcemaps): Avoid associating only sourcemap with all minified sources (#2447) by @szokeasaurusrex
+
 ## 2.45.0
 
 ### New feature
