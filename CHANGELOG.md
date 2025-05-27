@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.46.0
+
+### Various fixes & improvements
+
+- feat: Mark `react-native appcenter` as deprecated (#2522) by @chromy
+- docs: Fix typo "the the" -> "the" (#2519) by @chromy
+
 ## 2.46.0-alpha
 
 ### Various fixes & improvements

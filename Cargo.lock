@@ -2685,7 +2685,7 @@ dependencies = [
 
 [[package]]
 name = "sentry-cli"
-version = "2.46.0-alpha"
+version = "2.46.0"
 dependencies = [
  "anyhow",
  "anylog",
