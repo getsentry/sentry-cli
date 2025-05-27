@@ -11,8 +11,6 @@
 - ref: Only obtain max retry count once (#2521) by @szokeasaurusrex
 - fix: Don't error if invalid value supplied for max retries (#2520) by @szokeasaurusrex
 - fix: Explicitly deprecate `--started` flag (#2515) by @szokeasaurusrex
-- build(deps): bump docker/build-push-action from 6.16.0 to 6.17.0 (#2511) by @dependabot
-- build(deps): bump github/codeql-action from 3.28.17 to 3.28.18 (#2510) by @dependabot
 - fix: Use `orig_path` for bundle sources output file name (#2514) by @szokeasaurusrex
 - feat: Mark all `files` subcommands as deprecated. (#2512) by @Swatinem
 - Support multiple files in SENTRY_DOTENV_PATH (#2454) by @Kinqdos
