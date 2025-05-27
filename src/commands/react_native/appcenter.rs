@@ -19,7 +19,8 @@ use crate::utils::sourcemaps::SourceMapProcessor;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Upload react-native projects for AppCenter.")
+        .about("[DEPRECATED] Upload react-native projects for AppCenter.")
+        .hide(true)
         .org_arg()
         .project_arg(false)
         .arg(
@@ -108,6 +109,9 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    eprintln!("{}", style("⚠ DEPRECATION NOTICE: This functionality will be removed in a future version of `sentry-cli`. \
+        Use the `sourcemaps upload` command instead.").yellow());
+
     let config = Config::current();
     let here = env::current_dir()?;
     let here_str: &str = &here.to_string_lossy();
