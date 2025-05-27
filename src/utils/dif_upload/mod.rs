@@ -243,7 +243,7 @@ impl<'data> DifMatch<'data> {
         //
         // We *might* have to locate the original library in the Xcode
         // distribution, then build a new non-fat dSYM file from it and patch
-        // the the UUID.
+        // the UUID.
         if self.file_name().starts_with("libswift") {
             return false;
         }
