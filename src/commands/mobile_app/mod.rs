@@ -21,12 +21,11 @@ pub fn make_command(mut command: Command) -> Command {
     }
 
     command = command
-        .about("(Experimental) Manage mobile apps.")
+        .about("[EXPERIMENTAL] Manage mobile apps.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()
         .project_arg(true)
-        .release_arg()
         // TODO: Remove this when ready for release
         .hide(true);
     each_subcommand!(add_subcommand);

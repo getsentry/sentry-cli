@@ -6,7 +6,7 @@ use crate::utils::args::ArgExt;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Upload mobile app files to a project.")
+        .about("[EXPERIMENTAL] Upload mobile app files to a project.")
         .org_arg()
         .project_arg(false)
         .arg(
@@ -18,9 +18,9 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-#[allow(clippy::unnecessary_wraps)]
+#[expect(clippy::unnecessary_wraps)]
 pub fn execute(_matches: &ArgMatches) -> Result<()> {
-    println!("Uploading mobile app files to a project is not yet implemented.");
+    eprintln!("Uploading mobile app files to a project is not yet implemented.");
 
     Ok(())
 }
