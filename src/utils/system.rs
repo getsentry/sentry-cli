@@ -75,9 +75,7 @@ pub fn print_error(err: &Error) {
     // Debug style for error includes cause chain and backtrace (if available).
     eprintln!("{} {:?}", style("error:").red(), err);
 
-    if Config::current_opt().map_or(true, |config| {
-        config.get_log_level() < log::LevelFilter::Info
-    }) {
+    if Config::current_opt().is_none_or(|config| config.get_log_level() < log::LevelFilter::Info) {
         eprintln!();
         eprintln!("{}", style("Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.").dim());
         eprintln!(

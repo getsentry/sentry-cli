@@ -1553,7 +1553,6 @@ fn handle_req<W: Write>(
 }
 
 /// Iterator over response headers
-#[allow(dead_code)]
 pub struct Headers<'a> {
     lines: &'a [String],
     idx: usize,
@@ -1857,7 +1856,6 @@ impl ApiResponse {
     }
 
     /// Iterates over the headers.
-    #[allow(dead_code)]
     pub fn headers(&self) -> Headers<'_> {
         Headers {
             lines: &self.headers[..],
@@ -1866,7 +1864,6 @@ impl ApiResponse {
     }
 
     /// Looks up the first matching header for a key.
-    #[allow(dead_code)]
     pub fn get_header(&self, key: &str) -> Option<&str> {
         for (header_key, header_value) in self.headers() {
             if header_key.eq_ignore_ascii_case(key) {

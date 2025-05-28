@@ -1,3 +1,4 @@
+#![warn(clippy::allow_attributes)]
 #![warn(clippy::unnecessary_wraps)]
 
 mod api;
