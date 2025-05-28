@@ -53,12 +53,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-/// Validate the file is a valid mobile app file
 pub fn validate_mobile_app_file(path: &Path) -> Result<()> {
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
 
-    // Check for APK/AAB (both are ZIP files with specific structure)
+    // First check if the file is a zip file (AAB or APK)
     if is_zip_file(&mut reader)? {
         reader.seek(SeekFrom::Start(0))?;
 
@@ -72,7 +71,7 @@ pub fn validate_mobile_app_file(path: &Path) -> Result<()> {
         }
     }
 
-    // Check for XCArchive (directory structure)
+    // Check for XCArchive (directory)
     if path.is_dir() && is_xcarchive_directory(path)? {
         return Ok(());
     }
