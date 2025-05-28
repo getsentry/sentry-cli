@@ -44,7 +44,7 @@ pub fn is_aab_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
 pub fn is_xcarchive_directory<P: AsRef<Path>>(path: P) -> Result<bool> {
     let path = path.as_ref();
 
-    // XCArchive should have Info.plist and an app file in Products/Applications/
+    // XCArchive should have Info.plist and a .app file in Products/Applications/
     let info_plist = path.join("Info.plist");
     let applications_dir = path.join("Products").join("Applications");
 
@@ -56,8 +56,7 @@ pub fn is_xcarchive_directory<P: AsRef<Path>>(path: P) -> Result<bool> {
     let has_app_file = std::fs::read_dir(&applications_dir)?
         .filter_map(|entry| entry.ok())
         .any(|entry| {
-            entry.path().is_dir() &&
-            entry.path().extension().is_some_and(|ext| ext == "app")
+            entry.path().is_dir() && entry.path().extension().is_some_and(|ext| ext == "app")
         });
 
     Ok(has_app_file)
