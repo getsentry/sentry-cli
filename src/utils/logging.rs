@@ -23,30 +23,6 @@ pub fn set_quiet_mode(is_quiet: bool) {
     QUIET_MODE.store(is_quiet, Ordering::Relaxed);
 }
 
-// NOTE: Remove `allow`s after first use.
-#[expect(unused_macros)]
-macro_rules! quiet_println {
-    ($($tt:tt)*) => {{
-        if !crate::utils::logging::is_quiet_mode() {
-            println!($($tt)*);
-        }
-    }};
-}
-#[expect(unused_imports)]
-pub(crate) use quiet_println;
-
-// NOTE: Remove `allow`s after first use.
-#[expect(unused_macros)]
-macro_rules! quiet_eprintln {
-    ($($tt:tt)*) => {{
-        if !crate::utils::logging::is_quiet_mode() {
-            eprintln!($($tt)*);
-        }
-    }};
-}
-#[expect(unused_imports)]
-pub(crate) use quiet_eprintln;
-
 // Globally shared ProgressBar instance.
 lazy_static! {
     static ref PROGRESS_BAR: RwLock<Option<Weak<ProgressBar>>> = RwLock::new(None);
