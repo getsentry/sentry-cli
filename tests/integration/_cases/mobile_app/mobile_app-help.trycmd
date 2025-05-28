@@ -3,7 +3,7 @@ $ sentry-cli mobile-app --help
 ? success
 [EXPERIMENTAL] Manage mobile apps.
 
-Usage: sentry-cli mobile-app [OPTIONS] <COMMAND>
+Usage: sentry-cli[EXE] mobile-app [OPTIONS] <COMMAND>
 
 Commands:
   upload  [EXPERIMENTAL] Upload mobile app files to a project.

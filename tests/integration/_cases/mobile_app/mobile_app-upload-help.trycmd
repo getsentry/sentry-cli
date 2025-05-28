@@ -3,7 +3,7 @@ $ sentry-cli mobile-app upload --help
 ? success
 [EXPERIMENTAL] Upload mobile app files to a project.
 
-Usage: sentry-cli mobile-app upload [OPTIONS] [PATH]...
+Usage: sentry-cli[EXE] mobile-app upload [OPTIONS] [PATH]...
 
 Arguments:
   [PATH]...  The path to the mobile app files to upload. Supported files include Apk, Aab or
