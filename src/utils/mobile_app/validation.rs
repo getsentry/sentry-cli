@@ -44,12 +44,7 @@ pub fn is_aab_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
 pub fn is_xcarchive_directory<P: AsRef<Path>>(path: P) -> Result<bool> {
     let path = path.as_ref();
 
-    // XCArchive should have .xcarchive extension
-    if path.extension().and_then(|s| s.to_str()) != Some("xcarchive") {
-        return Ok(false);
-    }
-
-    // Check for required XCArchive structure
+    // XCArchive should have Info.plist and Products directory
     let info_plist = path.join("Info.plist");
     let products_dir = path.join("Products");
 
