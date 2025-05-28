@@ -24,7 +24,7 @@ pub fn set_quiet_mode(is_quiet: bool) {
 }
 
 // NOTE: Remove `allow`s after first use.
-#[allow(unused_macros)]
+#[expect(unused_macros)]
 macro_rules! quiet_println {
     ($($tt:tt)*) => {{
         if !crate::utils::logging::is_quiet_mode() {
@@ -32,11 +32,11 @@ macro_rules! quiet_println {
         }
     }};
 }
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 pub(crate) use quiet_println;
 
 // NOTE: Remove `allow`s after first use.
-#[allow(unused_macros)]
+#[expect(unused_macros)]
 macro_rules! quiet_eprintln {
     ($($tt:tt)*) => {{
         if !crate::utils::logging::is_quiet_mode() {
@@ -44,7 +44,7 @@ macro_rules! quiet_eprintln {
         }
     }};
 }
-#[allow(unused_imports)]
+#[expect(unused_imports)]
 pub(crate) use quiet_eprintln;
 
 // Globally shared ProgressBar instance.

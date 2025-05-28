@@ -723,7 +723,7 @@ impl Clone for Config {
     }
 }
 
-#[allow(clippy::manual_map)]
+#[expect(clippy::manual_map)]
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
         Some(Auth::Token(val.into()))
