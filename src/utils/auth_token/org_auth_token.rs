@@ -13,9 +13,7 @@ pub struct OrgAuthToken {
 
 /// Represents the payload data of an org auth token.
 #[derive(Clone, Debug, Deserialize)]
-#[expect(dead_code)] // Otherwise, we get a warning about unused fields
 pub struct AuthTokenPayload {
-    iat: f64,
     pub region_url: String,
     pub org: String,
 
