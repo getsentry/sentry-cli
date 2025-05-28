@@ -43,7 +43,7 @@ where
 {
     let path = path.as_ref();
 
-    // XCArchive should have Info.plist and an app file in Products/Applications/
+    // XCArchive should have Info.plist and a Products/ directory
     let info_plist = path.join("Info.plist");
     let products_dir = path.join("Products");
 
