@@ -24,7 +24,6 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-#[expect(clippy::unnecessary_wraps)]
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path_strings = matches.get_many::<String>("paths").unwrap();
 
