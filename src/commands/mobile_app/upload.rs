@@ -32,19 +32,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let path: &Path = path_string.as_ref();
 
         if !path.exists() {
-            return Err(anyhow!("File does not exist: {}", path.display()));
+            return Err(anyhow!("Path does not exist: {}", path.display()));
         }
 
-        if !path.is_file() {
-            return Err(anyhow!("Path is not a file: {}", path.display()));
-        }
-
-        validate_mobile_app_file(path)?;
+        validate_is_mobile_app(path)?;
         paths.push(path);
     }
 
     for path in paths {
         println!("Uploading mobile app file: {}", path.display());
+        // TODO: Normalize the path to be a zip of the underlying file/dir
         // TODO: Upload the file to the chunked uploads API
     }
 
@@ -52,7 +49,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-pub fn validate_mobile_app_file(path: &Path) -> Result<()> {
+fn validate_is_mobile_app(path: &Path) -> Result<()> {
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
 
