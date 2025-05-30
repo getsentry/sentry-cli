@@ -11,3 +11,7 @@ yarn-error.log
 /sentry-cli.exe
 
 .vscode/
+
+
+HackerNews.xcarchive.zip
+HackerNews_arm64
