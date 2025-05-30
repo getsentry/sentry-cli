@@ -8,7 +8,10 @@ mod file_state;
 mod hash_algorithm;
 mod upload;
 
-pub use self::artifact::{AssembleArtifactsResponse, ChunkedArtifactRequest};
+pub use self::artifact::{
+    AssembleArtifactsRequest, AssembleArtifactsResponse, ChunkedArtifactRequest, ChunkedArtifactResponse,
+    ChunkedPreprodArtifactRequest, ChunkedPreprodArtifactResponse,
+};
 pub use self::compression::ChunkCompression;
 pub use self::dif::{AssembleDifsRequest, AssembleDifsResponse, ChunkedDifRequest};
 pub use self::file_state::ChunkedFileState;
