@@ -1,11 +1,10 @@
-use std::fs::File;
-use std::io::{BufReader, Seek, SeekFrom};
 use std::path::Path;
 
 use anyhow::anyhow;
 use anyhow::Result;
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
+use symbolic::common::ByteView;
 
 use crate::utils::args::ArgExt;
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_xcarchive_directory, is_zip_file};
@@ -52,26 +51,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 }
 
 fn validate_is_mobile_app(path: &Path) -> Result<()> {
-    let file = File::open(path)?;
-    let mut reader = BufReader::new(file);
-
-    // First check if the file is a zip file (AAB or APK)
-    if is_zip_file(&mut reader)? {
-        reader.seek(SeekFrom::Start(0))?;
-
-        if is_aab_file(&mut reader)? {
-            return Ok(());
-        }
-
-        reader.seek(SeekFrom::Start(0))?;
-        if is_apk_file(&mut reader)? {
-            return Ok(());
-        }
-    }
-
-    // Check for XCArchive (directory)
+    // Check for XCArchive (directory) first
     if path.is_dir() && is_xcarchive_directory(path)? {
         return Ok(());
+    }
+
+    let byteview = ByteView::open(path)?;
+
+    // First check if the file is a zip file (AAB or APK)
+    if is_zip_file(&byteview)? {
+        if is_aab_file(&byteview)? {
+            return Ok(());
+        }
+
+        if is_apk_file(&byteview)? {
+            return Ok(());
+        }
     }
 
     Err(anyhow!(
