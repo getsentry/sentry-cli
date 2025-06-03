@@ -3,10 +3,11 @@ use std::path::Path;
 
 use anyhow::Result;
 
-pub fn is_zip_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
+pub fn is_zip_file<R>(reader: &mut R) -> Result<bool>
+where
+    R: Read + Seek,
+{
     let mut magic = [0u8; 4];
-    reader.seek(SeekFrom::Start(0))?;
-
     if reader.read_exact(&mut magic).is_err() {
         return Ok(false);
     }
@@ -18,9 +19,10 @@ pub fn is_zip_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
     Ok(magic == ZIP_MAGIC || magic == ZIP_MAGIC_EMPTY || magic == ZIP_MAGIC_SPANNED)
 }
 
-pub fn is_apk_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
-    reader.seek(SeekFrom::Start(0))?;
-
+pub fn is_apk_file<R>(reader: &mut R) -> Result<bool>
+where
+    R: Read + Seek,
+{
     let mut archive = zip::ZipArchive::new(reader)?;
 
     // APK files must contain AndroidManifest.xml at the root of the zip file
@@ -29,9 +31,10 @@ pub fn is_apk_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
     Ok(has_manifest)
 }
 
-pub fn is_aab_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
-    reader.seek(SeekFrom::Start(0))?;
-
+pub fn is_aab_file<R>(reader: &mut R) -> Result<bool>
+where
+    R: Read + Seek,
+{
     let mut archive = zip::ZipArchive::new(reader)?;
 
     // AAB files must contain BundleConfig.pb and base/manifest/AndroidManifest.xml
@@ -41,7 +44,10 @@ pub fn is_aab_file<R: Read + Seek>(reader: &mut R) -> Result<bool> {
     Ok(has_bundle_config && has_base_manifest)
 }
 
-pub fn is_xcarchive_directory<P: AsRef<Path>>(path: P) -> Result<bool> {
+pub fn is_xcarchive_directory<P>(path: P) -> Result<bool>
+where
+    P: AsRef<Path>,
+{
     let path = path.as_ref();
 
     // XCArchive should have Info.plist and a .app file in Products/Applications/

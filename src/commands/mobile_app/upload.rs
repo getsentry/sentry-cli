@@ -25,9 +25,11 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path_strings = matches.get_many::<String>("paths").unwrap();
+    let path_strings = matches
+        .get_many::<String>("paths")
+        .expect("paths argument is required");
 
-    let mut paths: Vec<&Path> = Vec::new();
+    let mut paths = Vec::new();
     for path_string in path_strings {
         let path: &Path = path_string.as_ref();
 
