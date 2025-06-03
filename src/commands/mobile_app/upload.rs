@@ -32,7 +32,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .expect("paths argument is required");
 
     let mut paths = Vec::new();
-    let mut normalized_zips: Vec<TempFile> = Vec::new();
+    let mut normalized_zips = Vec::new();
     for path_string in path_strings {
         let path: &Path = path_string.as_ref();
 
