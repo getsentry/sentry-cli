@@ -624,10 +624,10 @@ impl SourceMapProcessor {
             }
 
             if let Some(Some(sourcemap_reference)) = self.sourcemap_references.get(&source.url) {
-                let sourcemap_url = &sourcemap_reference
+                let sourcemap_url = sourcemap_reference
                     .original_url
-                    .clone()
-                    .unwrap_or(sourcemap_reference.url.clone());
+                    .as_ref()
+                    .unwrap_or(&sourcemap_reference.url);
 
                 if !self.debug_ids.contains_key(sourcemap_url) {
                     debug!(
