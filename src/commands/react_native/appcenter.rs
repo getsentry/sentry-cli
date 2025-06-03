@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "deprecated command")]
+
 use std::env;
 use std::ffi::OsStr;
 use std::fs;

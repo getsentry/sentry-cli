@@ -337,6 +337,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // which types should we consider?
     if let Some(t) = matches.get_many::<String>("types") {
         for ty in t {
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             types.insert(ty.parse().unwrap());
         }
     } else {

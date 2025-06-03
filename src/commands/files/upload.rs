@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;

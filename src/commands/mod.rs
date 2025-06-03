@@ -331,6 +331,7 @@ fn setup() {
     // we use debug internally but our log handler then rejects to a lower limit.
     // This is okay for our uses but not as efficient.
     set_max_level(LevelFilter::Debug);
+    #[expect(clippy::unwrap_used, reason = "legacy code")]
     set_logger(&Logger).unwrap();
 
     if let Err(e) = load_dotenv_result {

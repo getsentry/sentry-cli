@@ -16,6 +16,7 @@ impl UserAuthToken {
 
         let bytes = data_encoding::HEXLOWER_PERMISSIVE.decode(secret_portion.as_bytes());
 
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
         if bytes.is_ok() && bytes.unwrap().len() == USER_TOKEN_BYTES {
             Ok(UserAuthToken(auth_string.into()))
         } else {

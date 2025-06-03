@@ -267,6 +267,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // if values are given associate
     if let Some(app_id) = matches.get_one::<String>("app_id") {
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
         let version = matches.get_one::<String>("version").unwrap().to_owned();
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 

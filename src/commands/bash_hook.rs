@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "deprecated command")]
+
 use std::cmp::min;
 use std::collections::HashMap;
 use std::env;

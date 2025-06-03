@@ -67,6 +67,7 @@ pub fn validate_distribution(v: &str) -> Result<String, String> {
 
 pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
     if let Ok(int) = value.parse::<i64>() {
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
         Ok(Utc.timestamp_opt(int, 0).single().unwrap())
     } else if let Ok(dt) = DateTime::parse_from_rfc3339(value) {
         Ok(dt.with_timezone(&Utc))

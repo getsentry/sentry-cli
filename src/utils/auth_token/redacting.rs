@@ -15,7 +15,7 @@ pub fn redact_token_from_string<'r>(to_redact: &'r str, replacement: &'r str) ->
             static ref AUTH_TOKEN_REGEX: Regex = Regex::new(&format!(
                 "(({ORG_AUTH_TOKEN_PREFIX})|({USER_TOKEN_PREFIX}))\\S+"
             ))
-            .unwrap();
+            .expect("this regex is valid");
         }
 
         AUTH_TOKEN_REGEX.replace_all(to_redact, replacement)

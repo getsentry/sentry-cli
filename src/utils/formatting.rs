@@ -70,6 +70,7 @@ impl Table {
         if self.title_row.is_none() {
             self.title_row = Some(TableRow::new());
         }
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
         self.title_row.as_mut().unwrap()
     }
 

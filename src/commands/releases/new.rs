@@ -30,6 +30,7 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
+    #[expect(clippy::unwrap_used, reason = "legacy code")]
     let version = matches.get_one::<String>("version").unwrap();
 
     api.authenticated()?.new_release(

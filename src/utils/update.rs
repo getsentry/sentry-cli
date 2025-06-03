@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 #[cfg(not(feature = "managed"))]
 use std::env;
 use std::fs;

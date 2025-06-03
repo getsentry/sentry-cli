@@ -17,6 +17,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    #[expect(clippy::unwrap_used, reason = "legacy code")]
     let path = Path::new(matches.get_one::<String>("path").unwrap());
 
     // which types should we consider?

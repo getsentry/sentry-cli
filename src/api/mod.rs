@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 //! This module implements the API access to the Sentry API as well
 //! as some other APIs we interact with.  In particular it can talk
 //! to the GitHub API to figure out if there are new releases of the

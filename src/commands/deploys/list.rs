@@ -33,6 +33,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .add(&deploy.env)
             .add(deploy.name())
             .add(HumanDuration(
+                #[expect(clippy::unwrap_used, reason = "legacy code")]
                 Utc::now().signed_duration_since(deploy.finished.unwrap()),
             ));
     }

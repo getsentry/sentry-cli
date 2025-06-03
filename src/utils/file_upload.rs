@@ -759,7 +759,7 @@ fn build_artifact_bundle(
 }
 
 fn url_to_bundle_path(url: &str) -> Result<String> {
-    let base = Url::parse("http://~").unwrap();
+    let base = Url::parse("http://~").expect("this url is valid");
     let url = if let Some(rest) = url.strip_prefix("~/") {
         base.join(rest)?
     } else {

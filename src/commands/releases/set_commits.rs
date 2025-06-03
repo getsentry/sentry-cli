@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use anyhow::{bail, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;

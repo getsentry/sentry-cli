@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
