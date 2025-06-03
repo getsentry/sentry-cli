@@ -58,8 +58,8 @@ fn validate_is_mobile_app(path: &Path) -> Result<()> {
 
     let byteview = ByteView::open(path)?;
 
-    // First check if the file is a zip file (AAB or APK)
-    if is_zip_file(&byteview)? {
+    // Check if the file is a zip file (then AAB or APK)
+    if is_zip_file(&byteview) {
         if is_aab_file(&byteview)? {
             return Ok(());
         }

@@ -3,9 +3,9 @@ use symbolic::common::ByteView;
 
 use anyhow::Result;
 
-pub fn is_zip_file(byteview: &ByteView) -> Result<bool> {
+pub fn is_zip_file(byteview: &ByteView) -> bool {
     if byteview.len() < 4 {
-        return Ok(false);
+        return false;
     }
 
     let magic = &byteview[0..4];
@@ -14,7 +14,7 @@ pub fn is_zip_file(byteview: &ByteView) -> Result<bool> {
     const ZIP_MAGIC: [u8; 4] = [0x50, 0x4B, 0x03, 0x04];
     const ZIP_MAGIC_EMPTY: [u8; 4] = [0x50, 0x4B, 0x05, 0x06];
     const ZIP_MAGIC_SPANNED: [u8; 4] = [0x50, 0x4B, 0x07, 0x08];
-    Ok(magic == ZIP_MAGIC || magic == ZIP_MAGIC_EMPTY || magic == ZIP_MAGIC_SPANNED)
+    magic == ZIP_MAGIC || magic == ZIP_MAGIC_EMPTY || magic == ZIP_MAGIC_SPANNED
 }
 
 pub fn is_apk_file(byteview: &ByteView) -> Result<bool> {
