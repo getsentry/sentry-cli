@@ -1,14 +1,13 @@
 use std::path::Path;
-use symbolic::common::ByteView;
 
 use anyhow::Result;
 
-pub fn is_zip_file(byteview: &ByteView) -> bool {
-    if byteview.len() < 4 {
+pub fn is_zip_file(bytes: &[u8]) -> bool {
+    if bytes.len() < 4 {
         return false;
     }
 
-    let magic = &byteview[0..4];
+    let magic = &bytes[0..4];
 
     // https://en.wikipedia.org/wiki/List_of_file_signatures
     const ZIP_MAGIC: [u8; 4] = [0x50, 0x4B, 0x03, 0x04];
@@ -17,8 +16,8 @@ pub fn is_zip_file(byteview: &ByteView) -> bool {
     magic == ZIP_MAGIC || magic == ZIP_MAGIC_EMPTY || magic == ZIP_MAGIC_SPANNED
 }
 
-pub fn is_apk_file(byteview: &ByteView) -> Result<bool> {
-    let cursor = std::io::Cursor::new(byteview.as_slice());
+pub fn is_apk_file(bytes: &[u8]) -> Result<bool> {
+    let cursor = std::io::Cursor::new(bytes);
     let mut archive = zip::ZipArchive::new(cursor)?;
 
     // APK files must contain AndroidManifest.xml at the root of the zip file
@@ -27,8 +26,8 @@ pub fn is_apk_file(byteview: &ByteView) -> Result<bool> {
     Ok(has_manifest)
 }
 
-pub fn is_aab_file(byteview: &ByteView) -> Result<bool> {
-    let cursor = std::io::Cursor::new(byteview.as_slice());
+pub fn is_aab_file(bytes: &[u8]) -> Result<bool> {
+    let cursor = std::io::Cursor::new(bytes);
     let mut archive = zip::ZipArchive::new(cursor)?;
 
     // AAB files must contain BundleConfig.pb and base/manifest/AndroidManifest.xml
