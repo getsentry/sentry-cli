@@ -38,7 +38,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mut normalized_zips = vec![];
     for path_string in path_strings {
-        println!("Processing path: {}", path_string);
         let path: &Path = path_string.as_ref();
         debug!("Processing artifact at path: {}", path.display());
 
