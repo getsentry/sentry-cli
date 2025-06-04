@@ -105,7 +105,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
     zip.start_file(file_name, SimpleFileOptions::default())?;
-    zip.write(bytes)?;
+    zip.write_all(bytes)?;
 
     zip.finish()?;
     Ok(temp_file)
