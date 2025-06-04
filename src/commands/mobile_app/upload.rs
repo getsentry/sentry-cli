@@ -35,6 +35,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mut normalized_zips = Vec::new();
     for path_string in path_strings {
+        println!("Processing path: {}", path_string);
         let path: &Path = path_string.as_ref();
 
         if !path.exists() {
@@ -93,6 +94,7 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
 
 // For APK and AAB files, we'll copy them directly into the zip
 fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
+    println!("Normalizing file: {}", path.display());
     let temp_file = TempFile::create()?;
     let mut zip = ZipWriter::new(temp_file.open()?);
 
@@ -103,7 +105,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
     zip.start_file(file_name, SimpleFileOptions::default())?;
-    zip.write_all(bytes)?;
+    zip.write(bytes)?;
 
     zip.finish()?;
     Ok(temp_file)
