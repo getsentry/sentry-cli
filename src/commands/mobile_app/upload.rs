@@ -38,6 +38,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mut normalized_zips = vec![];
     for path_string in path_strings {
+        println!("Processing path: {}", path_string);
         let path: &Path = path_string.as_ref();
         debug!("Processing artifact at path: {}", path.display());
 
@@ -134,7 +135,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 
     debug!("Adding file to zip: {}", file_name);
     zip.start_file(file_name, SimpleFileOptions::default())?;
-    zip.write_all(bytes)?;
+    zip.write(bytes)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for file");
