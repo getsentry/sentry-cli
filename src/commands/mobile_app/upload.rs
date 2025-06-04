@@ -2,6 +2,7 @@ use std::io::Write;
 use std::path::Path;
 
 use anyhow::anyhow;
+use anyhow::Context;
 use anyhow::Result;
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
@@ -53,14 +54,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 "Path {} is neither a file nor a directory, cannot upload",
                 path.display()
             ))
-        }
-        .unwrap_or_else(|e| {
-            panic!(
-                "Failed to create uploadable zip while processing {}: {}",
-                path.display(),
-                e
-            )
-        });
+        }?;
 
         normalized_zips.push(normalized_zip);
     }
@@ -106,7 +100,8 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .file_name()
         .unwrap()
         .to_str()
-        .unwrap_or_else(|| panic!("Failed to get file name for {}", path.display()));
+        .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
+
     zip.start_file(file_name, SimpleFileOptions::default())?;
     zip.write_all(bytes)?;
 
@@ -126,9 +121,9 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     {
         let entry_path = entry.path();
         if entry_path.is_file() {
-            let relative_path = entry_path
-                .strip_prefix(path)
-                .map_err(|_| anyhow!("Failed to get relative path"))?;
+            let relative_path = entry_path.strip_prefix(path).with_context(|| {
+                format!("Failed to get relative path for {}", entry_path.display())
+            })?;
 
             zip.start_file(
                 relative_path.to_string_lossy(),
