@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use std::collections::HashMap;
 use std::env;
 use std::fs;

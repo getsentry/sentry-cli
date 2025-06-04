@@ -43,6 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches)?;
+    #[expect(clippy::unwrap_used, reason = "legacy code")]
     let pages = *matches.get_one("pages").unwrap();
     let api = Api::current();
 

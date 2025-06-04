@@ -71,6 +71,7 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut processor = SourceMapProcessor::new();
 
+    #[expect(clippy::unwrap_used, reason = "legacy code")]
     let paths = matches
         .get_many::<String>("paths")
         .unwrap()

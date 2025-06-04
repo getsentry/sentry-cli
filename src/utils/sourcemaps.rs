@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 //! Provides sourcemap validation functionality.
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::io::Write;

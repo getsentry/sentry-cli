@@ -9,7 +9,7 @@ use regex::Regex;
 use sentry::protocol::{Breadcrumb, ClientSdkInfo, Event};
 
 lazy_static! {
-    static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).unwrap();
+    static ref COMPONENT_RE: Regex = Regex::new(r#"^([^:]+): (.*)$"#).expect("this regex is valid");
 }
 
 /// Attaches all logs from a logfile as breadcrumbs to the given event.

@@ -68,10 +68,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let version = config.get_release_with_legacy_fallback(matches)?;
     let mut deploy = Deploy {
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
         env: matches.get_one::<String>("env").unwrap().into(),
         name: matches.get_one::<String>("name").map(|n| n.into()),
         url: matches.get_one::<String>("url").map(|u| u.into()),
-        projects: matches.get_many::<String>("project").map(|x| x.into_iter().map(|x| x.into()).collect()),
+        projects: matches
+            .get_many::<String>("project")
+            .map(|x| x.into_iter().map(|x| x.into()).collect()),
         ..Default::default()
     };
 
@@ -93,8 +96,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let org = config.get_org(matches)?;
     let authenticated_api = api.authenticated()?;
 
-    let created_deploy = authenticated_api
-        .create_deploy(&org, &version, &deploy)?;
+    let created_deploy = authenticated_api.create_deploy(&org, &version, &deploy)?;
 
     println!(
         "Created new deploy {} for '{}'",

@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use chrono_tz::Tz;
 use std::process;
 use std::time::{Duration, Instant};

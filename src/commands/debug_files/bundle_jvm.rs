@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;

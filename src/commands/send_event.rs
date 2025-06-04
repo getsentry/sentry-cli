@@ -175,6 +175,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let raw = matches.get_flag("raw");
 
     if let Some(path) = matches.get_one::<String>("path") {
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
         let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
             .unwrap()
             .flatten()

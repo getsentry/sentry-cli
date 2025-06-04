@@ -52,7 +52,8 @@ pub fn is_npm_install() -> bool {
 /// Expands variables in a string
 pub fn expand_vars<F: Fn(&str) -> String>(s: &str, f: F) -> Cow<'_, str> {
     lazy_static! {
-        static ref VAR_RE: Regex = Regex::new(r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").unwrap();
+        static ref VAR_RE: Regex =
+            Regex::new(r"\$(\$|[a-zA-Z0-9_]+|\([^)]+\)|\{[^}]+\})").expect("this regex is valid");
     }
     VAR_RE.replace_all(s, |caps: &Captures<'_>| {
         let key = &caps[1];

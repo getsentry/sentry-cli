@@ -41,6 +41,7 @@ pub fn capitalize_string(s: &str) -> String {
     let mut bytes = s.as_bytes().to_vec();
     bytes.make_ascii_lowercase();
     bytes[0] = bytes[0].to_ascii_uppercase();
+    #[expect(clippy::unwrap_used, reason = "legacy code")]
     String::from_utf8(bytes).unwrap()
 }
 

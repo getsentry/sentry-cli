@@ -141,11 +141,10 @@ impl ReleaseFileSearch {
             }
             pb.set_message(&format!("{}", file.path().display()));
 
-            info!(
-                "found: {} ({} bytes)",
-                file.path().display(),
+            info!("found: {} ({} bytes)", file.path().display(), {
+                #[expect(clippy::unwrap_used, reason = "legacy code")]
                 file.metadata().unwrap().len()
-            );
+            });
 
             let mut f = fs::File::open(file.path())?;
             let mut contents = Vec::new();

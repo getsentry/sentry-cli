@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 //! Searches, processes and uploads debug information files (DIFs). See
 //! `DifUpload` for more information.
 

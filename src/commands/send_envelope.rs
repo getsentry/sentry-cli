@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
+
 use std::path::PathBuf;
 
 use anyhow::Result;

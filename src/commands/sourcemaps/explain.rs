@@ -1,3 +1,5 @@
+#![expect(clippy::unwrap_used, reason = "deprecated command")]
+
 use std::io::Read;
 use std::path::Path;
 
