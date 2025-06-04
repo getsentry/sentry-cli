@@ -74,19 +74,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn validate_is_mobile_app(path: &Path, byte_view: &ByteView) -> Result<()> {
+fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     // Check for XCArchive (directory) first
     if path.is_dir() && is_xcarchive_directory(path) {
         return Ok(());
     }
 
     // Check if the file is a zip file (then AAB or APK)
-    if is_zip_file(byte_view) {
-        if is_aab_file(byte_view)? {
+    if is_zip_file(bytes) {
+        if is_aab_file(bytes)? {
             return Ok(());
         }
 
-        if is_apk_file(byte_view)? {
+        if is_apk_file(bytes)? {
             return Ok(());
         }
     }
@@ -98,7 +98,7 @@ fn validate_is_mobile_app(path: &Path, byte_view: &ByteView) -> Result<()> {
 }
 
 // For APK and AAB files, we'll copy them directly into the zip
-fn normalize_file(path: &Path, byte_view: &ByteView) -> Result<TempFile> {
+fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     let temp_file = TempFile::create()?;
     let mut zip = ZipWriter::new(temp_file.open()?);
 
@@ -108,7 +108,7 @@ fn normalize_file(path: &Path, byte_view: &ByteView) -> Result<TempFile> {
         .to_str()
         .unwrap_or_else(|| panic!("Failed to get file name for {}", path.display()));
     zip.start_file(file_name, SimpleFileOptions::default())?;
-    zip.write_all(byte_view.as_slice())?;
+    zip.write_all(bytes)?;
 
     zip.finish()?;
     Ok(temp_file)
