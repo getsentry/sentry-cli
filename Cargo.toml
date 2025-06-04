@@ -6,6 +6,18 @@ version = "2.46.0"
 edition = "2021"
 rust-version = "1.86"
 
+[lib]
+name = "sentry_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "test_full_upload"
+path = "test_full_upload.rs"
+
+[[bin]]
+name = "test_mobile_app_upload"
+path = "test_mobile_app_upload.rs"
+
 [dependencies]
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }

@@ -990,6 +990,8 @@ impl<'a> AuthenticatedApi<'a> {
                 projects: &[],
                 version: None,
                 dist: None,
+                filename: None,
+                project_id: None,
             })?
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
@@ -1013,9 +1015,30 @@ impl<'a> AuthenticatedApi<'a> {
                 projects,
                 version,
                 dist,
+                filename: None,
+                project_id: None,
             })?
             .send()?
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
+    }
+
+    /// Request preprod artifact assembling and processing from chunks.
+    pub fn assemble_preprod_artifact(
+        &self,
+        org: &str,
+        project: &str,
+        request: &ChunkedPreprodArtifactRequest<'_>,
+    ) -> ApiResult<ChunkedPreprodArtifactResponse> {
+        let url = format!(
+            "/projects/{}/{}/files/preprodartifacts/assemble/",
+            PathArg(org),
+            PathArg(project)
+        );
+
+        self.request(Method::Post, &url)?
+            .with_json_body(request)?
+            .send()?
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     pub fn associate_proguard_mappings(
@@ -1931,7 +1954,6 @@ pub struct AuthDetails {
 #[derive(Deserialize, Debug)]
 pub struct User {
     pub email: String,
-    #[expect(dead_code)]
     pub id: String,
 }
 
@@ -2013,7 +2035,6 @@ pub struct UpdatedRelease {
 #[derive(Debug, Deserialize)]
 pub struct ReleaseInfo {
     pub version: String,
-    #[expect(dead_code)]
     pub url: Option<String>,
     #[serde(rename = "dateCreated")]
     pub date_created: DateTime<Utc>,
@@ -2079,7 +2100,6 @@ pub struct DebugInfoData {
     #[serde(default, rename = "type")]
     pub kind: Option<ObjectKind>,
     #[serde(default)]
-    #[expect(dead_code)]
     pub features: Vec<String>,
 }
 
