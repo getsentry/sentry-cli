@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::path::Path;
 
 use anyhow::anyhow;
@@ -31,7 +32,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    let mut paths = Vec::new();
     let mut normalized_zips = Vec::new();
     for path_string in path_strings {
         let path: &Path = path_string.as_ref();
@@ -40,8 +40,28 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             return Err(anyhow!("Path does not exist: {}", path.display()));
         }
 
-        validate_is_mobile_app(path)?;
-        let normalized_zip = normalize_mobile_app(path)?;
+        let byteview = ByteView::open(path)?;
+
+        validate_is_mobile_app(path, &byteview)?;
+
+        let normalized_zip = if path.is_file() {
+            normalize_file(path, &byteview)
+        } else if path.is_dir() {
+            normalize_directory(path)
+        } else {
+            Err(anyhow!(
+                "Path {} is neither a file nor a directory, cannot upload",
+                path.display()
+            ))
+        }
+        .unwrap_or_else(|e| {
+            panic!(
+                "Failed to create uploadable zip while processing {}: {}",
+                path.display(),
+                e
+            )
+        });
+
         normalized_zips.push(normalized_zip);
     }
 
@@ -54,21 +74,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn validate_is_mobile_app(path: &Path) -> Result<()> {
+fn validate_is_mobile_app(path: &Path, byte_view: &ByteView) -> Result<()> {
     // Check for XCArchive (directory) first
-    if path.is_dir() && is_xcarchive_directory(path)? {
+    if path.is_dir() && is_xcarchive_directory(path) {
         return Ok(());
     }
 
-    let byteview = ByteView::open(path)?;
-
     // Check if the file is a zip file (then AAB or APK)
-    if is_zip_file(&byteview) {
-        if is_aab_file(&byteview)? {
+    if is_zip_file(byte_view) {
+        if is_aab_file(byte_view)? {
             return Ok(());
         }
 
-        if is_apk_file(&byteview)? {
+        if is_apk_file(byte_view)? {
             return Ok(());
         }
     }
@@ -79,41 +97,45 @@ fn validate_is_mobile_app(path: &Path) -> Result<()> {
     ))
 }
 
-/// Normalizes a mobile app file into a zip file to ensure consistent artifact parsing logic on the backend.
-fn normalize_mobile_app(path: &Path) -> Result<TempFile> {
+// For APK and AAB files, we'll copy them directly into the zip
+fn normalize_file(path: &Path, byte_view: &ByteView) -> Result<TempFile> {
     let temp_file = TempFile::create()?;
     let mut zip = ZipWriter::new(temp_file.open()?);
 
-    if path.is_file() {
-        // For APK and AAB files, we'll copy them directly into the zip
-        let mut file = File::open(path)?;
-        let file_name = path
-            .file_name()
-            .ok_or_else(|| anyhow!("Invalid file name"))?
-            .to_string_lossy();
+    let file_name = path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap_or_else(|| panic!("Failed to get file name for {}", path.display()));
+    zip.start_file(file_name, SimpleFileOptions::default())?;
+    zip.write_all(byte_view.as_slice())?;
 
-        zip.start_file(file_name, SimpleFileOptions::default())?;
-        std::io::copy(&mut file, &mut zip)?;
-    } else if path.is_dir() {
-        // For XCArchive directories, we'll zip the entire directory
-        for entry in walkdir::WalkDir::new(path)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            let entry_path = entry.path();
-            if entry_path.is_file() {
-                let relative_path = entry_path
-                    .strip_prefix(path)
-                    .map_err(|_| anyhow!("Failed to get relative path"))?;
+    zip.finish()?;
+    Ok(temp_file)
+}
 
-                let mut file = File::open(entry_path)?;
-                zip.start_file(
-                    relative_path.to_string_lossy(),
-                    SimpleFileOptions::default(),
-                )?;
-                std::io::copy(&mut file, &mut zip)?;
-            }
+// For XCArchive directories, we'll zip the entire directory
+fn normalize_directory(path: &Path) -> Result<TempFile> {
+    let temp_file = TempFile::create()?;
+    let mut zip = ZipWriter::new(temp_file.open()?);
+
+    for entry in walkdir::WalkDir::new(path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let entry_path = entry.path();
+        if entry_path.is_file() {
+            let relative_path = entry_path
+                .strip_prefix(path)
+                .map_err(|_| anyhow!("Failed to get relative path"))?;
+
+            zip.start_file(
+                relative_path.to_string_lossy(),
+                SimpleFileOptions::default(),
+            )?;
+            let file_byteview = ByteView::open(entry_path)?;
+            zip.write_all(file_byteview.as_slice())?;
         }
     }
 

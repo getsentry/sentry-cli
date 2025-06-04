@@ -37,7 +37,7 @@ pub fn is_aab_file(bytes: &[u8]) -> Result<bool> {
     Ok(has_bundle_config && has_base_manifest)
 }
 
-pub fn is_xcarchive_directory<P>(path: P) -> Result<bool>
+pub fn is_xcarchive_directory<P>(path: P) -> bool
 where
     P: AsRef<Path>,
 {
@@ -47,5 +47,5 @@ where
     let info_plist = path.join("Info.plist");
     let products_dir = path.join("Products");
 
-    Ok(info_plist.exists() && products_dir.exists() && products_dir.is_dir())
+    info_plist.exists() && products_dir.exists() && products_dir.is_dir()
 }
