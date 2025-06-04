@@ -135,7 +135,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 
     debug!("Adding file to zip: {}", file_name);
     zip.start_file(file_name, SimpleFileOptions::default())?;
-    zip.write(bytes)?;
+    zip.write_all(bytes)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for file");
