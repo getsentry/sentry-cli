@@ -37,6 +37,7 @@ pub fn is_aab_file(bytes: &[u8]) -> Result<bool> {
     Ok(has_bundle_config && has_base_manifest)
 }
 
+pub fn is_xcarchive_directory<P>(path: P) -> bool
 where
     P: AsRef<Path>,
 {
