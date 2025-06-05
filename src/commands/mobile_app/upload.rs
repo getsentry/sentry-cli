@@ -1,9 +1,16 @@
 use std::io::Write;
 use std::path::Path;
-
 use anyhow::{anyhow, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::debug;
+#[cfg(target_os = "macos")]
+use std::ffi::CString;
+#[cfg(target_os = "macos")]
+use std::os::unix::ffi::OsStrExt;
+#[cfg(target_os = "macos")]
+use std::path::PathBuf;
+#[cfg(target_os = "macos")]
+use walkdir::WalkDir;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -24,6 +31,36 @@ pub fn make_command(command: Command) -> Command {
                 .num_args(1..)
                 .action(ArgAction::Append),
         )
+}
+
+#[cfg(target_os = "macos")]
+extern "C" {
+    fn swift_inspect_asset_catalog(msg: *const std::os::raw::c_char);
+}
+
+#[cfg(target_os = "macos")]
+pub fn inspect_asset_catalog<P: AsRef<Path>>(path: P) {
+    // let rust_string = "/Users/noahmartin/Library/Developer/Xcode/DerivedData/HackerNews-dmsbmgkqxtdhuggaicvwnkihdwne/Build/Products/Release-iphonesimulator/HackerNews.app/Assets.car";
+    let c_string = CString::new(path.as_ref().as_os_str().as_bytes()).expect("CString::new failed");
+    unsafe {
+        swift_inspect_asset_catalog(c_string.as_ptr());
+    }
+}
+
+#[cfg(target_os = "macos")]
+pub fn find_car_files(root: &Path) -> Vec<PathBuf> {
+    WalkDir::new(root)
+        .into_iter()
+        .filter_map(Result::ok)                   // discard I/O errors
+        .filter(|e| e.file_type().is_file())
+        .filter(|e| {
+            e.path()
+                .extension()
+                .and_then(|s| s.to_str())
+                .is_some_and(|ext| ext.eq("car"))
+        })
+        .map(|e| e.into_path())
+        .collect()
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -47,6 +84,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
+
+        #[cfg(target_os = "macos")]
+        if is_apple_app(path) {
+            // Find all asset catalogs
+            let cars = find_car_files(path);
+            for car in &cars {
+                inspect_asset_catalog(car);
+            }
+        }
 
         validate_is_mobile_app(path, &byteview)?;
 
@@ -84,16 +130,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         println!("Created normalized zip at: {}", zip.path().display());
         // TODO: Upload the normalized zip to the chunked uploads API
     }
-
     eprintln!("Uploading mobile app files to a project is not yet implemented.");
     Ok(())
+}
+
+fn is_apple_app(path: &Path) -> bool {
+    path.is_dir() && is_xcarchive_directory(path)
 }
 
 fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating mobile app format for: {}", path.display());
 
-    // Check for XCArchive (directory) first
-    if path.is_dir() && is_xcarchive_directory(path) {
+
+    if is_apple_app(path) {
         debug!("Detected XCArchive directory");
         return Ok(());
     }
