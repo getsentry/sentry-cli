@@ -85,48 +85,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         normalized_zips.push(normalized_zip);
     }
 
-    let api = Api::current();
-    let authenticated_api = api.authenticated()?;
-
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
-    let chunk_upload_options = authenticated_api
-        .get_chunk_upload_options(&org)?
-        .expect("Chunked uploading is not supported for this organization");
 
-    for zip in normalized_zips {
-        let progress_style = ProgressStyle::default_bar().template(&format!(
-            "{} Uploading files...\
-       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-            style(">").dim(),
-        ));
-
-        let byteview = ByteView::open(zip.path())?;
-        let (checksum, checksums) =
-            get_sha1_checksums(&byteview, chunk_upload_options.chunk_size as usize)?;
-        let mut chunks = byteview
-            .chunks(chunk_upload_options.chunk_size as usize)
-            .zip(checksums.iter())
-            .map(|(data, checksum)| Chunk((*checksum, data)))
-            .collect::<Vec<_>>();
-
-        let response = authenticated_api
-            .assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
-        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
-
-        if !chunks.is_empty() {
-            upload_chunks(&chunks, &chunk_upload_options, progress_style)?;
-            println!("{} Uploaded files to Sentry", style(">").dim());
-        } else {
-            println!(
-                "{} Nothing to upload, all files are on the server",
-                style(">").dim()
-            );
-        }
-        poll_assemble(checksum, &checksums, &org, &project)?;
+    for (path, zip) in normalized_zips {
+        println!("Uploading file: {}", zip.path().display());
+        let bytes = ByteView::open(zip.path())?;
+        upload_file(&bytes, &org, &project)?;
+        println!("Successfully uploaded file at path {}", path);
     }
 
-    // eprintln!("Uploading mobile app files to a project is not yet implemented.");
     Ok(())
 }
 
@@ -218,12 +186,51 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     Ok(temp_file)
 }
 
+fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
+    let chunk_upload_options = authenticated_api
+        .get_chunk_upload_options(&org)?
+        .expect("Chunked uploading is not supported for this organization");
+
+    let progress_style = ProgressStyle::default_bar().template(&format!(
+        "{} Uploading file...\
+       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+        style(">").dim(),
+    ));
+
+    let (checksum, checksums) =
+        get_sha1_checksums(&bytes, chunk_upload_options.chunk_size as usize)?;
+    let mut chunks = bytes
+        .chunks(chunk_upload_options.chunk_size as usize)
+        .zip(checksums.iter())
+        .map(|(data, checksum)| Chunk((*checksum, data)))
+        .collect::<Vec<_>>();
+
+    let response =
+        authenticated_api.assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
+    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+
+    if !chunks.is_empty() {
+        upload_chunks(&chunks, &chunk_upload_options, progress_style)?;
+    } else {
+        println!(
+            "{} Nothing to upload, all files are on the server",
+            style(">").dim()
+        );
+    }
+    poll_assemble(checksum, &checksums, &org, &project)?;
+    Ok(())
+}
+
 fn poll_assemble(checksum: Digest, checksums: &[Digest], org: &str, project: &str) -> Result<()> {
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
+
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
 
@@ -253,8 +260,6 @@ fn poll_assemble(checksum: Digest, checksums: &[Digest], org: &str, project: &st
     } else {
         println!("{} File processing complete", style(">").dim());
     }
-
-    // print_upload_context_details(context);
 
     Ok(())
 }
