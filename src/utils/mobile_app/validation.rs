@@ -37,26 +37,15 @@ pub fn is_aab_file(bytes: &[u8]) -> Result<bool> {
     Ok(has_bundle_config && has_base_manifest)
 }
 
-pub fn is_xcarchive_directory<P>(path: P) -> Result<bool>
+pub fn is_xcarchive_directory<P>(path: P) -> bool
 where
     P: AsRef<Path>,
 {
     let path = path.as_ref();
 
-    // XCArchive should have Info.plist and a .app file in Products/Applications/
+    // XCArchive should have Info.plist and a Products/ directory
     let info_plist = path.join("Info.plist");
-    let applications_dir = path.join("Products").join("Applications");
+    let products_dir = path.join("Products");
 
-    if !info_plist.exists() || !applications_dir.exists() || !applications_dir.is_dir() {
-        return Ok(false);
-    }
-
-    // Check if there's at least one .app file in the Applications directory
-    let has_app_file = std::fs::read_dir(&applications_dir)?
-        .filter_map(|entry| entry.ok())
-        .any(|entry| {
-            entry.path().is_dir() && entry.path().extension().is_some_and(|ext| ext == "app")
-        });
-
-    Ok(has_app_file)
+    info_plist.exists() && products_dir.exists() && products_dir.is_dir()
 }

@@ -1,13 +1,27 @@
+use std::io::Write;
 use std::path::Path;
 
 use anyhow::anyhow;
+use anyhow::bail;
+use anyhow::Context;
 use anyhow::Result;
 use clap::ArgAction;
 use clap::{Arg, ArgMatches, Command};
+use console::style;
+use indicatif::ProgressStyle;
+use sha1_smol::Digest;
 use symbolic::common::ByteView;
+use zip::write::SimpleFileOptions;
+use zip::ZipWriter;
 
+use crate::api::Api;
+use crate::config::Config;
 use crate::utils::args::ArgExt;
+use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
+use crate::utils::fs::get_sha1_checksums;
+use crate::utils::fs::TempFile;
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_xcarchive_directory, is_zip_file};
+use crate::utils::progress::ProgressBar;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -28,7 +42,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    let mut paths = Vec::new();
+    let mut normalized_zips = Vec::new();
     for path_string in path_strings {
         let path: &Path = path_string.as_ref();
 
@@ -36,35 +50,50 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             return Err(anyhow!("Path does not exist: {}", path.display()));
         }
 
-        validate_is_mobile_app(path)?;
-        paths.push(path);
+        let byteview = ByteView::open(path)?;
+
+        validate_is_mobile_app(path, &byteview)?;
+
+        let normalized_zip = if path.is_file() {
+            normalize_file(path, &byteview)
+        } else if path.is_dir() {
+            normalize_directory(path)
+        } else {
+            Err(anyhow!(
+                "Path {} is neither a file nor a directory, cannot upload",
+                path.display()
+            ))
+        }?;
+
+        normalized_zips.push((path_string, normalized_zip));
     }
 
-    for path in paths {
-        println!("Uploading mobile app file: {}", path.display());
-        // TODO: Normalize the path to be a zip of the underlying file/dir
-        // TODO: Upload the file to the chunked uploads API
+    let config = Config::current();
+    let (org, project) = config.get_org_and_project(matches)?;
+
+    for (path, zip) in normalized_zips {
+        println!("Uploading file: {}", zip.path().display());
+        let bytes = ByteView::open(zip.path())?;
+        upload_file(&bytes, &org, &project)?;
+        println!("Successfully uploaded file at path {}", path);
     }
 
-    eprintln!("Uploading mobile app files to a project is not yet implemented.");
     Ok(())
 }
 
-fn validate_is_mobile_app(path: &Path) -> Result<()> {
+fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     // Check for XCArchive (directory) first
-    if path.is_dir() && is_xcarchive_directory(path)? {
+    if path.is_dir() && is_xcarchive_directory(path) {
         return Ok(());
     }
 
-    let byteview = ByteView::open(path)?;
-
     // Check if the file is a zip file (then AAB or APK)
-    if is_zip_file(&byteview) {
-        if is_aab_file(&byteview)? {
+    if is_zip_file(bytes) {
+        if is_aab_file(bytes)? {
             return Ok(());
         }
 
-        if is_apk_file(&byteview)? {
+        if is_apk_file(bytes)? {
             return Ok(());
         }
     }
@@ -73,4 +102,129 @@ fn validate_is_mobile_app(path: &Path) -> Result<()> {
         "File is not a recognized mobile app format (APK, AAB, or XCArchive): {}",
         path.display()
     ))
+}
+
+// For APK and AAB files, we'll copy them directly into the zip
+fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
+    let temp_file = TempFile::create()?;
+    let mut zip = ZipWriter::new(temp_file.open()?);
+
+    let file_name = path
+        .file_name()
+        .unwrap()
+        .to_str()
+        .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
+
+    zip.start_file(file_name, SimpleFileOptions::default())?;
+    zip.write_all(bytes)?;
+
+    zip.finish()?;
+    Ok(temp_file)
+}
+
+// For XCArchive directories, we'll zip the entire directory
+fn normalize_directory(path: &Path) -> Result<TempFile> {
+    let temp_file = TempFile::create()?;
+    let mut zip = ZipWriter::new(temp_file.open()?);
+
+    for entry in walkdir::WalkDir::new(path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+    {
+        let entry_path = entry.path();
+        if entry_path.is_file() {
+            let relative_path = entry_path.strip_prefix(path).with_context(|| {
+                format!("Failed to get relative path for {}", entry_path.display())
+            })?;
+
+            zip.start_file(
+                relative_path.to_string_lossy(),
+                SimpleFileOptions::default(),
+            )?;
+            let file_byteview = ByteView::open(entry_path)?;
+            zip.write_all(file_byteview.as_slice())?;
+        }
+    }
+
+    zip.finish()?;
+    Ok(temp_file)
+}
+
+fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
+    let chunk_upload_options = authenticated_api
+        .get_chunk_upload_options(&org)?
+        .expect("Chunked uploading is not supported for this organization");
+
+    let progress_style = ProgressStyle::default_bar().template(&format!(
+        "{} Uploading file...\
+       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+        style(">").dim(),
+    ));
+
+    let (checksum, checksums) =
+        get_sha1_checksums(&bytes, chunk_upload_options.chunk_size as usize)?;
+    let mut chunks = bytes
+        .chunks(chunk_upload_options.chunk_size as usize)
+        .zip(checksums.iter())
+        .map(|(data, checksum)| Chunk((*checksum, data)))
+        .collect::<Vec<_>>();
+
+    let response =
+        authenticated_api.assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
+    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+
+    if !chunks.is_empty() {
+        upload_chunks(&chunks, &chunk_upload_options, progress_style)?;
+    } else {
+        println!(
+            "{} Nothing to upload, all files are on the server",
+            style(">").dim()
+        );
+    }
+    poll_assemble(checksum, &checksums, &org, &project)?;
+    Ok(())
+}
+
+fn poll_assemble(checksum: Digest, checksums: &[Digest], org: &str, project: &str) -> Result<()> {
+    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
+
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
+
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
+    let response = loop {
+        let response: crate::api::AssembleMobileAppResponse = authenticated_api
+            .assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
+
+        if response.state.is_finished() {
+            break response;
+        }
+
+        std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
+    };
+
+    if response.state.is_err() {
+        let message = response.detail.as_deref().unwrap_or("unknown error");
+        bail!("Failed to process uploaded files: {}", message);
+    }
+
+    pb.finish_with_duration("Processing");
+
+    if response.state.is_pending() {
+        println!(
+            "{} File upload complete (processing pending on server)",
+            style(">").dim()
+        );
+    } else {
+        println!("{} File processing complete", style(">").dim());
+    }
+
+    Ok(())
 }
