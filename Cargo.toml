@@ -91,6 +91,11 @@ default = []
 managed = []
 with_crash_reporting = []
 
+[lints.clippy]
+allow-attributes = "warn"
+unnecessary-wraps = "warn"
+unwrap-used = "warn"
+
 [target]
 
 [target."cfg(target_os = \"macos\")"]
