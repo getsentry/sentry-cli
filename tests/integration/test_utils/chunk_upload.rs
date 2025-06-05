@@ -1,11 +1,12 @@
 //! Utilities for chunk upload tests.
-use std::collections::HashSet;
 use std::error::Error;
 use std::str;
 use std::sync::LazyLock;
 
 use mockito::Request;
 use regex::bytes::Regex;
+
+use crate::collections::HashMultiSet;
 
 /// This regex is used to extract the boundary from the content-type header.
 /// We need to match the boundary, since it changes with each request.
@@ -41,7 +42,7 @@ impl HeaderContainer for Request {
 pub fn split_chunk_body<'b>(
     body: &'b [u8],
     boundary: &str,
-) -> Result<HashSet<&'b [u8]>, Box<dyn Error>> {
+) -> Result<HashMultiSet<&'b [u8]>, Box<dyn Error>> {
     let escaped_boundary = regex::escape(boundary);
 
     let inner_body = entire_body_regex(&escaped_boundary)
