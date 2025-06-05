@@ -1,1 +1,3 @@
+#![cfg(test)]
+
 mod integration;
