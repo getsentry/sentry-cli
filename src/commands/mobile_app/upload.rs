@@ -1,11 +1,8 @@
 use std::io::Write;
 use std::path::Path;
 
-use anyhow::anyhow;
-use anyhow::Context;
-use anyhow::Result;
-use clap::ArgAction;
-use clap::{Arg, ArgMatches, Command};
+use anyhow::{anyhow, Context as _, Result};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -46,15 +43,25 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         validate_is_mobile_app(path, &byteview)?;
 
         let normalized_zip = if path.is_file() {
-            normalize_file(path, &byteview)
+            normalize_file(path, &byteview).with_context(|| {
+                format!(
+                    "Failed to generate uploadable bundle for file {}",
+                    path.display()
+                )
+            })?
         } else if path.is_dir() {
-            normalize_directory(path)
+            normalize_directory(path).with_context(|| {
+                format!(
+                    "Failed to generate uploadable bundle for directory {}",
+                    path.display()
+                )
+            })?
         } else {
             Err(anyhow!(
                 "Path {} is neither a file nor a directory, cannot upload",
                 path.display()
-            ))
-        }?;
+            ))?
+        };
 
         normalized_zips.push(normalized_zip);
     }
@@ -121,9 +128,7 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     {
         let entry_path = entry.path();
         if entry_path.is_file() {
-            let relative_path = entry_path.strip_prefix(path).with_context(|| {
-                format!("Failed to get relative path for {}", entry_path.display())
-            })?;
+            let relative_path = entry_path.strip_prefix(path)?;
 
             zip.start_file(
                 relative_path.to_string_lossy(),
