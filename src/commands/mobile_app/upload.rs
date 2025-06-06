@@ -30,7 +30,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    let mut normalized_zips = Vec::new();
+    let mut normalized_zips = vec![];
     for path_string in path_strings {
         let path: &Path = path_string.as_ref();
 
