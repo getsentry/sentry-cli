@@ -105,7 +105,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 
     let file_name = path
         .file_name()
-        .unwrap()
+        .expect("Failed to get file name")
         .to_str()
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
