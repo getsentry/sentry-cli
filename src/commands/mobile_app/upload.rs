@@ -1,14 +1,14 @@
 use std::io::Write;
 use std::path::Path;
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::debug;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
 
-use crate::api::Api;
+use crate::api::{Api, AuthenticatedApi};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
@@ -196,7 +196,7 @@ fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
 
     let progress_style = ProgressStyle::default_bar().template(&format!(
         "{} Uploading file...\
-       \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
+        \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
         style(">").dim(),
     ));
 
@@ -208,6 +208,8 @@ fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
+    // TODO: Get git values
+    // TODO: Build config as arg
     let response =
         authenticated_api.assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
     chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
@@ -220,23 +222,27 @@ fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
             style(">").dim()
         );
     }
-    poll_assemble(checksum, &checksums, &org, &project)?;
+
+    poll_assemble(&authenticated_api, checksum, &checksums, &org, &project)?;
     Ok(())
 }
 
-fn poll_assemble(checksum: Digest, checksums: &[Digest], org: &str, project: &str) -> Result<()> {
+fn poll_assemble(
+    api: &AuthenticatedApi,
+    checksum: Digest,
+    checksums: &[Digest],
+    org: &str,
+    project: &str,
+) -> Result<()> {
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
 
-    let api = Api::current();
-    let authenticated_api = api.authenticated()?;
-
     let response = loop {
-        let response: crate::api::AssembleMobileAppResponse = authenticated_api
-            .assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
+        let response: crate::api::AssembleMobileAppResponse =
+            api.assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
 
         if response.state.is_finished() {
             break response;
