@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
+use std::process::Command;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
@@ -28,6 +29,49 @@ fn main() -> Result<(), Box<dyn Error>> {
     writeln!(f, "/// The user agent for sentry events")?;
     writeln!(f, "pub const USER_AGENT: &str = \"sentry-cli/{arch}\";")?;
     println!("cargo:rerun-if-changed=build.rs\n");
+
+    if platform == "darwin" {
+        println!("cargo:rerun-if-changed=src/apple/AssetCatalogReader.swift");
+        println!("cargo:rerun-if-changed=src/apple/safeValueForKey.h");
+        println!("cargo:rerun-if-changed=src/apple/safeValueForKey.m");
+        // Compile Objective-C
+        let status = Command::new("clang")
+            .args([
+                "src/apple/safeValueForKey.m",
+                "-c",
+                "-o",
+                "safeValueForKey.o",
+                "-fobjc-arc",
+            ])
+            .status()
+            .expect("Failed to compile Objective-C");
+
+        assert!(status.success(), "clang failed");
+
+        // Compile Swift and link ObjC
+        let status = Command::new("swiftc")
+            .args([
+                "-emit-library",
+                "-static",
+                "-o",
+                "libswiftbridge.a",
+                "src/apple/AssetCatalogReader.swift",
+                "safeValueForKey.o",
+                "-import-objc-header",
+                "src/apple/safeValueForKey.h",
+            ])
+            .status()
+            .expect("Failed to compile Swift");
+
+        assert!(status.success(), "swiftc failed");
+
+        println!("cargo:rustc-link-search=native=.");
+        println!("cargo:rustc-link-lib=static=swiftbridge");
+
+        println!("cargo:rustc-link-arg=-F");
+        println!("cargo:rustc-link-arg=/System/Library/PrivateFrameworks");
+        println!("cargo:rustc-link-lib=framework=CoreUI");
+    }
 
     Ok(())
 }
