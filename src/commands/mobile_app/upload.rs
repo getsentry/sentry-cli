@@ -1,6 +1,5 @@
 use std::io::Write;
 use std::path::Path;
-use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -53,8 +52,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let sha = matches
         .get_one::<String>("sha")
-        .map(String::as_str)
-        .or_else(|| vcs::find_head().ok().map(String::as_str).as_ref());
+        .cloned()
+        .or_else(|| vcs::find_head().ok());
+
     let build_configuration = matches
         .get_one::<String>("build_configuration")
         .map(String::as_str);
@@ -114,7 +114,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         println!("Uploading file: {}", zip.path().display());
         let bytes = ByteView::open(zip.path())?;
-        upload_file(&bytes, &org, &project, sha, build_configuration)
+        upload_file(&bytes, &org, &project, sha.as_deref(), build_configuration)
             .with_context(|| format!("Failed to upload file at path {}", path.display()))?;
         println!("Successfully uploaded file at path {}", path.display());
     }
@@ -229,7 +229,7 @@ fn upload_file(
     let authenticated_api = api.authenticated()?;
 
     let chunk_upload_options = authenticated_api
-        .get_chunk_upload_options(&org)?
+        .get_chunk_upload_options(org)?
         .expect("Chunked uploading is not supported for this organization");
 
     let progress_style =
@@ -239,7 +239,7 @@ fn upload_file(
     pb.set_style(progress_style);
 
     let chunk_size = chunk_upload_options.chunk_size as usize;
-    let (checksum, checksums) = get_sha1_checksums(&bytes, chunk_size)?;
+    let (checksum, checksums) = get_sha1_checksums(bytes, chunk_size)?;
     let mut chunks = bytes
         .chunks(chunk_size)
         .zip(checksums.iter())
@@ -250,8 +250,8 @@ fn upload_file(
     pb.finish_with_duration("Optimizing");
 
     let response = authenticated_api.assemble_mobile_app(
-        &org,
-        &project,
+        org,
+        project,
         checksum,
         &checksums,
         sha,
@@ -277,8 +277,8 @@ fn upload_file(
         &authenticated_api,
         checksum,
         &checksums,
-        &org,
-        &project,
+        org,
+        project,
         sha,
         build_configuration,
     )?;
@@ -304,7 +304,7 @@ fn poll_assemble(
 
     let response = loop {
         let response =
-            api.assemble_mobile_app(&org, &project, checksum, chunks, sha, build_configuration)?;
+            api.assemble_mobile_app(org, project, checksum, chunks, sha, build_configuration)?;
 
         if response.state.is_finished() {
             break response;
