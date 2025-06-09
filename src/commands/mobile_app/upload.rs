@@ -1,9 +1,13 @@
 use std::io::Write;
 use std::path::Path;
+use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use console::style;
+use indicatif::ProgressStyle;
 use log::debug;
+use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::ZipWriter;
@@ -16,6 +20,7 @@ use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_xcarchive_directory, is_zip_file};
 use crate::utils::progress::ProgressBar;
+use crate::utils::vcs;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -29,12 +34,30 @@ pub fn make_command(command: Command) -> Command {
                 .num_args(1..)
                 .action(ArgAction::Append),
         )
+        .arg(
+            Arg::new("sha")
+                .long("sha")
+                .help("The git commit sha to use for the upload. If not provided, the current commit sha will be used.")
+        )
+        .arg(
+            Arg::new("build_configuration")
+                .long("build-configuration")
+                .help("The build configuration to use for the upload. If not provided, the current version will be used.")
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path_strings = matches
         .get_many::<String>("paths")
         .expect("paths argument is required");
+
+    let sha = matches
+        .get_one::<String>("sha")
+        .map(String::as_str)
+        .or_else(|| vcs::find_head().ok().map(String::as_str).as_ref());
+    let build_configuration = matches
+        .get_one::<String>("build_configuration")
+        .map(String::as_str);
 
     debug!(
         "Starting mobile app upload for {} paths",
@@ -82,7 +105,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             "Successfully normalized to: {}",
             normalized_zip.path().display()
         );
-        normalized_zips.push(normalized_zip);
+        normalized_zips.push((path, normalized_zip));
     }
 
     let config = Config::current();
@@ -91,8 +114,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         println!("Uploading file: {}", zip.path().display());
         let bytes = ByteView::open(zip.path())?;
-        upload_file(&bytes, &org, &project)?;
-        println!("Successfully uploaded file at path {}", path);
+        upload_file(&bytes, &org, &project, sha, build_configuration)
+            .with_context(|| format!("Failed to upload file at path {}", path.display()))?;
+        println!("Successfully uploaded file at path {}", path.display());
     }
 
     Ok(())
@@ -186,7 +210,21 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     Ok(temp_file)
 }
 
-fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
+fn upload_file(
+    bytes: &[u8],
+    org: &str,
+    project: &str,
+    sha: Option<&str>,
+    build_configuration: Option<&str>,
+) -> Result<()> {
+    debug!(
+        "Uploading file to organization: {}, project: {}, sha: {}, build_configuration: {}",
+        org,
+        project,
+        sha.unwrap_or("unknown"),
+        build_configuration.unwrap_or("unknown")
+    );
+
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
 
@@ -194,28 +232,40 @@ fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
         .get_chunk_upload_options(&org)?
         .expect("Chunked uploading is not supported for this organization");
 
-    let progress_style = ProgressStyle::default_bar().template(&format!(
-        "{} Uploading file...\
-        \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-        style(">").dim(),
-    ));
+    let progress_style =
+        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
 
-    let (checksum, checksums) =
-        get_sha1_checksums(&bytes, chunk_upload_options.chunk_size as usize)?;
+    let chunk_size = chunk_upload_options.chunk_size as usize;
+    let (checksum, checksums) = get_sha1_checksums(&bytes, chunk_size)?;
     let mut chunks = bytes
-        .chunks(chunk_upload_options.chunk_size as usize)
+        .chunks(chunk_size)
         .zip(checksums.iter())
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    // TODO: Get git values
-    // TODO: Build config as arg
-    let response =
-        authenticated_api.assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
+    // TODO
+    pb.finish_with_duration("Optimizing");
+
+    let response = authenticated_api.assemble_mobile_app(
+        &org,
+        &project,
+        checksum,
+        &checksums,
+        sha,
+        build_configuration,
+    )?;
     chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
     if !chunks.is_empty() {
-        upload_chunks(&chunks, &chunk_upload_options, progress_style)?;
+        let upload_progress_style = ProgressStyle::default_bar().template(
+            "{prefix:.dim} Uploading files...\
+             \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
+        );
+        upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
+        println!("{} Uploaded files to Sentry", style(">").dim());
     } else {
         println!(
             "{} Nothing to upload, all files are on the server",
@@ -223,26 +273,38 @@ fn upload_file(bytes: &[u8], org: &str, project: &str) -> Result<()> {
         );
     }
 
-    poll_assemble(&authenticated_api, checksum, &checksums, &org, &project)?;
+    poll_assemble(
+        &authenticated_api,
+        checksum,
+        &checksums,
+        &org,
+        &project,
+        sha,
+        build_configuration,
+    )?;
     Ok(())
 }
 
 fn poll_assemble(
     api: &AuthenticatedApi,
     checksum: Digest,
-    checksums: &[Digest],
+    chunks: &[Digest],
     org: &str,
     project: &str,
+    sha: Option<&str>,
+    build_configuration: Option<&str>,
 ) -> Result<()> {
-    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
+    debug!("Polling assemble for checksum: {}", checksum);
 
+    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
     let pb = ProgressBar::new_spinner();
+
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
 
     let response = loop {
-        let response: crate::api::AssembleMobileAppResponse =
-            api.assemble_mobile_app(&org, &project, checksum, &checksums, None, None)?;
+        let response =
+            api.assemble_mobile_app(&org, &project, checksum, chunks, sha, build_configuration)?;
 
         if response.state.is_finished() {
             break response;
@@ -251,12 +313,12 @@ fn poll_assemble(
         std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
     };
 
+    pb.finish_with_duration("Processing");
+
     if response.state.is_err() {
         let message = response.detail.as_deref().unwrap_or("unknown error");
         bail!("Failed to process uploaded files: {}", message);
     }
-
-    pb.finish_with_duration("Processing");
 
     if response.state.is_pending() {
         println!(
