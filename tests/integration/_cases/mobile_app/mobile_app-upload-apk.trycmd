@@ -1,8 +1,7 @@
 ```
 $ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/apk.apk --sha test_sha
-Uploading file: tests/integration/_fixtures/mobile_app/apk.apk
-> Uploaded files to Sentry
-> File processing complete
-Successfully uploaded file at path tests/integration/_fixtures/mobile_app/apk.apk
+? success
+Successfully uploaded 1 file to Sentry
+  - tests/integration/_fixtures/mobile_app/apk.apk
 
 ```

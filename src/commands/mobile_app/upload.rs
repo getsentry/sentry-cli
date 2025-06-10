@@ -1,11 +1,12 @@
+use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use console::style;
 use indicatif::ProgressStyle;
-use log::debug;
+use itertools::Itertools;
+use log::{debug, info, warn};
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
@@ -51,13 +52,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .expect("paths argument is required");
 
     let sha = matches
-        .get_one::<String>("sha")
-        .cloned()
-        .or_else(|| vcs::find_head().ok());
+        .get_one("sha")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| vcs::find_head().ok().map(Cow::Owned));
 
-    let build_configuration = matches
-        .get_one::<String>("build_configuration")
-        .map(String::as_str);
+    let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
     debug!(
         "Starting mobile app upload for {} paths",
@@ -111,14 +111,48 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
+    let mut uploaded_paths = vec![];
+    let mut errored_paths = vec![];
     for (path, zip) in normalized_zips {
-        println!("Uploading file: {}", path.display());
+        info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        upload_file(&bytes, &org, &project, sha.as_deref(), build_configuration)
-            .with_context(|| format!("Failed to upload file at path {}", path.display()))?;
-        println!("Successfully uploaded file at path {}", path.display());
+        match upload_file(&bytes, &org, &project, sha.as_deref(), build_configuration) {
+            Ok(_) => {
+                info!("Successfully uploaded file: {}", path.display());
+                uploaded_paths.push(path.to_path_buf());
+            }
+            Err(e) => {
+                debug!("Failed to upload file at path {}: {}", path.display(), e);
+                errored_paths.push(path.to_path_buf());
+            }
+        }
     }
 
+    if !errored_paths.is_empty() {
+        warn!(
+            "Failed to upload {} file{}:",
+            errored_paths.len(),
+            if errored_paths.len() == 1 { "" } else { "s" }
+        );
+        for path in errored_paths {
+            warn!("  - {}", path.display());
+        }
+    }
+
+    println!(
+        "Successfully uploaded {} file{} to Sentry",
+        uploaded_paths.len(),
+        if uploaded_paths.len() == 1 { "" } else { "s" }
+    );
+    if uploaded_paths.len() < 3 {
+        for path in &uploaded_paths {
+            println!("  - {}", path.display());
+        }
+    }
+
+    if uploaded_paths.is_empty() {
+        bail!("Failed to upload any files");
+    }
     Ok(())
 }
 
@@ -168,6 +202,8 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     debug!("Adding file to zip: {}", file_name);
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
+    // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
+    // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Stored)
         .last_modified_time(DateTime::default());
@@ -190,23 +226,25 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     let mut file_count = 0;
 
     // Collect and sort entries for deterministic ordering
-    let mut entries = Vec::new();
-    for entry in walkdir::WalkDir::new(path)
+    // This is important to ensure stable sha1 checksums for the zip file as
+    // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
+    let entries = walkdir::WalkDir::new(path)
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-    {
-        let entry_path = entry.path();
-        if entry_path.is_file() {
-            let relative_path = entry_path.strip_prefix(path)?;
-            entries.push((entry_path.to_path_buf(), relative_path.to_path_buf()));
-        }
-    }
-
-    // Sort by relative path for consistent ordering
-    entries.sort_by(|a, b| a.1.cmp(&b.1));
+        .filter(|entry| entry.path().is_file())
+        .map(|entry| {
+            let entry_path = entry.into_path();
+            let relative_path = entry_path.strip_prefix(path)?.to_owned();
+            Ok((entry_path, relative_path))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .sorted_by(|(_, a), (_, b)| a.cmp(b));
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
+    // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
+    // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Stored)
         .last_modified_time(DateTime::default());
@@ -282,12 +320,8 @@ fn upload_file(
              \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
         );
         upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
-        println!("{} Uploaded files to Sentry", style(">").dim());
     } else {
-        println!(
-            "{} Nothing to upload, all files are on the server",
-            style(">").dim()
-        );
+        println!("Nothing to upload, all files are on the server");
     }
 
     poll_assemble(
@@ -338,12 +372,9 @@ fn poll_assemble(
     }
 
     if response.state.is_pending() {
-        println!(
-            "{} File upload complete (processing pending on server)",
-            style(">").dim()
-        );
+        info!("File upload complete (processing pending on server)");
     } else {
-        println!("{} File processing complete", style(">").dim());
+        info!("File processing complete");
     }
 
     Ok(())
