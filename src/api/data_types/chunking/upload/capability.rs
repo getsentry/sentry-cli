@@ -31,7 +31,7 @@ pub enum ChunkUploadCapability {
     Il2Cpp,
 
     /// Upload of preprod artifacts
-    PreprodArtifacts, // TODO
+    PreprodArtifacts,
 
     /// Any other unsupported capability (ignored)
     Unknown,

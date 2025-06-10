@@ -9,7 +9,7 @@ use log::debug;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
-use zip::ZipWriter;
+use zip::{DateTime, ZipWriter};
 
 use crate::api::{Api, AuthenticatedApi};
 use crate::config::Config;
@@ -112,7 +112,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
 
     for (path, zip) in normalized_zips {
-        println!("Uploading file: {}", zip.path().display());
+        println!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
         upload_file(&bytes, &org, &project, sha.as_deref(), build_configuration)
             .with_context(|| format!("Failed to upload file at path {}", path.display()))?;
@@ -166,7 +166,13 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
     debug!("Adding file to zip: {}", file_name);
-    zip.start_file(file_name, SimpleFileOptions::default())?;
+
+    // Need to set the last modified time to a fixed value to ensure consistent checksums
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .last_modified_time(DateTime::default());
+
+    zip.start_file(file_name, options)?;
     zip.write_all(bytes)?;
 
     zip.finish()?;
@@ -182,6 +188,9 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     let mut zip = ZipWriter::new(temp_file.open()?);
 
     let mut file_count = 0;
+
+    // Collect and sort entries for deterministic ordering
+    let mut entries = Vec::new();
     for entry in walkdir::WalkDir::new(path)
         .follow_links(true)
         .into_iter()
@@ -190,16 +199,25 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         let entry_path = entry.path();
         if entry_path.is_file() {
             let relative_path = entry_path.strip_prefix(path)?;
-            debug!("Adding file to zip: {}", relative_path.display());
-
-            zip.start_file(
-                relative_path.to_string_lossy(),
-                SimpleFileOptions::default(),
-            )?;
-            let file_byteview = ByteView::open(entry_path)?;
-            zip.write_all(file_byteview.as_slice())?;
-            file_count += 1;
+            entries.push((entry_path.to_path_buf(), relative_path.to_path_buf()));
         }
+    }
+
+    // Sort by relative path for consistent ordering
+    entries.sort_by(|a, b| a.1.cmp(&b.1));
+
+    // Need to set the last modified time to a fixed value to ensure consistent checksums
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .last_modified_time(DateTime::default());
+
+    for (entry_path, relative_path) in entries {
+        debug!("Adding file to zip: {}", relative_path.display());
+
+        zip.start_file(relative_path.to_string_lossy(), options)?;
+        let file_byteview = ByteView::open(&entry_path)?;
+        zip.write_all(file_byteview.as_slice())?;
+        file_count += 1;
     }
 
     zip.finish()?;
@@ -230,7 +248,7 @@ fn upload_file(
 
     let chunk_upload_options = authenticated_api
         .get_chunk_upload_options(org)?
-        .expect("Chunked uploading is not supported for this organization");
+        .expect("Chunked uploading is not supported");
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
@@ -246,8 +264,7 @@ fn upload_file(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    // TODO
-    pb.finish_with_duration("Optimizing");
+    pb.finish_with_duration("Finishing upload");
 
     let response = authenticated_api.assemble_mobile_app(
         org,
