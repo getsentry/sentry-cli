@@ -10,6 +10,7 @@ mod macos {
     }
 
     pub fn handle_asset_catalogs(path: &Path) {
+        // Find all asset catalogs
         let cars = find_car_files(path);
         for car in &cars {
             inspect_asset_catalog(car);

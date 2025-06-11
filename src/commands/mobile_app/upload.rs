@@ -75,9 +75,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
 
-        #[cfg(target_os = "macos")]
         if is_apple_app(path) {
-            // Find all asset catalogs
             handle_asset_catalogs(path);
         }
 
