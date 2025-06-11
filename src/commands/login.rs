@@ -98,11 +98,32 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    let config_to_update = if matches.get_flag("global") {
+    let update_global = matches.get_flag("global");
+    let config_to_update = if update_global {
         Config::global()?
     } else {
         Config::from_cli_config()?
     };
+
+    if update_global {
+        if let Some(Auth::Token(ref existing_token)) = config_to_update.get_auth() {
+            if let (Some(old_payload), Some(new_payload)) =
+                (existing_token.payload(), token.payload())
+            {
+                if old_payload.org != new_payload.org {
+                    println!(
+                        "You are already logged in globally with organization `{}`. \
+                        Logging in with a token for `{}` will overwrite the existing token.",
+                        old_payload.org, new_payload.org
+                    );
+                    if !prompt_to_continue("Continue?")? {
+                        println!("Aborted!");
+                        return Ok(());
+                    }
+                }
+            }
+        }
+    }
 
     update_config(&config_to_update, token)?;
     println!();
