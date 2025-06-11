@@ -42,6 +42,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 "-o",
                 "safeValueForKey.o",
                 "-fobjc-arc",
+                "-arch",
+                "x86_64",
+                "-arch",
+                "arm64",
             ])
             .status()
             .expect("Failed to compile Objective-C");
@@ -59,6 +63,10 @@ fn main() -> Result<(), Box<dyn Error>> {
                 "safeValueForKey.o",
                 "-import-objc-header",
                 "src/apple/safeValueForKey.h",
+                "-target",
+                "x86_64-apple-macosx11",
+                "-target",
+                "arm64-apple-macosx11",
             ])
             .status()
             .expect("Failed to compile Swift");
@@ -71,6 +79,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("cargo:rustc-link-arg=-F");
         println!("cargo:rustc-link-arg=/System/Library/PrivateFrameworks");
         println!("cargo:rustc-link-lib=framework=CoreUI");
+
+        // Get the developer directory and platform name
+        let developer_dir = Command::new("xcode-select")
+            .args(["-p"])
+            .output()
+            .expect("Failed to get developer directory");
+        let developer_dir_path = String::from_utf8_lossy(&developer_dir.stdout)
+            .trim()
+            .to_string();
+        println!("cargo:rustc-link-arg=-L");
+        println!(
+            "cargo:rustc-link-arg={}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
+            developer_dir_path
+        );
     }
 
     Ok(())

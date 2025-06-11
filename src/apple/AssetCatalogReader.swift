@@ -1,8 +1,11 @@
 @_cdecl("swift_inspect_asset_catalog")
 public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>) {
     let pathString = String(cString: path)
-    print("Swift received: \(pathString)")
-    AssetUtil.disect(file: URL(filePath: pathString))
+    if #available(macOS 13.0, *) {
+        AssetUtil.disect(file: URL(filePath: pathString))
+    } else {
+        print("Skipping asset catalog inspection on macOS earlier than 13.0")
+    }
 }
 
 import CoreGraphics

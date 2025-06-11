@@ -5,17 +5,9 @@ use itertools::Itertools;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
 use std::borrow::Cow;
-#[cfg(target_os = "macos")]
-use std::ffi::CString;
 use std::io::Write;
-#[cfg(target_os = "macos")]
-use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
-#[cfg(target_os = "macos")]
-use std::path::PathBuf;
 use symbolic::common::ByteView;
-#[cfg(target_os = "macos")]
-use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
@@ -25,7 +17,7 @@ use crate::utils::args::ArgExt;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_xcarchive_directory, is_zip_file};
+use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, handle_asset_catalogs, is_apple_app};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -51,36 +43,6 @@ pub fn make_command(command: Command) -> Command {
                 .long("build-configuration")
                 .help("The build configuration to use for the upload. If not provided, the current version will be used.")
         )
-}
-
-#[cfg(target_os = "macos")]
-extern "C" {
-    fn swift_inspect_asset_catalog(msg: *const std::os::raw::c_char);
-}
-
-#[cfg(target_os = "macos")]
-pub fn inspect_asset_catalog<P: AsRef<Path>>(path: P) {
-    // let rust_string = "/Users/noahmartin/Library/Developer/Xcode/DerivedData/HackerNews-dmsbmgkqxtdhuggaicvwnkihdwne/Build/Products/Release-iphonesimulator/HackerNews.app/Assets.car";
-    let c_string = CString::new(path.as_ref().as_os_str().as_bytes()).expect("CString::new failed");
-    unsafe {
-        swift_inspect_asset_catalog(c_string.as_ptr());
-    }
-}
-
-#[cfg(target_os = "macos")]
-pub fn find_car_files(root: &Path) -> Vec<PathBuf> {
-    WalkDir::new(root)
-        .into_iter()
-        .filter_map(Result::ok) // discard I/O errors
-        .filter(|e| e.file_type().is_file())
-        .filter(|e| {
-            e.path()
-                .extension()
-                .and_then(|s| s.to_str())
-                .is_some_and(|ext| ext.eq("car"))
-        })
-        .map(|e| e.into_path())
-        .collect()
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -116,10 +78,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         #[cfg(target_os = "macos")]
         if is_apple_app(path) {
             // Find all asset catalogs
-            let cars = find_car_files(path);
-            for car in &cars {
-                inspect_asset_catalog(car);
-            }
+            handle_asset_catalogs(path);
         }
 
         validate_is_mobile_app(path, &byteview)?;
@@ -200,10 +159,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         bail!("Failed to upload any files");
     }
     Ok(())
-}
-
-fn is_apple_app(path: &Path) -> bool {
-    path.is_dir() && is_xcarchive_directory(path)
 }
 
 fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
