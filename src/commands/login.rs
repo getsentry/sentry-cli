@@ -104,6 +104,26 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Config::from_cli_config()?
     };
 
+    if should_warn_about_overwrite(config_to_update.get_auth(), &token) {
+        println!();
+        println!("Warning: You are about to overwrite an existing token!");
+
+        // Show organization information
+        if let Some(existing_auth) = config_to_update.get_auth() {
+            let existing_org = get_org_from_auth(existing_auth);
+            let new_org = get_org_from_token(&token);
+
+            println!("The current token is {}.", format_org_info(existing_org));
+            println!("The new token is {}.", format_org_info(new_org));
+        }
+
+        println!();
+        if !prompt_to_continue("Do you want to continue and overwrite the existing token?")? {
+            println!("Token update cancelled.");
+            return Ok(());
+        }
+    }
+
     update_config(&config_to_update, token)?;
     println!();
     println!(
@@ -112,4 +132,38 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     Ok(())
+}
+
+/// Helper function to get organization name from auth (treats keys and tokens without org as "(unknown)")
+fn get_org_from_auth(auth: &Auth) -> Option<&str> {
+    match auth {
+        Auth::Token(token) => get_org_from_token(token),
+        Auth::Key(_) => None,
+    }
+}
+
+/// Helper function to get organization name from token
+fn get_org_from_token(token: &AuthToken) -> Option<&str> {
+    token.payload().map(|p| p.org.as_str())
+}
+
+/// Helper function to format organization information for display
+fn format_org_info(org: Option<&str>) -> String {
+    match org {
+        Some(org_name) => format!("for organization {}", org_name),
+        None => "not tied to any specific organization".to_string(),
+    }
+}
+
+/// Helper function to determine if we should warn about overwriting an existing token
+fn should_warn_about_overwrite(existing_auth: Option<&Auth>, new_token: &AuthToken) -> bool {
+    // Only warn if there's an existing auth
+    let Some(existing_auth) = existing_auth else {
+        return false;
+    };
+
+    let existing_org = get_org_from_auth(existing_auth);
+    let new_org = get_org_from_token(new_token);
+
+    existing_org != new_org
 }
