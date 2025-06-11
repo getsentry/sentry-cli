@@ -1,5 +1,5 @@
 # Adding new commands
-For new commands, it is recommended to use clap's [Derive API](https://docs.rs/clap/latest/clap/_derive/index.html). 
+For new commands, it is recommended to use clap's [Derive API](https://docs.rs/clap/latest/clap/_derive/index.html).
 In contrast to the [Builder API](https://docs.rs/clap/latest/clap/_tutorial/index.html), the Derive API makes it:
 - Easier to read, write, and modify commands and arguments.
 - Easier to keep argument declaration and reading in sync.
@@ -26,6 +26,16 @@ In order to overwrite current integration tests snapshots, use `TRYCMD=overwrite
 ```shell
 $ TRYCMD=overwrite cargo test
 ```
+
+## Debugging tests
+
+To dump the stdout/stderr to a `/dump` directory in the project, use `TRYCMD=dump` env variable when running tests, eg.
+
+```shell
+$ TRYCMD=overwrite cargo test
+```
+
+This only works with tests that execute using `.trycmd` files, i.e. not tests using `assert_cmd` or inline command construction.
 
 ## Working with Fixtures
 
