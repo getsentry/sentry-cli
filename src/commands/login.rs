@@ -26,6 +26,20 @@ fn update_config(config: &Config, token: AuthToken) -> Result<()> {
     Ok(())
 }
 
+fn get_org_from_auth(auth: &Auth) -> &str {
+    match auth {
+        Auth::Token(token) => token.payload()
+            .map(|p| p.org.as_str())
+            .unwrap_or("(unknown)"),
+        Auth::Key(_) => "(unknown)",
+    }
+}
+
+fn should_warn_about_overwrite(existing_auth: Option<&Auth>) -> bool {
+    // Warn if there's any existing auth (token or key)
+    existing_auth.is_some()
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let token_url = format!(
@@ -103,6 +117,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     } else {
         Config::from_cli_config()?
     };
+
+    if should_warn_about_overwrite(config_to_update.get_auth()) {
+        let existing_org = config_to_update.get_auth()
+            .map(get_org_from_auth)
+            .unwrap_or("(none)");
+        let new_org = token.payload()
+            .map(|p| p.org.as_str())
+            .unwrap_or("(unknown)");
+        
+        println!();
+        println!("Warning: Overwriting existing token");
+        println!("  Current org: {}", existing_org);
+        println!("  New org: {}", new_org);
+        
+        if !prompt_to_continue("Continue?")? {
+            return Ok(());
+        }
+    }
 
     update_config(&config_to_update, token)?;
     println!();
