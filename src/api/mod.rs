@@ -1018,6 +1018,32 @@ impl<'a> AuthenticatedApi<'a> {
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
+    pub fn assemble_mobile_app(
+        &self,
+        org: &str,
+        project: &str,
+        checksum: Digest,
+        chunks: &[Digest],
+        git_sha: Option<&str>,
+        build_configuration: Option<&str>,
+    ) -> ApiResult<AssembleMobileAppResponse> {
+        let url = format!(
+            "/projects/{}/{}/files/preprodartifacts/assemble/",
+            PathArg(org),
+            PathArg(project)
+        );
+
+        self.request(Method::Post, &url)?
+            .with_json_body(&ChunkedMobileAppRequest {
+                checksum,
+                chunks,
+                git_sha,
+                build_configuration,
+            })?
+            .send()?
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
+    }
+
     pub fn associate_proguard_mappings(
         &self,
         org: &str,

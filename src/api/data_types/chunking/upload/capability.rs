@@ -30,6 +30,9 @@ pub enum ChunkUploadCapability {
     /// Upload of il2cpp line mappings
     Il2Cpp,
 
+    /// Upload of preprod artifacts
+    PreprodArtifacts,
+
     /// Any other unsupported capability (ignored)
     Unknown,
 }
@@ -49,6 +52,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "sources" => ChunkUploadCapability::Sources,
             "bcsymbolmaps" => ChunkUploadCapability::BcSymbolmap,
             "il2cpp" => ChunkUploadCapability::Il2Cpp,
+            "preprod_artifacts" => ChunkUploadCapability::PreprodArtifacts,
             _ => ChunkUploadCapability::Unknown,
         })
     }

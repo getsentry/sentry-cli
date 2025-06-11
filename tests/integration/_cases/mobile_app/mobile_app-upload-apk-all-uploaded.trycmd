@@ -1,0 +1,8 @@
+```
+$ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/apk.apk
+? success
+Nothing to upload, all files are on the server
+Successfully uploaded 1 file to Sentry
+  - tests/integration/_fixtures/mobile_app/apk.apk
+
+```

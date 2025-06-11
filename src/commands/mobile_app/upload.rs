@@ -1,23 +1,33 @@
-use std::io::Write;
-use std::path::Path;
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
-use log::debug;
+use indicatif::ProgressStyle;
+use itertools::Itertools;
+use log::{debug, info, warn};
+use sha1_smol::Digest;
+use std::borrow::Cow;
 #[cfg(target_os = "macos")]
 use std::ffi::CString;
+use std::io::Write;
 #[cfg(target_os = "macos")]
 use std::os::unix::ffi::OsStrExt;
+use std::path::Path;
 #[cfg(target_os = "macos")]
 use std::path::PathBuf;
+use symbolic::common::ByteView;
 #[cfg(target_os = "macos")]
 use walkdir::WalkDir;
-use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
-use zip::ZipWriter;
+use zip::{DateTime, ZipWriter};
 
+use crate::api::{Api, AuthenticatedApi};
+use crate::config::Config;
 use crate::utils::args::ArgExt;
+use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
+use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_xcarchive_directory, is_zip_file};
+use crate::utils::progress::ProgressBar;
+use crate::utils::vcs;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -30,6 +40,16 @@ pub fn make_command(command: Command) -> Command {
                 .help("The path to the mobile app files to upload. Supported files include Apk, Aab or XCArchive.")
                 .num_args(1..)
                 .action(ArgAction::Append),
+        )
+        .arg(
+            Arg::new("sha")
+                .long("sha")
+                .help("The git commit sha to use for the upload. If not provided, the current commit sha will be used.")
+        )
+        .arg(
+            Arg::new("build_configuration")
+                .long("build-configuration")
+                .help("The build configuration to use for the upload. If not provided, the current version will be used.")
         )
 }
 
@@ -51,7 +71,7 @@ pub fn inspect_asset_catalog<P: AsRef<Path>>(path: P) {
 pub fn find_car_files(root: &Path) -> Vec<PathBuf> {
     WalkDir::new(root)
         .into_iter()
-        .filter_map(Result::ok)                   // discard I/O errors
+        .filter_map(Result::ok) // discard I/O errors
         .filter(|e| e.file_type().is_file())
         .filter(|e| {
             e.path()
@@ -67,6 +87,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path_strings = matches
         .get_many::<String>("paths")
         .expect("paths argument is required");
+
+    let sha = matches
+        .get_one("sha")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| vcs::find_head().ok().map(Cow::Owned));
+
+    let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
     debug!(
         "Starting mobile app upload for {} paths",
@@ -123,14 +151,54 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             "Successfully normalized to: {}",
             normalized_zip.path().display()
         );
-        normalized_zips.push(normalized_zip);
+        normalized_zips.push((path, normalized_zip));
     }
 
-    for zip in normalized_zips {
-        println!("Created normalized zip at: {}", zip.path().display());
-        // TODO: Upload the normalized zip to the chunked uploads API
+    let config = Config::current();
+    let (org, project) = config.get_org_and_project(matches)?;
+
+    let mut uploaded_paths = vec![];
+    let mut errored_paths = vec![];
+    for (path, zip) in normalized_zips {
+        info!("Uploading file: {}", path.display());
+        let bytes = ByteView::open(zip.path())?;
+        match upload_file(&bytes, &org, &project, sha.as_deref(), build_configuration) {
+            Ok(_) => {
+                info!("Successfully uploaded file: {}", path.display());
+                uploaded_paths.push(path.to_path_buf());
+            }
+            Err(e) => {
+                debug!("Failed to upload file at path {}: {}", path.display(), e);
+                errored_paths.push(path.to_path_buf());
+            }
+        }
     }
-    eprintln!("Uploading mobile app files to a project is not yet implemented.");
+
+    if !errored_paths.is_empty() {
+        warn!(
+            "Failed to upload {} file{}:",
+            errored_paths.len(),
+            if errored_paths.len() == 1 { "" } else { "s" }
+        );
+        for path in errored_paths {
+            warn!("  - {}", path.display());
+        }
+    }
+
+    println!(
+        "Successfully uploaded {} file{} to Sentry",
+        uploaded_paths.len(),
+        if uploaded_paths.len() == 1 { "" } else { "s" }
+    );
+    if uploaded_paths.len() < 3 {
+        for path in &uploaded_paths {
+            println!("  - {}", path.display());
+        }
+    }
+
+    if uploaded_paths.is_empty() {
+        bail!("Failed to upload any files");
+    }
     Ok(())
 }
 
@@ -140,7 +208,6 @@ fn is_apple_app(path: &Path) -> bool {
 
 fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating mobile app format for: {}", path.display());
-
 
     if is_apple_app(path) {
         debug!("Detected XCArchive directory");
@@ -182,7 +249,15 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
     debug!("Adding file to zip: {}", file_name);
-    zip.start_file(file_name, SimpleFileOptions::default())?;
+
+    // Need to set the last modified time to a fixed value to ensure consistent checksums
+    // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
+    // but the last modified time being different will cause checksums to be different.
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .last_modified_time(DateTime::default());
+
+    zip.start_file(file_name, options)?;
     zip.write_all(bytes)?;
 
     zip.finish()?;
@@ -198,24 +273,38 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     let mut zip = ZipWriter::new(temp_file.open()?);
 
     let mut file_count = 0;
-    for entry in walkdir::WalkDir::new(path)
+
+    // Collect and sort entries for deterministic ordering
+    // This is important to ensure stable sha1 checksums for the zip file as
+    // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
+    let entries = walkdir::WalkDir::new(path)
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-    {
-        let entry_path = entry.path();
-        if entry_path.is_file() {
-            let relative_path = entry_path.strip_prefix(path)?;
-            debug!("Adding file to zip: {}", relative_path.display());
+        .filter(|entry| entry.path().is_file())
+        .map(|entry| {
+            let entry_path = entry.into_path();
+            let relative_path = entry_path.strip_prefix(path)?.to_owned();
+            Ok((entry_path, relative_path))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .sorted_by(|(_, a), (_, b)| a.cmp(b));
 
-            zip.start_file(
-                relative_path.to_string_lossy(),
-                SimpleFileOptions::default(),
-            )?;
-            let file_byteview = ByteView::open(entry_path)?;
-            zip.write_all(file_byteview.as_slice())?;
-            file_count += 1;
-        }
+    // Need to set the last modified time to a fixed value to ensure consistent checksums
+    // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
+    // but the last modified time being different will cause checksums to be different.
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .last_modified_time(DateTime::default());
+
+    for (entry_path, relative_path) in entries {
+        debug!("Adding file to zip: {}", relative_path.display());
+
+        zip.start_file(relative_path.to_string_lossy(), options)?;
+        let file_byteview = ByteView::open(&entry_path)?;
+        zip.write_all(file_byteview.as_slice())?;
+        file_count += 1;
     }
 
     zip.finish()?;
@@ -224,4 +313,118 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         file_count
     );
     Ok(temp_file)
+}
+
+fn upload_file(
+    bytes: &[u8],
+    org: &str,
+    project: &str,
+    sha: Option<&str>,
+    build_configuration: Option<&str>,
+) -> Result<()> {
+    debug!(
+        "Uploading file to organization: {}, project: {}, sha: {}, build_configuration: {}",
+        org,
+        project,
+        sha.unwrap_or("unknown"),
+        build_configuration.unwrap_or("unknown")
+    );
+
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
+    let chunk_upload_options = authenticated_api
+        .get_chunk_upload_options(org)?
+        .expect("Chunked uploading is not supported");
+
+    let progress_style =
+        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+    let pb = ProgressBar::new_spinner();
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
+
+    let chunk_size = chunk_upload_options.chunk_size as usize;
+    let (checksum, checksums) = get_sha1_checksums(bytes, chunk_size)?;
+    let mut chunks = bytes
+        .chunks(chunk_size)
+        .zip(checksums.iter())
+        .map(|(data, checksum)| Chunk((*checksum, data)))
+        .collect::<Vec<_>>();
+
+    pb.finish_with_duration("Finishing upload");
+
+    let response = authenticated_api.assemble_mobile_app(
+        org,
+        project,
+        checksum,
+        &checksums,
+        sha,
+        build_configuration,
+    )?;
+    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+
+    if !chunks.is_empty() {
+        let upload_progress_style = ProgressStyle::default_bar().template(
+            "{prefix:.dim} Uploading files...\
+             \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
+        );
+        upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
+    } else {
+        println!("Nothing to upload, all files are on the server");
+    }
+
+    poll_assemble(
+        &authenticated_api,
+        checksum,
+        &checksums,
+        org,
+        project,
+        sha,
+        build_configuration,
+    )?;
+    Ok(())
+}
+
+fn poll_assemble(
+    api: &AuthenticatedApi,
+    checksum: Digest,
+    chunks: &[Digest],
+    org: &str,
+    project: &str,
+    sha: Option<&str>,
+    build_configuration: Option<&str>,
+) -> Result<()> {
+    debug!("Polling assemble for checksum: {}", checksum);
+
+    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
+    let pb = ProgressBar::new_spinner();
+
+    pb.enable_steady_tick(100);
+    pb.set_style(progress_style);
+
+    let response = loop {
+        let response =
+            api.assemble_mobile_app(org, project, checksum, chunks, sha, build_configuration)?;
+
+        if response.state.is_finished() {
+            break response;
+        }
+
+        std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
+    };
+
+    pb.finish_with_duration("Processing");
+
+    if response.state.is_err() {
+        let message = response.detail.as_deref().unwrap_or("unknown error");
+        bail!("Failed to process uploaded files: {}", message);
+    }
+
+    if response.state.is_pending() {
+        info!("File upload complete (processing pending on server)");
+    } else {
+        info!("File processing complete");
+    }
+
+    Ok(())
 }

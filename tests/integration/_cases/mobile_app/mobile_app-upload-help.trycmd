@@ -10,16 +10,27 @@ Arguments:
              XCArchive.
 
 Options:
-  -o, --org <ORG>                The organization ID or slug.
-      --header <KEY:VALUE>       Custom headers that should be attached to all requests
-                                 in key:value format.
-  -p, --project <PROJECT>        The project ID or slug.
-      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
-      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
-                                 warn, error]
-      --quiet                    Do not print any output while preserving correct exit code. This
-                                 flag is currently implemented only for selected subcommands.
-                                 [aliases: silent]
-  -h, --help                     Print help
+  -o, --org <ORG>
+          The organization ID or slug.
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+  -p, --project <PROJECT>
+          The project ID or slug.
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+      --sha <sha>
+          The git commit sha to use for the upload. If not provided, the current commit sha will be
+          used.
+      --build-configuration <build_configuration>
+          The build configuration to use for the upload. If not provided, the current version will
+          be used.
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: silent]
+  -h, --help
+          Print help
 
 ```

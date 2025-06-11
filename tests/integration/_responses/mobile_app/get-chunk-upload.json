@@ -1,0 +1,11 @@
+{
+    "url": "/api/0/organizations/wat-org/chunk-upload/",
+    "chunkSize": 8388608,
+    "chunksPerRequest": 64,
+    "maxFileSize": 1073741824,
+    "maxRequestSize": 1073741824,
+    "concurrency": 8,
+    "hashAlgorithm": "sha1",
+    "compression": ["gzip"],
+    "accept": ["debug_files", "release_files", "pdbs", "portablepdbs", "sources", "bcsymbolmaps", "preprod_artifacts"]
+}
