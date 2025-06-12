@@ -1,4 +1,4 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 5.10
 
 import PackageDescription
 
@@ -14,7 +14,20 @@ let package = Package(
     ],
     targets: [
         .target(
-            name: "AssetCatalogParser", dependencies: ["ObjcSupport"]),
+            name: "AssetCatalogParser",
+            dependencies: ["ObjcSupport"],
+            linkerSettings: [
+              .unsafeFlags([
+                "-F", "/System/Library/PrivateFrameworks",
+                "-framework", "CoreUI",
+              ])
+            ]),
         .target(name: "ObjcSupport"),
+        .testTarget(
+          name: "AssetCatalogParserTests",
+          dependencies: ["AssetCatalogParser"],
+          resources: [
+            .copy("Resources")
+          ])
     ]
 )

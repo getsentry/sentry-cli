@@ -31,23 +31,8 @@ struct AssetCatalogEntry: Encodable {
     let type: AssetType?
 }
 
-func createResultsPath(assetPath: URL) -> URL {
-    var archiveURL = assetPath
-    var tailComponents: [String] = []
-    while archiveURL.pathExtension != "xcarchive" {
-        tailComponents.insert(archiveURL.lastPathComponent, at: 0)
-        archiveURL.deleteLastPathComponent()
-    }
-    let parsedRoot = archiveURL.appendingPathComponent("ParsedAssets",
-                                                       isDirectory: true)
-    let destDir = tailComponents
-        .dropLast()
-        .reduce(parsedRoot) { partial, next in
-            partial.appendingPathComponent(next, isDirectory: true)
-        }
-    try! FileManager.default.createDirectory(at: destDir,
-                                             withIntermediateDirectories: true)
-    return destDir
+enum Error: Swift.Error {
+  case pathError
 }
 
 typealias objectiveCMethodImp = @convention(c) (AnyObject, Selector, UnsafeRawPointer) -> Unmanaged<
@@ -55,7 +40,29 @@ typealias objectiveCMethodImp = @convention(c) (AnyObject, Selector, UnsafeRawPo
 >?
 
 enum AssetUtil {
-    static func disect(file: URL) {
+    private static func createResultsPath(assetPath: URL) throws -> URL {
+        var archiveURL = assetPath
+        var tailComponents: [String] = []
+        while archiveURL.pathExtension != "xcarchive" && archiveURL.pathComponents.count > 1 {
+            tailComponents.insert(archiveURL.lastPathComponent, at: 0)
+            archiveURL.deleteLastPathComponent()
+        }
+        if archiveURL.pathExtension != "xcarchive" {
+            throw Error.pathError
+        }
+        let parsedRoot = archiveURL.appendingPathComponent("ParsedAssets",
+                                                           isDirectory: true)
+        let destDir = tailComponents
+            .dropLast()
+            .reduce(parsedRoot) { partial, next in
+                partial.appendingPathComponent(next, isDirectory: true)
+            }
+        try! FileManager.default.createDirectory(at: destDir,
+                                                 withIntermediateDirectories: true)
+        return destDir
+    }
+
+    @discardableResult static func disect(file: URL) -> [AssetCatalogEntry] {
         var assets: [AssetCatalogEntry] = []
         var colorLength: UInt = 0
         var colorCount = 0
@@ -139,7 +146,7 @@ enum AssetUtil {
         ))
 
         let data = try! JSONEncoder().encode(assets)
-        let folder = createResultsPath(assetPath: file)
+        let folder = try! createResultsPath(assetPath: file)
         let url = folder
             .appendingPathComponent("Assets")
             .appendingPathExtension("json")
@@ -162,6 +169,7 @@ enum AssetUtil {
             CGImageDestinationAddImage(dest, cgImage, nil)
             CGImageDestinationFinalize(dest)
         }
+        return assets
     }
 
     private static func initializeCatalog(from file: URL) -> (
@@ -172,12 +180,12 @@ enum AssetUtil {
             catalogClass.perform(Selector(("alloc"))).takeRetainedValue() as! NSObject
         catalog =
             catalog.perform(Selector(("initWithURL:error:")), with: file as NSURL, with: nil)
-                .takeRetainedValue() as! NSObject
+                .takeUnretainedValue() as! NSObject
         let structuredThemeStore =
-            catalog.perform(Selector(("_themeStore"))).takeRetainedValue() as! NSObject
-        let assetStorage = structuredThemeStore.perform(Selector(("themeStore"))).takeRetainedValue()
+            catalog.perform(Selector(("_themeStore"))).takeUnretainedValue() as! NSObject
+        let assetStorage = structuredThemeStore.perform(Selector(("themeStore"))).takeUnretainedValue()
         let assetKeys =
-            assetStorage.perform(Selector(("allAssetKeys"))).takeRetainedValue() as! [NSObject]
+            assetStorage.perform(Selector(("allAssetKeys"))).takeUnretainedValue() as! [NSObject]
         return (structuredThemeStore, assetKeys)
     }
 
@@ -187,7 +195,7 @@ enum AssetUtil {
         let renditionWithKeySelector = Selector(("renditionWithKey:"))
         let renditionWithKeyMethod = themeStore.method(for: renditionWithKeySelector)!
         let renditionWithKeyImp = unsafeBitCast(renditionWithKeyMethod, to: objectiveCMethodImp.self)
-        return renditionWithKeyImp(themeStore, renditionWithKeySelector, keyList)!.takeRetainedValue()
+        return renditionWithKeyImp(themeStore, renditionWithKeySelector, keyList)!.takeUnretainedValue()
             as! NSObject
     }
 

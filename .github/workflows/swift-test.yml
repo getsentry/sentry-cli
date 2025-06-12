@@ -1,0 +1,19 @@
+name: Swift Test
+
+on:
+  push:
+    branches:
+      - master
+      - release/**
+
+  pull_request:
+
+jobs:
+  run-tests:
+    runs-on: macos-15
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Run tests
+        working-directory: native/swift/AssetCatalogParser
+        run: swift test
