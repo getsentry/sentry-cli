@@ -6,10 +6,6 @@ version = "2.46.0"
 edition = "2021"
 rust-version = "1.86"
 
-[build-dependencies]
-cc = "1.0"
-objc = "0.2"
-
 [dependencies]
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }

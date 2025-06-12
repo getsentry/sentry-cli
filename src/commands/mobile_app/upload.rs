@@ -1,12 +1,13 @@
+use std::borrow::Cow;
+use std::io::Write;
+use std::path::Path;
+
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use indicatif::ProgressStyle;
 use itertools::Itertools;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
-use std::borrow::Cow;
-use std::io::Write;
-use std::path::Path;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
@@ -17,7 +18,9 @@ use crate::utils::args::ArgExt;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, handle_asset_catalogs, is_apple_app};
+use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, is_apple_app};
+#[cfg(target_os = "macos")]
+use crate::utils::mobile_app::handle_asset_catalogs;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -75,6 +78,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
 
+        #[cfg(target_os = "macos")]
         if is_apple_app(path) {
             handle_asset_catalogs(path);
         }

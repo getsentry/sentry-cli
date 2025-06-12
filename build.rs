@@ -31,56 +31,55 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=build.rs\n");
 
     if platform == "darwin" {
-        println!("cargo:rerun-if-changed=src/apple/AssetCatalogReader.swift");
-        println!("cargo:rerun-if-changed=src/apple/safeValueForKey.h");
-        println!("cargo:rerun-if-changed=src/apple/safeValueForKey.m");
-        // Compile Objective-C
-        let status = Command::new("clang")
+        println!("cargo:rerun-if-changed=native/swift/AssetCatalogParser");
+
+        env::set_current_dir("native/swift/AssetCatalogParser")
+            .expect("Failed to change to AssetCatalogParser directory");
+
+        let target_dir = "../../../target/swift-bridge";
+
+        let _ = std::fs::remove_dir_all(".build");
+        let _ = std::fs::remove_file(format!("{}/libswiftbridge.a", target_dir));
+
+        let status = Command::new("swift")
             .args([
-                "src/apple/safeValueForKey.m",
+                "build",
                 "-c",
-                "-o",
-                "safeValueForKey.o",
-                "-fobjc-arc",
-                "-arch",
-                "x86_64",
-                "-arch",
-                "arm64",
+                "release",
+                "--triple",
+                &format!("{}-apple-macosx11", arch),
             ])
             .status()
-            .expect("Failed to compile Objective-C");
+            .expect("Failed to compile SPM");
 
-        assert!(status.success(), "clang failed");
+        assert!(status.success(), "swift build failed");
 
-        // Compile Swift and link ObjC
-        let status = Command::new("swiftc")
+        let target_dir = "../../../target/swift-bridge";
+
+        std::fs::create_dir_all(target_dir)
+            .expect("Failed to create target/swift-bridge directory");
+
+        let status = Command::new("ar")
             .args([
-                "-emit-library",
-                "-static",
-                "-o",
-                "libswiftbridge.a",
-                "src/apple/AssetCatalogReader.swift",
-                "safeValueForKey.o",
-                "-import-objc-header",
-                "src/apple/safeValueForKey.h",
-                "-target",
-                "x86_64-apple-macosx11",
-                "-target",
-                "arm64-apple-macosx11",
+                "crus",
+                &format!("{}/libswiftbridge.a", target_dir),
+                ".build/release/AssetCatalogParser.build/AssetCatalogReader.swift.o",
+                ".build/release/ObjcSupport.build/safeValueForKey.m.o",
             ])
             .status()
-            .expect("Failed to compile Swift");
+            .expect("Failed to create static library");
 
-        assert!(status.success(), "swiftc failed");
+        assert!(status.success(), "ar failed");
 
-        println!("cargo:rustc-link-search=native=.");
+        env::set_current_dir("../../../").expect("Failed to change back to original directory");
+
+        println!("cargo:rustc-link-search=native=target/swift-bridge");
         println!("cargo:rustc-link-lib=static=swiftbridge");
 
         println!("cargo:rustc-link-arg=-F");
         println!("cargo:rustc-link-arg=/System/Library/PrivateFrameworks");
         println!("cargo:rustc-link-lib=framework=CoreUI");
 
-        // Get the developer directory and platform name
         let developer_dir = Command::new("xcode-select")
             .args(["-p"])
             .output()

@@ -1,3 +1,9 @@
+import CoreGraphics
+import Foundation
+import ImageIO
+import UniformTypeIdentifiers
+import ObjcSupport
+
 @_cdecl("swift_inspect_asset_catalog")
 public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>) {
     let pathString = String(cString: path)
@@ -8,12 +14,7 @@ public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>) {
     }
 }
 
-import CoreGraphics
-import Foundation
-import ImageIO
-import UniformTypeIdentifiers
-
-public enum AssetType: Int, Encodable {
+enum AssetType: Int, Encodable {
     case image
     case icon
     case imageSet
