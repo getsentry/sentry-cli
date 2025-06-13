@@ -358,23 +358,6 @@ fn chunk_upload_two_files() {
 }
 
 #[test]
-fn force_legacy_upload() {
-    // Test that setting SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD=0 forces legacy upload
-    TestManager::new()
-        .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/files/dsyms/")
-                .with_response_body("[]"),
-        )
-        .assert_cmd([
-            "upload-proguard",
-            "tests/integration/_fixtures/upload_proguard/mapping.txt",
-        ])
-        .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "0")
-        .run_and_assert(AssertCommand::Success)
-}
-
-#[test]
 fn chunk_upload_not_supported_for_proguard() {
     // Test that when server supports chunk uploads but not for Proguard, it falls back to legacy
     TestManager::new()

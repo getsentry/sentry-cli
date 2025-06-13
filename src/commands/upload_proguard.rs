@@ -1,4 +1,3 @@
-use std::env;
 use std::io;
 
 use anyhow::{bail, Error, Result};
@@ -19,8 +18,6 @@ use crate::utils::proguard;
 use crate::utils::proguard::ProguardMapping;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
-
-const CHUNK_UPLOAD_ENV_VAR: &str = "SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD";
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -182,9 +179,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let config = Config::current();
 
-    // Check if we should use the legacy upload method
-    let force_legacy_upload = env::var(CHUNK_UPLOAD_ENV_VAR) == Ok("0".into());
-
     // Handle the no-upload case first
     if matches.get_flag("no_upload") {
         if mappings.is_empty() && matches.get_flag("require_one") {
@@ -204,87 +198,50 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     // Check if the server supports chunk uploads for Proguard files
-    if !force_legacy_upload {
-        let authenticated_api = api.authenticated()?;
-        let (org, project) = config.get_org_and_project(matches)?;
+    let authenticated_api = api.authenticated()?;
+    let (org, project) = config.get_org_and_project(matches)?;
 
-        if let Ok(Some(chunk_upload_options)) = authenticated_api.get_chunk_upload_options(&org) {
-            if chunk_upload_options.supports(ChunkUploadCapability::Proguard) {
-                // Use chunk upload when the server supports it
-                log::info!("Using chunk upload for Proguard mappings");
-                proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
-            } else {
-                // Fall back to legacy upload when chunk upload is not supported for Proguard
-                log::info!("Server does not support chunk upload for Proguard files, using legacy upload method");
-                upload_legacy(&mappings, matches, &config, &api)?;
-            }
+    if let Ok(Some(chunk_upload_options)) = authenticated_api.get_chunk_upload_options(&org) {
+        if chunk_upload_options.supports(ChunkUploadCapability::Proguard) {
+            // Use chunk upload when the server supports it
+            log::info!("Using chunk upload for Proguard mappings");
+            proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
         } else {
-            // Fall back to legacy upload when chunk upload is not available at all
-            log::info!("Chunk upload not available, using legacy upload method");
+            // Fall back to legacy upload when chunk upload is not supported for Proguard
+            log::info!("Server does not support chunk upload for Proguard files, using legacy upload method");
             upload_legacy(&mappings, matches, &config, &api)?;
         }
-
-        // Handle association if needed (for chunk upload path)
-        if let Some(app_id) = matches.get_one::<String>("app_id") {
-            #[expect(clippy::unwrap_used, reason = "legacy code")]
-            let version = matches.get_one::<String>("version").unwrap().to_owned();
-            let build: Option<String> = matches.get_one::<String>("version_code").cloned();
-
-            let mut release_name = app_id.to_owned();
-            release_name.push('@');
-            release_name.push_str(&version);
-
-            if let Some(build_str) = build {
-                release_name.push('+');
-                release_name.push_str(&build_str);
-            }
-
-            for mapping in &mappings {
-                let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
-                authenticated_api.associate_proguard_mappings(
-                    &org,
-                    &project,
-                    &AssociateProguard {
-                        release_name: release_name.to_owned(),
-                        proguard_uuid: uuid.to_string(),
-                    },
-                )?;
-            }
-        }
     } else {
-        // Force legacy upload was requested
-        log::info!("Using legacy upload method (forced via environment variable)");
+        // Fall back to legacy upload when chunk upload is not available at all
+        log::info!("Chunk upload not available, using legacy upload method");
         upload_legacy(&mappings, matches, &config, &api)?;
+    }
 
-        // Handle association if needed (for legacy upload path)
-        if let Some(app_id) = matches.get_one::<String>("app_id") {
-            let authenticated_api = api.authenticated()?;
-            let (org, project) = config.get_org_and_project(matches)?;
-            
-            #[expect(clippy::unwrap_used, reason = "legacy code")]
-            let version = matches.get_one::<String>("version").unwrap().to_owned();
-            let build: Option<String> = matches.get_one::<String>("version_code").cloned();
+    // Handle association if needed (for chunk upload path)
+    if let Some(app_id) = matches.get_one::<String>("app_id") {
+        #[expect(clippy::unwrap_used, reason = "legacy code")]
+        let version = matches.get_one::<String>("version").unwrap().to_owned();
+        let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
-            let mut release_name = app_id.to_owned();
-            release_name.push('@');
-            release_name.push_str(&version);
+        let mut release_name = app_id.to_owned();
+        release_name.push('@');
+        release_name.push_str(&version);
 
-            if let Some(build_str) = build {
-                release_name.push('+');
-                release_name.push_str(&build_str);
-            }
+        if let Some(build_str) = build {
+            release_name.push('+');
+            release_name.push_str(&build_str);
+        }
 
-            for mapping in &mappings {
-                let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
-                authenticated_api.associate_proguard_mappings(
-                    &org,
-                    &project,
-                    &AssociateProguard {
-                        release_name: release_name.to_owned(),
-                        proguard_uuid: uuid.to_string(),
-                    },
-                )?;
-            }
+        for mapping in &mappings {
+            let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
+            authenticated_api.associate_proguard_mappings(
+                &org,
+                &project,
+                &AssociateProguard {
+                    release_name: release_name.to_owned(),
+                    proguard_uuid: uuid.to_string(),
+                },
+            )?;
         }
     }
 
