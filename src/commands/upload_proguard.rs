@@ -10,6 +10,7 @@ use uuid::Uuid;
 
 use crate::api::Api;
 use crate::api::AssociateProguard;
+use crate::api::ChunkUploadCapability;
 use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt;
@@ -181,56 +182,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let config = Config::current();
 
-    // Don't initialize these until we confirm the user did not pass the --no-upload flag,
-    // or if we are using chunked uploading. This is because auth token, org, and project
-    // are not needed for the no-upload case.
-    let authenticated_api;
-    let (org, project);
+    // Check if we should use the legacy upload method
+    let force_legacy_upload = env::var(CHUNK_UPLOAD_ENV_VAR) == Ok("0".into());
 
-    if env::var(CHUNK_UPLOAD_ENV_VAR) == Ok("1".into()) {
-        log::warn!(
-            "EXPERIMENTAL FEATURE: Uploading proguard mappings using chunked uploading. \
-             Some functionality may be unavailable when using chunked uploading. Please unset \
-             the {CHUNK_UPLOAD_ENV_VAR} variable if you encounter any \
-             problems."
-        );
-
-        authenticated_api = api.authenticated()?;
-        (org, project) = config.get_org_and_project(matches)?;
-
-        let chunk_upload_options = authenticated_api
-            .get_chunk_upload_options(&org)
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|options| {
-                options.ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "server does not support chunked uploading. unset \
-                         {CHUNK_UPLOAD_ENV_VAR} to continue."
-                    )
-                })
-            })?;
-
-        proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
-    } else {
+    // Handle the no-upload case first
+    if matches.get_flag("no_upload") {
         if mappings.is_empty() && matches.get_flag("require_one") {
             println!();
             eprintln!("{}", style("error: found no mapping files to upload").red());
             return Err(QuietExit(1).into());
-        }
-
-        println!("{} compressing mappings", style(">").dim());
-        let tf = TempFile::create()?;
-        {
-            let mut zip = zip::ZipWriter::new(tf.open()?);
-            for mapping in &mappings {
-                let pb = make_byte_progress_bar(mapping.len() as u64);
-                zip.start_file(
-                    format!("proguard/{}.txt", mapping.uuid()),
-                    zip::write::SimpleFileOptions::default(),
-                )?;
-                copy_with_progress(&pb, &mut mapping.as_ref(), &mut zip)?;
-                pb.finish_and_clear();
-            }
         }
 
         // write UUIDs into the mapping file.
@@ -239,57 +199,153 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             dump_proguard_uuids_as_properties(p, &uuids)?;
         }
 
-        if matches.get_flag("no_upload") {
-            println!("{} skipping upload.", style(">").dim());
-            return Ok(());
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(());
+    }
+
+    // Check if the server supports chunk uploads for Proguard files
+    if !force_legacy_upload {
+        let authenticated_api = api.authenticated()?;
+        let (org, project) = config.get_org_and_project(matches)?;
+
+        if let Ok(Some(chunk_upload_options)) = authenticated_api.get_chunk_upload_options(&org) {
+            if chunk_upload_options.supports(ChunkUploadCapability::Proguard) {
+                // Use chunk upload when the server supports it
+                log::info!("Using chunk upload for Proguard mappings");
+                proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
+            } else {
+                // Fall back to legacy upload when chunk upload is not supported for Proguard
+                log::info!("Server does not support chunk upload for Proguard files, using legacy upload method");
+                upload_legacy(&mappings, matches, &config, &api)?;
+            }
+        } else {
+            // Fall back to legacy upload when chunk upload is not available at all
+            log::info!("Chunk upload not available, using legacy upload method");
+            upload_legacy(&mappings, matches, &config, &api)?;
         }
 
-        println!("{} uploading mappings", style(">").dim());
-        (org, project) = config.get_org_and_project(matches)?;
+        // Handle association if needed (for chunk upload path)
+        if let Some(app_id) = matches.get_one::<String>("app_id") {
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
+            let version = matches.get_one::<String>("version").unwrap().to_owned();
+            let build: Option<String> = matches.get_one::<String>("version_code").cloned();
 
-        authenticated_api = api.authenticated()?;
+            let mut release_name = app_id.to_owned();
+            release_name.push('@');
+            release_name.push_str(&version);
 
-        let rv = authenticated_api
-            .region_specific(&org)
-            .upload_dif_archive(&project, tf.path())?;
-        println!(
-            "{} Uploaded a total of {} new mapping files",
-            style(">").dim(),
-            style(rv.len()).yellow()
-        );
-        if !rv.is_empty() {
-            println!("Newly uploaded debug symbols:");
-            for df in rv {
-                println!("  {}", style(&df.id()).dim());
+            if let Some(build_str) = build {
+                release_name.push('+');
+                release_name.push_str(&build_str);
+            }
+
+            for mapping in &mappings {
+                let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
+                authenticated_api.associate_proguard_mappings(
+                    &org,
+                    &project,
+                    &AssociateProguard {
+                        release_name: release_name.to_owned(),
+                        proguard_uuid: uuid.to_string(),
+                    },
+                )?;
+            }
+        }
+    } else {
+        // Force legacy upload was requested
+        log::info!("Using legacy upload method (forced via environment variable)");
+        upload_legacy(&mappings, matches, &config, &api)?;
+
+        // Handle association if needed (for legacy upload path)
+        if let Some(app_id) = matches.get_one::<String>("app_id") {
+            let authenticated_api = api.authenticated()?;
+            let (org, project) = config.get_org_and_project(matches)?;
+            
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
+            let version = matches.get_one::<String>("version").unwrap().to_owned();
+            let build: Option<String> = matches.get_one::<String>("version_code").cloned();
+
+            let mut release_name = app_id.to_owned();
+            release_name.push('@');
+            release_name.push_str(&version);
+
+            if let Some(build_str) = build {
+                release_name.push('+');
+                release_name.push_str(&build_str);
+            }
+
+            for mapping in &mappings {
+                let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
+                authenticated_api.associate_proguard_mappings(
+                    &org,
+                    &project,
+                    &AssociateProguard {
+                        release_name: release_name.to_owned(),
+                        proguard_uuid: uuid.to_string(),
+                    },
+                )?;
             }
         }
     }
 
-    // if values are given associate
-    if let Some(app_id) = matches.get_one::<String>("app_id") {
-        #[expect(clippy::unwrap_used, reason = "legacy code")]
-        let version = matches.get_one::<String>("version").unwrap().to_owned();
-        let build: Option<String> = matches.get_one::<String>("version_code").cloned();
+    Ok(())
+}
 
-        let mut release_name = app_id.to_owned();
-        release_name.push('@');
-        release_name.push_str(&version);
+fn upload_legacy(
+    mappings: &[ProguardMapping],
+    matches: &ArgMatches,
+    config: &Config,
+    api: &Api,
+) -> Result<()> {
+    if mappings.is_empty() && matches.get_flag("require_one") {
+        println!();
+        eprintln!("{}", style("error: found no mapping files to upload").red());
+        return Err(QuietExit(1).into());
+    }
 
-        if let Some(build_str) = build {
-            release_name.push('+');
-            release_name.push_str(&build_str);
-        }
-
-        for mapping in &mappings {
-            let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
-            authenticated_api.associate_proguard_mappings(
-                &org,
-                &project,
-                &AssociateProguard {
-                    release_name: release_name.to_owned(),
-                    proguard_uuid: uuid.to_string(),
-                },
+    println!("{} compressing mappings", style(">").dim());
+    let tf = TempFile::create()?;
+    {
+        let mut zip = zip::ZipWriter::new(tf.open()?);
+        for mapping in mappings {
+            let pb = make_byte_progress_bar(mapping.len() as u64);
+            zip.start_file(
+                format!("proguard/{}.txt", mapping.uuid()),
+                zip::write::SimpleFileOptions::default(),
             )?;
+            copy_with_progress(&pb, &mut mapping.as_ref(), &mut zip)?;
+            pb.finish_and_clear();
+        }
+    }
+
+    // write UUIDs into the mapping file.
+    if let Some(p) = matches.get_one::<String>("write_properties") {
+        let uuids: Vec<_> = mappings.iter().map(|x| x.uuid()).collect();
+        dump_proguard_uuids_as_properties(p, &uuids)?;
+    }
+
+    if matches.get_flag("no_upload") {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(());
+    }
+
+    println!("{} uploading mappings", style(">").dim());
+    let (org, project) = config.get_org_and_project(matches)?;
+
+    let authenticated_api = api.authenticated()?;
+
+    let rv = authenticated_api
+        .region_specific(&org)
+        .upload_dif_archive(&project, tf.path())?;
+    println!(
+        "{} Uploaded a total of {} new mapping files",
+        style(">").dim(),
+        style(rv.len()).yellow()
+    );
+    if !rv.is_empty() {
+        println!("Newly uploaded debug symbols:");
+        for df in rv {
+            println!("  {}", style(&df.id()).dim());
         }
     }
 

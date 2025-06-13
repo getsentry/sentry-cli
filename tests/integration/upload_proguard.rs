@@ -72,7 +72,6 @@ fn chunk_upload_already_there() {
             "tests/integration/_fixtures/upload_proguard/mapping.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
         .run_and_assert(AssertCommand::Success)
 }
 
@@ -190,7 +189,6 @@ fn chunk_upload_needs_upload() {
             "tests/integration/_fixtures/upload_proguard/mapping.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
         .run_and_assert(AssertCommand::Success)
 }
 
@@ -356,6 +354,54 @@ fn chunk_upload_two_files() {
             "tests/integration/_fixtures/upload_proguard/mapping-2.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
+        .run_and_assert(AssertCommand::Success)
+}
+
+#[test]
+fn force_legacy_upload() {
+    // Test that setting SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD=0 forces legacy upload
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/files/dsyms/")
+                .with_response_body("[]"),
+        )
+        .assert_cmd([
+            "upload-proguard",
+            "tests/integration/_fixtures/upload_proguard/mapping.txt",
+        ])
+        .with_default_token()
+        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "0")
+        .run_and_assert(AssertCommand::Success)
+}
+
+#[test]
+fn chunk_upload_not_supported_for_proguard() {
+    // Test that when server supports chunk uploads but not for Proguard, it falls back to legacy
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_body(
+                    r#"{
+                        "url": "organizations/wat-org/chunk-upload/",
+                        "chunkSize": 8388608,
+                        "chunksPerRequest": 64,
+                        "maxFileSize": 2147483648,
+                        "maxRequestSize": 33554432,
+                        "concurrency": 8,
+                        "hashAlgorithm": "sha1",
+                        "compression": ["gzip"],
+                        "accept": ["debug_files", "release_files"]
+                    }"#,
+                ),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/files/dsyms/")
+                .with_response_body("[]"),
+        )
+        .assert_cmd([
+            "upload-proguard",
+            "tests/integration/_fixtures/upload_proguard/mapping.txt",
+        ])
+        .with_default_token()
         .run_and_assert(AssertCommand::Success)
 }
