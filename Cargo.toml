@@ -6,6 +6,11 @@ version = "2.46.0"
 edition = "2021"
 rust-version = "1.86"
 
+[workspace]
+members = [
+    "crates/sentry-cli-apple"
+]
+
 [dependencies]
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }
@@ -102,6 +107,7 @@ unwrap-used = "warn"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 mac-process-info = "0.2.0"
+sentry-cli-apple = { path = "crates/sentry-cli-apple" }
 
 [target."cfg(unix)"]
 

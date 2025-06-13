@@ -31,46 +31,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("cargo:rerun-if-changed=build.rs\n");
 
     if platform == "darwin" {
-        println!("cargo:rerun-if-changed=native/swift/AssetCatalogParser");
-
-        let status = Command::new("swift")
-            .args([
-                "build",
-                "-c",
-                "release",
-                "--package-path",
-                "native/swift/AssetCatalogParser",
-                "--scratch-path",
-                &format!("{}/swift-scratch", out_dir),
-                "--triple",
-                &format!("{}-apple-macosx11", arch),
-            ])
-            .status()
-            .expect("Failed to compile SPM");
-
-        assert!(status.success(), "swift build failed");
-
-        let status = Command::new("ar")
-            .args([
-                "crus",
-                &format!("{}/libswiftbridge.a", out_dir),
-                &format!(
-                    "{}/swift-scratch/release/AssetCatalogParser.build/AssetCatalogReader.swift.o",
-                    out_dir
-                ),
-                &format!(
-                    "{}/swift-scratch/release/ObjcSupport.build/safeValueForKey.m.o",
-                    out_dir
-                ),
-            ])
-            .status()
-            .expect("Failed to create static library");
-
-        assert!(status.success(), "ar failed");
-
-        println!("cargo:rustc-link-search=native={}", out_dir);
-        println!("cargo:rustc-link-lib=static=swiftbridge");
-
         println!("cargo:rustc-link-arg=-F");
         println!("cargo:rustc-link-arg=/System/Library/PrivateFrameworks");
         println!("cargo:rustc-link-lib=framework=CoreUI");
@@ -85,8 +45,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             .to_string();
         println!("cargo:rustc-link-arg=-L");
         println!(
-            "cargo:rustc-link-arg={}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx",
-            developer_dir_path
+            "cargo:rustc-link-arg={developer_dir_path}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"
         );
     }
 
