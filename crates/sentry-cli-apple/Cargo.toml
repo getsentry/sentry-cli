@@ -1,0 +1,5 @@
+[package]
+name = "sentry-cli-apple"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
