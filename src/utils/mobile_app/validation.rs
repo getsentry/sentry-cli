@@ -1,5 +1,6 @@
-use anyhow::Result;
 use std::path::Path;
+
+use anyhow::Result;
 
 pub fn is_zip_file(bytes: &[u8]) -> bool {
     if bytes.len() < 4 {

@@ -8,7 +8,13 @@ import ObjcSupport
 public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>) {
     let pathString = String(cString: path)
     if #available(macOS 13.0, *) {
-        AssetUtil.disect(file: URL(filePath: pathString))
+        let supportedVersions = [13, 14, 15]
+        let version = ProcessInfo.processInfo.operatingSystemVersion
+        if supportedVersions.contains(version.majorVersion) {
+            AssetUtil.disect(file: URL(filePath: pathString))
+        } else {
+            print("Skipping asset catalog inspection on unsupported macOS version \(version)")
+        }
     } else {
         print("Skipping asset catalog inspection on macOS earlier than 13.0")
     }

@@ -33,19 +33,15 @@ fn main() -> Result<(), Box<dyn Error>> {
     if platform == "darwin" {
         println!("cargo:rerun-if-changed=native/swift/AssetCatalogParser");
 
-        env::set_current_dir("native/swift/AssetCatalogParser")
-            .expect("Failed to change to AssetCatalogParser directory");
-
-        let target_dir = "../../../target/swift-bridge";
-
-        let _ = std::fs::remove_dir_all(".build");
-        let _ = std::fs::remove_file(format!("{}/libswiftbridge.a", target_dir));
-
         let status = Command::new("swift")
             .args([
                 "build",
                 "-c",
                 "release",
+                "--package-path",
+                "native/swift/AssetCatalogParser",
+                "--scratch-path",
+                &format!("{}/swift-scratch", out_dir),
                 "--triple",
                 &format!("{}-apple-macosx11", arch),
             ])
@@ -54,26 +50,25 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         assert!(status.success(), "swift build failed");
 
-        let target_dir = "../../../target/swift-bridge";
-
-        std::fs::create_dir_all(target_dir)
-            .expect("Failed to create target/swift-bridge directory");
-
         let status = Command::new("ar")
             .args([
                 "crus",
-                &format!("{}/libswiftbridge.a", target_dir),
-                ".build/release/AssetCatalogParser.build/AssetCatalogReader.swift.o",
-                ".build/release/ObjcSupport.build/safeValueForKey.m.o",
+                &format!("{}/libswiftbridge.a", out_dir),
+                &format!(
+                    "{}/swift-scratch/release/AssetCatalogParser.build/AssetCatalogReader.swift.o",
+                    out_dir
+                ),
+                &format!(
+                    "{}/swift-scratch/release/ObjcSupport.build/safeValueForKey.m.o",
+                    out_dir
+                ),
             ])
             .status()
             .expect("Failed to create static library");
 
         assert!(status.success(), "ar failed");
 
-        env::set_current_dir("../../../").expect("Failed to change back to original directory");
-
-        println!("cargo:rustc-link-search=native=target/swift-bridge");
+        println!("cargo:rustc-link-search=native={}", out_dir);
         println!("cargo:rustc-link-lib=static=swiftbridge");
 
         println!("cargo:rustc-link-arg=-F");
@@ -84,7 +79,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             .args(["-p"])
             .output()
             .expect("Failed to get developer directory");
-        let developer_dir_path = String::from_utf8_lossy(&developer_dir.stdout)
+        let developer_dir_path = String::from_utf8(developer_dir.stdout)
+            .expect("Failed to convert developer directory to UTF-8")
             .trim()
             .to_string();
         println!("cargo:rustc-link-arg=-L");
