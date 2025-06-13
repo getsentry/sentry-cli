@@ -25,7 +25,7 @@ Fastlane tools.
 
 ## Installation
 
-If you are on OS X or Linux, you can use the automated downloader which will fetch the latest release version for you and install it:
+If you are on macOS or Linux, you can use the automated downloader which will fetch the latest release version for you and install it:
 
     curl -sL https://sentry.io/get-cli/ | bash
 
