@@ -1,6 +1,7 @@
 **
 
 !src/
+!crates/
 !Cargo.lock
 !Cargo.toml
 !build.rs
