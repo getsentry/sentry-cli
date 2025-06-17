@@ -7,9 +7,6 @@ edition = "2021"
 rust-version = "1.86"
 
 [workspace]
-members = [
-    "crates/sentry-cli-apple"
-]
 
 [dependencies]
 anylog = "0.6.3"
@@ -96,7 +93,7 @@ default = []
 managed = []
 with_crash_reporting = []
 
-[lints.clippy]
+[workspace.lints.clippy]
 allow-attributes = "warn"
 unnecessary-wraps = "warn"
 unwrap-used = "warn"
