@@ -18,7 +18,9 @@ use crate::utils::args::ArgExt;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_xcarchive_directory, is_zip_file};
+use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, is_apple_app};
+#[cfg(target_os = "macos")]
+use crate::utils::mobile_app::handle_asset_catalogs;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -75,6 +77,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
+
+        #[cfg(target_os = "macos")]
+        if is_apple_app(path) {
+            handle_asset_catalogs(path);
+        }
 
         validate_is_mobile_app(path, &byteview)?;
 
@@ -159,8 +166,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating mobile app format for: {}", path.display());
 
-    // Check for XCArchive (directory) first
-    if path.is_dir() && is_xcarchive_directory(path) {
+    if is_apple_app(path) {
         debug!("Detected XCArchive directory");
         return Ok(());
     }

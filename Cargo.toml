@@ -91,7 +91,7 @@ default = []
 managed = []
 with_crash_reporting = []
 
-[lints.clippy]
+[workspace.lints.clippy]
 allow-attributes = "warn"
 unnecessary-wraps = "warn"
 unwrap-used = "warn"
@@ -102,6 +102,7 @@ unwrap-used = "warn"
 
 [target."cfg(target_os = \"macos\")".dependencies]
 mac-process-info = "0.2.0"
+apple-catalog-parsing = { path = "apple-catalog-parsing" }
 
 [target."cfg(unix)"]
 

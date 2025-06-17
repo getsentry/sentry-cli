@@ -1,0 +1,10 @@
+[package]
+name = "apple-catalog-parsing"
+edition = "2021"
+build = "build.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+thiserror = "1.0.38"
