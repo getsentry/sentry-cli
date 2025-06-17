@@ -145,6 +145,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "apple-catalog-parsing"
+version = "0.0.0"
+dependencies = [
+ "thiserror 1.0.61",
+]
+
+[[package]]
 name = "arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2689,6 +2696,7 @@ version = "2.46.0"
 dependencies = [
  "anyhow",
  "anylog",
+ "apple-catalog-parsing",
  "assert_cmd",
  "backoff",
  "brotli2",
@@ -2734,7 +2742,6 @@ dependencies = [
  "secrecy",
  "semver",
  "sentry",
- "sentry-cli-apple",
  "serde",
  "serde_json",
  "sha1_smol",
@@ -2751,10 +2758,6 @@ dependencies = [
  "windows-sys 0.59.0",
  "zip",
 ]
-
-[[package]]
-name = "sentry-cli-apple"
-version = "0.1.0"
 
 [[package]]
 name = "sentry-contexts"

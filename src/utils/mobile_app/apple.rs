@@ -1,15 +1,15 @@
 use std::path::{Path, PathBuf};
 
-#[cfg(target_os = "macos")]
-use sentry_cli_apple;
+use apple_catalog_parsing;
 use walkdir::WalkDir;
 
-#[cfg(target_os = "macos")]
 pub fn handle_asset_catalogs(path: &Path) {
     // Find all asset catalogs
     let cars = find_car_files(path);
     for car in &cars {
-        sentry_cli_apple::inspect_asset_catalog(car);
+        if let Err(e) = apple_catalog_parsing::inspect_asset_catalog(car) {
+            eprintln!("Failed to inspect asset catalog {}: {}", car.display(), e);
+        }
     }
 }
 
