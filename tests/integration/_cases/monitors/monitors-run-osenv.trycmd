@@ -1,5 +1,5 @@
 ```
-$ sentry-cli monitors run foo-monitor -- sh -c 'env | sort | grep -E "SENTRY_MONITOR_SLUG"'
+$ sentry-cli monitors run foo-monitor -- sh -c 'env | sort | GREP_OPTIONS="" grep -E "SENTRY_MONITOR_SLUG"'
 ? success
 SENTRY_MONITOR_SLUG=foo-monitor
 
