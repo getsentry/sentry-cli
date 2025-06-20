@@ -282,11 +282,17 @@ function getPath() {
  * @param {string[]} args Command line arguments passed to `sentry-cli`.
  * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
  * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
+ * @param {boolean} silentLogs Show only errors and success messages, hide verbose logs
  * @param {string} [configFile] Relative or absolute path to the configuration file.
  * @param {Object} [config] More configuration to pass to the CLI
  * @returns {Promise.<string>} A promise that resolves to the standard output.
  */
-async function execute(args, live, silent, configFile, config = {}) {
+async function execute(args, live, silent, silentLogs, configFile, config = {}) {
+  // Ensure silent takes precedence over silentLogs
+  if (silent) {
+    silentLogs = false;
+  }
+
   const env = { ...process.env };
   if (configFile) {
     env.SENTRY_PROPERTIES = configFile;
@@ -323,21 +329,58 @@ async function execute(args, live, silent, configFile, config = {}) {
   }
   return new Promise((resolve, reject) => {
     if (live === true) {
-      const output = silent ? 'ignore' : 'inherit';
+      let stdoutMode, stderrMode;
+
+      if (silent) {
+        // Complete silence
+        stdoutMode = 'ignore';
+        stderrMode = 'ignore';
+      } else if (silentLogs) {
+        // Capture stdout to filter it, but show stderr for errors
+        stdoutMode = 'pipe';
+        stderrMode = 'inherit';
+      } else {
+        // Show everything
+        stdoutMode = 'inherit';
+        stderrMode = 'inherit';
+      }
+
       const pid = childProcess.spawn(getPath(), args, {
         env,
         // stdin, stdout, stderr
-        stdio: ['ignore', output, output],
+        stdio: ['ignore', stdoutMode, stderrMode],
       });
-      pid.on('exit', () => {
-        resolve();
-      });
+
+      if (silentLogs) {
+        pid.on('exit', (code) => {
+          if (code === 0) {
+            const successMessage = determineSuccessMessage(args);
+            if (successMessage) {
+              console.info(successMessage);
+            }
+          }
+          // Note: errors are already shown via stderr inherit
+          resolve();
+        });
+      } else {
+        pid.on('exit', () => {
+          resolve();
+        });
+      }
     } else {
       childProcess.execFile(getPath(), args, { env }, (err, stdout) => {
         if (err) {
           reject(err);
         } else {
-          resolve(stdout);
+          if (silentLogs) {
+            const successMessage = determineSuccessMessage(args);
+            if (successMessage) {
+              console.info(successMessage);
+            }
+            resolve('');
+          } else {
+            resolve(silent ? '' : stdout);
+          }
         }
       });
     }
@@ -346,6 +389,84 @@ async function execute(args, live, silent, configFile, config = {}) {
 
 function getProjectFlagsFromOptions({ projects = [] } = {}) {
   return projects.reduce((flags, project) => flags.concat('-p', project), []);
+}
+
+/**
+ * Determines an appropriate success message based on the command.
+ *
+ * @param {string[]} args Command line arguments passed to sentry-cli
+ * @returns {string|null} Success message to display or null if no message needed
+ */
+function determineSuccessMessage(args) {
+  if (!args || args.length === 0) {
+    return null;
+  }
+
+  const command = args[0];
+
+  // Only show success messages for high-impact operations customers care about
+  switch (command) {
+    case 'releases':
+      if (args[1] === 'new' && args[2]) {
+        return `✓ Release ${args[2]} created`;
+      } else if (args[1] === 'finalize' && args[2]) {
+        return `✓ Release ${args[2]} finalized`;
+      } else if (args[1] === 'files' && args[3] === 'upload-sourcemaps' && args[2]) {
+        return `✓ Source maps uploaded to release ${args[2]}`;
+      }
+      break;
+
+    case 'sourcemaps':
+      if (args[1] === 'upload') {
+        return `✓ Source maps uploaded`;
+      } else if (args[1] === 'inject') {
+        return `✓ Source maps injected`;
+      }
+      break;
+
+    case 'debug-files':
+      if (args[1] === 'upload') {
+        return `✓ Debug files uploaded`;
+      }
+      break;
+
+    case 'upload-proguard':
+      return `✓ ProGuard mappings uploaded`;
+
+    case 'upload-dif':
+      return `✓ Debug information files uploaded`;
+
+    case 'upload-dsym':
+      return `✓ dSYM files uploaded`;
+
+    case 'deploys':
+      if (args[1] === 'new') {
+        return `✓ Deploy created`;
+      }
+      break;
+
+    case 'mobile-app':
+      if (args[1] === 'upload') {
+        return `✓ Mobile app uploaded`;
+      }
+      break;
+
+    case 'send-event':
+      return `✓ Event sent`;
+
+    case 'send-envelope':
+      return `✓ Envelope sent`;
+
+    case 'send-metric':
+      return `✓ Metric sent`;
+
+    // Don't show success messages for info/list operations - they show their own output
+    // Don't show for --version, --help - the output is the success
+    default:
+      return null;
+  }
+
+  return null;
 }
 
 module.exports = {
@@ -358,4 +479,5 @@ module.exports = {
   getDistributionForThisPlatform,
   throwUnsupportedPlatformError,
   getFallbackBinaryPath,
+  determineSuccessMessage,
 };
