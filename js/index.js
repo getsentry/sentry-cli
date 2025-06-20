@@ -34,7 +34,11 @@ class SentryCli {
     if (typeof configFile === 'string') {
       this.configFile = configFile;
     }
-    this.options = options || { silent: false };
+    this.options = {
+      silent: false,
+      silentLogs: false,
+      ...options,
+    };
     this.releases = new Releases({ ...this.options, configFile });
   }
 
@@ -65,7 +69,14 @@ class SentryCli {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
-    return helper.execute(args, live, this.options.silent, this.configFile, this.options);
+    return helper.execute(
+      args,
+      live,
+      this.options.silent,
+      this.options.silentLogs,
+      this.configFile,
+      this.options
+    );
   }
 }
 
