@@ -1,8 +1,5 @@
-#[cfg(target_os = "macos")]
 use std::ffi::CString;
-#[cfg(target_os = "macos")]
 use std::os::unix::ffi::OsStrExt;
-#[cfg(target_os = "macos")]
 use std::path::Path;
 use thiserror::Error;
 
@@ -12,7 +9,6 @@ pub enum Error {
     PathConversion(#[from] std::ffi::NulError),
 }
 
-#[cfg(target_os = "macos")]
 extern "C" {
     fn swift_inspect_asset_catalog(msg: *const std::os::raw::c_char);
 }
@@ -23,7 +19,6 @@ extern "C" {
 // as duplicate image detection, xray, and image optimization insights.
 // The path should be in an xcarchive file, results are written
 // to a JSON file in the xcarchive’s ParsedAssets directory.
-#[cfg(target_os = "macos")]
 pub fn inspect_asset_catalog<P>(path: P) -> Result<(), Error>
 where
     P: AsRef<Path>,
