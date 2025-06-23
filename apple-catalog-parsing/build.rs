@@ -6,16 +6,12 @@ fn main() {
     let mut target_bits = target.split('-');
 
     // https://rust-lang.github.io/rfcs/0131-target-specification.html#detailed-design
-    let mut arch = target_bits.next().expect("TARGET triple has an arch");
+    let _arch = target_bits.next().expect("TARGET triple has an arch");
     let _vendor = target_bits.next();
     let platform = target_bits.next().expect("TARGET triple has a platform");
 
     if platform != "darwin" {
         return;
-    }
-
-    if arch == "aarch64" {
-        arch = "arm64"; // enforce Darwin naming conventions
     }
 
     println!("cargo:rerun-if-changed=native/swift/AssetCatalogParser");
@@ -32,14 +28,13 @@ fn main() {
             "native/swift/AssetCatalogParser",
             "--scratch-path",
             &format!("{out_dir}/swift-scratch"),
-            "--triple",
-            &format!("{arch}-apple-macosx11"),
         ])
         .status()
         .expect("Failed to compile SPM");
 
     assert!(status.success(), "swift build failed");
 
+    // Create a static library of the Swift and Objective-C code
     let status = Command::new("ar")
         .args([
             "crus",
@@ -56,16 +51,19 @@ fn main() {
 
     assert!(status.success(), "ar failed");
 
+    // Add the new static library to search paths and link to it
     println!("cargo:rustc-link-search=native={out_dir}");
     println!("cargo:rustc-link-lib=static=swiftbridge");
 
+    // Link to CoreUI framework
     println!("cargo:rustc-link-search=framework=/System/Library/PrivateFrameworks");
     println!("cargo:rustc-link-lib=framework=CoreUI");
 
+    // Link to swift macOS support libraries for Swift runtime support on older macOS versions
     let developer_dir = Command::new("xcode-select")
         .args(["-p"])
         .output()
-        .expect("Failed to get developer directory");
+        .expect("Failed to get developer directory, please ensure Xcode is installed.");
     let developer_dir_path = String::from_utf8(developer_dir.stdout)
         .expect("Failed to convert developer directory to UTF-8")
         .trim()

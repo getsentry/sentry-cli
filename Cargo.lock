@@ -148,7 +148,7 @@ dependencies = [
 name = "apple-catalog-parsing"
 version = "0.0.0"
 dependencies = [
- "thiserror 1.0.61",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
