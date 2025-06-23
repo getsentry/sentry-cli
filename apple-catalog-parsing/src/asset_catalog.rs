@@ -4,6 +4,7 @@ use std::path::Path;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[non_exhaustive]
 pub enum Error {
     #[error("Failed to convert path to C string: {0}")]
     PathConversion(#[from] std::ffi::NulError),
