@@ -33,7 +33,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     if platform == "darwin" {
         println!("cargo:rustc-link-arg=-F");
         println!("cargo:rustc-link-arg=/System/Library/PrivateFrameworks");
-        println!("cargo:rustc-link-lib=framework=CoreUI");
 
         let developer_dir = Command::new("xcode-select")
             .args(["-p"])

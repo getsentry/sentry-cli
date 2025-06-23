@@ -12,7 +12,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let platform = target_bits.next().expect("TARGET triple has a platform");
 
     if platform != "darwin" {
-        panic!("This crate is only available on macOS");
+        return Ok(());
     }
 
     if arch == "aarch64" {
@@ -58,6 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("cargo:rustc-link-search=native={out_dir}");
     println!("cargo:rustc-link-lib=static=swiftbridge");
+    println!("cargo:rustc-link-lib=framework=CoreUI");
 
     Ok(())
 }
