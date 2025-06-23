@@ -4,7 +4,7 @@ edition = "2021"
 build = "build.rs"
 
 [dependencies]
-thiserror = "1.0.38"
+thiserror = "2.0.12"
 
 [lints]
 workspace = true
