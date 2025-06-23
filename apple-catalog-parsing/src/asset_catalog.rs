@@ -14,12 +14,12 @@ extern "C" {
     fn swift_inspect_asset_catalog(msg: *const std::os::raw::c_char);
 }
 
-// This calls out to Swift code that uses Apple APIs to convert the contents
-// of an asset catalog into a format that can be parsed by the
-// size analysis backend. It enables main size analysis features such
-// as duplicate image detection, xray, and image optimization insights.
-// The path should be in an xcarchive file, results are written
-// to a JSON file in the xcarchive’s ParsedAssets directory.
+/// This calls out to Swift code that uses Apple APIs to convert the contents
+/// of an asset catalog into a format that can be parsed by the
+/// size analysis backend. It enables main size analysis features such
+/// as duplicate image detection, xray, and image optimization insights.
+/// The path should be in an xcarchive file, results are written
+/// to a JSON file in the xcarchive’s ParsedAssets directory.
 pub fn inspect_asset_catalog<P>(path: P) -> Result<(), Error>
 where
     P: AsRef<Path>,
