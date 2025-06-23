@@ -3,7 +3,6 @@ use std::error::Error;
 use std::fs::File;
 use std::io::Write;
 use std::path::Path;
-use std::process::Command;
 
 fn main() -> Result<(), Box<dyn Error>> {
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
@@ -29,24 +28,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     writeln!(f, "/// The user agent for sentry events")?;
     writeln!(f, "pub const USER_AGENT: &str = \"sentry-cli/{arch}\";")?;
     println!("cargo:rerun-if-changed=build.rs\n");
-
-    if platform == "darwin" {
-        println!("cargo:rustc-link-arg=-F");
-        println!("cargo:rustc-link-arg=/System/Library/PrivateFrameworks");
-
-        let developer_dir = Command::new("xcode-select")
-            .args(["-p"])
-            .output()
-            .expect("Failed to get developer directory");
-        let developer_dir_path = String::from_utf8(developer_dir.stdout)
-            .expect("Failed to convert developer directory to UTF-8")
-            .trim()
-            .to_string();
-        println!("cargo:rustc-link-arg=-L");
-        println!(
-            "cargo:rustc-link-arg={developer_dir_path}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"
-        );
-    }
 
     Ok(())
 }

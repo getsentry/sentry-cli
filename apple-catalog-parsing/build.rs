@@ -58,7 +58,21 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     println!("cargo:rustc-link-search=native={out_dir}");
     println!("cargo:rustc-link-lib=static=swiftbridge");
+
+    println!("cargo:rustc-link-search=framework=/System/Library/PrivateFrameworks");
     println!("cargo:rustc-link-lib=framework=CoreUI");
+
+    let developer_dir = Command::new("xcode-select")
+        .args(["-p"])
+        .output()
+        .expect("Failed to get developer directory");
+    let developer_dir_path = String::from_utf8(developer_dir.stdout)
+        .expect("Failed to convert developer directory to UTF-8")
+        .trim()
+        .to_string();
+    println!(
+    "cargo:rustc-link-search={developer_dir_path}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"
+);
 
     Ok(())
 }
