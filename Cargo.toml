@@ -96,6 +96,9 @@ allow-attributes = "warn"
 unnecessary-wraps = "warn"
 unwrap-used = "warn"
 
+[lints]
+workspace = true
+
 [target]
 
 [target."cfg(target_os = \"macos\")"]

@@ -5,3 +5,6 @@ build = "build.rs"
 
 [dependencies]
 thiserror = "1.0.38"
+
+[lints]
+workspace = true
