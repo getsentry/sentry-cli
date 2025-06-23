@@ -172,57 +172,7 @@ describe('SentryCli helper', () => {
     });
   });
 
-  describe('silentLogs functionality', () => {
-    let consoleInfoSpy;
-    let consoleErrorSpy;
-
-    beforeEach(() => {
-      consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
-      consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-    });
-
-    afterEach(() => {
-      consoleInfoSpy.mockRestore();
-      consoleErrorSpy.mockRestore();
-    });
-
-    test('determineSuccessMessage returns correct message for releases new', () => {
-      const args = ['releases', 'new', 'v1.0.0'];
-      const message = helper.determineSuccessMessage(args);
-      expect(message).toBe('✓ Release v1.0.0 created');
-    });
-
-    test('determineSuccessMessage returns correct message for sourcemaps upload', () => {
-      const args = ['sourcemaps', 'upload'];
-      const message = helper.determineSuccessMessage(args);
-      expect(message).toBe('✓ Source maps uploaded');
-    });
-
-    test('determineSuccessMessage returns null for version check', () => {
-      const args = ['--version'];
-      const message = helper.determineSuccessMessage(args);
-      expect(message).toBe(null);
-    });
-
-    test('determineSuccessMessage handles empty args', () => {
-      const message = helper.determineSuccessMessage([]);
-      expect(message).toBe(null);
-    });
-
-    test('determineSuccessMessage handles null args', () => {
-      const message = helper.determineSuccessMessage(null);
-      expect(message).toBe(null);
-    });
-
-    test('execute with silent=true takes precedence over silentLogs=true', async () => {
-      const result = await helper.execute(['--version'], false, true, true);
-
-      expect(result).toBe('');
-      expect(consoleInfoSpy).not.toHaveBeenCalled();
-    });
-  });
-
-  describe('command type coverage', () => {
+  describe('determineSuccessMessage type coverage', () => {
     test('determineSuccessMessage handles supported high-impact commands', () => {
       const testCases = [
         { args: ['releases', 'new', 'v1.0.0'], expected: '✓ Release v1.0.0 created' },
@@ -307,6 +257,13 @@ describe('SentryCli helper', () => {
       expect(consoleInfoSpy).not.toHaveBeenCalled();
     });
 
+    test('execute with silent=true takes precedence over silentLogs=true', async () => {
+      const result = await helper.execute(['--version'], false, true, true);
+
+      expect(result).toBe('');
+      expect(consoleInfoSpy).not.toHaveBeenCalled();
+    });
+
     test('execute with live=false, silentLogs=true shows success message and returns empty string', async () => {
       const result = await helper.execute(['sourcemaps', 'upload'], false, false, true);
 
@@ -334,14 +291,12 @@ describe('SentryCli helper', () => {
       const result3 = await helper.execute(['sourcemaps', 'upload'], false, true, true);
       expect(result3).toBe('');
 
-      // No success messages should be shown when silent=true
       expect(consoleInfoSpy).not.toHaveBeenCalled();
     });
 
     test('execute with live=true and normal mode uses stdio inherit and resolves with undefined', async () => {
       const result = await helper.execute(['--version'], true, false, false);
 
-      // Should resolve with undefined (stdio inherit mode)
       expect(result).toBeUndefined();
       expect(consoleInfoSpy).not.toHaveBeenCalled();
     });
