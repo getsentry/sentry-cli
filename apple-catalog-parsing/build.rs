@@ -22,6 +22,7 @@ fn main() {
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
 
+    // Compile Swift code
     let status = Command::new("swift")
         .args([
             "build",
