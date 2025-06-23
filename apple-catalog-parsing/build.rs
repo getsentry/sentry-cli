@@ -1,8 +1,7 @@
 use std::env;
-use std::error::Error;
 use std::process::Command;
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() {
     let target = env::var("TARGET").expect("TARGET is set for build scripts");
     let mut target_bits = target.split('-');
 
@@ -12,7 +11,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let platform = target_bits.next().expect("TARGET triple has a platform");
 
     if platform != "darwin" {
-        return Ok(());
+        return;
     }
 
     if arch == "aarch64" {
@@ -73,6 +72,4 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!(
     "cargo:rustc-link-search={developer_dir_path}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"
 );
-
-    Ok(())
 }

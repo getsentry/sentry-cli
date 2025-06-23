@@ -5,6 +5,8 @@ import UniformTypeIdentifiers
 import ObjcSupport
 
 @_cdecl("swift_inspect_asset_catalog")
+// Insepects the asset catalog and writes the results to a JSON file
+// in the xcarchive containing the asset catalog.
 public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>) {
     let pathString = String(cString: path)
     if #available(macOS 13.0, *) {
