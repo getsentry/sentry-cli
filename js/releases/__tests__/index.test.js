@@ -14,7 +14,7 @@ describe('SentryCli releases', () => {
     let cli;
     let mockExecute;
     beforeAll(() => {
-      mockExecute = jest.fn(async () => {});
+      mockExecute = jest.fn(async () => { });
       jest.doMock('../../helper', () => ({
         ...jest.requireActual('../../helper'),
         execute: mockExecute,
@@ -181,8 +181,9 @@ describe('SentryCli releases', () => {
           ],
           live,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
     });

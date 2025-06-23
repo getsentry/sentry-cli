@@ -427,8 +427,8 @@ function determineSuccessMessage(args) {
         return `✓ Release ${args[2]} created`;
       } else if (args[1] === 'finalize' && args[2]) {
         return `✓ Release ${args[2]} finalized`;
-      } else if (args[1] === 'files' && args[3] === 'upload-sourcemaps' && args[2]) {
-        return `✓ Source maps uploaded to release ${args[2]}`;
+      } else if (args[1] === 'files' && args[3] === 'upload-sourcemaps') {
+        return `✓ Source maps uploaded`;
       }
       break;
 
@@ -450,20 +450,12 @@ function determineSuccessMessage(args) {
       return `✓ ProGuard mappings uploaded`;
 
     case 'upload-dif':
-      return `✓ Debug information files uploaded`;
-
     case 'upload-dsym':
-      return `✓ dSYM files uploaded`;
+      return `✓ Debug information files uploaded`;
 
     case 'deploys':
       if (args[1] === 'new') {
         return `✓ Deploy created`;
-      }
-      break;
-
-    case 'mobile-app':
-      if (args[1] === 'upload') {
-        return `✓ Mobile app uploaded`;
       }
       break;
 
@@ -472,9 +464,6 @@ function determineSuccessMessage(args) {
 
     case 'send-envelope':
       return `✓ Envelope sent`;
-
-    case 'send-metric':
-      return `✓ Metric sent`;
 
     // Don't show success messages for info/list operations - they show their own output
     // Don't show for --version, --help - the output is the success
