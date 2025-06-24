@@ -33,7 +33,7 @@ fn main() {
             "--scratch-path",
             &format!("{out_dir}/swift-scratch"),
             "--triple",
-            &format!("{arch}-apple-macosx11"),
+            &format!("{arch}-apple-macosx10.12"),
         ])
         .status()
         .expect("Failed to compile SPM");
