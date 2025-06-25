@@ -1,6 +1,7 @@
 **
 
 !src/
+!apple-catalog-parsing/
 !Cargo.lock
 !Cargo.toml
 !build.rs

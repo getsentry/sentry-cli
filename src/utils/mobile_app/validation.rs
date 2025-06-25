@@ -49,3 +49,8 @@ where
 
     info_plist.exists() && products_dir.exists() && products_dir.is_dir()
 }
+
+/// A path is an Apple app if it points to an xarchive directory
+pub fn is_apple_app(path: &Path) -> bool {
+    path.is_dir() && is_xcarchive_directory(path)
+}

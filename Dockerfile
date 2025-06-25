@@ -5,6 +5,8 @@ RUN apk add musl-dev perl openssl-dev make
 
 WORKDIR /work
 
+COPY apple-catalog-parsing apple-catalog-parsing/
+
 # Build only dependencies to speed up subsequent builds
 COPY Cargo.toml Cargo.lock build.rs ./
 RUN mkdir -p src \
