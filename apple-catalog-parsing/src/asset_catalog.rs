@@ -28,6 +28,8 @@ where
     let string_ptr = c_string.as_ptr();
     unsafe {
         // The string pointed to is immutable, in Swift we cannot change it.
+        // We ensure this by using "UnsafePointer<CChar>" in Swift which is
+        // immutable (as opposed to "UnsafeMutablePointer<CChar>").
         swift_inspect_asset_catalog(string_ptr);
     }
     Ok(())
