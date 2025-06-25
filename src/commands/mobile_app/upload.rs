@@ -12,7 +12,7 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{Api, AuthenticatedApi};
+use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
 use crate::config::Config;
 use crate::utils::args::ArgExt;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
@@ -295,6 +295,13 @@ fn upload_file(
                 is required for mobile app uploads. {SELF_HOSTED_ERROR_HINT}"
             )
         })?;
+
+    if !chunk_upload_options.supports(ChunkUploadCapability::PreprodArtifacts) {
+        bail!(
+            "The Sentry server lacks support for receiving files uploaded \
+            with this command. {SELF_HOSTED_ERROR_HINT}"
+        );
+    }
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
