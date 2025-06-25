@@ -273,6 +273,9 @@ fn upload_file(
     sha: Option<&str>,
     build_configuration: Option<&str>,
 ) -> Result<()> {
+    const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
+        update to the latest version of Sentry to use the mobile-app upload command.";
+
     debug!(
         "Uploading file to organization: {}, project: {}, sha: {}, build_configuration: {}",
         org,
@@ -286,7 +289,12 @@ fn upload_file(
 
     let chunk_upload_options = authenticated_api
         .get_chunk_upload_options(org)?
-        .expect("Chunked uploading is not supported");
+        .ok_or_else(|| {
+            anyhow!(
+                "The Sentry server lacks chunked uploading support, which \
+                is required for mobile app uploads. {SELF_HOSTED_ERROR_HINT}"
+            )
+        })?;
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
