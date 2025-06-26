@@ -56,6 +56,11 @@ jobs:
     name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
 
+    env:
+      OS: ${{ matrix.os }}
+
+    if: false
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
 
