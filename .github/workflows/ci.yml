@@ -91,3 +91,23 @@ jobs:
         if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
       - run: npm test
+
+  check_required:
+    needs: [lint, test, test_node]
+    runs-on: ubuntu-24.04
+    if: always() # Run even if lint-each-os fails
+    name: Ensure all checks pass
+    steps:
+      - run: |
+          node -e "
+            const needs = JSON.parse(process.env.NEEDS_JSON);
+
+            if (Object.values(needs).some(job => job.result !== 'success')) {
+              console.error('Required checks failed. You need to fix the problem before merging.');
+              process.exit(1);
+            } else {
+              console.log('All checks passed.');
+            }
+          "
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
