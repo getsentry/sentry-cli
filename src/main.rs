@@ -5,5 +5,7 @@ mod constants;
 mod utils;
 
 pub fn main() -> ! {
+    #[cfg(not(target_os = "linux"))]
+    let _: &str = 2;
     commands::main()
 }
