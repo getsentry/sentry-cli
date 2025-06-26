@@ -61,6 +61,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
+    // Intentionally instantiate the api here to ensure that the auth token is available
+    // and that the org is valid before doing any work.
+    // Will throw if user is not authenticated.
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
     debug!(
         "Starting mobile app upload for {} paths",
         path_strings.len()
@@ -123,7 +129,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        match upload_file(&bytes, &org, &project, sha.as_deref(), build_configuration) {
+        match upload_file(
+            &authenticated_api,
+            &bytes,
+            &org,
+            &project,
+            sha.as_deref(),
+            build_configuration,
+        ) {
             Ok(_) => {
                 info!("Successfully uploaded file: {}", path.display());
                 uploaded_paths.push(path.to_path_buf());
@@ -273,6 +286,7 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
 }
 
 fn upload_file(
+    api: &AuthenticatedApi,
     bytes: &[u8],
     org: &str,
     project: &str,
@@ -290,10 +304,7 @@ fn upload_file(
         build_configuration.unwrap_or("unknown")
     );
 
-    let api = Api::current();
-    let authenticated_api = api.authenticated()?;
-
-    let chunk_upload_options = authenticated_api
+    let chunk_upload_options = api
         .get_chunk_upload_options(org)?
         .ok_or_else(|| {
             anyhow!(
@@ -325,14 +336,8 @@ fn upload_file(
 
     pb.finish_with_duration("Finishing upload");
 
-    let response = authenticated_api.assemble_mobile_app(
-        org,
-        project,
-        checksum,
-        &checksums,
-        sha,
-        build_configuration,
-    )?;
+    let response =
+        api.assemble_mobile_app(org, project, checksum, &checksums, sha, build_configuration)?;
     chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
     if !chunks.is_empty() {
@@ -346,7 +351,7 @@ fn upload_file(
     }
 
     poll_assemble(
-        &authenticated_api,
+        api,
         checksum,
         &checksums,
         org,
