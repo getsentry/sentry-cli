@@ -251,7 +251,7 @@ impl Config {
         let path = path.trim_start_matches('/');
         let path = path.trim_start_matches("api/0/");
 
-        Ok(format!("{}/api/0/{}", base, path))
+        Ok(format!("{base}/api/0/{path}"))
     }
 
     /// Returns the log level.

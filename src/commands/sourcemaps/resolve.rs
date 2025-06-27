@@ -106,16 +106,11 @@ fn print_token(token: &Token<'_>) {
     let col_align = cmp::max(dst_col_digits, src_col_digits);
 
     let output_minified_line = format!(
-        "Found the nearest {token_display_name} at line {:>line_align$}, column {:>col_align$} in the minified file.",
-        dst_line,
-        dst_col,
+        "Found the nearest {token_display_name} at line {dst_line:>line_align$}, column {dst_col:>col_align$} in the minified file.",
     );
 
     let output_source_line = format!(
-        "- The same token is located at line {:>line_align$}, column {:>col_align$} in source file {}.",
-        src_line,
-        src_col,
-        source_file,
+        "- The same token is located at line {src_line:>line_align$}, column {src_col:>col_align$} in source file {source_file}.",
     );
 
     let output_minified_line_align = 2 + output_minified_line.len();

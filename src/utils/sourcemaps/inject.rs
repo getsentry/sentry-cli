@@ -473,7 +473,7 @@ something else
 //# debugId=00000000-0000-0000-0000-000000000000
 "#;
 
-        println!("{}", result);
+        println!("{result}");
         assert_eq!(result, expected);
     }
 

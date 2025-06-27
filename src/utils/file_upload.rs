@@ -504,7 +504,7 @@ fn upload_files_parallel(
 
     pb.finish_and_clear();
 
-    println!("{}", context);
+    println!("{context}");
 
     Ok(())
 }
