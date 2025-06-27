@@ -301,12 +301,14 @@ fn upload_file(
         build_configuration.unwrap_or("unknown")
     );
 
-    let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
-        anyhow!(
-            "The Sentry server lacks chunked uploading support, which \
+    let chunk_upload_options = api
+        .get_chunk_upload_options(org)?
+        .ok_or_else(|| {
+            anyhow!(
+                "The Sentry server lacks chunked uploading support, which \
                 is required for mobile app uploads. {SELF_HOSTED_ERROR_HINT}"
-        )
-    })?;
+            )
+        })?;
 
     if !chunk_upload_options.supports(ChunkUploadCapability::PreprodArtifacts) {
         bail!(
