@@ -32,15 +32,14 @@ pub(super) fn common_upload_endpoints(
     };
     let chunk_upload_response = format!(
         "{{
-            \"url\": \"{}/api/0/organizations/wat-org/chunk-upload/\",
+            \"url\": \"{server_url}/api/0/organizations/wat-org/chunk-upload/\",
             \"chunkSize\": {chunk_size},
             \"chunksPerRequest\": 64,
             \"maxRequestSize\": 33554432,
             \"concurrency\": 8,
             \"hashAlgorithm\": \"sha1\",
-            \"accept\": [{}]
+            \"accept\": [{accept}]
           }}",
-        server_url, accept,
     );
 
     vec![

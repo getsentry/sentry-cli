@@ -26,7 +26,7 @@ pub enum ValidationError {
 /// the upload, it will return an error, that can be propagated
 /// to the caller.
 pub fn handle(dif_name: &str, error: &ValidationError) -> Result<()> {
-    let message = format!("{}: {}", dif_name, error);
+    let message = format!("{dif_name}: {error}");
     match error {
         ValidationError::InvalidFormat
         | ValidationError::InvalidFeatures

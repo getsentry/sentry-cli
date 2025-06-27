@@ -127,7 +127,7 @@ pub fn load_dotenv() -> Result<()> {
 
     for path in custom_dotenv_paths {
         dotenvy::from_path_override(path)
-            .with_context(|| format!("Failed to load custom .env file: {}", path))?;
+            .with_context(|| format!("Failed to load custom .env file: {path}"))?;
     }
 
     Ok(())
@@ -169,7 +169,7 @@ fn display_technical_details(info: &PanicHookInfo, backtrace: &Backtrace) -> Str
 /// Formats the current thread name for display in the panic message
 fn display_thread_details() -> String {
     match thread::current().name() {
-        Some(name) => format!("thread '{}'", name),
+        Some(name) => format!("thread '{name}'"),
         None => "unknown thread".into(),
     }
 }

@@ -146,7 +146,7 @@ fn find_hermesc() -> String {
     }
 
     let pods_root_path = env::var("PODS_ROOT").unwrap_or("".to_string());
-    format!("{}/hermes-engine/destroot/bin/hermesc", pods_root_path)
+    format!("{pods_root_path}/hermes-engine/destroot/bin/hermesc")
 }
 
 /// Check if Hermes is enabled based its executable existence in the installed pods
