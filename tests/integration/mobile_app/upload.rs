@@ -10,6 +10,11 @@ fn command_mobile_app_upload_help() {
 }
 
 #[test]
+fn command_mobile_app_upload_no_token() {
+    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-apk-no-token.trycmd");
+}
+
+#[test]
 fn command_mobile_app_upload_invalid_aab() {
     TestManager::new()
         .assert_cmd(vec![
@@ -17,6 +22,7 @@ fn command_mobile_app_upload_invalid_aab() {
             "upload",
             "tests/integration/_fixtures/mobile_app/invalid_aab.aab",
         ])
+        .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
@@ -28,6 +34,7 @@ fn command_mobile_app_upload_invalid_apk() {
             "upload",
             "tests/integration/_fixtures/mobile_app/invalid_apk.apk",
         ])
+        .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
@@ -39,6 +46,7 @@ fn command_mobile_app_upload_invalid_xcarchive() {
             "upload",
             "tests/integration/_fixtures/mobile_app/invalid_xcarchive",
         ])
+        .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
