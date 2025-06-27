@@ -18,9 +18,9 @@ use crate::utils::args::ArgExt;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, is_apple_app};
 #[cfg(target_os = "macos")]
 use crate::utils::mobile_app::handle_asset_catalogs;
+use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_apple_app, is_zip_file};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -61,9 +61,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
-    // Intentionally instantiate the api here to ensure that the auth token is available
-    // and that the org is valid before doing any work.
-    // Will throw if user is not authenticated.
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
 
@@ -304,14 +301,12 @@ fn upload_file(
         build_configuration.unwrap_or("unknown")
     );
 
-    let chunk_upload_options = api
-        .get_chunk_upload_options(org)?
-        .ok_or_else(|| {
-            anyhow!(
-                "The Sentry server lacks chunked uploading support, which \
+    let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
+        anyhow!(
+            "The Sentry server lacks chunked uploading support, which \
                 is required for mobile app uploads. {SELF_HOSTED_ERROR_HINT}"
-            )
-        })?;
+        )
+    })?;
 
     if !chunk_upload_options.supports(ChunkUploadCapability::PreprodArtifacts) {
         bail!(
