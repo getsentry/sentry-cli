@@ -1,0 +1,5 @@
+$ sentry-cli sourcemaps upload --release "" tests/integration/_fixtures/upload_some_debugids/
+? failed
+error: invalid value '' for '--release <RELEASE>': Invalid release version. Slashes and certain whitespace characters are not permitted.
+
+For more information, try '--help'.

@@ -1,0 +1,3 @@
+$ sentry-cli sourcemaps upload --release my-app/v1.0.0 tests/integration/_fixtures/upload_some_debugids/
+? failed
+error: Invalid release 'my-app/v1.0.0'. Release names for sourcemaps cannot contain forward slashes.

@@ -4,7 +4,7 @@ use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
 use itertools::Itertools;
@@ -425,6 +425,21 @@ fn process_sources_from_paths(
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let version = config.get_release_with_legacy_fallback(matches).ok();
+    
+    // Validate release string for sourcemaps upload
+    if let Some(ref release) = version {
+        if release.contains('/') {
+            bail!(
+                "Invalid release '{}'. Release names for sourcemaps cannot contain forward slashes.",
+                release
+            );
+        }
+        
+        if release.is_empty() {
+            bail!("Release name cannot be empty.");
+        }
+    }
+    
     let org = config.get_org(matches)?;
     let projects = config.get_projects(matches)?;
     let api = Api::current();

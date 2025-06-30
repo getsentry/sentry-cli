@@ -191,3 +191,17 @@ fn command_sourcemaps_upload_skip_invalid_utf8() {
         .register_trycmd_test("sourcemaps/sourcemaps-with-invalid-utf8.trycmd")
         .with_default_token();
 }
+
+#[test]
+fn command_sourcemaps_upload_invalid_release_with_slash() {
+    TestManager::new()
+        .register_trycmd_test("sourcemaps/sourcemaps-upload-invalid-release-slash.trycmd")
+        .with_default_token();
+}
+
+#[test]
+fn command_sourcemaps_upload_empty_release() {
+    TestManager::new()
+        .register_trycmd_test("sourcemaps/sourcemaps-upload-empty-release.trycmd")
+        .with_default_token();
+}
