@@ -1018,6 +1018,7 @@ impl<'a> AuthenticatedApi<'a> {
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
+    #[cfg(feature = "unstable-mobile-app")]
     pub fn assemble_mobile_app(
         &self,
         org: &str,

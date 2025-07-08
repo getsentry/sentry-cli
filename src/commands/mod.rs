@@ -31,6 +31,7 @@ macro_rules! each_subcommand {
         $mac!(info);
         $mac!(issues);
         $mac!(login);
+        #[cfg(feature = "unstable-mobile-app")]
         $mac!(mobile_app);
         $mac!(monitors);
         $mac!(organizations);

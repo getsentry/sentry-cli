@@ -1,3 +1,5 @@
+#![cfg(feature = "unstable-mobile-app")]
+
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
