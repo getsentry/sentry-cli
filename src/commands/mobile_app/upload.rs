@@ -242,6 +242,13 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
 
     let mut file_count = 0;
 
+    // Get the directory name to preserve in the zip structure
+    let dir_name = path
+        .file_name()
+        .ok_or_else(|| anyhow!("Failed to get directory name"))?
+        .to_str()
+        .ok_or_else(|| anyhow!("Directory name is not valid UTF-8"))?;
+
     // Collect and sort entries for deterministic ordering
     // This is important to ensure stable sha1 checksums for the zip file as
     // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
@@ -253,7 +260,9 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .map(|entry| {
             let entry_path = entry.into_path();
             let relative_path = entry_path.strip_prefix(path)?.to_owned();
-            Ok((entry_path, relative_path))
+            // Preserve the directory structure by including the directory name
+            let full_relative_path = Path::new(dir_name).join(relative_path);
+            Ok((entry_path, full_relative_path))
         })
         .collect::<Result<Vec<_>>>()?
         .into_iter()
