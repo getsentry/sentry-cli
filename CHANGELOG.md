@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.47.0
+
+### Various fixes & improvements
+
+- ref: Exclude `mobile-app` command from release builds (#2582) by @szokeasaurusrex
+- feat(login): Improve error output for login errors (#2581) by @szokeasaurusrex
+- test(monitors): pass empty options to grep (#2562) by @lcian
+- feat(login): Warn when overwriting existing auth token (#2554) by @szokeasaurusrex
+- meta: Add .sentryclirc to gitignore (#2547) by @rbro112
+- build: Bump MSRV to 1.86
+
 ## 2.46.0
 
 ### Various fixes & improvements
@@ -21,11 +32,12 @@
 ## 2.45.0
 
 ### New feature
+
 - feat(sourcemaps): Multi-project sourcemaps upload (#2497) by @szokeasaurusrex
-   - Sourcemaps can now be uploaded to multiple projects at once by passing each project to the `sentry-cli sourcemaps upload` command, like so:
-     ```sh
-     sentry-cli sourcemaps upload -p project1 -p project2 /path/to/sourcemaps
-     ```
+  - Sourcemaps can now be uploaded to multiple projects at once by passing each project to the `sentry-cli sourcemaps upload` command, like so:
+    ```sh
+    sentry-cli sourcemaps upload -p project1 -p project2 /path/to/sourcemaps
+    ```
   - Note that users on old versions of self-hosted Sentry may need to upgrade their self-hosted server to a newer version to take advantage of multi-project uploads.
 
 ### Various fixes & improvements
