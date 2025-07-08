@@ -8,30 +8,10 @@
 
 - ref: Exclude `mobile-app` command from release builds (#2582) by @szokeasaurusrex
 - feat(login): Improve error output for login errors (#2581) by @szokeasaurusrex
-- build(deps): bump swatinem/rust-cache from 2.7.8 to 2.8.0 (#2573) by @dependabot
-- build(deps): bump github/codeql-action from 3.29.0 to 3.29.2 (#2574) by @dependabot
-- feat(mobile-app): Fail mobile-app upload command early if not authenticated (#2570) by @rbro112
-- chore: Fix latest clippy lints (#2571) by @rbro112
-- feat: Add asset catalog parsing for apple platforms (#2545) by @noahsmartin
-- fix(mobile-app): Check server support before upload (#2568) by @szokeasaurusrex
-- fix(mobile-app): Avoid panic if chunk uploading not supported (#2567) by @szokeasaurusrex
-- build(deps): bump docker/setup-buildx-action from 3.11.0 to 3.11.1 (#2565) by @dependabot
 - test(monitors): pass empty options to grep (#2562) by @lcian
-- build(deps): bump docker/setup-buildx-action from 3.10.0 to 3.11.0 (#2561) by @dependabot
-- build(deps): bump github/codeql-action from 3.28.19 to 3.29.0 (#2560) by @dependabot
-- chore: Update OS X -> macOS (#2557) by @noahsmartin
-- meta: Add some testing notes to docs (#2552) by @rbro112
 - feat(login): Warn when overwriting existing auth token (#2554) by @szokeasaurusrex
-- ref(mobile-app): Wireup mobile app upload (#2542) by @rbro112
-- ci: Use `windows-2022` (#2549) by @szokeasaurusrex
-- build: Bump `rust` docker image (#2550) by @szokeasaurusrex
-- build: Bump and pin Alpine Docker image (#2551) by @szokeasaurusrex
-- build(deps): bump github/codeql-action from 3.28.18 to 3.28.19 (#2548) by @dependabot
 - meta: Add .sentryclirc to gitignore (#2547) by @rbro112
-- ref(mobile-app): Add debug logging to mobile-app command (#2546) by @rbro112
-- Add Zip normalization of provided paths before uploading (#2532) by @rbro112
-
-_Plus 13 more_
+- build: Bump MSRV to 1.86
 
 ## 2.46.0
 
@@ -52,11 +32,12 @@ _Plus 13 more_
 ## 2.45.0
 
 ### New feature
+
 - feat(sourcemaps): Multi-project sourcemaps upload (#2497) by @szokeasaurusrex
-   - Sourcemaps can now be uploaded to multiple projects at once by passing each project to the `sentry-cli sourcemaps upload` command, like so:
-     ```sh
-     sentry-cli sourcemaps upload -p project1 -p project2 /path/to/sourcemaps
-     ```
+  - Sourcemaps can now be uploaded to multiple projects at once by passing each project to the `sentry-cli sourcemaps upload` command, like so:
+    ```sh
+    sentry-cli sourcemaps upload -p project1 -p project2 /path/to/sourcemaps
+    ```
   - Note that users on old versions of self-hosted Sentry may need to upgrade their self-hosted server to a newer version to take advantage of multi-project uploads.
 
 ### Various fixes & improvements
