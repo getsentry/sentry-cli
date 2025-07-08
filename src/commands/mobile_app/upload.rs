@@ -52,8 +52,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path_strings: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
-            eprintln!("path argument is required");
-            return Ok(());
+            return Err(anyhow!("path argument is required"));
         }
     };
 
