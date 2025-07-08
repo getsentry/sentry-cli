@@ -48,7 +48,25 @@ pub(in crate::api) enum ApiErrorKind {
 
 impl fmt::Display for ApiError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Display::fmt(&self.inner, f)
+        match &self.inner {
+            ApiErrorKind::RequestFailed => write!(
+                f,
+                "{}, due to {}",
+                self.inner,
+                self.source.as_ref().map_or_else(
+                    || "an unknown error".to_owned(),
+                    |source| format!("the following error: {source}")
+                )
+            )?,
+            _ => {
+                write!(f, "{}", self.inner)?;
+                if let Some(source) = &self.source {
+                    write!(f, " This error was caused by: {source}")?;
+                }
+            }
+        }
+
+        Ok(())
     }
 }
 
