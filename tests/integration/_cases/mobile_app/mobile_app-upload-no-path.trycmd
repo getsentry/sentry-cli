@@ -1,6 +1,6 @@
 ```
 $ sentry-cli mobile-app upload
-? 1
+? failed
 error: path argument is required
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
