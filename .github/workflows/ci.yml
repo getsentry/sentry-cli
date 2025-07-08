@@ -18,8 +18,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-14, windows-2022]
+        feature-args: ['', '-Funstable-mobile-app']
+        include:
+          - feature-args: ''
+            feature-suffix: ''
+          - feature-args: '-Funstable-mobile-app'
+            feature-suffix: ', mobile-app'
 
-    name: Lint (${{ matrix.os }})
+    name: Lint (${{ matrix.os }}${{ matrix.feature-suffix }})
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
@@ -33,7 +39,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --workspace --tests
+        run: cargo clippy --workspace --tests ${{ matrix.feature-args }}
 
   lint:
     needs: lint-each-os
@@ -52,8 +58,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-14, windows-2022]
+        feature-args: ['', '-Funstable-mobile-app']
+        include:
+          - feature-args: ''
+            feature-suffix: ''
+          - feature-args: '-Funstable-mobile-app'
+            feature-suffix: ', mobile-app'
 
-    name: Test (${{ matrix.os }})
+    name: Test (${{ matrix.os }}${{ matrix.feature-suffix }})
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -64,7 +76,7 @@ jobs:
           key: ${{ github.job }}
 
       - name: Run Cargo Tests
-        run: cargo test --all
+        run: cargo test --all ${{ matrix.feature-args }}
 
   test_node:
     strategy:

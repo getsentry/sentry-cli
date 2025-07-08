@@ -1,3 +1,4 @@
+#![cfg(feature = "unstable-mobile-app")]
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 
