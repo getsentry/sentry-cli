@@ -1,0 +1,6 @@
+```
+$ sentry-cli mobile-app upload
+? success
+path argument is required
+
+```
