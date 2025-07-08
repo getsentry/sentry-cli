@@ -1,6 +1,6 @@
 use std::env;
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use url::Url;
 
@@ -88,11 +88,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 break;
             }
             Err(err) => {
-                let msg = format!("Invalid token: {err}");
+                // Convert to anyhow error to take advantage of anyhow's Debug impl
+                let err = anyhow::anyhow!(err);
+
                 if has_predefined_token {
-                    bail!(msg);
+                    return Err(err);
                 } else {
-                    println!("{msg}");
+                    println!("Error: {err:?}");
                 }
             }
         }
