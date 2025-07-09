@@ -242,13 +242,6 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
 
     let mut file_count = 0;
 
-    // Get the directory name to preserve in the zip structure
-    let dir_name = path
-        .file_name()
-        .ok_or_else(|| anyhow!("Failed to get directory name"))?
-        .to_str()
-        .ok_or_else(|| anyhow!("Directory name is not valid UTF-8"))?;
-
     // Collect and sort entries for deterministic ordering
     // This is important to ensure stable sha1 checksums for the zip file as
     // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
@@ -270,11 +263,12 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .last_modified_time(DateTime::default());
 
     for entry_path in entries {
-        let relative_path = entry_path.strip_prefix(path)?.to_owned();
-        let full_relative_path = Path::new(dir_name).join(relative_path);
-        debug!("Adding file to zip: {}", full_relative_path.display());
+        let zip_path = entry_path.strip_prefix(
+            path.parent().ok_or_else(|| anyhow!("Failed to get parent directory"))?
+        )?.to_owned();
+        debug!("Adding file to zip: {}", zip_path.display());
 
-        zip.start_file(full_relative_path.to_string_lossy(), options)?;
+        zip.start_file(zip_path.to_string_lossy(), options)?;
         let file_byteview = ByteView::open(&entry_path)?;
         zip.write_all(file_byteview.as_slice())?;
         file_count += 1;
