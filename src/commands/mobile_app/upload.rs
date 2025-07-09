@@ -257,16 +257,10 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.path().is_file())
-        .map(|entry| {
-            let entry_path = entry.into_path();
-            let relative_path = entry_path.strip_prefix(path)?.to_owned();
-            // Preserve the directory structure by including the directory name
-            let full_relative_path = Path::new(dir_name).join(relative_path);
-            Ok((entry_path, full_relative_path))
-        })
+        .map(|entry| Ok(entry.into_path()))
         .collect::<Result<Vec<_>>>()?
         .into_iter()
-        .sorted_by(|(_, a), (_, b)| a.cmp(b));
+        .sorted_by(|a, b| a.cmp(b));
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
@@ -275,10 +269,12 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .compression_method(zip::CompressionMethod::Stored)
         .last_modified_time(DateTime::default());
 
-    for (entry_path, relative_path) in entries {
-        debug!("Adding file to zip: {}", relative_path.display());
+    for entry_path in entries {
+        let relative_path = entry_path.strip_prefix(path)?.to_owned();
+        let full_relative_path = Path::new(dir_name).join(relative_path);
+        debug!("Adding file to zip: {}", full_relative_path.display());
 
-        zip.start_file(relative_path.to_string_lossy(), options)?;
+        zip.start_file(full_relative_path.to_string_lossy(), options)?;
         let file_byteview = ByteView::open(&entry_path)?;
         zip.write_all(file_byteview.as_slice())?;
         file_count += 1;
