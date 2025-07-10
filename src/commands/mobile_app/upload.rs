@@ -50,12 +50,9 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path_strings: Vec<_> = match matches.get_many::<String>("paths") {
-        Some(paths) => paths.collect(),
-        None => {
-            return Err(anyhow!("clap error: paths argument is required"));
-        }
-    };
+    let path_strings = matches
+        .get_many::<String>("paths")
+        .expect("paths argument is required");
 
     let sha = matches
         .get_one("sha")
