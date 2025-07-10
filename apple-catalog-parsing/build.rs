@@ -22,19 +22,30 @@ fn main() {
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
 
+    let scratch_path = format!("{out_dir}/swift-scratch");
+    let triple = format!("{arch}-apple-macosx10.12");
+    let mut args = vec![
+        "build",
+        "-c",
+        "release",
+        "--package-path",
+        "native/swift/AssetCatalogParser",
+        "--scratch-path",
+        &scratch_path,
+        "--triple",
+        &triple,
+    ];
+
+    // Allow swift to be run with `--disable-sandbox` in case cargo has been invoked inside a
+    // sandbox already. Nested sandboxes are not allowed on Darwin.
+    println!("cargo:rerun-if-env-changed=SWIFT_DISABLE_SANDBOX");
+    if std::env::var_os("SWIFT_DISABLE_SANDBOX").map_or(false, |s| s != "0") {
+        args.push("--disable-sandbox");
+    }
+
     // Compile Swift code
     let status = Command::new("swift")
-        .args([
-            "build",
-            "-c",
-            "release",
-            "--package-path",
-            "native/swift/AssetCatalogParser",
-            "--scratch-path",
-            &format!("{out_dir}/swift-scratch"),
-            "--triple",
-            &format!("{arch}-apple-macosx10.12"),
-        ])
+        .args(&args)
         .status()
         .expect("Failed to compile SPM");
 
