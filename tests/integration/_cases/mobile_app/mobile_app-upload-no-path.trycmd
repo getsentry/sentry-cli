@@ -1,9 +1,11 @@
 ```
 $ sentry-cli mobile-app upload
 ? failed
-error: path argument is required
+error: the following required arguments were not provided:
+  <PATH>...
 
-Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
-Please attach the full debug log to all bug reports.
+Usage: sentry-cli mobile-app upload <PATH>...
+
+For more information, try '--help'.
 
 ```

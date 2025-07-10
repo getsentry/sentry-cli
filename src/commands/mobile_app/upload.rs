@@ -34,7 +34,8 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .help("The path to the mobile app files to upload. Supported files include Apk, Aab or XCArchive.")
                 .num_args(1..)
-                .action(ArgAction::Append),
+                .action(ArgAction::Append)
+                .required(true),
         )
         .arg(
             Arg::new("sha")
@@ -52,7 +53,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path_strings: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
-            return Err(anyhow!("path argument is required"));
+            // Clap will handle the case where no paths are provided.
+            return Ok(());
         }
     };
 
