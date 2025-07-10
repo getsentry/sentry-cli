@@ -53,8 +53,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path_strings: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
-            // Clap will handle the case where no paths are provided.
-            return Ok(());
+            return Err(anyhow!("clap error: paths argument is required"));
         }
     };
 
