@@ -34,7 +34,8 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .help("The path to the mobile app files to upload. Supported files include Apk, Aab or XCArchive.")
                 .num_args(1..)
-                .action(ArgAction::Append),
+                .action(ArgAction::Append)
+                .required(true),
         )
         .arg(
             Arg::new("sha")
@@ -49,9 +50,12 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path_strings = matches
-        .get_many::<String>("paths")
-        .expect("paths argument is required");
+    let path_strings: Vec<_> = match matches.get_many::<String>("paths") {
+        Some(paths) => paths.collect(),
+        None => {
+            return Err(anyhow!("clap error: paths argument is required"));
+        }
+    };
 
     let sha = matches
         .get_one("sha")
@@ -301,14 +305,12 @@ fn upload_file(
         build_configuration.unwrap_or("unknown")
     );
 
-    let chunk_upload_options = api
-        .get_chunk_upload_options(org)?
-        .ok_or_else(|| {
-            anyhow!(
-                "The Sentry server lacks chunked uploading support, which \
+    let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
+        anyhow!(
+            "The Sentry server lacks chunked uploading support, which \
                 is required for mobile app uploads. {SELF_HOSTED_ERROR_HINT}"
-            )
-        })?;
+        )
+    })?;
 
     if !chunk_upload_options.supports(ChunkUploadCapability::PreprodArtifacts) {
         bail!(

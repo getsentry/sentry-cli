@@ -1,0 +1,11 @@
+```
+$ sentry-cli mobile-app upload
+? failed
+error: the following required arguments were not provided:
+  <PATH>...
+
+Usage: sentry-cli[EXE] mobile-app upload <PATH>...
+
+For more information, try '--help'.
+
+```
