@@ -250,9 +250,7 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.path().is_file())
-        .map(|entry| Ok(entry.into_path()))
-        .collect::<Result<Vec<_>>>()?
-        .into_iter()
+        .map(|entry| entry.into_path())
         .sorted_by(|a, b| a.cmp(b));
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
@@ -399,4 +397,28 @@ fn poll_assemble(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use zip::ZipArchive;
+
+    #[test]
+    fn test_normalize_directory_preserves_top_level_directory_name() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("MyApp.xcarchive");
+        fs::create_dir_all(&test_dir.join("Products"))?;
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        let result_zip = normalize_directory(&test_dir)?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+        let file = archive.by_index(0)?;
+        let file_path = file.name();
+        
+        assert_eq!(file_path, "MyApp.xcarchive/Products/app.txt");
+        Ok(())
+    }
 }
