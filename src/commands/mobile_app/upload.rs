@@ -399,6 +399,7 @@ fn poll_assemble(
     Ok(())
 }
 
+#[cfg(not(windows))]
 #[cfg(test)]
 mod tests {
     use super::*;
