@@ -126,6 +126,7 @@ fn extract_nth_frame(stacktrace: &Stacktrace, position: usize) -> Result<&Frame>
     Ok(frame)
 }
 
+#[deprecated]
 fn fetch_release_artifacts(org: &str, project: &str, release: &str) -> Result<Vec<Artifact>> {
     Api::current().authenticated()?.list_release_files(org, Some(project), release).map(|artifacts| {
         if artifacts.is_empty() {
@@ -184,6 +185,7 @@ fn verify_dists_matches(artifact: &Artifact, dist: Option<&str>) -> Result<()> {
     Ok(())
 }
 
+#[deprecated]
 fn fetch_release_artifact_file(
     org: &str,
     project: &str,
@@ -218,6 +220,7 @@ fn fetch_release_artifact_file(
         })?
 }
 
+#[deprecated]
 fn fetch_release_artifact_file_metadata(
     org: &str,
     project: &str,
@@ -371,6 +374,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
     Ok(filename)
 }
 
+#[deprecated]
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     warning("DEPRECATION: `sourcemaps explain` has drifted from how sourcemap processing actually operates \
