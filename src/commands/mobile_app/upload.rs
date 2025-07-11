@@ -409,7 +409,7 @@ mod tests {
     fn test_normalize_directory_preserves_top_level_directory_name() -> Result<()> {
         let temp_dir = crate::utils::fs::TempDir::create()?;
         let test_dir = temp_dir.path().join("MyApp.xcarchive");
-        fs::create_dir_all(&test_dir.join("Products"))?;
+        fs::create_dir_all(test_dir.join("Products"))?;
         fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
 
         let result_zip = normalize_directory(&test_dir)?;
