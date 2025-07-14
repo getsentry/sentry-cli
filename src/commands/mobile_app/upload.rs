@@ -250,8 +250,16 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.path().is_file())
-        .map(|entry| entry.into_path())
-        .sorted_by(|a, b| a.cmp(b));
+        .map(|entry| {
+            let entry_path = entry.into_path();
+            let relative_path = entry_path.strip_prefix(
+                path.parent().ok_or_else(|| anyhow!("Cannot determine parent directory for path: {}", path.display()))?
+            )?.to_owned();
+            Ok((entry_path, relative_path))
+        })
+        .collect::<Result<Vec<_>>>()?
+        .into_iter()
+        .sorted_by(|(_, a), (_, b)| a.cmp(b));
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
@@ -260,13 +268,10 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .compression_method(zip::CompressionMethod::Stored)
         .last_modified_time(DateTime::default());
 
-    for entry_path in entries {
-        let zip_path = entry_path.strip_prefix(
-            path.parent().ok_or_else(|| anyhow!("Failed to get parent directory"))?
-        )?.to_owned();
-        debug!("Adding file to zip: {}", zip_path.display());
+    for (entry_path, relative_path) in entries {
+        debug!("Adding file to zip: {}", relative_path.display());
 
-        zip.start_file(zip_path.to_string_lossy(), options)?;
+        zip.start_file(relative_path.to_string_lossy(), options)?;
         let file_byteview = ByteView::open(&entry_path)?;
         zip.write_all(file_byteview.as_slice())?;
         file_count += 1;
@@ -418,7 +423,6 @@ mod tests {
         let mut archive = ZipArchive::new(zip_file)?;
         let file = archive.by_index(0)?;
         let file_path = file.name();
-        
         assert_eq!(file_path, "MyApp.xcarchive/Products/app.txt");
         Ok(())
     }
