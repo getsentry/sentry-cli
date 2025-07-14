@@ -1,15 +1,15 @@
-name: Swift Test
+name: Test Swift
 
 on:
-  push:
-    branches:
-      - master
-      - release/**
-
-  pull_request:
+  workflow_call:
+    outputs:
+      matrix-result:
+        description: 'Job result'
+        value: ${{ jobs.run-tests.result }}
 
 jobs:
   run-tests:
+    name: Run tests
     runs-on: macos-15
     steps:
       - name: Checkout code
