@@ -112,7 +112,6 @@ workspace = true
 
 [target."cfg(target_os = \"macos\")".dependencies]
 mac-process-info = "0.2.0"
-apple-catalog-parsing = { path = "apple-catalog-parsing" }
 
 [target."cfg(unix)"]
 
