@@ -2,6 +2,15 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.47.1
+
+### Various fixes & improvements
+
+- build: Only compile `apple-catalog-parsing` when relevant feature enabled (#2598) by @szokeasaurusrex
+- fix(launchpad): Ensure mobile artifact's zip structures are preserved (#2585) by @NicoHinderling
+- feat(mobile-app): Update to original panic if paths arg is missing (#2588) by @rbro112
+- feat(mobile-app): Make missing path not panic (#2583) by @rbro112
+
 ## 2.47.0
 
 ### Various fixes & improvements
