@@ -1,7 +1,10 @@
 use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
+#[cfg(not(windows))]
 use std::fs;
+#[cfg(not(windows))]
+use std::os::unix::fs::PermissionsExt;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -12,9 +15,6 @@ use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
-
-#[cfg(not(windows))]
-use std::os::unix::fs::PermissionsExt;
 
 use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
 use crate::config::Config;
@@ -268,22 +268,23 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     for (entry_path, relative_path) in entries {
         debug!("Adding file to zip: {}", relative_path.display());
 
-        // Get file metadata to preserve permissions
-        let metadata = fs::metadata(&entry_path)?;
-
         // Need to set the last modified time to a fixed value to ensure consistent checksums
         // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
         // but the last modified time being different will cause checksums to be different.
-        let mut options = SimpleFileOptions::default()
+        #[cfg(not(windows))]
+        let options = {
+            let metadata = fs::metadata(&entry_path)?;
+            let mode = metadata.permissions().mode();
+            SimpleFileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored)
+                .last_modified_time(DateTime::default())
+                .unix_permissions(mode)
+        };
+
+        #[cfg(windows)]
+        let options = SimpleFileOptions::default()
             .compression_method(zip::CompressionMethod::Stored)
             .last_modified_time(DateTime::default());
-
-        // Preserve Unix file permissions on non-Windows systems
-        #[cfg(not(windows))]
-        {
-            let mode = metadata.permissions().mode();
-            options = options.unix_permissions(mode);
-        }
 
         zip.start_file(relative_path.to_string_lossy(), options)?;
         let file_byteview = ByteView::open(&entry_path)?;
