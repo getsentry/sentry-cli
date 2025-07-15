@@ -47,7 +47,7 @@ jobs:
 
       # older node versions need an older nft
       - run: |
-          SENTRYCLI_SKIP_DOWNLOAD=1 yarn install -f --frozen-lockfile
+          SENTRYCLI_SKIP_DOWNLOAD=1 yarn install --ignore-engines --frozen-lockfile
           SENTRYCLI_SKIP_DOWNLOAD=1 yarn add @vercel/nft@0.22.1
         if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
