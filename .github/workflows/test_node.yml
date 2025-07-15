@@ -48,4 +48,4 @@ jobs:
       - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install @vercel/nft@0.22.1
         if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
-      - run: npm run test
+      - run: npm test
