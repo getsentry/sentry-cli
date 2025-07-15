@@ -10,13 +10,13 @@ const DEFAULT_IGNORE = ['node_modules'];
 
 /**
  * Schema for the `upload-sourcemaps` command.
- * @type {OptionsSchema}
+ * @type {import('../helper').OptionsSchema}
  */
 const SOURCEMAPS_SCHEMA = require('./options/uploadSourcemaps');
 
 /**
  * Schema for the `deploys new` command.
- * @type {OptionsSchema}
+ * @type {import('../helper').OptionsSchema}
  */
 const DEPLOYS_SCHEMA = require('./options/deploys');
 
@@ -95,7 +95,7 @@ class Releases {
       commitFlags.push('--ignore-missing');
     }
 
-    return this.execute(['releases', 'set-commits', release].concat(commitFlags));
+    return this.execute(['releases', 'set-commits', release].concat(commitFlags), false);
   }
 
   /**

@@ -186,6 +186,7 @@ function mockBinaryPath(mockPath) {
  * @typedef {object} OptionSchema
  * @prop {string} param The flag of the command line option including dashes.
  * @prop {OptionType} type The value type of the command line option.
+ * @prop {string} [invertedParam] The flag of the command line option including dashes (optional).
  */
 
 /**
@@ -245,7 +246,7 @@ function serializeOptions(schema, options) {
 /**
  * Serializes the command and its options into an arguments array.
  *
- * @param {string} command The literal name of the command.
+ * @param {string[]} command The literal name of the command.
  * @param {OptionsSchema} [schema] An options schema required by the command.
  * @param {object} [options] An options object according to the schema.
  * @returns {string[]} An arguments array that can be passed via command line.
@@ -330,6 +331,7 @@ async function execute(args, live, silent, configFile, config = {}) {
         stdio: ['ignore', output, output],
       });
       pid.on('exit', () => {
+        // @ts-expect-error - this is a TODO (v3) to fix and resolve a string here
         resolve();
       });
     } else {

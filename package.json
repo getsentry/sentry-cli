@@ -22,12 +22,14 @@
     "which": "^2.0.2"
   },
   "devDependencies": {
+    "@types/node": "^20.10.0",
     "@vercel/nft": "^0.22.1",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.5.0",
     "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
-    "prettier": "2.8.8"
+    "prettier": "2.8.8",
+    "typescript": "~5.8.3"
   },
   "optionalDependencies": {
     "@sentry/cli-darwin": "2.47.1",
@@ -49,6 +51,7 @@
     "test:watch": "jest --watch --notify",
     "test:eslint": "eslint bin/* scripts/**/*.js js/**/*.js",
     "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js",
+    "check:types": "tsc --noEmit",
     "test:vercel-nft": "node scripts/test-vercel-nft.js"
   },
   "jest": {
