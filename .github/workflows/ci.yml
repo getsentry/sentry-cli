@@ -9,97 +9,38 @@ on:
 
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   RUSTFLAGS: -Dwarnings
 
 jobs:
-  lint-each-os:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
-        feature-args: ['', '-Funstable-mobile-app']
-        include:
-          - feature-args: ''
-            feature-suffix: ''
-          - feature-args: '-Funstable-mobile-app'
-            feature-suffix: ', mobile-app'
-
-    name: Lint (${{ matrix.os }}${{ matrix.feature-suffix }})
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-
-      - name: Install Rust Toolchain
-        run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt --no-self-update
-
-      - uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
-
-      - name: Run Rustfmt
-        run: cargo fmt --all -- --check
-
-      - name: Run Clippy
-        run: cargo clippy --workspace --tests ${{ matrix.feature-args }}
-
   lint:
-    needs: lint-each-os
-    runs-on: ubuntu-24.04
-    if: always() # Run even if lint-each-os fails
     name: Lint
-    steps:
-      - name: Check for lint failures
-        if: contains(needs.lint-each-os.result, 'failure') || contains(needs.lint-each-os.result, 'skipped')
-        run: |
-          echo "Required lint check failed. You need to fix the problem before merging."
-          exit 1
+    uses: ./.github/workflows/lint.yml
 
   test:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
-        feature-args: ['', '-Funstable-mobile-app']
-        include:
-          - feature-args: ''
-            feature-suffix: ''
-          - feature-args: '-Funstable-mobile-app'
-            feature-suffix: ', mobile-app'
-
-    name: Test (${{ matrix.os }}${{ matrix.feature-suffix }})
-    runs-on: ${{ matrix.os }}
-
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-
-      - uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
-        with:
-          key: ${{ github.job }}
-
-      - name: Run Cargo Tests
-        run: cargo test --all ${{ matrix.feature-args }}
+    name: Test
+    uses: ./.github/workflows/test.yml
 
   test_node:
-    strategy:
-      fail-fast: false
-      matrix:
-        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x]
+    name: Test Node
+    uses: ./.github/workflows/test_node.yml
 
-    name: Test Node ${{ matrix.node-version }}
+  test_swift:
+    name: Test Swift
+    uses: ./.github/workflows/swift-test.yml
+
+  required:
+    name: Check required jobs
     runs-on: ubuntu-24.04
-
+    needs: [lint, test, test_node, test_swift]
+    if: always()
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
-
-      - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # 4.4.0
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install
-
-      # older node versions need an older nft
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install @vercel/nft@0.22.1
-        if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
-
-      - run: npm test
+      - name: Check for failure
+        if: ${{ needs.lint.result != 'success' || needs.test.result != 'success' || needs.test_node.result != 'success' || needs.test_swift.result != 'success' }}
+        run: |
+          echo "One or more jobs failed"
+          exit 1
