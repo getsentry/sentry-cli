@@ -19,7 +19,9 @@ jobs:
         with:
           node-version-file: package.json
 
-      - run: npm run check:types
+      - run: yarn install
+
+      - run: yarn check:types
 
   test_node:
     strategy:
