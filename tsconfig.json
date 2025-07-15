@@ -10,4 +10,4 @@
   },
   "include": ["js/**/*.js"],
   "exclude": ["**/__tests__/**", "**/__mocks__/**"]
-} 
+}
