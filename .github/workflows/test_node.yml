@@ -42,10 +42,10 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install
+      - run: SENTRYCLI_SKIP_DOWNLOAD=1 yarn install
 
       # older node versions need an older nft
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install @vercel/nft@0.22.1
+      - run: SENTRYCLI_SKIP_DOWNLOAD=1 yarn add @vercel/nft@0.22.1
         if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
-      - run: npm test
+      - run: yarn test
