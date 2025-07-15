@@ -7,14 +7,14 @@ describe('SentryCli releases', () => {
   test('call sentry-cli releases propose-version', () => {
     expect.assertions(1);
     const cli = new SentryCli();
-    return cli.releases.proposeVersion().then(version => expect(version).toBeTruthy());
+    return cli.releases.proposeVersion().then((version) => expect(version).toBeTruthy());
   });
 
   describe('with mock', () => {
     let cli;
     let mockExecute;
     beforeAll(() => {
-      mockExecute = jest.fn(async () => { });
+      mockExecute = jest.fn(async () => {});
       jest.doMock('../../helper', () => ({
         ...jest.requireActual('../../helper'),
         execute: mockExecute,
@@ -100,7 +100,7 @@ describe('SentryCli releases', () => {
         await cli.releases.uploadSourceMaps('my-version', { include: paths });
 
         expect(mockExecute).toHaveBeenCalledTimes(2);
-        paths.forEach(path =>
+        paths.forEach((path) =>
           expect(mockExecute).toHaveBeenCalledWith(
             [
               'releases',
@@ -154,6 +154,25 @@ describe('SentryCli releases', () => {
             'node_modules',
           ],
           true,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
+
+      test.each([true, false, 'rejectOnError'])('handles live mode %s', async (live) => {
+        await cli.releases.uploadSourceMaps('my-version', { include: ['path'], live });
+        expect(mockExecute).toHaveBeenCalledWith(
+          [
+            'releases',
+            'files',
+            'my-version',
+            'upload-sourcemaps',
+            'path',
+            '--ignore',
+            'node_modules',
+          ],
+          live,
           false,
           undefined,
           { silent: false }
