@@ -1,5 +1,3 @@
-#![cfg(feature = "unstable-mobile-app")]
-
 #[cfg(target_os = "macos")]
 mod apple;
 mod validation;
