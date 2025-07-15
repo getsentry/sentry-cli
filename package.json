@@ -27,7 +27,8 @@
     "eslint-config-prettier": "^8.5.0",
     "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
-    "prettier": "2.8.8"
+    "prettier": "2.8.8",
+    "typescript": "^5.0.0"
   },
   "optionalDependencies": {
     "@sentry/cli-darwin": "2.47.1",
@@ -44,11 +45,12 @@
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",
-    "test": "npm-run-all test:jest test:eslint test:prettier test:vercel-nft",
+    "test": "npm-run-all test:jest test:eslint test:prettier test:vercel-nft check:types",
     "test:jest": "jest",
     "test:watch": "jest --watch --notify",
     "test:eslint": "eslint bin/* scripts/**/*.js js/**/*.js",
     "test:prettier": "prettier --check  bin/* scripts/**/*.js js/**/*.js",
+    "check:types": "tsc --noEmit",
     "test:vercel-nft": "node scripts/test-vercel-nft.js"
   },
   "jest": {

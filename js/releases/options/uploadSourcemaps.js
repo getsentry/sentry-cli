@@ -1,3 +1,6 @@
+/**
+ * @type {import('../../helper').OptionsSchema}
+ */
 module.exports = {
   ignore: {
     param: '--ignore',
