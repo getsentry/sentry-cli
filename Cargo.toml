@@ -94,10 +94,6 @@ default = []
 managed = []
 with_crash_reporting = []
 
-# Feature flag for the mobile-app command, as it is still under development.
-# CI tests run against this flag, but we don't include it in release builds.
-unstable-mobile-app = ["apple-catalog-parsing"]
-
 [workspace.lints.clippy]
 allow-attributes = "warn"
 str-to-string = "warn"
