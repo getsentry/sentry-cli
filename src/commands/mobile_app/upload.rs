@@ -213,7 +213,10 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8]) -> Result<TempFile> {
-    debug!("Converting IPA to XCArchive structure: {}", ipa_path.display());
+    debug!(
+        "Converting IPA to XCArchive structure: {}",
+        ipa_path.display()
+    );
 
     let temp_dir = crate::utils::fs::TempDir::create()?;
     let xcarchive_dir = temp_dir.path().join("archive.xcarchive");
@@ -228,83 +231,37 @@ fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8]) -> Result<TempFile> {
     let mut ipa_archive = zip::ZipArchive::new(cursor)?;
 
     let mut app_name = String::new();
-    let mut app_bundle_id = String::new();
-    let mut app_version = String::new();
-    let mut app_short_version = String::new();
 
     // Extract .app from Payload/ directory
     for i in 0..ipa_archive.len() {
         let mut file = ipa_archive.by_index(i)?;
-        let file_path = file.name();
+        let file_path = file.name().to_string();
 
-        if file_path.starts_with("Payload/") && file_path.ends_with(".app/") {
-            // Extract app name from path like "Payload/MyApp.app/"
-            let app_folder_name = file_path
-                .strip_prefix("Payload/")
-                .unwrap()
-                .strip_suffix("/")
-                .unwrap();
-            app_name = app_folder_name.strip_suffix(".app").unwrap().to_string();
-            debug!("Found app: {}", app_name);
-        }
-
-        if file_path.starts_with("Payload/") && !file.is_dir() {
-            // Create the file path in the XCArchive structure
-            let relative_path = file_path.strip_prefix("Payload/").unwrap();
-            let target_path = applications_dir.join(relative_path);
-
-            // Create parent directories
-            if let Some(parent) = target_path.parent() {
-                std::fs::create_dir_all(parent)?;
+        if let Some(stripped) = file_path.strip_prefix("Payload/") {
+            if let Some(app_folder_name) = stripped.strip_suffix(".app/") {
+                app_name = app_folder_name.to_string();
+                debug!("Found app: {}", app_name);
             }
 
-            // Extract file
-            let mut target_file = std::fs::File::create(&target_path)?;
-            std::io::copy(&mut file, &mut target_file)?;
+            if !file.is_dir() {
+                // Create the file path in the XCArchive structure
+                let target_path = applications_dir.join(stripped);
 
-            // If this is Info.plist, extract bundle information
-            if relative_path.ends_with("/Info.plist") {
-                debug!("Extracting bundle info from Info.plist");
-                if let Ok(info_plist_data) = std::fs::read(&target_path) {
-                    if let Ok(plist) = plist::from_bytes::<plist::Dictionary>(&info_plist_data) {
-                        if let Some(bundle_id) = plist.get("CFBundleIdentifier")
-                            .and_then(|v| v.as_string()) {
-                            app_bundle_id = bundle_id.to_string();
-                        }
-                        if let Some(version) = plist.get("CFBundleVersion")
-                            .and_then(|v| v.as_string()) {
-                            app_version = version.to_string();
-                        }
-                        if let Some(short_version) = plist.get("CFBundleShortVersionString")
-                            .and_then(|v| v.as_string()) {
-                            app_short_version = short_version.to_string();
-                        }
-                    }
+                // Create parent directories
+                if let Some(parent) = target_path.parent() {
+                    std::fs::create_dir_all(parent)?;
                 }
+
+                // Extract file
+                let mut target_file = std::fs::File::create(&target_path)?;
+                std::io::copy(&mut file, &mut target_file)?;
             }
         }
     }
-
-    if app_name.is_empty() {
-        app_name = "UnknownApp".to_string();
-    }
-    if app_bundle_id.is_empty() {
-        app_bundle_id = "com.unknown.app".to_string();
-    }
-    if app_version.is_empty() {
-        app_version = "1".to_string();
-    }
-    if app_short_version.is_empty() {
-        app_short_version = "1.0".to_string();
-    }
-
-    debug!("App info - Name: {}, Bundle ID: {}, Version: {}, Short Version: {}", 
-           app_name, app_bundle_id, app_version, app_short_version);
 
     // Create Info.plist for XCArchive
     let info_plist_path = xcarchive_dir.join("Info.plist");
-    let creation_date = chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string();
-    
+
     let info_plist_content = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -313,41 +270,20 @@ fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8]) -> Result<TempFile> {
 	<key>ApplicationProperties</key>
 	<dict>
 		<key>ApplicationPath</key>
-		<string>Applications/{}.app</string>
-		<key>Architectures</key>
-		<array>
-			<string>arm64</string>
-		</array>
-		<key>CFBundleIdentifier</key>
-		<string>{}</string>
-		<key>CFBundleShortVersionString</key>
-		<string>{}</string>
-		<key>CFBundleVersion</key>
-		<string>{}</string>
-		<key>SigningIdentity</key>
-		<string>Apple Development: Converted from IPA</string>
-		<key>Team</key>
-		<string>CONVERTED</string>
+		<string>Applications/{app_name}.app</string>
 	</dict>
 	<key>ArchiveVersion</key>
 	<integer>1</integer>
-	<key>CreationDate</key>
-	<date>{}</date>
-	<key>Name</key>
-	<string>{}</string>
-	<key>SchemeName</key>
-	<string>{}</string>
 </dict>
-</plist>"#,
-        app_name, app_bundle_id, app_short_version, app_version, creation_date, app_name, app_name
+</plist>"#
     );
 
     std::fs::write(&info_plist_path, info_plist_content)?;
 
-    debug!("Created XCArchive Info.plist at: {}", info_plist_path.display());
-
-    // Now create a zip file containing the XCArchive
-    debug!("Creating zip from XCArchive directory");
+    debug!(
+        "Created XCArchive Info.plist at: {}",
+        info_plist_path.display()
+    );
     normalize_directory(&xcarchive_dir)
 }
 
