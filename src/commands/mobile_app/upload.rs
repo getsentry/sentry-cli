@@ -270,26 +270,19 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .into_iter()
         .sorted_by(|(_, a), (_, b)| a.cmp(b));
 
+    // Need to set the last modified time to a fixed value to ensure consistent checksums
+    // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
+    // but the last modified time being different will cause checksums to be different.
+    let options = SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .last_modified_time(DateTime::default());
+
     for (entry_path, relative_path) in entries {
         debug!("Adding file to zip: {}", relative_path.display());
 
-        // Need to set the last modified time to a fixed value to ensure consistent checksums
-        // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
-        // but the last modified time being different will cause checksums to be different.
         #[cfg(not(windows))]
-        let options = {
-            let metadata = fs::metadata(&entry_path)?;
-            let mode = metadata.permissions().mode();
-            SimpleFileOptions::default()
-                .compression_method(zip::CompressionMethod::Stored)
-                .last_modified_time(DateTime::default())
-                .unix_permissions(mode)
-        };
-
-        #[cfg(windows)]
-        let options = SimpleFileOptions::default()
-            .compression_method(zip::CompressionMethod::Stored)
-            .last_modified_time(DateTime::default());
+        // On Unix, we need to preserve the file permissions.
+        let options = options.unix_permissions(fs::metadata(&entry_path)?.permissions().mode());
 
         zip.start_file(relative_path.to_string_lossy(), options)?;
         let file_byteview = ByteView::open(&entry_path)?;
