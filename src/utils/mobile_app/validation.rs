@@ -48,10 +48,10 @@ pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
     for i in 0..archive.len() {
         let file = archive.by_index(i)?;
         let name = file.name();
-        
+
         if name.starts_with("Payload/") {
             has_payload = true;
-            
+
             // Check if there's a .app directory in Payload/
             if name.starts_with("Payload/") && name.ends_with(".app/") {
                 has_app_in_payload = true;
