@@ -119,9 +119,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     if let Some(version) = version {
         for dist in matches.get_many::<String>("dist").unwrap() {
-            println!(
-                "Uploading sourcemaps for release {version} distribution {dist}"
-            );
+            println!("Uploading sourcemaps for release {version} distribution {dist}");
 
             processor.upload(&UploadContext {
                 org: &org,
