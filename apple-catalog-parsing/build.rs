@@ -2,6 +2,9 @@ use std::env;
 use std::process::Command;
 
 fn main() {
+    /// Environment variable to disable Swift sandboxing.
+    const SWIFT_DISABLE_SANDBOX: &str = "SWIFT_DISABLE_SANDBOX";
+
     let target = env::var("TARGET").expect("TARGET is set for build scripts");
     let mut target_bits = target.split('-');
 
@@ -20,32 +23,34 @@ fn main() {
 
     println!("cargo:rerun-if-changed=native/swift/AssetCatalogParser");
 
-    let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
-
-    let scratch_path = format!("{out_dir}/swift-scratch");
-    let triple = format!("{arch}-apple-macosx10.12");
-    let mut args = vec![
-        "build",
-        "-c",
-        "release",
-        "--package-path",
-        "native/swift/AssetCatalogParser",
-        "--scratch-path",
-        &scratch_path,
-        "--triple",
-        &triple,
-    ];
-
     // Allow swift to be run with `--disable-sandbox` in case cargo has been invoked inside a
     // sandbox already. Nested sandboxes are not allowed on Darwin.
-    println!("cargo:rerun-if-env-changed=SWIFT_DISABLE_SANDBOX");
-    if std::env::var_os("SWIFT_DISABLE_SANDBOX").map_or(false, |s| s != "0") {
-        args.push("--disable-sandbox");
-    }
+    println!("cargo:rerun-if-env-changed={SWIFT_DISABLE_SANDBOX}");
+
+    let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
 
     // Compile Swift code
     let status = Command::new("swift")
-        .args(&args)
+        .args(
+            [
+                "build",
+                "-c",
+                "release",
+                "--package-path",
+                "native/swift/AssetCatalogParser",
+                "--scratch-path",
+                &format!("{out_dir}/swift-scratch"),
+                "--triple",
+                &format!("{arch}-apple-macosx10.12"),
+            ]
+            .into_iter()
+            .chain(
+                env::var(SWIFT_DISABLE_SANDBOX)
+                    .ok()
+                    .filter(|s| s == "1")
+                    .map(|_| "--disable-sandbox"),
+            ),
+        )
         .status()
         .expect("Failed to compile SPM");
 
