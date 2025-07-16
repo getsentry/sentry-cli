@@ -20,6 +20,8 @@ jobs:
           node-version-file: package.json
 
       # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
+      # We have to use npm here because yarn fails on the non-existing existing optionalDependency version:
+      # https://github.com/yarnpkg/berry/issues/2425#issuecomment-1627807326
       - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install
 
       - run: npm run check:types
@@ -42,6 +44,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
+      # We have to use npm here because yarn fails on the non-existing existing optionalDependency version:
+      # https://github.com/yarnpkg/berry/issues/2425#issuecomment-1627807326
       - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install
 
       # older node versions need an older nft
