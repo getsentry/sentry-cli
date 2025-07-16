@@ -6,8 +6,8 @@ $ sentry-cli mobile-app upload --help
 Usage: sentry-cli[EXE] mobile-app upload [OPTIONS] <PATH>...
 
 Arguments:
-  <PATH>...  The path to the mobile app files to upload. Supported files include Apk, Aab or
-             XCArchive.
+  <PATH>...  The path to the mobile app files to upload. Supported files include Apk, Aab,
+             XCArchive, or IPA.
 
 Options:
   -o, --org <ORG>

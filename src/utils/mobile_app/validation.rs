@@ -37,6 +37,32 @@ pub fn is_aab_file(bytes: &[u8]) -> Result<bool> {
     Ok(has_bundle_config && has_base_manifest)
 }
 
+pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
+    let cursor = std::io::Cursor::new(bytes);
+    let mut archive = zip::ZipArchive::new(cursor)?;
+
+    // IPA files must contain a Payload/ directory with a .app bundle inside
+    let mut has_payload = false;
+    let mut has_app_in_payload = false;
+
+    for i in 0..archive.len() {
+        let file = archive.by_index(i)?;
+        let name = file.name();
+        
+        if name.starts_with("Payload/") {
+            has_payload = true;
+            
+            // Check if there's a .app directory in Payload/
+            if name.starts_with("Payload/") && name.ends_with(".app/") {
+                has_app_in_payload = true;
+                break;
+            }
+        }
+    }
+
+    Ok(has_payload && has_app_in_payload)
+}
+
 pub fn is_xcarchive_directory<P>(path: P) -> bool
 where
     P: AsRef<Path>,

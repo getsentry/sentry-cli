@@ -56,6 +56,18 @@ fn command_mobile_app_upload_invalid_xcarchive() {
 }
 
 #[test]
+fn command_mobile_app_upload_invalid_ipa() {
+    TestManager::new()
+        .assert_cmd(vec![
+            "mobile-app",
+            "upload",
+            "tests/integration/_fixtures/mobile_app/invalid.ipa",
+        ])
+        .with_default_token()
+        .run_and_assert(AssertCommand::Failure);
+}
+
+#[test]
 fn command_mobile_app_upload_apk_all_uploaded() {
     TestManager::new()
         .mock_endpoint(
