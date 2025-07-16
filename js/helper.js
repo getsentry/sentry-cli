@@ -186,6 +186,7 @@ function mockBinaryPath(mockPath) {
  * @typedef {object} OptionSchema
  * @prop {string} param The flag of the command line option including dashes.
  * @prop {OptionType} type The value type of the command line option.
+ * @prop {string} [invertedParam] The flag of the command line option including dashes (optional).
  */
 
 /**
@@ -245,7 +246,7 @@ function serializeOptions(schema, options) {
 /**
  * Serializes the command and its options into an arguments array.
  *
- * @param {string} command The literal name of the command.
+ * @param {string[]} command The literal name of the command.
  * @param {OptionsSchema} [schema] An options schema required by the command.
  * @param {object} [options] An options object according to the schema.
  * @returns {string[]} An arguments array that can be passed via command line.
@@ -280,7 +281,11 @@ function getPath() {
  * expect(output.trim()).toBe('sentry-cli x.y.z');
  *
  * @param {string[]} args Command line arguments passed to `sentry-cli`.
- * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+ * @param {boolean | 'rejectOnError'} live can be set to:
+ *  - `true` to inherit stdio to display `sentry-cli` output directly.
+ *  - `false` to not inherit stdio and return the output as a string.
+ *  - `'rejectOnError'` to inherit stdio and reject the promise if the command
+ *    exits with a non-zero exit code.
  * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
  * @param {string} [configFile] Relative or absolute path to the configuration file.
  * @param {Object} [config] More configuration to pass to the CLI
@@ -321,15 +326,27 @@ async function execute(args, live, silent, configFile, config = {}) {
     ]);
     args = [...headers, ...args];
   }
+
   return new Promise((resolve, reject) => {
-    if (live === true) {
+    if (live === true || live === 'rejectOnError') {
       const output = silent ? 'ignore' : 'inherit';
       const pid = childProcess.spawn(getPath(), args, {
         env,
         // stdin, stdout, stderr
         stdio: ['ignore', output, output],
       });
-      pid.on('exit', () => {
+      pid.on('exit', (exitCode) => {
+        if (live === 'rejectOnError') {
+          if (exitCode === 0) {
+            resolve('success (live mode)');
+          }
+          reject(new Error(`Command ${args.join(' ')} failed with exit code ${exitCode}`));
+        }
+        // According to the type definition, resolving with void is not allowed.
+        // However, for backwards compatibility, we resolve void here to
+        // avoid a behaviour-breaking change.
+        // TODO (v3): Clean this up and always resolve a string (or change the type definition)
+        // @ts-expect-error - see comment above
         resolve();
       });
     } else {

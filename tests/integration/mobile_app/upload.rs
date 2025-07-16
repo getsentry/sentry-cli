@@ -15,6 +15,11 @@ fn command_mobile_app_upload_no_token() {
 }
 
 #[test]
+fn command_mobile_app_upload_no_path() {
+    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-no-path.trycmd");
+}
+
+#[test]
 fn command_mobile_app_upload_invalid_aab() {
     TestManager::new()
         .assert_cmd(vec![

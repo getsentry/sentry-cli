@@ -1,0 +1,54 @@
+name: Test Node
+
+on:
+  workflow_call:
+    outputs:
+      matrix-result:
+        description: 'Matrix job result'
+        value: ${{ jobs.test_node.result }}
+
+jobs:
+  type_check:
+    name: Type Check
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+
+      - name: Use Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # 4.4.0
+        with:
+          node-version-file: package.json
+
+      # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
+      - run: SENTRYCLI_SKIP_DOWNLOAD=1 yarn install --frozen-lockfile
+
+      - run: yarn check:types
+
+  test_node:
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x]
+
+    name: Test Node ${{ matrix.node-version }}
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # 4.4.0
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
+      - run: SENTRYCLI_SKIP_DOWNLOAD=1 yarn install --frozen-lockfile
+        if: matrix.node-version != '10.x' && matrix.node-version != '12.x'
+
+      # older node versions need an older nft
+      - run: |
+          SENTRYCLI_SKIP_DOWNLOAD=1 yarn install --ignore-engines --frozen-lockfile
+          SENTRYCLI_SKIP_DOWNLOAD=1 yarn add @vercel/nft@0.22.1 --ignore-engines
+        if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
+
+      - run: yarn test

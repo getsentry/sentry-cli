@@ -22,6 +22,30 @@ describe('SentryCli helper', () => {
     expect(helper.getPath()).toMatch(pattern);
   });
 
+  describe('execute', () => {
+    test('execute with live=false returns stdout', async () => {
+      const output = await helper.execute(['--version'], false);
+      expect(output.trim()).toBe('sentry-cli DEV');
+    });
+
+    test('execute with live=true resolves without output', async () => {
+      // TODO (v3): This should resolve with a string, not undefined/void
+      const result = await helper.execute(['--version'], true);
+      expect(result).toBeUndefined();
+    });
+
+    test('execute with live=rejectOnError resolves on success', async () => {
+      const result = await helper.execute(['--version'], 'rejectOnError');
+      expect(result).toBe('success (live mode)');
+    });
+
+    test('execute with live=rejectOnError rejects on failure', async () => {
+      await expect(helper.execute(['fail'], 'rejectOnError')).rejects.toThrow(
+        'Command fail failed with exit code 1'
+      );
+    });
+  });
+
   describe('`prepare` command', () => {
     test('call prepare command add default ignore', () => {
       const command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];

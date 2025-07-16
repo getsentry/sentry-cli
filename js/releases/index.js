@@ -10,13 +10,13 @@ const DEFAULT_IGNORE = ['node_modules'];
 
 /**
  * Schema for the `upload-sourcemaps` command.
- * @type {OptionsSchema}
+ * @type {import('../helper').OptionsSchema}
  */
 const SOURCEMAPS_SCHEMA = require('./options/uploadSourcemaps');
 
 /**
  * Schema for the `deploys new` command.
- * @type {OptionsSchema}
+ * @type {import('../helper').OptionsSchema}
  */
 const DEPLOYS_SCHEMA = require('./options/deploys');
 
@@ -95,7 +95,7 @@ class Releases {
       commitFlags.push('--ignore-missing');
     }
 
-    return this.execute(['releases', 'set-commits', release].concat(commitFlags));
+    return this.execute(['releases', 'set-commits', release].concat(commitFlags), false);
   }
 
   /**
@@ -199,7 +199,10 @@ class Releases {
 
       return uploadPaths.map((path) =>
         // `execute()` is async and thus we're returning a promise here
-        this.execute(helper.prepareCommand([...args, path], SOURCEMAPS_SCHEMA, newOptions), true)
+        this.execute(
+          helper.prepareCommand([...args, path], SOURCEMAPS_SCHEMA, newOptions),
+          options.live != null ? options.live : true
+        )
       );
     });
 
@@ -255,7 +258,11 @@ class Releases {
   /**
    * See {helper.execute} docs.
    * @param {string[]} args Command line arguments passed to `sentry-cli`.
-   * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+   * @param {boolean | 'rejectOnError'} live can be set to:
+   *  - `true` to inherit stdio to display `sentry-cli` output directly.
+   *  - `false` to not inherit stdio and return the output as a string.
+   *  - `'rejectOnError'` to inherit stdio and reject the promise if the command
+   *    exits with a non-zero exit code.
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   async execute(args, live) {
