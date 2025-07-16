@@ -19,7 +19,33 @@ use crate::utils::system::{load_dotenv, print_error, set_panic_hook, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
 
+mod bash_hook;
+mod debug_files;
+mod deploys;
 mod derive_parser;
+mod events;
+mod files;
+mod info;
+mod issues;
+mod login;
+mod mobile_app;
+mod monitors;
+mod organizations;
+mod projects;
+mod react_native;
+mod releases;
+mod repos;
+mod send_envelope;
+mod send_event;
+mod send_metric;
+mod sourcemaps;
+#[cfg(not(feature = "managed"))]
+mod uninstall;
+#[cfg(not(feature = "managed"))]
+mod update;
+mod upload_dif;
+mod upload_dsym;
+mod upload_proguard;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -52,14 +78,6 @@ macro_rules! each_subcommand {
         $mac!(upload_proguard);
     };
 }
-
-macro_rules! import_subcommand {
-    ($name:ident) => {
-        pub mod $name;
-    };
-}
-
-each_subcommand!(import_subcommand);
 
 const ABOUT: &str = "
 Command line utility for Sentry.
