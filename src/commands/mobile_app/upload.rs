@@ -1,10 +1,10 @@
 use std::borrow::Cow;
-use std::io::Write;
-use std::path::Path;
 #[cfg(not(windows))]
 use std::fs;
+use std::io::Write;
 #[cfg(not(windows))]
 use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -343,9 +343,14 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .filter(|entry| entry.path().is_file())
         .map(|entry| {
             let entry_path = entry.into_path();
-            let relative_path = entry_path.strip_prefix(
-                path.parent().ok_or_else(|| anyhow!("Cannot determine parent directory for path: {}", path.display()))?
-            )?.to_owned();
+            let relative_path = entry_path
+                .strip_prefix(path.parent().ok_or_else(|| {
+                    anyhow!(
+                        "Cannot determine parent directory for path: {}",
+                        path.display()
+                    )
+                })?)?
+                .to_owned();
             Ok((entry_path, relative_path))
         })
         .collect::<Result<Vec<_>>>()?

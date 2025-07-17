@@ -38,7 +38,7 @@ This command will validate input parameters and attempt to send a metric to \
 Sentry. Due to network errors and rate limits, the metric is not guaranteed to \
 arrive. Check the debug output for transmission errors by passing --log-level=\
 debug or setting `SENTRY_LOG_LEVEL=debug`."))]
-#[command(hide=true)]
+#[command(hide = true)]
 enum SendMetricSubcommand {
     #[command(about = format!("[DEPRECATED] {INCREMENT_ABOUT}"))]
     #[command(long_about = format!("{DEPRECATION_MESSAGE}{{n}}{{n}}{INCREMENT_ABOUT}"))]

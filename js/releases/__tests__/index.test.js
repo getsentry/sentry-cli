@@ -159,6 +159,25 @@ describe('SentryCli releases', () => {
           { silent: false }
         );
       });
+
+      test.each([true, false, 'rejectOnError'])('handles live mode %s', async (live) => {
+        await cli.releases.uploadSourceMaps('my-version', { include: ['path'], live });
+        expect(mockExecute).toHaveBeenCalledWith(
+          [
+            'releases',
+            'files',
+            'my-version',
+            'upload-sourcemaps',
+            'path',
+            '--ignore',
+            'node_modules',
+          ],
+          live,
+          false,
+          undefined,
+          { silent: false }
+        );
+      });
     });
   });
 });
