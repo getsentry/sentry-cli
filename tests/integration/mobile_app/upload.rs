@@ -172,3 +172,57 @@ fn command_mobile_app_upload_apk_chunked() {
         .register_trycmd_test("mobile_app/mobile_app-upload-apk.trycmd")
         .with_default_token();
 }
+
+#[test]
+#[cfg(target_os = "macos")]
+/// This test simulates a full chunk upload for an IPA file (with only one chunk).
+/// It verifies that the Sentry CLI makes the expected API calls to the chunk upload endpoint
+/// and that the data sent to the chunk upload endpoint is exactly as expected.
+/// It also verifies that the correct calls are made to the assemble endpoint.
+fn command_mobile_app_upload_ipa_chunked() {
+    let is_first_assemble_call = AtomicBool::new(true);
+
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("mobile_app/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_fn(move |request| {
+                    let content_type_headers = request.header("content-type");
+                    assert_eq!(
+                        content_type_headers.len(),
+                        1,
+                        "content-type header should be present exactly once, found {} times",
+                        content_type_headers.len()
+                    );
+                    vec![] // Client does not expect a response body
+                }),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
+            )
+            .with_header_matcher("content-type", "application/json")
+             .with_matcher(r#"{"checksum":"ed9da71e3688261875db21b266da84ffe004a8a4","chunks":["ed9da71e3688261875db21b266da84ffe004a8a4"],"git_sha":"test_sha"}"#)
+            .with_response_fn(move |_| {
+                if is_first_assemble_call.swap(false, Ordering::Relaxed) {
+                    r#"{
+                        "state": "created",
+                        "missingChunks": ["ed9da71e3688261875db21b266da84ffe004a8a4"]
+                    }"#
+                } else {
+                    r#"{
+                        "state": "ok",
+                        "missingChunks": []
+                    }"#
+                }
+                .into()
+            })
+            .expect(2),
+        )
+        .register_trycmd_test("mobile_app/mobile_app-upload-ipa.trycmd")
+        .with_default_token();
+}

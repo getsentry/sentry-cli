@@ -24,7 +24,9 @@ use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
 #[cfg(target_os = "macos")]
 use crate::utils::mobile_app::handle_asset_catalogs;
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_apple_app, is_ipa_file, is_zip_file};
+use crate::utils::mobile_app::{
+    ipa_to_xcarchive, is_aab_file, is_apk_file, is_apple_app, is_ipa_file, is_zip_file,
+};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -95,12 +97,29 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let normalized_zip = if path.is_file() {
             debug!("Normalizing file: {}", path.display());
-            normalize_file(path, &byteview).with_context(|| {
-                format!(
-                    "Failed to generate uploadable bundle for file {}",
-                    path.display()
-                )
-            })?
+
+            // Handle IPA files by converting them to XCArchive
+            if is_zip_file(&byteview) && is_ipa_file(&byteview)? {
+                debug!("Converting IPA file to XCArchive structure");
+                let temp_dir = crate::utils::fs::TempDir::create()?;
+                let xcarchive_path =
+                    ipa_to_xcarchive(path, &byteview, &temp_dir).with_context(|| {
+                        format!(
+                            "Failed to convert IPA to XCArchive for file {}",
+                            path.display()
+                        )
+                    })?;
+                normalize_directory(&xcarchive_path).with_context(|| {
+                    format!("Failed to normalize XCArchive for file {}", path.display())
+                })?
+            } else {
+                normalize_file(path, &byteview).with_context(|| {
+                    format!(
+                        "Failed to generate uploadable bundle for file {}",
+                        path.display()
+                    )
+                })?
+            }
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
             normalize_directory(path).with_context(|| {
@@ -212,90 +231,9 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     ))
 }
 
-fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8]) -> Result<TempFile> {
-    debug!(
-        "Converting IPA to XCArchive structure: {}",
-        ipa_path.display()
-    );
-
-    let temp_dir = crate::utils::fs::TempDir::create()?;
-    let xcarchive_dir = temp_dir.path().join("archive.xcarchive");
-    let products_dir = xcarchive_dir.join("Products");
-    let applications_dir = products_dir.join("Applications");
-
-    debug!("Creating XCArchive directory structure");
-    std::fs::create_dir_all(&applications_dir)?;
-
-    // Extract IPA file
-    let cursor = std::io::Cursor::new(ipa_bytes);
-    let mut ipa_archive = zip::ZipArchive::new(cursor)?;
-
-    let mut app_name = String::new();
-
-    // Extract .app from Payload/ directory
-    for i in 0..ipa_archive.len() {
-        let mut file = ipa_archive.by_index(i)?;
-
-        if let Some(stripped) = file.name().strip_prefix("Payload/") {
-            if let Some(app_folder_name) = stripped.strip_suffix(".app/") {
-                app_name = app_folder_name.to_string();
-                debug!("Found app: {}", app_name);
-            }
-
-            if !file.is_dir() {
-                // Create the file path in the XCArchive structure
-                let target_path = applications_dir.join(stripped);
-
-                // Create parent directories
-                if let Some(parent) = target_path.parent() {
-                    std::fs::create_dir_all(parent)?;
-                }
-
-                // Extract file
-                let mut target_file = std::fs::File::create(&target_path)?;
-                std::io::copy(&mut file, &mut target_file)?;
-            }
-        }
-    }
-
-    // Create Info.plist for XCArchive
-    let info_plist_path = xcarchive_dir.join("Info.plist");
-
-    let info_plist_content = format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>ApplicationProperties</key>
-	<dict>
-		<key>ApplicationPath</key>
-		<string>Applications/{app_name}.app</string>
-	</dict>
-	<key>ArchiveVersion</key>
-	<integer>1</integer>
-</dict>
-</plist>"#
-    );
-
-    std::fs::write(&info_plist_path, info_plist_content)?;
-
-    debug!(
-        "Created XCArchive Info.plist at: {}",
-        info_plist_path.display()
-    );
-    normalize_directory(&xcarchive_dir)
-}
-
 // For APK and AAB files, we'll copy them directly into the zip
-// For IPA files, we'll convert them to XCArchive structure first
 fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     debug!("Creating normalized zip for file: {}", path.display());
-
-    // Check if this is an IPA file that needs conversion
-    if is_zip_file(bytes) && is_ipa_file(bytes)? {
-        debug!("Converting IPA file to XCArchive structure");
-        return ipa_to_xcarchive(path, bytes);
-    }
 
     let temp_file = TempFile::create()?;
     let mut zip = ZipWriter::new(temp_file.open()?);
