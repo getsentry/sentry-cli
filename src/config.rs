@@ -194,8 +194,7 @@ impl Config {
                 );
             }
             Some(Auth::Key(ref val)) => {
-                self.ini
-                    .set_to(Some("auth"), "api_key".into(), val.to_string());
+                self.ini.set_to(Some("auth"), "api_key".into(), val.clone());
             }
             None => {}
         }
@@ -351,7 +350,7 @@ impl Config {
                     format_err!("An organization ID or slug is required (provide with --org)")
                 }),
             (None, Some(cli_org)) => Ok(cli_org),
-            (Some(token_org), None) => Ok(token_org.to_string()),
+            (Some(token_org), None) => Ok(token_org.clone()),
             (Some(token_org), Some(cli_org)) => {
                 if cli_org != *token_org {
                     log::warn!(
@@ -381,7 +380,7 @@ impl Config {
     // Backward compatibility with `releases files <VERSION>` commands.
     pub fn get_release_with_legacy_fallback(&self, matches: &ArgMatches) -> Result<String> {
         if let Some(version) = matches.get_one::<String>("version") {
-            Ok(version.to_string())
+            Ok(version.clone())
         } else {
             self.get_release(matches)
         }

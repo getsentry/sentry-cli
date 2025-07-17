@@ -316,7 +316,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     if let Some(fingerprint) = matches.get_many::<String>("fingerprint") {
         event.fingerprint = fingerprint
-            .map(|x| x.to_string().into())
+            .map(|x| x.clone().into())
             .collect::<Vec<_>>()
             .into();
     }
