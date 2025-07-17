@@ -197,7 +197,7 @@ pub fn fixup_js_file(js_contents: &mut Vec<u8>, debug_id: DebugId) -> Result<Sou
 
     let map = magic
         .generate_map(GenerateDecodedMapOptions {
-            source: Some("pre_injection.js".to_string()),
+            source: Some("pre_injection.js".to_owned()),
             include_content: true,
             ..Default::default()
         })
@@ -645,10 +645,7 @@ more text
     #[test]
     fn test_find_matching_paths_unique() {
         let expected = "./foo/bar/baz/quux";
-        let candidates = &[
-            "./foo/baz/quux".to_string(),
-            "foo/baar/baz/quux".to_string(),
-        ];
+        let candidates = &["./foo/baz/quux".to_owned(), "foo/baar/baz/quux".to_owned()];
 
         assert_eq!(
             find_matching_paths(candidates, expected),
@@ -656,9 +653,9 @@ more text
         );
 
         let candidates = &[
-            "./foo/baz/quux".to_string(),
-            "foo/baar/baz/quux".to_string(),
-            "./foo/bar/baz/quux".to_string(),
+            "./foo/baz/quux".to_owned(),
+            "foo/baar/baz/quux".to_owned(),
+            "./foo/bar/baz/quux".to_owned(),
         ];
 
         assert_eq!(find_matching_paths(candidates, expected), vec![expected]);
@@ -668,8 +665,8 @@ more text
     fn test_find_matching_paths_ambiguous() {
         let expected = "./foo/bar/baz/quux";
         let candidates = &[
-            "./foo/bar/baaz/quux".to_string(),
-            "foo/baar/baz/quux".to_string(),
+            "./foo/bar/baaz/quux".to_owned(),
+            "foo/baar/baz/quux".to_owned(),
         ];
 
         assert_eq!(find_matching_paths(candidates, expected), candidates,);
@@ -679,21 +676,21 @@ more text
     fn test_find_matching_paths_filename() {
         let expected = "./foo/bar/baz/quux";
         let candidates = &[
-            "./foo/bar/baz/nop".to_string(),
-            "foo/baar/baz/quux".to_string(),
+            "./foo/bar/baz/nop".to_owned(),
+            "foo/baar/baz/quux".to_owned(),
         ];
 
         assert_eq!(
             find_matching_paths(candidates, expected),
-            ["foo/baar/baz/quux".to_string()]
+            ["foo/baar/baz/quux".to_owned()]
         );
     }
 
     #[test]
     fn test_find_matching_paths_sourcemaps() {
         let candidates = &[
-            "./project/maps/index.js.map".to_string(),
-            "./project/maps/page/index.js.map".to_string(),
+            "./project/maps/index.js.map".to_owned(),
+            "./project/maps/page/index.js.map".to_owned(),
         ];
 
         assert_eq!(

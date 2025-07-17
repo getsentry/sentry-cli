@@ -40,8 +40,8 @@ pub fn attach_logfile(event: &mut Event<'_>, logfile: &str, with_component: bool
 
         event.breadcrumbs.values.push(Breadcrumb {
             timestamp: rec.utc_timestamp().unwrap_or(fallback_timestamp).into(),
-            message: Some(message.to_string()),
-            category: Some(component.to_string()),
+            message: Some(message.to_owned()),
+            category: Some(component.to_owned()),
             ..Default::default()
         })
     }

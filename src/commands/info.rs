@@ -70,7 +70,7 @@ fn get_config_status_json() -> Result<()> {
     let (org, project) = config.get_org_and_project_defaults();
     rv.config.org = org;
     rv.config.project = project;
-    rv.config.url = Some(config.get_base_url()?.to_string());
+    rv.config.url = Some(config.get_base_url()?.to_owned());
 
     rv.auth.auth_type = config.get_auth().map(|val| match val {
         Auth::Token(_) => "token".into(),

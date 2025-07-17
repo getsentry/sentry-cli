@@ -315,7 +315,7 @@ impl<'a> DifFile<'a> {
                 .filter_map(Result::ok)
                 .map(|object| DifVariant {
                     debug_id: object.debug_id(),
-                    arch: Some(object.arch().name().to_string()),
+                    arch: Some(object.arch().name().to_owned()),
                     code_id: object.code_id(),
                 })
                 .collect(),

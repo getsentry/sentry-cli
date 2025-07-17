@@ -20,7 +20,7 @@ pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(p: P, uuids: &[Uuid]) -
     };
 
     props.insert(
-        "io.sentry.ProguardUuids".to_string(),
+        "io.sentry.ProguardUuids".to_owned(),
         uuids.iter().map(Uuid::to_string).join("|"),
     );
 

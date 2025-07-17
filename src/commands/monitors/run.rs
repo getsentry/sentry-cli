@@ -140,10 +140,10 @@ fn execute_checkin(
 
     let open_checkin = MonitorCheckIn {
         check_in_id,
-        monitor_slug: monitor_slug.to_string(),
+        monitor_slug: monitor_slug.to_owned(),
         status: MonitorCheckInStatus::InProgress,
         duration: None,
-        environment: Some(environment.to_string()),
+        environment: Some(environment.to_owned()),
         monitor_config,
     };
 
@@ -166,10 +166,10 @@ fn execute_checkin(
 
     let close_checkin = MonitorCheckIn {
         check_in_id,
-        monitor_slug: monitor_slug.to_string(),
+        monitor_slug: monitor_slug.to_owned(),
         status,
         duration,
-        environment: Some(environment.to_string()),
+        environment: Some(environment.to_owned()),
         monitor_config: None,
     };
 

@@ -86,8 +86,8 @@ pub struct LastUpdateCheck {
 impl LastUpdateCheck {
     pub fn update_for_info(&mut self, ui: &SentryCliUpdateInfo) {
         self.last_check_timestamp = Some(Utc::now());
-        self.last_check_version = Some(ui.current_version().to_string());
-        self.last_fetched_version = Some(ui.latest_version().to_string());
+        self.last_check_version = Some(ui.current_version().to_owned());
+        self.last_fetched_version = Some(ui.latest_version().to_owned());
     }
 
     pub fn should_run_check(&self) -> bool {

@@ -115,7 +115,7 @@ pub fn load_dotenv() -> Result<()> {
             .split(",")
             .map(|path| path.trim())
             .filter(|path| !path.is_empty())
-            .map(|path| path.to_string())
+            .map(|path| path.to_owned())
             .collect::<Vec<_>>()
     } else {
         // Fallback to default dotenv

@@ -153,7 +153,7 @@ fn get_org_from_token(token: &AuthToken) -> Option<&str> {
 fn format_org_info(org: Option<&str>) -> String {
     match org {
         Some(org_name) => format!("for organization {org_name}"),
-        None => "not tied to any specific organization".to_string(),
+        None => "not tied to any specific organization".to_owned(),
     }
 }
 

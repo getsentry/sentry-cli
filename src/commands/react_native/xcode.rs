@@ -145,7 +145,7 @@ fn find_hermesc() -> String {
         }
     }
 
-    let pods_root_path = env::var("PODS_ROOT").unwrap_or("".to_string());
+    let pods_root_path = env::var("PODS_ROOT").unwrap_or("".to_owned());
     format!("{pods_root_path}/hermes-engine/destroot/bin/hermesc")
 }
 
@@ -219,10 +219,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let url = url.trim_end_matches('/');
         bundle_file = TempFile::create()?;
         bundle_path = bundle_file.path().to_path_buf();
-        bundle_url = "~/index.ios.bundle".to_string();
+        bundle_url = "~/index.ios.bundle".to_owned();
         sourcemap_file = TempFile::create()?;
         sourcemap_path = sourcemap_file.path().to_path_buf();
-        sourcemap_url = "~/index.ios.map".to_string();
+        sourcemap_url = "~/index.ios.map".to_owned();
 
         // wait up to 10 seconds for the server to be up.
         if !api.wait_until_available(url, Duration::seconds(10))? {
@@ -359,7 +359,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 match InfoPlist::discover_from_env() {
                     Ok(Some(plist)) => {
                         // Successfully discovered and parsed Info.plist
-                        let dist_string = plist.build().to_string();
+                        let dist_string = plist.build().to_owned();
                         let release_string =
                             format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist_string);
                         info!("Parse result from Info.plist: {:?}", &plist);
@@ -418,7 +418,7 @@ pub fn wrap_call() -> Result<()> {
     let mut sourcemap_path = None;
     let bundle_command = env::var("SENTRY_RN_BUNDLE_COMMAND");
     let compose_source_maps_path = env::var("COMPOSE_SOURCEMAP_PATH");
-    let no_debug_id = env::var("SENTRY_RN_NO_DEBUG_ID").unwrap_or("0".to_string()) == "1";
+    let no_debug_id = env::var("SENTRY_RN_NO_DEBUG_ID").unwrap_or("0".to_owned()) == "1";
 
     let report_file_path = env::var("SENTRY_RN_SOURCEMAP_REPORT").unwrap();
     let mut sourcemap_report: SourceMapReport = if std::path::Path::new(&report_file_path).exists()
@@ -442,11 +442,11 @@ pub fn wrap_call() -> Result<()> {
             if item == "--sourcemap-output" {
                 sourcemap_path = iter.next().cloned();
             } else if let Some(rest) = item.strip_prefix("--sourcemap-output=") {
-                sourcemap_path = Some(rest.to_string());
+                sourcemap_path = Some(rest.to_owned());
             } else if item == "--bundle-output" {
                 bundle_path = iter.next().cloned();
             } else if let Some(rest) = item.strip_prefix("--bundle-output=") {
-                bundle_path = Some(rest.to_string());
+                bundle_path = Some(rest.to_owned());
             }
         }
 
@@ -551,8 +551,8 @@ pub fn wrap_call() -> Result<()> {
                         .get("debugId")
                         .or_else(|| packager_sourcemap.get("debug_id"))
                     {
-                        hermes_sourcemap.insert("debugId".to_string(), debug_id.clone());
-                        hermes_sourcemap.insert("debug_id".to_string(), debug_id.clone());
+                        hermes_sourcemap.insert("debugId".to_owned(), debug_id.clone());
+                        hermes_sourcemap.insert("debug_id".to_owned(), debug_id.clone());
 
                         hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
                         serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;

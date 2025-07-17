@@ -70,7 +70,7 @@ where
         match iter.next() {
             Some("rfc1034identifier") => SEP_RE.replace_all(value, "-").into_owned(),
             Some("identifier") => SEP_RE.replace_all(value, "_").into_owned(),
-            None | Some(_) => value.to_string(),
+            None | Some(_) => value.to_owned(),
         }
     })
     .into_owned()
@@ -397,7 +397,7 @@ pub fn launched_from_xcode() -> bool {
 #[test]
 fn test_expansion() {
     let mut vars = HashMap::new();
-    vars.insert("FOO_BAR".to_string(), "foo bar baz / blah".to_string());
+    vars.insert("FOO_BAR".to_owned(), "foo bar baz / blah".to_owned());
 
     assert_eq!(
         expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B", &vars),

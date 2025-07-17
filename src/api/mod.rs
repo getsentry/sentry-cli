@@ -473,7 +473,7 @@ impl<'a> AuthenticatedApi<'a> {
         checksums: &[String],
     ) -> ApiResult<Vec<Artifact>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         loop {
             let mut path = if let Some(project) = project {
                 format!(
@@ -1080,7 +1080,7 @@ impl<'a> AuthenticatedApi<'a> {
     /// we're issuing a request to a monolith deployment.
     pub fn list_organizations(&self, region: Option<&Region>) -> ApiResult<Vec<Organization>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         loop {
             let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
             let resp = if let Some(rg) = region {
@@ -1128,7 +1128,7 @@ impl<'a> AuthenticatedApi<'a> {
     /// List all monitors associated with an organization
     pub fn list_organization_monitors(&self, org: &str) -> ApiResult<Vec<Monitor>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         loop {
             let resp = self.get(&format!(
                 "/organizations/{}/monitors/?cursor={}",
@@ -1156,7 +1156,7 @@ impl<'a> AuthenticatedApi<'a> {
     /// List all projects associated with an organization
     pub fn list_organization_projects(&self, org: &str) -> ApiResult<Vec<Project>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         loop {
             let resp = self.get(&format!(
                 "/organizations/{}/projects/?cursor={}",
@@ -1189,7 +1189,7 @@ impl<'a> AuthenticatedApi<'a> {
         max_pages: usize,
     ) -> ApiResult<Vec<ProcessedEvent>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         let mut requests_no = 0;
 
         loop {
@@ -1236,7 +1236,7 @@ impl<'a> AuthenticatedApi<'a> {
         query: Option<String>,
     ) -> ApiResult<Vec<Issue>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         let mut requests_no = 0;
 
         let url = if let Some(query) = query {
@@ -1283,7 +1283,7 @@ impl<'a> AuthenticatedApi<'a> {
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let mut rv = vec![];
-        let mut cursor = "".to_string();
+        let mut cursor = "".to_owned();
         loop {
             let path = format!(
                 "/organizations/{}/repos/?cursor={}",
@@ -1930,7 +1930,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
 
             let replaced = AUTH_RE.replace_all(line, |caps: &Captures<'_>| {
                 let info = if &caps[1].to_lowercase() == "basic" {
-                    caps[3].split(':').next().unwrap().to_string()
+                    caps[3].split(':').next().unwrap().to_owned()
                 } else {
                     format!("{}***", &caps[3][..std::cmp::min(caps[3].len(), 8)])
                 };

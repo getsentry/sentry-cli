@@ -79,7 +79,7 @@ impl log::Log for Logger {
             style(if short_target != "sentry_cli" {
                 format!("  (from {short_target})")
             } else {
-                "".to_string()
+                "".to_owned()
             })
             .dim(),
         );

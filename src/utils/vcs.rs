@@ -62,7 +62,7 @@ fn parse_rev_range(rng: &str) -> (Option<String>, String) {
     }
     let mut iter = rng.rsplitn(2, "..");
     let rev = iter.next().unwrap_or("HEAD");
-    (iter.next().map(str::to_owned), rev.to_string())
+    (iter.next().map(str::to_owned), rev.to_owned())
 }
 
 impl CommitSpec {
@@ -284,7 +284,7 @@ fn find_matching_rev(
             // direct reference in root repository found.  If we are in discovery
             // mode we want to also check for matching URLs.
             if_chain! {
-                if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_string()));
+                if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_owned()));
                 if let Some(url) = remote.url();
                 then {
                     if !discovery || is_matching_url(url, &reference_url) {
@@ -537,7 +537,7 @@ pub fn generate_patch_set(
             author_name: commit.author().name().map(|s| s.to_owned()),
             author_email: commit.author().email().map(|s| s.to_owned()),
             message: commit.message().map(|s| s.to_owned()),
-            repository: repository.to_string(),
+            repository: repository.to_owned(),
             timestamp: get_commit_time(commit.author().when()),
             patch_set: vec![],
         };
@@ -969,7 +969,7 @@ fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
         .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {tag_name}`."));
 
     String::from_utf8(hash.stdout)
-        .map(|s| s.trim().to_string())
+        .map(|s| s.trim().to_owned())
         .expect("Invalid utf-8")
 }
 

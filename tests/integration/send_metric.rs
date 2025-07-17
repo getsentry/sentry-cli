@@ -5,8 +5,7 @@ use trycmd::TestCases;
 
 fn envelopes_endpoint_builder() -> MockEndpointBuilder {
     let expected_auth_header = Matcher::Regex(
-        r#"^Sentry sentry_key=test, sentry_version=7, sentry_timestamp=\d{10}(\.[0-9]+)?, sentry_client=sentry-cli/.*"#
-            .to_string(),
+        r#"^Sentry sentry_key=test, sentry_version=7, sentry_timestamp=\d{10}(\.[0-9]+)?, sentry_client=sentry-cli/.*"#.to_owned(),
     );
 
     MockEndpointBuilder::new("POST", "/api/1337/envelope/")

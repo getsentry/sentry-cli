@@ -89,7 +89,7 @@ fn main() {
     let developer_dir_path = String::from_utf8(developer_dir.stdout)
         .expect("Failed to convert developer directory to UTF-8")
         .trim()
-        .to_string();
+        .to_owned();
 
     println!(
         "cargo:rustc-link-search={developer_dir_path}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"

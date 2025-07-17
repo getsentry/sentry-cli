@@ -88,12 +88,12 @@ pub fn get_appcenter_error(output: &Output) -> Error {
                 .map(|o| {
                     let stripped = strip_ansi_codes(o);
                     if let Some(rest) = stripped.strip_prefix("Error: ") {
-                        rest.to_string()
+                        rest.to_owned()
                     } else {
                         stripped.to_string()
                     }
                 })
-                .unwrap_or_else(|_| "Unknown AppCenter error".to_string())
+                .unwrap_or_else(|_| "Unknown AppCenter error".to_owned())
         });
 
     format_err!(cause)
@@ -155,7 +155,7 @@ pub fn get_react_native_appcenter_release(
     let release_name_ovrr = release_name_override.unwrap_or("");
 
     if !release_name_ovrr.is_empty() {
-        return Ok(release_name_ovrr.to_string());
+        return Ok(release_name_ovrr.to_owned());
     }
 
     if !bundle_id_ovrr.is_empty() && !version_name_ovrr.is_empty() {

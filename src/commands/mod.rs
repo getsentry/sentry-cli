@@ -106,7 +106,7 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
 const AUTH_TOKEN_ARG: &str = "auth-token";
 
 fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
-    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
+    generate(gen, cmd, cmd.get_name().to_owned(), &mut io::stdout());
 }
 
 fn preexecute_hooks() -> Result<bool> {

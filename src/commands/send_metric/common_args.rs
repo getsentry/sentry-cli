@@ -51,7 +51,7 @@ impl FromStr for MetricName {
             .ok_or_else(|| anyhow!("metric name cannot be empty"))?
             .is_ascii_alphabetic()
         {
-            Ok(MetricName(s.to_string()))
+            Ok(MetricName(s.to_owned()))
         } else {
             Err(anyhow!(
                 "metric name must start with an alphabetic character"

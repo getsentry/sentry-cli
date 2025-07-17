@@ -83,7 +83,7 @@ fn unsplit_url(path: Option<&str>, basename: &str, ext: Option<&str>) -> String 
 
 pub fn get_sourcemap_ref_from_headers(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
     get_sourcemap_reference_from_headers(file.headers.iter())
-        .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_string()))
+        .map(|sm_ref| sourcemap::SourceMapRef::Ref(sm_ref.to_owned()))
 }
 
 pub fn get_sourcemap_ref_from_contents(file: &SourceFile) -> Option<sourcemap::SourceMapRef> {
@@ -245,7 +245,7 @@ impl SourceMapProcessor {
 
     /// Adds a new file for processing.
     pub fn add(&mut self, url: &str, file: ReleaseFileMatch) {
-        self.pending_sources.insert((url.to_string(), file));
+        self.pending_sources.insert((url.to_owned(), file));
     }
 
     fn flush_pending_sources(&mut self) {
@@ -318,7 +318,7 @@ impl SourceMapProcessor {
             let location =
                 discover_sourcemaps_location(contents).filter(|loc| !is_remote_sourcemap(loc));
             let sourcemap_reference = match location {
-                Some(url) => SourceMapReference::from_url(url.to_string()),
+                Some(url) => SourceMapReference::from_url(url.to_owned()),
                 None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
                     Ok(target) => target,
                     Err(err) => {
@@ -375,7 +375,7 @@ impl SourceMapProcessor {
                 if let Some(sm_ref) = get_sourcemap_ref(source) {
                     let sm_url = sm_ref.get_url();
                     if sm_url.starts_with("data:") {
-                        pieces.push("embedded sourcemap".to_string());
+                        pieces.push("embedded sourcemap".to_owned());
                     } else {
                         pieces.push(format!("sourcemap at {}", style(sm_url).cyan()));
                     };

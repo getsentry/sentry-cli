@@ -143,7 +143,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 bail!("Invalid header. Needs to be in key:value format");
             }
             let (key, value) = header.split_once(':').unwrap();
-            headers.insert(key.trim().to_string(), value.trim().to_string());
+            headers.insert(key.trim().to_owned(), value.trim().to_owned());
         }
     };
 

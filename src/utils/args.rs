@@ -6,7 +6,7 @@ fn validate_org(v: &str) -> Result<String, String> {
     if v.contains('/') || v == "." || v == ".." || v.contains(' ') {
         Err(
             "Invalid value for organization. Use the URL slug or the ID and not the name!"
-                .to_string(),
+                .to_owned(),
         )
     } else {
         Ok(v.to_owned())
@@ -22,7 +22,7 @@ pub fn validate_project(v: &str) -> Result<String, String> {
         || v.contains('\t')
         || v.contains('\r')
     {
-        Err("Invalid value for project. Use the URL slug or the ID and not the name!".to_string())
+        Err("Invalid value for project. Use the URL slug or the ID and not the name!".to_owned())
     } else {
         Ok(v.to_owned())
     }
@@ -32,7 +32,7 @@ fn validate_release(v: &str) -> Result<String, String> {
     if v.trim() != v {
         Err(
             "Invalid release version. Releases must not contain leading or trailing spaces."
-                .to_string(),
+                .to_owned(),
         )
     } else if v.is_empty()
         || v == "."
@@ -42,7 +42,7 @@ fn validate_release(v: &str) -> Result<String, String> {
     {
         Err(
             "Invalid release version. Slashes and certain whitespace characters are not permitted."
-                .to_string(),
+                .to_owned(),
         )
     } else {
         Ok(v.to_owned())
@@ -53,12 +53,12 @@ pub fn validate_distribution(v: &str) -> Result<String, String> {
     if v.trim() != v {
         Err(
             "Invalid distribution name. Distribution must not contain leading or trailing spaces."
-                .to_string(),
+                .to_owned(),
         )
     } else if bytecount::num_chars(v.as_bytes()) > 64 {
         Err(
             "Invalid distribution name. Distribution name must not be longer than 64 characters."
-                .to_string(),
+                .to_owned(),
         )
     } else {
         Ok(v.to_owned())

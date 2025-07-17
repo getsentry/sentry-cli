@@ -78,7 +78,7 @@ impl Config {
             .unwrap_or_default();
 
         let url = if token_url.is_empty() {
-            manually_configured_url.unwrap_or_else(|| DEFAULT_URL.to_string())
+            manually_configured_url.unwrap_or_else(|| DEFAULT_URL.to_owned())
         } else {
             warn_about_conflicting_urls(token_url, manually_configured_url.as_deref());
             token_url.into()
@@ -184,7 +184,7 @@ impl Config {
                 self.cached_token_data = val.payload().cloned();
 
                 if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.url.as_str()) {
-                    self.cached_base_url = token_url.to_string();
+                    self.cached_base_url = token_url.to_owned();
                 }
 
                 self.ini.set_to(
@@ -656,7 +656,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
         let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
         for (section, props) in ini.iter() {
             for (key, value) in props.iter() {
-                rv.set_to(section, key.to_string(), value.to_owned());
+                rv.set_to(section, key.to_owned(), value.to_owned());
             }
         }
         (project_config_path, rv)
@@ -681,7 +681,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                     let mut iter = key.rsplitn(2, '.');
                     if let Some(key) = iter.next() {
                         let section = iter.next();
-                        rv.set_to(section, key.to_string(), value);
+                        rv.set_to(section, key.to_owned(), value);
                     } else {
                         debug!("Incorrect properties file key: {}", key);
                     }
@@ -780,9 +780,9 @@ fn get_default_vcs_remote(ini: &Ini) -> String {
     if let Ok(remote) = env::var("SENTRY_VCS_REMOTE") {
         remote
     } else if let Some(remote) = ini.get_from(Some("defaults"), "vcs_remote") {
-        remote.to_string()
+        remote.to_owned()
     } else {
-        "origin".to_string()
+        "origin".to_owned()
     }
 }
 
@@ -799,7 +799,7 @@ mod tests {
             process_bound: false,
             ini: Default::default(),
             cached_auth: None,
-            cached_base_url: "https://sentry.io/".to_string(),
+            cached_base_url: "https://sentry.io/".to_owned(),
             cached_headers: None,
             cached_log_level: LevelFilter::Off,
             cached_vcs_remote: String::new(),

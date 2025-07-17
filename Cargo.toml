@@ -100,6 +100,7 @@ unstable-mobile-app = ["apple-catalog-parsing"]
 
 [workspace.lints.clippy]
 allow-attributes = "warn"
+str-to-string = "warn"
 unnecessary-wraps = "warn"
 unwrap-used = "warn"
 

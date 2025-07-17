@@ -75,7 +75,7 @@ fn command_sourcemaps_upload_modern_v2() {
         .mock_common_upload_endpoints(
             ServerBehavior::ModernV2,
             ChunkOptions {
-                missing_chunks: vec!["ec8450a9db19805703a27a2545c18b7b27ba0d7d".to_string()],
+                missing_chunks: vec!["ec8450a9db19805703a27a2545c18b7b27ba0d7d".to_owned()],
                 // Set the chunk size so the bundle will be split into two chunks
                 chunk_size: 512,
             },
@@ -115,7 +115,7 @@ fn command_sourcemaps_upload_some_debugids_v2() {
         .mock_common_upload_endpoints(
             ServerBehavior::ModernV2,
             ChunkOptions {
-                missing_chunks: vec!["ff16e0ac593a74b454cc34814f6249f45a1a2dfe".to_string()],
+                missing_chunks: vec!["ff16e0ac593a74b454cc34814f6249f45a1a2dfe".to_owned()],
                 chunk_size: 524288,
             },
         )

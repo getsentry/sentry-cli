@@ -117,7 +117,7 @@ fn send_event(
         );
     }
 
-    let mut cmd = "unknown".to_string();
+    let mut cmd = "unknown".to_owned();
     let mut exit_code = 1;
     let mut frames = vec![];
 
@@ -129,7 +129,7 @@ fn send_event(
             // meta info
             if line.starts_with('@') {
                 if let Some(rest) = line.strip_prefix("@command:") {
-                    cmd = rest.to_string();
+                    cmd = rest.to_owned();
                 } else if let Some(rest) = line.strip_prefix("@exit_code:") {
                     exit_code = rest.parse().unwrap_or(exit_code);
                 } else {
@@ -170,7 +170,7 @@ fn send_event(
                 if let Ok(f) = fs::File::open(filename) {
                     let lines: Vec<_> = BufReader::new(f)
                         .lines()
-                        .map(|x| x.unwrap_or_else(|_| "".to_string()))
+                        .map(|x| x.unwrap_or_else(|_| "".to_owned()))
                         .collect();
                     source_caches.insert(filename, lines);
                 } else {

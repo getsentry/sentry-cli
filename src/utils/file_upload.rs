@@ -74,7 +74,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
         api.authenticated()?.new_release(
             context.org,
             &NewRelease {
-                version: version.to_string(),
+                version: version.to_owned(),
                 projects: context.projects.to_vec(),
                 ..Default::default()
             },
@@ -317,12 +317,12 @@ impl SourceFile {
 
     /// Sets the value of the "debug-id" header.
     pub fn set_debug_id(&mut self, debug_id: String) {
-        self.headers.insert("debug-id".to_string(), debug_id);
+        self.headers.insert("debug-id".to_owned(), debug_id);
     }
 
     /// Sets the value of the "Sourcemap" header.
     pub fn set_sourcemap_reference(&mut self, sourcemap: String) {
-        self.headers.insert("Sourcemap".to_string(), sourcemap);
+        self.headers.insert("Sourcemap".to_owned(), sourcemap);
     }
 
     pub fn log(&mut self, level: LogLevel, msg: String) {
@@ -766,7 +766,7 @@ fn url_to_bundle_path(url: &str) -> Result<String> {
         base.join(url)?
     };
 
-    let mut path = url.path().to_string();
+    let mut path = url.path().to_owned();
     if let Some(fragment) = url.fragment() {
         path = format!("{path}#{fragment}");
     }
