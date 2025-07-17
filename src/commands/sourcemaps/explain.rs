@@ -333,7 +333,7 @@ fn print_mapped_frame(frame: &Frame) {
 fn extract_release(event: &ProcessedEvent) -> Result<String> {
     if let Some(release) = event.release.as_ref() {
         success(format!("Event has release name: {release}"));
-        Ok(release.to_string())
+        Ok(release.clone())
     } else {
         error("Event is missing a release name");
         tip("Configure 'release' option in the SDK.\n  \

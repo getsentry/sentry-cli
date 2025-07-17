@@ -96,7 +96,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let local_path_jvm_ext = local_path.with_extension("jvm");
             let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
             (
-                url.to_string(),
+                url.clone(),
                 SourceFile {
                     url,
                     path: source.path.clone(),

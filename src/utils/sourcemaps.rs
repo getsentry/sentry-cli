@@ -292,7 +292,7 @@ impl SourceMapProcessor {
             .iter()
             .map(|x| x.1)
             .filter(|x| x.ty == SourceFileType::SourceMap)
-            .map(|x| x.url.to_string())
+            .map(|x| x.url.clone())
             .collect();
 
         for source in self.sources.values_mut() {
@@ -325,15 +325,14 @@ impl SourceMapProcessor {
                         source.warn(format!(
                             "could not determine a source map reference ({err})"
                         ));
-                        self.sourcemap_references
-                            .insert(source.url.to_string(), None);
+                        self.sourcemap_references.insert(source.url.clone(), None);
                         continue;
                     }
                 },
             };
 
             self.sourcemap_references
-                .insert(source.url.to_string(), Some(sourcemap_reference));
+                .insert(source.url.clone(), Some(sourcemap_reference));
         }
     }
 
@@ -610,7 +609,7 @@ impl SourceMapProcessor {
             }
 
             if let Some(Some(sourcemap)) = self.sourcemap_references.get(&source.url) {
-                source.set_sourcemap_reference(sourcemap.url.to_string());
+                source.set_sourcemap_reference(sourcemap.url.clone());
             }
         }
     }
@@ -925,7 +924,7 @@ impl SourceMapProcessor {
 
                         let sourcemap_url = match &matches[..] {
                             [] => normalized,
-                            [x] => x.to_string(),
+                            [x] => x.clone(),
                             _ => {
                                 warn!("Ambiguous matches for sourcemap path {normalized}:");
                                 for path in matches {

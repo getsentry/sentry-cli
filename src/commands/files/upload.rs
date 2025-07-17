@@ -205,7 +205,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
 
                 (
-                    url.to_string(),
+                    url.clone(),
                     SourceFile {
                         url,
                         path: source.path.clone(),

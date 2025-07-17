@@ -424,7 +424,7 @@ pub fn find_heads(
     } else {
         for repo in repos {
             let spec = CommitSpec {
-                repo: repo.name.to_string(),
+                repo: repo.name.clone(),
                 path: None,
                 rev: "HEAD".into(),
                 prev_rev: None,
@@ -433,7 +433,7 @@ pub fn find_heads(
                 find_matching_rev(spec.reference(), &spec, repos, false, remote_name.clone())?
             {
                 rv.push(Ref {
-                    repo: repo.name.to_string(),
+                    repo: repo.name.clone(),
                     rev,
                     prev_rev: None,
                 });
