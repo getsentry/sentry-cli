@@ -235,9 +235,8 @@ fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8]) -> Result<TempFile> {
     // Extract .app from Payload/ directory
     for i in 0..ipa_archive.len() {
         let mut file = ipa_archive.by_index(i)?;
-        let file_path = file.name().to_string();
 
-        if let Some(stripped) = file_path.strip_prefix("Payload/") {
+        if let Some(stripped) = file.name().strip_prefix("Payload/") {
             if let Some(app_folder_name) = stripped.strip_suffix(".app/") {
                 app_name = app_folder_name.to_string();
                 debug!("Found app: {}", app_name);
