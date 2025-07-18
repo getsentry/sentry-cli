@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.48.0
+
+### Various fixes & improvements
+
+- feat(js): Add `live: 'rejectOnError'` execution mode to `execute` method (#2605) by @Lms24
+
+### Build-time changes
+
+- feat: allow optionally disabling Swift sandbox (#2587) by @carlocab
+
 ## 2.47.1
 
 No user-facing changes. 
