@@ -6,22 +6,11 @@
 
 ### Various fixes & improvements
 
-- ref: Enable `string-to-string` lint (#2626) by @szokeasaurusrex
-- ref: Enable `str-to-string` lint (#2625) by @szokeasaurusrex
-- ref: Clean up code (#2623) by @szokeasaurusrex
-- Revert "chore(ci): Use yarn for node tests instead of npm (#2612)" (#2624) by @Lms24
-- ref: Define command modules manually (#2622) by @szokeasaurusrex
-- ref: Reformat `src/commands` (#2621) by @szokeasaurusrex
-- feat: allow optionally disabling Swift sandbox (#2587) by @carlocab
 - feat(js): Add `live: 'rejectOnError'` execution mode to `execute` method (#2605) by @Lms24
-- fix: Fix file permissions in zip (#2618) by @noahsmartin
-- chore(ci): Use yarn for node tests instead of npm (#2612) by @Lms24
-- chore: Add `typescript` to type check JS Interface via JSDoc (#2611) by @Lms24
-- ci: Remove `rust-cache` custom key (#2610) by @szokeasaurusrex
-- ci: User-friendly name for `rust-cache` action (#2609) by @szokeasaurusrex
-- ci: User-friendly name for `checkout` action (#2608) by @szokeasaurusrex
-- chore(js): Unstale yarn lock (#2607) by @Lms24
-- ci: Restructure CI process (#2599) by @szokeasaurusrex
+
+### Build-time changes
+
+- feat: allow optionally disabling Swift sandbox (#2587) by @carlocab
 
 ## 2.47.1
 
