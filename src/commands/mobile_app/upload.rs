@@ -24,7 +24,9 @@ use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;
 #[cfg(target_os = "macos")]
 use crate::utils::mobile_app::handle_asset_catalogs;
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_apple_app, is_zip_file};
+use crate::utils::mobile_app::{
+    ipa_to_xcarchive, is_aab_file, is_apk_file, is_apple_app, is_ipa_file, is_zip_file,
+};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -36,7 +38,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .value_name("PATH")
-                .help("The path to the mobile app files to upload. Supported files include Apk, Aab or XCArchive.")
+                .help("The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, or IPA.")
                 .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true),
@@ -95,12 +97,29 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let normalized_zip = if path.is_file() {
             debug!("Normalizing file: {}", path.display());
-            normalize_file(path, &byteview).with_context(|| {
-                format!(
-                    "Failed to generate uploadable bundle for file {}",
-                    path.display()
-                )
-            })?
+
+            // Handle IPA files by converting them to XCArchive
+            if is_zip_file(&byteview) && is_ipa_file(&byteview)? {
+                debug!("Converting IPA file to XCArchive structure");
+                let temp_dir = crate::utils::fs::TempDir::create()?;
+                let xcarchive_path =
+                    ipa_to_xcarchive(path, &byteview, &temp_dir).with_context(|| {
+                        format!(
+                            "Failed to convert IPA to XCArchive for file {}",
+                            path.display()
+                        )
+                    })?;
+                normalize_directory(&xcarchive_path).with_context(|| {
+                    format!("Failed to normalize XCArchive for file {}", path.display())
+                })?
+            } else {
+                normalize_file(path, &byteview).with_context(|| {
+                    format!(
+                        "Failed to generate uploadable bundle for file {}",
+                        path.display()
+                    )
+                })?
+            }
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
             normalize_directory(path).with_context(|| {
@@ -186,9 +205,9 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
         return Ok(());
     }
 
-    // Check if the file is a zip file (then AAB or APK)
+    // Check if the file is a zip file (then AAB, APK, or IPA)
     if is_zip_file(bytes) {
-        debug!("File is a zip, checking for AAB/APK format");
+        debug!("File is a zip, checking for AAB/APK/IPA format");
         if is_aab_file(bytes)? {
             debug!("Detected AAB file");
             return Ok(());
@@ -198,11 +217,16 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
             debug!("Detected APK file");
             return Ok(());
         }
+
+        if is_ipa_file(bytes)? {
+            debug!("Detected IPA file");
+            return Ok(());
+        }
     }
 
     debug!("File format validation failed");
     Err(anyhow!(
-        "File is not a recognized mobile app format (APK, AAB, or XCArchive): {}",
+        "File is not a recognized mobile app format (APK, AAB, XCArchive, or IPA): {}",
         path.display()
     ))
 }
