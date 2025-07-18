@@ -68,6 +68,8 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
 
     let app_name = extract_app_name_from_ipa(&ipa_archive)?;
 
+    log::debug!("Extracted app name: {}", app_name);
+
     // Extract all files from the archive
     for i in 0..ipa_archive.len() {
         let mut file = ipa_archive.by_index(i)?;
@@ -120,6 +122,7 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
 }
 
 fn extract_app_name_from_ipa(archive: &ZipArchive<Cursor<&[u8]>>) -> Result<String> {
+    log::debug!("app names: {:?}", archive.file_names().collect::<Vec<_>>());
     archive
         .file_names()
         .filter(|name| name.starts_with("Payload/") && name.ends_with(".app/Info.plist"))
