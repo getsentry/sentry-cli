@@ -57,7 +57,11 @@ class SentryCli {
   /**
    * See {helper.execute} docs.
    * @param {string[]} args Command line arguments passed to `sentry-cli`.
-   * @param {boolean} live We inherit stdio to display `sentry-cli` output directly.
+   * @param {boolean | 'rejectOnError'} live can be set to:
+   *  - `true` to inherit stdio to display `sentry-cli` output directly.
+   *  - `false` to not inherit stdio and return the output as a string.
+   *  - `'rejectOnError'` to inherit stdio and reject the promise if the command
+   *    exits with a non-zero exit code.
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {

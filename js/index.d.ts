@@ -217,7 +217,7 @@ declare module '@sentry/cli' {
 
     newDeploy(release: string, options: SentryCliNewDeployOptions): Promise<string>;
 
-    execute(args: string[], live: boolean): Promise<string>;
+    execute(args: string[], live: boolean | 'rejectOnError'): Promise<string>;
   }
 
   export default class SentryCli {
@@ -237,6 +237,6 @@ declare module '@sentry/cli' {
 
     public static getVersion(): string;
     public static getPath(): string;
-    public execute(args: string[], live: boolean): Promise<string>;
+    public execute(args: string[], live: boolean | 'rejectOnError'): Promise<string>;
   }
 }
