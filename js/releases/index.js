@@ -149,6 +149,7 @@ class Releases {
    *   ext: ['js', 'map', 'jsbundle', 'bundle'],  // override file extensions to scan for
    *   projects: ['node'],        // provide a list of projects
    *   decompress: false          // decompress gzip files before uploading
+   *   live: undefined            // whether to inherit stdio to display `sentry-cli` output directly.
    * });
    *
    * @param {string} release Unique name of the release.

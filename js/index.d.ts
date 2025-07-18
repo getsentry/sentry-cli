@@ -208,7 +208,10 @@ declare module '@sentry/cli' {
 
     proposeVersion(): Promise<string>;
 
-    uploadSourceMaps(release: string, options: SentryCliUploadSourceMapsOptions): Promise<string>;
+    uploadSourceMaps(
+      release: string,
+      options: SentryCliUploadSourceMapsOptions & { live?: boolean | 'rejectOnError' }
+    ): Promise<string>;
 
     listDeploys(release: string): Promise<string>;
 
