@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.50.0
+
+### Various fixes & improvements
+
+- feat(js): Expose `rejectOnError` in public `execute` type declarations (#2628) by @Lms24
+
 ## 2.49.0
 
 ### Various fixes & improvements
