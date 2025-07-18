@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.49.0
+
+### Various fixes & improvements
+
+- feat(js): Export `live` option type for `releases.uploadSourceMaps` (#2627) by @Lms24
+
 ## 2.48.0
 
 ### Various fixes & improvements
