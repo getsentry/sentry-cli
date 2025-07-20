@@ -38,7 +38,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .value_name("PATH")
-                .help("The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, or IPA.")
+                .help("The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.")
                 .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true),
