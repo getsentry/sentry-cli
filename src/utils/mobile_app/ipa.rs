@@ -40,15 +40,6 @@ use crate::utils::fs::TempDir;
 /// │           └── ... (other app resources)
 /// └── ... (other archive metadata)
 /// ```
-///
-/// # Transformation Process
-///
-/// This function performs the following steps:
-/// 1. Creates the XCArchive directory structure (`archive.xcarchive/Products/Applications/`)
-/// 2. Extracts the app name from the IPA by finding the shortest path ending with `.app/Info.plist`
-/// 3. Extracts all files from the IPA's `Payload/` directory into the XCArchive structure
-/// 4. Creates an `Info.plist` file for the XCArchive with the app path reference
-/// 5. Returns the path to the XCArchive directory structure
 pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -> Result<PathBuf> {
     debug!(
         "Converting IPA to XCArchive structure: {}",
