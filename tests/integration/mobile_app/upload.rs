@@ -4,9 +4,16 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::LazyLock;
 use std::{fs, str};
 
+#[cfg(target_os = "macos")]
 #[test]
 fn command_mobile_app_upload_help() {
     TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help.trycmd");
+}
+
+#[cfg(not(target_os = "macos"))]
+#[test]
+fn command_mobile_app_upload_help() {
+    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help-not-macos.trycmd");
 }
 
 #[test]

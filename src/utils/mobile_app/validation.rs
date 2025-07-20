@@ -37,6 +37,7 @@ pub fn is_aab_file(bytes: &[u8]) -> Result<bool> {
     Ok(has_bundle_config && has_base_manifest)
 }
 
+#[cfg(target_os = "macos")]
 pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
     let cursor = std::io::Cursor::new(bytes);
     let archive = zip::ZipArchive::new(cursor)?;
