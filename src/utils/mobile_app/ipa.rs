@@ -63,8 +63,10 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
     for i in 0..ipa_archive.len() {
         let mut file = ipa_archive.by_index(i)?;
 
-        if let Some(name) = file.enclosed_name() {
-            if let Ok(stripped) = name.strip_prefix("Payload/") {
+        if let Some(stripped) = file
+            .enclosed_name()
+            .and_then(|name| name.strip_prefix("Payload/").ok())
+        {
                 if !file.is_dir() {
                     // Create the file path in the XCArchive structure
                     let target_path = applications_dir.join(stripped);
