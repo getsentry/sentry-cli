@@ -37,6 +37,7 @@ flate2 = { version = "1.0.25", default-features = false, features = [
 ] }
 git2 = { version = "0.18.1", default-features = false }
 glob = "0.3.1"
+goblin = "0.10.0"
 if_chain = "1.0.2"
 ignore = "0.4.20"
 # Do not update due to https://github.com/console-rs/indicatif/issues/317 and https://github.com/getsentry/sentry-cli/pull/1055

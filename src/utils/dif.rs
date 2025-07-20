@@ -3,6 +3,7 @@ use std::path::Path;
 use std::str;
 
 use anyhow::{bail, Context, Error, Result};
+use goblin;
 use proguard::ProguardMapping;
 use serde::ser::{SerializeStruct, Serializer};
 use serde::Serialize;
@@ -203,8 +204,59 @@ impl DifFile<'static> {
         }
     }
 
+    fn validate_macho_magic_is_dsym(data: &[u8]) -> Result<()> {
+        // Parse the file as a MachO file and validate the file type
+        match goblin::Object::parse(data) {
+            Ok(goblin::Object::Mach(mach)) => {
+                match mach {
+                    goblin::mach::Mach::Fat(fat) => {
+                        for (i, arch_result) in fat.iter_arches().enumerate() {
+                            match arch_result {
+                                Ok(arch) => {
+                                    let offset = arch.offset as usize;
+                                    let bytes = &data[offset..][..arch.size as usize];
+                                    match goblin::mach::MachO::parse(bytes, 0) {
+                                        Ok(macho) => {
+                                            // As defined in https://github.com/apple-oss-distributions/xnu/blob/e3723e1f17661b24996789d8afc084c0c3303b26/EXTERNAL_HEADERS/mach-o/loader.h#L120, look for MH_DSYM file type
+                                            const MH_DSYM: u32 = 0xa;
+                                            if macho.header.filetype != MH_DSYM {
+                                                bail!("Invalid architecture in fat MachO file, not a dSYM");
+                                            }
+                                        }
+                                        Err(e) => {
+                                            bail!("Invalid architecture in fat MachO file, not a dSYM");
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    bail!("Invalid architecture in fat MachO file, not a dSYM");
+                                }
+                            }
+                        }
+                        Ok(())
+                    }
+                    goblin::mach::Mach::Binary(bin) => {
+                        Ok(())
+                    }
+                }
+            }
+            Ok(_) => {
+                bail!("File is not a valid MachO format");
+            }
+            Err(e) => {
+                bail!("Invalid MachO file: {}", e);
+            }
+        }
+    }
+
     fn open_object<P: AsRef<Path>>(path: P, format: FileFormat) -> Result<Self> {
         let data = ByteView::open(&path)?;
+
+        // Only run this check for dSYM files
+        if format == FileFormat::MachO {
+            Self::validate_macho_magic_is_dsym(data.as_slice())?;
+        }
+
         let archive = SelfCell::try_new(data, |d| Archive::parse(unsafe { &*d }))?;
 
         if archive.get().file_format() != format {
