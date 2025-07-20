@@ -112,7 +112,7 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
     Ok(xcarchive_dir)
 }
 
-fn extract_app_name_from_ipa(archive: &ZipArchive<Cursor<&[u8]>>) -> Result<String> {
+fn extract_app_name_from_ipa<'a>(archive: &'a ZipArchive<Cursor<&[u8]>>) -> Result<&'a str> {
     archive
         .file_names()
         .filter(|name| name.starts_with("Payload/") && name.ends_with(".app/Info.plist"))
@@ -120,6 +120,5 @@ fn extract_app_name_from_ipa(archive: &ZipArchive<Cursor<&[u8]>>) -> Result<Stri
         .and_then(|name| name.strip_prefix("Payload/"))
         .and_then(|name| name.split('/').next())
         .and_then(|name| name.strip_suffix(".app"))
-        .map(|name| name.to_owned())
         .ok_or_else(|| anyhow!("No .app found in IPA"))
 }
