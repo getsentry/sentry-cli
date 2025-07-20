@@ -102,16 +102,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             if is_zip_file(&byteview) && is_ipa_file(&byteview)? {
                 debug!("Converting IPA file to XCArchive structure");
                 let temp_dir = crate::utils::fs::TempDir::create()?;
-                let xcarchive_path =
-                    ipa_to_xcarchive(path, &byteview, &temp_dir).with_context(|| {
-                        format!(
-                            "Failed to convert IPA to XCArchive for file {}",
-                            path.display()
-                        )
-                    })?;
-                normalize_directory(&xcarchive_path).with_context(|| {
-                    format!("Failed to normalize XCArchive for file {}", path.display())
-                })?
+                ipa_to_xcarchive(path, &byteview, &temp_dir)
+                    .and_then(|path| normalize_directory(&path))
+                    .with_context(|| format!("Failed to process IPA file {}", path.display()))?
             } else {
                 normalize_file(path, &byteview).with_context(|| {
                     format!(
