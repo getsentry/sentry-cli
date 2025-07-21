@@ -32,9 +32,9 @@ use crate::utils::vcs;
 
 pub fn make_command(command: Command) -> Command {
     #[cfg(target_os = "macos")]
-    let help_text = "The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
+    const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
     #[cfg(not(target_os = "macos"))]
-    let help_text = "The path to the mobile app files to upload. Supported files include Apk, Aab, and XCArchive.";
+    const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, and XCArchive.";
     command
         .about("[EXPERIMENTAL] Upload mobile app files to a project.")
         .org_arg()
