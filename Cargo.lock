@@ -145,13 +145,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "apple-catalog-parsing"
-version = "0.0.0"
-dependencies = [
- "thiserror 2.0.12",
-]
-
-[[package]]
 name = "arbitrary"
 version = "1.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2696,7 +2689,6 @@ version = "2.50.0"
 dependencies = [
  "anyhow",
  "anylog",
- "apple-catalog-parsing",
  "assert_cmd",
  "backoff",
  "brotli2",
