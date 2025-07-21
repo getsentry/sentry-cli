@@ -233,8 +233,7 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     let format_list = "APK, AAB, or XCArchive";
 
     Err(anyhow!(
-        "File is not a recognized mobile app format ({}): {}",
-        format_list,
+        "File is not a recognized mobile app format ({format_list}): {}",
         path.display()
     ))
 }
