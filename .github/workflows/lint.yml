@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-14, windows-2022]
-        feature-args: ['', '-Funstable-mobile-app']
+        feature-args: ['']
         include:
           - os: ubuntu-24.04
             display-os: Linux
@@ -26,8 +26,6 @@ jobs:
             display-os: Windows
           - feature-args: ''
             feature-suffix: ''
-          - feature-args: '-Funstable-mobile-app'
-            feature-suffix: ' (-Funstable-mobile-app)'
 
     name: ${{ matrix.display-os }}${{ matrix.feature-suffix }}
     runs-on: ${{ matrix.os }}
