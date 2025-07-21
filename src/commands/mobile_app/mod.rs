@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use clap::{ArgMatches, Command};
+use log::debug;
 
 use crate::utils::args::ArgExt as _;
 
@@ -35,6 +36,8 @@ pub fn make_command(mut command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    debug!("EXPERIMENTAL: The mobile-app subcommand is experimental and may be updated without notice in the future.");
+
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =
