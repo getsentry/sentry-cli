@@ -136,18 +136,18 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
     Ok(xcarchive_dir)
 }
 
-fn extract_app_name_from_ipa(archive: &ZipArchive<Cursor<&[u8]>>) -> Result<String> {
+fn extract_app_name_from_ipa<'a>(archive: &'a ZipArchive<Cursor<&[u8]>>) -> Result<&'a str> {
     let pattern = Regex::new(r"^Payload/([^/]+)\.app/Info\.plist$")?;
-    let mut matches = Vec::new();
+    let matches = archive
+        .file_names()
+        .filter_map(|name| pattern.captures(name))
+        .map(|c| c.get(1).expect("group 1 must be present").as_str())
+        .take(2)  // If there are ≥2 matches, we already know the IPA is invalid
+        .collect::<Vec<_>>();
 
-    for name in archive.file_names() {
-        if let Some(captures) = pattern.captures(name) {
-            matches.push(captures[1].to_string());
-        }
-    }
-
-    match matches.len() {
-        1 => Ok(matches[0].clone()),
-        _ => Err(anyhow!("IPA file did not contain exactly one .app.")),
+    if let &[app_name] = matches.as_slice() {
+        Ok(app_name)
+    } else {
+        Err(anyhow!("IPA did not contain exactly one .app."))
     }
 }
