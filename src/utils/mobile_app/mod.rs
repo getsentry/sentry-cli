@@ -2,8 +2,6 @@
 
 #[cfg(target_os = "macos")]
 mod apple;
-#[cfg(target_os = "macos")]
-mod ipa;
 mod validation;
 
 #[cfg(target_os = "macos")]

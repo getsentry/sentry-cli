@@ -208,7 +208,11 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
 
     // Check if the file is a zip file (then AAB, APK, or IPA)
     if is_zip_file(bytes) {
+        #[cfg(target_os = "macos")]
         debug!("File is a zip, checking for AAB/APK/IPA format");
+        #[cfg(not(target_os = "macos"))]
+        debug!("File is a zip, checking for AAB/APK format");
+
         if is_aab_file(bytes)? {
             debug!("Detected AAB file");
             return Ok(());

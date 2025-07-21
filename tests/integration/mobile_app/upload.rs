@@ -7,7 +7,7 @@ use std::{fs, str};
 #[cfg(target_os = "macos")]
 #[test]
 fn command_mobile_app_upload_help() {
-    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help.trycmd");
+    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help-macos.trycmd");
 }
 
 #[cfg(not(target_os = "macos"))]

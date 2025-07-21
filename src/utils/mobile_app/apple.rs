@@ -1,7 +1,10 @@
 use anyhow::{anyhow, Result};
 use log::debug;
 use regex::Regex;
-use std::path::{Path, PathBuf};
+use std::{
+    path::{Path, PathBuf},
+    sync::LazyLock,
+};
 
 use crate::utils::fs::TempDir;
 use apple_catalog_parsing;
@@ -83,7 +86,7 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
     let cursor = Cursor::new(ipa_bytes);
     let mut ipa_archive = ZipArchive::new(cursor)?;
 
-    let app_name = extract_app_name_from_ipa(&ipa_archive)?;
+    let app_name = extract_app_name_from_ipa(&ipa_archive)?.to_owned();
 
     // Extract all files from the archive
     for i in 0..ipa_archive.len() {
@@ -136,13 +139,15 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
     Ok(xcarchive_dir)
 }
 
+static PATTERN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^Payload/([^/]+)\.app/Info\.plist$").expect("regex is valid"));
+
 fn extract_app_name_from_ipa<'a>(archive: &'a ZipArchive<Cursor<&[u8]>>) -> Result<&'a str> {
-    let pattern = Regex::new(r"^Payload/([^/]+)\.app/Info\.plist$")?;
     let matches = archive
         .file_names()
-        .filter_map(|name| pattern.captures(name))
+        .filter_map(|name| PATTERN.captures(name))
         .map(|c| c.get(1).expect("group 1 must be present").as_str())
-        .take(2)  // If there are ≥2 matches, we already know the IPA is invalid
+        .take(2) // If there are ≥2 matches, we already know the IPA is invalid
         .collect::<Vec<_>>();
 
     if let &[app_name] = matches.as_slice() {
