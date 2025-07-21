@@ -1,3 +1,4 @@
+#[cfg(target_os = "macos")]
 use std::path::Path;
 
 use anyhow::Result;
@@ -51,6 +52,7 @@ pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
     Ok(is_ipa)
 }
 
+#[cfg(target_os = "macos")]
 pub fn is_xcarchive_directory<P>(path: P) -> bool
 where
     P: AsRef<Path>,
@@ -65,6 +67,7 @@ where
 }
 
 /// A path is an Apple app if it points to an xarchive directory
+#[cfg(target_os = "macos")]
 pub fn is_apple_app(path: &Path) -> bool {
     path.is_dir() && is_xcarchive_directory(path)
 }
