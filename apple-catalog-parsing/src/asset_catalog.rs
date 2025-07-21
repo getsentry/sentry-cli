@@ -1,5 +1,5 @@
 use std::ffi::CString;
-use std::os::unix::ffi::OsStrExt;
+use std::os::unix::ffi::OsStrExt as _;
 use std::path::Path;
 use thiserror::Error;
 

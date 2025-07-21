@@ -12,7 +12,7 @@ use sourcemap::ram_bundle::RamBundle;
 use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
-use crate::utils::args::{validate_distribution, ArgExt};
+use crate::utils::args::{validate_distribution, ArgExt as _};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{SourceFile, UploadContext};
 use crate::utils::sourcemaps::SourceMapProcessor;

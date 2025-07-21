@@ -3,7 +3,7 @@
 use std::env;
 use std::ffi::OsStr;
 use std::fs;
-use std::io::Read;
+use std::io::Read as _;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};

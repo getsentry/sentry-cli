@@ -7,7 +7,7 @@ use regex::Regex;
 
 use crate::api::{Api, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, UpdatedRelease};
 use crate::config::Config;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
     find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,

@@ -4,7 +4,7 @@ use std::cmp::min;
 use std::collections::HashMap;
 use std::env;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead as _, BufReader};
 use std::path::Path;
 
 use anyhow::{format_err, Result};

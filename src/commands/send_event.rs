@@ -7,7 +7,7 @@ use anyhow::{anyhow, format_err, Result};
 use chrono::{DateTime, Utc};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use log::warn;
 use sentry::protocol::{Event, Level, LogEntry, User};
 use sentry::types::Uuid;
@@ -190,7 +190,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let raw_event = std::fs::read(&path)?;
 
             let id = if raw {
-                use std::io::Write;
+                use std::io::Write as _;
 
                 // Its a bit unfortunate that we still need to parse the whole JSON,
                 // but envelopes need an `event_id`, which we also want to report.

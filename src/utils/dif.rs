@@ -2,9 +2,9 @@ use std::fmt;
 use std::path::Path;
 use std::str;
 
-use anyhow::{bail, Context, Error, Result};
+use anyhow::{bail, Context as _, Error, Result};
 use proguard::ProguardMapping;
-use serde::ser::{SerializeStruct, Serializer};
+use serde::ser::{SerializeStruct as _, Serializer};
 use serde::Serialize;
 use symbolic::common::{ByteView, CodeId, DebugId, SelfCell};
 use symbolic::debuginfo::{Archive, FileFormat, Object, ObjectKind};

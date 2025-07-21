@@ -1,6 +1,6 @@
 use std::collections::BTreeSet;
 use std::fs;
-use std::io::Read;
+use std::io::Read as _;
 use std::path::PathBuf;
 
 use anyhow::Result;

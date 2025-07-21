@@ -2,14 +2,14 @@
 
 //! Provides sourcemap validation functionality.
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::io::Write;
+use std::io::Write as _;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
-use std::str::FromStr;
+use std::str::FromStr as _;
 use std::sync::Arc;
 
-use anyhow::{anyhow, bail, Context, Error, Result};
+use anyhow::{anyhow, bail, Context as _, Error, Result};
 use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};

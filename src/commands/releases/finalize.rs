@@ -4,7 +4,7 @@ use clap::{Arg, ArgMatches, Command};
 
 use crate::api::{Api, UpdatedRelease};
 use crate::config::Config;
-use crate::utils::args::{get_timestamp, ArgExt};
+use crate::utils::args::{get_timestamp, ArgExt as _};
 
 pub fn make_command(command: Command) -> Command {
     command

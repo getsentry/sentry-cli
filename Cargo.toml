@@ -103,6 +103,7 @@ allow-attributes = "warn"
 str-to-string = "warn"
 string-to-string = "warn"
 unnecessary-wraps = "warn"
+unused-trait-names = "warn"
 unwrap-used = "warn"
 
 [lints]

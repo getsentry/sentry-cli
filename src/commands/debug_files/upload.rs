@@ -1,17 +1,17 @@
 use std::collections::BTreeSet;
-use std::str::{self, FromStr};
+use std::str::{self, FromStr as _};
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Result};
 use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};
 use console::style;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::FileFormat;
 
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 use crate::utils::dif::{DifType, ObjectDifFeatures};
 use crate::utils::dif_upload::{DifFormat, DifUpload};
 use crate::utils::system::QuietExit;

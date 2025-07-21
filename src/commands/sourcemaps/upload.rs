@@ -7,7 +7,7 @@ use std::time::Duration;
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use glob::{glob_with, MatchOptions};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use log::{debug, warn};
 
 use crate::api::{Api, ChunkUploadCapability};

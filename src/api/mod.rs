@@ -19,13 +19,13 @@ use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
 use std::fmt;
 use std::fs::File;
-use std::io::{self, Read, Write};
+use std::io::{self, Read as _, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 
-use anyhow::{Context, Result};
-use backoff::backoff::Backoff;
+use anyhow::{Context as _, Result};
+use backoff::backoff::Backoff as _;
 use brotli2::write::BrotliEncoder;
 #[cfg(target_os = "macos")]
 use chrono::Duration;
@@ -37,7 +37,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use regex::{Captures, Regex};
-use secrecy::ExposeSecret;
+use secrecy::ExposeSecret as _;
 use sentry::protocol::{Exception, Values};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
@@ -52,7 +52,7 @@ use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST
 use crate::utils::file_upload::LegacyUploadContext;
 use crate::utils::http::{self, is_absolute_url};
 use crate::utils::progress::{ProgressBar, ProgressBarMode};
-use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds};
+use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds as _};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 

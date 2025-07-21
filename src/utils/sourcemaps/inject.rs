@@ -1,10 +1,10 @@
 use console::style;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use regex::Regex;
 use symbolic::common::{clean_path, join_path};
 
 use std::fmt;
-use std::io::{BufRead, Write};
+use std::io::{BufRead as _, Write as _};
 use std::path::PathBuf;
 use std::sync::LazyLock;
 
@@ -374,7 +374,7 @@ pub fn find_matching_paths(candidate_paths: &[String], expected_path: &str) -> V
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::str::FromStr as _;
 
     use sentry::types::DebugId;
 

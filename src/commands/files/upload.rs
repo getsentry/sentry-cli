@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
-use std::io::Read;
+use std::io::Read as _;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;

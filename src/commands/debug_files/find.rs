@@ -4,7 +4,7 @@ use std::ffi::OsStr;
 use std::fmt::Debug;
 use std::io;
 use std::path::PathBuf;
-use std::str::FromStr;
+use std::str::FromStr as _;
 
 use anyhow::Result;
 use clap::{builder::PossibleValuesParser, Arg, ArgAction, ArgMatches, Command};

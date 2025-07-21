@@ -1,8 +1,8 @@
 use std::borrow::Cow;
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead as _, BufReader};
 
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use chrono::Utc;
 use lazy_static::lazy_static;
 use regex::Regex;

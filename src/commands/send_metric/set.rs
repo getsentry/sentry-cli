@@ -1,5 +1,5 @@
 use super::common_args::CommonMetricArgs;
-use crate::{api::envelopes_api::EnvelopesApi, utils::metrics::DefaultTags};
+use crate::{api::envelopes_api::EnvelopesApi, utils::metrics::DefaultTags as _};
 use anyhow::Result;
 use clap::{command, Args};
 use sentry::metrics::Metric;

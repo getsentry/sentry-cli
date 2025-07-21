@@ -1,5 +1,5 @@
 use anyhow::{bail, Result};
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, TimeZone as _, Utc};
 use clap::{Arg, ArgAction, Command};
 
 fn validate_org(v: &str) -> Result<String, String> {

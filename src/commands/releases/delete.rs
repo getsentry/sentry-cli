@@ -3,7 +3,7 @@ use clap::{ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 
 pub fn make_command(command: Command) -> Command {
     command

@@ -4,7 +4,7 @@ use std::io;
 use std::path::Path;
 
 use anyhow::{format_err, Result};
-use itertools::Itertools;
+use itertools::Itertools as _;
 use uuid::Uuid;
 
 pub fn dump_proguard_uuids_as_properties<P: AsRef<Path>>(p: P, uuids: &[Uuid]) -> Result<()> {

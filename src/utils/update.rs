@@ -4,7 +4,7 @@
 use std::env;
 use std::fs;
 use std::io;
-use std::io::Write;
+use std::io::Write as _;
 #[cfg(not(feature = "managed"))]
 use std::path::Path;
 

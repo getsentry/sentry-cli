@@ -1,15 +1,15 @@
 use std::borrow::Cow;
 #[cfg(not(windows))]
 use std::fs;
-use std::io::Write;
+use std::io::Write as _;
 #[cfg(not(windows))]
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use indicatif::ProgressStyle;
-use itertools::Itertools;
+use itertools::Itertools as _;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
@@ -18,7 +18,7 @@ use zip::{DateTime, ZipWriter};
 
 use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
 use crate::config::Config;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempFile;

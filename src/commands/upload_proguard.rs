@@ -12,7 +12,7 @@ use crate::api::Api;
 use crate::api::AssociateProguard;
 use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 use crate::utils::fs::TempFile;
 use crate::utils::proguard;
 use crate::utils::proguard::ProguardMapping;
