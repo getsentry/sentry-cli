@@ -213,7 +213,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 send_raw_event(event)?
             };
 
-            println!("Event from file {} dispatched: {}", path.display(), id);
+            println!("Event from file {} dispatched: {id}", path.display());
         }
 
         return Ok(());

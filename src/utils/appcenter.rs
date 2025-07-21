@@ -160,8 +160,8 @@ pub fn get_react_native_appcenter_release(
 
     if !bundle_id_ovrr.is_empty() && !version_name_ovrr.is_empty() {
         return Ok(format!(
-            "{}@{}+codepush:{}",
-            bundle_id_ovrr, version_name_ovrr, package.label
+            "{bundle_id_ovrr}@{version_name_ovrr}+codepush:{}",
+            package.label
         ));
     }
 
@@ -189,8 +189,8 @@ pub fn get_react_native_appcenter_release(
                         version_name_ovrr
                     };
                     return Ok(format!(
-                        "{}@{}+codepush:{}",
-                        bundle_id, version_name, package.label
+                        "{bundle_id}@{version_name}+codepush:{}",
+                        package.label
                     ));
                 }
             }
@@ -207,7 +207,7 @@ pub fn get_react_native_appcenter_release(
                     let vec: Vec<&str> = release_name.split('@').collect();
                     let bundle_id = if bundle_id_ovrr.is_empty() { vec[0] } else { bundle_id_ovrr };
                     let version_name = if version_name_ovrr.is_empty() { vec[1] } else { version_name_ovrr };
-                    return Ok(format!("{}@{}+codepush:{}", bundle_id, version_name, package.label));
+                    return Ok(format!("{bundle_id}@{version_name}+codepush:{}", package.label));
                 } else {
                     bail!("Could not parse app id from build.gradle");
                 }

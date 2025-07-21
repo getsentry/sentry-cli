@@ -101,7 +101,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if let Some(prob) = dif.get_problem() {
-        println!("  Usable: {} ({})", style("no").red(), prob);
+        println!("  Usable: {} ({prob})", style("no").red());
         Err(QuietExit(1).into())
     } else {
         println!("  Usable: {}", style("yes").green());

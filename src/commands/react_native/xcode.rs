@@ -361,7 +361,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         // Successfully discovered and parsed Info.plist
                         let dist_string = plist.build().to_owned();
                         let release_string =
-                            format!("{}@{}+{}", plist.bundle_id(), plist.version(), dist_string);
+                            format!("{}@{}+{dist_string}", plist.bundle_id(), plist.version());
                         info!("Parse result from Info.plist: {:?}", &plist);
                         (Some(dist_string), Some(release_string))
                     }

@@ -74,7 +74,7 @@ pub fn print_error(err: &Error) {
     }
 
     // Debug style for error includes cause chain and backtrace (if available).
-    eprintln!("{} {:?}", style("error:").red(), err);
+    eprintln!("{} {err:?}", style("error:").red());
 
     if Config::current_opt().is_none_or(|config| config.get_log_level() < log::LevelFilter::Info) {
         eprintln!();
@@ -146,11 +146,10 @@ fn panic_hook(info: &PanicHookInfo) {
         Please open a bug report issue at https://github.com/getsentry/sentry-cli/issues/new?template=BUG_REPORT.yml. 🐞";
 
     eprintln!(
-        "{}\n\n{}\n\n{}",
+        "{}\n\n{PANIC_MESSAGE}\n\n{}",
         console::style("🔥 Internal Error in Sentry CLI 🔥")
             .bold()
             .red(),
-        PANIC_MESSAGE,
         display_technical_details(info, &Backtrace::force_capture())
     );
 }
@@ -158,11 +157,10 @@ fn panic_hook(info: &PanicHookInfo) {
 /// Generates the "technical details" section of the panic message
 fn display_technical_details(info: &PanicHookInfo, backtrace: &Backtrace) -> String {
     format!(
-        "🔬 Technical Details 🔬\n\n{} panicked at {}:\n{}\n\nStack Backtrace:\n{}",
+        "🔬 Technical Details 🔬\n\n{} panicked at {}:\n{}\n\nStack Backtrace:\n{backtrace}",
         display_thread_details(),
         display_panic_location(info.location()),
-        display_panic_payload(info.payload()),
-        backtrace
+        display_panic_payload(info.payload())
     )
 }
 

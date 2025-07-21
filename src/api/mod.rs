@@ -329,7 +329,7 @@ impl Api {
             _ => ARCH,
         };
 
-        let ref_name = format!("sentry-cli-{}-{}{}", capitalize_string(PLATFORM), arch, EXT);
+        let ref_name = format!("sentry-cli-{}-{arch}{EXT}", capitalize_string(PLATFORM));
         info!("Looking for file named: {}", ref_name);
 
         if resp.status() == 200 {
@@ -894,10 +894,9 @@ impl<'a> AuthenticatedApi<'a> {
         };
         self.put(
             &format!(
-                "/projects/{}/{}/issues/?{}",
+                "/projects/{}/{}/issues/?{qs}",
                 PathArg(org),
-                PathArg(project),
-                qs
+                PathArg(project)
             ),
             changes,
         )?
@@ -1252,7 +1251,7 @@ impl<'a> AuthenticatedApi<'a> {
         loop {
             requests_no += 1;
 
-            let resp = self.get(&format!("{}cursor={}", url, QueryArg(&cursor)))?;
+            let resp = self.get(&format!("{url}cursor={}", QueryArg(&cursor)))?;
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
@@ -1933,7 +1932,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 } else {
                     format!("{}***", &caps[3][..std::cmp::min(caps[3].len(), 8)])
                 };
-                format!("{}: {} {}", &caps[1], &caps[2], info)
+                format!("{}: {} {info}", &caps[1], &caps[2])
             });
             debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
         }

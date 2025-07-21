@@ -646,8 +646,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
 
     let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
         let file_desc = format!(
-            "{} file from project path ({})",
-            CONFIG_RC_FILE_NAME,
+            "{CONFIG_RC_FILE_NAME} file from project path ({})",
             project_config_path.display()
         );
         let mut f = fs::File::open(&project_config_path)
