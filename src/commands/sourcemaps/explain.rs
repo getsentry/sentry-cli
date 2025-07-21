@@ -1,6 +1,6 @@
 #![expect(clippy::unwrap_used, reason = "deprecated command")]
 
-use std::io::Read;
+use std::io::Read as _;
 use std::path::Path;
 
 use anyhow::{bail, format_err, Result};

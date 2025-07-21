@@ -22,7 +22,7 @@ impl r2d2::ManageConnection for CurlConnectionManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use r2d2::ManageConnection;
+    use r2d2::ManageConnection as _;
 
     #[test]
     fn test_connect() {

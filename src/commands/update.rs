@@ -1,6 +1,6 @@
 use std::env;
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::utils::update::{assert_updatable, can_update_sentrycli, get_latest_sentrycli_release};

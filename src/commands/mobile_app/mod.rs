@@ -3,7 +3,7 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 
 pub mod upload;
 

@@ -3,17 +3,17 @@
 use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
 use crate::utils::fs::path_as_url;
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use sentry::types::DebugId;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
-use std::str::FromStr;
+use std::str::FromStr as _;
 use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 

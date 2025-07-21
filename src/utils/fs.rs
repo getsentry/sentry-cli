@@ -138,7 +138,7 @@ pub fn is_writable<P: AsRef<Path>>(path: P) -> bool {
 #[cfg(not(feature = "managed"))]
 #[cfg(not(windows))]
 pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
+    use std::os::unix::fs::PermissionsExt as _;
 
     let mut perm = fs::metadata(&path)?.permissions();
     perm.set_mode(0o755);

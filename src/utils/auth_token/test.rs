@@ -2,7 +2,7 @@
 
 use super::AuthToken;
 use rstest::rstest;
-use secrecy::ExposeSecret;
+use secrecy::ExposeSecret as _;
 // Org auth token tests -----------------------------------------------------
 
 #[test]

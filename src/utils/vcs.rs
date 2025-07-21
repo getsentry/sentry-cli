@@ -4,7 +4,7 @@ use std::fmt;
 use std::path::PathBuf;
 
 use anyhow::{bail, format_err, Error, Result};
-use chrono::{DateTime, FixedOffset, TimeZone};
+use chrono::{DateTime, FixedOffset, TimeZone as _};
 use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
@@ -583,7 +583,7 @@ use {
     crate::api::RepoProvider,
     insta::{assert_debug_snapshot, assert_yaml_snapshot},
     std::fs::File,
-    std::io::Write,
+    std::io::Write as _,
     std::path::Path,
     std::process::Command,
     tempfile::{tempdir, TempDir},

@@ -11,7 +11,7 @@ use self::set::SetMetricArgs;
 use super::derive_parser::{SentryCLI, SentryCLICommand};
 use anyhow::Result;
 use clap::{command, Args, Subcommand};
-use clap::{ArgMatches, Command, Parser};
+use clap::{ArgMatches, Command, Parser as _};
 
 const DEPRECATION_MESSAGE: &str = "DEPRECATION NOTICE: \
     The send-metric commands are deprecated and will be \

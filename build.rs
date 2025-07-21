@@ -1,7 +1,7 @@
 use std::env;
 use std::error::Error;
 use std::fs::File;
-use std::io::Write;
+use std::io::Write as _;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn Error>> {

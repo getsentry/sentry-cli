@@ -3,7 +3,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 use crate::utils::formatting::Table;
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::system::QuietExit;

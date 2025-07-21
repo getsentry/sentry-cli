@@ -1,5 +1,5 @@
 use super::common_args::FloatValueMetricArgs;
-use crate::{api::envelopes_api::EnvelopesApi, utils::metrics::DefaultTags};
+use crate::{api::envelopes_api::EnvelopesApi, utils::metrics::DefaultTags as _};
 use anyhow::Result;
 use sentry::metrics::Metric;
 

@@ -2,7 +2,7 @@ use anyhow::Result;
 use clap::{ArgMatches, Command};
 use console::style;
 
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 
 pub mod delete;
 pub mod list;

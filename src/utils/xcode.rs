@@ -5,11 +5,11 @@ use std::env;
 use std::fmt;
 use std::fs;
 use std::hash::BuildHasher;
-use std::io::{BufRead, BufReader, Cursor};
+use std::io::{BufRead as _, BufReader, Cursor};
 use std::path::{Path, PathBuf};
 use std::process;
 
-use anyhow::{format_err, Context, Result};
+use anyhow::{format_err, Context as _, Result};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::warn;

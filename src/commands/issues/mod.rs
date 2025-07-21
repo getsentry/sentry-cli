@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::{Arg, ArgAction, ArgMatches, Command};
 
-use crate::utils::args::ArgExt;
+use crate::utils::args::ArgExt as _;
 
 pub mod list;
 pub mod mute;

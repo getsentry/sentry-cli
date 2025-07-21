@@ -1,6 +1,6 @@
 use std::time::{Duration, Instant};
 
-use backoff::backoff::Backoff;
+use backoff::backoff::Backoff as _;
 use backoff::ExponentialBackoff;
 
 use crate::constants::{

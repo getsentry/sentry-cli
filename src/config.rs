@@ -8,13 +8,13 @@ use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-use anyhow::{bail, format_err, Context, Error, Result};
+use anyhow::{bail, format_err, Context as _, Error, Result};
 use clap::ArgMatches;
 use ini::Ini;
 use lazy_static::lazy_static;
 use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
-use secrecy::ExposeSecret;
+use secrecy::ExposeSecret as _;
 use sentry::types::Dsn;
 
 use crate::constants::CONFIG_INI_FILE_PATH;
@@ -159,7 +159,7 @@ impl Config {
         // Remove all non-user permissions for the newly created file
         #[cfg(not(windows))]
         {
-            use std::os::unix::fs::OpenOptionsExt;
+            use std::os::unix::fs::OpenOptionsExt as _;
             options.mode(0o600);
         }
 
