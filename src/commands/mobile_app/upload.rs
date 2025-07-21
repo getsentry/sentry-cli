@@ -42,7 +42,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("paths")
                 .value_name("PATH")
-                .help(help_text)
+                .help(HELP_TEXT)
                 .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true),
