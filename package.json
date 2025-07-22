@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli",
-  "version": "2.50.0",
+  "version": "2.50.1",
   "description": "A command line utility to work with Sentry. https://docs.sentry.io/hosted/learn/cli/",
   "repository": "git://github.com/getsentry/sentry-cli.git",
   "homepage": "https://docs.sentry.io/hosted/learn/cli/",
@@ -32,14 +32,14 @@
     "typescript": "~5.8.3"
   },
   "optionalDependencies": {
-    "@sentry/cli-darwin": "2.50.0",
-    "@sentry/cli-linux-arm": "2.50.0",
-    "@sentry/cli-linux-arm64": "2.50.0",
-    "@sentry/cli-linux-i686": "2.50.0",
-    "@sentry/cli-linux-x64": "2.50.0",
-    "@sentry/cli-win32-i686": "2.50.0",
-    "@sentry/cli-win32-x64": "2.50.0",
-    "@sentry/cli-win32-arm64": "2.50.0"
+    "@sentry/cli-darwin": "2.50.1",
+    "@sentry/cli-linux-arm": "2.50.1",
+    "@sentry/cli-linux-arm64": "2.50.1",
+    "@sentry/cli-linux-i686": "2.50.1",
+    "@sentry/cli-linux-x64": "2.50.1",
+    "@sentry/cli-win32-i686": "2.50.1",
+    "@sentry/cli-win32-x64": "2.50.1",
+    "@sentry/cli-win32-arm64": "2.50.1"
   },
   "scripts": {
     "postinstall": "node ./scripts/install.js",
