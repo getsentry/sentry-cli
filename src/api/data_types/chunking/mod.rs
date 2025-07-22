@@ -14,5 +14,6 @@ pub use self::compression::ChunkCompression;
 pub use self::dif::{AssembleDifsRequest, AssembleDifsResponse, ChunkedDifRequest};
 pub use self::file_state::ChunkedFileState;
 pub use self::hash_algorithm::ChunkHashAlgorithm;
+#[cfg(feature = "unstable-mobile-app")]
 pub use self::mobile_app::{AssembleMobileAppResponse, ChunkedMobileAppRequest};
 pub use self::upload::{ChunkServerOptions, ChunkUploadCapability};

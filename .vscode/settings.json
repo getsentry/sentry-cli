@@ -1,0 +1,4 @@
+{
+    "rust-analyzer.cargo.features": ["unstable-mobile-app"],
+    "rust-analyzer.cargo.noDefaultFeatures": false
+}
