@@ -1,6 +1,7 @@
 ```
 $ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/apk.apk
 ? failed
+[..]WARN[..]EXPERIMENTAL: The mobile-app subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
 error: Auth token is required for this request. Please run `sentry-cli login` and try again!
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
