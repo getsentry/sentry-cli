@@ -2,6 +2,22 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.50.2
+
+### Various fixes & improvements
+
+- feat(mobile-app): Reintroduce mobile-app feature gating (#2643) by @szokeasaurusrex
+- ci: Enable `uninlined-format-args` Clippy lint (#2634) by @szokeasaurusrex
+- ci(test): Replace `--all` with `--workspace` (#2640) by @szokeasaurusrex
+- build: Delete `Makefile` (#2641) by @szokeasaurusrex
+- build(deps): bump github/codeql-action from 3.29.2 to 3.29.3 (#2637) by @dependabot
+- build(deps): bump form-data from 3.0.1 to 3.0.4 (#2638) by @dependabot
+- feat(mobile-app): Remove unstable-mobile-app feature gating (#2601) by @rbro112
+- feat(mobile-app): Add extra experimental logging to the mobile-app subcommand (#2636) by @rbro112
+- feat(mobileapp): Update mobile app command for ipa uploads (#2619) by @noahsmartin
+- test: Delete unused test response (#2633) by @szokeasaurusrex
+- ci: Enable `unused-trait-names` lint, fix violations (#2631) by @szokeasaurusrex
+
 ## 2.50.0
 
 ### Various fixes & improvements
