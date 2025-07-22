@@ -4,19 +4,17 @@
 
 ## 2.50.2
 
+This change removes the `mobile-app upload` experimental feature which was introduced in 2.50.1.
+
+## 2.50.1
+
 ### Various fixes & improvements
 
-- feat(mobile-app): Reintroduce mobile-app feature gating (#2643) by @szokeasaurusrex
-- ci: Enable `uninlined-format-args` Clippy lint (#2634) by @szokeasaurusrex
-- ci(test): Replace `--all` with `--workspace` (#2640) by @szokeasaurusrex
-- build: Delete `Makefile` (#2641) by @szokeasaurusrex
-- build(deps): bump github/codeql-action from 3.29.2 to 3.29.3 (#2637) by @dependabot
 - build(deps): bump form-data from 3.0.1 to 3.0.4 (#2638) by @dependabot
-- feat(mobile-app): Remove unstable-mobile-app feature gating (#2601) by @rbro112
-- feat(mobile-app): Add extra experimental logging to the mobile-app subcommand (#2636) by @rbro112
-- feat(mobileapp): Update mobile app command for ipa uploads (#2619) by @noahsmartin
-- test: Delete unused test response (#2633) by @szokeasaurusrex
-- ci: Enable `unused-trait-names` lint, fix violations (#2631) by @szokeasaurusrex
+
+### New experimental feature
+
+This release introduces the new experimental `mobile-app upload` subcommand. This command is experimental, and therefore subject to changes, including breaking changes and/or removal, in any release. The command might not work as expected.
 
 ## 2.50.0
 
@@ -42,7 +40,7 @@
 
 ## 2.47.1
 
-No user-facing changes. 
+No user-facing changes.
 
 ## 2.47.0
 
