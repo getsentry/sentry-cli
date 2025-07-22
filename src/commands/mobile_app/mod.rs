@@ -33,6 +33,12 @@ pub fn make_command(mut command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    log::warn!(
+        "EXPERIMENTAL: The mobile-app subcommand is experimental. \
+        The command is subject to breaking changes and may be removed \
+        without notice in any release."
+    );
+
     macro_rules! execute_subcommand {
         ($name:ident) => {{
             if let Some(sub_matches) =

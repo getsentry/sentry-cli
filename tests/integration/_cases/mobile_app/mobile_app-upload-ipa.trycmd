@@ -1,9 +1,8 @@
 ```
-$ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/apk.apk
+$ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/ipa.ipa --sha test_sha
 ? success
 [..]WARN[..]EXPERIMENTAL: The mobile-app subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
-Nothing to upload, all files are on the server
 Successfully uploaded 1 file to Sentry
-  - tests/integration/_fixtures/mobile_app/apk.apk
+  - tests/integration/_fixtures/mobile_app/ipa.ipa
 
 ```
