@@ -288,7 +288,7 @@ impl Display for DifMatch<'_> {
 
         write!(
             f,
-            "{} ({}; {}{})",
+            "{} ({}; {}{kind})",
             style(self.debug_id.map(|id| id.to_string()).unwrap_or_default()).dim(),
             self.name,
             self.object()
@@ -300,7 +300,6 @@ impl Display for DifMatch<'_> {
                     }
                 })
                 .unwrap_or_default(),
-            kind,
         )
     }
 }

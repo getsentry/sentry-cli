@@ -117,10 +117,9 @@ fn run_program(args: Vec<&String>, monitor_slug: &str) -> (bool, Option<i32>, Du
         Ok(status) => (status.success(), status.code()),
         Err(err) => {
             eprintln!(
-                "{} could not invoke program '{}': {}",
+                "{} could not invoke program '{}': {err}",
                 style("error").red(),
-                args[0],
-                err
+                args[0]
             );
             (false, None)
         }

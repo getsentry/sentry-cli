@@ -279,7 +279,7 @@ where
             // If we skip waiting for the server to finish processing, there
             // are pending entries. We only expect results that have been
             // uploaded in the first place, so we can skip everything else.
-            println!("  {:>8} {}", console::style("UPLOADED").yellow(), object);
+            println!("  {:>8} {object}", console::style("UPLOADED").yellow());
         }
         // All other entries will be in the `errors` list.
     }

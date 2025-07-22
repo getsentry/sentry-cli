@@ -209,8 +209,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Some(dists) => {
             for dist in dists {
                 println!(
-                    "Uploading sourcemaps for release {} distribution {}",
-                    &release, dist
+                    "Uploading sourcemaps for release {} distribution {dist}",
+                    &release
                 );
 
                 processor.upload(&UploadContext {

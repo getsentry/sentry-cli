@@ -284,18 +284,14 @@ fn process_sources_from_bundle(
 
     let bundle_path = PathBuf::from(matches.get_one::<String>("bundle").unwrap());
     let bundle_url = format!(
-        "{}/{}{}",
-        url_prefix,
-        bundle_path.file_name().unwrap().to_string_lossy(),
-        url_suffix
+        "{url_prefix}/{}{url_suffix}",
+        bundle_path.file_name().unwrap().to_string_lossy()
     );
 
     let sourcemap_path = PathBuf::from(matches.get_one::<String>("bundle_sourcemap").unwrap());
     let sourcemap_url = format!(
-        "{}/{}{}",
-        url_prefix,
-        sourcemap_path.file_name().unwrap().to_string_lossy(),
-        url_suffix
+        "{url_prefix}/{}{url_suffix}",
+        sourcemap_path.file_name().unwrap().to_string_lossy()
     );
 
     debug!("Bundle path: {}", bundle_path.display());
@@ -397,7 +393,7 @@ fn process_sources_from_paths(
 
         for source in sources {
             let local_path = source.path.strip_prefix(base_path).unwrap();
-            let url = format!("{}/{}{}", url_prefix, path_as_url(local_path), url_suffix);
+            let url = format!("{url_prefix}/{}{url_suffix}", path_as_url(local_path));
             processor.add(&url, source);
         }
     }

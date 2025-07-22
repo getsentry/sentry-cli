@@ -186,7 +186,7 @@ fn find_ids(
             eprintln!();
             eprintln!("missing debug information files:");
             for id in &remaining {
-                eprintln!("  {} ({})", id, id_hint(id),);
+                eprintln!("  {id} ({})", id_hint(id),);
             }
         }
     }

@@ -776,8 +776,8 @@ fn url_to_bundle_path(url: &str) -> Result<String> {
 
     Ok(match url.host_str() {
         Some("~") => format!("_/_/{path}"),
-        Some(host) => format!("{}/{}/{}", url.scheme(), host, path),
-        None => format!("{}/_/{}", url.scheme(), path),
+        Some(host) => format!("{}/{host}/{path}", url.scheme()),
+        None => format!("{}/_/{path}", url.scheme()),
     })
 }
 
