@@ -1,0 +1,7 @@
+```
+$ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/ipa.ipa --sha test_sha
+? success
+Successfully uploaded 1 file to Sentry
+  - tests/integration/_fixtures/mobile_app/ipa.ipa
+
+```
