@@ -2,6 +2,20 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.50.2
+
+This change removes the `mobile-app upload` experimental feature which was introduced in 2.50.1.
+
+## 2.50.1
+
+### Various fixes & improvements
+
+- build(deps): bump form-data from 3.0.1 to 3.0.4 (#2638) by @dependabot
+
+### New experimental feature
+
+This release introduces the new experimental `mobile-app upload` subcommand. This command is experimental, and therefore subject to changes, including breaking changes and/or removal, in any release. The command might not work as expected.
+
 ## 2.50.0
 
 ### Various fixes & improvements
@@ -26,7 +40,7 @@
 
 ## 2.47.1
 
-No user-facing changes. 
+No user-facing changes.
 
 ## 2.47.0
 
