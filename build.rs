@@ -29,5 +29,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     writeln!(f, "pub const USER_AGENT: &str = \"sentry-cli/{arch}\";")?;
     println!("cargo:rerun-if-changed=build.rs\n");
 
+    // if platform == "darwin" {
+    //     let lib_dir = "/usr/lib/swift";
+    //     println!("cargo:rustc-link-arg=-Wl,-rpath");
+    //     println!("cargo:rustc-link-arg=-Wl,{lib_dir}");
+    // }
+
     Ok(())
 }

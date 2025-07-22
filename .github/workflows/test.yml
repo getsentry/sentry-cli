@@ -79,19 +79,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-13, macos-13-xlarge]
+        os: [macos-13, macos-13-xlarge, macos-15-large]
         feature-args: ['', '-Funstable-mobile-app']
         include:
           - os: macos-13
             base-os: macos-14-large
           - os: macos-13-xlarge
             base-os: macos-14
+          - os: macos-15-large
+            base-os: macos-14-large
           - feature-args: ''
             feature-suffix: ''
           - feature-args: '-Funstable-mobile-app'
             feature-suffix: ' (-Funstable-mobile-app)'
 
-    name: Run macOS 13 ${{ matrix.feature-suffix }}
+    name: Run macOS ${{ matrix.os }} ${{ matrix.feature-suffix }}
     runs-on: ${{ matrix.os }}
 
     steps:
