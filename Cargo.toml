@@ -11,7 +11,6 @@ rust-version = "1.86"
 [dependencies]
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }
-apple-catalog-parsing = { path = "apple-catalog-parsing", optional = true }
 backoff = "0.4.0"
 brotli2 = "0.3.2"
 bytecount = "0.6.3"
@@ -94,10 +93,6 @@ default = []
 managed = []
 with_crash_reporting = []
 
-# Feature flag for the mobile-app command, as it is still under development.
-# CI tests run against this flag, but we don't include it in release builds.
-unstable-mobile-app = ["apple-catalog-parsing"]
-
 [workspace.lints.clippy]
 allow-attributes = "warn"
 str-to-string = "warn"
@@ -115,6 +110,7 @@ workspace = true
 
 [target."cfg(target_os = \"macos\")".dependencies]
 mac-process-info = "0.2.0"
+apple-catalog-parsing = { path = "apple-catalog-parsing"}
 
 [target."cfg(unix)"]
 

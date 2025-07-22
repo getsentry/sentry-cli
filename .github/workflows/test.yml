@@ -16,7 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-14, windows-2022]
-        feature-args: ['', '-Funstable-mobile-app']
         include:
           - os: ubuntu-24.04
             display-os: Linux
@@ -24,12 +23,8 @@ jobs:
             display-os: macOS
           - os: windows-2022
             display-os: Windows
-          - feature-args: ''
-            feature-suffix: ''
-          - feature-args: '-Funstable-mobile-app'
-            feature-suffix: ' (-Funstable-mobile-app)'
 
-    name: ${{ matrix.display-os }}${{ matrix.feature-suffix }}
+    name: ${{ matrix.display-os }}
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -40,4 +35,4 @@ jobs:
         uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
 
       - name: Run Cargo Tests
-        run: cargo test --all ${{ matrix.feature-args }}
+        run: cargo test --all

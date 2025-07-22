@@ -16,7 +16,6 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-14, windows-2022]
-        feature-args: ['', '-Funstable-mobile-app']
         include:
           - os: ubuntu-24.04
             display-os: Linux
@@ -24,12 +23,8 @@ jobs:
             display-os: macOS
           - os: windows-2022
             display-os: Windows
-          - feature-args: ''
-            feature-suffix: ''
-          - feature-args: '-Funstable-mobile-app'
-            feature-suffix: ' (-Funstable-mobile-app)'
 
-    name: ${{ matrix.display-os }}${{ matrix.feature-suffix }}
+    name: ${{ matrix.display-os }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repository
@@ -45,4 +40,4 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --workspace --tests ${{ matrix.feature-args }}
+        run: cargo clippy --workspace --tests

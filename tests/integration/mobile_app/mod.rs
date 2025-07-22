@@ -1,5 +1,3 @@
-#![cfg(feature = "unstable-mobile-app")]
-
 use crate::integration::TestManager;
 
 mod upload;
