@@ -94,8 +94,4 @@ fn main() {
     println!(
         "cargo:rustc-link-search={developer_dir_path}/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx"
     );
-
-    let lib_dir = "/usr/lib/swift";
-    println!("cargo:rustc-link-arg=-Wl,-rpath");
-    println!("cargo:rustc-link-arg=-Wl,{lib_dir}");
 }

@@ -33,7 +33,7 @@ use crate::utils::vcs;
 pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
-    #[cfg(any(not(target_os = "macos"), not(target_arch = "aarch64")))]
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, and XCArchive.";
     command
         .about("[EXPERIMENTAL] Upload mobile app files to a project.")
@@ -233,7 +233,7 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("File format validation failed");
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let format_list = "APK, AAB, XCArchive, or IPA";
-    #[cfg(any(not(target_os = "macos"), not(target_arch = "aarch64")))]
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     let format_list = "APK, AAB, or XCArchive";
 
     Err(anyhow!(
