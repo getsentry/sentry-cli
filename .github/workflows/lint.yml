@@ -15,28 +15,38 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
+        target: [x86_64-pc-windows-msvc, x86_64-unknown-linux-musl, aarch64-apple-darwin]
         feature-args: ['', '-Funstable-mobile-app']
         include:
-          - os: ubuntu-24.04
-            display-os: Linux
-          - os: macos-14
-            display-os: macOS
-          - os: windows-2022
-            display-os: Windows
+          - target: x86_64-pc-windows-msvc
+            runs-on: windows-2022
+            display-name: Windows
+          - target: x86_64-unknown-linux-musl
+            runs-on: ubuntu-24.04
+            display-name: Linux
+          - target: aarch64-apple-darwin
+            runs-on: macos-14
+            display-name: macOS
           - feature-args: ''
             feature-suffix: ''
           - feature-args: '-Funstable-mobile-app'
             feature-suffix: ' (-Funstable-mobile-app)'
 
-    name: ${{ matrix.display-os }}${{ matrix.feature-suffix }}
-    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.display-name }}${{ matrix.feature-suffix }}
+    runs-on: ${{ matrix.runs-on }}
     steps:
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
 
       - name: Install Rust Toolchain
         run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt --no-self-update
+
+      - name: Add Rust Target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install musl-tools
+        if: ${{ matrix.target == 'x86_64-unknown-linux-musl' }}
+        run: sudo apt-get update && sudo apt-get install -y musl-tools
 
       - name: Cache Dependencies
         uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
@@ -45,4 +55,4 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --workspace --tests ${{ matrix.feature-args }}
+        run: cargo clippy --workspace --tests ${{ matrix.feature-args }} --target ${{ matrix.target }}
