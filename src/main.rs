@@ -5,5 +5,6 @@ mod constants;
 mod utils;
 
 pub fn main() -> ! {
+    panic!("test PR");
     commands::main()
 }
