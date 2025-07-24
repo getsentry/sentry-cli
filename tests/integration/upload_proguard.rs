@@ -72,7 +72,6 @@ fn chunk_upload_already_there() {
             "tests/integration/_fixtures/upload_proguard/mapping.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
         .run_and_assert(AssertCommand::Success)
 }
 

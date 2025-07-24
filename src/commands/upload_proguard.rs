@@ -1,4 +1,3 @@
-use std::env;
 use std::io;
 
 use anyhow::{bail, Error, Result};
@@ -10,6 +9,7 @@ use uuid::Uuid;
 
 use crate::api::Api;
 use crate::api::AssociateProguard;
+use crate::api::ChunkUploadCapability;
 use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt as _;
@@ -18,8 +18,6 @@ use crate::utils::proguard;
 use crate::utils::proguard::ProguardMapping;
 use crate::utils::system::QuietExit;
 use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
-
-const CHUNK_UPLOAD_ENV_VAR: &str = "SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD";
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -187,29 +185,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let authenticated_api;
     let (org, project);
 
-    if env::var(CHUNK_UPLOAD_ENV_VAR) == Ok("1".into()) {
-        log::warn!(
-            "EXPERIMENTAL FEATURE: Uploading proguard mappings using chunked uploading. \
-             Some functionality may be unavailable when using chunked uploading. Please unset \
-             the {CHUNK_UPLOAD_ENV_VAR} variable if you encounter any \
-             problems."
-        );
+    let chunk_upload_options = if matches.get_flag("no_upload") {
+        None
+    } else {
+        let authenticated_api = api.authenticated()?;
+        let org = config.get_org(matches)?;
+        authenticated_api
+            .get_chunk_upload_options(&org)
+            .ok()
+            .flatten()
+    };
 
+    if let Some(chunk_upload_options) =
+        chunk_upload_options.filter(|options| options.supports(ChunkUploadCapability::Proguard))
+    {
         authenticated_api = api.authenticated()?;
         (org, project) = config.get_org_and_project(matches)?;
-
-        let chunk_upload_options = authenticated_api
-            .get_chunk_upload_options(&org)
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|options| {
-                options.ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "server does not support chunked uploading. unset \
-                         {CHUNK_UPLOAD_ENV_VAR} to continue."
-                    )
-                })
-            })?;
-
         proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
     } else {
         if mappings.is_empty() && matches.get_flag("require_one") {
