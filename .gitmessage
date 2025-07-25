@@ -1,0 +1,13 @@
+
+# Commit Message Format
+# <type>(<scope>): <subject>
+#
+# <body - explain what and why, not how>
+#
+# <footer - link issues: "Fixes #123", breaking: "BREAKING CHANGE: desc">
+#
+# Example: feat(api): Add user authentication endpoint
+# Types: feat, fix, docs, style, ref, test, ci, build, perf, meta, license, revert
+# Subject: Capitalize, imperative mood, no period, max 70 chars
+# Body: Separate from subject with blank line
+# Details: https://develop.sentry.dev/engineering-practices/commit-messages/

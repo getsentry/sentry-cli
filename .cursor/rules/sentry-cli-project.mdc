@@ -21,7 +21,8 @@ This is **sentry-cli**, a command-line utility for working with Sentry. It's pri
 
 - `src/` - Core Rust source code with command modules and utilities
 - `js/` - JavaScript wrapper and npm package code
-- `scripts/` - Build and utility scripts
+- `scripts/` - Build, installation, and deployment scripts
+- `tools/` - Development tooling and utilities (commit hooks, validation scripts)
 - `tests/integration/` - Integration tests using `.trycmd` format
 - `npm-binary-distributions/` - Platform-specific binary packages
 - `.github/workflows/` - CI/CD workflows (follows reusable workflow pattern)

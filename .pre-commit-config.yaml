@@ -1,0 +1,27 @@
+# pre-commit configuration for sentry-cli
+# See https://pre-commit.com for more information
+default_stages: [pre-commit]
+fail_fast: false
+
+repos:
+  # Commit message validation
+  - repo: local
+    hooks:
+      - id: validate-commit-msg
+        name: Validate commit message
+        entry: ./tools/validate-commit-msg.py
+        language: system
+        stages: [commit-msg]
+        always_run: true
+
+  # Standard hooks for code quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
