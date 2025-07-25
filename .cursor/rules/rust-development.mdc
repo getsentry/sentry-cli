@@ -1,0 +1,41 @@
+---
+description: Rust development patterns and conventions for sentry-cli
+globs: *.rs,Cargo.*,.cargo/**/*,src/**/*,apple-catalog-parsing/**/*
+alwaysApply: false
+---
+
+# Rust Development Guidelines
+
+## Code Organization
+
+- Follow existing module structure in `src/commands/` for new commands
+- Use `anyhow::Result` for error handling patterns
+- Consider cross-platform compatibility
+- Ensure backward compatibility for CLI interface
+
+## Common Patterns
+
+- Use existing error types and handling patterns
+- Follow established CLI argument parsing patterns using `clap`
+- Reuse utility functions from `src/utils/`
+- Match existing code style and naming conventions
+- Add appropriate logging using `log` crate patterns
+
+## Development Commands
+
+```bash
+# Essential Rust workflow - run against the whole workspace
+cargo build --workspace
+cargo test --workspace
+cargo clippy --workspace
+cargo fmt
+
+# Local testing
+./bin/sentry-cli --help
+```
+
+## Testing Requirements
+
+- Update integration tests in `tests/integration/` with `.trycmd` files
+- Unit tests alongside source code
+- Cross-platform testing considerations

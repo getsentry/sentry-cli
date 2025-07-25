@@ -1,0 +1,40 @@
+---
+description: CI/CD workflow patterns and conventions for sentry-cli
+globs: .github/workflows/**/*
+alwaysApply: false
+---
+
+# CI/CD Workflow Guidelines
+
+## Reusable Workflow Pattern
+
+- Main `ci.yml` calls separate workflows (`lint.yml`, `test.yml`, etc.)
+- Extract actual logic into separate workflows that `ci.yml` calls
+- Use `uses: ./.github/workflows/workflow-name.yml` pattern
+
+## Required Checks Pattern
+
+- All workflows must pass before merge via "Check required jobs" pattern
+- Update the `required` job dependencies when adding new workflows
+- Branch protection relies on this "Check required jobs" validation
+
+## Test Matrix Requirements
+
+- Test matrix should cover primary platforms (Ubuntu, macOS, Windows)
+- Consider impact on binary distribution pipeline
+- Cross-platform testing is essential
+
+## Branch Protection
+
+- Main branches (`master`, `1.x`, `release/**`) are protected
+- Merge strategy: Primarily squash merging, some rebase merging allowed
+- Restrict pushes to protected branches (force use of PRs)
+
+## Adding New Workflows
+
+When adding new CI checks:
+
+1. Create separate reusable workflow file
+2. Call it from main `ci.yml`
+3. Add to `required` job dependencies
+4. Test across platform matrix
