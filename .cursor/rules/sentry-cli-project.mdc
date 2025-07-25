@@ -1,0 +1,68 @@
+---
+description: Core development guidelines and context for sentry-cli
+alwaysApply: true
+---
+
+# Sentry CLI Development Guidelines
+
+## Project Overview
+
+This is **sentry-cli**, a command-line utility for working with Sentry. It's primarily written in **Rust** with **JavaScript/Node.js** wrapper components for npm distribution.
+
+## Language & Architecture
+
+- **Primary language**: Rust (core functionality)
+- **Secondary language**: JavaScript/TypeScript (npm wrapper, installation scripts)
+- **Build system**: Cargo for Rust, npm/yarn for JavaScript
+- **Cross-platform**: Supports multiple architectures (darwin, linux, windows, ARM variants)
+- **Binary distributions**: Located in `npm-binary-distributions/` for different platforms
+
+## Project Structure
+
+- `src/` - Core Rust source code with command modules and utilities
+- `js/` - JavaScript wrapper and npm package code
+- `scripts/` - Build and utility scripts
+- `tests/integration/` - Integration tests using `.trycmd` format
+- `npm-binary-distributions/` - Platform-specific binary packages
+- `.github/workflows/` - CI/CD workflows (follows reusable workflow pattern)
+
+## Development Standards
+
+### Commit Message Format
+
+**MUST follow Sentry's commit message format**: `type(scope): subject`
+
+Valid types: `build`, `ci`, `docs`, `feat`, `fix`, `perf`, `ref`, `style`, `test`, `meta`, `license`, `revert`
+
+Subject requirements:
+
+- Capitalize first letter
+- Use imperative mood ("Add" not "Added")
+- No trailing period
+- Max 70 characters for header
+
+Reference: https://develop.sentry.dev/engineering-practices/commit-messages/
+
+### Performance & Scale Considerations
+
+- CLI tool should be fast and responsive
+- Consider impact on cold start times
+- Memory usage matters for CI environments
+- Network operations should be optimized and retryable
+
+### Security Best Practices
+
+- Handle authentication tokens securely
+- Validate file paths to prevent directory traversal
+- Consider impact of processing user-provided files (sourcemaps, debug files)
+- Follow Rust security best practices
+
+## Testing Requirements
+
+- Unit tests alongside source code
+- Integration tests using `.trycmd` format in `tests/integration/`
+- Mock HTTP responses in `tests/integration/_responses/`
+- Test fixtures in `tests/integration/_fixtures/`
+- Cross-platform testing via CI matrix
+
+Remember: This is a production tool used by many developers. Changes should be well-tested, backward-compatible, and follow established patterns.
