@@ -15,7 +15,6 @@ alwaysApply: false
 
 ## Installation & Distribution
 
-- Multiple distribution methods: npm, direct binary, package managers
 - Installation logic in `scripts/install.js` handles platform detection
 - Consider offline/air-gapped environments
 - Binary management via `npm-binary-distributions/`
