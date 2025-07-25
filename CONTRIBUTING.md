@@ -1,3 +1,11 @@
+# Pre-commit hooks
+
+Pre-commit hooks provide some local validation of your commits. Please set up the hooks with the following script:
+
+```bash
+./tools/setup-commit-hooks.sh
+```
+
 # Adding new commands
 For new commands, it is recommended to use clap's [Derive API](https://docs.rs/clap/latest/clap/_derive/index.html).
 In contrast to the [Builder API](https://docs.rs/clap/latest/clap/_tutorial/index.html), the Derive API makes it:
