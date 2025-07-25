@@ -39,3 +39,27 @@ cargo fmt
 - Update integration tests in `tests/integration/` with `.trycmd` files
 - Unit tests alongside source code
 - Cross-platform testing considerations
+
+## Error Handling Patterns
+
+- Use `anyhow::Result` for application-level errors
+- Use `thiserror` for library-level error types (see `src/utils/auth_token/error.rs`)
+- Chain errors with `.context()` for better error messages
+- Custom error types in `src/api/errors/` and `src/utils/dif_upload/error.rs`
+
+## Testing Patterns
+
+- Integration tests use `trycmd` crate for CLI testing (asserting output)
+- Use `assert_cmd` crate when asserting behavior rather than just output
+- Test fixtures in `tests/integration/_fixtures/`
+- Mock API responses in `tests/integration/_responses/`
+- Use `TestManager` for setting up test environments
+- Platform-specific tests with `#[cfg(target_os = "...")]`
+
+## Swift/Apple Integration
+
+- Swift code in `apple-catalog-parsing/` is used for parsing xarchive files
+- Used by the `mobile-app upload` command for iOS app processing
+- Built as a separate crate with FFI bindings to Rust
+- Only compiled on macOS targets
+- Tests run via `swift-test.yml` workflow in CI

@@ -1,0 +1,45 @@
+# Testing Guidelines
+
+## Unit Tests
+
+- Colocate with source code
+- Use `#[cfg(test)]` modules
+- Mock external dependencies
+
+## Integration Tests
+
+- Use `trycmd` for CLI interface testing when asserting output
+- Use `assert_cmd` for testing behavior rather than just output
+- Structure: `tests/integration/_cases/<command>/<test>.trycmd`
+- Fixtures: `tests/integration/_fixtures/`
+- Expected outputs: `tests/integration/_expected_outputs/`
+- API mocks: `tests/integration/_responses/`
+
+## Snapshot Management
+
+```bash
+# Update snapshots
+TRYCMD=overwrite cargo test
+
+# Debug test output
+TRYCMD=dump cargo test
+```
+
+## Test Utilities
+
+- `TestManager`: Sets up test environment with mock server
+- `MockEndpointBuilder`: Creates API endpoint mocks
+- `copy_recursively`: Helper for fixture setup
+- Environment setup via `test_utils::env`
+
+## Platform-Specific Testing
+
+- Use `#[cfg(windows)]` for Windows-specific tests
+- Separate `.trycmd` files when behavior differs
+- Test on CI matrix: Linux, macOS, Windows
+
+## Assert Command vs Trycmd
+
+- `trycmd`: Best for testing exact CLI output, supports snapshot testing
+- `assert_cmd`: Better for testing behavior, exit codes, and when you need programmatic assertions
+- Example of `assert_cmd` usage can be found in `TestManager::run_and_assert()`

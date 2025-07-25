@@ -38,3 +38,23 @@ When adding new CI checks:
 2. Call it from main `ci.yml`
 3. Add to `required` job dependencies
 4. Test across platform matrix
+
+## Specific Workflows
+
+- `lint.yml`: Rustfmt, Clippy, cross-platform
+- `test.yml`: Rust tests with feature matrix
+- `test_node.yml`: JavaScript/Node.js tests
+- `swift-test.yml`: Apple catalog parsing tests
+
+## Release Process
+
+- Uses `.craft.yml` for release automation
+- Platform-specific binary builds
+- npm package publishing coordination
+- Docker image releases (edge/latest tags)
+
+## Environment Variables in CI
+
+- `RUSTFLAGS: -Dwarnings` enforced in CI
+- Feature flag testing: `-Funstable-mobile-app`
+- Cross-platform matrix: Ubuntu 24.04, macOS 14, Windows 2022

@@ -34,3 +34,9 @@ npm run check:types
 - Uses ESLint, Prettier, and Jest
 - Follow existing patterns for error handling
 - Maintain backward compatibility
+
+## TypeScript Support
+
+- Type definitions maintained in `js/index.d.ts`
+- Sync with Rust CLI interface changes
+- Consider backward compatibility for JS API
