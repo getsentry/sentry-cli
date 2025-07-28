@@ -15,7 +15,7 @@ $ sentry-cli send-event --log-level=debug
 ? success
   INFO    [..] Loaded config from [CWD]/.sentryclirc
   DEBUG   [..] sentry-cli version: [VERSION], platform: [..], architecture: [..]
-  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "send-event" "--log-level=debug" "--level" "debug" "--timestamp" "1649335000929" "--release" "my-release" "--dist" "my-dist" "--env" "production" "--message" "hello" "--platform" "prod" "--tag" "hello:there" "--extra" "hello:there" "--user" "id:42" "--fingerprint" "custom-fingerprint" "--no-environ"
+  INFO    [..] sentry-cli was invoked with the following command line: "[..]" "send-event" "--log-level=debug" "--level" "debug" "--timestamp" "1649335000929" "--release" "my-release" "--dist" "my-dist" "--env" "production" "--message" "hello" "--platform" "prod" "--tag" "hello:there" "--extra" "hello:there" "--user" "id:42" "--fingerprint" "custom-fingerprint" "--no-environ"
   DEBUG   [..] Sending envelope:
 {"event_id":"[..]"}
 {"type":"event","length":[..]}

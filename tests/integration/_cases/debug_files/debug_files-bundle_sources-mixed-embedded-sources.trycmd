@@ -3,7 +3,7 @@ $ sentry-cli --log-level=debug debug-files bundle-sources tests/integration/_fix
 ? success
   INFO    [..] Loaded config from [CWD]/.sentryclirc
   DEBUG   [..] sentry-cli version: [VERSION], platform: [..], architecture: [..]
-  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "--log-level=debug" "debug-files" "bundle-sources" "tests/integration/_fixtures/SrcGenSampleApp.pdb"
+  INFO    [..] sentry-cli was invoked with the following command line: "[..]" "--log-level=debug" "debug-files" "bundle-sources" "tests/integration/_fixtures/SrcGenSampleApp.pdb"
   DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/Program.cs
   DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/SrcGenSampleApp.GlobalUsings.g.cs
   DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/.NETCoreApp,Version=v6.0.AssemblyAttributes.cs

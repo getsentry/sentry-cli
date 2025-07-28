@@ -3,6 +3,6 @@ $ sentry-cli uninstall
 ? failed
 Cannot uninstall on Windows :(
 
-Delete this file yourself: [CWD]/target/debug/sentry-cli[EXE]
+Delete this file yourself: [..]
 
 ```

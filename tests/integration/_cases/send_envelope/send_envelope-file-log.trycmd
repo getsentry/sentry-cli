@@ -3,7 +3,7 @@ $ sentry-cli send-envelope tests/integration/_fixtures/envelope.dat --log-level=
 ? success
   INFO    [..] Loaded config from [CWD]/.sentryclirc
   DEBUG   [..] sentry-cli version: [VERSION], platform: [..], architecture: [..]
-  INFO    [..] sentry-cli was invoked with the following command line: "[CWD]/target/debug/sentry-cli[EXE]" "send-envelope" "tests/integration/_fixtures/envelope.dat" "--log-level=debug"
+  INFO    [..] sentry-cli was invoked with the following command line: "[..]" "send-envelope" "tests/integration/_fixtures/envelope.dat" "--log-level=debug"
   DEBUG   [..] Sending envelope:
 {"event_id":"22d00b3f-d1b1-4b5d-8d20-49d138cd8a9c"}
 {"type":"event","length":74}

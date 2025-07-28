@@ -37,7 +37,7 @@ _sentry_err_trap() {
   echo "@exit_code:${_exit_code}" >> "$_SENTRY_TRACEBACK_FILE"
 
   : >> "$_SENTRY_LOG_FILE"
-  export SENTRY_LAST_EVENT=$([CWD]/target/debug/sentry-cli[EXE] bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --log "$_SENTRY_LOG_FILE" )
+  export SENTRY_LAST_EVENT=$([..] bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --log "$_SENTRY_LOG_FILE" )
   rm -f "$_SENTRY_TRACEBACK_FILE" "$_SENTRY_LOG_FILE"
 }
 
