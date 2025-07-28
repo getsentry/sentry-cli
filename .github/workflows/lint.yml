@@ -15,15 +15,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
+        target:
+          - x86_64-unknown-linux-musl
+          - x86_64-pc-windows-msvc
+          - aarch64-apple-darwin
         feature-args: ['', '-Funstable-mobile-app']
         include:
-          - os: ubuntu-24.04
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-24.04
             display-os: Linux
-          - os: macos-14
-            display-os: macOS
-          - os: windows-2022
+          - target: x86_64-pc-windows-msvc
+            os: windows-2022
             display-os: Windows
+          - target: aarch64-apple-darwin
+            os: macos-14
+            display-os: macOS
           - feature-args: ''
             feature-suffix: ''
           - feature-args: '-Funstable-mobile-app'
@@ -38,6 +44,15 @@ jobs:
       - name: Install Rust Toolchain
         run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt --no-self-update
 
+      - name: Add Target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Install musl-gcc (Linux only)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
       - name: Cache Dependencies
         uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
 
@@ -45,4 +60,4 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --workspace --tests ${{ matrix.feature-args }}
+        run: cargo clippy --workspace --tests --target ${{ matrix.target }} ${{ matrix.feature-args }}
