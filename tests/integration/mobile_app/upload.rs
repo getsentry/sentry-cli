@@ -4,13 +4,13 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::LazyLock;
 use std::{fs, str};
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
 fn command_mobile_app_upload_help() {
     TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help-macos.trycmd");
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
 #[test]
 fn command_mobile_app_upload_help() {
     TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help-not-macos.trycmd");
@@ -181,7 +181,7 @@ fn command_mobile_app_upload_apk_chunked() {
 }
 
 #[test]
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 /// This test simulates a full chunk upload for an IPA file (with only one chunk).
 /// It verifies that the Sentry CLI makes the expected API calls to the chunk upload endpoint
 /// and that the data sent to the chunk upload endpoint is exactly as expected.

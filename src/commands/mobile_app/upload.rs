@@ -21,19 +21,19 @@ use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::mobile_app::{handle_asset_catalogs, ipa_to_xcarchive, is_ipa_file};
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_apple_app, is_zip_file};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
 pub fn make_command(command: Command) -> Command {
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, and XCArchive.";
     command
         .about("[EXPERIMENTAL] Upload mobile app files to a project.")
@@ -92,7 +92,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
 
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         if is_apple_app(path) {
             handle_asset_catalogs(path);
         }
@@ -181,7 +181,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
 fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
     // Handle IPA files by converting them to XCArchive
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_zip_file(byteview) && is_ipa_file(byteview)? {
         debug!("Converting IPA file to XCArchive structure");
         let temp_dir = TempDir::create()?;
@@ -208,9 +208,9 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
 
     // Check if the file is a zip file (then AAB, APK, or IPA)
     if is_zip_file(bytes) {
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         debug!("File is a zip, checking for AAB/APK/IPA format");
-        #[cfg(not(target_os = "macos"))]
+        #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
         debug!("File is a zip, checking for AAB/APK format");
 
         if is_aab_file(bytes)? {
@@ -223,7 +223,7 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
             return Ok(());
         }
 
-        #[cfg(target_os = "macos")]
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
         if is_ipa_file(bytes)? {
             debug!("Detected IPA file");
             return Ok(());
@@ -231,9 +231,9 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     }
 
     debug!("File format validation failed");
-    #[cfg(target_os = "macos")]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let format_list = "APK, AAB, XCArchive, or IPA";
-    #[cfg(not(target_os = "macos"))]
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     let format_list = "APK, AAB, or XCArchive";
 
     Err(anyhow!(
