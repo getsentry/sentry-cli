@@ -1,0 +1,3 @@
+$ sentry-cli logs list
+? 1
+[ERROR] No organization specified. Use --org or set a default in config. 

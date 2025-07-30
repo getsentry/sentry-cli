@@ -28,6 +28,7 @@ mod files;
 mod info;
 mod issues;
 mod login;
+mod logs;
 mod mobile_app;
 mod monitors;
 mod organizations;
@@ -57,6 +58,7 @@ macro_rules! each_subcommand {
         $mac!(info);
         $mac!(issues);
         $mac!(login);
+        $mac!(logs);
         #[cfg(feature = "unstable-mobile-app")]
         $mac!(mobile_app);
         $mac!(monitors);
@@ -95,6 +97,7 @@ const UPDATE_NAGGER_CMDS: &[&str] = &[
     "info",
     "issues",
     "login",
+    "logs",
     "organizations",
     "projects",
     "releases",

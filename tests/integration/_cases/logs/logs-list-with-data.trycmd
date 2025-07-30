@@ -1,0 +1,9 @@
+$ sentry-cli logs list --org wat-org --project wat-project
+? success
++------------------+---------------------+----------+----------------------+---------------------+
+| Item ID          | Timestamp           | Severity | Message              | Trace               |
++------------------+---------------------+----------+----------------------+---------------------+
+| test-item-id-001 | 2025-01-15T10:30:00 | info     | test_log_message_001 | test-trace-id-abc123 |
+| test-item-id-002 | 2025-01-15T10:31:00 | error    | test_error_message_002 | test-trace-id-def456 |
+| test-item-id-003 | 2025-01-15T10:32:00 | warning  | test_warning_message_003 | test-trace-id-ghi789 |
++------------------+---------------------+----------+----------------------+---------------------+ 
