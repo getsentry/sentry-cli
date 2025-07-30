@@ -1225,60 +1225,14 @@ impl<'a> AuthenticatedApi<'a> {
 
         Ok(rv)
     }
-}
 
-/// Options for fetching organization events
-#[derive(Debug, Default)]
-pub struct FetchEventsOptions<'a> {
-    /// Project ID to filter events by
-    pub project_id: Option<&'a str>,
-    /// Cursor for pagination
-    pub cursor: Option<&'a str>,
-    /// Query string to filter events
-    pub query: Option<&'a str>,
-    /// Number of events per page (default: 100)
-    pub per_page: Option<usize>,
-    /// Time period for stats (default: "1h")
-    pub stats_period: Option<&'a str>,
-    /// Sort order (default: "-timestamp")
-    pub sort: Option<&'a str>,
-}
-
-impl<'a> AuthenticatedApi<'a> {
     /// Fetch organization events from the specified dataset
     pub fn fetch_organization_events(
         &self,
         org: &str,
-        dataset: &str,
-        fields: &[&str],
-        options: FetchEventsOptions,
+        options: &FetchEventsOptions,
     ) -> ApiResult<Vec<LogEntry>> {
-        let mut params = vec![format!("dataset={}", QueryArg(dataset))];
-
-        for field in fields {
-            params.push(format!("field={}", QueryArg(field)));
-        }
-
-        if let Some(cursor) = options.cursor {
-            params.push(format!("cursor={}", QueryArg(cursor)));
-        }
-
-        if let Some(project_id) = options.project_id {
-            params.push(format!("project={}", QueryArg(project_id)));
-        }
-
-        if let Some(query) = options.query {
-            params.push(format!("query={}", QueryArg(query)));
-        }
-
-        params.push(format!("per_page={}", options.per_page.unwrap_or(100)));
-        params.push(format!(
-            "statsPeriod={}",
-            options.stats_period.unwrap_or("1h")
-        ));
-        params.push("referrer=sentry-cli-tail".to_owned());
-        params.push(format!("sort={}", options.sort.unwrap_or("-timestamp")));
-
+        let params = options.to_query_params();
         let url = format!(
             "/organizations/{}/events/?{}",
             PathArg(org),
@@ -1456,6 +1410,71 @@ impl<'a> AuthenticatedApi<'a> {
             org,
             region_url,
         }
+    }
+}
+
+/// Available datasets for fetching organization events
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dataset {
+    /// Our logs dataset
+    OurLogs,
+}
+
+impl Dataset {
+    /// Returns the string representation of the dataset
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Dataset::OurLogs => "ourlogs",
+        }
+    }
+}
+/// Options for fetching organization events
+pub struct FetchEventsOptions<'a> {
+    /// Dataset to fetch events from
+    pub dataset: Dataset,
+    /// Fields to include in the response
+    pub fields: &'a [&'a str],
+    /// Project ID to filter events by
+    pub project_id: Option<&'a str>,
+    /// Cursor for pagination
+    pub cursor: Option<&'a str>,
+    /// Query string to filter events
+    pub query: Option<&'a str>,
+    /// Number of events per page (default: 100)
+    pub per_page: Option<usize>,
+    /// Time period for stats (default: "1h")
+    pub stats_period: Option<&'a str>,
+    /// Sort order (default: "-timestamp")
+    pub sort: Option<&'a str>,
+}
+
+impl<'a> FetchEventsOptions<'a> {
+    /// Generate query parameters as a vector of strings
+    pub fn to_query_params(&self) -> Vec<String> {
+        let mut params = vec![format!("dataset={}", QueryArg(self.dataset.as_str()))];
+
+        for field in self.fields {
+            params.push(format!("field={}", QueryArg(field)));
+        }
+
+        if let Some(cursor) = self.cursor {
+            params.push(format!("cursor={}", QueryArg(cursor)));
+        }
+
+        if let Some(project_id) = self.project_id {
+            params.push(format!("project={}", QueryArg(project_id)));
+        }
+
+        if let Some(query) = self.query {
+            params.push(format!("query={}", QueryArg(query)));
+        }
+
+        params.push(format!("per_page={}", self.per_page.unwrap_or(100)));
+        params.push(format!("statsPeriod={}", self.stats_period.unwrap_or("1h")));
+
+        params.push(format!("sort={}", self.sort.unwrap_or("-timestamp")));
+
+        params
     }
 }
 

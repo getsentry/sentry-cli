@@ -13,10 +13,7 @@ Options:
           The organization ID or slug.
 
   -p, --project <PROJECT>
-          The project ID or slug.
-
-      --live
-          Live-tail logs (not implemented yet).
+          The project ID (slug not supported).
 
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests

@@ -1,5 +1,3 @@
-pub mod common_args;
-
 mod list;
 
 use self::list::ListLogsArgs;
@@ -19,12 +17,12 @@ pub(super) struct LogsArgs {
 #[derive(Subcommand)]
 #[command(about = "Manage logs in Sentry")]
 #[command(long_about = "Manage and query logs in Sentry. \
-This command provides access to log entries and supports live-tailing functionality.")]
+    This command provides access to log entries.")]
 enum LogsSubcommand {
     #[command(about = LIST_ABOUT)]
     #[command(long_about = format!("{LIST_ABOUT}. \
-Query and filter log entries from your Sentry projects. \
-Supports filtering by time period, log level, and custom queries."))]
+    Query and filter log entries from your Sentry projects. \
+    Supports filtering by time period, log level, and custom queries."))]
     List(ListLogsArgs),
 }
 

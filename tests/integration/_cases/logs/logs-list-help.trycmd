@@ -6,10 +6,7 @@ Usage: sentry-cli[EXE] logs list [OPTIONS]
 
 Options:
       --max-rows <MAX_ROWS>
-          Maximum number of rows to print.
-
-      --per-page <PER_PAGE>
-          Number of log entries per request (max 1000). [default: 100]
+          Maximum number of log entries to fetch and display (max 1000). [default: 100]
 
       --query <QUERY>
           Query to filter logs. Example: "level:error" [default: ]
@@ -18,10 +15,7 @@ Options:
           The organization ID or slug.
 
   -p, --project <PROJECT>
-          The project ID or slug.
-
-      --live
-          Live-tail logs (not implemented yet).
+          The project ID (slug not supported).
 
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
