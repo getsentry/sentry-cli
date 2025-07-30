@@ -1,0 +1,40 @@
+{
+    "data": [
+        {
+            "sentry.item_id": "test-item-id-001",
+            "project.id": 1,
+            "trace": "test-trace-id-abc123",
+            "severity_number": 9,
+            "severity": "info",
+            "timestamp": "2025-01-15T10:30:00+00:00",
+            "tags[sentry.timestamp_precise,number]": 1.7051238000000000e+18,
+            "sentry.observed_timestamp_nanos": "1705123800000000000",
+            "message": "test_log_message_001",
+            "key": null
+        },
+        {
+            "sentry.item_id": "test-item-id-002",
+            "project.id": 1,
+            "trace": "test-trace-id-def456",
+            "severity_number": 13,
+            "severity": "error",
+            "timestamp": "2025-01-15T10:31:00+00:00",
+            "tags[sentry.timestamp_precise,number]": 1.7051238600000000e+18,
+            "sentry.observed_timestamp_nanos": "1705123860000000000",
+            "message": "test_error_message_002",
+            "key": null
+        },
+        {
+            "sentry.item_id": "test-item-id-003",
+            "project.id": 1,
+            "trace": "test-trace-id-ghi789",
+            "severity_number": 11,
+            "severity": "warning",
+            "timestamp": "2025-01-15T10:32:00+00:00",
+            "tags[sentry.timestamp_precise,number]": 1.7051239200000000e+18,
+            "sentry.observed_timestamp_nanos": "1705123920000000000",
+            "message": "test_warning_message_003",
+            "key": null
+        }
+    ]
+}

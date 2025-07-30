@@ -1,0 +1,3 @@
+$ sentry-cli logs list --org wat-org --project wat-project --max-rows 0
+? success
+No logs found 

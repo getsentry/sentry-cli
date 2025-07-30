@@ -1225,6 +1225,75 @@ impl<'a> AuthenticatedApi<'a> {
 
         Ok(rv)
     }
+}
+
+/// Options for fetching organization events
+#[derive(Debug, Default)]
+pub struct FetchEventsOptions<'a> {
+    /// Project ID to filter events by
+    pub project_id: Option<&'a str>,
+    /// Cursor for pagination
+    pub cursor: Option<&'a str>,
+    /// Query string to filter events
+    pub query: Option<&'a str>,
+    /// Number of events per page (default: 100)
+    pub per_page: Option<usize>,
+    /// Time period for stats (default: "1h")
+    pub stats_period: Option<&'a str>,
+    /// Sort order (default: "-timestamp")
+    pub sort: Option<&'a str>,
+}
+
+impl<'a> AuthenticatedApi<'a> {
+    /// Fetch organization events from the specified dataset
+    pub fn fetch_organization_events(
+        &self,
+        org: &str,
+        dataset: &str,
+        fields: &[&str],
+        options: FetchEventsOptions,
+    ) -> ApiResult<Vec<LogEntry>> {
+        let mut params = vec![format!("dataset={}", QueryArg(dataset))];
+
+        for field in fields {
+            params.push(format!("field={}", QueryArg(field)));
+        }
+
+        if let Some(cursor) = options.cursor {
+            params.push(format!("cursor={}", QueryArg(cursor)));
+        }
+
+        if let Some(project_id) = options.project_id {
+            params.push(format!("project={}", QueryArg(project_id)));
+        }
+
+        if let Some(query) = options.query {
+            params.push(format!("query={}", QueryArg(query)));
+        }
+
+        params.push(format!("per_page={}", options.per_page.unwrap_or(100)));
+        params.push(format!(
+            "statsPeriod={}",
+            options.stats_period.unwrap_or("1h")
+        ));
+        params.push("referrer=sentry-cli-tail".to_owned());
+        params.push(format!("sort={}", options.sort.unwrap_or("-timestamp")));
+
+        let url = format!(
+            "/organizations/{}/events/?{}",
+            PathArg(org),
+            params.join("&")
+        );
+
+        let resp = self.get(&url)?;
+
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::OrganizationNotFound.into());
+        }
+
+        let logs_response: LogsResponse = resp.convert()?;
+        Ok(logs_response.data)
+    }
 
     /// List all issues associated with an organization and a project
     pub fn list_organization_project_issues(
@@ -2343,7 +2412,7 @@ pub struct ProcessedEvent {
     pub tags: Option<Vec<ProcessedEventTag>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProcessedEventUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
@@ -2377,7 +2446,7 @@ impl fmt::Display for ProcessedEventUser {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProcessedEventTag {
     pub key: String,
     pub value: String,
@@ -2400,4 +2469,21 @@ pub struct Region {
 #[derive(Clone, Debug, Deserialize)]
 pub struct RegionResponse {
     pub regions: Vec<Region>,
+}
+
+/// Response structure for logs API
+#[derive(Debug, Deserialize)]
+struct LogsResponse {
+    data: Vec<LogEntry>,
+}
+
+/// Log entry structure from the logs API
+#[derive(Debug, Deserialize)]
+pub struct LogEntry {
+    #[serde(rename = "sentry.item_id")]
+    pub item_id: String,
+    pub trace: Option<String>,
+    pub severity: Option<String>,
+    pub timestamp: String,
+    pub message: Option<String>,
 }
