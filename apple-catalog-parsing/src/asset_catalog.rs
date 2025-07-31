@@ -11,7 +11,10 @@ pub enum Error {
 }
 
 extern "C" {
-    fn swift_inspect_asset_catalog(msg: *const std::os::raw::c_char);
+    fn swift_inspect_asset_catalog(
+        catalog_path: *const std::os::raw::c_char,
+        output_path: *const std::os::raw::c_char,
+    );
 }
 
 /// This calls out to Swift code that uses Apple APIs to convert the contents
@@ -20,17 +23,19 @@ extern "C" {
 /// as duplicate image detection, xray, and image optimization insights.
 /// The path should be in an xcarchive file, results are written
 /// to a JSON file in the xcarchive’s ParsedAssets directory.
-pub fn inspect_asset_catalog<P>(path: P) -> Result<(), Error>
+pub fn inspect_asset_catalog<P>(catalog_path: P, output_path: P) -> Result<(), Error>
 where
     P: AsRef<Path>,
 {
-    let c_string = CString::new(path.as_ref().as_os_str().as_bytes())?;
-    let string_ptr = c_string.as_ptr();
+    let catalog_c_string = CString::new(catalog_path.as_ref().as_os_str().as_bytes())?;
+    let output_path_c_string = CString::new(output_path.as_ref().as_os_str().as_bytes())?;
+    let catalog_string_ptr = catalog_c_string.as_ptr();
+    let output_string_ptr = output_path_c_string.as_ptr();
     unsafe {
         // The string pointed to is immutable, in Swift we cannot change it.
         // We ensure this by using "UnsafePointer<CChar>" in Swift which is
         // immutable (as opposed to "UnsafeMutablePointer<CChar>").
-        swift_inspect_asset_catalog(string_ptr);
+        swift_inspect_asset_catalog(catalog_string_ptr, output_string_ptr);
     }
     Ok(())
 }
