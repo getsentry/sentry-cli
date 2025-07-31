@@ -25,8 +25,10 @@ use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-use crate::utils::mobile_app::{handle_asset_catalogs, ipa_to_xcarchive, is_ipa_file};
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_apple_app, is_zip_file};
+use crate::utils::mobile_app::{
+    handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file,
+};
+use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs;
 
@@ -34,7 +36,8 @@ pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
     #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, and XCArchive.";
+    const HELP_TEXT: &str =
+        "The path to the mobile app files to upload. Supported files include Apk, and Aab.";
     command
         .about("[EXPERIMENTAL] Upload mobile app files to a project.")
         .org_arg()
@@ -201,6 +204,7 @@ fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
 fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating mobile app format for: {}", path.display());
 
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_apple_app(path) {
         debug!("Detected XCArchive directory");
         return Ok(());
@@ -234,7 +238,7 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let format_list = "APK, AAB, XCArchive, or IPA";
     #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    let format_list = "APK, AAB, or XCArchive";
+    let format_list = "APK, or AAB";
 
     Err(anyhow!(
         "File is not a recognized mobile app format ({format_list}): {}",
