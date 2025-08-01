@@ -5,6 +5,18 @@ use crate::api::{Api, Dataset, FetchEventsOptions};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 
+/// Validate that max_rows is greater than 0
+fn validate_max_rows(s: &str) -> Result<usize, String> {
+    let value = s
+        .parse::<usize>()
+        .map_err(|_| "invalid number".to_owned())?;
+    if value == 0 {
+        Err("max-rows must be greater than 0".to_owned())
+    } else {
+        Ok(value)
+    }
+}
+
 /// Fields to fetch from the logs API
 const LOG_FIELDS: &[&str] = &[
     "sentry.item_id",
@@ -26,6 +38,7 @@ pub(super) struct ListLogsArgs {
     project: Option<String>,
 
     #[arg(long = "max-rows", default_value = "100")]
+    #[arg(value_parser = validate_max_rows)]
     #[arg(help = "Maximum number of log entries to fetch and display (max 1000).")]
     max_rows: usize,
 
@@ -43,7 +56,7 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
         .as_ref()
         .or(default_org.as_ref())
         .ok_or_else(|| {
-            anyhow::anyhow!("No organization specified. Use --org or set a default in config.")
+            anyhow::anyhow!("No organization specified. Please specify an organization using the --org argument.")
         })?
         .to_owned();
     let project = args
@@ -98,15 +111,14 @@ fn execute_single_fetch(
         .add("Message")
         .add("Trace");
 
-    if let Some(logs) = logs.get(..args.max_rows) {
-        for log in logs {
-            let row = table.add_row();
-            row.add(&log.item_id)
-                .add(&log.timestamp)
-                .add(log.severity.as_deref().unwrap_or(""))
-                .add(log.message.as_deref().unwrap_or(""))
-                .add(log.trace.as_deref().unwrap_or(""));
-        }
+    let logs_to_show = &logs[..args.max_rows.min(logs.len())];
+    for log in logs_to_show {
+        let row = table.add_row();
+        row.add(&log.item_id)
+            .add(&log.timestamp)
+            .add(log.severity.as_deref().unwrap_or(""))
+            .add(log.message.as_deref().unwrap_or(""))
+            .add(log.trace.as_deref().unwrap_or(""));
     }
 
     if table.is_empty() {

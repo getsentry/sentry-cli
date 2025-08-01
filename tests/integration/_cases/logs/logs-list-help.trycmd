@@ -1,28 +1,34 @@
+```
 $ sentry-cli logs list --help
 ? success
-List logs from your organization.
+List logs from your organization. Query and filter log entries from your Sentry projects. Supports
+filtering by time period, log level, and custom queries.
 
 Usage: sentry-cli[EXE] logs list [OPTIONS]
 
 Options:
-      --max-rows <MAX_ROWS>
-          Maximum number of log entries to fetch and display (max 1000). [default: 100]
-
-      --query <QUERY>
-          Query to filter logs. Example: "level:error" [default: ]
-
   -o, --org <ORG>
           The organization ID or slug.
-
-  -p, --project <PROJECT>
-          The project ID (slug not supported).
 
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
           in key:value format.
 
+  -p, --project <PROJECT>
+          The project ID (slug not supported).
+
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
+
+      --max-rows <MAX_ROWS>
+          Maximum number of log entries to fetch and display (max 1000).
+          
+          [default: 100]
+
+      --query <QUERY>
+          Query to filter logs. Example: "level:error"
+          
+          [default: ]
 
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
@@ -34,4 +40,6 @@ Options:
           [aliases: silent]
 
   -h, --help
-          Print help 
+          Print help (see a summary with '-h')
+
+``` 

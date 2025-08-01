@@ -1422,12 +1422,19 @@ pub enum Dataset {
 
 impl Dataset {
     /// Returns the string representation of the dataset
-    pub fn as_str(&self) -> &'static str {
+    fn as_str(&self) -> &'static str {
         match self {
             Dataset::OurLogs => "ourlogs",
         }
     }
 }
+
+impl fmt::Display for Dataset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 /// Options for fetching organization events
 pub struct FetchEventsOptions<'a> {
     /// Dataset to fetch events from
