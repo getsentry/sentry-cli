@@ -20,7 +20,6 @@ jobs:
           - x86_64-pc-windows-msvc
           - aarch64-apple-darwin
           - x86_64-apple-darwin
-        feature-args: ['', '-Funstable-mobile-app']
         include:
           - target: x86_64-unknown-linux-musl
             os: ubuntu-24.04
@@ -34,12 +33,8 @@ jobs:
           - target: x86_64-apple-darwin
             os: macos-14
             display-os: macOS – x86_64
-          - feature-args: ''
-            feature-suffix: ''
-          - feature-args: '-Funstable-mobile-app'
-            feature-suffix: ' (-Funstable-mobile-app)'
 
-    name: ${{ matrix.display-os }}${{ matrix.feature-suffix }}
+    name: ${{ matrix.display-os }}
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout Repository
@@ -64,4 +59,4 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run Clippy
-        run: cargo clippy --workspace --tests --target ${{ matrix.target }} ${{ matrix.feature-args }}
+        run: cargo clippy --workspace --tests --target ${{ matrix.target }}
