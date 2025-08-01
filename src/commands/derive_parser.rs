@@ -2,6 +2,7 @@ use crate::utils::auth_token::AuthToken;
 use crate::utils::value_parsers::{auth_token_parser, kv_parser};
 use clap::{command, ArgAction::SetTrue, Parser, Subcommand};
 
+use super::logs::LogsArgs;
 use super::send_metric::SendMetricArgs;
 
 #[derive(Parser)]
@@ -32,5 +33,6 @@ pub(super) struct SentryCLI {
 
 #[derive(Subcommand)]
 pub(super) enum SentryCLICommand {
+    Logs(LogsArgs),
     SendMetric(SendMetricArgs),
 }

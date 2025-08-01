@@ -7,6 +7,7 @@ mod info;
 mod invalid_env;
 mod issues;
 mod login;
+mod logs;
 mod mobile_app;
 mod monitors;
 mod org_tokens;
