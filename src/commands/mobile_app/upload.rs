@@ -4,7 +4,7 @@ use std::fs;
 use std::io::Write as _;
 #[cfg(not(windows))]
 use std::os::unix::fs::PermissionsExt as _;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -13,6 +13,7 @@ use itertools::Itertools as _;
 use log::{debug, info, warn};
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
+use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
@@ -21,7 +22,6 @@ use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -95,11 +95,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
 
-        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-        if is_apple_app(path) {
-            handle_asset_catalogs(path);
-        }
-
         validate_is_mobile_app(path, &byteview)?;
 
         let normalized_zip = if path.is_file() {
@@ -107,7 +102,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             handle_file(path, &byteview)?
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
-            normalize_directory(path).with_context(|| {
+            handle_directory(path).with_context(|| {
                 format!(
                     "Failed to generate uploadable bundle for directory {}",
                     path.display()
@@ -187,9 +182,9 @@ fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_zip_file(byteview) && is_ipa_file(byteview)? {
         debug!("Converting IPA file to XCArchive structure");
-        let temp_dir = TempDir::create()?;
-        return ipa_to_xcarchive(path, byteview, &temp_dir)
-            .and_then(|path| normalize_directory(&path))
+        let archive_temp_dir = TempDir::create()?;
+        return ipa_to_xcarchive(path, byteview, &archive_temp_dir)
+            .and_then(|path| handle_directory(&path))
             .with_context(|| format!("Failed to process IPA file {}", path.display()));
     }
 
@@ -276,38 +271,45 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     Ok(temp_file)
 }
 
-// For XCArchive directories, we'll zip the entire directory
-fn normalize_directory(path: &Path) -> Result<TempFile> {
-    debug!("Creating normalized zip for directory: {}", path.display());
-
-    let temp_file = TempFile::create()?;
-    let mut zip = ZipWriter::new(temp_file.open()?);
-
-    let mut file_count = 0;
-
-    // Collect and sort entries for deterministic ordering
-    // This is important to ensure stable sha1 checksums for the zip file as
-    // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
-    let entries = walkdir::WalkDir::new(path)
+fn sort_entries(path: &Path) -> Result<std::vec::IntoIter<(PathBuf, PathBuf)>> {
+    Ok(WalkDir::new(path)
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|entry| entry.path().is_file())
         .map(|entry| {
             let entry_path = entry.into_path();
-            let relative_path = entry_path
-                .strip_prefix(path.parent().ok_or_else(|| {
-                    anyhow!(
-                        "Cannot determine parent directory for path: {}",
-                        path.display()
-                    )
-                })?)?
-                .to_owned();
+            let relative_path = entry_path.strip_prefix(path)?.to_owned();
             Ok((entry_path, relative_path))
         })
         .collect::<Result<Vec<_>>>()?
         .into_iter()
-        .sorted_by(|(_, a), (_, b)| a.cmp(b));
+        .sorted_by(|(_, a), (_, b)| a.cmp(b)))
+}
+
+fn handle_directory(path: &Path) -> Result<TempFile> {
+    let temp_dir = TempDir::create()?;
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    if is_apple_app(path) {
+        handle_asset_catalogs(path, temp_dir.path());
+    }
+    normalize_directory(path, temp_dir.path())
+}
+
+// For XCArchive directories, we'll zip the entire directory
+fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<TempFile> {
+    debug!("Creating normalized zip for directory: {}", path.display());
+
+    let temp_file = TempFile::create()?;
+    let mut zip = ZipWriter::new(temp_file.open()?);
+
+    let mut file_count = 0;
+    let directory_name = path.file_name().expect("Failed to get basename");
+
+    // Collect and sort entries for deterministic ordering
+    // This is important to ensure stable sha1 checksums for the zip file as
+    // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
+    let entries = sort_entries(path)?;
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
@@ -317,16 +319,45 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
         .last_modified_time(DateTime::default());
 
     for (entry_path, relative_path) in entries {
-        debug!("Adding file to zip: {}", relative_path.display());
+        let zip_path = format!(
+            "{}/{}",
+            directory_name.to_string_lossy(),
+            relative_path.to_string_lossy()
+        );
+        debug!("Adding file to zip: {}", zip_path);
 
         #[cfg(not(windows))]
         // On Unix, we need to preserve the file permissions.
         let options = options.unix_permissions(fs::metadata(&entry_path)?.permissions().mode());
 
-        zip.start_file(relative_path.to_string_lossy(), options)?;
+        zip.start_file(zip_path, options)?;
         let file_byteview = ByteView::open(&entry_path)?;
         zip.write_all(file_byteview.as_slice())?;
         file_count += 1;
+    }
+
+    // Add parsed assets to the zip in a "ParsedAssets" directory
+    if parsed_assets_path.exists() {
+        debug!(
+            "Adding parsed assets from: {}",
+            parsed_assets_path.display()
+        );
+
+        let parsed_assets_entries = sort_entries(parsed_assets_path)?;
+
+        for (entry_path, relative_path) in parsed_assets_entries {
+            let zip_path = format!(
+                "{}/ParsedAssets/{}",
+                directory_name.to_string_lossy(),
+                relative_path.to_string_lossy()
+            );
+            debug!("Adding parsed asset to zip: {}", zip_path);
+
+            zip.start_file(zip_path, options)?;
+            let file_byteview = ByteView::open(&entry_path)?;
+            zip.write_all(file_byteview.as_slice())?;
+            file_count += 1;
+        }
     }
 
     zip.finish()?;
@@ -470,12 +501,76 @@ mod tests {
         fs::create_dir_all(test_dir.join("Products"))?;
         fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
 
-        let result_zip = normalize_directory(&test_dir)?;
+        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
         let file = archive.by_index(0)?;
         let file_path = file.name();
         assert_eq!(file_path, "MyApp.xcarchive/Products/app.txt");
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_xcarchive_upload_includes_parsed_assets() -> Result<()> {
+        // Test that XCArchive uploads include parsed asset catalogs
+        let xcarchive_path = Path::new("tests/integration/_fixtures/mobile_app/archive.xcarchive");
+
+        // Process the XCArchive directory
+        let result = handle_directory(xcarchive_path)?;
+
+        // Verify the resulting zip contains parsed assets
+        let zip_file = fs::File::open(result.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        let mut has_parsed_assets = false;
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            let file_name = file
+                .enclosed_name()
+                .ok_or(anyhow!("Failed to get file name"))?;
+            if file_name.to_string_lossy().contains("ParsedAssets") {
+                has_parsed_assets = true;
+                break;
+            }
+        }
+
+        assert!(
+            has_parsed_assets,
+            "XCArchive upload should include parsed asset catalogs"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_ipa_upload_includes_parsed_assets() -> Result<()> {
+        // Test that IPA uploads handle missing asset catalogs gracefully
+        let ipa_path = Path::new("tests/integration/_fixtures/mobile_app/ipa_with_asset.ipa");
+        let byteview = ByteView::open(ipa_path)?;
+
+        // Process the IPA file - this should work even without asset catalogs
+        let result = handle_file(ipa_path, &byteview)?;
+
+        let zip_file = fs::File::open(result.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        let mut has_parsed_assets = false;
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            let file_name = file
+                .enclosed_name()
+                .ok_or(anyhow!("Failed to get file name"))?;
+            if file_name.to_string_lossy().contains("ParsedAssets") {
+                has_parsed_assets = true;
+                break;
+            }
+        }
+
+        assert!(
+            has_parsed_assets,
+            "XCArchive upload should include parsed asset catalogs"
+        );
         Ok(())
     }
 }

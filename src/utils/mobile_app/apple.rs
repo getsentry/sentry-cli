@@ -12,11 +12,13 @@ use std::io::Cursor;
 use walkdir::WalkDir;
 use zip::ZipArchive;
 
-pub fn handle_asset_catalogs(path: &Path) {
+pub fn handle_asset_catalogs(archive_path: &Path, output_path: &Path) {
     // Find all asset catalogs
-    let cars = find_car_files(path);
+    let cars = find_car_files(archive_path);
     for car in &cars {
-        if let Err(e) = apple_catalog_parsing::inspect_asset_catalog(car) {
+        if let Err(e) =
+            apple_catalog_parsing::inspect_asset_catalog(car, &output_path.to_path_buf())
+        {
             eprintln!("Failed to inspect asset catalog {}: {e}", car.display());
         }
     }
