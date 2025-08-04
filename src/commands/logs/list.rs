@@ -94,7 +94,7 @@ fn execute_single_fetch(
         cursor: None,
         query,
         per_page: Some(args.max_rows),
-        stats_period: Some("1h"),
+        stats_period: Some("90d"),
         sort: Some("-timestamp"),
     };
 
@@ -111,8 +111,7 @@ fn execute_single_fetch(
         .add("Message")
         .add("Trace");
 
-    let logs_to_show = &logs[..args.max_rows.min(logs.len())];
-    for log in logs_to_show {
+    for log in logs.iter().take(args.max_rows) {
         let row = table.add_row();
         row.add(&log.item_id)
             .add(&log.timestamp)

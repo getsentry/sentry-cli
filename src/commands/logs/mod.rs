@@ -22,7 +22,7 @@ enum LogsSubcommand {
     #[command(about = LIST_ABOUT)]
     #[command(long_about = format!("{LIST_ABOUT}. \
     Query and filter log entries from your Sentry projects. \
-    Supports filtering by time period, log level, and custom queries."))]
+    Supports filtering by log level and custom queries."))]
     List(ListLogsArgs),
 }
 
