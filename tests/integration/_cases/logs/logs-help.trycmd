@@ -3,7 +3,7 @@ $ sentry-cli logs --help
 ? success
 Manage and query logs in Sentry. This command provides access to log entries.
 
-Usage: sentry-cli logs [OPTIONS] [COMMAND]
+Usage: sentry-cli[EXE] logs [OPTIONS] [COMMAND]
 
 Commands:
   list  List logs from your organization
