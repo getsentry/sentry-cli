@@ -98,6 +98,75 @@ impl Table {
         }
         tbl.print_tty(false).ok();
     }
+
+    /// Print only the header row for streaming mode
+    pub fn print_header(&self) {
+        if let Some(ref title_row) = self.title_row {
+            let mut tbl = prettytable::Table::new();
+            tbl.set_format(*prettytable::format::consts::FORMAT_NO_BORDER);
+            tbl.add_row(title_row.make_row());
+            tbl.print_tty(false).ok();
+        }
+    }
+
+    /// Print header with first data batch for streaming mode
+    /// This ensures header column widths match the actual data by letting prettytable
+    /// size columns based on both header and data content together
+    pub fn print_table_start(&self) {
+        if self.is_empty() {
+            self.print_header();
+            return;
+        }
+
+        let mut tbl = prettytable::Table::new();
+        // Use the same base format as print_rows_only but add header separator
+        let mut format = *prettytable::format::consts::FORMAT_NO_BORDER;
+        format.column_separator('|');
+        format.padding(1, 1);
+        format.borders('|'); // Add left and right borders
+                             // Add separator line under the header
+        format.separator(
+            prettytable::format::LinePosition::Title,
+            prettytable::format::LineSeparator::new('-', '+', '+', '+'),
+        );
+        tbl.set_format(format);
+
+        if let Some(ref title_row) = self.title_row {
+            tbl.set_titles(title_row.make_row());
+        }
+
+        for row in &self.rows {
+            tbl.add_row(row.make_row());
+        }
+
+        tbl.print_tty(false).ok();
+    }
+
+    /// Print only the current rows with column separators but no borders for streaming mode
+    pub fn print_rows_only(&self) {
+        if self.is_empty() {
+            return;
+        }
+
+        let mut tbl = prettytable::Table::new();
+        // Use format with column separators (|) and side borders, but no top/bottom borders
+        let mut format = *prettytable::format::consts::FORMAT_NO_BORDER;
+        format.column_separator('|');
+        format.padding(1, 1);
+        format.borders('|'); // Add left and right borders
+        tbl.set_format(format);
+
+        for row in &self.rows {
+            tbl.add_row(row.make_row());
+        }
+
+        tbl.print_tty(false).ok();
+    }
+
+    /// Clear all rows but keep the header for reuse in streaming mode
+    pub fn clear_rows(&mut self) {
+        self.rows.clear();
+    }
 }
 
 impl Default for Table {
