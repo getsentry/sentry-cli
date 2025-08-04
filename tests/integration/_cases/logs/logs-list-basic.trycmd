@@ -1,6 +1,12 @@
 ```
 $ sentry-cli logs list --org wat-org --project 12345 --max-rows 1
-? success
-No logs found
+? 1
+error: API request failed
+
+Caused by:
+    sentry reported an error: unknown error (http status: 501)
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
 
 ``` 
