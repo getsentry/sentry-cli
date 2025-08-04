@@ -1,12 +1,12 @@
 ```
 $ sentry-cli logs list
-? 1
-error: API request failed
-
-Caused by:
-    sentry reported an error: unknown error (http status: 501)
-
-Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
-Please attach the full debug log to all bug reports.
+? success
++------------------+---------------------------+----------+--------------------------+----------------------+
+| Item ID          | Timestamp                 | Severity | Message                  | Trace                |
++------------------+---------------------------+----------+--------------------------+----------------------+
+| test-item-id-001 | 2025-01-15T10:30:00+00:00 | info     | test_log_message_001     | test-trace-id-abc123 |
+| test-item-id-002 | 2025-01-15T10:31:00+00:00 | error    | test_error_message_002   | test-trace-id-def456 |
+| test-item-id-003 | 2025-01-15T10:32:00+00:00 | warning  | test_warning_message_003 | test-trace-id-ghi789 |
++------------------+---------------------------+----------+--------------------------+----------------------+
 
 ```
