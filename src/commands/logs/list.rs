@@ -5,15 +5,18 @@ use crate::api::{Api, Dataset, FetchEventsOptions};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 
-/// Validate that max_rows is greater than 0
-fn validate_max_rows(s: &str) -> Result<usize, String> {
-    let value = s
-        .parse::<usize>()
-        .map_err(|_| "invalid number".to_owned())?;
-    if value == 0 {
-        Err("max-rows must be greater than 0".to_owned())
-    } else {
+const MAX_ROWS_RANGE: std::ops::RangeInclusive<usize> = 1..=1000;
+/// Validate that max_rows is in the allowed range
+fn validate_max_rows(s: &str) -> Result<usize> {
+    let value = s.parse()?;
+    if MAX_ROWS_RANGE.contains(&value) {
         Ok(value)
+    } else {
+        Err(anyhow::anyhow!(
+            "max-rows must be between {} and {}",
+            MAX_ROWS_RANGE.start(),
+            MAX_ROWS_RANGE.end()
+        ))
     }
 }
 
@@ -39,7 +42,7 @@ pub(super) struct ListLogsArgs {
 
     #[arg(long = "max-rows", default_value = "100")]
     #[arg(value_parser = validate_max_rows)]
-    #[arg(help = "Maximum number of log entries to fetch and display (max 1000).")]
+    #[arg(help = format!("Maximum number of log entries to fetch and display (max {}).", MAX_ROWS_RANGE.end()))]
     max_rows: usize,
 
     #[arg(long = "query", default_value = "")]
@@ -57,16 +60,15 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
         .or(default_org.as_ref())
         .ok_or_else(|| {
             anyhow::anyhow!("No organization specified. Please specify an organization using the --org argument.")
-        })?
-        .to_owned();
+        })?;
+
     let project = args
         .project
         .as_ref()
         .or(default_project.as_ref())
         .ok_or_else(|| {
             anyhow::anyhow!("No project specified. Use --project or set a default in config.")
-        })?
-        .to_owned();
+        })?;
 
     let api = Api::current();
 
@@ -76,7 +78,7 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
         Some(args.query.as_str())
     };
 
-    execute_single_fetch(&api, &org, &project, query, LOG_FIELDS, &args)
+    execute_single_fetch(&api, org, project, query, LOG_FIELDS, &args)
 }
 
 fn execute_single_fetch(
