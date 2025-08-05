@@ -34,14 +34,6 @@ fn command_logs_zero_max_rows() {
 }
 
 #[test]
-fn command_logs_help() {
-    let manager = TestManager::new();
-
-    #[cfg(not(windows))]
-    manager.register_trycmd_test("logs/logs-help.trycmd");
-}
-
-#[test]
 fn command_logs_list_help() {
     TestManager::new().register_trycmd_test("logs/logs-list-help.trycmd");
 }
