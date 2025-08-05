@@ -9,7 +9,7 @@ pub struct ChunkedMobileAppRequest<'a> {
     pub checksum: Digest,
     pub chunks: &'a [Digest],
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub git_sha: Option<&'a str>,
+    pub head_sha: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_configuration: Option<&'a str>,
 }
@@ -20,4 +20,5 @@ pub struct AssembleMobileAppResponse {
     pub state: ChunkedFileState,
     pub missing_chunks: Vec<Digest>,
     pub detail: Option<String>,
+    pub artifact_id: Option<String>,
 }
