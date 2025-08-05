@@ -54,13 +54,11 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
     let config = Config::current();
     let (default_org, default_project) = config.get_org_and_project_defaults();
 
-    let org = args
-        .org
-        .as_ref()
-        .or(default_org.as_ref())
-        .ok_or_else(|| {
-            anyhow::anyhow!("No organization specified. Please specify an organization using the --org argument.")
-        })?;
+    let org = args.org.as_ref().or(default_org.as_ref()).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No organization specified. Please specify an organization using the --org argument."
+        )
+    })?;
 
     let project = args
         .project
