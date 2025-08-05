@@ -11,15 +11,14 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use indicatif::ProgressStyle;
 use itertools::Itertools as _;
 use log::{debug, info, warn};
-use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
+use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
-use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
+use crate::utils::chunks::{upload_chunks, Chunk};
 use crate::utils::fs::get_sha1_checksums;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::fs::TempDir;
@@ -129,9 +128,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
+    let base_url = config.get_base_url()?;
 
-    let mut uploaded_paths = vec![];
-    let mut errored_paths = vec![];
+    let mut uploaded_paths_and_ids = vec![];
+    let mut errored_paths_and_reasons = vec![];
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
@@ -143,41 +143,50 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             sha.as_deref(),
             build_configuration,
         ) {
-            Ok(_) => {
+            Ok(artifact_id) => {
                 info!("Successfully uploaded file: {}", path.display());
-                uploaded_paths.push(path.to_path_buf());
+                uploaded_paths_and_ids.push((path.to_path_buf(), artifact_id));
             }
             Err(e) => {
                 debug!("Failed to upload file at path {}: {}", path.display(), e);
-                errored_paths.push(path.to_path_buf());
+                errored_paths_and_reasons.push((path.to_path_buf(), e));
             }
         }
     }
 
-    if !errored_paths.is_empty() {
+    if !errored_paths_and_reasons.is_empty() {
         warn!(
             "Failed to upload {} file{}:",
-            errored_paths.len(),
-            if errored_paths.len() == 1 { "" } else { "s" }
+            errored_paths_and_reasons.len(),
+            if errored_paths_and_reasons.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
         );
-        for path in errored_paths {
-            warn!("  - {}", path.display());
+        for (path, reason) in errored_paths_and_reasons {
+            warn!("  - {} ({})", path.display(), reason);
         }
     }
 
-    println!(
-        "Successfully uploaded {} file{} to Sentry",
-        uploaded_paths.len(),
-        if uploaded_paths.len() == 1 { "" } else { "s" }
-    );
-    if uploaded_paths.len() < 3 {
-        for path in &uploaded_paths {
-            println!("  - {}", path.display());
-        }
-    }
-
-    if uploaded_paths.is_empty() {
+    if uploaded_paths_and_ids.is_empty() {
         bail!("Failed to upload any files");
+    } else {
+        println!(
+            "Successfully uploaded {} file{} to Sentry",
+            uploaded_paths_and_ids.len(),
+            if uploaded_paths_and_ids.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
+        );
+        if uploaded_paths_and_ids.len() < 3 {
+            for (path, artifact_id) in &uploaded_paths_and_ids {
+                let url = format!("{base_url}/{org}/preprod/{project}/{artifact_id}");
+                println!("  - {} ({url})", path.display());
+            }
+        }
     }
     Ok(())
 }
@@ -337,6 +346,7 @@ fn normalize_directory(path: &Path) -> Result<TempFile> {
     Ok(temp_file)
 }
 
+/// Returns artifact id if upload was successful.
 fn upload_file(
     api: &AuthenticatedApi,
     bytes: &[u8],
@@ -344,7 +354,7 @@ fn upload_file(
     project: &str,
     sha: Option<&str>,
     build_configuration: Option<&str>,
-) -> Result<()> {
+) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
         update to the latest version of Sentry to use the mobile-app upload command.";
 
@@ -371,7 +381,7 @@ fn upload_file(
     }
 
     let progress_style =
-        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+        ProgressStyle::default_spinner().template("{spinner} Preparing for upload...");
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
@@ -384,76 +394,52 @@ fn upload_file(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    pb.finish_with_duration("Finishing upload");
+    pb.finish_with_duration("Preparing for upload");
 
-    let response =
-        api.assemble_mobile_app(org, project, checksum, &checksums, sha, build_configuration)?;
-    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
-
-    if !chunks.is_empty() {
-        let upload_progress_style = ProgressStyle::default_bar().template(
-            "{prefix:.dim} Uploading files...\
-             \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
-        );
-        upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
-    } else {
-        println!("Nothing to upload, all files are on the server");
-    }
-
-    poll_assemble(
-        api,
-        checksum,
-        &checksums,
-        org,
-        project,
-        sha,
-        build_configuration,
-    )?;
-    Ok(())
-}
-
-fn poll_assemble(
-    api: &AuthenticatedApi,
-    checksum: Digest,
-    chunks: &[Digest],
-    org: &str,
-    project: &str,
-    sha: Option<&str>,
-    build_configuration: Option<&str>,
-) -> Result<()> {
-    debug!("Polling assemble for checksum: {}", checksum);
-
-    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
-    let pb = ProgressBar::new_spinner();
-
-    pb.enable_steady_tick(100);
-    pb.set_style(progress_style);
-
-    let response = loop {
+    // In the normal case we go through this loop exactly twice:
+    // 1. state=not_found
+    //    server tells us the we need to send every chunk and we do so
+    // 2. artifact_id set so we're done (likely state=created)
+    //
+    // In the case where all the chunks are already on the server we go
+    // through only once:
+    // 1. state=ok, artifact_id set
+    //
+    // In the case where something went wrong (which could be on either
+    // iteration of the loop) we get:
+    // n. state=err, artifact_id unset
+    let result = loop {
         let response =
-            api.assemble_mobile_app(org, project, checksum, chunks, sha, build_configuration)?;
+            api.assemble_mobile_app(org, project, checksum, &checksums, sha, build_configuration)?;
+        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
-        if response.state.is_finished() {
-            break response;
+        if !chunks.is_empty() {
+            let upload_progress_style = ProgressStyle::default_bar().template(
+                "{prefix:.dim} Uploading files...\
+               \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
+            );
+            upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
         }
 
-        std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
+        // state.is_err() is not the same as this since it also returns
+        // true for ChunkedFileState::NotFound.
+        if response.state == ChunkedFileState::Error {
+            let message = response.detail.as_deref().unwrap_or("unknown error");
+            bail!("Failed to process uploaded files: {}", message);
+        }
+
+        if let Some(artifact_id) = response.artifact_id {
+            break Ok(artifact_id);
+        }
+
+        if response.state.is_finished() {
+            bail!(
+                "File upload is_finished() but did not succeeded (returning artifact_id) or error"
+            );
+        }
     };
 
-    pb.finish_with_duration("Processing");
-
-    if response.state.is_err() {
-        let message = response.detail.as_deref().unwrap_or("unknown error");
-        bail!("Failed to process uploaded files: {}", message);
-    }
-
-    if response.state.is_pending() {
-        info!("File upload complete (processing pending on server)");
-    } else {
-        info!("File processing complete");
-    }
-
-    Ok(())
+    result
 }
 
 #[cfg(not(windows))]
