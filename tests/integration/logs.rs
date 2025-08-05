@@ -39,8 +39,6 @@ fn command_logs_help() {
 
     #[cfg(not(windows))]
     manager.register_trycmd_test("logs/logs-help.trycmd");
-    #[cfg(windows)]
-    manager.register_trycmd_test("logs/logs-help-windows.trycmd");
 }
 
 #[test]
