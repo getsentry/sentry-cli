@@ -297,7 +297,7 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # 3.11.1
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # 3.4.0
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # 3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -321,7 +321,7 @@ jobs:
       packages: write
     steps:
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # 3.4.0
+        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # 3.5.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
