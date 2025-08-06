@@ -1452,7 +1452,8 @@ pub struct FetchEventsOptions<'a> {
     /// Time period for stats
     pub stats_period: Option<&'a str>,
     /// Sort order
-    pub sort: Option<&'a str>,}
+    pub sort: Option<&'a str>,
+}
 
 impl<'a> FetchEventsOptions<'a> {
     /// Generate query parameters as a vector of strings
@@ -1703,7 +1704,6 @@ impl ApiRequest {
         pipeline_env: Option<String>,
         global_headers: Option<Vec<String>>,
     ) -> ApiResult<Self> {
-
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
 
