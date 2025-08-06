@@ -1,5 +1,3 @@
-#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
-
 //! This module implements the API access to the Sentry API as well
 //! as some other APIs we interact with.  In particular it can talk
 //! to the GitHub API to figure out if there are new releases of the
@@ -160,6 +158,7 @@ impl Api {
     pub fn with_config(config: Arc<Config>) -> Api {
         Api {
             config,
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             pool: r2d2::Pool::builder()
                 .max_size(16)
                 .build(CurlConnectionManager)
@@ -223,7 +222,11 @@ impl Api {
         url: &str,
         auth: Option<&Auth>,
     ) -> ApiResult<ApiRequest> {
-        let mut handle = self.pool.get().unwrap();
+        let mut handle = self
+            .pool
+            .get()
+            .map_err(|e| ApiError::with_source(ApiErrorKind::RequestFailed, e))?;
+
         handle.reset();
         if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();
@@ -310,7 +313,11 @@ impl Api {
                     }
                 }
             }
-            std::thread::sleep(Duration::milliseconds(500).to_std().unwrap());
+            std::thread::sleep(
+                Duration::milliseconds(500)
+                    .to_std()
+                    .expect("500ms is valid, as it is non-negative"),
+            );
             if Utc::now() - duration > started {
                 return Ok(false);
             }
@@ -1608,6 +1615,7 @@ fn handle_req<W: Write>(
             })?;
         } else if progress_bar_mode.active() {
             let pb_progress = pb.clone();
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             handle.progress_function(move |a, b, c, d| {
                 let (down_len, down_pos, up_len, up_pos) = (a as u64, b as u64, c as u64, d as u64);
                 let mut pb = pb_progress.borrow_mut();
@@ -1661,8 +1669,8 @@ fn handle_req<W: Write>(
         handle.perform()?;
     }
 
-    if pb.borrow().is_some() {
-        pb.borrow().as_ref().unwrap().finish_and_clear();
+    if let Some(pb) = pb.borrow().as_ref() {
+        pb.finish_and_clear();
     }
 
     Ok((handle.response_code()?, headers))
@@ -1812,6 +1820,7 @@ impl ApiRequest {
     fn get_headers(&self) -> curl::easy::List {
         let mut result = curl::easy::List::new();
         for header_bytes in self.headers.iter() {
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             let header = String::from_utf8(header_bytes.to_vec()).unwrap();
             result.append(&header).ok();
         }
@@ -1851,7 +1860,10 @@ impl ApiRequest {
             }
 
             // Exponential backoff
-            let backoff_timeout = backoff.next_backoff().unwrap();
+            let backoff_timeout = backoff
+                .next_backoff()
+                .expect("should not return None, as there is no max_elapsed_time");
+
             debug!(
                 "retry number {}, retrying again in {} ms",
                 retry_number,
@@ -2004,7 +2016,8 @@ impl ApiResponse {
 
 fn log_headers(is_response: bool, data: &[u8]) {
     lazy_static! {
-        static ref AUTH_RE: Regex = Regex::new(r"(?i)(authorization):\s*([\w]+)\s+(.*)").unwrap();
+        static ref AUTH_RE: Regex =
+            Regex::new(r"(?i)(authorization):\s*([\w]+)\s+(.*)").expect("regex is valid");
     }
     if let Ok(header) = std::str::from_utf8(data) {
         for line in header.lines() {
@@ -2014,6 +2027,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
 
             let replaced = AUTH_RE.replace_all(line, |caps: &Captures<'_>| {
                 let info = if &caps[1].to_lowercase() == "basic" {
+                    #[expect(clippy::unwrap_used, reason = "legacy code")]
                     caps[3].split(':').next().unwrap().to_owned()
                 } else {
                     format!("{}***", &caps[3][..std::cmp::min(caps[3].len(), 8)])
