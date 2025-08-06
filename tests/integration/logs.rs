@@ -6,7 +6,7 @@ fn command_logs_with_api_calls() {
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET", 
-                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=wat-project&per_page=100&statsPeriod=90d&sort=-timestamp"
+                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=wat-project&query=&per_page=100&statsPeriod=90d&sort=-timestamp"
             )
             .with_response_file("logs/get-logs.json"),
         )
@@ -20,7 +20,7 @@ fn command_logs_no_logs_found() {
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET", 
-                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=12345&per_page=100&statsPeriod=90d&sort=-timestamp"
+                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=12345&query=&per_page=100&statsPeriod=90d&sort=-timestamp"
             )
             .with_response_body(r#"{"data": []}"#),
         )
