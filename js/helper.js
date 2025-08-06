@@ -195,11 +195,11 @@ function mockBinaryPath(mockPath) {
  */
 
 /**
- * Serializes command line options into an arguments array.
+ * Serializes options into an arguments array for the sentry-cli command.
  *
- * @param {OptionsSchema} schema An options schema required by the command.
- * @param {object} options An options object according to the schema.
- * @returns {string[]} An arguments array that can be passed via command line.
+ * @param {OptionsSchema} schema The options schema required by the command.
+ * @param {Object} options The options object.
+ * @returns {string[]} An array of command line arguments.
  */
 function serializeOptions(schema, options) {
   return Object.keys(schema).reduce((newOptions, option) => {
@@ -208,8 +208,19 @@ function serializeOptions(schema, options) {
       return newOptions;
     }
 
-    const paramType = schema[option].type;
-    const paramName = schema[option].param;
+    const schemaEntry = schema[option];
+    const paramType = schemaEntry.type;
+    const paramName = schemaEntry.param;
+
+    // Handle deprecated options
+    if (schemaEntry.deprecated) {
+      if (paramValue) {
+        console.warn(`Warning: The '${option}' option is deprecated and will be removed in a future version. ` +
+                    `Artifact bundles are now used by default, so this option is no longer needed.`);
+      }
+      // Don't add deprecated options to CLI arguments - just return existing options
+      return newOptions;
+    }
 
     if (paramType === 'array') {
       if (!Array.isArray(paramValue)) {
@@ -226,7 +237,7 @@ function serializeOptions(schema, options) {
         throw new Error(`${option} should be a bool`);
       }
 
-      const invertedParamName = schema[option].invertedParam;
+      const invertedParamName = schemaEntry.invertedParam;
 
       if (paramValue && paramName !== undefined) {
         return newOptions.concat([paramName]);

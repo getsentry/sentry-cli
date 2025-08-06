@@ -56,7 +56,9 @@ module.exports = {
     type: 'array',
   },
   useArtifactBundle: {
-    param: '--use-artifact-bundle',
+    // Deprecated option - no param to avoid passing --use-artifact-bundle to CLI
+    // param: '--use-artifact-bundle', // REMOVED - this flag is deprecated in CLI
     type: 'boolean',
+    deprecated: true, // Custom flag to identify deprecated options
   },
 };
