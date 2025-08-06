@@ -48,27 +48,27 @@ describe('SentryCli helper', () => {
 
   describe('`prepare` command', () => {
     test('call prepare command add default ignore', () => {
-      const command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
+      const command = ['sourcemaps', 'upload', '--release', 'release', '/dev/null'];
 
       expect(helper.prepareCommand(command)).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
       ]);
     });
 
     test('call prepare command with array option', () => {
-      const command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
+      const command = ['sourcemaps', 'upload', '--release', 'release', '/dev/null'];
 
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { stripPrefix: ['node', 'app'] })
       ).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--strip-prefix',
         'node',
@@ -83,30 +83,30 @@ describe('SentryCli helper', () => {
     });
 
     test('call prepare command with boolean option', () => {
-      const command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
+      const command = ['sourcemaps', 'upload', '--release', 'release', '/dev/null'];
 
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { sourceMapReference: false })
       ).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--no-sourcemap-reference',
       ]);
 
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { sourceMapReference: true })
-      ).toEqual(['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null']);
+      ).toEqual(['sourcemaps', 'upload', '--release', 'release', '/dev/null']);
 
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { decompress: true, rewrite: true })
       ).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--decompress',
         '--rewrite',
@@ -115,10 +115,10 @@ describe('SentryCli helper', () => {
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { rewrite: false, dedupe: false })
       ).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--no-rewrite',
         '--no-dedupe',
@@ -126,10 +126,10 @@ describe('SentryCli helper', () => {
 
       // Only `invertedParam` registered for `dedupe` in `uploadSourcemaps`, so it should not add anything for positive boolean.
       expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { dedupe: true })).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
       ]);
 
@@ -139,23 +139,23 @@ describe('SentryCli helper', () => {
     });
 
     test('call prepare command with string option', () => {
-      const command = ['releases', 'files', 'release', 'upload-sourcemaps', '/dev/null'];
+      const command = ['sourcemaps', 'upload', '--release', 'release', '/dev/null'];
 
       expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { ext: ['js'] })).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--ext',
         'js',
       ]);
 
       expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlPrefix: '~/' })).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--url-prefix',
         '~/',
@@ -164,20 +164,20 @@ describe('SentryCli helper', () => {
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { urlSuffix: '?hash=1337' })
       ).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--url-suffix',
         '?hash=1337',
       ]);
 
       expect(helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { decompress: true })).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--decompress',
       ]);
@@ -185,10 +185,10 @@ describe('SentryCli helper', () => {
       expect(
         helper.prepareCommand(command, SOURCEMAPS_OPTIONS, { ignoreFile: '/js.ignore' })
       ).toEqual([
-        'releases',
-        'files',
+        'sourcemaps',
+        'upload',
+        '--release',
         'release',
-        'upload-sourcemaps',
         '/dev/null',
         '--ignore-file',
         '/js.ignore',
