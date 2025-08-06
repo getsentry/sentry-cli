@@ -88,7 +88,7 @@ fn execute_single_fetch(
     args: &ListLogsArgs,
 ) -> Result<()> {
     let options = FetchEventsOptions {
-        dataset: Dataset::OurLogs,
+        dataset: Dataset::Logs,
         fields,
         project_id: Some(project),
         cursor: None,

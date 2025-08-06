@@ -1417,14 +1417,14 @@ impl<'a> AuthenticatedApi<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dataset {
     /// Our logs dataset
-    OurLogs,
+    Logs,
 }
 
 impl Dataset {
     /// Returns the string representation of the dataset
     fn as_str(&self) -> &'static str {
         match self {
-            Dataset::OurLogs => "ourlogs",
+            Dataset::Logs => "logs",
         }
     }
 }
@@ -1447,13 +1447,12 @@ pub struct FetchEventsOptions<'a> {
     pub cursor: Option<&'a str>,
     /// Query string to filter events
     pub query: Option<&'a str>,
-    /// Number of events per page (default: 100)
+    /// Number of events per page
     pub per_page: Option<usize>,
-    /// Time period for stats (default: "1h")
+    /// Time period for stats
     pub stats_period: Option<&'a str>,
-    /// Sort order (default: "-timestamp")
-    pub sort: Option<&'a str>,
-}
+    /// Sort order
+    pub sort: Option<&'a str>,}
 
 impl<'a> FetchEventsOptions<'a> {
     /// Generate query parameters as a vector of strings
