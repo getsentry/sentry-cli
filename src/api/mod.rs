@@ -1469,11 +1469,7 @@ impl<'a> FetchEventsOptions<'a> {
         }
 
         params.push(format!("project={}", QueryArg(self.project_id)));
-
-        if !self.query.is_empty() {
-            params.push(format!("query={}", QueryArg(self.query)));
-        }
-
+        params.push(format!("query={}", QueryArg(self.query)));
         params.push(format!("per_page={}", self.per_page));
         params.push(format!("statsPeriod={}", QueryArg(self.stats_period)));
         params.push(format!("sort={}", QueryArg(self.sort)));
