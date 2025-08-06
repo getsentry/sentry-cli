@@ -1446,13 +1446,13 @@ pub struct FetchEventsOptions<'a> {
     /// Cursor for pagination
     pub cursor: Option<&'a str>,
     /// Query string to filter events
-    pub query: Option<&'a str>,
+    pub query: &'a str,
     /// Number of events per page
-    pub per_page: Option<usize>,
+    pub per_page: usize,
     /// Time period for stats
-    pub stats_period: Option<&'a str>,
+    pub stats_period: &'a str,
     /// Sort order
-    pub sort: Option<&'a str>,
+    pub sort: &'a str,
 }
 
 impl<'a> FetchEventsOptions<'a> {
@@ -1470,14 +1470,13 @@ impl<'a> FetchEventsOptions<'a> {
 
         params.push(format!("project={}", QueryArg(self.project_id)));
 
-        if let Some(query) = self.query {
-            params.push(format!("query={}", QueryArg(query)));
+        if !self.query.is_empty() {
+            params.push(format!("query={}", QueryArg(self.query)));
         }
 
-        params.push(format!("per_page={}", self.per_page.unwrap_or(100)));
-        params.push(format!("statsPeriod={}", self.stats_period.unwrap_or("1h")));
-
-        params.push(format!("sort={}", self.sort.unwrap_or("-timestamp")));
+        params.push(format!("per_page={}", self.per_page));
+        params.push(format!("statsPeriod={}", QueryArg(self.stats_period)));
+        params.push(format!("sort={}", QueryArg(self.sort)));
 
         params
     }

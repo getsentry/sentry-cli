@@ -92,10 +92,10 @@ fn execute_single_fetch(
         fields,
         project_id: project,
         cursor: None,
-        query,
-        per_page: Some(args.max_rows),
-        stats_period: Some("90d"),
-        sort: Some("-timestamp"),
+        query: query.unwrap_or(""),
+        per_page: args.max_rows,
+        stats_period: "90d",
+        sort: "-timestamp",
     };
 
     let logs = api
