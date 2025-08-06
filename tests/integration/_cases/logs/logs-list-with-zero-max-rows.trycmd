@@ -1,0 +1,8 @@
+```
+$ sentry-cli logs list --org wat-org --project 12345 --max-rows 0
+? failed
+error: invalid value '0' for '--max-rows <MAX_ROWS>': max-rows must be between 1 and 1000
+
+For more information, try '--help'.
+
+``` 

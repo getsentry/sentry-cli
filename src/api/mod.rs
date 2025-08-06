@@ -1226,6 +1226,29 @@ impl<'a> AuthenticatedApi<'a> {
         Ok(rv)
     }
 
+    /// Fetch organization events from the specified dataset
+    pub fn fetch_organization_events(
+        &self,
+        org: &str,
+        options: &FetchEventsOptions,
+    ) -> ApiResult<Vec<LogEntry>> {
+        let params = options.to_query_params();
+        let url = format!(
+            "/organizations/{}/events/?{}",
+            PathArg(org),
+            params.join("&")
+        );
+
+        let resp = self.get(&url)?;
+
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::OrganizationNotFound.into());
+        }
+
+        let logs_response: LogsResponse = resp.convert()?;
+        Ok(logs_response.data)
+    }
+
     /// List all issues associated with an organization and a project
     pub fn list_organization_project_issues(
         &self,
@@ -1387,6 +1410,71 @@ impl<'a> AuthenticatedApi<'a> {
             org,
             region_url,
         }
+    }
+}
+
+/// Available datasets for fetching organization events
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Dataset {
+    /// Our logs dataset
+    Logs,
+}
+
+impl Dataset {
+    /// Returns the string representation of the dataset
+    fn as_str(&self) -> &'static str {
+        match self {
+            Dataset::Logs => "logs",
+        }
+    }
+}
+
+impl fmt::Display for Dataset {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+/// Options for fetching organization events
+pub struct FetchEventsOptions<'a> {
+    /// Dataset to fetch events from
+    pub dataset: Dataset,
+    /// Fields to include in the response
+    pub fields: &'a [&'a str],
+    /// Project ID to filter events by
+    pub project_id: &'a str,
+    /// Cursor for pagination
+    pub cursor: Option<&'a str>,
+    /// Query string to filter events
+    pub query: &'a str,
+    /// Number of events per page
+    pub per_page: usize,
+    /// Time period for stats
+    pub stats_period: &'a str,
+    /// Sort order
+    pub sort: &'a str,
+}
+
+impl<'a> FetchEventsOptions<'a> {
+    /// Generate query parameters as a vector of strings
+    pub fn to_query_params(&self) -> Vec<String> {
+        let mut params = vec![format!("dataset={}", QueryArg(self.dataset.as_str()))];
+
+        for field in self.fields {
+            params.push(format!("field={}", QueryArg(field)));
+        }
+
+        if let Some(cursor) = self.cursor {
+            params.push(format!("cursor={}", QueryArg(cursor)));
+        }
+
+        params.push(format!("project={}", QueryArg(self.project_id)));
+        params.push(format!("query={}", QueryArg(self.query)));
+        params.push(format!("per_page={}", self.per_page));
+        params.push(format!("statsPeriod={}", QueryArg(self.stats_period)));
+        params.push(format!("sort={}", QueryArg(self.sort)));
+
+        params
     }
 }
 
@@ -1609,8 +1697,6 @@ impl ApiRequest {
         pipeline_env: Option<String>,
         global_headers: Option<Vec<String>>,
     ) -> ApiResult<Self> {
-        debug!("request {} {}", method, url);
-
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
 
@@ -1740,7 +1826,6 @@ impl ApiRequest {
         let body = self.body.as_deref();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
-        debug!("response status: {}", status);
         Ok(ApiResponse {
             status,
             headers,
@@ -2343,7 +2428,7 @@ pub struct ProcessedEvent {
     pub tags: Option<Vec<ProcessedEventTag>>,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProcessedEventUser {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
@@ -2377,7 +2462,7 @@ impl fmt::Display for ProcessedEventUser {
     }
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct ProcessedEventTag {
     pub key: String,
     pub value: String,
@@ -2400,4 +2485,21 @@ pub struct Region {
 #[derive(Clone, Debug, Deserialize)]
 pub struct RegionResponse {
     pub regions: Vec<Region>,
+}
+
+/// Response structure for logs API
+#[derive(Debug, Deserialize)]
+struct LogsResponse {
+    data: Vec<LogEntry>,
+}
+
+/// Log entry structure from the logs API
+#[derive(Debug, Deserialize)]
+pub struct LogEntry {
+    #[serde(rename = "sentry.item_id")]
+    pub item_id: String,
+    pub trace: Option<String>,
+    pub severity: Option<String>,
+    pub timestamp: String,
+    pub message: Option<String>,
 }
