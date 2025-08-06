@@ -1703,7 +1703,6 @@ impl ApiRequest {
         pipeline_env: Option<String>,
         global_headers: Option<Vec<String>>,
     ) -> ApiResult<Self> {
-        debug!("request {} {}", method, url);
 
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
@@ -1834,7 +1833,6 @@ impl ApiRequest {
         let body = self.body.as_deref();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
-        debug!("response status: {}", status);
         Ok(ApiResponse {
             status,
             headers,
