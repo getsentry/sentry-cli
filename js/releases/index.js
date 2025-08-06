@@ -194,9 +194,9 @@ class Releases {
       }
 
       // args which apply to the entire `include` entry (everything besides the path)
-      const args = ['releases']
+      const args = ['sourcemaps', 'upload']
         .concat(helper.getProjectFlagsFromOptions(options))
-        .concat(['files', release, 'upload-sourcemaps']);
+        .concat(['--release', release]);
 
       return uploadPaths.map((path) =>
         // `execute()` is async and thus we're returning a promise here

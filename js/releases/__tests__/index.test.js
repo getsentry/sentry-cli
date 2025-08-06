@@ -53,10 +53,10 @@ describe('SentryCli releases', () => {
         await cli.releases.uploadSourceMaps('my-version', { include: ['path'] });
         expect(mockExecute).toHaveBeenCalledWith(
           [
-            'releases',
-            'files',
+            'sourcemaps',
+            'upload',
+            '--release',
             'my-version',
-            'upload-sourcemaps',
             'path',
             '--ignore',
             'node_modules',
@@ -74,14 +74,14 @@ describe('SentryCli releases', () => {
         });
         expect(mockExecute).toHaveBeenCalledWith(
           [
-            'releases',
+            'sourcemaps',
+            'upload',
             '-p',
             'proj-a',
             '-p',
             'proj-b',
-            'files',
+            '--release',
             'my-version',
-            'upload-sourcemaps',
             'path',
             '--ignore',
             'node_modules',
@@ -103,10 +103,10 @@ describe('SentryCli releases', () => {
         paths.forEach(path =>
           expect(mockExecute).toHaveBeenCalledWith(
             [
-              'releases',
-              'files',
+              'sourcemaps',
+              'upload',
+              '--release',
               'my-version',
-              'upload-sourcemaps',
               path,
               '--ignore',
               'node_modules',
@@ -129,10 +129,10 @@ describe('SentryCli releases', () => {
 
         expect(mockExecute).toHaveBeenCalledWith(
           [
-            'releases',
-            'files',
+            'sourcemaps',
+            'upload',
+            '--release',
             'my-version',
-            'upload-sourcemaps',
             'some-path',
             '--ignore',
             'not-me', // note how this has been overridden
@@ -145,10 +145,10 @@ describe('SentryCli releases', () => {
 
         expect(mockExecute).toHaveBeenCalledWith(
           [
-            'releases',
-            'files',
+            'sourcemaps',
+            'upload',
+            '--release',
             'my-version',
-            'upload-sourcemaps',
             'other-path',
             '--ignore',
             'node_modules',
@@ -164,10 +164,10 @@ describe('SentryCli releases', () => {
         await cli.releases.uploadSourceMaps('my-version', { include: ['path'], live });
         expect(mockExecute).toHaveBeenCalledWith(
           [
-            'releases',
-            'files',
+            'sourcemaps',
+            'upload',
+            '--release',
             'my-version',
-            'upload-sourcemaps',
             'path',
             '--ignore',
             'node_modules',
