@@ -90,7 +90,7 @@ fn execute_single_fetch(
     let options = FetchEventsOptions {
         dataset: Dataset::Logs,
         fields,
-        project_id: Some(project),
+        project_id: project,
         cursor: None,
         query,
         per_page: Some(args.max_rows),
