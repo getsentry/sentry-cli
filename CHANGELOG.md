@@ -2,6 +2,18 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.51.0
+
+### Logs command
+
+This release introduces a [new `sentry-cli logs list` command](https://github.com/getsentry/sentry-cli/pull/2664), which lists your Sentry logs. For more details, see `sentry-cli logs list --help`.
+
+Please note: if you receive a `403` error when using the new command, you may need to generate a new auth token with different permissions. You can do this by navigating to _Settings_ → _Developer Settings_ → _Personal Tokens_ in Sentry. On the _Personal Tokens_ page, generate a token with `org:read` scope, and pass this to the command using `--auth-token` or by setting the `SENTRY_AUTH_TOKEN` environment variable.
+
+### Various fixes & improvements
+
+- fix(js): Stop calling `releases files upload-sourcemaps` (#2676) by @szokeasaurusrex
+
 ## 2.50.2
 
 This change removes the `mobile-app upload` experimental feature which was introduced in 2.50.1.
