@@ -5,11 +5,10 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
-use console::style;
 
 use crate::api::{Api, ChunkUploadCapability};
 use crate::config::Config;
-use crate::constants::DEFAULT_MAX_WAIT;
+use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{upload_chunked_objects, Assemblable, ChunkOptions, Chunked};
 use crate::utils::args::ArgExt as _;
 use crate::utils::dif::DifFile;
@@ -105,6 +104,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .unwrap_or(mapping_path)
                 .to_string();
 
+            let mapping_len = mapping_file_bytes.len();
             let object = DartSymbolMapObject {
                 bytes: mapping_file_bytes,
                 name: file_name.clone(),
@@ -127,6 +127,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 );
             }
 
+            // Early file size check against server or default limits (same as debug files)
+            let effective_max_file_size = if chunk_upload_options.max_file_size > 0 {
+                chunk_upload_options.max_file_size
+            } else {
+                DEFAULT_MAX_DIF_SIZE
+            };
+
+            if (mapping_len as u64) > effective_max_file_size {
+                bail!(
+                    "The dartsymbolmap '{}' exceeds the maximum allowed size ({} bytes > {} bytes).",
+                    mapping_path,
+                    mapping_len,
+                    effective_max_file_size
+                );
+            }
+
             let options = ChunkOptions::new(chunk_upload_options, &org, &project)
                 .with_max_wait(DEFAULT_MAX_WAIT)
                 .with_strip_debug_ids_override(false);
@@ -136,13 +152,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             if has_processing_errors {
                 bail!("Some symbol maps did not process correctly");
             }
-
-            println!(
-                "{} Uploaded dartsymbolmap '{}' for Debug ID {}",
-                style(">").dim(),
-                file_name,
-                style(debug_id).dim()
-            );
 
             Ok(())
         }
