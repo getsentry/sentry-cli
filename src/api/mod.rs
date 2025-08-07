@@ -871,7 +871,7 @@ impl<'a> AuthenticatedApi<'a> {
     ) -> ApiResult<Deploy<'_>> {
         let path = format!(
             "/organizations/{}/releases/{}/deploys/",
-            PathArg(org),   
+            PathArg(org),
             PathArg(version)
         );
 
