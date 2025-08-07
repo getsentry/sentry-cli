@@ -2,6 +2,28 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.51.0
+
+### Various fixes & improvements
+
+- ci: Remove tar.gz from requireNames in .craft.yml (#2680) by @szokeasaurusrex
+- ref: Remove blanket `expect` from `api` (#2679) by @szokeasaurusrex
+- fix(js): Stop calling `releases files upload-sourcemaps` (#2676) by @szokeasaurusrex
+- feat(logs): Introduce logs command (#2664) by @vgrozdanic
+- build(deps): bump docker/login-action from 3.4.0 to 3.5.0 (#2671) by @dependabot
+- build(deps): bump github/codeql-action from 3.29.4 to 3.29.5 (#2672) by @dependabot
+- build(python): Stop building and releasing PyPI package (#2668) by @szokeasaurusrex
+- fix: XCArchive upload on macOS ARM only (#2635) by @noahsmartin
+- meta(vscode): Make `rust-analyzer` run Clippy (#2665) by @szokeasaurusrex
+- build(deps): bump github/codeql-action from 3.29.3 to 3.29.4 (#2662) by @dependabot
+- ci: Test and lint macOS x86_64 (#2658) by @szokeasaurusrex
+- fix: Remove apple uploads from intel (#2645) by @noahsmartin
+- ci: Lint and test statically linked binaries (#2653) by @szokeasaurusrex
+- test: Make tests pass with custom `--target` (#2657) by @szokeasaurusrex
+- meta: Add Cursor rules (#2651) by @szokeasaurusrex
+- chore: Add `.idea` to gitignore (#2649) by @andreiborza
+- meta: Add `@getsentry/owners-sentry-cli` to CODEOWNERS (#2646) by @szokeasaurusrex
+
 ## 2.50.2
 
 This change removes the `mobile-app upload` experimental feature which was introduced in 2.50.1.
