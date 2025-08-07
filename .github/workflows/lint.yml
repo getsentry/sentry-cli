@@ -46,7 +46,8 @@ jobs:
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
 
       - name: Install Rust Toolchain
-        run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt --no-self-update
+        # Pin to specific version to avoid clippy lint changes in new releases
+        run: rustup toolchain install 1.89.0 --profile minimal --component clippy --component rustfmt --no-self-update
 
       - name: Add Target
         run: rustup target add ${{ matrix.target }}
