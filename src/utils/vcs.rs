@@ -399,13 +399,6 @@ pub fn find_head() -> Result<String> {
     Ok(head.id().to_string())
 }
 
-pub fn find_base_sha(repo: &Repository, branch: &str) -> Result<String> {
-    let head = repo.revparse_single(branch)?;
-    Ok(head.id().to_string())
-}
-
-
-
 /// Given commit specs, repos and remote_name this returns a list of head
 /// commits from it.
 pub fn find_heads(

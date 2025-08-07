@@ -108,7 +108,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let head_ref = matches.get_one("head_ref").map(String::as_str);
     let base_ref = matches.get_one("base_ref").map(String::as_str);
-    let pr_number = matches.get_one("pr_number").map(String::as_str);
+    let pr_number = matches.get_one("pr_number").map(String::as_str).and_then(|s| s.parse::<i32>().ok());
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
@@ -348,7 +348,7 @@ fn upload_file(
     base_repo_name: Option<&str>,
     head_ref: Option<&str>,
     base_ref: Option<&str>,
-    pr_number: Option<&str>,
+    pr_number: Option<i32>,
 ) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
         update to the latest version of Sentry to use the mobile-app upload command.";
@@ -364,7 +364,10 @@ fn upload_file(
         base_repo_name.unwrap_or("unknown"),
         head_ref.unwrap_or("unknown"),
         base_ref.unwrap_or("unknown"),
-        pr_number.unwrap_or("unknown"),
+        pr_number
+            .map(|n| n.to_string())
+            .as_deref()
+            .unwrap_or("unknown"),
         build_configuration.unwrap_or("unknown")
     );
 
