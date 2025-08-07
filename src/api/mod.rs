@@ -1075,7 +1075,7 @@ impl<'a> AuthenticatedApi<'a> {
             );
             Ok(())
         } else if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
+            Err(ApiErrorKind::ResourceNotFound.into())
         } else {
             resp.convert()
         }
