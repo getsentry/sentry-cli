@@ -13,6 +13,11 @@ pub struct ChunkOptions<'a> {
     /// If the server_options.max_wait is set to a smaller nonzero value,
     /// we use that value instead.
     max_wait: Duration,
+
+    /// Optional override for whether to strip debug ids.
+    /// When `Some(value)`, this value takes precedence over the server option.
+    /// When `None`, we defer to `server_options.should_strip_debug_ids()`.
+    strip_debug_ids_override: Option<bool>,
 }
 
 impl<'a> ChunkOptions<'a> {
@@ -22,6 +27,7 @@ impl<'a> ChunkOptions<'a> {
             org,
             project,
             max_wait: Duration::ZERO,
+            strip_debug_ids_override: None,
         }
     }
 
@@ -32,7 +38,17 @@ impl<'a> ChunkOptions<'a> {
     }
 
     pub fn should_strip_debug_ids(&self) -> bool {
-        self.server_options.should_strip_debug_ids()
+        match self.strip_debug_ids_override {
+            Some(override_value) => override_value,
+            None => self.server_options.should_strip_debug_ids(),
+        }
+    }
+
+    /// Override whether to strip debug ids from uploaded files.
+    /// If not set, the behavior falls back to the server options.
+    pub fn with_strip_debug_ids_override(mut self, strip: bool) -> Self {
+        self.strip_debug_ids_override = Some(strip);
+        self
     }
 
     pub fn org(&self) -> &str {

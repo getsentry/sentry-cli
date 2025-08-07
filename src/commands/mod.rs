@@ -47,6 +47,7 @@ mod update;
 mod upload_dif;
 mod upload_dsym;
 mod upload_proguard;
+mod upload_dart_symbol_map;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -78,6 +79,7 @@ macro_rules! each_subcommand {
         $mac!(upload_dif);
         $mac!(upload_dsym);
         $mac!(upload_proguard);
+        $mac!(upload_dart_symbol_map);
     };
 }
 
