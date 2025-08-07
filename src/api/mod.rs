@@ -1036,8 +1036,15 @@ impl<'a> AuthenticatedApi<'a> {
         project: &str,
         checksum: Digest,
         chunks: &[Digest],
-        head_sha: Option<&str>,
         build_configuration: Option<&str>,
+        head_sha: Option<&str>,
+        base_sha: Option<&str>,
+        provider: Option<&str>,
+        head_repo_name: Option<&str>,
+        base_repo_name: Option<&str>,
+        head_ref: Option<&str>,
+        base_ref: Option<&str>,
+        pr_number: Option<&str>,
     ) -> ApiResult<AssembleMobileAppResponse> {
         let url = format!(
             "/projects/{}/{}/files/preprodartifacts/assemble/",
@@ -1049,8 +1056,15 @@ impl<'a> AuthenticatedApi<'a> {
             .with_json_body(&ChunkedMobileAppRequest {
                 checksum,
                 chunks,
-                head_sha,
                 build_configuration,
+                head_sha,
+                base_sha,
+                provider,
+                head_repo_name,
+                base_repo_name,
+                head_ref,
+                base_ref,
+                pr_number,
             })?
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)

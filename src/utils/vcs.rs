@@ -211,6 +211,7 @@ fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
 
+// TODO: This is not used anywhere.
 pub fn get_repo_from_remote(repo: &str) -> String {
     let obj = VcsUrl::parse(repo);
     obj.id
@@ -397,6 +398,13 @@ pub fn find_head() -> Result<String> {
     let head = repo.revparse_single("HEAD")?;
     Ok(head.id().to_string())
 }
+
+pub fn find_base_sha(repo: &Repository, branch: &str) -> Result<String> {
+    let head = repo.revparse_single(branch)?;
+    Ok(head.id().to_string())
+}
+
+
 
 /// Given commit specs, repos and remote_name this returns a list of head
 /// commits from it.
