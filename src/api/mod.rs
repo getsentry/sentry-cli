@@ -1044,7 +1044,7 @@ impl<'a> AuthenticatedApi<'a> {
         base_repo_name: Option<&str>,
         head_ref: Option<&str>,
         base_ref: Option<&str>,
-        pr_number: Option<&str>,
+        pr_number: Option<i32>,
     ) -> ApiResult<AssembleMobileAppResponse> {
         let url = format!(
             "/projects/{}/{}/files/preprodartifacts/assemble/",
