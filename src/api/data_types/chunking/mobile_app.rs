@@ -2,8 +2,6 @@
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 
-use super::ChunkedFileState;
-
 #[derive(Debug, Serialize)]
 pub struct ChunkedMobileAppRequest<'a> {
     pub checksum: Digest,
@@ -17,7 +15,6 @@ pub struct ChunkedMobileAppRequest<'a> {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AssembleMobileAppResponse {
-    pub state: ChunkedFileState,
     pub missing_chunks: Vec<Digest>,
-    pub detail: Option<String>,
+    pub artifact_id: Option<String>,
 }

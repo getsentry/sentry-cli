@@ -11,7 +11,6 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use indicatif::ProgressStyle;
 use itertools::Itertools as _;
 use log::{debug, info, warn};
-use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
@@ -19,7 +18,7 @@ use zip::{DateTime, ZipWriter};
 use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
-use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
+use crate::utils::chunks::{upload_chunks, Chunk};
 use crate::utils::fs::get_sha1_checksums;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::fs::TempDir;
@@ -143,8 +142,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             sha.as_deref(),
             build_configuration,
         ) {
-            Ok(_) => {
-                info!("Successfully uploaded file: {}", path.display());
+            Ok(artifact_id) => {
+                if let Some(id) = artifact_id {
+                    info!(
+                        "Successfully uploaded file: {} (artifact_id: {})",
+                        path.display(),
+                        id
+                    );
+                } else {
+                    info!("Successfully uploaded file: {}", path.display());
+                }
                 uploaded_paths.push(path.to_path_buf());
             }
             Err(e) => {
@@ -344,7 +351,7 @@ fn upload_file(
     project: &str,
     sha: Option<&str>,
     build_configuration: Option<&str>,
-) -> Result<()> {
+) -> Result<Option<String>> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
         update to the latest version of Sentry to use the mobile-app upload command.";
 
@@ -399,61 +406,7 @@ fn upload_file(
     } else {
         println!("Nothing to upload, all files are on the server");
     }
-
-    poll_assemble(
-        api,
-        checksum,
-        &checksums,
-        org,
-        project,
-        sha,
-        build_configuration,
-    )?;
-    Ok(())
-}
-
-fn poll_assemble(
-    api: &AuthenticatedApi,
-    checksum: Digest,
-    chunks: &[Digest],
-    org: &str,
-    project: &str,
-    sha: Option<&str>,
-    build_configuration: Option<&str>,
-) -> Result<()> {
-    debug!("Polling assemble for checksum: {}", checksum);
-
-    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
-    let pb = ProgressBar::new_spinner();
-
-    pb.enable_steady_tick(100);
-    pb.set_style(progress_style);
-
-    let response = loop {
-        let response =
-            api.assemble_mobile_app(org, project, checksum, chunks, sha, build_configuration)?;
-
-        if response.state.is_finished() {
-            break response;
-        }
-
-        std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
-    };
-
-    pb.finish_with_duration("Processing");
-
-    if response.state.is_err() {
-        let message = response.detail.as_deref().unwrap_or("unknown error");
-        bail!("Failed to process uploaded files: {}", message);
-    }
-
-    if response.state.is_pending() {
-        info!("File upload complete (processing pending on server)");
-    } else {
-        info!("File processing complete");
-    }
-
-    Ok(())
+    Ok(response.artifact_id)
 }
 
 #[cfg(not(windows))]
