@@ -1037,14 +1037,7 @@ impl<'a> AuthenticatedApi<'a> {
         checksum: Digest,
         chunks: &[Digest],
         build_configuration: Option<&str>,
-        head_sha: Option<&str>,
-        base_sha: Option<&str>,
-        provider: Option<&str>,
-        head_repo_name: Option<&str>,
-        base_repo_name: Option<&str>,
-        head_ref: Option<&str>,
-        base_ref: Option<&str>,
-        pr_number: Option<i32>,
+        vcs_info: &VcsInfo<'_>,
     ) -> ApiResult<AssembleMobileAppResponse> {
         let url = format!(
             "/projects/{}/{}/files/preprodartifacts/assemble/",
@@ -1057,14 +1050,14 @@ impl<'a> AuthenticatedApi<'a> {
                 checksum,
                 chunks,
                 build_configuration,
-                head_sha,
-                base_sha,
-                provider,
-                head_repo_name,
-                base_repo_name,
-                head_ref,
-                base_ref,
-                pr_number,
+                head_sha: vcs_info.head_sha,
+                base_sha: vcs_info.base_sha,
+                provider: vcs_info.vcs_provider,
+                head_repo_name: vcs_info.head_repo_name,
+                base_repo_name: vcs_info.base_repo_name,
+                head_ref: vcs_info.head_ref,
+                base_ref: vcs_info.base_ref,
+                pr_number: vcs_info.pr_number,
             })?
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)
@@ -2530,6 +2523,21 @@ pub struct RegionResponse {
 #[derive(Debug, Deserialize)]
 struct LogsResponse {
     data: Vec<LogEntry>,
+}
+
+/// VCS information for mobile app uploads
+#[derive(Debug)]
+// This is not dead code because it is used in the mobile app upload command
+#[expect(dead_code)]
+pub struct VcsInfo<'a> {
+    pub head_sha: Option<&'a str>,
+    pub base_sha: Option<&'a str>,
+    pub vcs_provider: Option<&'a str>,
+    pub head_repo_name: Option<&'a str>,
+    pub base_repo_name: Option<&'a str>,
+    pub head_ref: Option<&'a str>,
+    pub base_ref: Option<&'a str>,
+    pub pr_number: Option<i32>,
 }
 
 /// Log entry structure from the logs API

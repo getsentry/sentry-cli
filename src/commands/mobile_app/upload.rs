@@ -10,7 +10,7 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState};
+use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState, VcsInfo};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::chunks::{upload_chunks, Chunk};
@@ -171,13 +171,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        match upload_file(
-            &authenticated_api,
-            &bytes,
-            &org,
-            &project,
-            build_configuration,
-            head_sha.as_deref(),
+        let vcs_info = VcsInfo {
+            head_sha: head_sha.as_deref(),
             base_sha,
             vcs_provider,
             head_repo_name,
@@ -185,6 +180,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             head_ref,
             base_ref,
             pr_number,
+        };
+        match upload_file(
+            &authenticated_api,
+            &bytes,
+            &org,
+            &project,
+            build_configuration,
+            &vcs_info,
         ) {
             Ok(artifact_id) => {
                 info!("Successfully uploaded file: {}", path.display());
@@ -344,34 +347,17 @@ fn upload_file(
     org: &str,
     project: &str,
     build_configuration: Option<&str>,
-    head_sha: Option<&str>,
-    base_sha: Option<&str>,
-    vcs_provider: Option<&str>,
-    head_repo_name: Option<&str>,
-    base_repo_name: Option<&str>,
-    head_ref: Option<&str>,
-    base_ref: Option<&str>,
-    pr_number: Option<i32>,
+    vcs_info: &VcsInfo<'_>,
 ) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
         update to the latest version of Sentry to use the mobile-app upload command.";
 
     debug!(
-        "Uploading file to organization: {}, project: {}, head_sha: {}, base_sha: {}, vcs_provider: {}, head_repo_name: {}, base_repo_name: {}, head_ref: {}, base_ref: {}, pr_number: {}, build_configuration: {}",
+        "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
         org,
         project,
-        head_sha.unwrap_or("unknown"),
-        base_sha.unwrap_or("unknown"),
-        vcs_provider.unwrap_or("unknown"),
-        head_repo_name.unwrap_or("unknown"),
-        base_repo_name.unwrap_or("unknown"),
-        head_ref.unwrap_or("unknown"),
-        base_ref.unwrap_or("unknown"),
-        pr_number
-            .map(|n| n.to_string())
-            .as_deref()
-            .unwrap_or("unknown"),
-        build_configuration.unwrap_or("unknown")
+        build_configuration.unwrap_or("unknown"),
+        vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
@@ -422,14 +408,7 @@ fn upload_file(
         checksum,
         &checksums,
         build_configuration,
-        head_sha,
-        base_sha,
-        vcs_provider,
-        head_repo_name,
-        base_repo_name,
-        head_ref,
-        base_ref,
-        pr_number,
+        vcs_info,
     )?;
     chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
