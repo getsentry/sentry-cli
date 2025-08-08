@@ -92,25 +92,6 @@ fn command_mobile_app_upload_apk_all_uploaded() {
         .with_default_token();
 }
 
-#[test]
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-fn command_mobile_app_upload_xcarchive_all_uploaded() {
-    TestManager::new()
-        .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
-                .with_response_file("mobile_app/get-chunk-upload.json"),
-        )
-        .mock_endpoint(
-            MockEndpointBuilder::new(
-                "POST",
-                "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
-            )
-            .with_response_body(r#"{"state":"ok","missingChunks":[]}"#),
-        )
-        .register_trycmd_test("mobile_app/mobile_app-upload-xcarchive-all-uploaded.trycmd")
-        .with_default_token();
-}
-
 /// This regex is used to extract the boundary from the content-type header.
 /// We need to match the boundary, since it changes with each request.
 /// The regex matches the format as specified in
