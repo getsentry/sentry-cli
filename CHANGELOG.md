@@ -2,6 +2,12 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.51.1
+
+### Various fixes & improvements
+
+- fix(logs): Mark `logs` command as beta (#2690) by @szokeasaurusrex
+
 ## 2.51.0
 
 ### Logs command
