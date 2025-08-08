@@ -17,7 +17,7 @@ Commands:
   info             Print information about the configuration and verify authentication.
   issues           Manage issues in Sentry.
   login            Authenticate with the Sentry server.
-  logs             Manage logs in Sentry
+  logs             [BETA] Manage logs in Sentry
   monitors         Manage cron monitors on Sentry.
   organizations    Manage organizations on Sentry.
   projects         Manage projects on Sentry.
