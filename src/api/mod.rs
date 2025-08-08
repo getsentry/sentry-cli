@@ -2520,6 +2520,7 @@ struct LogsResponse {
 }
 
 /// VCS information for mobile app uploads
+#[cfg(feature = "unstable-mobile-app")]
 #[derive(Debug)]
 pub struct VcsInfo<'a> {
     pub head_sha: Option<&'a str>,
