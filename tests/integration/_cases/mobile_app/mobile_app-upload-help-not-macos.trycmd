@@ -1,6 +1,5 @@
 ```
 $ sentry-cli mobile-app upload --help
-? success
 [EXPERIMENTAL] Upload mobile app files to a project.
 
 Usage: sentry-cli[EXE] mobile-app upload [OPTIONS] <PATH>...
@@ -18,17 +17,38 @@ Options:
           The project ID or slug.
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
-      --sha <sha>
-          The git commit sha to use for the upload. If not provided, the current commit sha will be
+      --head-sha <head_sha>
+          The VCS commit sha to use for the upload. If not provided, the current commit sha will be
           used.
-      --build-configuration <build_configuration>
-          The build configuration to use for the upload. If not provided, the current version will
-          be used.
+      --base-sha <base_sha>
+          The VCS commit's base sha to use for the upload. If not provided, the merge-base of the
+          current and remote branch will be used.
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --vcs-provider <vcs_provider>
+          The VCS provider to use for the upload. If not provided, the current provider will be
+          used.
+      --head-repo-name <head_repo_name>
+          The name of the git repository to use for the upload (e.g. organization/repository). If
+          not provided, the current repository will be used.
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands. [aliases: silent]
+      --base-repo-name <base_repo_name>
+          The name of the git repository to use for the upload (e.g. organization/repository). If
+          not provided, the current repository will be used.
+      --head-ref <head_ref>
+          The reference (branch) to use for the upload. If not provided, the current reference will
+          be used.
+      --base-ref <base_ref>
+          The reference (branch) to use for the upload. If not provided, the current reference will
+          be used.
+      --pr-number <pr_number>
+          The pull request number to use for the upload. If not provided, the current pull request
+          number will be used.
+      --build-configuration <build_configuration>
+          The build configuration to use for the upload. If not provided, the current version will
+          be used.
   -h, --help
           Print help
 

@@ -16,7 +16,7 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
+use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, VcsInfo};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
@@ -51,9 +51,44 @@ pub fn make_command(command: Command) -> Command {
                 .required(true),
         )
         .arg(
-            Arg::new("sha")
-                .long("sha")
-                .help("The git commit sha to use for the upload. If not provided, the current commit sha will be used.")
+            Arg::new("head_sha")
+                .long("head-sha")
+                .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
+        )
+        .arg(
+            Arg::new("base_sha")
+                .long("base-sha")
+                .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
+        )
+        .arg(
+            Arg::new("vcs_provider")
+                .long("vcs-provider")
+                .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
+        )
+        .arg(
+            Arg::new("head_repo_name")
+                .long("head-repo-name")
+                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+        )
+        .arg(
+            Arg::new("base_repo_name")
+                .long("base-repo-name")
+                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+        )
+        .arg(
+            Arg::new("head_ref")
+                .long("head-ref")
+                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+        )
+        .arg(
+            Arg::new("base_ref")
+                .long("base-ref")
+                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+        )
+        .arg(
+            Arg::new("pr_number")
+                .long("pr-number")
+                .help("The pull request number to use for the upload. If not provided, the current pull request number will be used.")
         )
         .arg(
             Arg::new("build_configuration")
@@ -67,11 +102,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    let sha = matches
-        .get_one("sha")
+    let head_sha = matches
+        .get_one("head_sha")
         .map(String::as_str)
         .map(Cow::Borrowed)
         .or_else(|| vcs::find_head().ok().map(Cow::Owned));
+
+    // TODO: Implement default values
+    let base_sha = matches.get_one("base_sha").map(String::as_str);
+    let vcs_provider = matches.get_one("vcs_provider").map(String::as_str);
+    let head_repo_name = matches.get_one("head_repo_name").map(String::as_str);
+    let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
+    let head_ref = matches.get_one("head_ref").map(String::as_str);
+    let base_ref = matches.get_one("base_ref").map(String::as_str);
+    let pr_number = matches
+        .get_one("pr_number")
+        .map(String::as_str)
+        .and_then(|s| s.parse::<i32>().ok());
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
@@ -135,13 +182,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
+        let vcs_info = VcsInfo {
+            head_sha: head_sha.as_deref(),
+            base_sha,
+            vcs_provider,
+            head_repo_name,
+            base_repo_name,
+            head_ref,
+            base_ref,
+            pr_number,
+        };
         match upload_file(
             &authenticated_api,
             &bytes,
             &org,
             &project,
-            sha.as_deref(),
             build_configuration,
+            &vcs_info,
         ) {
             Ok(_) => {
                 info!("Successfully uploaded file: {}", path.display());
@@ -342,18 +399,18 @@ fn upload_file(
     bytes: &[u8],
     org: &str,
     project: &str,
-    sha: Option<&str>,
     build_configuration: Option<&str>,
+    vcs_info: &VcsInfo<'_>,
 ) -> Result<()> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
         update to the latest version of Sentry to use the mobile-app upload command.";
 
     debug!(
-        "Uploading file to organization: {}, project: {}, sha: {}, build_configuration: {}",
+        "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
         org,
         project,
-        sha.unwrap_or("unknown"),
-        build_configuration.unwrap_or("unknown")
+        build_configuration.unwrap_or("unknown"),
+        vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
@@ -386,8 +443,14 @@ fn upload_file(
 
     pb.finish_with_duration("Finishing upload");
 
-    let response =
-        api.assemble_mobile_app(org, project, checksum, &checksums, sha, build_configuration)?;
+    let response = api.assemble_mobile_app(
+        org,
+        project,
+        checksum,
+        &checksums,
+        build_configuration,
+        vcs_info,
+    )?;
     chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
     if !chunks.is_empty() {
@@ -406,8 +469,8 @@ fn upload_file(
         &checksums,
         org,
         project,
-        sha,
         build_configuration,
+        vcs_info,
     )?;
     Ok(())
 }
@@ -418,8 +481,8 @@ fn poll_assemble(
     chunks: &[Digest],
     org: &str,
     project: &str,
-    sha: Option<&str>,
     build_configuration: Option<&str>,
+    vcs_info: &VcsInfo<'_>,
 ) -> Result<()> {
     debug!("Polling assemble for checksum: {}", checksum);
 
@@ -430,8 +493,14 @@ fn poll_assemble(
     pb.set_style(progress_style);
 
     let response = loop {
-        let response =
-            api.assemble_mobile_app(org, project, checksum, chunks, sha, build_configuration)?;
+        let response = api.assemble_mobile_app(
+            org,
+            project,
+            checksum,
+            chunks,
+            build_configuration,
+            vcs_info,
+        )?;
 
         if response.state.is_finished() {
             break response;
