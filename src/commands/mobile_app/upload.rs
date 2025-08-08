@@ -108,7 +108,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let head_ref = matches.get_one("head_ref").map(String::as_str);
     let base_ref = matches.get_one("base_ref").map(String::as_str);
-    let pr_number = matches.get_one("pr_number").map(String::as_str).and_then(|s| s.parse::<i32>().ok());
+    let pr_number = matches
+        .get_one("pr_number")
+        .map(String::as_str)
+        .and_then(|s| s.parse::<i32>().ok());
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
