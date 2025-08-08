@@ -42,7 +42,7 @@ pub(super) struct ListLogsArgs {
     org: Option<String>,
 
     #[arg(short = 'p', long = "project")]
-    #[arg(help = "The project ID (numeric) or project slug (string).")]
+    #[arg(help = "The project ID or slug.")]
     project: Option<String>,
 
     #[arg(long = "max-rows", default_value = "100")]
