@@ -93,21 +93,21 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
         (query, None)
     };
 
-    execute_single_fetch(&api, org, &query, project_id, LOG_FIELDS, &args)
+    execute_single_fetch(&api, org, project_id, &query, LOG_FIELDS, &args)
 }
 
 fn execute_single_fetch(
     api: &Api,
     org: &str,
-    query: &str,
     project_id: Option<&str>,
+    query: &str,
     fields: &[&str],
     args: &ListLogsArgs,
 ) -> Result<()> {
     let options = FetchEventsOptions {
         dataset: Dataset::Logs,
         fields,
-        project: project_id,
+        project_id,
         cursor: None,
         query,
         per_page: args.max_rows,
