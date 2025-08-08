@@ -1,5 +1,5 @@
 ```
-$ sentry-cli logs list --org wat-org --project 12345
+$ sentry-cli logs list --org wat-org --project myproject
 ? success
 No logs found
 

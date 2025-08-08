@@ -1,5 +1,5 @@
 ```
-$ sentry-cli logs list --org wat-org --project myproject
+$ sentry-cli logs list --project 12345
 ? success
 +------------------+---------------------------+----------+--------------------------+----------------------+
 | Item ID          | Timestamp                 | Severity | Message                  | Trace                |
