@@ -508,7 +508,7 @@ pub fn get_commits_from_git<'a>(
 pub fn get_default_commits_from_git(
     repo: &Repository,
     default_count: usize,
-) -> Result<(Vec<Commit>, Option<Commit>)> {
+) -> Result<(Vec<Commit<'_>>, Option<Commit<'_>>)> {
     let mut revwalk = repo.revwalk()?;
     revwalk.push_head()?;
     let mut result: Vec<Commit> = revwalk

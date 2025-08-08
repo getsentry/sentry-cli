@@ -306,7 +306,7 @@ impl Display for DifMatch<'_> {
 
 impl Assemblable for DifMatch<'_> {
     /// A DIF's name is its file name.
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         self.file_name().into()
     }
 
