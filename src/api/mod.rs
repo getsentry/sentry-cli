@@ -1454,7 +1454,7 @@ pub struct FetchEventsOptions<'a> {
     /// Fields to include in the response
     pub fields: &'a [&'a str],
     /// Project ID to filter events by
-    pub project: Option<&'a str>,
+    pub project_id: Option<&'a str>,
     /// Cursor for pagination
     pub cursor: Option<&'a str>,
     /// Query string to filter events
@@ -1480,7 +1480,7 @@ impl<'a> FetchEventsOptions<'a> {
             params.push(format!("cursor={}", QueryArg(cursor)));
         }
 
-        if let Some(project) = self.project {
+        if let Some(project) = self.project_id {
             if !project.is_empty() {
                 params.push(format!("project={}", QueryArg(project)));
             }
