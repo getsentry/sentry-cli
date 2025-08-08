@@ -27,6 +27,7 @@ mod update;
 mod upload_dif;
 mod upload_dsym;
 mod upload_proguard;
+mod upload_dart_symbol_map;
 
 use std::fs;
 use std::io;
