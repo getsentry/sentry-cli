@@ -2527,8 +2527,6 @@ struct LogsResponse {
 
 /// VCS information for mobile app uploads
 #[derive(Debug)]
-// This is not dead code because it is used in the mobile app upload command
-#[expect(dead_code)]
 pub struct VcsInfo<'a> {
     pub head_sha: Option<&'a str>,
     pub base_sha: Option<&'a str>,
