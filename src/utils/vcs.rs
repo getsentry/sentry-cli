@@ -211,7 +211,6 @@ fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
 
-// TODO: This is not used anywhere.
 pub fn get_repo_from_remote(repo: &str) -> String {
     let obj = VcsUrl::parse(repo);
     obj.id
