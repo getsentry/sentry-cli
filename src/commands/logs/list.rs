@@ -77,7 +77,7 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
 
     let api = Api::current();
 
-    // Pass numeric project IDs as project parameter, otherwise pass as query string - 
+    // Pass numeric project IDs as project parameter, otherwise pass as query string -
     // current API does not support project slugs as a parameter.
     let (query, project_id) = if is_numeric_project_id(project) {
         (Cow::Borrowed(&args.query), Some(project.as_str()))
