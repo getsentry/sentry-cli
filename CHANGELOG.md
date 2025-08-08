@@ -2,6 +2,16 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.51.1
+
+### Various fixes & improvements
+
+- revert: "build: Pin Rust toolchain minor version (#2687)" (#2692) by @szokeasaurusrex
+- fix(logs): Mark `logs` command as beta (#2690) by @szokeasaurusrex
+- test: Test `logs` help message (#2689) by @szokeasaurusrex
+- build: Pin Rust toolchain minor version (#2687) by @szokeasaurusrex
+- chore: Fix latest clippy lints (#2684) by @rbro112
+
 ## 2.51.0
 
 ### Logs command
