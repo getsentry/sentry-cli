@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use anyhow::Result;
 use clap::Args;
 
@@ -75,22 +77,17 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
 
     let api = Api::current();
 
+    // Pass numeric project IDs as project parameter, otherwise pass as query string - 
+    // current API does not support project slugs as a parameter.
     let (query, project_id) = if is_numeric_project_id(project) {
-        // For numeric project IDs, pass as project parameter
-        let query = if args.query.is_empty() {
-            String::new()
-        } else {
-            args.query.clone()
-        };
-        (query, Some(project.as_str()))
+        (Cow::Borrowed(&args.query), Some(project.as_str()))
     } else {
-        // For project slugs, include in query string
         let query = if args.query.is_empty() {
             format!("project:{project}")
         } else {
             format!("project:{project} {}", args.query)
         };
-        (query, None)
+        (Cow::Owned(query), None)
     };
 
     execute_single_fetch(&api, org, project_id, &query, LOG_FIELDS, &args)
