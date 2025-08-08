@@ -189,21 +189,44 @@ debug   -> 1% sampling
 ### 5. Sentry Integration (`src/utils/log_transmission.rs`)
 
 #### LogTransmitter
-Handles conversion and transmission of log entries to Sentry:
+Handles conversion and transmission of log entries to Sentry using the official Sentry logs protocol:
 
 **Key Methods:**
-- `send_log_batch()`: Converts log entries to Sentry events and sends as envelope
-- `create_sentry_event()`: Maps LogEntry fields to Sentry event structure
-- `convert_log_level()`: Maps custom log levels to Sentry levels
+- `send_log_batch()`: Converts log entries to proper Sentry log envelopes (not events)
+- `convert_to_sentry_log()`: Maps LogEntry to SentryLogPayload structure
+- `create_structured_sentry_log()` / `create_plain_text_sentry_log()`: Creates protocol-compliant log payloads
+- `send_raw_envelope()`: Sends raw envelope bytes using proper logs protocol
 
-#### Rate Limiting
+#### Sentry Logs Protocol Compliance
+The implementation follows the [official Sentry logs protocol specification](https://develop.sentry.dev/sdk/telemetry/logs/):
+
+**Correct Envelope Structure:**
+```json
+{}  // Empty header (no event_id for logs)
+{"type":"log","item_count":N,"content_type":"application/vnd.sentry.items.log+json","length":X}
+{"items":[{...log1...}, {...log2...}, {...logN...}]}
+```
+
+**SentryLogPayload Structure:**
 ```rust
-pub struct TransmissionRateLimiter {
-    max_events_per_minute: u32,
-    current_window_start: Instant,
-    events_in_current_window: u32,
+pub struct SentryLogPayload {
+    pub timestamp: f64,           // Unix timestamp
+    pub trace_id: String,         // 32-char hex trace ID
+    pub level: String,            // Log level (debug, info, warn, error, fatal)
+    pub body: String,             // Log message
+    pub attributes: HashMap<String, SentryLogAttribute>,  // Structured data
 }
 ```
+
+**Key Features:**
+- Logs appear in Sentry's **Logs section** (not Events section)
+- Each log gets a unique trace ID for correlation
+- Structured attributes preserve parsed log fields
+- Proper severity levels with numeric mapping
+- Batch transmission for efficiency
+
+#### Updated EnvelopesApi
+Added `send_raw_envelope()` method to `src/api/envelopes_api.rs` for sending raw envelope bytes while maintaining authentication and error handling.
 
 ## Key Implementation Patterns
 
@@ -237,11 +260,18 @@ The implementation includes comprehensive testing:
 **Unit Tests:**
 - Placed alongside source files (e.g., in `sampling.rs`, `memory_monitor.rs`)
 - Test individual component behavior and edge cases
+- Protocol compliance tests in `log_transmission.rs`
 
 **Integration Tests:**
 - Located in `tests/integration/logs/`
 - Use `.trycmd` format following sentry-cli conventions
 - Test end-to-end command behavior
+
+**Protocol Compliance Verification:**
+- Real-time testing with actual Sentry DSN
+- Verification via `sentry-cli logs list` command
+- Debug output validation for proper envelope format
+- Confirmation that logs appear in Sentry Logs section (not Events)
 
 ## Usage Examples
 
@@ -298,11 +328,52 @@ sentry-cli logs tail high-volume.log --sampling-rate 0.1 --memory-limit 100 --ra
 sentry-cli logs tail --log-level debug /path/to/logfile
 ```
 
+**Verify Logs Ingestion:**
+```bash
+# Check if logs are being sent (should show HTTP 200 responses)
+sentry-cli logs tail /path/to/logfile --log-level debug --org ORG --project PROJECT
+
+# Verify logs appear in Sentry (requires auth token)
+sentry-cli logs list --org ORG --project PROJECT --max-rows 10
+```
+
+**Expected Debug Output:**
+- File watcher initialization and event detection
+- Log parsing results with extracted fields
+- Envelope structure showing correct protocol format
+- HTTP requests/responses for log transmission
+- Batch processing statistics
+
 **Common Issues:**
 - **File Permission Errors:** Ensure sentry-cli has read access to log files
 - **Memory Pressure:** Increase `--memory-limit` or decrease `--batch-size`
 - **Rate Limiting:** Adjust `--rate-limit` based on Sentry plan limits
 - **Parse Failures:** Check log format or use `--format plain` as fallback
+- **Logs Not Appearing:** Verify DSN/auth token, check debug output for HTTP errors
+
+## Protocol Compliance & Standards
+
+### Sentry Logs Protocol
+The implementation strictly follows the [Sentry Logs Protocol](https://develop.sentry.dev/sdk/telemetry/logs/):
+
+**Critical Requirements:**
+- Logs must use `type: "log"` envelope items (not `type: "event"`)
+- Envelope header must be empty `{}` (no event_id for logs)
+- Content-Type must be `application/vnd.sentry.items.log+json`
+- Logs must be wrapped in `{"items": [...]}` structure
+- Each log needs unique trace_id and proper timestamp
+- Severity levels must map to Sentry's expected values
+
+**Verification:**
+- Logs appear in Sentry's "Logs" section (not "Issues/Events")
+- Debug output shows correct envelope format
+- HTTP responses return 200 OK (not empty `{}` body)
+
+### Performance Standards
+- **Memory Efficiency:** Default 50MB limit with monitoring
+- **Batch Processing:** Adaptive batching (10-500 entries per batch)
+- **Rate Limiting:** Configurable events per minute
+- **Error Handling:** Graceful degradation on parse failures
 
 ## Future Enhancement Ideas
 
