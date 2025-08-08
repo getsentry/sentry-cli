@@ -45,11 +45,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
 
-      - name: Setup Rust Toolchain
-        run: |
-          rustup set profile minimal
-          rustup component add clippy rustfmt
-          rustup target add ${{ matrix.target }}
+      - name: Install Rust Toolchain
+        run: rustup toolchain install stable --profile minimal --component clippy --component rustfmt --no-self-update
+
+      - name: Add Target
+        run: rustup target add ${{ matrix.target }}
 
       - name: Install musl-gcc (Linux only)
         if: matrix.os == 'ubuntu-24.04'
