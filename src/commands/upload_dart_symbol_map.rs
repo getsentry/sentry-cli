@@ -144,8 +144,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
 
             let options = ChunkOptions::new(chunk_upload_options, &org, &project)
-                .with_max_wait(DEFAULT_MAX_WAIT)
-                .with_strip_debug_ids_override(false);
+                .with_max_wait(DEFAULT_MAX_WAIT);
 
             let chunked = Chunked::from(object, options.server_options().chunk_size as usize)?;
             let (_uploaded, has_processing_errors) = upload_chunked_objects(&[chunked], options)?;
