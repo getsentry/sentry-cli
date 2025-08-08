@@ -1248,15 +1248,16 @@ fn upload_difs_chunked(
         let source_bundles = create_source_bundles(&processed, options.upload_il2cpp_mappings)?;
         processed.extend(source_bundles);
     }
-    if options.no_upload {
-        println!("{} skipping upload.", style(">").dim());
-        return Ok(Default::default());
-    }
 
     // Calculate checksums and chunks
     let chunked = prepare_difs(processed, |m| {
         Chunked::from(m, chunk_options.chunk_size as usize)
     })?;
+
+    if options.no_upload {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(Default::default());
+    }
 
     let options = options.into_chunk_options(chunk_options);
     chunks::upload_chunked_objects(&chunked, options)
