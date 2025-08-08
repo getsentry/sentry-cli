@@ -20,6 +20,11 @@ fn validate_max_rows(s: &str) -> Result<usize> {
     }
 }
 
+/// Check if a project identifier is numeric (project ID) or string (project slug)
+fn is_numeric_project_id(project: &str) -> bool {
+    project.chars().all(|c| c.is_ascii_digit())
+}
+
 /// Fields to fetch from the logs API
 const LOG_FIELDS: &[&str] = &[
     "sentry.item_id",
@@ -37,7 +42,7 @@ pub(super) struct ListLogsArgs {
     org: Option<String>,
 
     #[arg(short = 'p', long = "project")]
-    #[arg(help = "The project ID (slug not supported).")]
+    #[arg(help = "The project ID (numeric) or project slug (string).")]
     project: Option<String>,
 
     #[arg(long = "max-rows", default_value = "100")]
@@ -70,29 +75,41 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
 
     let api = Api::current();
 
-    let query = if args.query.is_empty() {
-        None
+    let (query, project_id) = if is_numeric_project_id(project) {
+        // For numeric project IDs, pass as project parameter
+        let query = if args.query.is_empty() {
+            String::new()
+        } else {
+            args.query.clone()
+        };
+        (query, Some(project.as_str()))
     } else {
-        Some(args.query.as_str())
+        // For project slugs, include in query string
+        let query = if args.query.is_empty() {
+            format!("project:{project}")
+        } else {
+            format!("project:{project} {}", args.query)
+        };
+        (query, None)
     };
 
-    execute_single_fetch(&api, org, project, query, LOG_FIELDS, &args)
+    execute_single_fetch(&api, org, &query, project_id, LOG_FIELDS, &args)
 }
 
 fn execute_single_fetch(
     api: &Api,
     org: &str,
-    project: &str,
-    query: Option<&str>,
+    query: &str,
+    project_id: Option<&str>,
     fields: &[&str],
     args: &ListLogsArgs,
 ) -> Result<()> {
     let options = FetchEventsOptions {
         dataset: Dataset::Logs,
         fields,
-        project_id: project,
+        project: project_id,
         cursor: None,
-        query: query.unwrap_or(""),
+        query,
         per_page: args.max_rows,
         stats_period: "90d",
         sort: "-timestamp",
