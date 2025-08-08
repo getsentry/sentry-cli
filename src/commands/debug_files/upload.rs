@@ -270,6 +270,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     upload.include_sources(matches.get_flag("include_sources"));
     upload.il2cpp_mapping(matches.get_flag("il2cpp_mapping"));
+    upload.no_upload(matches.get_flag("no_upload"));
 
     // Configure BCSymbolMap resolution, if possible
     if let Some(symbol_map) = matches.get_one::<String>("symbol_maps") {
@@ -286,11 +287,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 upload.search_path(path);
             }
         }
-    }
-
-    if matches.get_flag("no_upload") {
-        println!("{} skipping upload.", style(">").dim());
-        return Ok(());
     }
 
     // Execute the upload

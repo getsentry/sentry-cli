@@ -1248,6 +1248,10 @@ fn upload_difs_chunked(
         let source_bundles = create_source_bundles(&processed, options.upload_il2cpp_mappings)?;
         processed.extend(source_bundles);
     }
+    if options.no_upload {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(Default::default());
+    }
 
     // Calculate checksums and chunks
     let chunked = prepare_difs(processed, |m| {
@@ -1359,6 +1363,10 @@ fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
         println!("{} Nothing to upload", style(">").dim());
         return Ok(Default::default());
     }
+    if options.no_upload {
+        println!("{} skipping upload.", style(">").dim());
+        return Ok(Default::default());
+    }
 
     // Upload missing DIFs in batches
     let uploaded = upload_in_batches(&missing, options)?;
@@ -1448,6 +1456,7 @@ pub struct DifUpload<'a> {
     wait: bool,
     upload_il2cpp_mappings: bool,
     il2cpp_mappings_allowed: bool,
+    no_upload: bool,
 }
 
 impl<'a> DifUpload<'a> {
@@ -1488,6 +1497,7 @@ impl<'a> DifUpload<'a> {
             wait: false,
             upload_il2cpp_mappings: false,
             il2cpp_mappings_allowed: false,
+            no_upload: false,
         }
     }
 
@@ -1596,6 +1606,14 @@ impl<'a> DifUpload<'a> {
     /// Defaults to `false`.
     pub fn il2cpp_mapping(&mut self, il2cpp_mapping: bool) -> &mut Self {
         self.upload_il2cpp_mappings = il2cpp_mapping;
+        self
+    }
+
+    /// Set whether to skip uploading the detected debug files for troubleshooting purposes.
+    ///
+    /// Defaults to `false`.
+    pub fn no_upload(&mut self, skip: bool) -> &mut Self {
+        self.no_upload = skip;
         self
     }
 
