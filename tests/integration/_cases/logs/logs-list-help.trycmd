@@ -18,7 +18,7 @@ Options:
           in key:value format.
 
   -p, --project <PROJECT>
-          The project ID (numeric) or project slug (string).
+          The project ID or slug.
 
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
