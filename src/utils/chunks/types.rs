@@ -98,7 +98,7 @@ impl<T> Assemblable for &T
 where
     T: Assemblable,
 {
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         (*self).name()
     }
 
