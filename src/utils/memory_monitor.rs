@@ -58,20 +58,9 @@ impl MemoryMonitor {
         self.current_usage.load(Ordering::Relaxed)
     }
 
-    /// Get current memory usage in MB
-    pub fn current_usage_mb(&self) -> usize {
-        self.current_usage_bytes() / (1024 * 1024)
-    }
-
     /// Get maximum allowed memory usage in MB
     pub fn max_usage_mb(&self) -> usize {
         self.max_usage / (1024 * 1024)
-    }
-
-    /// Check if we're near the memory limit (>80%)
-    pub fn is_near_limit(&self) -> bool {
-        let current = self.current_usage.load(Ordering::Relaxed);
-        current > (self.max_usage * 8) / 10
     }
 
     /// Get memory usage percentage (0-100)
@@ -86,14 +75,13 @@ impl MemoryMonitor {
         let now = Instant::now().elapsed().as_secs() as usize;
         let last_log = self.last_log_time.load(Ordering::Relaxed);
         
-        if now - last_log >= self.log_interval.as_secs() as usize {
-            if self.last_log_time.compare_exchange(last_log, now, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
+        if now - last_log >= self.log_interval.as_secs() as usize
+            && self.last_log_time.compare_exchange(last_log, now, Ordering::Relaxed, Ordering::Relaxed).is_ok() {
                 debug!("Memory usage: {} MB / {} MB ({:.1}%)", 
                        current_usage / (1024 * 1024),
                        self.max_usage / (1024 * 1024),
                        self.usage_percentage());
             }
-        }
     }
 }
 
@@ -105,6 +93,7 @@ pub fn estimate_entry_size(entry: &str) -> usize {
 
 /// Memory-bounded queue for log entries with automatic cleanup
 #[derive(Debug)]
+
 pub struct BoundedLogQueue {
     entries: Vec<String>,
     memory_monitor: MemoryMonitor,
@@ -171,15 +160,7 @@ impl BoundedLogQueue {
         self.entries.len()
     }
 
-    /// Check if queue is empty
-    pub fn is_empty(&self) -> bool {
-        self.entries.is_empty()
-    }
 
-    /// Get memory monitor reference
-    pub fn memory_monitor(&self) -> &MemoryMonitor {
-        &self.memory_monitor
-    }
 }
 
 #[cfg(test)]
@@ -206,13 +187,13 @@ mod tests {
     fn test_bounded_queue() {
         let mut queue = BoundedLogQueue::new(1, 3); // 1 MB, 3 entries max
         
-        queue.push("entry1".to_string());
-        queue.push("entry2".to_string());
-        queue.push("entry3".to_string());
+        queue.push("entry1".to_owned());
+        queue.push("entry2".to_owned());
+        queue.push("entry3".to_owned());
         assert_eq!(queue.len(), 3);
         
         // Should drop oldest when adding 4th entry
-        queue.push("entry4".to_string());
+        queue.push("entry4".to_owned());
         assert_eq!(queue.len(), 3);
         
         let entries = queue.drain();

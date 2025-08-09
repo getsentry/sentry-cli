@@ -120,7 +120,7 @@ pub(super) fn execute(args: TailLogsArgs) -> Result<()> {
     let adaptive_config = AdaptiveBatchingConfig {
         min_batch_size: 10,
         max_batch_size: (args.batch_size as usize * 2).min(1000),
-        base_timeout: Duration::from_secs(args.batch_timeout),
+
         min_timeout: Duration::from_secs(1),
         max_timeout: Duration::from_secs(args.batch_timeout * 2),
         recent_flush_times: Vec::new(),
@@ -152,7 +152,7 @@ pub(super) fn execute(args: TailLogsArgs) -> Result<()> {
     let parser = create_parser(log_format);
 
     // Initialize Sentry log transmitter
-    let log_transmitter = LogTransmitter::new(org.to_string(), project.to_string())?;
+    let log_transmitter = LogTransmitter::new(org.clone(), project.clone())?;
     let mut rate_limiter = TransmissionRateLimiter::new(args.rate_limit);
     
     // Initialize performance monitoring and optimization features
@@ -186,7 +186,7 @@ pub(super) fn execute(args: TailLogsArgs) -> Result<()> {
 
         // Check for file system events
         match file_watcher.check_events(poll_interval)? {
-            Some(FileEvent::DataWritten { .. }) => {
+            Some(FileEvent::DataWritten) => {
                 // File has new data, read new lines
                 let new_lines = position_tracker.read_new_lines()?;
                 
@@ -251,11 +251,7 @@ pub(super) fn execute(args: TailLogsArgs) -> Result<()> {
                     }
                 }
             }
-            Some(FileEvent::Truncated { new_size }) => {
-                warn!("File was truncated to {} bytes", new_size);
-                // Reset position tracker
-                position_tracker = PositionTracker::new(&args.file)?;
-            }
+
             Some(FileEvent::Deleted) => {
                 warn!("Log file was deleted, stopping monitoring");
                 break;
@@ -327,7 +323,7 @@ pub(super) fn execute(args: TailLogsArgs) -> Result<()> {
 /// Read sample lines from a file for format auto-detection
 fn read_sample_lines(file_path: &PathBuf, max_lines: usize) -> Result<Vec<String>> {
     use std::fs::File;
-    use std::io::{BufRead, BufReader};
+    use std::io::{BufRead as _, BufReader};
 
     let file = File::open(file_path)?;
     let reader = BufReader::new(file);

@@ -13,13 +13,13 @@ pub struct LogBatch {
 
 /// Configuration for adaptive batching behavior
 #[derive(Debug, Clone)]
+
 pub struct AdaptiveBatchingConfig {
     /// Minimum batch size (always flush at least this many)
     pub min_batch_size: usize,
     /// Maximum batch size (never exceed this)
     pub max_batch_size: usize,
-    /// Base timeout for batching
-    pub base_timeout: Duration,
+
     /// Minimum timeout (for high-volume periods)
     pub min_timeout: Duration,
     /// Maximum timeout (for low-volume periods)
@@ -35,7 +35,7 @@ impl Default for AdaptiveBatchingConfig {
         AdaptiveBatchingConfig {
             min_batch_size: 10,
             max_batch_size: 1000,
-            base_timeout: Duration::from_secs(5),
+
             min_timeout: Duration::from_secs(1),
             max_timeout: Duration::from_secs(30),
             recent_flush_times: Vec::new(),
@@ -164,19 +164,9 @@ impl LogBatch {
         }
     }
 
-    /// Get the current number of entries in the batch
-    pub fn len(&self) -> usize {
-        self.entries.len()
-    }
-
     /// Check if the batch is empty
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
-    }
-
-    /// Get time since last flush
-    pub fn time_since_last_flush(&self) -> Duration {
-        self.last_flush.elapsed()
     }
 }
 

@@ -1,6 +1,6 @@
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use chrono::{DateTime, Utc};
-use log::{debug, warn};
+use log::debug;
 
 use serde::{Deserialize, Serialize};
 use sentry::types::Uuid;
@@ -73,15 +73,8 @@ impl LogTransmitter {
         let mut sentry_logs = Vec::new();
         
         for log_entry_json in log_entries {
-            match self.convert_to_sentry_log(&log_entry_json) {
-                Ok(sentry_log) => {
-                    sentry_logs.push(sentry_log);
-                }
-                Err(e) => {
-                    warn!("Failed to convert log entry: {}", e);
-                    // Continue processing other entries even if one fails
-                }
-            }
+            let sentry_log = self.convert_to_sentry_log(&log_entry_json);
+            sentry_logs.push(sentry_log);
         }
 
         if sentry_logs.is_empty() {
@@ -103,7 +96,7 @@ impl LogTransmitter {
             r#"{{"type":"log","item_count":{},"content_type":"application/vnd.sentry.items.log+json"}}"#,
             envelope_payload.items.len()
         );
-        let envelope_content = format!("{}\n{}\n{}", envelope_header, item_header, envelope_json);
+        let envelope_content = format!("{envelope_header}\n{item_header}\n{envelope_json}");
 
         debug!("Sending log envelope:\n{}", envelope_content);
 
@@ -116,7 +109,7 @@ impl LogTransmitter {
     }
 
     /// Convert a log entry JSON string to Sentry log format
-    fn convert_to_sentry_log(&self, log_entry_json: &str) -> Result<SentryLogPayload> {
+    fn convert_to_sentry_log(&self, log_entry_json: &str) -> SentryLogPayload {
         // First, try to deserialize as our LogEntry type
         match serde_json::from_str::<LogEntry>(log_entry_json) {
             Ok(log_entry) => self.create_structured_sentry_log(&log_entry),
@@ -128,7 +121,7 @@ impl LogTransmitter {
     }
 
     /// Create a structured Sentry log from our LogEntry
-    fn create_structured_sentry_log(&self, log_entry: &LogEntry) -> Result<SentryLogPayload> {
+    fn create_structured_sentry_log(&self, log_entry: &LogEntry) -> SentryLogPayload {
         let mut attributes = HashMap::new();
 
         // Add structured fields as attributes with proper typing
@@ -137,56 +130,56 @@ impl LogTransmitter {
                 key.clone(),
                 SentryLogAttribute {
                     value: serde_json::Value::String(value.clone()),
-                    attr_type: "string".to_string(),
+                    attr_type: "string".to_owned(),
                 },
             );
         }
 
         // Add SDK information as per spec
         attributes.insert(
-            "sentry.sdk.name".to_string(),
+            "sentry.sdk.name".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String("sentry-cli".to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String("sentry-cli".to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
         attributes.insert(
-            "sentry.sdk.version".to_string(),
+            "sentry.sdk.version".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String(env!("CARGO_PKG_VERSION").to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
 
         // Add format information
         attributes.insert(
-            "log_format".to_string(),
+            "log_format".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String(log_entry.format.name().to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String(log_entry.format.name().to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
 
         // Add source information
         attributes.insert(
-            "log_source".to_string(),
+            "log_source".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String("sentry-cli-tail".to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String("sentry-cli-tail".to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
         attributes.insert(
-            "organization".to_string(),
+            "organization".to_owned(),
             SentryLogAttribute {
                 value: serde_json::Value::String(self.org.clone()),
-                attr_type: "string".to_string(),
+                attr_type: "string".to_owned(),
             },
         );
         attributes.insert(
-            "project".to_string(),
+            "project".to_owned(),
             SentryLogAttribute {
                 value: serde_json::Value::String(self.project.clone()),
-                attr_type: "string".to_string(),
+                attr_type: "string".to_owned(),
             },
         );
 
@@ -205,65 +198,65 @@ impl LogTransmitter {
 
         let (level, severity_number) = convert_log_level_to_sentry(&log_entry.level);
 
-        Ok(SentryLogPayload {
+        SentryLogPayload {
             timestamp,
             trace_id,
             level,
             body: log_entry.message.clone(),
             attributes,
             severity_number: Some(severity_number),
-        })
+        }
     }
 
     /// Create a plain text Sentry log entry
-    fn create_plain_text_sentry_log(&self, message: &str) -> Result<SentryLogPayload> {
+    fn create_plain_text_sentry_log(&self, message: &str) -> SentryLogPayload {
         let mut attributes = HashMap::new();
 
         // Add SDK information
         attributes.insert(
-            "sentry.sdk.name".to_string(),
+            "sentry.sdk.name".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String("sentry-cli".to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String("sentry-cli".to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
         attributes.insert(
-            "sentry.sdk.version".to_string(),
+            "sentry.sdk.version".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String(env!("CARGO_PKG_VERSION").to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
 
         // Add format information
         attributes.insert(
-            "log_format".to_string(),
+            "log_format".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String("plain".to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String("plain".to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
 
         // Add source information
         attributes.insert(
-            "log_source".to_string(),
+            "log_source".to_owned(),
             SentryLogAttribute {
-                value: serde_json::Value::String("sentry-cli-tail".to_string()),
-                attr_type: "string".to_string(),
+                value: serde_json::Value::String("sentry-cli-tail".to_owned()),
+                attr_type: "string".to_owned(),
             },
         );
         attributes.insert(
-            "organization".to_string(),
+            "organization".to_owned(),
             SentryLogAttribute {
                 value: serde_json::Value::String(self.org.clone()),
-                attr_type: "string".to_string(),
+                attr_type: "string".to_owned(),
             },
         );
         attributes.insert(
-            "project".to_string(),
+            "project".to_owned(),
             SentryLogAttribute {
                 value: serde_json::Value::String(self.project.clone()),
-                attr_type: "string".to_string(),
+                attr_type: "string".to_owned(),
             },
         );
 
@@ -275,14 +268,14 @@ impl LogTransmitter {
         // Generate a random trace_id (32 hex chars)
         let trace_id = format!("{:032x}", rand::random::<u128>());
 
-        Ok(SentryLogPayload {
+        SentryLogPayload {
             timestamp,
             trace_id,
-            level: "info".to_string(),
-            body: message.to_string(),
+            level: "info".to_owned(),
+            body: message.to_owned(),
             attributes,
             severity_number: Some(9), // Info level is 9-12, we use 9
-        })
+        }
     }
 
     /// Send a raw envelope to Sentry using the updated envelope API
@@ -298,12 +291,12 @@ impl LogTransmitter {
 /// Returns (level_string, severity_number) as per Sentry logs protocol
 fn convert_log_level_to_sentry(level: &Option<LogLevel>) -> (String, u8) {
     match level {
-        Some(LogLevel::Debug) => ("debug".to_string(), 5),  // Debug level: 5-8
-        Some(LogLevel::Info) => ("info".to_string(), 9),    // Info level: 9-12
-        Some(LogLevel::Warning) => ("warn".to_string(), 13), // Warn level: 13-16
-        Some(LogLevel::Error) => ("error".to_string(), 17),  // Error level: 17-20
-        Some(LogLevel::Fatal) => ("fatal".to_string(), 21),  // Fatal level: 21-24
-        None => ("info".to_string(), 9), // Default to info for unspecified levels
+        Some(LogLevel::Debug) => ("debug".to_owned(), 5),  // Debug level: 5-8
+        Some(LogLevel::Info) => ("info".to_owned(), 9),    // Info level: 9-12
+        Some(LogLevel::Warning) => ("warn".to_owned(), 13), // Warn level: 13-16
+        Some(LogLevel::Error) => ("error".to_owned(), 17),  // Error level: 17-20
+        Some(LogLevel::Fatal) => ("fatal".to_owned(), 21),  // Fatal level: 21-24
+        None => ("info".to_owned(), 9), // Default to info for unspecified levels
     }
 }
 
@@ -329,7 +322,7 @@ impl TransmissionRateLimiter {
         let now = Utc::now();
         
         // Reset counter if we've moved to a new minute
-        use chrono::Timelike;
+        use chrono::Timelike as _;
         if now.minute() != self.current_minute.minute() || now.hour() != self.current_minute.hour() {
             self.current_minute = now;
             self.events_this_minute = 0;
@@ -356,12 +349,12 @@ mod tests {
 
     #[test]
     fn test_convert_log_level_to_sentry() {
-        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Debug)), ("debug".to_string(), 5));
-        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Info)), ("info".to_string(), 9));
-        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Warning)), ("warn".to_string(), 13));
-        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Error)), ("error".to_string(), 17));
-        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Fatal)), ("fatal".to_string(), 21));
-        assert_eq!(convert_log_level_to_sentry(&None), ("info".to_string(), 9));
+        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Debug)), ("debug".to_owned(), 5));
+        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Info)), ("info".to_owned(), 9));
+        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Warning)), ("warn".to_owned(), 13));
+        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Error)), ("error".to_owned(), 17));
+        assert_eq!(convert_log_level_to_sentry(&Some(LogLevel::Fatal)), ("fatal".to_owned(), 21));
+        assert_eq!(convert_log_level_to_sentry(&None), ("info".to_owned(), 9));
     }
 
     #[test]

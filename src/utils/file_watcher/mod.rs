@@ -1,6 +1,6 @@
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use log::{debug, warn};
-use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher as _};
 use std::path::Path;
 use std::sync::mpsc::{self, Receiver};
 use std::time::Duration;
@@ -11,11 +11,11 @@ mod position_tracker;
 
 /// Events that can occur during file watching
 #[derive(Debug, Clone)]
+
 pub enum FileEvent {
     /// New data has been written to the file
-    DataWritten { new_size: u64 },
-    /// File was truncated (size decreased)
-    Truncated { new_size: u64 },
+    DataWritten,
+
     /// File was moved or renamed 
     Moved,
     /// File was deleted
@@ -26,7 +26,7 @@ pub enum FileEvent {
 
 /// Cross-platform file watcher for monitoring log files
 pub struct LogFileWatcher {
-    watcher: RecommendedWatcher,
+    _watcher: RecommendedWatcher,
     receiver: Receiver<Result<Event, notify::Error>>,
     file_path: std::path::PathBuf,
 }
@@ -68,7 +68,7 @@ impl LogFileWatcher {
         debug!("Started watching file: {}", file_path.display());
 
         Ok(LogFileWatcher {
-            watcher,
+            _watcher: watcher,
             receiver,
             file_path,
         })
@@ -80,7 +80,7 @@ impl LogFileWatcher {
         match self.receiver.recv_timeout(timeout) {
             Ok(Ok(event)) => {
                 debug!("File system event: {:?}", event);
-                self.process_event(event)
+                Ok(self.process_event(event))
             }
             Ok(Err(e)) => {
                 warn!("File system notification error: {}", e);
@@ -94,50 +94,43 @@ impl LogFileWatcher {
     }
 
     /// Process a file system event and convert it to a LogEvent
-    fn process_event(&self, event: Event) -> Result<Option<FileEvent>> {
+    fn process_event(&self, event: Event) -> Option<FileEvent> {
         // Only process events for our target file
         if !event.paths.iter().any(|p| p == &self.file_path) {
-            return Ok(None);
+            return None;
         }
 
         match event.kind {
             EventKind::Modify(notify::event::ModifyKind::Data(_)) => {
                 // File content was modified
-                if let Ok(metadata) = std::fs::metadata(&self.file_path) {
-                    Ok(Some(FileEvent::DataWritten {
-                        new_size: metadata.len(),
-                    }))
+                if let Ok(_metadata) = std::fs::metadata(&self.file_path) {
+                    Some(FileEvent::DataWritten)
                 } else {
                     // File might have been deleted
-                    Ok(Some(FileEvent::Deleted))
+                    Some(FileEvent::Deleted)
                 }
             }
             EventKind::Modify(notify::event::ModifyKind::Metadata(_)) => {
                 // File metadata changed, check if size changed
-                if let Ok(metadata) = std::fs::metadata(&self.file_path) {
-                    Ok(Some(FileEvent::DataWritten {
-                        new_size: metadata.len(),
-                    }))
+                if let Ok(_metadata) = std::fs::metadata(&self.file_path) {
+                    Some(FileEvent::DataWritten)
                 } else {
-                    Ok(None)
+                    None
                 }
             }
-            EventKind::Remove(_) => Ok(Some(FileEvent::Deleted)),
-            EventKind::Create(_) => Ok(Some(FileEvent::Created)),
+            EventKind::Remove(_) => Some(FileEvent::Deleted),
+            EventKind::Create(_) => Some(FileEvent::Created),
             EventKind::Modify(notify::event::ModifyKind::Name(notify::event::RenameMode::To)) => {
-                Ok(Some(FileEvent::Moved))
+                Some(FileEvent::Moved)
             }
             _ => {
                 debug!("Ignoring file system event: {:?}", event.kind);
-                Ok(None)
+                None
             }
         }
     }
 
-    /// Get the path of the file being watched
-    pub fn file_path(&self) -> &Path {
-        &self.file_path
-    }
+
 }
 
 /// Handle graceful shutdown signals

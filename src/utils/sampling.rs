@@ -115,22 +115,15 @@ impl AdaptiveSampler {
     pub fn get_stats(&self) -> SamplingStats {
         SamplingStats {
             current_rate: self.current_rate,
-            base_rate: self.base_rate,
-            current_eps: self.calculate_current_eps(),
-            target_eps: self.target_eps,
-            recent_events_count: self.recent_events.len(),
         }
     }
 }
 
 /// Statistics about sampling behavior
 #[derive(Debug, Clone)]
+
 pub struct SamplingStats {
     pub current_rate: f64,
-    pub base_rate: f64,
-    pub current_eps: f64,
-    pub target_eps: f64,
-    pub recent_events_count: usize,
 }
 
 /// Priority-based sampling for different log levels
@@ -148,11 +141,11 @@ impl PrioritySampler {
     /// Create a new priority sampler
     pub fn new(target_eps: f64) -> Self {
         let mut level_rates = HashMap::new();
-        level_rates.insert("fatal".to_string(), 1.0);    // Always sample fatal
-        level_rates.insert("error".to_string(), 0.8);    // Sample most errors
-        level_rates.insert("warning".to_string(), 0.4);  // Sample some warnings
-        level_rates.insert("info".to_string(), 0.1);     // Sample few info
-        level_rates.insert("debug".to_string(), 0.01);   // Sample very few debug
+        level_rates.insert("fatal".to_owned(), 1.0);    // Always sample fatal
+        level_rates.insert("error".to_owned(), 0.8);    // Sample most errors
+        level_rates.insert("warning".to_owned(), 0.4);  // Sample some warnings
+        level_rates.insert("info".to_owned(), 0.1);     // Sample few info
+        level_rates.insert("debug".to_owned(), 0.01);   // Sample very few debug
 
         PrioritySampler {
             level_rates,
@@ -184,28 +177,10 @@ impl PrioritySampler {
         should_sample
     }
 
-    /// Get current sampling statistics
-    pub fn get_stats(&self) -> PrioritySamplingStats {
-        PrioritySamplingStats {
-            level_rates: self.level_rates.clone(),
-            adaptive_stats: self.adaptive_sampler.get_stats(),
-            default_rate: self.default_rate,
-        }
-    }
 
-    /// Update sampling rate for a specific log level
-    pub fn set_level_rate(&mut self, level: &str, rate: f64) {
-        self.level_rates.insert(level.to_string(), rate.clamp(0.0, 1.0));
-    }
 }
 
-/// Statistics for priority-based sampling
-#[derive(Debug, Clone)]
-pub struct PrioritySamplingStats {
-    pub level_rates: HashMap<String, f64>,
-    pub adaptive_stats: SamplingStats,
-    pub default_rate: f64,
-}
+
 
 /// Simple deterministic sampling based on hash
 pub fn hash_sample(content: &str, rate: f64) -> bool {
@@ -217,7 +192,7 @@ pub fn hash_sample(content: &str, rate: f64) -> bool {
     }
 
     use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    use std::hash::{Hash as _, Hasher as _};
 
     let mut hasher = DefaultHasher::new();
     content.hash(&mut hasher);
@@ -267,7 +242,7 @@ mod tests {
     fn test_hash_sample() {
         // Test with 50% rate
         let samples: Vec<_> = (0..1000)
-            .map(|i| hash_sample(&format!("entry_{}", i), 0.5))
+            .map(|i| hash_sample(&format!("entry_{i}"), 0.5))
             .collect();
         
         let sample_rate = samples.iter().filter(|&&x| x).count() as f64 / 1000.0;

@@ -1,7 +1,7 @@
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use log::debug;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Seek, SeekFrom};
+use std::io::{BufRead as _, BufReader, Seek as _, SeekFrom};
 use std::path::Path;
 
 /// Tracks file position for tail-like behavior
@@ -47,7 +47,7 @@ impl PositionTracker {
         // Check if file was rotated (inode changed)
         if self.inode.is_some() && new_inode != self.inode {
             debug!("File rotation detected for {}", self.file_path.display());
-            self.handle_file_rotation(new_size, new_inode)?;
+            self.handle_file_rotation(new_size, new_inode);
             return Ok(0); // No new data from current position after rotation
         }
 
@@ -114,12 +114,11 @@ impl PositionTracker {
     }
 
     /// Handle file rotation scenario
-    fn handle_file_rotation(&mut self, new_size: u64, new_inode: Option<u64>) -> Result<()> {
+    fn handle_file_rotation(&mut self, new_size: u64, new_inode: Option<u64>) {
         debug!("Handling file rotation, resetting position to 0");
         self.current_position = 0;
         self.current_size = new_size;
         self.inode = new_inode;
-        Ok(())
     }
 
     /// Get the current file position
@@ -136,8 +135,14 @@ impl PositionTracker {
 /// Get file inode number for rotation detection (Unix-like systems)
 #[cfg(unix)]
 fn get_inode(metadata: &std::fs::Metadata) -> Option<u64> {
-    use std::os::unix::fs::MetadataExt;
-    Some(metadata.ino())
+    use std::os::unix::fs::MetadataExt as _;
+    // Unix systems always have inodes, but we return Option for API consistency
+    if metadata.len() == 0 && metadata.ino() == 0 {
+        // Handle edge case of empty/invalid file
+        None
+    } else {
+        Some(metadata.ino())
+    }
 }
 
 /// Windows doesn't have inodes, so we use file index instead
@@ -157,7 +162,7 @@ fn get_inode(_metadata: &std::fs::Metadata) -> Option<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Write;
+    use std::io::Write as _;
     use tempfile::NamedTempFile;
 
     #[test]

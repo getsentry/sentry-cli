@@ -141,7 +141,7 @@ mod tests {
 
     #[test]
     fn test_detect_log_format_fallback() {
-        let sample_lines = vec!["some random text".to_string()];
+        let sample_lines = vec!["some random text".to_owned()];
         assert!(matches!(detect_log_format(&sample_lines), LogFormat::Plain));
     }
 }

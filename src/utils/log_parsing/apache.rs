@@ -44,25 +44,25 @@ impl ApacheParser {
             let mut fields = HashMap::new();
 
             // Extract fields
-            let host = captures.get(1).unwrap().as_str();
-            let ident = captures.get(2).unwrap().as_str();
-            let authuser = captures.get(3).unwrap().as_str();
-            let timestamp_str = captures.get(4).unwrap().as_str();
-            let request = captures.get(5).unwrap().as_str();
-            let status = captures.get(6).unwrap().as_str();
-            let bytes = captures.get(7).unwrap().as_str();
+            let host = captures.get(1).expect("regex capture group should exist").as_str();
+            let ident = captures.get(2).expect("regex capture group should exist").as_str();
+            let authuser = captures.get(3).expect("regex capture group should exist").as_str();
+            let timestamp_str = captures.get(4).expect("regex capture group should exist").as_str();
+            let request = captures.get(5).expect("regex capture group should exist").as_str();
+            let status = captures.get(6).expect("regex capture group should exist").as_str();
+            let bytes = captures.get(7).expect("regex capture group should exist").as_str();
 
-            fields.insert("remote_host".to_string(), host.to_string());
+            fields.insert("remote_host".to_owned(), host.to_owned());
             if ident != "-" {
-                fields.insert("remote_ident".to_string(), ident.to_string());
+                fields.insert("remote_ident".to_owned(), ident.to_owned());
             }
             if authuser != "-" {
-                fields.insert("remote_user".to_string(), authuser.to_string());
+                fields.insert("remote_user".to_owned(), authuser.to_owned());
             }
-            fields.insert("request".to_string(), request.to_string());
-            fields.insert("status".to_string(), status.to_string());
+            fields.insert("request".to_owned(), request.to_owned());
+            fields.insert("status".to_owned(), status.to_owned());
             if bytes != "-" {
-                fields.insert("bytes_sent".to_string(), bytes.to_string());
+                fields.insert("bytes_sent".to_owned(), bytes.to_owned());
             }
 
             // Parse timestamp - Apache format: 10/Oct/2000:13:55:36 -0700
@@ -76,7 +76,7 @@ impl ApacheParser {
             };
 
             Ok(LogEntry {
-                message: line.to_string(),
+                message: line.to_owned(),
                 timestamp,
                 level,
                 fields,
@@ -93,33 +93,33 @@ impl ApacheParser {
             let mut fields = HashMap::new();
 
             // Extract all fields from combined format
-            let host = captures.get(1).unwrap().as_str();
-            let ident = captures.get(2).unwrap().as_str();
-            let authuser = captures.get(3).unwrap().as_str();
-            let timestamp_str = captures.get(4).unwrap().as_str();
-            let request = captures.get(5).unwrap().as_str();
-            let status = captures.get(6).unwrap().as_str();
-            let bytes = captures.get(7).unwrap().as_str();
-            let referer = captures.get(8).unwrap().as_str();
-            let user_agent = captures.get(9).unwrap().as_str();
+            let host = captures.get(1).expect("regex capture group should exist").as_str();
+            let ident = captures.get(2).expect("regex capture group should exist").as_str();
+            let authuser = captures.get(3).expect("regex capture group should exist").as_str();
+            let timestamp_str = captures.get(4).expect("regex capture group should exist").as_str();
+            let request = captures.get(5).expect("regex capture group should exist").as_str();
+            let status = captures.get(6).expect("regex capture group should exist").as_str();
+            let bytes = captures.get(7).expect("regex capture group should exist").as_str();
+            let referer = captures.get(8).expect("regex capture group should exist").as_str();
+            let user_agent = captures.get(9).expect("regex capture group should exist").as_str();
 
-            fields.insert("remote_host".to_string(), host.to_string());
+            fields.insert("remote_host".to_owned(), host.to_owned());
             if ident != "-" {
-                fields.insert("remote_ident".to_string(), ident.to_string());
+                fields.insert("remote_ident".to_owned(), ident.to_owned());
             }
             if authuser != "-" {
-                fields.insert("remote_user".to_string(), authuser.to_string());
+                fields.insert("remote_user".to_owned(), authuser.to_owned());
             }
-            fields.insert("request".to_string(), request.to_string());
-            fields.insert("status".to_string(), status.to_string());
+            fields.insert("request".to_owned(), request.to_owned());
+            fields.insert("status".to_owned(), status.to_owned());
             if bytes != "-" {
-                fields.insert("bytes_sent".to_string(), bytes.to_string());
+                fields.insert("bytes_sent".to_owned(), bytes.to_owned());
             }
             if referer != "-" {
-                fields.insert("http_referer".to_string(), referer.to_string());
+                fields.insert("http_referer".to_owned(), referer.to_owned());
             }
             if user_agent != "-" {
-                fields.insert("http_user_agent".to_string(), user_agent.to_string());
+                fields.insert("http_user_agent".to_owned(), user_agent.to_owned());
             }
 
             let timestamp = parse_apache_timestamp(timestamp_str);
@@ -131,7 +131,7 @@ impl ApacheParser {
             };
 
             Ok(LogEntry {
-                message: line.to_string(),
+                message: line.to_owned(),
                 timestamp,
                 level,
                 fields,
@@ -147,21 +147,21 @@ impl ApacheParser {
         if let Some(captures) = self.error_regex.captures(line) {
             let mut fields = HashMap::new();
 
-            let timestamp_str = captures.get(1).unwrap().as_str();
-            let level_str = captures.get(2).unwrap().as_str();
+            let timestamp_str = captures.get(1).expect("regex capture group should exist").as_str();
+            let level_str = captures.get(2).expect("regex capture group should exist").as_str();
             let client = captures.get(3).map(|m| m.as_str());
-            let message = captures.get(4).unwrap().as_str();
+            let message = captures.get(4).expect("regex capture group should exist").as_str();
 
             if let Some(client_ip) = client {
-                fields.insert("client_ip".to_string(), client_ip.to_string());
+                fields.insert("client_ip".to_owned(), client_ip.to_owned());
             }
-            fields.insert("error_message".to_string(), message.to_string());
+            fields.insert("error_message".to_owned(), message.to_owned());
 
             // Parse timestamp - Apache error format: Wed Oct 11 14:32:52 2000
             let timestamp = parse_apache_error_timestamp(timestamp_str);
 
             // Parse log level
-            let level = LogLevel::from_str(level_str).or_else(|| {
+            let level = LogLevel::from_str(level_str).or({
                 // Apache specific levels
                 match level_str {
                     "emerg" | "alert" | "crit" => Some(LogLevel::Fatal),
@@ -174,7 +174,7 @@ impl ApacheParser {
             });
 
             Ok(LogEntry {
-                message: line.to_string(),
+                message: line.to_owned(),
                 timestamp,
                 level,
                 fields,
@@ -238,13 +238,13 @@ mod tests {
         let parser = ApacheParser::new();
         let line = r#"127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326"#;
         
-        let entry = parser.parse_line(line).unwrap();
+        let entry = parser.parse_line(line).expect("regex capture group should exist");
         assert_eq!(entry.message, line);
         assert!(entry.timestamp.is_some());
         assert!(matches!(entry.level, Some(LogLevel::Info)));
-        assert_eq!(entry.fields.get("remote_host").unwrap(), "127.0.0.1");
-        assert_eq!(entry.fields.get("remote_user").unwrap(), "frank");
-        assert_eq!(entry.fields.get("status").unwrap(), "200");
+        assert_eq!(entry.fields.get("remote_host").expect("regex capture group should exist"), "127.0.0.1");
+        assert_eq!(entry.fields.get("remote_user").expect("regex capture group should exist"), "frank");
+        assert_eq!(entry.fields.get("status").expect("regex capture group should exist"), "200");
         assert!(matches!(entry.format, LogFormat::Apache));
     }
 
@@ -253,13 +253,13 @@ mod tests {
         let parser = ApacheParser::new();
         let line = r#"127.0.0.1 - frank [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://www.example.com/start.html" "Mozilla/4.08""#;
         
-        let entry = parser.parse_line(line).unwrap();
+        let entry = parser.parse_line(line).expect("regex capture group should exist");
         assert_eq!(entry.message, line);
         assert!(entry.timestamp.is_some());
         assert!(matches!(entry.level, Some(LogLevel::Info)));
-        assert_eq!(entry.fields.get("remote_host").unwrap(), "127.0.0.1");
-        assert_eq!(entry.fields.get("http_referer").unwrap(), "http://www.example.com/start.html");
-        assert_eq!(entry.fields.get("http_user_agent").unwrap(), "Mozilla/4.08");
+        assert_eq!(entry.fields.get("remote_host").expect("regex capture group should exist"), "127.0.0.1");
+        assert_eq!(entry.fields.get("http_referer").expect("regex capture group should exist"), "http://www.example.com/start.html");
+        assert_eq!(entry.fields.get("http_user_agent").expect("regex capture group should exist"), "Mozilla/4.08");
         assert!(matches!(entry.format, LogFormat::Apache));
     }
 
@@ -268,12 +268,12 @@ mod tests {
         let parser = ApacheParser::new();
         let line = "[Wed Oct 11 14:32:52 2000] [error] [client 127.0.0.1] client denied by server configuration";
         
-        let entry = parser.parse_line(line).unwrap();
+        let entry = parser.parse_line(line).expect("regex capture group should exist");
         assert_eq!(entry.message, line);
         assert!(entry.timestamp.is_some());
         assert!(matches!(entry.level, Some(LogLevel::Error)));
-        assert_eq!(entry.fields.get("client_ip").unwrap(), "127.0.0.1");
-        assert!(entry.fields.get("error_message").is_some());
+        assert_eq!(entry.fields.get("client_ip").expect("regex capture group should exist"), "127.0.0.1");
+        assert!(entry.fields.contains_key("error_message"));
         assert!(matches!(entry.format, LogFormat::Apache));
     }
 

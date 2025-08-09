@@ -62,9 +62,9 @@ impl PlainParser {
         }
 
         // Try with current year for formats without year
-        use chrono::Datelike;
+        use chrono::Datelike as _;
         if let Ok(dt) = chrono::NaiveDateTime::parse_from_str(
-            &format!("{} {}", chrono::Utc::now().year(), timestamp_str),
+            &format!("{} {timestamp_str}", chrono::Utc::now().year()),
             "%Y %b %d %H:%M:%S"
         ) {
             return Some(DateTime::from_naive_utc_and_offset(dt, Utc));
@@ -98,9 +98,9 @@ impl PlainParser {
         // Extract key=value pairs
         let kv_regex = Regex::new(r"(\w+)=([^\s]+)").expect("Invalid KV regex");
         for captures in kv_regex.captures_iter(line) {
-            let key = captures.get(1).unwrap().as_str();
-            let value = captures.get(2).unwrap().as_str();
-            fields.insert(key.to_string(), value.to_string());
+            let key = captures.get(1).expect("regex capture group should exist").as_str();
+            let value = captures.get(2).expect("regex capture group should exist").as_str();
+            fields.insert(key.to_owned(), value.to_owned());
         }
 
         // Extract quoted strings that might be values
@@ -108,13 +108,13 @@ impl PlainParser {
         let mut quoted_values = Vec::new();
         for captures in quoted_regex.captures_iter(line) {
             if let Some(quoted) = captures.get(1) {
-                quoted_values.push(quoted.as_str().to_string());
+                quoted_values.push(quoted.as_str().to_owned());
             }
         }
 
         // Store quoted values if found
         for (i, value) in quoted_values.iter().enumerate() {
-            fields.insert(format!("quoted_field_{}", i), value.clone());
+            fields.insert(format!("quoted_field_{i}"), value.clone());
         }
 
         fields
@@ -128,7 +128,7 @@ impl LogParser for PlainParser {
         let fields = self.extract_fields(line);
 
         Ok(LogEntry {
-            message: line.to_string(),
+            message: line.to_owned(),
             timestamp,
             level,
             fields,
@@ -155,7 +155,7 @@ mod tests {
         let parser = PlainParser::new();
         let line = "2023-12-25 10:00:00 ERROR Something went wrong in the application";
         
-        let entry = parser.parse_line(line).unwrap();
+        let entry = parser.parse_line(line).expect("regex capture group should exist");
         assert_eq!(entry.message, line);
         assert!(entry.timestamp.is_some());
         assert!(matches!(entry.level, Some(LogLevel::Error)));
@@ -167,11 +167,11 @@ mod tests {
         let parser = PlainParser::new();
         let line = "User logged in successfully user_id=12345 session=abc123";
         
-        let entry = parser.parse_line(line).unwrap();
+        let entry = parser.parse_line(line).expect("regex capture group should exist");
         assert_eq!(entry.message, line);
         assert!(matches!(entry.level, Some(LogLevel::Info)));
-        assert_eq!(entry.fields.get("user_id").unwrap(), "12345");
-        assert_eq!(entry.fields.get("session").unwrap(), "abc123");
+        assert_eq!(entry.fields.get("user_id").expect("regex capture group should exist"), "12345");
+        assert_eq!(entry.fields.get("session").expect("regex capture group should exist"), "abc123");
         assert!(matches!(entry.format, LogFormat::Plain));
     }
 
@@ -180,10 +180,10 @@ mod tests {
         let parser = PlainParser::new();
         let line = r#"Processing request "GET /api/users" from client"#;
         
-        let entry = parser.parse_line(line).unwrap();
+        let entry = parser.parse_line(line).expect("regex capture group should exist");
         assert_eq!(entry.message, line);
         assert!(matches!(entry.level, Some(LogLevel::Info)));
-        assert_eq!(entry.fields.get("quoted_field_0").unwrap(), "GET /api/users");
+        assert_eq!(entry.fields.get("quoted_field_0").expect("regex capture group should exist"), "GET /api/users");
         assert!(matches!(entry.format, LogFormat::Plain));
     }
 
