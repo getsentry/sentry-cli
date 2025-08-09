@@ -7,7 +7,7 @@ describe('SentryCli releases', () => {
   test('call sentry-cli releases propose-version', () => {
     expect.assertions(1);
     const cli = new SentryCli();
-    return cli.releases.proposeVersion().then(version => expect(version).toBeTruthy());
+    return cli.releases.proposeVersion().then((version) => expect(version).toBeTruthy());
   });
 
   describe('with mock', () => {
@@ -33,8 +33,9 @@ describe('SentryCli releases', () => {
           ['releases', 'new', 'my-version'],
           null,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
       test('with projects', async () => {
@@ -43,8 +44,9 @@ describe('SentryCli releases', () => {
           ['releases', 'new', 'my-version', '-p', 'proj-a', '-p', 'proj-b'],
           null,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
     });
@@ -63,8 +65,9 @@ describe('SentryCli releases', () => {
           ],
           true,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
       test('with projects', async () => {
@@ -88,8 +91,9 @@ describe('SentryCli releases', () => {
           ],
           true,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
 
@@ -100,7 +104,7 @@ describe('SentryCli releases', () => {
         await cli.releases.uploadSourceMaps('my-version', { include: paths });
 
         expect(mockExecute).toHaveBeenCalledTimes(2);
-        paths.forEach(path =>
+        paths.forEach((path) =>
           expect(mockExecute).toHaveBeenCalledWith(
             [
               'sourcemaps',
@@ -113,8 +117,9 @@ describe('SentryCli releases', () => {
             ],
             true,
             false,
+            false,
             undefined,
-            { silent: false }
+            { silent: false, silentLogs: false }
           )
         );
       });
@@ -139,8 +144,9 @@ describe('SentryCli releases', () => {
           ],
           true,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
 
         expect(mockExecute).toHaveBeenCalledWith(
@@ -155,8 +161,9 @@ describe('SentryCli releases', () => {
           ],
           true,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
 
@@ -174,8 +181,9 @@ describe('SentryCli releases', () => {
           ],
           live,
           false,
+          false,
           undefined,
-          { silent: false }
+          { silent: false, silentLogs: false }
         );
       });
     });
