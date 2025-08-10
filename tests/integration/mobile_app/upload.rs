@@ -86,7 +86,7 @@ fn command_mobile_app_upload_apk_all_uploaded() {
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
             )
-            .with_response_body(r#"{"state":"ok","missingChunks":[],"artifactId":"42"}"#),
+            .with_response_body(r#"{"state":"ok","missingChunks":[],"artifactUrl":"https://sentry.io/wat-org/preprod/wat-project/42"}"#),
         )
         .register_trycmd_test("mobile_app/mobile_app-upload-apk-all-uploaded.trycmd")
         .with_default_token();
@@ -170,7 +170,7 @@ fn command_mobile_app_upload_apk_chunked() {
                     r#"{
                         "state": "ok",
                         "missingChunks": [],
-                        "artifactId": "42"
+                        "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/42"
                     }"#
                 }
                 .into()
@@ -225,7 +225,7 @@ fn command_mobile_app_upload_ipa_chunked() {
                     r#"{
                         "state": "ok",
                         "missingChunks": [],
-                        "artifactId": "some-text-id"
+                        "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/some-text-id"
                     }"#
                 }
                 .into()
