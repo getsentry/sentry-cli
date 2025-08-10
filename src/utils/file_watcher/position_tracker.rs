@@ -162,8 +162,9 @@ fn get_inode(metadata: &std::fs::Metadata) -> Option<u64> {
 /// Windows doesn't have inodes, so we use creation time as a substitute
 /// This helps detect file rotation when a new file is created with the same name
 #[cfg(windows)]
+#[allow(clippy::unnecessary_wraps)] // Option is needed for API consistency across platforms
 fn get_inode(metadata: &std::fs::Metadata) -> Option<u64> {
-    use std::os::windows::fs::MetadataExt;
+    use std::os::windows::fs::MetadataExt as _;
     // Use creation time as a substitute for inode
     // This is a stable API and works for detecting file rotation
     Some(metadata.creation_time())
