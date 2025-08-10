@@ -159,12 +159,14 @@ fn get_inode(metadata: &std::fs::Metadata) -> Option<u64> {
     }
 }
 
-/// Windows doesn't have inodes, so we use file index instead
+/// Windows doesn't have inodes, so we use creation time as a substitute
+/// This helps detect file rotation when a new file is created with the same name
 #[cfg(windows)]
 fn get_inode(metadata: &std::fs::Metadata) -> Option<u64> {
     use std::os::windows::fs::MetadataExt;
-    // Use file index as a substitute for inode
-    Some(metadata.file_index().unwrap_or(0))
+    // Use creation time as a substitute for inode
+    // This is a stable API and works for detecting file rotation
+    Some(metadata.creation_time())
 }
 
 /// For other platforms, we can't detect rotation reliably
