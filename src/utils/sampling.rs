@@ -120,7 +120,7 @@ impl AdaptiveSampler {
     }
 
     /// Get sampling statistics
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn get_stats(&self) -> SamplingStats {
         SamplingStats {
             current_rate: self.current_rate,
@@ -130,7 +130,7 @@ impl AdaptiveSampler {
 
 /// Statistics about sampling behavior
 #[derive(Debug, Clone)]
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub struct SamplingStats {
     pub current_rate: f64,
 }
@@ -188,7 +188,7 @@ impl PrioritySampler {
 }
 
 /// Simple deterministic sampling based on hash
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub fn hash_sample(content: &str, rate: f64) -> bool {
     if rate >= 1.0 {
         return true;

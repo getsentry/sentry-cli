@@ -132,13 +132,13 @@ impl PositionTracker {
     }
 
     /// Get the current file position
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn current_position(&self) -> u64 {
         self.current_position
     }
 
     /// Get the current file size
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn current_size(&self) -> u64 {
         self.current_size
     }

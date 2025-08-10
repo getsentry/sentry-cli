@@ -76,13 +76,13 @@ impl MemoryMonitor {
     }
 
     /// Get current memory usage in bytes
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn current_usage_bytes(&self) -> usize {
         self.current_usage.load(Ordering::Relaxed)
     }
 
     /// Get maximum allowed memory usage in MB
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn max_usage_mb(&self) -> usize {
         self.max_usage / (1024 * 1024)
     }
@@ -123,7 +123,7 @@ pub fn estimate_entry_size(entry: &str) -> usize {
 
 /// Memory-bounded queue for log entries with automatic cleanup
 #[derive(Debug)]
-#[expect(dead_code)]
+#[allow(dead_code)]
 pub struct BoundedLogQueue {
     entries: Vec<String>,
     memory_monitor: MemoryMonitor,
@@ -132,7 +132,7 @@ pub struct BoundedLogQueue {
 
 impl BoundedLogQueue {
     /// Create a new bounded log queue
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn new(max_memory_mb: usize, max_entries: usize) -> Self {
         BoundedLogQueue {
             entries: Vec::with_capacity(max_entries.min(1000)),
@@ -142,7 +142,7 @@ impl BoundedLogQueue {
     }
 
     /// Add an entry to the queue, potentially dropping old entries
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn push(&mut self, entry: String) -> bool {
         let entry_size = estimate_entry_size(&entry);
 
@@ -164,7 +164,7 @@ impl BoundedLogQueue {
     }
 
     /// Make room by removing old entries
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     fn make_room(&mut self, needed_bytes: usize) {
         let mut freed_bytes = 0;
         let target_bytes = needed_bytes + (self.memory_monitor.max_usage_mb() * 1024 * 1024) / 10; // Free 10% extra
@@ -184,7 +184,7 @@ impl BoundedLogQueue {
     }
 
     /// Drain all entries and update memory tracking
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn drain(&mut self) -> Vec<String> {
         let entries = std::mem::take(&mut self.entries);
         let total_size: usize = entries.iter().map(|e| estimate_entry_size(e)).sum();
@@ -193,7 +193,7 @@ impl BoundedLogQueue {
     }
 
     /// Get current queue length
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.entries.len()
     }

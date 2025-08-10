@@ -46,7 +46,7 @@ impl Default for AdaptiveBatchingConfig {
 
 impl LogBatch {
     /// Create a new log batch with specified maximum size and timeout
-    #[expect(dead_code)]
+    #[allow(dead_code)]
     pub fn new(max_size: usize, timeout: Duration) -> Self {
         LogBatch {
             entries: Vec::with_capacity(max_size),
