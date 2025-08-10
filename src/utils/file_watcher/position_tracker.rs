@@ -1,3 +1,5 @@
+#![allow(clippy::allow_attributes)]
+
 use anyhow::{Context as _, Result};
 use log::debug;
 use std::fs::File;

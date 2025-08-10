@@ -1,3 +1,5 @@
+#![allow(clippy::allow_attributes)]
+
 use log::debug;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

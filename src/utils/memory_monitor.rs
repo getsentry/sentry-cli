@@ -1,3 +1,5 @@
+#![allow(clippy::allow_attributes)]
+
 use log::{debug, warn};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
