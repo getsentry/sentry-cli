@@ -37,4 +37,20 @@ impl EnvelopesApi {
             .send()?
             .into_result()
     }
+
+    /// Send a raw envelope (for logs protocol compliance)
+    pub fn send_raw_envelope(&self, envelope_bytes: Vec<u8>) -> ApiResult<ApiResponse> {
+        let url = self.dsn.envelope_api_url();
+        let auth = self.dsn.to_auth(Some(USER_AGENT));
+        debug!(
+            "Sending raw envelope:\n{}",
+            String::from_utf8_lossy(&envelope_bytes)
+        );
+        self.api
+            .request(Method::Post, url.as_str(), None)?
+            .with_header("X-Sentry-Auth", &auth.to_string())?
+            .with_body(envelope_bytes)
+            .send()?
+            .into_result()
+    }
 }

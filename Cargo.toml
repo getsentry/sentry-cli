@@ -28,6 +28,7 @@ clap = { version = "4.1.6", default-features = false, features = [
 ] }
 clap_complete = "4.4.3"
 console = "0.15.5"
+ctrlc = "3.4.0"
 curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
 dirs = "4.0.0"
 dotenvy = "0.15.7"
@@ -46,6 +47,7 @@ java-properties = "1.4.1"
 lazy_static = "1.4.0"
 libc = "0.2.139"
 log = { version = "0.4.17", features = ["std"] }
+notify = "6.1.1"
 open = "3.2.0"
 parking_lot = "0.12.1"
 percent-encoding = "2.2.0"
@@ -53,6 +55,7 @@ plist = "1.4.0"
 prettytable-rs = "0.10.0"
 proguard = { version = "5.0.0", features = ["uuid"] }
 r2d2 = "0.8.10"
+rand = "0.8.5"
 rayon = "1.6.1"
 regex = "1.7.3"
 runas = "1.0.0"

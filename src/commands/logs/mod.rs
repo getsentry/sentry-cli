@@ -1,6 +1,8 @@
 mod list;
+mod tail;
 
 use self::list::ListLogsArgs;
+use self::tail::TailLogsArgs;
 use super::derive_parser::{SentryCLI, SentryCLICommand};
 use anyhow::Result;
 use clap::ArgMatches;
@@ -10,6 +12,7 @@ const BETA_WARNING: &str = "[BETA] The \"logs\" command is in beta. The command 
     to breaking changes, including removal, in any Sentry CLI release.";
 
 const LIST_ABOUT: &str = "List logs from your organization";
+const TAIL_ABOUT: &str = "Monitor log files in real-time and send entries to Sentry";
 
 #[derive(Args)]
 pub(super) struct LogsArgs {
@@ -30,8 +33,16 @@ enum LogsSubcommand {
     Query and filter log entries from your Sentry projects. \
     Supports filtering by log level and custom queries.\n\n\
     {BETA_WARNING}")
-)]
+    )]
     List(ListLogsArgs),
+    #[command(about = format!("[BETA] {TAIL_ABOUT}"))]
+    #[command(long_about = format!("{TAIL_ABOUT}. \
+    Continuously monitor a log file for new entries and send them to Sentry \
+    as structured logging events. Supports common log formats including nginx \
+    and Apache Common Log Format.\n\n\
+    {BETA_WARNING}")
+    )]
+    Tail(TailLogsArgs),
 }
 
 pub(super) fn make_command(command: Command) -> Command {
@@ -47,5 +58,6 @@ pub(super) fn execute(_: &ArgMatches) -> Result<()> {
 
     match subcommand {
         LogsSubcommand::List(args) => list::execute(args),
+        LogsSubcommand::Tail(args) => tail::execute(args),
     }
 }
