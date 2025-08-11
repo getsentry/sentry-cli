@@ -216,6 +216,7 @@ pub fn get_repo_from_remote(repo: &str) -> String {
     obj.id
 }
 
+#[cfg(feature = "unstable-mobile-app")]
 pub fn get_provider_from_remote(remote: &str) -> String {
     let obj = VcsUrl::parse(remote);
     obj.provider
