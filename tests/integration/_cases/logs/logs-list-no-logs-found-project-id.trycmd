@@ -1,7 +1,7 @@
 ```
-$ sentry-cli logs list --org wat-org --project myproject
+$ sentry-cli logs list --org wat-org --project 12345
 ? success
 [BETA] The "logs" command is in beta. The command is subject to breaking changes, including removal, in any Sentry CLI release.
 No logs found
 
-``` 
+```
