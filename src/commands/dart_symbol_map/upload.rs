@@ -9,5 +9,3 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     crate::commands::upload_dart_symbol_map::execute(matches)
 }
-
-

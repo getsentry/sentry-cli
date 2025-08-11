@@ -41,5 +41,3 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     each_subcommand!(execute_subcommand);
     unreachable!();
 }
-
-

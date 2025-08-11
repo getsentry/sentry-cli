@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::ffi::OsStr;
-use std::path::Path;
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::path::Path;
 
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -9,8 +9,8 @@ use clap::{Arg, ArgMatches, Command};
 use crate::api::{Api, ChunkUploadCapability};
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
-use crate::utils::chunks::{upload_chunked_objects, Assemblable, ChunkOptions, Chunked};
 use crate::utils::args::ArgExt as _;
+use crate::utils::chunks::{upload_chunked_objects, Assemblable, ChunkOptions, Chunked};
 use crate::utils::dif::DifFile;
 use symbolic::common::DebugId;
 
@@ -161,5 +161,3 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ),
     }
 }
-
-

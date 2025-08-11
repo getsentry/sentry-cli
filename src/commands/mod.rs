@@ -12,15 +12,16 @@ use std::{env, iter};
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
+use crate::utils::args::ArgExt as _;
 use crate::utils::auth_token::{redact_token_from_string, AuthToken};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
 use crate::utils::system::{load_dotenv, print_error, set_panic_hook, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
-use crate::utils::args::ArgExt as _;
 
 mod bash_hook;
+mod dart_symbol_map;
 mod debug_files;
 mod deploys;
 mod derive_parser;
@@ -41,15 +42,14 @@ mod send_envelope;
 mod send_event;
 mod send_metric;
 mod sourcemaps;
-mod dart_symbol_map;
 #[cfg(not(feature = "managed"))]
 mod uninstall;
 #[cfg(not(feature = "managed"))]
 mod update;
+mod upload_dart_symbol_map;
 mod upload_dif;
 mod upload_dsym;
 mod upload_proguard;
-mod upload_dart_symbol_map;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
@@ -242,12 +242,18 @@ fn add_commands(mut app: Command) -> Command {
     // Backward compatibility: keep the old flat command as a hidden alias that delegates to
     // the new group subcommand.
     // Maintain the old flat command as a hidden alias that delegates to the new implementation
-    app = app.subcommand(Command::new("upload-dart-symbol-map").hide(true)
-        .about("Deprecated: use 'dart-symbol-map upload' instead")
-        .arg(Arg::new("mapping").value_name("MAPPING").required(true))
-        .arg(Arg::new("debug_file").value_name("DEBUG_FILE").required(true))
-        .org_arg()
-        .project_arg(false)
+    app = app.subcommand(
+        Command::new("upload-dart-symbol-map")
+            .hide(true)
+            .about("Deprecated: use 'dart-symbol-map upload' instead")
+            .arg(Arg::new("mapping").value_name("MAPPING").required(true))
+            .arg(
+                Arg::new("debug_file")
+                    .value_name("DEBUG_FILE")
+                    .required(true),
+            )
+            .org_arg()
+            .project_arg(false),
     );
     app
 }

@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU8, Ordering};
 
-use crate::integration::{MockEndpointBuilder, TestManager};
 use crate::integration::test_utils::AssertCommand;
+use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
 fn command_upload_dart_symbol_map_missing_capability() {
@@ -102,5 +102,3 @@ fn command_upload_dart_symbol_map_invalid_mapping() {
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
-
-
