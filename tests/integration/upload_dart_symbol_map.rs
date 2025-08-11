@@ -12,14 +12,15 @@ fn command_upload_dart_symbol_map_missing_capability() {
                 .with_response_file("debug_files/get-chunk-upload.json"),
         )
         .assert_cmd([
-            "upload-dart-symbol-map",
+            "dart-symbol-map",
+            "upload",
             "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap.json",
             // Use a fixture with a single Debug ID
             "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
         ])
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
-}}
+}
 
 #[test]
 fn command_upload_dart_symbol_map_chunk_upload_flow() {
@@ -78,7 +79,8 @@ fn command_upload_dart_symbol_map_chunk_upload_flow() {
             .expect(3),
         )
         .assert_cmd([
-            "upload-dart-symbol-map",
+            "dart-symbol-map",
+            "upload",
             "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap.json",
             // Use a fixture with a single Debug ID (embedded PDB)
             "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
@@ -92,7 +94,8 @@ fn command_upload_dart_symbol_map_invalid_mapping() {
     // Invalid mapping (odd number of entries) should fail before any HTTP calls.
     TestManager::new()
         .assert_cmd([
-            "upload-dart-symbol-map",
+            "dart-symbol-map",
+            "upload",
             "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap-invalid.json",
             "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
         ])

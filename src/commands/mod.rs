@@ -18,6 +18,7 @@ use crate::utils::logging::Logger;
 use crate::utils::system::{load_dotenv, print_error, set_panic_hook, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
+use crate::utils::args::ArgExt as _;
 
 mod bash_hook;
 mod debug_files;
@@ -40,6 +41,7 @@ mod send_envelope;
 mod send_event;
 mod send_metric;
 mod sourcemaps;
+mod dart_symbol_map;
 #[cfg(not(feature = "managed"))]
 mod uninstall;
 #[cfg(not(feature = "managed"))]
@@ -72,6 +74,7 @@ macro_rules! each_subcommand {
         $mac!(send_envelope);
         $mac!(send_metric);
         $mac!(sourcemaps);
+        $mac!(dart_symbol_map);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);
         #[cfg(not(feature = "managed"))]
@@ -79,7 +82,6 @@ macro_rules! each_subcommand {
         $mac!(upload_dif);
         $mac!(upload_dsym);
         $mac!(upload_proguard);
-        $mac!(upload_dart_symbol_map);
     };
 }
 
@@ -237,6 +239,16 @@ fn add_commands(mut app: Command) -> Command {
     }
 
     each_subcommand!(add_subcommand);
+    // Backward compatibility: keep the old flat command as a hidden alias that delegates to
+    // the new group subcommand.
+    // Maintain the old flat command as a hidden alias that delegates to the new implementation
+    app = app.subcommand(Command::new("upload-dart-symbol-map").hide(true)
+        .about("Deprecated: use 'dart-symbol-map upload' instead")
+        .arg(Arg::new("mapping").value_name("MAPPING").required(true))
+        .arg(Arg::new("debug_file").value_name("DEBUG_FILE").required(true))
+        .org_arg()
+        .project_arg(false)
+    );
     app
 }
 
@@ -255,6 +267,10 @@ fn run_command(matches: &ArgMatches) -> Result<()> {
     }
 
     each_subcommand!(execute_subcommand);
+    // Execute compatibility alias if used
+    if let Some(sub_matches) = matches.subcommand_matches("upload-dart-symbol-map") {
+        return crate::commands::upload_dart_symbol_map::execute(&sub_matches);
+    }
     unreachable!();
 }
 

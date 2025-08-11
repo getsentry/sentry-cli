@@ -10,28 +10,27 @@ to learn more about them.
 Usage: sentry-cli[EXE] [OPTIONS] <COMMAND>
 
 Commands:
-  completions             Generate completions for the specified shell.
-  debug-files             Locate, analyze or upload debug information files. [aliases: dif]
-  deploys                 Manage deployments for Sentry releases.
-  events                  Manage events on Sentry.
-  info                    Print information about the configuration and verify authentication.
-  issues                  Manage issues in Sentry.
-  login                   Authenticate with the Sentry server.
-  logs                    Manage logs in Sentry
-  monitors                Manage cron monitors on Sentry.
-  organizations           Manage organizations on Sentry.
-  projects                Manage projects on Sentry.
-  react-native            Upload build artifacts for react-native projects.
-  releases                Manage releases on Sentry.
-  repos                   Manage repositories on Sentry.
-  send-event              Send a manual event to Sentry.
-  send-envelope           Send a stored envelope to Sentry.
-  sourcemaps              Manage sourcemaps for Sentry releases.
-  uninstall               Uninstall the sentry-cli executable.
-  upload-proguard         Upload ProGuard mapping files to a project.
-  upload-dart-symbol-map  Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating
-                              Dart exception types.
-  help                    Print this message or the help of the given subcommand(s)
+  completions      Generate completions for the specified shell.
+  debug-files      Locate, analyze or upload debug information files. [aliases: dif]
+  deploys          Manage deployments for Sentry releases.
+  events           Manage events on Sentry.
+  info             Print information about the configuration and verify authentication.
+  issues           Manage issues in Sentry.
+  login            Authenticate with the Sentry server.
+  logs             Manage logs in Sentry
+  monitors         Manage cron monitors on Sentry.
+  organizations    Manage organizations on Sentry.
+  projects         Manage projects on Sentry.
+  react-native     Upload build artifacts for react-native projects.
+  releases         Manage releases on Sentry.
+  repos            Manage repositories on Sentry.
+  send-event       Send a manual event to Sentry.
+  send-envelope    Send a stored envelope to Sentry.
+  sourcemaps       Manage sourcemaps for Sentry releases.
+  dart-symbol-map  Manage Dart/Flutter symbol maps for Sentry.
+  uninstall        Uninstall the sentry-cli executable.
+  upload-proguard  Upload ProGuard mapping files to a project.
+  help             Print this message or the help of the given subcommand(s)
 
 Options:
       --url <URL>                Fully qualified URL to the Sentry server.
