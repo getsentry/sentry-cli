@@ -46,7 +46,7 @@ pub fn make_command(command: Command) -> Command {
     command
         .about("Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.")
         .after_help(
-            "Examples:\n  sentry-cli upload-dart-symbol-map --org my-org --project my-proj path/to/dartsymbolmap.json path/to/debug/file\n\n  The mapping must be a JSON array of strings with an even number of entries (pairs).\n  The debug file must contain exactly one Debug ID.",
+            "Examples:\n  sentry-cli dart-symbol-map upload --org my-org --project my-proj path/to/dartsymbolmap.json path/to/debug/file\n\n  The mapping must be a JSON array of strings with an even number of entries (pairs).\n  The debug file must contain exactly one Debug ID.",
         )
         .org_arg()
         .project_arg(false)
