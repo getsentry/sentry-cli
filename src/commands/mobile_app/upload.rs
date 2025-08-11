@@ -23,7 +23,7 @@ use crate::utils::mobile_app::{
 };
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, normalize_directory};
 use crate::utils::progress::ProgressBar;
-use crate::utils::vcs;
+use crate::utils::vcs::{self, get_provider_from_remote, get_repo_from_remote};
 
 pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -92,6 +92,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
     let path_strings = matches
         .get_many::<String>("paths")
         .expect("paths argument is required");
@@ -103,12 +104,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .or_else(|| vcs::find_head().ok().map(Cow::Owned));
 
     let base_sha = matches.get_one("base_sha").map(String::as_str);
-    let vcs_provider = matches.get_one("vcs_provider").map(String::as_str);
-    let head_repo_name = matches.get_one("head_repo_name").map(String::as_str);
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let head_ref = matches.get_one("head_ref").map(String::as_str);
     let base_ref = matches.get_one("base_ref").map(String::as_str);
     let pr_number = matches.get_one::<u32>("pr_number");
+
+    let remote = config.get_cached_vcs_remote();
+
+    let vcs_provider = matches
+        .get_one("vcs_provider")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| Some(Cow::Owned(get_provider_from_remote(&remote))));
+    let head_repo_name = matches
+        .get_one("head_repo_name")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| Some(Cow::Owned(get_repo_from_remote(&remote))));
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
@@ -170,8 +182,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let vcs_info = VcsInfo {
             head_sha: head_sha.as_deref(),
             base_sha,
-            vcs_provider,
-            head_repo_name,
+            vcs_provider: vcs_provider.as_deref(),
+            head_repo_name: head_repo_name.as_deref(),
             base_repo_name,
             head_ref,
             base_ref,

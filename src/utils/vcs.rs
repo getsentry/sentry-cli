@@ -216,6 +216,11 @@ pub fn get_repo_from_remote(repo: &str) -> String {
     obj.id
 }
 
+pub fn get_provider_from_remote(remote: &str) -> String {
+    let obj = VcsUrl::parse(remote);
+    obj.provider
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
