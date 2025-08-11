@@ -104,20 +104,48 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .or_else(|| vcs::find_head().ok().map(Cow::Owned));
 
     let cached_remote = config.get_cached_vcs_remote();
-    let repo = git2::Repository::open_from_env()?;
-    let remote = repo.find_remote(&cached_remote)?;
-    let remote_url = remote.url();
+    // Try to open the git repository and find the remote, but handle errors gracefully.
+    let (vcs_provider, head_repo_name) = {
+        // Try to open the repo and get the remote URL, but don't fail if not in a repo.
+        let remote_url = match git2::Repository::open_from_env().and_then(|repo| {
+            repo.find_remote(&cached_remote).and_then(|remote| {
+                remote
+                    .url()
+                    .map(|url| url.to_owned())
+                    .ok_or_else(|| git2::Error::from_str("No remote URL found"))
+            })
+        }) {
+            Ok(url) => Some(url),
+            Err(err) => {
+                debug!("Could not determine git remote: {err}");
+                None
+            }
+        };
 
-    let vcs_provider: Option<Cow<'_, str>> = matches
-        .get_one("vcs_provider")
-        .map(String::as_str)
-        .map(Cow::Borrowed)
-        .or_else(|| remote_url.map(get_provider_from_remote).map(Cow::Owned));
-    let head_repo_name = matches
-        .get_one("head_repo_name")
-        .map(String::as_str)
-        .map(Cow::Borrowed)
-        .or_else(|| remote_url.map(get_repo_from_remote).map(Cow::Owned));
+        let vcs_provider: Option<Cow<'_, str>> = matches
+            .get_one("vcs_provider")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                remote_url
+                    .as_ref()
+                    .map(|url| get_provider_from_remote(url))
+                    .map(Cow::Owned)
+            });
+
+        let head_repo_name: Option<Cow<'_, str>> = matches
+            .get_one("head_repo_name")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                remote_url
+                    .as_ref()
+                    .map(|url| get_repo_from_remote(url))
+                    .map(Cow::Owned)
+            });
+
+        (vcs_provider, head_repo_name)
+    };
 
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
 
