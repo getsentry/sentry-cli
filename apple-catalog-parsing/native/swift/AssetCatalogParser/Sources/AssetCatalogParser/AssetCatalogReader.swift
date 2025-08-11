@@ -7,13 +7,14 @@ import ObjcSupport
 @_cdecl("swift_inspect_asset_catalog")
 // Insepects the asset catalog and writes the results to a JSON file
 // in the xcarchive containing the asset catalog.
-public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>) {
+public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>, outputPath: UnsafePointer<CChar>) {
     let pathString = String(cString: path)
+    let outputPathString = String(cString: outputPath)
     if #available(macOS 13.0, *) {
         let supportedVersions = [13, 14, 15]
         let version = ProcessInfo.processInfo.operatingSystemVersion
         if supportedVersions.contains(version.majorVersion) {
-            AssetUtil.disect(file: URL(filePath: pathString))
+            AssetUtil.disect(file: URL(filePath: pathString), outputURL: URL(filePath: outputPathString))
         } else {
             print("Skipping asset catalog inspection on unsupported macOS version \(version)")
         }
@@ -48,8 +49,8 @@ typealias objectiveCMethodImp = @convention(c) (AnyObject, Selector, UnsafeRawPo
 >?
 
 enum AssetUtil {
-    private static func createResultsPath(assetPath: URL) throws -> URL {
-        var archiveURL = assetPath
+    private static func createResultsPath(assetURL: URL, outputURL: URL) throws -> URL {
+        var archiveURL = assetURL
         var tailComponents: [String] = []
         while archiveURL.pathExtension != "xcarchive" && archiveURL.pathComponents.count > 1 {
             tailComponents.insert(archiveURL.lastPathComponent, at: 0)
@@ -58,11 +59,10 @@ enum AssetUtil {
         if archiveURL.pathExtension != "xcarchive" {
             throw Error.pathError
         }
-        let parsedRoot = archiveURL.appendingPathComponent("ParsedAssets",
-                                                           isDirectory: true)
+
         let destDir = tailComponents
             .dropLast()
-            .reduce(parsedRoot) { partial, next in
+            .reduce(outputURL) { partial, next in
                 partial.appendingPathComponent(next, isDirectory: true)
             }
         try! FileManager.default.createDirectory(at: destDir,
@@ -70,7 +70,7 @@ enum AssetUtil {
         return destDir
     }
 
-    @discardableResult static func disect(file: URL) -> [AssetCatalogEntry] {
+    @discardableResult static func disect(file: URL, outputURL: URL) -> [AssetCatalogEntry] {
         var assets: [AssetCatalogEntry] = []
         var colorLength: UInt = 0
         var colorCount = 0
@@ -154,7 +154,7 @@ enum AssetUtil {
         ))
 
         let data = try! JSONEncoder().encode(assets)
-        let folder = try! createResultsPath(assetPath: file)
+        let folder = try! createResultsPath(assetURL: file, outputURL: outputURL)
         let url = folder
             .appendingPathComponent("Assets")
             .appendingPathExtension("json")
