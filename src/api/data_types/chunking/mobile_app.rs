@@ -26,7 +26,7 @@ pub struct ChunkedMobileAppRequest<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_ref: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pr_number: Option<&u32>,
+    pub pr_number: Option<&'a u32>,
 }
 
 #[derive(Debug, Deserialize)]

@@ -2536,7 +2536,7 @@ pub struct VcsInfo<'a> {
     pub base_repo_name: Option<&'a str>,
     pub head_ref: Option<&'a str>,
     pub base_ref: Option<&'a str>,
-    pub pr_number: Option<&u32>,
+    pub pr_number: Option<&'a u32>,
 }
 
 /// Log entry structure from the logs API
