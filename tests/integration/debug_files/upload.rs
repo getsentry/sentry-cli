@@ -157,7 +157,8 @@ fn command_debug_files_upload_no_upload() {
             )
             .with_response_file("debug_files/post-difs-assemble.json"),
         )
-        .register_trycmd_test("debug_files/upload/debug_files-upload-no-upload.trycmd");
+        .register_trycmd_test("debug_files/upload/debug_files-upload-no-upload.trycmd")
+        .with_default_token();
 }
 
 #[test]
