@@ -103,24 +103,28 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(Cow::Borrowed)
         .or_else(|| vcs::find_head().ok().map(Cow::Owned));
 
-    let base_sha = matches.get_one("base_sha").map(String::as_str);
-    let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
-    let head_ref = matches.get_one("head_ref").map(String::as_str);
-    let base_ref = matches.get_one("base_ref").map(String::as_str);
-    let pr_number = matches.get_one::<u32>("pr_number");
+    let cached_remote = config.get_cached_vcs_remote();
+    let repo = git2::Repository::open_from_env()?;
+    let remote = repo.find_remote(&cached_remote)?;
+    let remote_url = remote.url();
 
-    let remote = config.get_cached_vcs_remote();
-
-    let vcs_provider = matches
+    let vcs_provider: Option<Cow<'_, str>> = matches
         .get_one("vcs_provider")
         .map(String::as_str)
         .map(Cow::Borrowed)
-        .or_else(|| Some(Cow::Owned(get_provider_from_remote(&remote))));
+        .or_else(|| remote_url.map(get_provider_from_remote).map(Cow::Owned));
     let head_repo_name = matches
         .get_one("head_repo_name")
         .map(String::as_str)
         .map(Cow::Borrowed)
-        .or_else(|| Some(Cow::Owned(get_repo_from_remote(&remote))));
+        .or_else(|| remote_url.map(get_repo_from_remote).map(Cow::Owned));
+
+    let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
+
+    let base_sha = matches.get_one("base_sha").map(String::as_str);
+    let head_ref = matches.get_one("head_ref").map(String::as_str);
+    let base_ref = matches.get_one("base_ref").map(String::as_str);
+    let pr_number = matches.get_one::<u32>("pr_number");
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
