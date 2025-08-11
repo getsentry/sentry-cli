@@ -66,8 +66,12 @@ pub fn make_command(command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Parse required positional arguments
-    let mapping_path = matches.get_one::<String>("mapping").unwrap();
-    let debug_file_path = matches.get_one::<String>("debug_file").unwrap();
+    let mapping_path = matches
+        .get_one::<String>("mapping")
+        .expect("required argument 'mapping' not provided by clap");
+    let debug_file_path = matches
+        .get_one::<String>("debug_file")
+        .expect("required argument 'debug_file' not provided by clap");
 
     // Extract Debug ID(s) from the provided debug file
     let dif = DifFile::open_path(debug_file_path, None)?;
@@ -86,7 +90,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             // Validate the dartsymbolmap JSON: must be a JSON array of strings with even length
             let mapping_file_bytes = std::fs::read(mapping_path)
-                .with_context(|| format!("Failed to read mapping file at {}", mapping_path))?;
+                .with_context(|| format!("Failed to read mapping file at {mapping_path}"))?;
             let mapping_entries: Vec<String> = serde_json::from_slice(&mapping_file_bytes)
                 .context("Invalid dartsymbolmap: expected a JSON array of strings")?;
 
@@ -102,7 +106,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .file_name()
                 .and_then(OsStr::to_str)
                 .unwrap_or(mapping_path)
-                .to_string();
+                .to_owned();
 
             let mapping_len = mapping_file_bytes.len();
             let object = DartSymbolMapObject {

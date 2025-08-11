@@ -275,7 +275,7 @@ fn run_command(matches: &ArgMatches) -> Result<()> {
     each_subcommand!(execute_subcommand);
     // Execute compatibility alias if used
     if let Some(sub_matches) = matches.subcommand_matches("upload-dart-symbol-map") {
-        return crate::commands::upload_dart_symbol_map::execute(&sub_matches);
+        return crate::commands::upload_dart_symbol_map::execute(sub_matches);
     }
     unreachable!();
 }
