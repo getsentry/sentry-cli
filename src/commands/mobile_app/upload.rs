@@ -81,6 +81,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("pr_number")
                 .long("pr-number")
+                .value_parser(clap::value_parser!(u32))
                 .help("The pull request number to use for the upload. If not provided, the current pull request number will be used.")
         )
         .arg(
@@ -101,17 +102,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(Cow::Borrowed)
         .or_else(|| vcs::find_head().ok().map(Cow::Owned));
 
-    // TODO: Implement default values
     let base_sha = matches.get_one("base_sha").map(String::as_str);
     let vcs_provider = matches.get_one("vcs_provider").map(String::as_str);
     let head_repo_name = matches.get_one("head_repo_name").map(String::as_str);
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let head_ref = matches.get_one("head_ref").map(String::as_str);
     let base_ref = matches.get_one("base_ref").map(String::as_str);
-    let pr_number = matches
-        .get_one("pr_number")
-        .map(String::as_str)
-        .and_then(|s| s.parse::<i32>().ok());
+    let pr_number = matches.get_one::<u32>("pr_number");
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
@@ -402,15 +399,16 @@ fn upload_file(
     // In the case where something went wrong (which could be on either
     // iteration of the loop) we get:
     // n. state=err, artifact_id unset
-    let result = loop {let response = api.assemble_mobile_app(
-        org,
-        project,
-        checksum,
-        &checksums,
-        build_configuration,
-        vcs_info,
-    )?;
-    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+    let result = loop {
+        let response = api.assemble_mobile_app(
+            org,
+            project,
+            checksum,
+            &checksums,
+            build_configuration,
+            vcs_info,
+        )?;
+        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
         if !chunks.is_empty() {
             let upload_progress_style = ProgressStyle::default_bar().template(
