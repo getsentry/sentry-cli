@@ -1,5 +1,3 @@
-#![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
-
 //! This module implements the API access to the Sentry API as well
 //! as some other APIs we interact with.  In particular it can talk
 //! to the GitHub API to figure out if there are new releases of the
@@ -160,6 +158,7 @@ impl Api {
     pub fn with_config(config: Arc<Config>) -> Api {
         Api {
             config,
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             pool: r2d2::Pool::builder()
                 .max_size(16)
                 .build(CurlConnectionManager)
@@ -174,7 +173,7 @@ impl Api {
 
     /// Creates an AuthenticatedApi referencing this Api instance if an auth token is available.
     /// If an auth token is not available, returns an error.
-    pub fn authenticated(&self) -> ApiResult<AuthenticatedApi> {
+    pub fn authenticated(&self) -> ApiResult<AuthenticatedApi<'_>> {
         self.try_into()
     }
 
@@ -223,7 +222,11 @@ impl Api {
         url: &str,
         auth: Option<&Auth>,
     ) -> ApiResult<ApiRequest> {
-        let mut handle = self.pool.get().unwrap();
+        let mut handle = self
+            .pool
+            .get()
+            .map_err(|e| ApiError::with_source(ApiErrorKind::RequestFailed, e))?;
+
         handle.reset();
         if !self.config.allow_keepalive() {
             handle.forbid_reuse(true).ok();
@@ -310,7 +313,11 @@ impl Api {
                     }
                 }
             }
-            std::thread::sleep(Duration::milliseconds(500).to_std().unwrap());
+            std::thread::sleep(
+                Duration::milliseconds(500)
+                    .to_std()
+                    .expect("500ms is valid, as it is non-negative"),
+            );
             if Utc::now() - duration > started {
                 return Ok(false);
             }
@@ -856,7 +863,12 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Creates a new deploy for a release.
-    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy) -> ApiResult<Deploy> {
+    pub fn create_deploy(
+        &self,
+        org: &str,
+        version: &str,
+        deploy: &Deploy,
+    ) -> ApiResult<Deploy<'_>> {
         let path = format!(
             "/organizations/{}/releases/{}/deploys/",
             PathArg(org),
@@ -868,7 +880,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Lists all deploys for a release
-    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy>> {
+    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy<'_>>> {
         let path = format!(
             "/organizations/{}/releases/{}/deploys/",
             PathArg(org),
@@ -1068,7 +1080,7 @@ impl<'a> AuthenticatedApi<'a> {
             );
             Ok(())
         } else if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
+            Err(ApiErrorKind::ResourceNotFound.into())
         } else {
             resp.convert()
         }
@@ -1417,14 +1429,14 @@ impl<'a> AuthenticatedApi<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Dataset {
     /// Our logs dataset
-    OurLogs,
+    Logs,
 }
 
 impl Dataset {
     /// Returns the string representation of the dataset
     fn as_str(&self) -> &'static str {
         match self {
-            Dataset::OurLogs => "ourlogs",
+            Dataset::Logs => "logs",
         }
     }
 }
@@ -1446,13 +1458,13 @@ pub struct FetchEventsOptions<'a> {
     /// Cursor for pagination
     pub cursor: Option<&'a str>,
     /// Query string to filter events
-    pub query: Option<&'a str>,
-    /// Number of events per page (default: 100)
-    pub per_page: Option<usize>,
-    /// Time period for stats (default: "1h")
-    pub stats_period: Option<&'a str>,
-    /// Sort order (default: "-timestamp")
-    pub sort: Option<&'a str>,
+    pub query: &'a str,
+    /// Number of events per page
+    pub per_page: usize,
+    /// Time period for stats
+    pub stats_period: &'a str,
+    /// Sort order
+    pub sort: &'a str,
 }
 
 impl<'a> FetchEventsOptions<'a> {
@@ -1468,18 +1480,17 @@ impl<'a> FetchEventsOptions<'a> {
             params.push(format!("cursor={}", QueryArg(cursor)));
         }
 
-        if let Some(project_id) = self.project_id {
-            params.push(format!("project={}", QueryArg(project_id)));
+        if let Some(project) = self.project_id {
+            if !project.is_empty() {
+                params.push(format!("project={}", QueryArg(project)));
+            }
         }
-
-        if let Some(query) = self.query {
-            params.push(format!("query={}", QueryArg(query)));
+        if !self.query.is_empty() {
+            params.push(format!("query={}", QueryArg(self.query)));
         }
-
-        params.push(format!("per_page={}", self.per_page.unwrap_or(100)));
-        params.push(format!("statsPeriod={}", self.stats_period.unwrap_or("1h")));
-
-        params.push(format!("sort={}", self.sort.unwrap_or("-timestamp")));
+        params.push(format!("per_page={}", self.per_page));
+        params.push(format!("statsPeriod={}", QueryArg(self.stats_period)));
+        params.push(format!("sort={}", QueryArg(self.sort)));
 
         params
     }
@@ -1615,6 +1626,7 @@ fn handle_req<W: Write>(
             })?;
         } else if progress_bar_mode.active() {
             let pb_progress = pb.clone();
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             handle.progress_function(move |a, b, c, d| {
                 let (down_len, down_pos, up_len, up_pos) = (a as u64, b as u64, c as u64, d as u64);
                 let mut pb = pb_progress.borrow_mut();
@@ -1668,8 +1680,8 @@ fn handle_req<W: Write>(
         handle.perform()?;
     }
 
-    if pb.borrow().is_some() {
-        pb.borrow().as_ref().unwrap().finish_and_clear();
+    if let Some(pb) = pb.borrow().as_ref() {
+        pb.finish_and_clear();
     }
 
     Ok((handle.response_code()?, headers))
@@ -1704,8 +1716,6 @@ impl ApiRequest {
         pipeline_env: Option<String>,
         global_headers: Option<Vec<String>>,
     ) -> ApiResult<Self> {
-        debug!("request {} {}", method, url);
-
         let mut headers = curl::easy::List::new();
         headers.append("Expect:").ok();
 
@@ -1821,6 +1831,7 @@ impl ApiRequest {
     fn get_headers(&self) -> curl::easy::List {
         let mut result = curl::easy::List::new();
         for header_bytes in self.headers.iter() {
+            #[expect(clippy::unwrap_used, reason = "legacy code")]
             let header = String::from_utf8(header_bytes.to_vec()).unwrap();
             result.append(&header).ok();
         }
@@ -1835,7 +1846,6 @@ impl ApiRequest {
         let body = self.body.as_deref();
         let (status, headers) =
             send_req(&mut self.handle, out, body, self.progress_bar_mode.clone())?;
-        debug!("response status: {}", status);
         Ok(ApiResponse {
             status,
             headers,
@@ -1861,7 +1871,10 @@ impl ApiRequest {
             }
 
             // Exponential backoff
-            let backoff_timeout = backoff.next_backoff().unwrap();
+            let backoff_timeout = backoff
+                .next_backoff()
+                .expect("should not return None, as there is no max_elapsed_time");
+
             debug!(
                 "retry number {}, retrying again in {} ms",
                 retry_number,
@@ -2014,7 +2027,8 @@ impl ApiResponse {
 
 fn log_headers(is_response: bool, data: &[u8]) {
     lazy_static! {
-        static ref AUTH_RE: Regex = Regex::new(r"(?i)(authorization):\s*([\w]+)\s+(.*)").unwrap();
+        static ref AUTH_RE: Regex =
+            Regex::new(r"(?i)(authorization):\s*([\w]+)\s+(.*)").expect("regex is valid");
     }
     if let Ok(header) = std::str::from_utf8(data) {
         for line in header.lines() {
@@ -2024,6 +2038,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
 
             let replaced = AUTH_RE.replace_all(line, |caps: &Captures<'_>| {
                 let info = if &caps[1].to_lowercase() == "basic" {
+                    #[expect(clippy::unwrap_used, reason = "legacy code")]
                     caps[3].split(':').next().unwrap().to_owned()
                 } else {
                     format!("{}***", &caps[3][..std::cmp::min(caps[3].len(), 8)])
@@ -2504,7 +2519,7 @@ struct LogsResponse {
 }
 
 /// Log entry structure from the logs API
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize)]
 pub struct LogEntry {
     #[serde(rename = "sentry.item_id")]
     pub item_id: String,

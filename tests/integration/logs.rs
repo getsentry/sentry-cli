@@ -1,12 +1,12 @@
 use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
-fn command_logs_with_api_calls() {
+fn command_logs_with_api_calls_project_slug() {
     TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET", 
-                "/api/0/organizations/wat-org/events/?dataset=ourlogs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=wat-project&per_page=100&statsPeriod=1h&sort=-timestamp"
+                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&query=project:myproject&per_page=100&statsPeriod=90d&sort=-timestamp"
             )
             .with_response_file("logs/get-logs.json"),
         )
@@ -15,16 +15,44 @@ fn command_logs_with_api_calls() {
 }
 
 #[test]
-fn command_logs_basic() {
+fn command_logs_with_api_calls_project_id() {
     TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET", 
-                "/api/0/organizations/wat-org/events/?dataset=ourlogs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=12345&per_page=1&statsPeriod=1h&sort=-timestamp"
+                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=12345&per_page=100&statsPeriod=90d&sort=-timestamp"
+            )
+            .with_response_file("logs/get-logs.json"),
+        )
+        .register_trycmd_test("logs/logs-list-with-data-project-id.trycmd")
+        .with_default_token();
+}
+
+#[test]
+fn command_logs_no_logs_found_project_slug() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "GET", 
+                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&query=project:myproject&per_page=100&statsPeriod=90d&sort=-timestamp"
             )
             .with_response_body(r#"{"data": []}"#),
         )
-        .register_trycmd_test("logs/logs-list-basic.trycmd")
+        .register_trycmd_test("logs/logs-list-no-logs-found.trycmd")
+        .with_default_token();
+}
+
+#[test]
+fn command_logs_no_logs_found_project_id() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "GET", 
+                "/api/0/organizations/wat-org/events/?dataset=logs&field=sentry.item_id&field=trace&field=severity&field=timestamp&field=message&project=12345&per_page=100&statsPeriod=90d&sort=-timestamp"
+            )
+            .with_response_body(r#"{"data": []}"#),
+        )
+        .register_trycmd_test("logs/logs-list-no-logs-found-project-id.trycmd")
         .with_default_token();
 }
 
@@ -34,16 +62,11 @@ fn command_logs_zero_max_rows() {
 }
 
 #[test]
-fn command_logs_help() {
-    let manager = TestManager::new();
-
-    #[cfg(not(windows))]
-    manager.register_trycmd_test("logs/logs-help.trycmd");
-    #[cfg(windows)]
-    manager.register_trycmd_test("logs/logs-help-windows.trycmd");
+fn command_logs_list_help() {
+    TestManager::new().register_trycmd_test("logs/logs-list-help.trycmd");
 }
 
 #[test]
-fn command_logs_list_help() {
-    TestManager::new().register_trycmd_test("logs/logs-list-help.trycmd");
+fn command_logs_help() {
+    TestManager::new().register_trycmd_test("logs/logs-help.trycmd");
 }
