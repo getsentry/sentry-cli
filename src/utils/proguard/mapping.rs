@@ -69,7 +69,7 @@ impl AsRef<[u8]> for ProguardMapping<'_> {
 }
 
 impl Assemblable for ProguardMapping<'_> {
-    fn name(&self) -> Cow<str> {
+    fn name(&self) -> Cow<'_, str> {
         format!("/proguard/{}.txt", self.uuid).into()
     }
 

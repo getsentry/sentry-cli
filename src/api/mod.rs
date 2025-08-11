@@ -173,7 +173,7 @@ impl Api {
 
     /// Creates an AuthenticatedApi referencing this Api instance if an auth token is available.
     /// If an auth token is not available, returns an error.
-    pub fn authenticated(&self) -> ApiResult<AuthenticatedApi> {
+    pub fn authenticated(&self) -> ApiResult<AuthenticatedApi<'_>> {
         self.try_into()
     }
 
@@ -863,7 +863,12 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Creates a new deploy for a release.
-    pub fn create_deploy(&self, org: &str, version: &str, deploy: &Deploy) -> ApiResult<Deploy> {
+    pub fn create_deploy(
+        &self,
+        org: &str,
+        version: &str,
+        deploy: &Deploy,
+    ) -> ApiResult<Deploy<'_>> {
         let path = format!(
             "/organizations/{}/releases/{}/deploys/",
             PathArg(org),
@@ -875,7 +880,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Lists all deploys for a release
-    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy>> {
+    pub fn list_deploys(&self, org: &str, version: &str) -> ApiResult<Vec<Deploy<'_>>> {
         let path = format!(
             "/organizations/{}/releases/{}/deploys/",
             PathArg(org),
@@ -1075,7 +1080,7 @@ impl<'a> AuthenticatedApi<'a> {
             );
             Ok(())
         } else if resp.status() == 404 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
+            Err(ApiErrorKind::ResourceNotFound.into())
         } else {
             resp.convert()
         }

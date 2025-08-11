@@ -4,6 +4,9 @@ $ sentry-cli logs list --help
 List logs from your organization. Query and filter log entries from your Sentry projects. Supports
 filtering by log level and custom queries.
 
+[BETA] The "logs" command is in beta. The command is subject to breaking changes, including removal,
+in any Sentry CLI release.
+
 Usage: sentry-cli[EXE] logs list [OPTIONS]
 
 Options:

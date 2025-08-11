@@ -37,3 +37,8 @@ fn command_logs_zero_max_rows() {
 fn command_logs_list_help() {
     TestManager::new().register_trycmd_test("logs/logs-list-help.trycmd");
 }
+
+#[test]
+fn command_logs_help() {
+    TestManager::new().register_trycmd_test("logs/logs-help.trycmd");
+}
