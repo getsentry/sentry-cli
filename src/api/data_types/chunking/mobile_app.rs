@@ -35,5 +35,5 @@ pub struct AssembleMobileAppResponse {
     pub state: ChunkedFileState,
     pub missing_chunks: Vec<Digest>,
     pub detail: Option<String>,
-    pub artifact_id: Option<String>,
+    pub artifact_url: Option<String>,
 }
