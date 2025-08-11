@@ -142,3 +142,34 @@ fn execute_single_fetch(
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_is_numeric_project_id_purely_numeric() {
+        assert!(is_numeric_project_id("123456"));
+        assert!(is_numeric_project_id("1"));
+        assert!(is_numeric_project_id("999999999"));
+    }
+
+    #[test]
+    fn test_is_numeric_project_id_alphanumeric() {
+        assert!(!is_numeric_project_id("abc123"));
+        assert!(!is_numeric_project_id("123abc"));
+        assert!(!is_numeric_project_id("my-project"));
+    }
+
+    #[test]
+    fn test_is_numeric_project_id_numeric_with_dash() {
+        assert!(!is_numeric_project_id("123-45"));
+        assert!(!is_numeric_project_id("1-2-3"));
+        assert!(!is_numeric_project_id("999-888"));
+    }
+
+    #[test]
+    fn test_is_numeric_project_id_empty_string() {
+        assert!(is_numeric_project_id(""));
+    }
+}
