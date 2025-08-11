@@ -1036,8 +1036,8 @@ impl<'a> AuthenticatedApi<'a> {
         project: &str,
         checksum: Digest,
         chunks: &[Digest],
-        head_sha: Option<&str>,
         build_configuration: Option<&str>,
+        vcs_info: &VcsInfo<'_>,
     ) -> ApiResult<AssembleMobileAppResponse> {
         let url = format!(
             "/projects/{}/{}/files/preprodartifacts/assemble/",
@@ -1049,8 +1049,15 @@ impl<'a> AuthenticatedApi<'a> {
             .with_json_body(&ChunkedMobileAppRequest {
                 checksum,
                 chunks,
-                head_sha,
                 build_configuration,
+                head_sha: vcs_info.head_sha,
+                base_sha: vcs_info.base_sha,
+                provider: vcs_info.vcs_provider,
+                head_repo_name: vcs_info.head_repo_name,
+                base_repo_name: vcs_info.base_repo_name,
+                head_ref: vcs_info.head_ref,
+                base_ref: vcs_info.base_ref,
+                pr_number: vcs_info.pr_number,
             })?
             .send()?
             .convert_rnf(ApiErrorKind::ProjectNotFound)
@@ -2516,6 +2523,20 @@ pub struct RegionResponse {
 #[derive(Debug, Deserialize)]
 struct LogsResponse {
     data: Vec<LogEntry>,
+}
+
+/// VCS information for mobile app uploads
+#[cfg(feature = "unstable-mobile-app")]
+#[derive(Debug)]
+pub struct VcsInfo<'a> {
+    pub head_sha: Option<&'a str>,
+    pub base_sha: Option<&'a str>,
+    pub vcs_provider: Option<&'a str>,
+    pub head_repo_name: Option<&'a str>,
+    pub base_repo_name: Option<&'a str>,
+    pub head_ref: Option<&'a str>,
+    pub base_ref: Option<&'a str>,
+    pub pr_number: Option<&'a u32>,
 }
 
 /// Log entry structure from the logs API
