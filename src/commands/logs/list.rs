@@ -24,7 +24,7 @@ fn validate_max_rows(s: &str) -> Result<usize> {
 
 /// Check if a project identifier is numeric (project ID) or string (project slug)
 fn is_numeric_project_id(project: &str) -> bool {
-    project.chars().all(|c| c.is_ascii_digit())
+    !project.is_empty() && project.chars().all(|c| c.is_ascii_digit())
 }
 
 /// Fields to fetch from the logs API
@@ -170,6 +170,6 @@ mod tests {
 
     #[test]
     fn test_is_numeric_project_id_empty_string() {
-        assert!(is_numeric_project_id(""));
+        assert!(!is_numeric_project_id(""));
     }
 }
