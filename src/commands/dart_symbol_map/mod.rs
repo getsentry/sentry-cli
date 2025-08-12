@@ -1,43 +1,50 @@
 use anyhow::Result;
-use clap::{ArgMatches, Command};
-
-// Keep consistent import patterns with other grouped commands; currently no ArgExt usage here
+use clap::{Args, ArgMatches, Command, Parser as _, Subcommand};
+use crate::utils::args::ArgExt as _;
 
 pub mod upload;
 
-macro_rules! each_subcommand {
-    ($mac:ident) => {
-        $mac!(upload);
+const GROUP_ABOUT: &str = "Manage Dart/Flutter symbol maps for Sentry.";
+const UPLOAD_ABOUT: &str =
+    "Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.";
+const UPLOAD_LONG_ABOUT: &str =
+    "Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.{n}{n}Examples:{n}  sentry-cli dart-symbol-map upload --org my-org --project my-proj path/to/dartsymbolmap.json path/to/debug/file{n}{n}The mapping must be a JSON array of strings with an even number of entries (pairs).{n}The debug file must contain exactly one Debug ID.";
+
+#[derive(Args)]
+pub(super) struct DartSymbolMapArgs {
+    #[command(subcommand)]
+    pub(super) subcommand: DartSymbolMapSubcommand,
+}
+
+#[derive(Subcommand)]
+#[command(about = GROUP_ABOUT)]
+pub(super) enum DartSymbolMapSubcommand {
+    #[command(about = UPLOAD_ABOUT)]
+    #[command(long_about = UPLOAD_LONG_ABOUT)]
+    Upload(upload::DartSymbolMapUploadArgs),
+}
+
+pub(super) fn make_command(command: Command) -> Command {
+    DartSymbolMapSubcommand::augment_subcommands(
+        command
+            .about(GROUP_ABOUT)
+            .subcommand_required(true)
+            .arg_required_else_help(true)
+            .org_arg()
+            .project_arg(false),
+    )
+}
+
+pub(super) fn execute(matches: &ArgMatches) -> Result<()> {
+    // Re-parse with the derive-based parser, mirroring the send-metric pattern.
+    let subcommand = match crate::commands::derive_parser::SentryCLI::parse().command {
+        crate::commands::derive_parser::SentryCLICommand::DartSymbolMap(DartSymbolMapArgs {
+            subcommand,
+        }) => subcommand,
+        _ => unreachable!("expected dart-symbol-map subcommand"),
     };
-}
 
-pub fn make_command(mut command: Command) -> Command {
-    macro_rules! add_subcommand {
-        ($name:ident) => {{
-            command = command.subcommand(crate::commands::dart_symbol_map::$name::make_command(
-                Command::new(stringify!($name).replace('_', "-")),
-            ));
-        }};
+    match subcommand {
+        DartSymbolMapSubcommand::Upload(args) => upload::execute(args, matches),
     }
-
-    command = command
-        .about("Manage Dart/Flutter symbol maps for Sentry.")
-        .subcommand_required(true)
-        .arg_required_else_help(true);
-    each_subcommand!(add_subcommand);
-    command
-}
-
-pub fn execute(matches: &ArgMatches) -> Result<()> {
-    macro_rules! execute_subcommand {
-        ($name:ident) => {{
-            if let Some(sub_matches) =
-                matches.subcommand_matches(&stringify!($name).replace('_', "-"))
-            {
-                return crate::commands::dart_symbol_map::$name::execute(&sub_matches);
-            }
-        }};
-    }
-    each_subcommand!(execute_subcommand);
-    unreachable!();
 }

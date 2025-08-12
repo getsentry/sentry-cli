@@ -46,7 +46,7 @@ mod sourcemaps;
 mod uninstall;
 #[cfg(not(feature = "managed"))]
 mod update;
-mod upload_dart_symbol_map;
+// removed: upload_dart_symbol_map (replaced by derive-based dart-symbol-map group)
 mod upload_dif;
 mod upload_dsym;
 mod upload_proguard;
@@ -275,7 +275,8 @@ fn run_command(matches: &ArgMatches) -> Result<()> {
     each_subcommand!(execute_subcommand);
     // Execute compatibility alias if used
     if let Some(sub_matches) = matches.subcommand_matches("upload-dart-symbol-map") {
-        return crate::commands::upload_dart_symbol_map::execute(sub_matches);
+        // Delegate to the new derive-based implementation adapter
+        return crate::commands::dart_symbol_map::upload::execute_alias(sub_matches);
     }
     unreachable!();
 }
