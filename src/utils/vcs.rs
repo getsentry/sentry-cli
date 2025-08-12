@@ -223,7 +223,10 @@ pub fn get_provider_from_remote(remote: &str) -> String {
 }
 
 #[cfg(feature = "unstable-mobile-app")]
-pub fn git_repo_remote_url(repo: &git2::Repository, cached_remote: &str) -> Result<String, git2::Error> {
+pub fn git_repo_remote_url(
+    repo: &git2::Repository,
+    cached_remote: &str,
+) -> Result<String, git2::Error> {
     let remote = repo.find_remote(cached_remote)?;
     remote
         .url()
