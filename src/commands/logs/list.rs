@@ -211,27 +211,52 @@ impl LogDeduplicator {
     }
 }
 
-/// Returns the updated consecutive all-new batch count and whether we should warn.
+/// Tracks consecutive batches of all-new logs and manages warning state.
 ///
-/// A batch is considered "all-new" if `fetched_count > 0` and `unique_count == fetched_count`.
-/// - If the batch is all-new, the counter increments; when it reaches `threshold`, we reset it to 0 and return `should_warn = true`.
-/// - If the batch is not all-new (including `fetched_count == 0`), the counter resets to 0 and `should_warn = false`.
-fn evaluate_all_new_batch_state(
-    previous_count: usize,
-    fetched_count: usize,
-    unique_count: usize,
-    threshold: usize,
-) -> (usize, bool) {
-    let all_new_batch = fetched_count > 0 && unique_count == fetched_count;
-    if all_new_batch {
-        let updated = previous_count + 1;
-        if updated >= threshold {
-            (0, true)
-        } else {
-            (updated, false)
+/// A batch is "all-new" when every fetched log is unique (no duplicates).
+/// This struct tracks how many consecutive all-new batches we've seen and
+/// warns when the count reaches the threshold, suggesting the user might be
+/// missing some logs due to overly broad filtering.
+#[derive(Debug)]
+struct ConsecutiveNewOnlyTracker {
+    consecutive_count: usize,
+    warning_threshold: usize,
+}
+
+impl ConsecutiveNewOnlyTracker {
+    /// Creates a new tracker with the specified warning threshold.
+    fn new(warning_threshold: usize) -> Self {
+        Self {
+            consecutive_count: 0,
+            warning_threshold,
         }
-    } else {
-        (0, false)
+    }
+
+    /// Processes a new batch and returns whether to show a warning.
+    ///
+    /// A batch is considered "all-new" if `fetched_count > 0` and `unique_count == fetched_count`.
+    /// Returns `true` when the warning threshold is reached, `false` otherwise.
+    fn process_batch(&mut self, fetched_count: usize, unique_count: usize) -> bool {
+        let is_all_new_batch = fetched_count > 0 && unique_count == fetched_count;
+
+        if is_all_new_batch {
+            self.consecutive_count += 1;
+            if self.consecutive_count >= self.warning_threshold {
+                self.consecutive_count = 0; // Reset counter
+                true // Show warning
+            } else {
+                false // No warning yet
+            }
+        } else {
+            self.consecutive_count = 0; // Reset counter
+            false // No warning
+        }
+    }
+
+    /// Gets the current consecutive count (useful for debugging/testing).
+    #[cfg(test)]
+    fn consecutive_count(&self) -> usize {
+        self.consecutive_count
     }
 }
 
@@ -245,8 +270,7 @@ fn execute_live_streaming(
 ) -> Result<()> {
     let mut deduplicator = LogDeduplicator::new(MAX_DEDUP_BUFFER_SIZE);
     let poll_duration = Duration::from_secs(args.poll_interval);
-    let mut consecutive_new_only_count = 0;
-    const WARNING_THRESHOLD: usize = 3; // Show message every 3 consecutive all-new polls
+    let mut new_only_tracker = ConsecutiveNewOnlyTracker::new(3); // Warn after 3 consecutive batches of only new logs
 
     println!("Starting live log streaming...");
     println!(
@@ -288,21 +312,16 @@ fn execute_live_streaming(
                 let fetched_count = logs.len();
                 let unique_logs = deduplicator.add_logs(logs);
 
-                let (new_count, should_warn) = evaluate_all_new_batch_state(
-                    consecutive_new_only_count,
-                    fetched_count,
-                    unique_logs.len(),
-                    WARNING_THRESHOLD,
-                );
-                consecutive_new_only_count = new_count;
+                let should_warn = new_only_tracker.process_batch(fetched_count, unique_logs.len());
                 if should_warn {
                     let suggestion_suffix = if args.query.trim().is_empty() {
-                        Cow::Borrowed("")
+                        ""
                     } else {
-                        Cow::Owned(format!(" (current filter: \"{}\")", args.query))
+                        &format!(" (current filter: \"{}\")", args.query)
                     };
                     let msg = format!(
-                        "Only new logs received in the last {WARNING_THRESHOLD} polls. You may be missing some logs. Consider narrowing your query filter{suggestion_suffix}."
+                        "Only new logs received in the last {} polls. You may be missing some logs. Consider narrowing your query filter{suggestion_suffix}.",
+                        new_only_tracker.warning_threshold
                     );
                     pending_warning = Some(msg);
                 }
@@ -463,31 +482,39 @@ mod tests {
     }
 
     #[test]
-    fn test_evaluate_all_new_batch_state_increments_and_warns() {
-        let threshold = 3;
+    fn test_consecutive_new_only_tracker_creation() {
+        let tracker = ConsecutiveNewOnlyTracker::new(5);
+        assert_eq!(tracker.consecutive_count(), 0);
+        assert_eq!(tracker.warning_threshold, 5);
+    }
+
+    #[test]
+    fn test_consecutive_new_only_tracker_increments_and_warns() {
+        let mut tracker = ConsecutiveNewOnlyTracker::new(3);
+
         // First all-new batch
-        let (count1, warn1) = evaluate_all_new_batch_state(0, 5, 5, threshold);
-        assert_eq!(count1, 1);
+        let warn1 = tracker.process_batch(5, 5);
+        assert_eq!(tracker.consecutive_count(), 1);
         assert!(!warn1);
 
         // Second all-new batch
-        let (count2, warn2) = evaluate_all_new_batch_state(count1, 2, 2, threshold);
-        assert_eq!(count2, 2);
+        let warn2 = tracker.process_batch(2, 2);
+        assert_eq!(tracker.consecutive_count(), 2);
         assert!(!warn2);
 
         // Third all-new batch should warn and reset
-        let (count3, warn3) = evaluate_all_new_batch_state(count2, 10, 10, threshold);
-        assert_eq!(count3, 0);
+        let warn3 = tracker.process_batch(10, 10);
+        assert_eq!(tracker.consecutive_count(), 0);
         assert!(warn3);
 
         // Non all-new batch resets
-        let (count4, warn4) = evaluate_all_new_batch_state(2, 4, 3, threshold);
-        assert_eq!(count4, 0);
+        let warn4 = tracker.process_batch(4, 3);
+        assert_eq!(tracker.consecutive_count(), 0);
         assert!(!warn4);
 
         // Empty fetch resets
-        let (count5, warn5) = evaluate_all_new_batch_state(2, 0, 0, threshold);
-        assert_eq!(count5, 0);
+        let warn5 = tracker.process_batch(0, 0);
+        assert_eq!(tracker.consecutive_count(), 0);
         assert!(!warn5);
     }
 
