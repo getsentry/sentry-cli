@@ -36,7 +36,6 @@ pub(super) fn make_command(command: Command) -> Command {
 }
 
 pub(super) fn execute(matches: &ArgMatches) -> Result<()> {
-    // Re-parse with the derive-based parser, mirroring the send-metric pattern.
     let subcommand = match crate::commands::derive_parser::SentryCLI::parse().command {
         crate::commands::derive_parser::SentryCLICommand::DartSymbolMap(DartSymbolMapArgs {
             subcommand,

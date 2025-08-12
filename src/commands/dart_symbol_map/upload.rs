@@ -149,5 +149,3 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs, matches: &ArgMatches) -> Re
         ),
     }
 }
-
-// legacy alias removed
