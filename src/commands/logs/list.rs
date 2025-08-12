@@ -1,9 +1,11 @@
 use std::borrow::Cow;
+use std::collections::HashSet;
+use std::time::Duration;
 
 use anyhow::Result;
 use clap::Args;
 
-use crate::api::{Api, Dataset, FetchEventsOptions};
+use crate::api::{Api, Dataset, FetchEventsOptions, LogEntry};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 
@@ -55,6 +57,14 @@ pub(super) struct ListLogsArgs {
     #[arg(long = "query", default_value = "")]
     #[arg(help = "Query to filter logs. Example: \"level:error\"")]
     query: String,
+
+    #[arg(long = "live")]
+    #[arg(help = "Live stream logs.")]
+    live: bool,
+
+    #[arg(long = "poll-interval", default_value = "2")]
+    #[arg(help = "Poll interval in seconds. Only used when --live is specified.")]
+    poll_interval: u64,
 }
 
 pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
@@ -90,7 +100,11 @@ pub(super) fn execute(args: ListLogsArgs) -> Result<()> {
         (Cow::Owned(query), None)
     };
 
-    execute_single_fetch(&api, org, project_id, &query, LOG_FIELDS, &args)
+    if args.live {
+        execute_live_streaming(&api, org, project_id, &query, LOG_FIELDS, &args)
+    } else {
+        execute_single_fetch(&api, org, project_id, &query, LOG_FIELDS, &args)
+    }
 }
 
 fn execute_single_fetch(
@@ -153,6 +167,8 @@ struct LogDeduplicator {
     max_size: usize,
 }
 
+const MAX_DEDUP_BUFFER_SIZE: usize = 10_000;
+
 impl LogDeduplicator {
     fn new(max_size: usize) -> Self {
         Self {
@@ -187,15 +203,15 @@ impl LogDeduplicator {
 fn execute_live_streaming(
     api: &Api,
     org: &str,
-    project: &str,
-    query: Option<&str>,
+    project: Option<&str>,
+    query: &str,
     fields: &[&str],
     args: &ListLogsArgs,
 ) -> Result<()> {
     let mut deduplicator = LogDeduplicator::new(MAX_DEDUP_BUFFER_SIZE);
     let poll_duration = Duration::from_secs(args.poll_interval);
     let mut consecutive_new_only_count = 0;
-    const WARNING_THRESHOLD: usize = 3; // Show warning after 3 consecutive new-only responses
+    const WARNING_THRESHOLD: usize = 3; // Show message every 3 consecutive empty polls
 
     println!("Starting live log streaming...");
     println!(
@@ -217,14 +233,14 @@ fn execute_live_streaming(
 
     loop {
         let options = FetchEventsOptions {
-            dataset: Dataset::OurLogs,
+            dataset: Dataset::Logs,
             fields,
-            project_id: Some(project),
+            project_id: project,
             cursor: None,
             query,
-            per_page: Some(args.max_rows),
-            stats_period: Some("1h"),
-            sort: Some("-timestamp"),
+            per_page: args.max_rows,
+            stats_period: "10m",
+            sort: "-timestamp",
         };
 
         match api
@@ -237,12 +253,17 @@ fn execute_live_streaming(
                 if unique_logs.is_empty() {
                     consecutive_new_only_count += 1;
 
-                    if consecutive_new_only_count >= WARNING_THRESHOLD && args.query.is_empty() {
-                        eprintln!(
-                            "\n⚠️  Warning: No new logs found for {consecutive_new_only_count} consecutive polls."
-                        );
+                    if consecutive_new_only_count >= WARNING_THRESHOLD {
+                        if args.query.trim().is_empty() {
+                            eprintln!("\nNo logs found in the last {WARNING_THRESHOLD} polls.");
+                        } else {
+                            eprintln!(
+                                "\nNo logs found in the last {WARNING_THRESHOLD} polls. Consider adjusting your query filter: \"{}\"",
+                                args.query
+                            );
+                        }
 
-                        // Reset counter to avoid spam
+                        // Reset counter to show again after the next threshold
                         consecutive_new_only_count = 0;
                     }
                 } else {
@@ -390,30 +411,31 @@ mod tests {
 
         assert_eq!(deduplicator.seen_ids.len(), 4);
         assert_eq!(deduplicator.buffer.len(), 4);
-        #[test]
-        fn test_is_numeric_project_id_purely_numeric() {
-            assert!(is_numeric_project_id("123456"));
-            assert!(is_numeric_project_id("1"));
-            assert!(is_numeric_project_id("999999999"));
-        }
+    }
 
-        #[test]
-        fn test_is_numeric_project_id_alphanumeric() {
-            assert!(!is_numeric_project_id("abc123"));
-            assert!(!is_numeric_project_id("123abc"));
-            assert!(!is_numeric_project_id("my-project"));
-        }
+    #[test]
+    fn test_is_numeric_project_id_purely_numeric() {
+        assert!(is_numeric_project_id("123456"));
+        assert!(is_numeric_project_id("1"));
+        assert!(is_numeric_project_id("999999999"));
+    }
 
-        #[test]
-        fn test_is_numeric_project_id_numeric_with_dash() {
-            assert!(!is_numeric_project_id("123-45"));
-            assert!(!is_numeric_project_id("1-2-3"));
-            assert!(!is_numeric_project_id("999-888"));
-        }
+    #[test]
+    fn test_is_numeric_project_id_alphanumeric() {
+        assert!(!is_numeric_project_id("abc123"));
+        assert!(!is_numeric_project_id("123abc"));
+        assert!(!is_numeric_project_id("my-project"));
+    }
 
-        #[test]
-        fn test_is_numeric_project_id_empty_string() {
-            assert!(!is_numeric_project_id(""));
-        }
+    #[test]
+    fn test_is_numeric_project_id_numeric_with_dash() {
+        assert!(!is_numeric_project_id("123-45"));
+        assert!(!is_numeric_project_id("1-2-3"));
+        assert!(!is_numeric_project_id("999-888"));
+    }
+
+    #[test]
+    fn test_is_numeric_project_id_empty_string() {
+        assert!(!is_numeric_project_id(""));
     }
 }

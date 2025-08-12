@@ -34,13 +34,13 @@ Options:
           [default: ]
 
       --live
-          Enable live streaming mode to continuously poll for new logs.
+          Live stream logs.
 
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
       --poll-interval <POLL_INTERVAL>
-          Polling interval in seconds for live streaming mode.
+          Poll interval in seconds. Only used when --live is specified.
           
           [default: 2]
 
