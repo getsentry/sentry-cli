@@ -86,7 +86,7 @@ fn command_mobile_app_upload_apk_all_uploaded() {
                 "POST",
                 "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
             )
-            .with_response_body(r#"{"state":"ok","missingChunks":[],"artifactId":"42"}"#),
+            .with_response_body(r#"{"state":"ok","missingChunks":[],"artifactUrl":"https://sentry.io/wat-org/preprod/wat-project/42"}"#),
         )
         .register_trycmd_test("mobile_app/mobile_app-upload-apk-all-uploaded.trycmd")
         .with_default_token();
@@ -159,7 +159,7 @@ fn command_mobile_app_upload_apk_chunked() {
                 "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
             )
             .with_header_matcher("content-type", "application/json")
-            .with_matcher(r#"{"checksum":"18e40e6e932d0b622d631e887be454cc2003dbb5","chunks":["18e40e6e932d0b622d631e887be454cc2003dbb5"],"head_sha":"test_sha"}"#)
+            .with_matcher(r#"{"checksum":"18e40e6e932d0b622d631e887be454cc2003dbb5","chunks":["18e40e6e932d0b622d631e887be454cc2003dbb5"],"head_sha":"test_head_sha"}"#)
             .with_response_fn(move |_| {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
@@ -170,7 +170,7 @@ fn command_mobile_app_upload_apk_chunked() {
                     r#"{
                         "state": "ok",
                         "missingChunks": [],
-                        "artifactId": "42"
+                        "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/42"
                     }"#
                 }
                 .into()
@@ -214,7 +214,7 @@ fn command_mobile_app_upload_ipa_chunked() {
                 "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
             )
             .with_header_matcher("content-type", "application/json")
-             .with_matcher(r#"{"checksum":"ed9da71e3688261875db21b266da84ffe004a8a4","chunks":["ed9da71e3688261875db21b266da84ffe004a8a4"],"head_sha":"test_sha"}"#)
+             .with_matcher(r#"{"checksum":"ed9da71e3688261875db21b266da84ffe004a8a4","chunks":["ed9da71e3688261875db21b266da84ffe004a8a4"],"head_sha":"test_head_sha"}"#)
             .with_response_fn(move |_| {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
@@ -225,7 +225,7 @@ fn command_mobile_app_upload_ipa_chunked() {
                     r#"{
                         "state": "ok",
                         "missingChunks": [],
-                        "artifactId": "some-text-id"
+                        "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/some-text-id"
                     }"#
                 }
                 .into()
