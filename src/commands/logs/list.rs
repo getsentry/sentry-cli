@@ -200,6 +200,30 @@ impl LogDeduplicator {
     }
 }
 
+/// Returns the updated consecutive all-new batch count and whether we should warn.
+///
+/// A batch is considered "all-new" if `fetched_count > 0` and `unique_count == fetched_count`.
+/// - If the batch is all-new, the counter increments; when it reaches `threshold`, we reset it to 0 and return `should_warn = true`.
+/// - If the batch is not all-new (including `fetched_count == 0`), the counter resets to 0 and `should_warn = false`.
+fn evaluate_all_new_batch_state(
+    previous_count: usize,
+    fetched_count: usize,
+    unique_count: usize,
+    threshold: usize,
+) -> (usize, bool) {
+    let all_new_batch = fetched_count > 0 && unique_count == fetched_count;
+    if all_new_batch {
+        let updated = previous_count + 1;
+        if updated >= threshold {
+            (0, true)
+        } else {
+            (updated, false)
+        }
+    } else {
+        (0, false)
+    }
+}
+
 fn execute_live_streaming(
     api: &Api,
     org: &str,
@@ -211,7 +235,7 @@ fn execute_live_streaming(
     let mut deduplicator = LogDeduplicator::new(MAX_DEDUP_BUFFER_SIZE);
     let poll_duration = Duration::from_secs(args.poll_interval);
     let mut consecutive_new_only_count = 0;
-    const WARNING_THRESHOLD: usize = 3; // Show message every 3 consecutive empty polls
+    const WARNING_THRESHOLD: usize = 3; // Show message every 3 consecutive all-new polls
 
     println!("Starting live log streaming...");
     println!(
@@ -230,6 +254,8 @@ fn execute_live_streaming(
         .add("Trace");
 
     let mut header_printed = false;
+    // Holds a warning message to be printed after the current batch of rows for visibility
+    let mut pending_warning: Option<String> = None;
 
     loop {
         let options = FetchEventsOptions {
@@ -248,28 +274,31 @@ fn execute_live_streaming(
             .fetch_organization_events(org, &options)
         {
             Ok(logs) => {
+                let fetched_count = logs.len();
                 let unique_logs = deduplicator.add_logs(logs);
 
-                if unique_logs.is_empty() {
-                    consecutive_new_only_count += 1;
+                let (new_count, should_warn) = evaluate_all_new_batch_state(
+                    consecutive_new_only_count,
+                    fetched_count,
+                    unique_logs.len(),
+                    WARNING_THRESHOLD,
+                );
+                consecutive_new_only_count = new_count;
+                if should_warn {
+                    let suggestion_suffix = if args.query.trim().is_empty() {
+                        Cow::Borrowed("")
+                    } else {
+                        Cow::Owned(format!(" (current filter: \"{}\")", args.query))
+                    };
+                    let msg = format!(
+                        "Only new logs received in the last {WARNING_THRESHOLD} polls. You may be missing some logs. Consider narrowing your query filter{}.",
+                        suggestion_suffix
+                    );
+                    pending_warning = Some(msg);
+                }
 
-                    if consecutive_new_only_count >= WARNING_THRESHOLD {
-                        if args.query.trim().is_empty() {
-                            eprintln!("\nNo logs found in the last {WARNING_THRESHOLD} polls.");
-                        } else {
-                            eprintln!(
-                                "\nNo logs found in the last {WARNING_THRESHOLD} polls. Consider adjusting your query filter: \"{}\"",
-                                args.query
-                            );
-                        }
-
-                        // Reset counter to show again after the next threshold
-                        consecutive_new_only_count = 0;
-                    }
-                } else {
-                    consecutive_new_only_count = 0;
-
-                    // Add new logs to table
+                // Add new logs to table (if any)
+                if !unique_logs.is_empty() {
                     for log in unique_logs {
                         let row = table.add_row();
                         row.add(&log.item_id)
@@ -289,6 +318,16 @@ fn execute_live_streaming(
                     }
                     // Clear rows to free memory but keep the table structure for reuse
                     table.clear_rows();
+                }
+
+                // Print any pending warning AFTER the batch rows to maximize visibility
+                if let Some(msg) = pending_warning.take() {
+                    // Style: bold black text on bright yellow background, with spacing and banner
+                    const BANNER_WIDTH: usize = 100;
+                    let line = "=".repeat(BANNER_WIDTH);
+                    let reset = "\x1b[0m";
+                    let style = "\x1b[30;103;1m"; // black on bright yellow, bold
+                    eprintln!("\n\n{}\n{} {} {}\n{}\n\n", line, style, msg, reset, line);
                 }
             }
             Err(e) => {
@@ -411,6 +450,35 @@ mod tests {
 
         assert_eq!(deduplicator.seen_ids.len(), 4);
         assert_eq!(deduplicator.buffer.len(), 4);
+    }
+
+    #[test]
+    fn test_evaluate_all_new_batch_state_increments_and_warns() {
+        let threshold = 3;
+        // First all-new batch
+        let (count1, warn1) = evaluate_all_new_batch_state(0, 5, 5, threshold);
+        assert_eq!(count1, 1);
+        assert!(!warn1);
+
+        // Second all-new batch
+        let (count2, warn2) = evaluate_all_new_batch_state(count1, 2, 2, threshold);
+        assert_eq!(count2, 2);
+        assert!(!warn2);
+
+        // Third all-new batch should warn and reset
+        let (count3, warn3) = evaluate_all_new_batch_state(count2, 10, 10, threshold);
+        assert_eq!(count3, 0);
+        assert!(warn3);
+
+        // Non all-new batch resets
+        let (count4, warn4) = evaluate_all_new_batch_state(2, 4, 3, threshold);
+        assert_eq!(count4, 0);
+        assert!(!warn4);
+
+        // Empty fetch resets
+        let (count5, warn5) = evaluate_all_new_batch_state(2, 0, 0, threshold);
+        assert_eq!(count5, 0);
+        assert!(!warn5);
     }
 
     #[test]
