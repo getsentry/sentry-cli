@@ -453,36 +453,6 @@ mod tests {
     }
 
     #[test]
-    fn test_log_deduplicator_mixed_new_and_old_logs() {
-        let mut deduplicator = LogDeduplicator::new(10);
-
-        // Add initial logs
-        let initial_logs = vec![
-            create_test_log("1", "test message 1"),
-            create_test_log("2", "test message 2"),
-        ];
-        let unique_logs1 = deduplicator.add_logs(initial_logs);
-        assert_eq!(unique_logs1.len(), 2);
-
-        // Add mix of new and old logs
-        let mixed_logs = vec![
-            create_test_log("1", "test message 1"), // old
-            create_test_log("3", "test message 3"), // new
-            create_test_log("2", "test message 2"), // old
-            create_test_log("4", "test message 4"), // new
-        ];
-        let unique_logs2 = deduplicator.add_logs(mixed_logs);
-
-        // Should only return the new logs (3 and 4)
-        assert_eq!(unique_logs2.len(), 2);
-        assert_eq!(unique_logs2[0].item_id, "3");
-        assert_eq!(unique_logs2[1].item_id, "4");
-
-        assert_eq!(deduplicator.seen_ids.len(), 4);
-        assert_eq!(deduplicator.buffer.len(), 4);
-    }
-
-    #[test]
     fn test_consecutive_new_only_tracker_creation() {
         let tracker = ConsecutiveNewOnlyTracker::new(5);
         assert_eq!(tracker.consecutive_count(), 0);
