@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -173,7 +173,7 @@ struct LogDeduplicator {
     /// Set of seen log IDs for quick lookup
     seen_ids: HashSet<String>,
     /// Buffer of log entries in order (for maintaining size limit)
-    buffer: Vec<LogEntry>,
+    buffer: VecDeque<LogEntry>,
     /// Maximum size of the buffer
     max_size: usize,
 }
@@ -184,7 +184,7 @@ impl LogDeduplicator {
     fn new(max_size: usize) -> Self {
         Self {
             seen_ids: HashSet::new(),
-            buffer: Vec::new(),
+            buffer: VecDeque::new(),
             max_size,
         }
     }
@@ -196,15 +196,16 @@ impl LogDeduplicator {
         for log in new_logs {
             if !self.seen_ids.contains(&log.item_id) {
                 self.seen_ids.insert(log.item_id.clone());
-                self.buffer.push(log.clone());
+                self.buffer.push_back(log.clone());
                 unique_logs.push(log);
             }
         }
 
         // Maintain buffer size limit by removing oldest entries
         while self.buffer.len() > self.max_size {
-            let removed_log = self.buffer.remove(0);
-            self.seen_ids.remove(&removed_log.item_id);
+            if let Some(removed_log) = self.buffer.pop_front() {
+                self.seen_ids.remove(&removed_log.item_id);
+            }
         }
 
         unique_logs
