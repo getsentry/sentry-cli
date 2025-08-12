@@ -40,7 +40,7 @@ Options:
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
       --poll-interval <POLL_INTERVAL>
-          Poll interval in seconds. Only used when --live is specified.
+          Poll interval in seconds (must be > 0). Only used when --live is specified.
           
           [default: 2]
 
