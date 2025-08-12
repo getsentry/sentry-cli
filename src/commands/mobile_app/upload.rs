@@ -23,7 +23,9 @@ use crate::utils::mobile_app::{
 };
 use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, normalize_directory};
 use crate::utils::progress::ProgressBar;
-use crate::utils::vcs::{self, get_provider_from_remote, get_repo_from_remote};
+use crate::utils::vcs::{
+    self, get_provider_from_remote, get_repo_from_remote, git_repo_remote_url,
+};
 
 pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -107,20 +109,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Try to open the git repository and find the remote, but handle errors gracefully.
     let (vcs_provider, head_repo_name) = {
         // Try to open the repo and get the remote URL, but don't fail if not in a repo.
-        let remote_url = match git2::Repository::open_from_env().and_then(|repo| {
-            repo.find_remote(&cached_remote).and_then(|remote| {
-                remote
-                    .url()
-                    .map(|url| url.to_owned())
-                    .ok_or_else(|| git2::Error::from_str("No remote URL found"))
-            })
-        }) {
-            Ok(url) => Some(url),
-            Err(err) => {
-                debug!("Could not determine git remote: {err}");
-                None
-            }
-        };
+        let repo = git2::Repository::open_from_env().ok();
+        let remote_url = repo.and_then(|repo| git_repo_remote_url(&repo, &cached_remote).ok());
 
         let vcs_provider: Option<Cow<'_, str>> = matches
             .get_one("vcs_provider")
