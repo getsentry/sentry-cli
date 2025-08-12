@@ -24,6 +24,16 @@ fn validate_max_rows(s: &str) -> Result<usize> {
     }
 }
 
+/// Validate that poll-interval is a positive integer (> 0)
+fn validate_poll_interval(s: &str) -> Result<u64> {
+    let value = s.parse()?;
+    if value > 0 {
+        Ok(value)
+    } else {
+        Err(anyhow::anyhow!("poll-interval must be a positive integer"))
+    }
+}
+
 /// Check if a project identifier is numeric (project ID) or string (project slug)
 fn is_numeric_project_id(project: &str) -> bool {
     !project.is_empty() && project.chars().all(|c| c.is_ascii_digit())
@@ -63,7 +73,8 @@ pub(super) struct ListLogsArgs {
     live: bool,
 
     #[arg(long = "poll-interval", default_value = "2")]
-    #[arg(help = "Poll interval in seconds. Only used when --live is specified.")]
+    #[arg(value_parser = validate_poll_interval)]
+    #[arg(help = "Poll interval in seconds (must be > 0). Only used when --live is specified.")]
     poll_interval: u64,
 }
 
