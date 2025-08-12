@@ -140,8 +140,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(Cow::Borrowed)
             .or_else(|| {
                 // Try to get the current ref from the VCS if not provided
+                // Note: git_repo_head_ref will return an error for detached HEAD states,
+                // which .ok() converts to None - this prevents sending "HEAD" as a branch name
+                // In that case, the user will need to provide a valid branch name.
                 repo_ref
-                    .and_then(|r| git_repo_head_ref(r).ok())
+                    .and_then(|r| match git_repo_head_ref(r) {
+                        Ok(ref_name) => {
+                            debug!("Found current branch reference: {}", ref_name);
+                            Some(ref_name)
+                        }
+                        Err(e) => {
+                            debug!(
+                                "No valid branch reference found (likely detached HEAD): {}",
+                                e
+                            );
+                            None
+                        }
+                    })
                     .map(Cow::Owned)
             });
 

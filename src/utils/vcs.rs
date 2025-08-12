@@ -235,9 +235,19 @@ pub fn git_repo_remote_url(
 #[cfg(feature = "unstable-mobile-app")]
 pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String, git2::Error> {
     let head = repo.head()?;
-    head.shorthand()
-        .map(|s| s.to_owned())
-        .ok_or_else(|| git2::Error::from_str("No HEAD reference found"))
+
+    // Only return a reference name if we're not in a detached HEAD state
+    // In detached HEAD state, head.shorthand() returns "HEAD" which is not a valid branch name
+    if head.is_branch() {
+        head.shorthand()
+            .map(|s| s.to_owned())
+            .ok_or_else(|| git2::Error::from_str("No HEAD reference found"))
+    } else {
+        // In detached HEAD state, return an error to indicate no valid branch reference
+        Err(git2::Error::from_str(
+            "HEAD is detached - no branch reference available",
+        ))
+    }
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
@@ -1195,4 +1205,36 @@ fn test_generate_patch_ignore_missing() {
         ".*.id" => "[id]",
         ".*.timestamp" => "[timestamp]"
     });
+}
+
+#[cfg(feature = "unstable-mobile-app")]
+#[test]
+fn test_git_repo_head_ref() {
+    let dir = git_initialize_repo();
+
+    // Create initial commit
+    git_create_commit(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+
+    // Test on a branch (should succeed)
+    let head_ref = git_repo_head_ref(&repo).expect("Should get branch reference");
+    assert_eq!(head_ref, "main"); // or "master" depending on git version
+
+    // Test in detached HEAD state (should fail)
+    let head_commit = repo.head().unwrap().target().unwrap();
+    repo.set_head_detached(head_commit)
+        .expect("Failed to detach HEAD");
+
+    let head_ref_result = git_repo_head_ref(&repo);
+    assert!(head_ref_result.is_err());
+    assert_eq!(
+        head_ref_result.unwrap_err().message(),
+        "HEAD is detached - no branch reference available"
+    );
 }
