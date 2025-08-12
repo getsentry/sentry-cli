@@ -1,36 +1,31 @@
 use std::borrow::Cow;
-#[cfg(not(windows))]
-use std::fs;
 use std::io::Write as _;
-#[cfg(not(windows))]
-use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use indicatif::ProgressStyle;
-use itertools::Itertools as _;
 use log::{debug, info, warn};
-use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability};
+use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState, VcsInfo};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
-use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
+use crate::utils::chunks::{upload_chunks, Chunk};
 use crate::utils::fs::get_sha1_checksums;
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::mobile_app::{
     handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file,
 };
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file};
+use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, normalize_directory};
 use crate::utils::progress::ProgressBar;
-use crate::utils::vcs;
+use crate::utils::vcs::{
+    self, get_provider_from_remote, get_repo_from_remote, git_repo_remote_url,
+};
 
 pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -51,9 +46,45 @@ pub fn make_command(command: Command) -> Command {
                 .required(true),
         )
         .arg(
-            Arg::new("sha")
-                .long("sha")
-                .help("The git commit sha to use for the upload. If not provided, the current commit sha will be used.")
+            Arg::new("head_sha")
+                .long("head-sha")
+                .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
+        )
+        .arg(
+            Arg::new("base_sha")
+                .long("base-sha")
+                .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
+        )
+        .arg(
+            Arg::new("vcs_provider")
+                .long("vcs-provider")
+                .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
+        )
+        .arg(
+            Arg::new("head_repo_name")
+                .long("head-repo-name")
+                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+        )
+        .arg(
+            Arg::new("base_repo_name")
+                .long("base-repo-name")
+                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+        )
+        .arg(
+            Arg::new("head_ref")
+                .long("head-ref")
+                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+        )
+        .arg(
+            Arg::new("base_ref")
+                .long("base-ref")
+                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+        )
+        .arg(
+            Arg::new("pr_number")
+                .long("pr-number")
+                .value_parser(clap::value_parser!(u32))
+                .help("The pull request number to use for the upload. If not provided, the current pull request number will be used.")
         )
         .arg(
             Arg::new("build_configuration")
@@ -63,15 +94,55 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
     let path_strings = matches
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    let sha = matches
-        .get_one("sha")
+    let head_sha = matches
+        .get_one("head_sha")
         .map(String::as_str)
         .map(Cow::Borrowed)
         .or_else(|| vcs::find_head().ok().map(Cow::Owned));
+
+    let cached_remote = config.get_cached_vcs_remote();
+    // Try to open the git repository and find the remote, but handle errors gracefully.
+    let (vcs_provider, head_repo_name) = {
+        // Try to open the repo and get the remote URL, but don't fail if not in a repo.
+        let repo = git2::Repository::open_from_env().ok();
+        let remote_url = repo.and_then(|repo| git_repo_remote_url(&repo, &cached_remote).ok());
+
+        let vcs_provider: Option<Cow<'_, str>> = matches
+            .get_one("vcs_provider")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                remote_url
+                    .as_ref()
+                    .map(|url| get_provider_from_remote(url))
+                    .map(Cow::Owned)
+            });
+
+        let head_repo_name: Option<Cow<'_, str>> = matches
+            .get_one("head_repo_name")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                remote_url
+                    .as_ref()
+                    .map(|url| get_repo_from_remote(url))
+                    .map(Cow::Owned)
+            });
+
+        (vcs_provider, head_repo_name)
+    };
+
+    let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
+
+    let base_sha = matches.get_one("base_sha").map(String::as_str);
+    let head_ref = matches.get_one("head_ref").map(String::as_str);
+    let base_ref = matches.get_one("base_ref").map(String::as_str);
+    let pr_number = matches.get_one::<u32>("pr_number");
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
 
@@ -95,11 +166,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
 
-        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-        if is_apple_app(path) {
-            handle_asset_catalogs(path);
-        }
-
         validate_is_mobile_app(path, &byteview)?;
 
         let normalized_zip = if path.is_file() {
@@ -107,7 +173,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             handle_file(path, &byteview)?
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
-            normalize_directory(path).with_context(|| {
+            handle_directory(path).with_context(|| {
                 format!(
                     "Failed to generate uploadable bundle for directory {}",
                     path.display()
@@ -130,54 +196,72 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let (org, project) = config.get_org_and_project(matches)?;
 
-    let mut uploaded_paths = vec![];
-    let mut errored_paths = vec![];
+    let mut uploaded_paths_and_urls = vec![];
+    let mut errored_paths_and_reasons = vec![];
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
+        let vcs_info = VcsInfo {
+            head_sha: head_sha.as_deref(),
+            base_sha,
+            vcs_provider: vcs_provider.as_deref(),
+            head_repo_name: head_repo_name.as_deref(),
+            base_repo_name,
+            head_ref,
+            base_ref,
+            pr_number,
+        };
         match upload_file(
             &authenticated_api,
             &bytes,
             &org,
             &project,
-            sha.as_deref(),
             build_configuration,
+            &vcs_info,
         ) {
-            Ok(_) => {
+            Ok(artifact_url) => {
                 info!("Successfully uploaded file: {}", path.display());
-                uploaded_paths.push(path.to_path_buf());
+                uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
             }
             Err(e) => {
                 debug!("Failed to upload file at path {}: {}", path.display(), e);
-                errored_paths.push(path.to_path_buf());
+                errored_paths_and_reasons.push((path.to_path_buf(), e));
             }
         }
     }
 
-    if !errored_paths.is_empty() {
+    if !errored_paths_and_reasons.is_empty() {
         warn!(
             "Failed to upload {} file{}:",
-            errored_paths.len(),
-            if errored_paths.len() == 1 { "" } else { "s" }
+            errored_paths_and_reasons.len(),
+            if errored_paths_and_reasons.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
         );
-        for path in errored_paths {
-            warn!("  - {}", path.display());
+        for (path, reason) in errored_paths_and_reasons {
+            warn!("  - {} ({})", path.display(), reason);
         }
     }
 
-    println!(
-        "Successfully uploaded {} file{} to Sentry",
-        uploaded_paths.len(),
-        if uploaded_paths.len() == 1 { "" } else { "s" }
-    );
-    if uploaded_paths.len() < 3 {
-        for path in &uploaded_paths {
-            println!("  - {}", path.display());
-        }
-    }
-
-    if uploaded_paths.is_empty() {
+    if uploaded_paths_and_urls.is_empty() {
         bail!("Failed to upload any files");
+    } else {
+        println!(
+            "Successfully uploaded {} file{} to Sentry",
+            uploaded_paths_and_urls.len(),
+            if uploaded_paths_and_urls.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
+        );
+        if uploaded_paths_and_urls.len() < 3 {
+            for (path, artifact_url) in &uploaded_paths_and_urls {
+                println!("  - {} ({artifact_url})", path.display());
+            }
+        }
     }
     Ok(())
 }
@@ -187,9 +271,9 @@ fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_zip_file(byteview) && is_ipa_file(byteview)? {
         debug!("Converting IPA file to XCArchive structure");
-        let temp_dir = TempDir::create()?;
-        return ipa_to_xcarchive(path, byteview, &temp_dir)
-            .and_then(|path| normalize_directory(&path))
+        let archive_temp_dir = TempDir::create()?;
+        return ipa_to_xcarchive(path, byteview, &archive_temp_dir)
+            .and_then(|path| handle_directory(&path))
             .with_context(|| format!("Failed to process IPA file {}", path.display()));
     }
 
@@ -276,84 +360,33 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     Ok(temp_file)
 }
 
-// For XCArchive directories, we'll zip the entire directory
-fn normalize_directory(path: &Path) -> Result<TempFile> {
-    debug!("Creating normalized zip for directory: {}", path.display());
-
-    let temp_file = TempFile::create()?;
-    let mut zip = ZipWriter::new(temp_file.open()?);
-
-    let mut file_count = 0;
-
-    // Collect and sort entries for deterministic ordering
-    // This is important to ensure stable sha1 checksums for the zip file as
-    // an optimization is used to avoid re-uploading the same chunks if they're already on the server.
-    let entries = walkdir::WalkDir::new(path)
-        .follow_links(true)
-        .into_iter()
-        .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_file())
-        .map(|entry| {
-            let entry_path = entry.into_path();
-            let relative_path = entry_path
-                .strip_prefix(path.parent().ok_or_else(|| {
-                    anyhow!(
-                        "Cannot determine parent directory for path: {}",
-                        path.display()
-                    )
-                })?)?
-                .to_owned();
-            Ok((entry_path, relative_path))
-        })
-        .collect::<Result<Vec<_>>>()?
-        .into_iter()
-        .sorted_by(|(_, a), (_, b)| a.cmp(b));
-
-    // Need to set the last modified time to a fixed value to ensure consistent checksums
-    // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
-    // but the last modified time being different will cause checksums to be different.
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
-        .last_modified_time(DateTime::default());
-
-    for (entry_path, relative_path) in entries {
-        debug!("Adding file to zip: {}", relative_path.display());
-
-        #[cfg(not(windows))]
-        // On Unix, we need to preserve the file permissions.
-        let options = options.unix_permissions(fs::metadata(&entry_path)?.permissions().mode());
-
-        zip.start_file(relative_path.to_string_lossy(), options)?;
-        let file_byteview = ByteView::open(&entry_path)?;
-        zip.write_all(file_byteview.as_slice())?;
-        file_count += 1;
+fn handle_directory(path: &Path) -> Result<TempFile> {
+    let temp_dir = TempDir::create()?;
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    if is_apple_app(path) {
+        handle_asset_catalogs(path, temp_dir.path());
     }
-
-    zip.finish()?;
-    debug!(
-        "Successfully created normalized zip for directory with {} files",
-        file_count
-    );
-    Ok(temp_file)
+    normalize_directory(path, temp_dir.path())
 }
 
+/// Returns artifact url if upload was successful.
 fn upload_file(
     api: &AuthenticatedApi,
     bytes: &[u8],
     org: &str,
     project: &str,
-    sha: Option<&str>,
     build_configuration: Option<&str>,
-) -> Result<()> {
+    vcs_info: &VcsInfo<'_>,
+) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
         update to the latest version of Sentry to use the mobile-app upload command.";
 
     debug!(
-        "Uploading file to organization: {}, project: {}, sha: {}, build_configuration: {}",
+        "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
         org,
         project,
-        sha.unwrap_or("unknown"),
-        build_configuration.unwrap_or("unknown")
+        build_configuration.unwrap_or("unknown"),
+        vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
@@ -371,7 +404,7 @@ fn upload_file(
     }
 
     let progress_style =
-        ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
+        ProgressStyle::default_spinner().template("{spinner} Preparing for upload...");
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
@@ -384,76 +417,57 @@ fn upload_file(
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();
 
-    pb.finish_with_duration("Finishing upload");
+    pb.finish_with_duration("Preparing for upload");
 
-    let response =
-        api.assemble_mobile_app(org, project, checksum, &checksums, sha, build_configuration)?;
-    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+    // In the normal case we go through this loop exactly twice:
+    // 1. state=not_found
+    //    server tells us the we need to send every chunk and we do so
+    // 2. artifact_url set so we're done (likely state=created)
+    //
+    // In the case where all the chunks are already on the server we go
+    // through only once:
+    // 1. state=created, artifact_url set
+    //
+    // In the case where something went wrong (which could be on either
+    // iteration of the loop) we get:
+    // n. state=error, artifact_url unset
 
-    if !chunks.is_empty() {
-        let upload_progress_style = ProgressStyle::default_bar().template(
-            "{prefix:.dim} Uploading files...\
-             \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
-        );
-        upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
-    } else {
-        println!("Nothing to upload, all files are on the server");
-    }
+    let result = loop {
+        let response = api.assemble_mobile_app(
+            org,
+            project,
+            checksum,
+            &checksums,
+            build_configuration,
+            vcs_info,
+        )?;
+        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
-    poll_assemble(
-        api,
-        checksum,
-        &checksums,
-        org,
-        project,
-        sha,
-        build_configuration,
-    )?;
-    Ok(())
-}
-
-fn poll_assemble(
-    api: &AuthenticatedApi,
-    checksum: Digest,
-    chunks: &[Digest],
-    org: &str,
-    project: &str,
-    sha: Option<&str>,
-    build_configuration: Option<&str>,
-) -> Result<()> {
-    debug!("Polling assemble for checksum: {}", checksum);
-
-    let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
-    let pb = ProgressBar::new_spinner();
-
-    pb.enable_steady_tick(100);
-    pb.set_style(progress_style);
-
-    let response = loop {
-        let response =
-            api.assemble_mobile_app(org, project, checksum, chunks, sha, build_configuration)?;
-
-        if response.state.is_finished() {
-            break response;
+        if !chunks.is_empty() {
+            let upload_progress_style = ProgressStyle::default_bar().template(
+                "{prefix:.dim} Uploading files...\
+               \n{wide_bar}  {bytes}/{total_bytes} ({eta})",
+            );
+            upload_chunks(&chunks, &chunk_upload_options, upload_progress_style)?;
         }
 
-        std::thread::sleep(ASSEMBLE_POLL_INTERVAL);
+        // state.is_err() is not the same as this since it also returns
+        // true for ChunkedFileState::NotFound.
+        if response.state == ChunkedFileState::Error {
+            let message = response.detail.as_deref().unwrap_or("unknown error");
+            bail!("Failed to process uploaded files: {}", message);
+        }
+
+        if let Some(artifact_url) = response.artifact_url {
+            break Ok(artifact_url);
+        }
+
+        if response.state.is_finished() {
+            bail!("File upload is_finished() but did not succeeded or error");
+        }
     };
 
-    pb.finish_with_duration("Processing");
-
-    if response.state.is_err() {
-        let message = response.detail.as_deref().unwrap_or("unknown error");
-        bail!("Failed to process uploaded files: {}", message);
-    }
-
-    if response.state.is_pending() {
-        info!("File upload complete (processing pending on server)");
-    } else {
-        info!("File processing complete");
-    }
-
-    Ok(())
+    result
 }
 
 #[cfg(not(windows))]
@@ -470,12 +484,76 @@ mod tests {
         fs::create_dir_all(test_dir.join("Products"))?;
         fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
 
-        let result_zip = normalize_directory(&test_dir)?;
+        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
         let file = archive.by_index(0)?;
         let file_path = file.name();
         assert_eq!(file_path, "MyApp.xcarchive/Products/app.txt");
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_xcarchive_upload_includes_parsed_assets() -> Result<()> {
+        // Test that XCArchive uploads include parsed asset catalogs
+        let xcarchive_path = Path::new("tests/integration/_fixtures/mobile_app/archive.xcarchive");
+
+        // Process the XCArchive directory
+        let result = handle_directory(xcarchive_path)?;
+
+        // Verify the resulting zip contains parsed assets
+        let zip_file = fs::File::open(result.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        let mut has_parsed_assets = false;
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            let file_name = file
+                .enclosed_name()
+                .ok_or(anyhow!("Failed to get file name"))?;
+            if file_name.to_string_lossy().contains("ParsedAssets") {
+                has_parsed_assets = true;
+                break;
+            }
+        }
+
+        assert!(
+            has_parsed_assets,
+            "XCArchive upload should include parsed asset catalogs"
+        );
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_ipa_upload_includes_parsed_assets() -> Result<()> {
+        // Test that IPA uploads handle missing asset catalogs gracefully
+        let ipa_path = Path::new("tests/integration/_fixtures/mobile_app/ipa_with_asset.ipa");
+        let byteview = ByteView::open(ipa_path)?;
+
+        // Process the IPA file - this should work even without asset catalogs
+        let result = handle_file(ipa_path, &byteview)?;
+
+        let zip_file = fs::File::open(result.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        let mut has_parsed_assets = false;
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            let file_name = file
+                .enclosed_name()
+                .ok_or(anyhow!("Failed to get file name"))?;
+            if file_name.to_string_lossy().contains("ParsedAssets") {
+                has_parsed_assets = true;
+                break;
+            }
+        }
+
+        assert!(
+            has_parsed_assets,
+            "XCArchive upload should include parsed asset catalogs"
+        );
         Ok(())
     }
 }
