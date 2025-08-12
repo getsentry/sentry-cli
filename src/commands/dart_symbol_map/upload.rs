@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::path::Path;
 
 use anyhow::{bail, Context as _, Result};
-use clap::{ArgMatches, Args};
+use clap::Args;
 
 use crate::api::{Api, ChunkUploadCapability};
 use crate::config::Config;
@@ -44,6 +44,14 @@ impl<'a> Assemblable for DartSymbolMapObject<'a> {
 
 #[derive(Args, Clone)]
 pub(crate) struct DartSymbolMapUploadArgs {
+    #[arg(short = 'o', long = "org")]
+    #[arg(help = "The organization ID or slug.")]
+    pub(super) org: Option<String>,
+
+    #[arg(short = 'p', long = "project")]
+    #[arg(help = "The project ID or slug.")]
+    pub(super) project: Option<String>,
+
     #[arg(value_name = "MAPPING")]
     #[arg(
         help = "Path to the dartsymbolmap JSON file (e.g. dartsymbolmap.json). Must be a JSON array of strings with an even number of entries (pairs)."
@@ -57,7 +65,7 @@ pub(crate) struct DartSymbolMapUploadArgs {
     pub(super) debug_file: String,
 }
 
-pub(super) fn execute(args: DartSymbolMapUploadArgs, matches: &ArgMatches) -> Result<()> {
+pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
     let mapping_path = &args.mapping;
     let debug_file_path = &args.debug_file;
 
@@ -105,7 +113,23 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs, matches: &ArgMatches) -> Re
 
             // Prepare chunked upload
             let api = Api::current();
-            let (org, project) = Config::current().get_org_and_project(matches)?;
+            // Resolve org and project like logs: prefer args, fallback to defaults
+            let config = Config::current();
+            let (default_org, default_project) = config.get_org_and_project_defaults();
+            let org = args
+                .org
+                .as_ref()
+                .or(default_org.as_ref())
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No organization specified. Please specify an organization using the --org argument."
+                ))?;
+            let project = args
+                .project
+                .as_ref()
+                .or(default_project.as_ref())
+                .ok_or_else(|| anyhow::anyhow!(
+                    "No project specified. Use --project or set a default in config."
+                ))?;
             let chunk_upload_options = api
                 .authenticated()?
                 .get_chunk_upload_options(&org)?
@@ -135,7 +159,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs, matches: &ArgMatches) -> Re
                 );
             }
 
-            let options = ChunkOptions::new(chunk_upload_options, &org, &project)
+            let options = ChunkOptions::new(chunk_upload_options, org, project)
                 .with_max_wait(DEFAULT_MAX_WAIT);
 
             let chunked = Chunked::from(object, options.server_options().chunk_size as usize)?;

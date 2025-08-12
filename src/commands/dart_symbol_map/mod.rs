@@ -1,4 +1,3 @@
-use crate::utils::args::ArgExt as _;
 use anyhow::Result;
 use clap::{ArgMatches, Args, Command, Parser as _, Subcommand};
 
@@ -29,13 +28,11 @@ pub(super) fn make_command(command: Command) -> Command {
         command
             .about(GROUP_ABOUT)
             .subcommand_required(true)
-            .arg_required_else_help(true)
-            .org_arg()
-            .project_arg(false),
+            .arg_required_else_help(true),
     )
 }
 
-pub(super) fn execute(matches: &ArgMatches) -> Result<()> {
+pub(super) fn execute(_: &ArgMatches) -> Result<()> {
     let subcommand = match crate::commands::derive_parser::SentryCLI::parse().command {
         crate::commands::derive_parser::SentryCLICommand::DartSymbolMap(DartSymbolMapArgs {
             subcommand,
@@ -44,6 +41,6 @@ pub(super) fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     match subcommand {
-        DartSymbolMapSubcommand::Upload(args) => upload::execute(args, matches),
+        DartSymbolMapSubcommand::Upload(args) => upload::execute(args),
     }
 }
