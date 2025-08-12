@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
       - name: Build in Docker
         run: scripts/build-in-docker.sh
@@ -59,7 +59,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
@@ -115,7 +115,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
       - name: Install `rcodesign`
         run: |
@@ -179,7 +179,7 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
       # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
       # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
@@ -208,7 +208,7 @@ jobs:
     needs: [linux, macos, macos_universal, windows]
 
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # 4.4.0
         with:
@@ -239,7 +239,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows]
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # 4.4.0
         with:
           node-version: '20.10.0'
@@ -291,7 +291,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # 4.2.2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # 3.11.1
