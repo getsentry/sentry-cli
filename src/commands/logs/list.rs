@@ -302,8 +302,7 @@ fn execute_live_streaming(
                         Cow::Owned(format!(" (current filter: \"{}\")", args.query))
                     };
                     let msg = format!(
-                        "Only new logs received in the last {WARNING_THRESHOLD} polls. You may be missing some logs. Consider narrowing your query filter{}.",
-                        suggestion_suffix
+                        "Only new logs received in the last {WARNING_THRESHOLD} polls. You may be missing some logs. Consider narrowing your query filter{suggestion_suffix}."
                     );
                     pending_warning = Some(msg);
                 }
@@ -338,7 +337,7 @@ fn execute_live_streaming(
                     let line = "=".repeat(BANNER_WIDTH);
                     let reset = "\x1b[0m";
                     let style = "\x1b[30;103;1m"; // black on bright yellow, bold
-                    eprintln!("\n\n{}\n{} {} {}\n{}\n\n", line, style, msg, reset, line);
+                    eprintln!("\n\n{line}\n{style} {msg} {reset}\n{line}\n\n");
                 }
             }
             Err(e) => {
