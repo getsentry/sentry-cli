@@ -71,8 +71,11 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
     // Extract Debug ID(s) from the provided debug file
     let dif = DifFile::open_path(debug_file_path, None)?;
-    let mut ids = dif.ids();
-    ids.retain(|id| !id.is_nil());
+    let mut ids: Vec<DebugId> = dif
+        .ids()
+        .into_iter()
+        .filter(|id| !id.is_nil())
+        .collect();
 
     // Ensure a single, unambiguous Debug ID
     ids.sort();
