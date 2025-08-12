@@ -232,6 +232,14 @@ pub fn git_repo_remote_url(
         .ok_or_else(|| git2::Error::from_str("No remote URL found"))
 }
 
+#[cfg(feature = "unstable-mobile-app")]
+pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String, git2::Error> {
+    let head = repo.head()?;
+    head.shorthand()
+        .map(|s| s.to_owned())
+        .ok_or_else(|| git2::Error::from_str("No HEAD reference found"))
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {

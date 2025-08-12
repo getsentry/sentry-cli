@@ -22,7 +22,7 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_provider_from_remote, get_repo_from_remote, git_repo_remote_url,
+    self, get_provider_from_remote, get_repo_from_remote, git_repo_head_ref, git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -106,10 +106,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
-    let (vcs_provider, head_repo_name) = {
+    let (vcs_provider, head_repo_name, head_ref) = {
         // Try to open the repo and get the remote URL, but don't fail if not in a repo.
         let repo = git2::Repository::open_from_env().ok();
-        let remote_url = repo.and_then(|repo| git_repo_remote_url(&repo, &cached_remote).ok());
+        let repo_ref = repo.as_ref();
+        let remote_url = repo_ref.and_then(|repo| git_repo_remote_url(repo, &cached_remote).ok());
 
         let vcs_provider: Option<Cow<'_, str>> = matches
             .get_one("vcs_provider")
@@ -133,13 +134,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        (vcs_provider, head_repo_name)
+        let head_ref: Option<Cow<'_, str>> = matches
+            .get_one("head_ref")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                // Try to get the current ref from the VCS if not provided
+                repo_ref
+                    .and_then(|r| git_repo_head_ref(r).ok())
+                    .map(Cow::Owned)
+            });
+
+        (vcs_provider, head_repo_name, head_ref)
     };
 
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
-
     let base_sha = matches.get_one("base_sha").map(String::as_str);
-    let head_ref = matches.get_one("head_ref").map(String::as_str);
     let base_ref = matches.get_one("base_ref").map(String::as_str);
     let pr_number = matches.get_one::<u32>("pr_number");
 
@@ -203,7 +213,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             vcs_provider: vcs_provider.as_deref(),
             head_repo_name: head_repo_name.as_deref(),
             base_repo_name,
-            head_ref,
+            head_ref: head_ref.as_deref(),
             base_ref,
             pr_number,
         };
