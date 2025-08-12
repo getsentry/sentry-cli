@@ -1224,7 +1224,7 @@ fn test_git_repo_head_ref() {
 
     // Test on a branch (should succeed)
     let head_ref = git_repo_head_ref(&repo).expect("Should get branch reference");
-    assert_eq!(head_ref, "main"); // or "master" depending on git version
+    assert_eq!(head_ref, "master");
 
     // Test in detached HEAD state (should fail)
     let head_commit = repo.head().unwrap().target().unwrap();
