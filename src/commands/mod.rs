@@ -12,7 +12,6 @@ use std::{env, iter};
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, PLATFORM, VERSION};
-use crate::utils::args::ArgExt as _;
 use crate::utils::auth_token::{redact_token_from_string, AuthToken};
 use crate::utils::logging::set_quiet_mode;
 use crate::utils::logging::Logger;
@@ -46,7 +45,6 @@ mod sourcemaps;
 mod uninstall;
 #[cfg(not(feature = "managed"))]
 mod update;
-// removed: upload_dart_symbol_map (replaced by derive-based dart-symbol-map group)
 mod upload_dif;
 mod upload_dsym;
 mod upload_proguard;
