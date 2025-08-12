@@ -132,7 +132,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
                 ))?;
             let chunk_upload_options = api
                 .authenticated()?
-                .get_chunk_upload_options(&org)?
+                .get_chunk_upload_options(org)?
                 .ok_or_else(|| anyhow::anyhow!(
                     "server does not support chunked uploading. Please update your Sentry server."
                 ))?;
