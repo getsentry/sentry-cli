@@ -111,22 +111,6 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
                 debug_id,
             };
 
-            // Early file size check against server or default limits (same as debug files)
-            let effective_max_file_size = if chunk_upload_options.max_file_size > 0 {
-                chunk_upload_options.max_file_size
-            } else {
-                DEFAULT_MAX_DIF_SIZE
-            };
-
-            if (mapping_len as u64) > effective_max_file_size {
-                bail!(
-                    "The dartsymbolmap '{}' exceeds the maximum allowed size ({} bytes > {} bytes).",
-                    mapping_path,
-                    mapping_len,
-                    effective_max_file_size
-                );
-            }
-
             // Prepare chunked upload
             let api = Api::current();
             // Resolve org and project like logs: prefer args, fallback to defaults
@@ -156,6 +140,22 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             if !chunk_upload_options.supports(ChunkUploadCapability::DartSymbolMap) {
                 bail!(
                     "Server does not support uploading Dart symbol maps via chunked upload. Please update your Sentry server."
+                );
+            }
+
+            // Early file size check against server or default limits (same as debug files)
+            let effective_max_file_size = if chunk_upload_options.max_file_size > 0 {
+                chunk_upload_options.max_file_size
+            } else {
+                DEFAULT_MAX_DIF_SIZE
+            };
+
+            if (mapping_len as u64) > effective_max_file_size {
+                bail!(
+                    "The dartsymbolmap '{}' exceeds the maximum allowed size ({} bytes > {} bytes).",
+                    mapping_path,
+                    mapping_len,
+                    effective_max_file_size
                 );
             }
 
