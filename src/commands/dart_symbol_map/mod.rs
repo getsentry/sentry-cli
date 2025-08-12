@@ -1,6 +1,6 @@
-use anyhow::Result;
-use clap::{Args, ArgMatches, Command, Parser as _, Subcommand};
 use crate::utils::args::ArgExt as _;
+use anyhow::Result;
+use clap::{ArgMatches, Args, Command, Parser as _, Subcommand};
 
 pub mod upload;
 

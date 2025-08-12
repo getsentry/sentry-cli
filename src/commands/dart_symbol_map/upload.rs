@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::path::Path;
 
 use anyhow::{bail, Context as _, Result};
-use clap::{Args, ArgMatches};
+use clap::{ArgMatches, Args};
 
 use crate::api::{Api, ChunkUploadCapability};
 use crate::config::Config;
@@ -45,11 +45,15 @@ impl<'a> Assemblable for DartSymbolMapObject<'a> {
 #[derive(Args, Clone)]
 pub(crate) struct DartSymbolMapUploadArgs {
     #[arg(value_name = "MAPPING")]
-    #[arg(help = "Path to the dartsymbolmap JSON file (e.g. dartsymbolmap.json). Must be a JSON array of strings with an even number of entries (pairs).")]
+    #[arg(
+        help = "Path to the dartsymbolmap JSON file (e.g. dartsymbolmap.json). Must be a JSON array of strings with an even number of entries (pairs)."
+    )]
     pub(super) mapping: String,
 
     #[arg(value_name = "DEBUG_FILE")]
-    #[arg(help = "Path to the corresponding debug file to extract the Debug ID from. The file must contain exactly one Debug ID.")]
+    #[arg(
+        help = "Path to the corresponding debug file to extract the Debug ID from. The file must contain exactly one Debug ID."
+    )]
     pub(super) debug_file: String,
 }
 
