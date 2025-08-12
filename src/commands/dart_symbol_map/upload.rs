@@ -71,7 +71,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
     // Extract Debug ID(s) from the provided debug file
     let dif = DifFile::open_path(debug_file_path, None)?;
-    let mut ids: Vec<_> = dif.ids().filter(|id| !id.is_nil()).collect();
+    let mut ids: Vec<_> = dif.ids().into_iter().filter(|id| !id.is_nil()).collect();
 
     // Ensure a single, unambiguous Debug ID
     ids.sort();
@@ -87,8 +87,9 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             // Validate the dartsymbolmap JSON: must be a JSON array of strings with even length
             let mapping_file_bytes = ByteView::open(mapping_path)
                 .with_context(|| format!("Failed to read mapping file at {mapping_path}"))?;
-            let mapping_entries: Vec<&str> = serde_json::from_slice(&mapping_file_bytes)
-                .context("Invalid dartsymbolmap: expected a JSON array of strings")?;
+            let mapping_entries: Vec<Cow<'_, str>> =
+                serde_json::from_slice(mapping_file_bytes.as_ref())
+                    .context("Invalid dartsymbolmap: expected a JSON array of strings")?;
 
             if mapping_entries.len() % 2 != 0 {
                 bail!(
