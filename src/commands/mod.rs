@@ -239,22 +239,6 @@ fn add_commands(mut app: Command) -> Command {
     }
 
     each_subcommand!(add_subcommand);
-    // Backward compatibility: keep the old flat command as a hidden alias that delegates to
-    // the new group subcommand.
-    // Maintain the old flat command as a hidden alias that delegates to the new implementation
-    app = app.subcommand(
-        Command::new("upload-dart-symbol-map")
-            .hide(true)
-            .about("Deprecated: use 'dart-symbol-map upload' instead")
-            .arg(Arg::new("mapping").value_name("MAPPING").required(true))
-            .arg(
-                Arg::new("debug_file")
-                    .value_name("DEBUG_FILE")
-                    .required(true),
-            )
-            .org_arg()
-            .project_arg(false),
-    );
     app
 }
 
@@ -273,11 +257,6 @@ fn run_command(matches: &ArgMatches) -> Result<()> {
     }
 
     each_subcommand!(execute_subcommand);
-    // Execute compatibility alias if used
-    if let Some(sub_matches) = matches.subcommand_matches("upload-dart-symbol-map") {
-        // Delegate to the new derive-based implementation adapter
-        return crate::commands::dart_symbol_map::upload::execute_alias(sub_matches);
-    }
     unreachable!();
 }
 

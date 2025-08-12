@@ -150,19 +150,4 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs, matches: &ArgMatches) -> Re
     }
 }
 
-/// Compatibility adapter for the legacy flat command `upload-dart-symbol-map`.
-pub(crate) fn execute_alias(matches: &ArgMatches) -> Result<()> {
-    let mapping = matches
-        .get_one::<String>("mapping")
-        .expect("required argument 'mapping' not provided by clap")
-        .to_owned();
-    let debug_file = matches
-        .get_one::<String>("debug_file")
-        .expect("required argument 'debug_file' not provided by clap")
-        .to_owned();
-
-    execute(
-        DartSymbolMapUploadArgs { mapping, debug_file },
-        matches,
-    )
-}
+// legacy alias removed
