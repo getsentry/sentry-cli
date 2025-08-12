@@ -1,6 +1,6 @@
-use std::fmt;
 use std::path::Path;
 use std::str;
+use std::{fmt, iter};
 
 use anyhow::{bail, Context as _, Error, Result};
 use proguard::ProguardMapping;
@@ -327,16 +327,19 @@ impl<'a> DifFile<'a> {
         }
     }
 
-    pub fn ids(&self) -> Vec<DebugId> {
-        match self {
-            DifFile::Archive(archive) => archive
-                .get()
-                .objects()
-                .filter_map(Result::ok)
-                .map(|object| object.debug_id())
-                .collect(),
-            DifFile::Proguard(pg) => vec![pg.get().uuid().into()],
-        }
+    pub fn ids(&self) -> impl Iterator<Item = DebugId> + '_ {
+        let rv: Box<dyn Iterator<Item = _>> = match self {
+            DifFile::Archive(archive) => Box::new(
+                archive
+                    .get()
+                    .objects()
+                    .filter_map(Result::ok)
+                    .map(|object| object.debug_id()),
+            ),
+            DifFile::Proguard(pg) => Box::new(iter::once(pg.get().uuid().into())),
+        };
+
+        rv
     }
 
     pub fn features(&self) -> ObjectDifFeatures {
@@ -407,7 +410,7 @@ impl<'a> DifFile<'a> {
     }
 
     fn has_ids(&self) -> bool {
-        self.ids().iter().any(|id| !id.is_nil())
+        self.ids().any(|id| !id.is_nil())
     }
 }
 
