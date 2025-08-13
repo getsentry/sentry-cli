@@ -20,6 +20,7 @@ use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
 
 mod bash_hook;
+mod dart_symbol_map;
 mod debug_files;
 mod deploys;
 mod derive_parser;
@@ -71,6 +72,7 @@ macro_rules! each_subcommand {
         $mac!(send_envelope);
         $mac!(send_metric);
         $mac!(sourcemaps);
+        $mac!(dart_symbol_map);
         #[cfg(not(feature = "managed"))]
         $mac!(uninstall);
         #[cfg(not(feature = "managed"))]
