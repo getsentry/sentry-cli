@@ -70,3 +70,22 @@ fn command_logs_list_help() {
 fn command_logs_help() {
     TestManager::new().register_trycmd_test("logs/logs-help.trycmd");
 }
+
+#[test]
+fn command_logs_send() {
+    TestManager::new()
+        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/"))
+        .register_trycmd_test("logs/logs-send.trycmd");
+}
+
+#[test]
+fn command_logs_send_help() {
+    TestManager::new().register_trycmd_test("logs/logs-send-help.trycmd");
+}
+
+#[test]
+fn command_logs_send_with_attrs() {
+    TestManager::new()
+        .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/"))
+        .register_trycmd_test("logs/logs-send-with-attrs.trycmd");
+}
