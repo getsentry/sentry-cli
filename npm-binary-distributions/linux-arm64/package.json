@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli-linux-arm64",
-  "version": "2.51.1",
+  "version": "2.52.0",
   "description": "The linux arm64 distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "BSD-3-Clause",
