@@ -10,6 +10,7 @@
 
 - Removed all `sentry-cli files ...` and `sentry-cli releases files ...` subcommands ([#2956](https://github.com/getsentry/sentry-cli/pull/2956)). These commands provided functionality for managing release files, a feature that has been deprecated in Sentry. Users still using `sentry-cli files upload` to upload source maps should migrate to `sentry-cli sourcemaps upload`.
 - Removed the `sentry-cli sourcemaps explain` command ([#2947](https://github.com/getsentry/sentry-cli/pull/2947)). The command had been deprecated for some time, since Sentry now has a better in-product debugging flow for source map problems via the "Unminify Code" button, which is displayed on any JavaScript issues which could not be unminified.
+- Removed the `sentry-cli send-metric ...` subcommands ([#TODO](XXXX)). These commands have been deprecated, and the data they send is no longer accepted by Sentry.
 - Removed support for the legacy API key authentication method ([#2935](https://github.com/getsentry/sentry-cli/pull/2935)). Sentry CLI now only supports authenticating with Auth Tokens. If you are using API key authentication via any of the following methods, you need to generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/), instead:
   - `--api-key` CLI flag
   - `SENTRY_API_KEY` environment variable
