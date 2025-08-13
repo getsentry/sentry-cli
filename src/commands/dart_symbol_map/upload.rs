@@ -93,7 +93,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
             if mapping_entries.len() % 2 != 0 {
                 bail!(
-                    "Invalid dartsymbolmap: expected an even number of entries (pairs), got {}",
+                    "Invalid dartsymbolmap: expected an even number of entries, got {}",
                     mapping_entries.len()
                 );
             }
