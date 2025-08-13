@@ -1,8 +1,0 @@
-```
-$ sentry-cli send-metric increment -n testmetric -t ab,release:testRelease --log-level debug
-? failed
-error: invalid value 'ab' for '--tags <KEY:VALUE>...': `ab` is missing a `:`
-
-For more information, try '--help'.
-
-```
