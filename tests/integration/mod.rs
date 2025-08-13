@@ -24,6 +24,7 @@ mod test_utils;
 mod token_validation;
 mod uninstall;
 mod update;
+mod upload_dart_symbol_map;
 mod upload_dif;
 mod upload_dsym;
 mod upload_proguard;
