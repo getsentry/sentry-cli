@@ -224,7 +224,7 @@ fn find_ids_for_dsym(
         if dirent.path().extension() != Some(OsStr::new("class"));
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Dsym));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Dsym))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::Dsym))
         }
     }
     None
@@ -237,7 +237,7 @@ fn find_ids_for_elf(
     if_chain! {
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Elf));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Elf))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::Elf))
         }
     }
     None
@@ -252,7 +252,7 @@ fn find_ids_for_pe(
         dirent.path().extension() == Some(OsStr::new("dll"));
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pe));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Pe))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::Pe))
         }
     }
     None
@@ -266,7 +266,7 @@ fn find_ids_for_pdb(
         if dirent.path().extension() == Some(OsStr::new("pdb"));
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Pdb));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Pdb))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::Pdb))
         }
     }
     None
@@ -280,7 +280,7 @@ fn find_ids_for_portablepdb(
         if dirent.path().extension() == Some(OsStr::new("pdb"));
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::PortablePdb));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::PortablePdb))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::PortablePdb))
         }
     }
     None
@@ -294,7 +294,7 @@ fn find_ids_for_sourcebundle(
         if dirent.path().extension() == Some(OsStr::new("zip"));
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::SourceBundle));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::SourceBundle))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::SourceBundle))
         }
     }
     None
@@ -308,25 +308,27 @@ fn find_ids_for_breakpad(
         if dirent.path().extension() == Some(OsStr::new("sym"));
         if let Ok(dif) = DifFile::open_path(dirent.path(), Some(DifType::Breakpad));
         then {
-            return Some(extract_remaining_ids(&dif.ids(), remaining, DifType::Breakpad))
+            return Some(extract_remaining_ids(dif.ids(), remaining, DifType::Breakpad))
         }
     }
     None
 }
 
-fn extract_remaining_ids(
-    ids: &[DebugId],
+fn extract_remaining_ids<I>(
+    ids: I,
     remaining: &HashSet<DebugId>,
     t: DifType,
-) -> Vec<(DebugId, DifType)> {
-    ids.iter()
-        .filter_map(|id| {
-            if remaining.contains(id) {
-                return Some((id.to_owned(), t));
-            }
-            None
-        })
-        .collect()
+) -> Vec<(DebugId, DifType)>
+where
+    I: Iterator<Item = DebugId>,
+{
+    ids.filter_map(|id| {
+        if remaining.contains(&id) {
+            return Some((id.to_owned(), t));
+        }
+        None
+    })
+    .collect()
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {

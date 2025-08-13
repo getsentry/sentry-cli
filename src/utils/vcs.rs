@@ -216,6 +216,24 @@ pub fn get_repo_from_remote(repo: &str) -> String {
     obj.id
 }
 
+#[cfg(feature = "unstable-mobile-app")]
+pub fn get_provider_from_remote(remote: &str) -> String {
+    let obj = VcsUrl::parse(remote);
+    obj.provider
+}
+
+#[cfg(feature = "unstable-mobile-app")]
+pub fn git_repo_remote_url(
+    repo: &git2::Repository,
+    cached_remote: &str,
+) -> Result<String, git2::Error> {
+    let remote = repo.find_remote(cached_remote)?;
+    remote
+        .url()
+        .map(|url| url.to_owned())
+        .ok_or_else(|| git2::Error::from_str("No remote URL found"))
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
