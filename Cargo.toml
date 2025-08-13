@@ -80,6 +80,7 @@ data-encoding = "2.3.3"
 magic_string = "0.3.4"
 chrono-tz = "0.8.4"
 secrecy = "0.8.0"
+sentry-core = "0.42.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.11"

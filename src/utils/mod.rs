@@ -14,7 +14,6 @@ pub mod formatting;
 pub mod fs;
 pub mod http;
 pub mod logging;
-pub mod metrics;
 pub mod mobile_app;
 pub mod progress;
 pub mod proguard;

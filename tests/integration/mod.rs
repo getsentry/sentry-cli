@@ -18,7 +18,6 @@ mod react_native;
 mod releases;
 mod send_envelope;
 mod send_event;
-mod send_metric;
 mod sourcemaps;
 mod test_utils;
 mod token_validation;
