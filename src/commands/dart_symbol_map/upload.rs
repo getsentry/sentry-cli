@@ -93,7 +93,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
             if mapping_entries.len() % 2 != 0 {
                 bail!(
-                    "Invalid dartsymbolmap: expected an even number of entries (pairs), got {}",
+                    "Invalid dartsymbolmap: expected an even number of entries, got {}",
                     mapping_entries.len()
                 );
             }
@@ -122,7 +122,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             let modified_mapping_bytes: Vec<u8> = serde_json::to_vec(&modified_entries)
                 .context("Failed to serialize modified dartsymbolmap JSON")?;
 
-            let mapping_len = modified_mapping_bytes.len();
+            let mapping_len = mapping_file_bytes.len();
             let object = DartSymbolMapObject {
                 bytes: &modified_mapping_bytes,
                 name: file_name,

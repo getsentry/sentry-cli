@@ -2,6 +2,24 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.52.0
+
+### Various fixes & improvements
+
+- feat(dart): add `dart-symbol-map upload` command (#2691) by @buenaflor
+- Add default vcs head_repo_name and provider parsing for mobile-app subcommand (#2699) by @rbro112
+- ref(debug-files): Remove unnecessary `collect` (#2705) by @szokeasaurusrex
+- build(deps): bump github/codeql-action from 3.29.5 to 3.29.8 (#2700) by @dependabot
+- build(deps): bump actions/checkout from 4.2.2 to 5.0.0 (#2701) by @dependabot
+- build(deps): bump actions/create-github-app-token from 2.0.6 to 2.1.1 (#2702) by @dependabot
+- build(deps): bump actions/download-artifact from 4.3.0 to 5.0.0 (#2703) by @dependabot
+- Use URL from backend (#2698) by @chromy
+- feat(mobile-app): Add new VCS params to mobile-app command (#2682) by @rbro112
+- feat(launchpad): Add asset catalog files to zip without adding to folder (#2667) by @noahsmartin
+- feat(preprod): Show analysis URL after mobile-app upload (#2675) by @chromy
+- feat(logs): allow project slugs in logs list (#2688) by @shellmayr
+- fix(debug-files): Run all processing steps with `--no-upload` (#2693) by @P1n3appl3
+
 ## 2.51.1
 
 ### Various fixes & improvements
