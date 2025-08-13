@@ -102,12 +102,29 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             let file_name = Path::new(mapping_path)
                 .file_name()
                 .and_then(OsStr::to_str)
-                .unwrap_or(mapping_path)
-                ;
+                .unwrap_or(mapping_path);
 
-            let mapping_len = mapping_file_bytes.len();
+            // Prepend a marker.
+            //
+            // The Sentry backend deduplicates chunked uploads by content checksum. If the same
+            // mapping file is uploaded for multiple debug IDs, the raw file contents are identical
+            // and the backend rejects subsequent uploads as duplicates. To ensure each upload has a
+            // distinct checksum without mutating the user's file on disk, we inject a marker pair at
+            // the start of the JSON array: ["SENTRY_DEBUG_ID_MARKER", "<debug_id>"]. This keeps the
+            // structure valid (even-length array of strings) while making the payload unique per
+            // debug ID.
+            let mut modified_entries: Vec<Cow<'_, str>> =
+                Vec::with_capacity(mapping_entries.len() + 2);
+            modified_entries.push(Cow::Borrowed("SENTRY_DEBUG_ID_MARKER"));
+            modified_entries.push(Cow::Owned(debug_id.to_string()));
+            modified_entries.extend(mapping_entries.into_iter());
+
+            let modified_mapping_bytes: Vec<u8> = serde_json::to_vec(&modified_entries)
+                .context("Failed to serialize modified dartsymbolmap JSON")?;
+
+            let mapping_len = modified_mapping_bytes.len();
             let object = DartSymbolMapObject {
-                bytes: mapping_file_bytes.as_ref(),
+                bytes: &modified_mapping_bytes,
                 name: file_name,
                 debug_id,
             };
