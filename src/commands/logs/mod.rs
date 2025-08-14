@@ -42,7 +42,6 @@ pub(super) fn execute(_: &ArgMatches) -> Result<()> {
     let SentryCLICommand::Logs(LogsArgs { subcommand }) = SentryCLI::parse().command else {
         unreachable!("expected logs subcommand");
     };
-
     eprintln!("{BETA_WARNING}");
 
     match subcommand {
