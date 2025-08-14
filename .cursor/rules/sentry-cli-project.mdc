@@ -65,4 +65,8 @@ Reference: https://develop.sentry.dev/engineering-practices/commit-messages/
 - Test fixtures in `tests/integration/_fixtures/`
 - Cross-platform testing via CI matrix
 
+## Code Formatting
+
+- Always run `cargo fmt --all -- --check` before committing to ensure consistent Rust code formatting
+
 Remember: This is a production tool used by many developers. Changes should be well-tested, backward-compatible, and follow established patterns.
