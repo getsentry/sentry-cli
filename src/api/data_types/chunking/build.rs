@@ -9,6 +9,7 @@ pub struct ChunkedBuildRequest<'a> {
     pub chunks: &'a [Digest],
     #[serde(skip_serializing_if = "Option::is_none")]
     pub build_configuration: Option<&'a str>,
+    pub release_notes: Option<&'a str>,
     // VCS fields
     #[serde(skip_serializing_if = "Option::is_none")]
     pub head_sha: Option<&'a str>,
