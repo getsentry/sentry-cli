@@ -21,6 +21,12 @@ alwaysApply: false
 - Match existing code style and naming conventions
 - Add appropriate logging using `log` crate patterns
 
+## Type Annotations and Inference
+
+- Prefer compiler type inference across the codebase
+- Do not add explicit type annotations in `let` bindings or turbofish syntax (e.g., `::<T>`) unless required for the code to compile or to disambiguate an API that inference cannot resolve
+- If the code compiles without explicit annotations, omit them
+
 ## Development Commands
 
 ```bash
