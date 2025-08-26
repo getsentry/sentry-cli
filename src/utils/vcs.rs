@@ -1233,8 +1233,5 @@ fn test_git_repo_head_ref() {
 
     let head_ref_result = git_repo_head_ref(&repo);
     assert!(head_ref_result.is_err());
-    assert_eq!(
-        head_ref_result.unwrap_err().message(),
-        "HEAD is detached - no branch reference available"
-    );
+    assert_eq!(head_ref_result.unwrap_err().to_string(), "HEAD is detached - no branch reference available");
 }
