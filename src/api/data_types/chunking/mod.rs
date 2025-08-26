@@ -2,14 +2,16 @@
 //! from the server.
 
 mod artifact;
+mod build;
 mod compression;
 mod dif;
 mod file_state;
 mod hash_algorithm;
-mod mobile_app;
 mod upload;
 
 pub use self::artifact::{AssembleArtifactsResponse, ChunkedArtifactRequest};
+#[cfg(feature = "unstable-build")]
+pub use self::build::{AssembleBuildResponse, ChunkedBuildRequest};
 pub use self::compression::ChunkCompression;
 pub use self::dif::{AssembleDifsRequest, AssembleDifsResponse, ChunkedDifRequest};
 pub use self::file_state::ChunkedFileState;

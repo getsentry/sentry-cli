@@ -1,8 +1,0 @@
-```
-$ sentry-cli mobile-app upload tests/integration/_fixtures/mobile_app/ipa.ipa --head-sha test_head_sha
-? success
-[..]WARN[..]EXPERIMENTAL: The mobile-app subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
-Successfully uploaded 1 file to Sentry
-  - tests/integration/_fixtures/mobile_app/ipa.ipa (http[..]/wat-org/preprod/wat-project/some-text-id)
-
-```

@@ -50,7 +50,7 @@ cargo fmt
 ## Swift/Apple Integration
 
 - Swift code in `apple-catalog-parsing/` is used for parsing xarchive files
-- Used by the `mobile-app upload` command for iOS app processing
+- Used by the `build upload` command for iOS app processing
 - Built as a separate crate with FFI bindings to Rust
 - Only compiled on macOS targets
 - Tests run via `swift-test.yml` workflow in CI

@@ -1038,7 +1038,7 @@ impl<'a> AuthenticatedApi<'a> {
         chunks: &[Digest],
         build_configuration: Option<&str>,
         vcs_info: &VcsInfo<'_>,
-    ) -> ApiResult<AssembleMobileAppResponse> {
+    ) -> ApiResult<AssembleBuildResponse> {
         let url = format!(
             "/projects/{}/{}/files/preprodartifacts/assemble/",
             PathArg(org),
@@ -1046,7 +1046,7 @@ impl<'a> AuthenticatedApi<'a> {
         );
 
         self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedMobileAppRequest {
+            .with_json_body(&ChunkedBuildRequest {
                 checksum,
                 chunks,
                 build_configuration,

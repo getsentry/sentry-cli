@@ -14,14 +14,14 @@ macro_rules! each_subcommand {
 pub fn make_command(mut command: Command) -> Command {
     macro_rules! add_subcommand {
         ($name:ident) => {{
-            command = command.subcommand(crate::commands::mobile_app::$name::make_command(
+            command = command.subcommand(crate::commands::build::$name::make_command(
                 Command::new(stringify!($name).replace('_', "-")),
             ));
         }};
     }
 
     command = command
-        .about("[EXPERIMENTAL] Manage mobile apps.")
+        .about("[EXPERIMENTAL] Manage builds.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()
@@ -34,7 +34,7 @@ pub fn make_command(mut command: Command) -> Command {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     log::warn!(
-        "EXPERIMENTAL: The mobile-app subcommand is experimental. \
+        "EXPERIMENTAL: The build subcommand is experimental. \
         The command is subject to breaking changes and may be removed \
         without notice in any release."
     );
@@ -44,7 +44,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             if let Some(sub_matches) =
                 matches.subcommand_matches(&stringify!($name).replace('_', "-"))
             {
-                return crate::commands::mobile_app::$name::execute(&sub_matches);
+                return crate::commands::build::$name::execute(&sub_matches);
             }
         }};
     }
