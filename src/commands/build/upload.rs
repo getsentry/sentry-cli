@@ -112,7 +112,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let repo_ref = repo.as_ref();
         let remote_url = repo_ref.and_then(|repo| git_repo_remote_url(repo, &cached_remote).ok());
 
-        let vcs_provider: Option<Cow<'_, str>> = matches
+        let vcs_provider = matches
             .get_one("vcs_provider")
             .map(String::as_str)
             .map(Cow::Borrowed)
@@ -123,7 +123,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        let head_repo_name: Option<Cow<'_, str>> = matches
+        let head_repo_name = matches
             .get_one("head_repo_name")
             .map(String::as_str)
             .map(Cow::Borrowed)
@@ -134,14 +134,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        let head_ref: Option<Cow<'_, str>> = matches
+        let head_ref = matches
             .get_one("head_ref")
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
                 // Try to get the current ref from the VCS if not provided
                 // Note: git_repo_head_ref will return an error for detached HEAD states,
-                // which .ok() converts to None - this prevents sending "HEAD" as a branch name
+                // which the error handling converts to None - this prevents sending "HEAD" as a branch name
                 // In that case, the user will need to provide a valid branch name.
                 repo_ref
                     .and_then(|r| match git_repo_head_ref(r) {

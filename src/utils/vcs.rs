@@ -233,7 +233,7 @@ pub fn git_repo_remote_url(
 }
 
 #[cfg(feature = "unstable-mobile-app")]
-pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String, git2::Error> {
+pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     let head = repo.head()?;
 
     // Only return a reference name if we're not in a detached HEAD state
@@ -241,11 +241,11 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String, git2::Error>
     if head.is_branch() {
         head.shorthand()
             .map(|s| s.to_owned())
-            .ok_or_else(|| git2::Error::from_str("No HEAD reference found"))
+            .ok_or_else(|| anyhow::anyhow!("No HEAD reference found"))
     } else {
         // In detached HEAD state, return an error to indicate no valid branch reference
-        Err(git2::Error::from_str(
-            "HEAD is detached - no branch reference available",
+        Err(anyhow::anyhow!(
+            "HEAD is detached - no branch reference available"
         ))
     }
 }
