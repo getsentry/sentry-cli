@@ -900,6 +900,14 @@ fn git_initialize_repo() -> TempDir {
         .expect("Failed to wait on `git init`.");
 
     Command::new("git")
+        .args(["branch", "-M", "main"])
+        .current_dir(&dir)
+        .spawn()
+        .expect("Failed to execute `git branch`.")
+        .wait()
+        .expect("Failed to wait on `git branch`.");
+
+    Command::new("git")
         .args(["config", "--local", "user.name", "test"])
         .current_dir(&dir)
         .spawn()
@@ -1224,7 +1232,7 @@ fn test_git_repo_head_ref() {
 
     // Test on a branch (should succeed)
     let head_ref = git_repo_head_ref(&repo).expect("Should get branch reference");
-    assert_eq!(head_ref, "master");
+    assert_eq!(head_ref, "main");
 
     // Test in detached HEAD state (should fail)
     let head_commit = repo.head().unwrap().target().unwrap();
