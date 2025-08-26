@@ -1030,7 +1030,7 @@ impl<'a> AuthenticatedApi<'a> {
             .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
-    pub fn assemble_mobile_app(
+    pub fn assemble_build(
         &self,
         org: &str,
         project: &str,

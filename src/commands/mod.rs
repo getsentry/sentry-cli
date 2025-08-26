@@ -62,7 +62,6 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(login);
         $mac!(logs);
-        $mac!(mobile_app);
         $mac!(monitors);
         $mac!(organizations);
         $mac!(projects);
