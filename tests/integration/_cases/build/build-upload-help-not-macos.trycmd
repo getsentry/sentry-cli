@@ -1,6 +1,6 @@
 ```
 $ sentry-cli build upload --help
-[EXPERIMENTAL] Upload mobilebuilds to a project.
+[EXPERIMENTAL] Upload mobile builds to a project.
 
 Usage: sentry-cli[EXE] build upload [OPTIONS] <PATH>...
 
