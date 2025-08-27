@@ -2525,7 +2525,7 @@ struct LogsResponse {
     data: Vec<LogEntry>,
 }
 
-/// VCS information for mobile app uploads
+/// VCS information for build app uploads
 #[derive(Debug)]
 pub struct VcsInfo<'a> {
     pub head_sha: Option<&'a str>,

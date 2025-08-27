@@ -232,6 +232,23 @@ pub fn git_repo_remote_url(
         .ok_or_else(|| git2::Error::from_str("No remote URL found"))
 }
 
+pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
+    let head = repo.head()?;
+
+    // Only return a reference name if we're not in a detached HEAD state
+    // In detached HEAD state, head.shorthand() returns "HEAD" which is not a valid branch name
+    if head.is_branch() {
+        head.shorthand()
+            .map(|s| s.to_owned())
+            .ok_or_else(|| anyhow::anyhow!("No HEAD reference found"))
+    } else {
+        // In detached HEAD state, return an error to indicate no valid branch reference
+        Err(anyhow::anyhow!(
+            "HEAD is detached - no branch reference available"
+        ))
+    }
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
@@ -882,6 +899,14 @@ fn git_initialize_repo() -> TempDir {
         .expect("Failed to wait on `git init`.");
 
     Command::new("git")
+        .args(["branch", "-M", "main"])
+        .current_dir(&dir)
+        .spawn()
+        .expect("Failed to execute `git branch`.")
+        .wait()
+        .expect("Failed to wait on `git branch`.");
+
+    Command::new("git")
         .args(["config", "--local", "user.name", "test"])
         .current_dir(&dir)
         .spawn()
@@ -1187,4 +1212,35 @@ fn test_generate_patch_ignore_missing() {
         ".*.id" => "[id]",
         ".*.timestamp" => "[timestamp]"
     });
+}
+
+#[test]
+fn test_git_repo_head_ref() {
+    let dir = git_initialize_repo();
+
+    // Create initial commit
+    git_create_commit(
+        dir.path(),
+        "foo.js",
+        b"console.log(\"Hello, world!\");",
+        "\"initial commit\"",
+    );
+
+    let repo = git2::Repository::open(dir.path()).expect("Failed");
+
+    // Test on a branch (should succeed)
+    let head_ref = git_repo_head_ref(&repo).expect("Should get branch reference");
+    assert_eq!(head_ref, "main");
+
+    // Test in detached HEAD state (should fail)
+    let head_commit = repo.head().unwrap().target().unwrap();
+    repo.set_head_detached(head_commit)
+        .expect("Failed to detach HEAD");
+
+    let head_ref_result = git_repo_head_ref(&repo);
+    assert!(head_ref_result.is_err());
+    assert_eq!(
+        head_ref_result.unwrap_err().to_string(),
+        "HEAD is detached - no branch reference available"
+    );
 }
