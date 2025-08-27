@@ -4,6 +4,8 @@
 
 ## 2.53.0-alpha
 
+This release reintroduces the `build` (previously named `mobile-app`) commands. 
+
 ### Various fixes & improvements
 
 - feat(mobile-app): Add default vcs base_ref parsing for mobile-app subcommand (#2706) by @rbro112
