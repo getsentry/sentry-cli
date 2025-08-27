@@ -109,9 +109,11 @@ workspace = true
 
 [target."cfg(target_os = \"macos\")"]
 
+[target."cfg(all(target_os = \"macos\", target_arch = \"aarch64\"))".dependencies]
+apple-catalog-parsing = { path = "apple-catalog-parsing" }
+
 [target."cfg(target_os = \"macos\")".dependencies]
 mac-process-info = "0.2.0"
-apple-catalog-parsing = { path = "apple-catalog-parsing"}
 
 [target."cfg(unix)"]
 
