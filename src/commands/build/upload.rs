@@ -10,7 +10,9 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState, VcsInfo};
+use crate::api::{
+    Api, AuthenticatedApi, ChunkUploadCapability, ChunkedBuildRequest, ChunkedFileState, VcsInfo,
+};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -89,6 +91,11 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("build_configuration")
                 .long("build-configuration")
                 .help("The build configuration to use for the upload. If not provided, the current version will be used.")
+        )
+        .arg(
+            Arg::new("release_notes")
+                .long("release-notes")
+                .help("The release notes to use for the upload.")
         )
 }
 
@@ -169,6 +176,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let pr_number = matches.get_one::<u32>("pr_number");
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
+    let release_notes = matches.get_one("release_notes").map(String::as_str);
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
@@ -238,6 +246,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             &org,
             &project,
             build_configuration,
+            release_notes,
             &vcs_info,
         ) {
             Ok(artifact_url) => {
@@ -397,6 +406,7 @@ fn upload_file(
     org: &str,
     project: &str,
     build_configuration: Option<&str>,
+    release_notes: Option<&str>,
     vcs_info: &VcsInfo<'_>,
 ) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
@@ -457,10 +467,20 @@ fn upload_file(
         let response = api.assemble_build(
             org,
             project,
-            checksum,
-            &checksums,
-            build_configuration,
-            vcs_info,
+            &ChunkedBuildRequest {
+                checksum,
+                chunks: &checksums,
+                build_configuration,
+                release_notes,
+                head_sha: vcs_info.head_sha,
+                base_sha: vcs_info.base_sha,
+                provider: vcs_info.vcs_provider,
+                head_repo_name: vcs_info.head_repo_name,
+                base_repo_name: vcs_info.base_repo_name,
+                head_ref: vcs_info.head_ref,
+                base_ref: vcs_info.base_ref,
+                pr_number: vcs_info.pr_number,
+            },
         )?;
         chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 

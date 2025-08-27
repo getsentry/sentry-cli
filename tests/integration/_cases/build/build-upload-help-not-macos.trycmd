@@ -49,6 +49,8 @@ Options:
       --build-configuration <build_configuration>
           The build configuration to use for the upload. If not provided, the current version will
           be used.
+      --release-notes <release_notes>
+          The release notes to use for the upload.
   -h, --help
           Print help
 
