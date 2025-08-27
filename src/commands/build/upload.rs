@@ -11,8 +11,7 @@ use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
 use crate::api::{
-    Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState, ChunkedMobileAppRequest,
-    VcsInfo,
+    Api, AuthenticatedApi, ChunkUploadCapability, ChunkedBuildRequest, ChunkedFileState, VcsInfo,
 };
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
@@ -468,7 +467,7 @@ fn upload_file(
         let response = api.assemble_build(
             org,
             project,
-            &ChunkedMobileAppRequest {
+            &ChunkedBuildRequest {
                 checksum,
                 chunks: &checksums,
                 build_configuration,

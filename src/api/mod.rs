@@ -1034,7 +1034,7 @@ impl<'a> AuthenticatedApi<'a> {
         &self,
         org: &str,
         project: &str,
-        request: &ChunkedMobileAppRequest<'_>,
+        request: &ChunkedBuildRequest<'_>,
     ) -> ApiResult<AssembleBuildResponse> {
         let url = format!(
             "/projects/{}/{}/files/preprodartifacts/assemble/",
