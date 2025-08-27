@@ -232,7 +232,6 @@ pub fn git_repo_remote_url(
         .ok_or_else(|| git2::Error::from_str("No remote URL found"))
 }
 
-#[cfg(feature = "unstable-mobile-app")]
 pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     let head = repo.head()?;
 
@@ -1215,7 +1214,6 @@ fn test_generate_patch_ignore_missing() {
     });
 }
 
-#[cfg(feature = "unstable-mobile-app")]
 #[test]
 fn test_git_repo_head_ref() {
     let dir = git_initialize_repo();
