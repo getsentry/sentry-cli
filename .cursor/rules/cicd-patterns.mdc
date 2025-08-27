@@ -56,5 +56,4 @@ When adding new CI checks:
 ## Environment Variables in CI
 
 - `RUSTFLAGS: -Dwarnings` enforced in CI
-- Feature flag testing: `-Funstable-mobile-app`
 - Cross-platform matrix: Ubuntu 24.04, macOS 14, Windows 2022
