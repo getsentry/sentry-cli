@@ -4,7 +4,7 @@ use sha1_smol::Digest;
 use super::ChunkedFileState;
 
 #[derive(Debug, Serialize)]
-pub struct ChunkedMobileAppRequest<'a> {
+pub struct ChunkedBuildRequest<'a> {
     pub checksum: Digest,
     pub chunks: &'a [Digest],
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -30,7 +30,7 @@ pub struct ChunkedMobileAppRequest<'a> {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AssembleMobileAppResponse {
+pub struct AssembleBuildResponse {
     pub state: ChunkedFileState,
     pub missing_chunks: Vec<Digest>,
     pub detail: Option<String>,

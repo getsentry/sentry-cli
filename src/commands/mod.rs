@@ -20,6 +20,7 @@ use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
 
 mod bash_hook;
+mod build;
 mod dart_symbol_map;
 mod debug_files;
 mod deploys;
@@ -30,7 +31,6 @@ mod info;
 mod issues;
 mod login;
 mod logs;
-mod mobile_app;
 mod monitors;
 mod organizations;
 mod projects;
@@ -52,6 +52,7 @@ mod upload_proguard;
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bash_hook);
+        $mac!(build);
         $mac!(debug_files);
         $mac!(deploys);
         $mac!(events);
@@ -60,7 +61,6 @@ macro_rules! each_subcommand {
         $mac!(issues);
         $mac!(login);
         $mac!(logs);
-        $mac!(mobile_app);
         $mac!(monitors);
         $mac!(organizations);
         $mac!(projects);

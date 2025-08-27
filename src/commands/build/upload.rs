@@ -13,15 +13,13 @@ use zip::{DateTime, ZipWriter};
 use crate::api::{Api, AuthenticatedApi, ChunkUploadCapability, ChunkedFileState, VcsInfo};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use crate::utils::build::{handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file};
+use crate::utils::build::{is_aab_file, is_apk_file, is_zip_file, normalize_directory};
 use crate::utils::chunks::{upload_chunks, Chunk};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-use crate::utils::mobile_app::{
-    handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file,
-};
-use crate::utils::mobile_app::{is_aab_file, is_apk_file, is_zip_file, normalize_directory};
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
     self, get_provider_from_remote, get_repo_from_remote, git_repo_remote_url,
@@ -29,12 +27,13 @@ use crate::utils::vcs::{
 
 pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    const HELP_TEXT: &str = "The path to the mobile app files to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
+    const HELP_TEXT: &str =
+        "The path to the build to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
     #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     const HELP_TEXT: &str =
-        "The path to the mobile app files to upload. Supported files include Apk, and Aab.";
+        "The path to the build to upload. Supported files include Apk, and Aab.";
     command
-        .about("[EXPERIMENTAL] Upload mobile app files to a project.")
+        .about("[EXPERIMENTAL] Upload builds to a project.")
         .org_arg()
         .project_arg(false)
         .arg(
@@ -149,10 +148,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
 
-    debug!(
-        "Starting mobile app upload for {} paths",
-        path_strings.len()
-    );
+    debug!("Starting upload for {} paths", path_strings.len());
 
     let mut normalized_zips = vec![];
     for path_string in path_strings {
@@ -166,7 +162,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let byteview = ByteView::open(path)?;
         debug!("Loaded file with {} bytes", byteview.len());
 
-        validate_is_mobile_app(path, &byteview)?;
+        validate_is_supported_build(path, &byteview)?;
 
         let normalized_zip = if path.is_file() {
             debug!("Normalizing file: {}", path.display());
@@ -285,8 +281,8 @@ fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
     })
 }
 
-fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
-    debug!("Validating mobile app format for: {}", path.display());
+fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
+    debug!("Validating build format for: {}", path.display());
 
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_apple_app(path) {
@@ -325,7 +321,7 @@ fn validate_is_mobile_app(path: &Path, bytes: &[u8]) -> Result<()> {
     let format_list = "APK, or AAB";
 
     Err(anyhow!(
-        "File is not a recognized mobile app format ({format_list}): {}",
+        "File is not a recognized supported build format ({format_list}): {}",
         path.display()
     ))
 }
@@ -379,7 +375,7 @@ fn upload_file(
     vcs_info: &VcsInfo<'_>,
 ) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
-        update to the latest version of Sentry to use the mobile-app upload command.";
+        update to the latest version of Sentry to use the build upload command.";
 
     debug!(
         "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
@@ -392,7 +388,7 @@ fn upload_file(
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
         anyhow!(
             "The Sentry server lacks chunked uploading support, which \
-                is required for mobile app uploads. {SELF_HOSTED_ERROR_HINT}"
+                is required for build uploads. {SELF_HOSTED_ERROR_HINT}"
         )
     })?;
 
@@ -433,7 +429,7 @@ fn upload_file(
     // n. state=error, artifact_url unset
 
     let result = loop {
-        let response = api.assemble_mobile_app(
+        let response = api.assemble_build(
             org,
             project,
             checksum,
@@ -497,7 +493,7 @@ mod tests {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     fn test_xcarchive_upload_includes_parsed_assets() -> Result<()> {
         // Test that XCArchive uploads include parsed asset catalogs
-        let xcarchive_path = Path::new("tests/integration/_fixtures/mobile_app/archive.xcarchive");
+        let xcarchive_path = Path::new("tests/integration/_fixtures/build/archive.xcarchive");
 
         // Process the XCArchive directory
         let result = handle_directory(xcarchive_path)?;
@@ -529,7 +525,7 @@ mod tests {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     fn test_ipa_upload_includes_parsed_assets() -> Result<()> {
         // Test that IPA uploads handle missing asset catalogs gracefully
-        let ipa_path = Path::new("tests/integration/_fixtures/mobile_app/ipa_with_asset.ipa");
+        let ipa_path = Path::new("tests/integration/_fixtures/build/ipa_with_asset.ipa");
         let byteview = ByteView::open(ipa_path)?;
 
         // Process the IPA file - this should work even without asset catalogs

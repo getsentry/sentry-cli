@@ -1,0 +1,8 @@
+```
+$ sentry-cli build upload tests/integration/_fixtures/build/ipa.ipa --head-sha test_head_sha
+? success
+[..]WARN[..]EXPERIMENTAL: The build subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
+Successfully uploaded 1 file to Sentry
+  - tests/integration/_fixtures/build/ipa.ipa (http[..]/wat-org/preprod/wat-project/some-text-id)
+
+```

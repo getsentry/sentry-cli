@@ -6,80 +6,80 @@ use std::{fs, str};
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
-fn command_mobile_app_upload_help() {
-    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help-macos.trycmd");
+fn command_build_upload_help() {
+    TestManager::new().register_trycmd_test("build/build-upload-help-macos.trycmd");
 }
 
 #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
 #[test]
-fn command_mobile_app_upload_help() {
-    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-help-not-macos.trycmd");
+fn command_build_upload_help() {
+    TestManager::new().register_trycmd_test("build/build-upload-help-not-macos.trycmd");
 }
 
 #[test]
-fn command_mobile_app_upload_no_token() {
-    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-apk-no-token.trycmd");
+fn command_build_upload_no_token() {
+    TestManager::new().register_trycmd_test("build/build-upload-apk-no-token.trycmd");
 }
 
 #[test]
-fn command_mobile_app_upload_no_path() {
-    TestManager::new().register_trycmd_test("mobile_app/mobile_app-upload-no-path.trycmd");
+fn command_build_upload_no_path() {
+    TestManager::new().register_trycmd_test("build/build-upload-no-path.trycmd");
 }
 
 #[test]
-fn command_mobile_app_upload_invalid_aab() {
+fn command_build_upload_invalid_aab() {
     TestManager::new()
         .assert_cmd(vec![
-            "mobile-app",
+            "build",
             "upload",
-            "tests/integration/_fixtures/mobile_app/invalid_aab.aab",
+            "tests/integration/_fixtures/build/invalid_aab.aab",
         ])
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
 #[test]
-fn command_mobile_app_upload_invalid_apk() {
+fn command_build_upload_invalid_apk() {
     TestManager::new()
         .assert_cmd(vec![
-            "mobile-app",
+            "build",
             "upload",
-            "tests/integration/_fixtures/mobile_app/invalid_apk.apk",
+            "tests/integration/_fixtures/build/invalid_apk.apk",
         ])
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
 #[test]
-fn command_mobile_app_upload_invalid_xcarchive() {
+fn command_build_upload_invalid_xcarchive() {
     TestManager::new()
         .assert_cmd(vec![
-            "mobile-app",
+            "build",
             "upload",
-            "tests/integration/_fixtures/mobile_app/invalid_xcarchive",
+            "tests/integration/_fixtures/build/invalid_xcarchive",
         ])
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
 #[test]
-fn command_mobile_app_upload_invalid_ipa() {
+fn command_build_upload_invalid_ipa() {
     TestManager::new()
         .assert_cmd(vec![
-            "mobile-app",
+            "build",
             "upload",
-            "tests/integration/_fixtures/mobile_app/invalid.ipa",
+            "tests/integration/_fixtures/build/invalid.ipa",
         ])
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
 
 #[test]
-fn command_mobile_app_upload_apk_all_uploaded() {
+fn command_build_upload_apk_all_uploaded() {
     TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
-                .with_response_file("mobile_app/get-chunk-upload.json"),
+                .with_response_file("build/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
@@ -88,7 +88,7 @@ fn command_mobile_app_upload_apk_all_uploaded() {
             )
             .with_response_body(r#"{"state":"ok","missingChunks":[],"artifactUrl":"https://sentry.io/wat-org/preprod/wat-project/42"}"#),
         )
-        .register_trycmd_test("mobile_app/mobile_app-upload-apk-all-uploaded.trycmd")
+        .register_trycmd_test("build/build-upload-apk-all-uploaded.trycmd")
         .with_default_token();
 }
 
@@ -108,16 +108,15 @@ static CONTENT_TYPE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 /// It verifies that the Sentry CLI makes the expected API calls to the chunk upload endpoint
 /// and that the data sent to the chunk upload endpoint is exactly as expected.
 /// It also verifies that the correct calls are made to the assemble endpoint.
-fn command_mobile_app_upload_apk_chunked() {
+fn command_build_upload_apk_chunked() {
     let is_first_assemble_call = AtomicBool::new(true);
-    let expected_chunk_body =
-        fs::read("tests/integration/_expected_requests/mobile_app/apk_chunk.bin")
-            .expect("expected chunk body file should be present");
+    let expected_chunk_body = fs::read("tests/integration/_expected_requests/build/apk_chunk.bin")
+        .expect("expected chunk body file should be present");
 
     TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
-                .with_response_file("mobile_app/get-chunk-upload.json"),
+                .with_response_file("build/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
@@ -176,7 +175,7 @@ fn command_mobile_app_upload_apk_chunked() {
             })
             .expect(2),
         )
-        .register_trycmd_test("mobile_app/mobile_app-upload-apk.trycmd")
+        .register_trycmd_test("build/build-upload-apk.trycmd")
         .with_default_token();
 }
 
@@ -186,13 +185,13 @@ fn command_mobile_app_upload_apk_chunked() {
 /// It verifies that the Sentry CLI makes the expected API calls to the chunk upload endpoint
 /// and that the data sent to the chunk upload endpoint is exactly as expected.
 /// It also verifies that the correct calls are made to the assemble endpoint.
-fn command_mobile_app_upload_ipa_chunked() {
+fn command_build_upload_ipa_chunked() {
     let is_first_assemble_call = AtomicBool::new(true);
 
     TestManager::new()
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
-                .with_response_file("mobile_app/get-chunk-upload.json"),
+                .with_response_file("build/get-chunk-upload.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
@@ -230,6 +229,6 @@ fn command_mobile_app_upload_ipa_chunked() {
             })
             .expect(2),
         )
-        .register_trycmd_test("mobile_app/mobile_app-upload-ipa.trycmd")
+        .register_trycmd_test("build/build-upload-ipa.trycmd")
         .with_default_token();
 }

@@ -1,4 +1,5 @@
 mod bash_hook;
+mod build;
 mod debug_files;
 mod deploys;
 mod events;
@@ -8,7 +9,6 @@ mod invalid_env;
 mod issues;
 mod login;
 mod logs;
-mod mobile_app;
 mod monitors;
 mod org_tokens;
 mod organizations;
