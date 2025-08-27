@@ -1,5 +1,3 @@
-#![cfg(feature = "unstable-build")]
-
 use crate::integration::TestManager;
 
 mod upload;

@@ -52,7 +52,6 @@ mod upload_proguard;
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bash_hook);
-        #[cfg(feature = "unstable-build")]
         $mac!(build);
         $mac!(debug_files);
         $mac!(deploys);
