@@ -249,6 +249,54 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     }
 }
 
+pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<String> {
+    // Get the current HEAD commit
+    let head_commit = repo.head()?.peel_to_commit()?;
+
+    // Try to find the remote tracking branch
+    let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
+    let remote_ref = match repo.find_reference(&remote_branch_name) {
+        Ok(r) => r,
+        Err(_) => {
+            // If remote/HEAD doesn't exist, try to find the default branch
+            // First try common default branch names
+            for branch in &["main", "master", "develop"] {
+                let remote_branch = format!("refs/remotes/{remote_name}/{branch}");
+                if let Ok(r) = repo.find_reference(&remote_branch) {
+                    return find_merge_base_ref(repo, &head_commit, &r);
+                }
+            }
+            bail!("Could not find remote tracking branch for {}", remote_name);
+        }
+    };
+
+    find_merge_base_ref(repo, &head_commit, &remote_ref)
+}
+
+fn find_merge_base_ref(
+    repo: &git2::Repository,
+    head_commit: &git2::Commit,
+    remote_ref: &git2::Reference,
+) -> Result<String> {
+    let remote_commit = remote_ref.peel_to_commit()?;
+    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
+
+    // Try to find a branch name that points to this commit
+    let branches = repo.branches(Some(git2::BranchType::Local))?;
+    for (branch, _) in branches.flatten() {
+        if let Ok(branch_commit) = branch.get().peel_to_commit() {
+            if branch_commit.id() == merge_base_oid {
+                if let Some(branch_name) = branch.name()? {
+                    return Ok(branch_name.to_owned());
+                }
+            }
+        }
+    }
+
+    // If no branch name found, return the commit SHA
+    Ok(merge_base_oid.to_string())
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
