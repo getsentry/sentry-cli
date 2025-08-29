@@ -20,6 +20,9 @@ use crate::utils::args::{get_timestamp, validate_distribution};
 use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
+/// The maximum number of breadcrumbs to attach to an event.
+const MAX_BREADCRUMBS: usize = 100;
+
 pub fn make_command(command: Command) -> Command {
     command.about("Send a manual event to Sentry.")
         .long_about(
@@ -143,7 +146,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("logfile")
                 .value_name("PATH")
                 .long("logfile")
-                .help("Send a logfile as breadcrumbs with the event (last 100 records)"),
+                .help(format!("Send a logfile as breadcrumbs with the event (last {MAX_BREADCRUMBS} records)")),
         )
         .arg(
             Arg::new("with_categories")
@@ -322,7 +325,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     if let Some(logfile) = matches.get_one::<String>("logfile") {
-        attach_logfile(&mut event, logfile, matches.get_flag("with_categories"))?;
+        attach_logfile(
+            &mut event,
+            logfile,
+            matches.get_flag("with_categories"),
+            MAX_BREADCRUMBS,
+        )?;
     }
 
     let id = send_raw_event(event)?;
