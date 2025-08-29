@@ -249,6 +249,63 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     }
 }
 
+pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<Option<String>> {
+    // Get the current HEAD commit
+    let head_commit = repo.head()?.peel_to_commit()?;
+
+    // Try to find the remote tracking branch
+    let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
+    let remote_ref = repo
+        .find_reference(&remote_branch_name)
+        .or_else(|_| {
+            // If remote/HEAD doesn't exist, try to query the remote for its actual default branch
+            let mut remote = repo.find_remote(remote_name)?;
+            remote.connect(git2::Direction::Fetch)?;
+            let default_branch_buf = remote.default_branch()?;
+            let default_branch = default_branch_buf.as_str().unwrap();
+
+            // Convert "refs/heads/main" to "refs/remotes/origin/main"
+            let branch_name = default_branch
+                .strip_prefix("refs/heads/")
+                .unwrap_or(default_branch);
+            let remote_branch = format!("refs/remotes/{remote_name}/{branch_name}");
+            repo.find_reference(&remote_branch)
+        })
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Could not find remote tracking branch for {}: {}",
+                remote_name,
+                e
+            )
+        })?;
+
+    find_merge_base_ref(repo, &head_commit, &remote_ref)
+}
+
+fn find_merge_base_ref(
+    repo: &git2::Repository,
+    head_commit: &git2::Commit,
+    remote_ref: &git2::Reference,
+) -> Result<Option<String>> {
+    let remote_commit = remote_ref.peel_to_commit()?;
+    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
+
+    // Try to find a branch name that points to this commit
+    let branches = repo.branches(Some(git2::BranchType::Local))?;
+    for (branch, _) in branches.flatten() {
+        if let Ok(branch_commit) = branch.get().peel_to_commit() {
+            if branch_commit.id() == merge_base_oid {
+                if let Some(branch_name) = branch.name()? {
+                    return Ok(Some(branch_name.to_owned()));
+                }
+            }
+        }
+    }
+
+    // If no branch name found, return None (only return branch names)
+    Ok(None)
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
