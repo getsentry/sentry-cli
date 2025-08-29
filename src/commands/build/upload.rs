@@ -114,7 +114,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
-    let (vcs_provider, head_repo_name, head_ref) = {
+    let (vcs_provider, head_repo_name, head_ref, base_ref) = {
         // Try to open the repo and get the remote URL, but don't fail if not in a repo.
         let repo = git2::Repository::open_from_env().ok();
         let repo_ref = repo.as_ref();
@@ -168,33 +168,36 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        (vcs_provider, head_repo_name, head_ref)
+        let base_ref = matches
+            .get_one("base_ref")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                // Try to get the base ref from the VCS if not provided
+                // This attempts to find the merge-base with the remote tracking branch
+                repo_ref
+                    .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
+                        Ok(Some(base_ref_name)) => {
+                            debug!("Found base branch reference: {}", base_ref_name);
+                            Some(base_ref_name)
+                        }
+                        Ok(None) => {
+                            debug!("No base branch reference found (no local branch points to merge-base)");
+                            None
+                        }
+                        Err(e) => {
+                            debug!("Error getting base branch reference: {}", e);
+                            None
+                        }
+                    })
+                    .map(Cow::Owned)
+            });
+
+        (vcs_provider, head_repo_name, head_ref, base_ref)
     };
 
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let base_sha = matches.get_one("base_sha").map(String::as_str);
-    let base_ref = matches
-        .get_one("base_ref")
-        .map(String::as_str)
-        .map(Cow::Borrowed)
-        .or_else(|| {
-            // Try to get the base ref from the VCS if not provided
-            // This attempts to find the merge-base with the remote tracking branch
-            if let Ok(repo) = git2::Repository::open_from_env() {
-                match git_repo_base_ref(&repo, &cached_remote) {
-                    Ok(base_ref_name) => {
-                        debug!("Found base branch reference: {}", base_ref_name);
-                        Some(Cow::Owned(base_ref_name))
-                    }
-                    Err(e) => {
-                        debug!("No base branch reference found: {}", e);
-                        None
-                    }
-                }
-            } else {
-                None
-            }
-        });
     let pr_number = matches.get_one::<u32>("pr_number");
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
