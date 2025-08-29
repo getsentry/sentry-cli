@@ -267,7 +267,14 @@ class Releases {
    * @returns {Promise.<string>} A promise that resolves to the standard output.
    */
   async execute(args, live) {
-    return helper.execute(args, live, this.options.silent, this.configFile, this.options);
+    return helper.execute(
+      args,
+      live,
+      this.options.silent,
+      this.options.silentLogs,
+      this.configFile,
+      this.options
+    );
   }
 }
 
