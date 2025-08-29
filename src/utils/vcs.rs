@@ -255,20 +255,29 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<O
 
     // Try to find the remote tracking branch
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
-    let remote_ref = match repo.find_reference(&remote_branch_name) {
-        Ok(r) => r,
-        Err(_) => {
-            // If remote/HEAD doesn't exist, try to find the default branch
-            // First try common default branch names
-            for branch in &["main", "master", "develop"] {
-                let remote_branch = format!("refs/remotes/{remote_name}/{branch}");
-                if let Ok(r) = repo.find_reference(&remote_branch) {
-                    return find_merge_base_ref(repo, &head_commit, &r);
-                }
-            }
-            bail!("Could not find remote tracking branch for {}", remote_name);
-        }
-    };
+    let remote_ref = repo
+        .find_reference(&remote_branch_name)
+        .or_else(|_| {
+            // If remote/HEAD doesn't exist, try to query the remote for its actual default branch
+            let mut remote = repo.find_remote(remote_name)?;
+            remote.connect(git2::Direction::Fetch)?;
+            let default_branch_buf = remote.default_branch()?;
+            let default_branch = default_branch_buf.as_str().unwrap();
+
+            // Convert "refs/heads/main" to "refs/remotes/origin/main"
+            let branch_name = default_branch
+                .strip_prefix("refs/heads/")
+                .unwrap_or(default_branch);
+            let remote_branch = format!("refs/remotes/{remote_name}/{branch_name}");
+            repo.find_reference(&remote_branch)
+        })
+        .map_err(|e| {
+            anyhow::anyhow!(
+                "Could not find remote tracking branch for {}: {}",
+                remote_name,
+                e
+            )
+        })?;
 
     find_merge_base_ref(repo, &head_commit, &remote_ref)
 }
