@@ -2,6 +2,24 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.53.0
+
+### Various fixes & improvements
+
+- feat(mobile-app): Add release notes option (#2712) by @noahsmartin
+
+### Changes from 2.53.0-alpha
+
+2.53.0-alpha reintroduced the `build` (previously named `mobile-app`) commands. 2.53.0 is the first stable release to reintroduce them.
+
+Please note, the `build` commands are still experimental, and are therefore subject to breaking changes, including removal, in any release, without notice.
+
+- feat(mobile-app): Add default vcs base_ref parsing for mobile-app subcommand (#2706) by @rbro112
+- chore(mobile-app): Rename mobile-app subcommand to build (#2719) by @rbro112
+- Revert "feat(mobile-app): Reintroduce mobile-app feature gating (#2643)" (#2670) by @noahsmartin
+- meta(cursor): Add rule to avoid explicit type annotations (#2717) by @szokeasaurusrex
+- retry on cloudflare timeout (#2695) by @manishrawat1992
+
 ## 2.53.0-alpha
 
 This release reintroduces the `build` (previously named `mobile-app`) commands. 
