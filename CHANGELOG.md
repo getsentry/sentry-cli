@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.53.0
+
+### Various fixes & improvements
+
+- meta(cursor): Tell Cursor to `cargo fmt` (#2721) by @szokeasaurusrex
+- feat(mobile-app): Add release notes option (#2712) by @noahsmartin
+
 ## 2.53.0-alpha
 
 This release reintroduces the `build` (previously named `mobile-app`) commands. 
