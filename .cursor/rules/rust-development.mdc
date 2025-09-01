@@ -29,15 +29,18 @@ alwaysApply: false
 
 ## Development Commands
 
+Always run `cargo fmt --all`, prior to committing any Rust code, to ensure consistent formatting and to avoid CI failures.
+
+Some other commands you may find useful:
+
 ```bash
 # Essential Rust workflow - run against the whole workspace
 cargo build --workspace
 cargo test --workspace
 cargo clippy --workspace
-cargo fmt
 
 # Local testing
-./bin/sentry-cli --help
+cargo run -- --help
 ```
 
 ## Error Handling Patterns
