@@ -45,8 +45,8 @@ Options:
           The base reference (branch) to use for the upload. If not provided, the merge-base with
           the remote tracking branch will be used.
       --pr-number <pr_number>
-          The pull request number to use for the upload. If not provided, the current pull request
-          number will be used.
+          The pull request number to use for the upload. If not provided, the PR number will be
+          automatically detected from GitHub Actions environment variables.
       --build-configuration <build_configuration>
           The build configuration to use for the upload. If not provided, the current version will
           be used.

@@ -29,28 +29,23 @@ use crate::utils::vcs::{
 };
 
 fn get_default_pr_number() -> Option<u32> {
-    std::env::var("GITHUB_REF")
-        .ok()
-        .and_then(|github_ref| {
-            if let Ok(event_name) = std::env::var("GITHUB_EVENT_NAME") {
-                if event_name == "pull_request" && github_ref.starts_with("refs/pull/") {
-                    let pr_number_str = github_ref
-                        .strip_prefix("refs/pull/")?
-                        .split('/')
-                        .next()?;
-                    if let Ok(pr_number) = pr_number_str.parse::<u32>() {
-                        debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
-                        Some(pr_number)
-                    } else {
-                        None
-                    }
+    std::env::var("GITHUB_REF").ok().and_then(|github_ref| {
+        if let Ok(event_name) = std::env::var("GITHUB_EVENT_NAME") {
+            if event_name == "pull_request" && github_ref.starts_with("refs/pull/") {
+                let pr_number_str = github_ref.strip_prefix("refs/pull/")?.split('/').next()?;
+                if let Ok(pr_number) = pr_number_str.parse::<u32>() {
+                    debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
+                    Some(pr_number)
                 } else {
                     None
                 }
             } else {
                 None
             }
-        })
+        } else {
+            None
+        }
+    })
 }
 
 pub fn make_command(command: Command) -> Command {
@@ -651,19 +646,19 @@ mod tests {
     fn test_get_default_pr_number() {
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_REF", "refs/pull/123/merge");
-        
+
         let pr_number = get_default_pr_number();
         assert_eq!(pr_number, Some(123));
-        
+
         std::env::set_var("GITHUB_EVENT_NAME", "push");
         let pr_number = get_default_pr_number();
         assert_eq!(pr_number, None);
-        
+
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_REF", "refs/heads/main");
         let pr_number = get_default_pr_number();
         assert_eq!(pr_number, None);
-        
+
         std::env::remove_var("GITHUB_EVENT_NAME");
         std::env::remove_var("GITHUB_REF");
     }
