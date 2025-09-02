@@ -217,7 +217,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let pr_number = matches
         .get_one::<u32>("pr_number")
         .copied()
-        .or_else(|| get_default_pr_number());
+        .or_else(get_default_pr_number);
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
