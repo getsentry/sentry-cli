@@ -13,16 +13,12 @@ jobs:
         include:
           - arch: i686
             target: i686-unknown-linux-musl
-            container: i686-musl
           - arch: x86_64
             target: x86_64-unknown-linux-musl
-            container: x86_64-musl
           - arch: armv7
             target: armv7-unknown-linux-musleabi
-            container: armv7-musleabi
           - arch: aarch64
             target: aarch64-unknown-linux-musl
-            container: aarch64-musl
 
     name: Linux ${{ matrix.arch }}
     runs-on: ubuntu-24.04
@@ -30,14 +26,31 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
-      - name: Build in Docker
-        run: scripts/build-in-docker.sh
-        env:
-          TARGET: ${{ matrix.target }}
-          DOCKER_TAG: ${{ matrix.container }}
+      - name: Install musl and cross-compilation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+          # Install target-specific cross-compilation toolchains
+          case "${{ matrix.target }}" in
+            "armv7-unknown-linux-musleabi")
+              sudo apt-get install -y gcc-arm-linux-gnueabihf
+              ;;
+            "aarch64-unknown-linux-musl")
+              sudo apt-get install -y gcc-aarch64-linux-gnu
+              ;;
+          esac
+
+      - name: Add Rustup Target
+        run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
+
+      - name: Build Binary
+        run: cargo build --target=${{ matrix.target }} --release --locked
 
       - name: Rename Binary
-        run: mv target/*/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
+        run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
         with:
