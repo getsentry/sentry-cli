@@ -296,6 +296,7 @@ fn find_merge_base_ref(
         if let Ok(branch_commit) = branch.get().peel_to_commit() {
             if branch_commit.id() == merge_base_oid {
                 if let Some(branch_name) = branch.name()? {
+                    debug!("Found base branch reference: {}", branch_name);
                     return Ok(Some(branch_name.to_owned()));
                 }
             }
