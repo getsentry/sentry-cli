@@ -249,6 +249,23 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     }
 }
 
+/// Attempts to get the PR number from GitHub Actions environment variables.
+/// Returns the PR number if running in a GitHub Actions pull request environment.
+pub fn get_github_pr_number() -> Option<u32> {
+    let github_ref = std::env::var("GITHUB_REF").ok()?;
+    let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
+
+    if event_name != "pull_request" || !github_ref.starts_with("refs/pull/") {
+        return None;
+    }
+
+    let pr_number_str = github_ref.strip_prefix("refs/pull/")?.split('/').next()?;
+
+    let pr_number = pr_number_str.parse::<u32>().ok()?;
+    debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
+    Some(pr_number)
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
