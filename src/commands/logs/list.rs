@@ -279,18 +279,7 @@ fn execute_live_streaming(
         args.poll_interval
     );
 
-    // Set up table with headers and print header once
-    let mut table = Table::new();
-    table
-        .title_row()
-        .add("Item ID")
-        .add("Timestamp")
-        .add("Severity")
-        .add("Message")
-        .add("Trace");
-
-    let mut header_printed = false;
-    // Holds a warning message to be printed after the current batch of rows for visibility
+    // Holds a warning message to be printed after the current batch of logs for visibility
     let mut pending_warning: Option<String> = None;
 
     loop {
@@ -327,30 +316,20 @@ fn execute_live_streaming(
                     pending_warning = Some(msg);
                 }
 
-                // Add new logs to table (if any)
+                // Print new logs in human-readable format
                 if !unique_logs.is_empty() {
                     for log in unique_logs {
-                        let row = table.add_row();
-                        row.add(&log.item_id)
-                            .add(&log.timestamp)
-                            .add(log.severity.as_deref().unwrap_or(""))
-                            .add(log.message.as_deref().unwrap_or(""))
-                            .add(log.trace.as_deref().unwrap_or(""));
+                        println!(
+                            "{} | {} | {} | {}",
+                            log.timestamp,
+                            log.severity.as_deref().unwrap_or(""),
+                            log.trace.as_deref().unwrap_or(""),
+                            log.message.as_deref().unwrap_or("")
+                        );
                     }
-
-                    if !header_printed {
-                        // Print header with first data batch so column widths match actual data
-                        table.print_table_start();
-                        header_printed = true;
-                    } else {
-                        // Print only the rows (without table borders) for subsequent batches
-                        table.print_rows_only();
-                    }
-                    // Clear rows to free memory but keep the table structure for reuse
-                    table.clear_rows();
                 }
 
-                // Print any pending warning AFTER the batch rows to maximize visibility
+                // Print any pending warning AFTER the batch logs to maximize visibility
                 if let Some(msg) = pending_warning.take() {
                     // Style: bold black text on bright yellow background, with spacing and banner
                     const BANNER_WIDTH: usize = 100;
