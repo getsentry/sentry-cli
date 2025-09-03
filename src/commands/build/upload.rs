@@ -182,11 +182,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                             Some(base_ref_name)
                         }
                         Ok(None) => {
-                            info!("No base branch reference found (no local branch points to merge-base)");
+                            warn!("No base branch reference found (no local branch points to merge-base)");
                             None
                         }
                         Err(e) => {
-                            info!("Could not detect base branch reference: {}", e);
+                            warn!("Could not detect base branch reference: {}", e);
                             None
                         }
                     })
