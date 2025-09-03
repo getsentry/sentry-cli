@@ -1,9 +1,10 @@
 use std::borrow::Cow;
-use std::collections::{HashSet, VecDeque};
+use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use anyhow::Result;
 use clap::Args;
+use lru::LruCache;
 
 use crate::api::{Api, Dataset, FetchEventsOptions, LogEntry};
 use crate::config::Config;
@@ -168,14 +169,10 @@ fn execute_single_fetch(
     Ok(())
 }
 
-/// Manages deduplication of log entries with a bounded buffer
+/// Manages deduplication of log entries using an LRU cache
 struct LogDeduplicator {
-    /// Set of seen log IDs for quick lookup
-    seen_ids: HashSet<String>,
-    /// Buffer of log entries in order (for maintaining size limit)
-    buffer: VecDeque<LogEntry>,
-    /// Maximum size of the buffer
-    max_size: usize,
+    /// LRU cache of seen log IDs
+    seen_ids: LruCache<String, ()>,
 }
 
 const MAX_DEDUP_BUFFER_SIZE: usize = 10_000;
@@ -183,9 +180,11 @@ const MAX_DEDUP_BUFFER_SIZE: usize = 10_000;
 impl LogDeduplicator {
     fn new(max_size: usize) -> Self {
         Self {
-            seen_ids: HashSet::new(),
-            buffer: VecDeque::new(),
-            max_size,
+            seen_ids: LruCache::new(
+                max_size
+                    .try_into()
+                    .unwrap_or(NonZeroUsize::new(MAX_DEDUP_BUFFER_SIZE).expect("")),
+            ),
         }
     }
 
@@ -194,17 +193,11 @@ impl LogDeduplicator {
         let mut unique_logs = Vec::new();
 
         for log in new_logs {
-            if !self.seen_ids.contains(&log.item_id) {
-                self.seen_ids.insert(log.item_id.clone());
-                self.buffer.push_back(log.clone());
+            // If the log ID is not in the cache, it's a new log
+            if self.seen_ids.get(&log.item_id).is_none() {
+                // Add to cache (this will evict oldest entries if at capacity)
+                self.seen_ids.put(log.item_id.clone(), ());
                 unique_logs.push(log);
-            }
-        }
-
-        // Maintain buffer size limit by removing oldest entries
-        while self.buffer.len() > self.max_size {
-            if let Some(removed_log) = self.buffer.pop_front() {
-                self.seen_ids.remove(&removed_log.item_id);
             }
         }
 
