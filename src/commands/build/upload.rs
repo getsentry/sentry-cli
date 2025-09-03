@@ -24,29 +24,9 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref, git_repo_head_ref,
+    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref, git_repo_head_ref,
     git_repo_remote_url,
 };
-
-fn get_default_pr_number() -> Option<u32> {
-    std::env::var("GITHUB_REF").ok().and_then(|github_ref| {
-        if let Ok(event_name) = std::env::var("GITHUB_EVENT_NAME") {
-            if event_name == "pull_request" && github_ref.starts_with("refs/pull/") {
-                let pr_number_str = github_ref.strip_prefix("refs/pull/")?.split('/').next()?;
-                if let Ok(pr_number) = pr_number_str.parse::<u32>() {
-                    debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
-                    Some(pr_number)
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
-        } else {
-            None
-        }
-    })
-}
 
 pub fn make_command(command: Command) -> Command {
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -106,7 +86,7 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("pr_number")
                 .long("pr-number")
                 .value_parser(clap::value_parser!(u32))
-                .help("The pull request number to use for the upload. If not provided, the PR number will be automatically detected from GitHub Actions environment variables.")
+                .help("The pull request number to use for the upload. If not provided and running in a GitHub Actions environment, the PR number will be automatically detected from GitHub Actions environment variables.")
         )
         .arg(
             Arg::new("build_configuration")
@@ -217,7 +197,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let pr_number = matches
         .get_one::<u32>("pr_number")
         .copied()
-        .or_else(get_default_pr_number);
+        .or_else(get_github_pr_number);
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
@@ -643,20 +623,20 @@ mod tests {
     }
 
     #[test]
-    fn test_get_default_pr_number() {
+    fn test_get_github_pr_number() {
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_REF", "refs/pull/123/merge");
 
-        let pr_number = get_default_pr_number();
+        let pr_number = get_github_pr_number();
         assert_eq!(pr_number, Some(123));
 
         std::env::set_var("GITHUB_EVENT_NAME", "push");
-        let pr_number = get_default_pr_number();
+        let pr_number = get_github_pr_number();
         assert_eq!(pr_number, None);
 
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_REF", "refs/heads/main");
-        let pr_number = get_default_pr_number();
+        let pr_number = get_github_pr_number();
         assert_eq!(pr_number, None);
 
         std::env::remove_var("GITHUB_EVENT_NAME");
