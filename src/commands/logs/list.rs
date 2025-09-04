@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::num::NonZeroUsize;
+use std::num::{NonZero, NonZeroUsize};
 use std::time::Duration;
 
 use anyhow::Result;
@@ -175,16 +175,10 @@ struct LogDeduplicator {
     seen_ids: LruCache<String, ()>,
 }
 
-const MAX_DEDUP_BUFFER_SIZE: usize = 10_000;
-
 impl LogDeduplicator {
     fn new(max_size: NonZeroUsize) -> Self {
         Self {
-            seen_ids: LruCache::new(
-                max_size
-                    .try_into()
-                    .unwrap_or(NonZeroUsize::new(MAX_DEDUP_BUFFER_SIZE).expect("")),
-            ),
+            seen_ids: LruCache::new(max_size),
         }
     }
 
@@ -262,7 +256,8 @@ fn execute_live_streaming(
     fields: &[&str],
     args: &ListLogsArgs,
 ) -> Result<()> {
-    let mut deduplicator = LogDeduplicator::new(MAX_DEDUP_BUFFER_SIZE);
+    let mut deduplicator =
+        LogDeduplicator::new(NonZero::new(args.max_rows).expect("max-rows should be non-zero"));
     let poll_duration = Duration::from_secs(args.poll_interval);
     let mut new_only_tracker = ConsecutiveNewOnlyTracker::new(3); // Warn after 3 consecutive batches of only new logs
 
@@ -352,13 +347,13 @@ mod tests {
 
     #[test]
     fn test_log_deduplicator_new() {
-        let deduplicator = LogDeduplicator::new(100);
+        let deduplicator = LogDeduplicator::new(NonZeroUsize::new(100).unwrap());
         assert_eq!(deduplicator.seen_ids.len(), 0);
     }
 
     #[test]
     fn test_log_deduplicator_add_unique_logs() {
-        let mut deduplicator = LogDeduplicator::new(10);
+        let mut deduplicator = LogDeduplicator::new(NonZeroUsize::new(10).unwrap());
 
         let log1 = create_test_log("1", "test message 1");
         let log2 = create_test_log("2", "test message 2");
@@ -372,7 +367,7 @@ mod tests {
 
     #[test]
     fn test_log_deduplicator_deduplicate_logs() {
-        let mut deduplicator = LogDeduplicator::new(10);
+        let mut deduplicator = LogDeduplicator::new(NonZeroUsize::new(10).unwrap());
 
         let log1 = create_test_log("1", "test message 1");
         let log2 = create_test_log("2", "test message 2");
@@ -391,7 +386,7 @@ mod tests {
 
     #[test]
     fn test_log_deduplicator_buffer_size_limit() {
-        let mut deduplicator = LogDeduplicator::new(3);
+        let mut deduplicator = LogDeduplicator::new(NonZeroUsize::new(3).unwrap());
 
         // Add 5 logs to a buffer with max size 3
         let logs = vec![
