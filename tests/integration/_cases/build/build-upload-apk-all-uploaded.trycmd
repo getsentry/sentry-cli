@@ -2,7 +2,7 @@
 $ sentry-cli build upload tests/integration/_fixtures/build/apk.apk
 ? success
 [..]WARN[..]EXPERIMENTAL: The build subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
-  WARN    [..] No base branch reference found (no local branch points to merge-base)
+  WARN    [..] Could not detect base branch reference: [..]
 Successfully uploaded 1 file to Sentry
   - tests/integration/_fixtures/build/apk.apk (http[..]/wat-org/preprod/wat-project/42)
 
