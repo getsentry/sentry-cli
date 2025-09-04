@@ -293,20 +293,21 @@ fn find_merge_base_ref(
     let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
 
     // Try to find a branch name that points to this commit
-    let branches = repo.branches(Some(git2::BranchType::Local))?;
-    for (branch, _) in branches.flatten() {
-        if let Ok(branch_commit) = branch.get().peel_to_commit() {
+    let branch_name = repo
+        .branches(Some(git2::BranchType::Local))?
+        .flatten()
+        .find_map(|(branch, _)| {
+            let branch_commit = branch.get().peel_to_commit().ok()?;
             if branch_commit.id() == merge_base_oid {
-                if let Some(branch_name) = branch.name()? {
-                    debug!("Found base branch reference: {}", branch_name);
-                    return Ok(Some(branch_name.to_owned()));
-                }
+                let branch_name = branch.name().ok()??;
+                debug!("Found base branch reference: {}", branch_name);
+                Some(branch_name.to_owned())
+            } else {
+                None
             }
-        }
-    }
+        });
 
-    // If no branch name found, return None (only return branch names)
-    Ok(None)
+    Ok(branch_name)
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
