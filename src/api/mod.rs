@@ -473,6 +473,7 @@ impl<'a> AuthenticatedApi<'a> {
 
     /// Lists release files for the given `release`, filtered by a set of checksums.
     /// When empty checksums list is provided, fetches all possible artifacts.
+    #[deprecated]
     pub fn list_release_files_by_checksum(
         &self,
         org: &str,
@@ -532,6 +533,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Lists all the release files for the given `release`.
+    #[deprecated]
     pub fn list_release_files(
         &self,
         org: &str,
@@ -542,6 +544,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Get a single release file and store it inside provided descriptor.
+    #[deprecated]
     pub fn get_release_file(
         &self,
         org: &str,
@@ -576,6 +579,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Get a single release file metadata.
+    #[deprecated]
     pub fn get_release_file_metadata(
         &self,
         org: &str,
@@ -610,6 +614,7 @@ impl<'a> AuthenticatedApi<'a> {
 
     /// Deletes a single release file.  Returns `true` if the file was
     /// deleted or `false` otherwise.
+    #[deprecated]
     pub fn delete_release_file(
         &self,
         org: &str,
@@ -644,6 +649,7 @@ impl<'a> AuthenticatedApi<'a> {
 
     /// Deletes all release files.  Returns `true` if files were
     /// deleted or `false` otherwise.
+    #[deprecated]
     pub fn delete_release_files(
         &self,
         org: &str,
@@ -1513,6 +1519,7 @@ impl RegionSpecificApi<'_> {
 
     /// Uploads a new release file.  The file is loaded directly from the file
     /// system and uploaded as `name`.
+    #[deprecated]
     pub fn upload_release_file(
         &self,
         context: &LegacyUploadContext,
