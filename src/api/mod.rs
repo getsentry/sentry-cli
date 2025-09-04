@@ -2524,7 +2524,7 @@ pub struct VcsInfo<'a> {
 }
 
 /// Log entry structure from the logs API
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct LogEntry {
     #[serde(rename = "sentry.item_id")]
     pub item_id: String,
