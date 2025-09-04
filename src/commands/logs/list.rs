@@ -188,20 +188,20 @@ impl LogDeduplicator {
         }
     }
 
-    /// Add new logs and return only the ones that haven't been seen before
-    fn add_logs(&mut self, new_logs: Vec<LogEntry>) -> Vec<LogEntry> {
-        let mut unique_logs = Vec::new();
+    /// Add new logs and return an iterator overonly the ones that haven't been seen before
+    fn add_logs<'a>(&'a mut self, new_logs: &'a [LogEntry]) -> impl Iterator<Item = &'a LogEntry> {
+        new_logs
+            .iter()
+            .filter(|log| match self.seen_ids.get(&log.item_id) {
+                // If log ID is in the cache, we have seen it already
+                Some(_) => false,
 
-        for log in new_logs {
-            // If the log ID is not in the cache, it's a new log
-            if self.seen_ids.get(&log.item_id).is_none() {
-                // Add to cache (this will evict oldest entries if at capacity)
-                self.seen_ids.put(log.item_id.clone(), ());
-                unique_logs.push(log);
-            }
-        }
-
-        unique_logs
+                // If log ID is not in the cache, we have not seen it yet
+                None => {
+                    self.seen_ids.put(log.item_id.clone(), ());
+                    true
+                }
+            })
     }
 }
 
@@ -268,12 +268,9 @@ fn execute_live_streaming(
 
     println!("Starting live log streaming...");
     println!(
-        "Polling every {} seconds. Press Ctrl+C to stop.",
+        "Polling every {} seconds. Press ⌃C to stop.",
         args.poll_interval
     );
-
-    // Holds a warning message to be printed after the current batch of logs for visibility
-    let mut pending_warning: Option<String> = None;
 
     loop {
         let options = FetchEventsOptions {
@@ -293,37 +290,35 @@ fn execute_live_streaming(
         {
             Ok(logs) => {
                 let fetched_count = logs.len();
-                let unique_logs = deduplicator.add_logs(logs);
+                let unique_logs = deduplicator.add_logs(&logs).collect::<Vec<_>>();
 
                 let should_warn = new_only_tracker.process_batch(fetched_count, unique_logs.len());
+
+                // Print new logs in human-readable format
+                for log in unique_logs {
+                    println!(
+                        "{} | {} | {} | {}",
+                        log.timestamp,
+                        log.severity.as_deref().unwrap_or(""),
+                        log.trace.as_deref().unwrap_or(""),
+                        log.message.as_deref().unwrap_or("")
+                    );
+                }
+
+                // Print any pending warning AFTER the batch logs to maximize visibility
                 if should_warn {
+                    // compute warning message
                     let suggestion_suffix = if args.query.trim().is_empty() {
                         ""
                     } else {
                         &format!(" (current filter: \"{}\")", args.query)
                     };
+
                     let msg = format!(
                         "Only new logs received in the last {} polls. You may be missing some logs. Consider narrowing your query filter{suggestion_suffix}.",
                         new_only_tracker.warning_threshold
                     );
-                    pending_warning = Some(msg);
-                }
 
-                // Print new logs in human-readable format
-                if !unique_logs.is_empty() {
-                    for log in unique_logs {
-                        println!(
-                            "{} | {} | {} | {}",
-                            log.timestamp,
-                            log.severity.as_deref().unwrap_or(""),
-                            log.trace.as_deref().unwrap_or(""),
-                            log.message.as_deref().unwrap_or("")
-                        );
-                    }
-                }
-
-                // Print any pending warning AFTER the batch logs to maximize visibility
-                if let Some(msg) = pending_warning.take() {
                     // Style: bold black text on bright yellow background, with spacing and banner
                     const BANNER_WIDTH: usize = 100;
                     let line = "=".repeat(BANNER_WIDTH);
@@ -368,7 +363,8 @@ mod tests {
         let log1 = create_test_log("1", "test message 1");
         let log2 = create_test_log("2", "test message 2");
 
-        let unique_logs = deduplicator.add_logs(vec![log1.clone(), log2.clone()]);
+        let logs = vec![log1.clone(), log2.clone()];
+        let unique_logs = deduplicator.add_logs(&logs).collect::<Vec<_>>();
 
         assert_eq!(unique_logs.len(), 2);
         assert_eq!(deduplicator.seen_ids.len(), 2);
@@ -382,11 +378,12 @@ mod tests {
         let log2 = create_test_log("2", "test message 2");
 
         // Add logs first time
-        let unique_logs1 = deduplicator.add_logs(vec![log1.clone(), log2.clone()]);
+        let logs = vec![log1.clone(), log2.clone()];
+        let unique_logs1 = deduplicator.add_logs(&logs).collect::<Vec<_>>();
         assert_eq!(unique_logs1.len(), 2);
 
         // Add same logs again
-        let unique_logs2 = deduplicator.add_logs(vec![log1.clone(), log2.clone()]);
+        let unique_logs2 = deduplicator.add_logs(&logs).collect::<Vec<_>>();
         assert_eq!(unique_logs2.len(), 0); // Should be empty as logs already seen
 
         assert_eq!(deduplicator.seen_ids.len(), 2);
@@ -405,7 +402,7 @@ mod tests {
             create_test_log("5", "test message 5"),
         ];
 
-        let unique_logs = deduplicator.add_logs(logs);
+        let unique_logs = deduplicator.add_logs(&logs).collect::<Vec<_>>();
         assert_eq!(unique_logs.len(), 5);
 
         // After adding 5 logs to a buffer with max size 3, the oldest 2 should be evicted
@@ -415,12 +412,12 @@ mod tests {
             create_test_log("1", "test message 1"),
             create_test_log("2", "test message 2"),
         ];
-        let duplicate_unique_logs = deduplicator.add_logs(duplicate_logs);
+        let duplicate_unique_logs = deduplicator.add_logs(&duplicate_logs).collect::<Vec<_>>();
         assert_eq!(duplicate_unique_logs.len(), 2);
 
         // Test that adding new logs still works
         let new_logs = vec![create_test_log("6", "test message 6")];
-        let new_unique_logs = deduplicator.add_logs(new_logs);
+        let new_unique_logs = deduplicator.add_logs(&new_logs).collect::<Vec<_>>();
         assert_eq!(new_unique_logs.len(), 1);
     }
 
