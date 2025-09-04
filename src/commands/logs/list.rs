@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::num::{NonZero, NonZeroUsize};
+use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -12,10 +12,10 @@ use crate::utils::formatting::Table;
 
 const MAX_ROWS_RANGE: std::ops::RangeInclusive<usize> = 1..=1000;
 /// Validate that max_rows is in the allowed range
-fn validate_max_rows(s: &str) -> Result<usize> {
-    let value = s.parse()?;
+fn validate_max_rows(s: &str) -> Result<NonZeroUsize> {
+    let value = s.parse::<usize>()?;
     if MAX_ROWS_RANGE.contains(&value) {
-        Ok(value)
+        NonZeroUsize::new(value).ok_or_else(|| anyhow::anyhow!("max-rows must be greater than 0"))
     } else {
         Err(anyhow::anyhow!(
             "max-rows must be between {} and {}",
@@ -63,7 +63,7 @@ pub(super) struct ListLogsArgs {
     #[arg(long = "max-rows", default_value = "100")]
     #[arg(value_parser = validate_max_rows)]
     #[arg(help = format!("Maximum number of log entries to fetch and display (max {}).", MAX_ROWS_RANGE.end()))]
-    max_rows: usize,
+    max_rows: NonZeroUsize,
 
     #[arg(long = "query", default_value = "")]
     #[arg(help = "Query to filter logs. Example: \"level:error\"")]
@@ -133,7 +133,7 @@ fn execute_single_fetch(
         project_id,
         cursor: None,
         query,
-        per_page: args.max_rows,
+        per_page: args.max_rows.get(),
         stats_period: "90d",
         sort: "-timestamp",
     };
@@ -151,7 +151,7 @@ fn execute_single_fetch(
         .add("Message")
         .add("Trace");
 
-    for log in logs.iter().take(args.max_rows) {
+    for log in logs.iter().take(args.max_rows.get()) {
         let row = table.add_row();
         row.add(&log.item_id)
             .add(&log.timestamp)
@@ -256,8 +256,7 @@ fn execute_live_streaming(
     fields: &[&str],
     args: &ListLogsArgs,
 ) -> Result<()> {
-    let mut deduplicator =
-        LogDeduplicator::new(NonZero::new(args.max_rows).expect("max-rows should be non-zero"));
+    let mut deduplicator = LogDeduplicator::new(args.max_rows);
     let poll_duration = Duration::from_secs(args.poll_interval);
     let mut new_only_tracker = ConsecutiveNewOnlyTracker::new(3); // Warn after 3 consecutive batches of only new logs
 
@@ -274,7 +273,7 @@ fn execute_live_streaming(
             project_id: project,
             cursor: None,
             query,
-            per_page: args.max_rows,
+            per_page: args.max_rows.get(),
             stats_period: "10m",
             sort: "-timestamp",
         };
