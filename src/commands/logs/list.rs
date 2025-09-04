@@ -178,7 +178,7 @@ struct LogDeduplicator {
 const MAX_DEDUP_BUFFER_SIZE: usize = 10_000;
 
 impl LogDeduplicator {
-    fn new(max_size: usize) -> Self {
+    fn new(max_size: NonZeroUsize) -> Self {
         Self {
             seen_ids: LruCache::new(
                 max_size
