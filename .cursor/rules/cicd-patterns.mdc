@@ -75,3 +75,24 @@ When adding new CI checks:
 
 - `RUSTFLAGS: -Dwarnings` enforced in CI
 - Cross-platform matrix: Ubuntu 24.04, macOS 14, Windows 2022
+
+## Container-Based Builds
+
+For cross-compilation (e.g., Linux musl targets):
+
+- Use GitHub Actions' native `container` field instead of manual Docker commands
+- Prefer `messense/rust-musl-cross` images for Linux musl builds
+- Structure:
+  ```yaml
+  jobs:
+    build:
+      container:
+        image: messense/rust-musl-cross:${{ matrix.container }}
+        options: --user root
+      steps:
+        - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
+        - uses: actions/cache@1a9e2138d905efd099035b49d8b7a3888c653ca8 # v4.0.2
+  ```
+- Benefits: Better caching, cleaner logs, simpler conditionals
+- Use GitHub Actions cache for Cargo dependencies instead of Docker volumes
+- Remember to pin all actions by commit hash as per security guidelines
