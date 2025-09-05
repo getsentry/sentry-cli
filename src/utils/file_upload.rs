@@ -211,7 +211,7 @@ impl<'a> TryFrom<&'a UploadContext<'_>> for LegacyUploadContext<'a> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone, Hash)]
 pub enum LogLevel {
     Warning,
     Error,
@@ -226,7 +226,7 @@ impl fmt::Display for LogLevel {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SourceFile {
     pub url: String,
     pub path: PathBuf,
