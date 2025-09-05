@@ -178,11 +178,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
                         Ok(Some(base_ref_name)) => {
-                            debug!("Found base branch reference: {}", base_ref_name);
+                            debug!("Found base reference: {}", base_ref_name);
                             Some(base_ref_name)
                         }
                         Ok(None) => {
-                            warn!("No base branch reference found (no local branch points to merge-base)");
+                            warn!("No base reference found (could not determine merge-base)");
                             None
                         }
                         Err(e) => {
