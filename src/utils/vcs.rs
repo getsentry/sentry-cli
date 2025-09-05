@@ -294,7 +294,10 @@ fn find_merge_base_ref(
 
     // Return the merge-base commit SHA as the base reference
     let merge_base_sha = merge_base_oid.to_string();
-    debug!("Found merge-base commit as base reference: {}", merge_base_sha);
+    debug!(
+        "Found merge-base commit as base reference: {}",
+        merge_base_sha
+    );
     Ok(Some(merge_base_sha))
 }
 
