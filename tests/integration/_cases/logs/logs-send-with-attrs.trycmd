@@ -1,0 +1,7 @@
+```
+$ sentry-cli logs send --message "User action" --level warn -a user_id:123 -a action:login --release 1.0.0
+? success
+[BETA] The "logs" command is in beta. The command is subject to breaking changes, including removal, in any Sentry CLI release.
+Log sent.
+
+```
