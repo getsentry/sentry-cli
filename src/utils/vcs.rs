@@ -1301,19 +1301,24 @@ fn test_git_repo_head_ref() {
     );
 }
 
-#[test]
-fn test_get_github_pr_number() {
-    std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
-    std::env::set_var("GITHUB_REF", "refs/pull/123/merge");
-    let pr_number = get_github_pr_number();
-    assert_eq!(pr_number, Some(123));
-    std::env::set_var("GITHUB_EVENT_NAME", "push");
-    let pr_number = get_github_pr_number();
-    assert_eq!(pr_number, None);
-    std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
-    std::env::set_var("GITHUB_REF", "refs/heads/main");
-    let pr_number = get_github_pr_number();
-    assert_eq!(pr_number, None);
-    std::env::remove_var("GITHUB_EVENT_NAME");
-    std::env::remove_var("GITHUB_REF");
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_get_github_pr_number() {
+        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
+        std::env::set_var("GITHUB_REF", "refs/pull/123/merge");
+        let pr_number = get_github_pr_number();
+        assert_eq!(pr_number, Some(123));
+        std::env::set_var("GITHUB_EVENT_NAME", "push");
+        let pr_number = get_github_pr_number();
+        assert_eq!(pr_number, None);
+        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
+        std::env::set_var("GITHUB_REF", "refs/heads/main");
+        let pr_number = get_github_pr_number();
+        assert_eq!(pr_number, None);
+        std::env::remove_var("GITHUB_EVENT_NAME");
+        std::env::remove_var("GITHUB_REF");
+    }
 }

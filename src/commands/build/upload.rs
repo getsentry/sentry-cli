@@ -197,7 +197,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let base_sha = matches.get_one("base_sha").map(String::as_str);
     let pr_number = matches
-        .get_one::<u32>("pr_number")
+        .get_one("pr_number")
         .copied()
         .or_else(get_github_pr_number);
 
