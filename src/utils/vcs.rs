@@ -289,13 +289,18 @@ pub fn get_github_pr_number() -> Option<u32> {
     let github_ref = std::env::var("GITHUB_REF").ok()?;
     let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
 
-    if event_name != "pull_request" || !github_ref.starts_with("refs/pull/") {
+    if event_name != "pull_request" {
+        debug!("Not running in pull_request event, got: {}", event_name);
         return None;
     }
 
-    let pr_number_str = github_ref.strip_prefix("refs/pull/")?.split('/').next()?;
+    let pr_number_str = github_ref.strip_prefix("refs/pull/")?;
+    debug!("Extracted PR reference: {}", pr_number_str);
+    
+    let pr_number_str = pr_number_str.split('/').next()?;
+    debug!("Parsing PR number from: {}", pr_number_str);
 
-    let pr_number = pr_number_str.parse::<u32>().ok()?;
+    let pr_number = pr_number_str.parse().ok()?;
     debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
     Some(pr_number)
 }
