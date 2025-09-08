@@ -257,23 +257,7 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<O
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
     let remote_ref = repo
         .find_reference(&remote_branch_name)
-        .or_else(|_| -> Result<git2::Reference, anyhow::Error> {
-            // If remote/HEAD doesn't exist, try to query the remote for its actual default branch
-            let mut remote = repo.find_remote(remote_name)?;
-            remote.connect(git2::Direction::Fetch)?;
-            let default_branch_buf = remote.default_branch()?;
-            let default_branch = default_branch_buf
-                .as_str()
-                .ok_or_else(|| anyhow::anyhow!("Default branch contains invalid UTF-8"))?;
-
-            // Convert "refs/heads/main" to "refs/remotes/origin/main"
-            let branch_name = default_branch
-                .strip_prefix("refs/heads/")
-                .unwrap_or(default_branch);
-            let remote_branch = format!("refs/remotes/{remote_name}/{branch_name}");
-            Ok(repo.find_reference(&remote_branch)?)
-        })
-        .map_err(|e: anyhow::Error| {
+        .map_err(|e| {
             anyhow::anyhow!(
                 "Could not find remote tracking branch for {}: {}",
                 remote_name,
