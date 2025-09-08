@@ -249,7 +249,7 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     }
 }
 
-pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<Option<String>> {
+pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<String> {
     // Get the current HEAD commit
     let head_commit = repo.head()?.peel_to_commit()?;
 
@@ -270,7 +270,7 @@ fn find_merge_base_ref(
     repo: &git2::Repository,
     head_commit: &git2::Commit,
     remote_ref: &git2::Reference,
-) -> Result<Option<String>> {
+) -> Result<String> {
     let remote_commit = remote_ref.peel_to_commit()?;
     let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
 
@@ -280,7 +280,7 @@ fn find_merge_base_ref(
         "Found merge-base commit as base reference: {}",
         merge_base_sha
     );
-    Ok(Some(merge_base_sha))
+    Ok(merge_base_sha)
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {

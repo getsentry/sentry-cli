@@ -177,13 +177,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 // This attempts to find the merge-base with the remote tracking branch
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
-                        Ok(Some(base_ref_name)) => {
+                        Ok(base_ref_name) => {
                             debug!("Found base reference: {}", base_ref_name);
                             Some(base_ref_name)
-                        }
-                        Ok(None) => {
-                            warn!("No base reference found (could not determine merge-base)");
-                            None
                         }
                         Err(e) => {
                             warn!("Could not detect base branch reference: {}", e);
