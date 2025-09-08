@@ -255,15 +255,13 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<O
 
     // Try to find the remote tracking branch
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
-    let remote_ref = repo
-        .find_reference(&remote_branch_name)
-        .map_err(|e| {
-            anyhow::anyhow!(
-                "Could not find remote tracking branch for {}: {}",
-                remote_name,
-                e
-            )
-        })?;
+    let remote_ref = repo.find_reference(&remote_branch_name).map_err(|e| {
+        anyhow::anyhow!(
+            "Could not find remote tracking branch for {}: {}",
+            remote_name,
+            e
+        )
+    })?;
 
     find_merge_base_ref(repo, &head_commit, &remote_ref)
 }
