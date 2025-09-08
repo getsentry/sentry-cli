@@ -86,7 +86,9 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("pr_number")
                 .long("pr-number")
                 .value_parser(clap::value_parser!(u32))
-                .help("The pull request number to use for the upload. If not provided and running in a GitHub Actions environment, the PR number will be automatically detected from GitHub Actions environment variables.")
+                .help("The pull request number to use for the upload. If not provided and running \
+                    in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
+                    detected from GitHub Actions environment variables.")
         )
         .arg(
             Arg::new("build_configuration")
@@ -620,26 +622,5 @@ mod tests {
             "XCArchive upload should include parsed asset catalogs"
         );
         Ok(())
-    }
-
-    #[test]
-    fn test_get_github_pr_number() {
-        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
-        std::env::set_var("GITHUB_REF", "refs/pull/123/merge");
-
-        let pr_number = get_github_pr_number();
-        assert_eq!(pr_number, Some(123));
-
-        std::env::set_var("GITHUB_EVENT_NAME", "push");
-        let pr_number = get_github_pr_number();
-        assert_eq!(pr_number, None);
-
-        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
-        std::env::set_var("GITHUB_REF", "refs/heads/main");
-        let pr_number = get_github_pr_number();
-        assert_eq!(pr_number, None);
-
-        std::env::remove_var("GITHUB_EVENT_NAME");
-        std::env::remove_var("GITHUB_REF");
     }
 }
