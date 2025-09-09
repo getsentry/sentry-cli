@@ -1340,10 +1340,12 @@ mod tests {
             rev: "f915d32".to_owned(),
             prev_rev: None,
         };
-        
+
         match spec.reference() {
             GitReference::Symbolic(s) => assert_eq!(s, "f915d32"),
-            GitReference::Commit(_) => panic!("Partial SHA should be treated as symbolic reference"),
+            GitReference::Commit(_) => {
+                panic!("Partial SHA should be treated as symbolic reference")
+            }
         }
     }
 
@@ -1355,11 +1357,11 @@ mod tests {
             rev: "f915d32000000000000000000000000000000000".to_owned(),
             prev_rev: None,
         };
-        
+
         match spec.reference() {
             GitReference::Commit(oid) => {
                 assert_eq!(oid.to_string(), "f915d32000000000000000000000000000000000");
-            },
+            }
             GitReference::Symbolic(_) => panic!("Full SHA should be treated as commit OID"),
         }
     }
@@ -1380,10 +1382,15 @@ mod tests {
                 rev: rev.to_owned(),
                 prev_rev: None,
             };
-            
+
             match spec.reference() {
-                GitReference::Symbolic(s) => assert_eq!(s, rev, "Failed for {description}: expected '{rev}', got '{s}'"),
-                GitReference::Commit(_) => panic!("{description} should be treated as symbolic reference"),
+                GitReference::Symbolic(s) => assert_eq!(
+                    s, rev,
+                    "Failed for {description}: expected '{rev}', got '{s}'"
+                ),
+                GitReference::Commit(_) => {
+                    panic!("{description} should be treated as symbolic reference")
+                }
             }
         }
     }
@@ -1396,10 +1403,12 @@ mod tests {
             rev: "HEAD".to_owned(),
             prev_rev: Some("4ebad56".to_owned()),
         };
-        
+
         match spec.prev_reference().unwrap() {
             GitReference::Symbolic(s) => assert_eq!(s, "4ebad56"),
-            GitReference::Commit(_) => panic!("Partial SHA in prev_rev should be treated as symbolic reference"),
+            GitReference::Commit(_) => {
+                panic!("Partial SHA in prev_rev should be treated as symbolic reference")
+            }
         }
     }
 
@@ -1411,12 +1420,14 @@ mod tests {
             rev: "HEAD".to_owned(),
             prev_rev: Some("f915d32000000000000000000000000000000000".to_owned()),
         };
-        
+
         match spec.prev_reference().unwrap() {
             GitReference::Commit(oid) => {
                 assert_eq!(oid.to_string(), "f915d32000000000000000000000000000000000");
-            },
-            GitReference::Symbolic(_) => panic!("Full SHA in prev_rev should be treated as commit OID"),
+            }
+            GitReference::Symbolic(_) => {
+                panic!("Full SHA in prev_rev should be treated as commit OID")
+            }
         }
     }
 
@@ -1436,43 +1447,48 @@ mod tests {
                 rev: "HEAD".to_owned(),
                 prev_rev: Some(prev_rev.to_owned()),
             };
-            
+
             match spec.prev_reference().unwrap() {
-                GitReference::Symbolic(s) => assert_eq!(s, prev_rev, "Failed for {description}: expected '{prev_rev}', got '{s}'"),
-                GitReference::Commit(_) => panic!("{description} in prev_rev should be treated as symbolic reference"),
+                GitReference::Symbolic(s) => assert_eq!(
+                    s, prev_rev,
+                    "Failed for {description}: expected '{prev_rev}', got '{s}'"
+                ),
+                GitReference::Commit(_) => {
+                    panic!("{description} in prev_rev should be treated as symbolic reference")
+                }
             }
         }
     }
 
     #[test]
     fn test_partial_sha_resolution_with_real_git() {
-        use std::process::Command;
         use std::fs;
+        use std::process::Command;
         use tempfile::TempDir;
-        
+
         // Create a temporary git repository
         let temp_dir = TempDir::new().expect("Failed to create temp dir");
         let repo_path = temp_dir.path();
-        
+
         // Initialize git repo
         Command::new("git")
             .args(["init", "--quiet"])
             .current_dir(repo_path)
             .status()
             .expect("Failed to run git init");
-            
+
         Command::new("git")
             .args(["config", "user.name", "Test User"])
             .current_dir(repo_path)
             .status()
             .expect("Failed to set git user name");
-            
+
         Command::new("git")
             .args(["config", "user.email", "test@example.com"])
             .current_dir(repo_path)
             .status()
             .expect("Failed to set git user email");
-        
+
         // Create a commit
         fs::write(repo_path.join("test.txt"), "test content").expect("Failed to write test file");
         Command::new("git")
@@ -1480,28 +1496,34 @@ mod tests {
             .current_dir(repo_path)
             .status()
             .expect("Failed to git add");
-            
+
         Command::new("git")
             .args(["commit", "-m", "test commit", "--quiet"])
             .current_dir(repo_path)
             .status()
             .expect("Failed to git commit");
-        
+
         // Get the full and short SHA
         let full_sha_output = Command::new("git")
             .args(["rev-parse", "HEAD"])
             .current_dir(repo_path)
             .output()
             .expect("Failed to get full SHA");
-        let full_sha = String::from_utf8(full_sha_output.stdout).expect("Invalid UTF-8").trim().to_owned();
-        
+        let full_sha = String::from_utf8(full_sha_output.stdout)
+            .expect("Invalid UTF-8")
+            .trim()
+            .to_owned();
+
         let short_sha_output = Command::new("git")
             .args(["rev-parse", "--short", "HEAD"])
             .current_dir(repo_path)
             .output()
             .expect("Failed to get short SHA");
-        let short_sha = String::from_utf8(short_sha_output.stdout).expect("Invalid UTF-8").trim().to_owned();
-        
+        let short_sha = String::from_utf8(short_sha_output.stdout)
+            .expect("Invalid UTF-8")
+            .trim()
+            .to_owned();
+
         // Test that partial SHA is treated as symbolic reference
         let spec = CommitSpec {
             repo: "test-repo".to_owned(),
@@ -1509,20 +1531,26 @@ mod tests {
             rev: short_sha.clone(),
             prev_rev: None,
         };
-        
+
         match spec.reference() {
             GitReference::Symbolic(s) => {
                 assert_eq!(s, short_sha);
-                
+
                 // Now test that it resolves to the correct full SHA
                 let repo = git2::Repository::open(repo_path).expect("Failed to open git repo");
-                let resolved = repo.revparse_single(&short_sha).expect("Failed to resolve short SHA");
+                let resolved = repo
+                    .revparse_single(&short_sha)
+                    .expect("Failed to resolve short SHA");
                 let resolved_sha = resolved.id().to_string();
-                
-                assert_eq!(resolved_sha, full_sha, 
-                    "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}");
-            },
-            GitReference::Commit(_) => panic!("Partial SHA should be treated as symbolic reference"),
+
+                assert_eq!(
+                    resolved_sha, full_sha,
+                    "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}"
+                );
+            }
+            GitReference::Commit(_) => {
+                panic!("Partial SHA should be treated as symbolic reference")
+            }
         }
     }
 }
