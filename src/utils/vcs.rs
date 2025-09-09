@@ -1311,6 +1311,62 @@ fn test_git_repo_head_ref() {
     );
 }
 
+#[test]
+fn test_partial_sha_resolution_with_real_git() {
+    let dir = git_initialize_repo();
+
+    git_create_commit(dir.path(), "test.txt", b"test content", "test commit");
+
+    // Get the full and short SHA
+    let full_sha_output = std::process::Command::new("git")
+        .args(["rev-parse", "HEAD"])
+        .current_dir(dir.path())
+        .output()
+        .expect("Failed to get full SHA");
+    let full_sha = String::from_utf8(full_sha_output.stdout)
+        .expect("Invalid UTF-8")
+        .trim()
+        .to_owned();
+    let short_sha_output = std::process::Command::new("git")
+        .args(["rev-parse", "--short", "HEAD"])
+        .current_dir(dir.path())
+        .output()
+        .expect("Failed to get short SHA");
+    let short_sha = String::from_utf8(short_sha_output.stdout)
+        .expect("Invalid UTF-8")
+        .trim()
+        .to_owned();
+
+    // Test that partial SHA is treated as symbolic reference
+    let spec = CommitSpec {
+        repo: "test-repo".to_owned(),
+        path: Some(dir.path().to_path_buf()),
+        rev: short_sha.clone(),
+        prev_rev: None,
+    };
+
+    match spec.reference() {
+        GitReference::Symbolic(s) => {
+            assert_eq!(s, short_sha);
+
+            // Now test that it resolves to the correct full SHA
+            let repo = git2::Repository::open(dir.path()).expect("Failed to open git repo");
+            let resolved = repo
+                .revparse_single(&short_sha)
+                .expect("Failed to resolve short SHA");
+            let resolved_sha = resolved.id().to_string();
+
+            assert_eq!(
+                resolved_sha, full_sha,
+                "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}"
+            );
+        }
+        GitReference::Commit(_) => {
+            panic!("Partial SHA should be treated as symbolic reference")
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1456,62 +1512,6 @@ mod tests {
                 GitReference::Commit(_) => {
                     panic!("{description} in prev_rev should be treated as symbolic reference")
                 }
-            }
-        }
-    }
-
-    #[test]
-    fn test_partial_sha_resolution_with_real_git() {
-        let dir = git_initialize_repo();
-
-        git_create_commit(dir.path(), "test.txt", b"test content", "test commit");
-
-        // Get the full and short SHA
-        let full_sha_output = std::process::Command::new("git")
-            .args(["rev-parse", "HEAD"])
-            .current_dir(dir.path())
-            .output()
-            .expect("Failed to get full SHA");
-        let full_sha = String::from_utf8(full_sha_output.stdout)
-            .expect("Invalid UTF-8")
-            .trim()
-            .to_owned();
-        let short_sha_output = std::process::Command::new("git")
-            .args(["rev-parse", "--short", "HEAD"])
-            .current_dir(dir.path())
-            .output()
-            .expect("Failed to get short SHA");
-        let short_sha = String::from_utf8(short_sha_output.stdout)
-            .expect("Invalid UTF-8")
-            .trim()
-            .to_owned();
-
-        // Test that partial SHA is treated as symbolic reference
-        let spec = CommitSpec {
-            repo: "test-repo".to_owned(),
-            path: Some(dir.path().to_path_buf()),
-            rev: short_sha.clone(),
-            prev_rev: None,
-        };
-
-        match spec.reference() {
-            GitReference::Symbolic(s) => {
-                assert_eq!(s, short_sha);
-
-                // Now test that it resolves to the correct full SHA
-                let repo = git2::Repository::open(dir.path()).expect("Failed to open git repo");
-                let resolved = repo
-                    .revparse_single(&short_sha)
-                    .expect("Failed to resolve short SHA");
-                let resolved_sha = resolved.id().to_string();
-
-                assert_eq!(
-                    resolved_sha, full_sha,
-                    "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}"
-                );
-            }
-            GitReference::Commit(_) => {
-                panic!("Partial SHA should be treated as symbolic reference")
             }
         }
     }
