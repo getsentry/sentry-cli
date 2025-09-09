@@ -1337,7 +1337,6 @@ fn test_partial_sha_resolution_with_real_git() {
         .trim()
         .to_owned();
 
-    // Test that partial SHA is treated as symbolic reference
     let spec = CommitSpec {
         repo: "test-repo".to_owned(),
         path: Some(dir.path().to_path_buf()),
@@ -1348,23 +1347,33 @@ fn test_partial_sha_resolution_with_real_git() {
     match spec.reference() {
         GitReference::Symbolic(s) => {
             assert_eq!(s, short_sha);
-
-            // Now test that it resolves to the correct full SHA
-            let repo = git2::Repository::open(dir.path()).expect("Failed to open git repo");
-            let resolved = repo
-                .revparse_single(&short_sha)
-                .expect("Failed to resolve short SHA");
-            let resolved_sha = resolved.id().to_string();
-
-            assert_eq!(
-                resolved_sha, full_sha,
-                "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}"
-            );
         }
         GitReference::Commit(_) => {
             panic!("Partial SHA should be treated as symbolic reference")
         }
     }
+
+    let reference = spec.reference();
+    let repos = [Repo {
+        id: String::from("1"),
+        name: String::from("test-repo"),
+        url: Some(String::from("https://github.com/test/test-repo")),
+        provider: RepoProvider {
+            id: String::from("integrations:github"),
+            name: String::from("GitHub"),
+        },
+        status: String::from("active"),
+        date_created: chrono::Utc::now(),
+    }];
+
+    let resolved_sha = find_matching_rev(reference, &spec, &repos, false, None)
+        .expect("Failed to resolve partial SHA")
+        .expect("Partial SHA should resolve to a commit");
+
+    assert_eq!(
+        resolved_sha, full_sha,
+        "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}"
+    );
 }
 
 #[cfg(test)]
