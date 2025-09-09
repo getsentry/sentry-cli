@@ -1365,17 +1365,26 @@ mod tests {
     }
 
     #[test]
-    fn test_commit_spec_reference_non_hex() {
-        let spec = CommitSpec {
-            repo: "test-repo".to_string(),
-            path: None,
-            rev: "HEAD".to_string(),
-            prev_rev: None,
-        };
-        
-        match spec.reference() {
-            GitReference::Symbolic(s) => assert_eq!(s, "HEAD"),
-            GitReference::Commit(_) => panic!("Non-hex string should be treated as symbolic reference"),
+    fn test_commit_spec_reference_symbolic_refs() {
+        let test_cases = vec![
+            ("main", "branch name"),
+            ("v1.0.0", "tag name"),
+            ("HEAD~1", "relative reference"),
+            ("f915d32g", "invalid hex"),
+        ];
+
+        for (rev, description) in test_cases {
+            let spec = CommitSpec {
+                repo: "test-repo".to_string(),
+                path: None,
+                rev: rev.to_string(),
+                prev_rev: None,
+            };
+            
+            match spec.reference() {
+                GitReference::Symbolic(s) => assert_eq!(s, rev, "Failed for {}: expected '{}', got '{}'", description, rev, s),
+                GitReference::Commit(_) => panic!("{} should be treated as symbolic reference", description),
+            }
         }
     }
 
@@ -1391,6 +1400,47 @@ mod tests {
         match spec.prev_reference().unwrap() {
             GitReference::Symbolic(s) => assert_eq!(s, "4ebad56"),
             GitReference::Commit(_) => panic!("Partial SHA in prev_rev should be treated as symbolic reference"),
+        }
+    }
+
+    #[test]
+    fn test_commit_spec_prev_reference_full_sha() {
+        let spec = CommitSpec {
+            repo: "test-repo".to_string(),
+            path: None,
+            rev: "HEAD".to_string(),
+            prev_rev: Some("f915d32000000000000000000000000000000000".to_string()),
+        };
+        
+        match spec.prev_reference().unwrap() {
+            GitReference::Commit(oid) => {
+                assert_eq!(oid.to_string(), "f915d32000000000000000000000000000000000");
+            },
+            GitReference::Symbolic(_) => panic!("Full SHA in prev_rev should be treated as commit OID"),
+        }
+    }
+
+    #[test]
+    fn test_commit_spec_prev_reference_symbolic_refs() {
+        let test_cases = vec![
+            ("main", "branch name"),
+            ("v1.0.0", "tag name"),
+            ("HEAD~1", "relative reference"),
+            ("f915d32g", "invalid hex"),
+        ];
+
+        for (prev_rev, description) in test_cases {
+            let spec = CommitSpec {
+                repo: "test-repo".to_string(),
+                path: None,
+                rev: "HEAD".to_string(),
+                prev_rev: Some(prev_rev.to_string()),
+            };
+            
+            match spec.prev_reference().unwrap() {
+                GitReference::Symbolic(s) => assert_eq!(s, prev_rev, "Failed for {}: expected '{}', got '{}'", description, prev_rev, s),
+                GitReference::Commit(_) => panic!("{} in prev_rev should be treated as symbolic reference", description),
+            }
         }
     }
 
