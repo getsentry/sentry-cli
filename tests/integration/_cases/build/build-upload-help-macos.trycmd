@@ -42,8 +42,8 @@ Options:
           The reference (branch) to use for the upload. If not provided, the current reference will
           be used.
       --base-ref <base_ref>
-          The reference (branch) to use for the upload. If not provided, the current reference will
-          be used.
+          The base reference (branch) to use for the upload. If not provided, the merge-base with
+          the remote tracking branch will be used.
       --pr-number <pr_number>
           The pull request number to use for the upload. If not provided, the current pull request
           number will be used.

@@ -24,7 +24,8 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_provider_from_remote, get_repo_from_remote, git_repo_head_ref, git_repo_remote_url,
+    self, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref, git_repo_head_ref,
+    git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -79,7 +80,7 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("base_ref")
                 .long("base-ref")
-                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+                .help("The base reference (branch) to use for the upload. If not provided, the merge-base with the remote tracking branch will be used.")
         )
         .arg(
             Arg::new("pr_number")
@@ -113,7 +114,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
-    let (vcs_provider, head_repo_name, head_ref) = {
+    let (vcs_provider, head_repo_name, head_ref, base_ref) = {
         // Try to open the repo and get the remote URL, but don't fail if not in a repo.
         let repo = git2::Repository::open_from_env().ok();
         let repo_ref = repo.as_ref();
@@ -167,12 +168,32 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        (vcs_provider, head_repo_name, head_ref)
+        let base_ref = matches
+            .get_one("base_ref")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                // Try to get the base ref from the VCS if not provided
+                // This attempts to find the merge-base with the remote tracking branch
+                repo_ref
+                    .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
+                        Ok(base_ref_name) => {
+                            debug!("Found base reference: {}", base_ref_name);
+                            Some(base_ref_name)
+                        }
+                        Err(e) => {
+                            warn!("Could not detect base branch reference: {}", e);
+                            None
+                        }
+                    })
+                    .map(Cow::Owned)
+            });
+
+        (vcs_provider, head_repo_name, head_ref, base_ref)
     };
 
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let base_sha = matches.get_one("base_sha").map(String::as_str);
-    let base_ref = matches.get_one("base_ref").map(String::as_str);
     let pr_number = matches.get_one::<u32>("pr_number");
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
@@ -237,7 +258,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             head_repo_name: head_repo_name.as_deref(),
             base_repo_name,
             head_ref: head_ref.as_deref(),
-            base_ref,
+            base_ref: base_ref.as_deref(),
             pr_number,
         };
         match upload_file(

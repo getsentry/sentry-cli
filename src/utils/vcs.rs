@@ -249,6 +249,40 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     }
 }
 
+pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<String> {
+    // Get the current HEAD commit
+    let head_commit = repo.head()?.peel_to_commit()?;
+
+    // Try to find the remote tracking branch
+    let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
+    let remote_ref = repo.find_reference(&remote_branch_name).map_err(|e| {
+        anyhow::anyhow!(
+            "Could not find remote tracking branch for {}: {}",
+            remote_name,
+            e
+        )
+    })?;
+
+    find_merge_base_ref(repo, &head_commit, &remote_ref)
+}
+
+fn find_merge_base_ref(
+    repo: &git2::Repository,
+    head_commit: &git2::Commit,
+    remote_ref: &git2::Reference,
+) -> Result<String> {
+    let remote_commit = remote_ref.peel_to_commit()?;
+    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
+
+    // Return the merge-base commit SHA as the base reference
+    let merge_base_sha = merge_base_oid.to_string();
+    debug!(
+        "Found merge-base commit as base reference: {}",
+        merge_base_sha
+    );
+    Ok(merge_base_sha)
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
