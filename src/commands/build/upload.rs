@@ -24,8 +24,8 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref, git_repo_head_ref,
-    git_repo_remote_url,
+    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref,
+    git_repo_head_ref, git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -86,7 +86,9 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("pr_number")
                 .long("pr-number")
                 .value_parser(clap::value_parser!(u32))
-                .help("The pull request number to use for the upload. If not provided, the current pull request number will be used.")
+                .help("The pull request number to use for the upload. If not provided and running \
+                    in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
+                    detected from GitHub Actions environment variables.")
         )
         .arg(
             Arg::new("build_configuration")
@@ -194,7 +196,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
     let base_sha = matches.get_one("base_sha").map(String::as_str);
-    let pr_number = matches.get_one::<u32>("pr_number");
+    let pr_number = matches
+        .get_one("pr_number")
+        .copied()
+        .or_else(get_github_pr_number);
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
@@ -259,7 +264,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_repo_name,
             head_ref: head_ref.as_deref(),
             base_ref: base_ref.as_deref(),
-            pr_number,
+            pr_number: pr_number.as_ref(),
         };
         match upload_file(
             &authenticated_api,
