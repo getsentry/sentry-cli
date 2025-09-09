@@ -1462,61 +1462,23 @@ mod tests {
 
     #[test]
     fn test_partial_sha_resolution_with_real_git() {
-        use std::fs;
-        use std::process::Command;
-        use tempfile::TempDir;
+        let dir = git_initialize_repo();
 
-        // Create a temporary git repository
-        let temp_dir = TempDir::new().expect("Failed to create temp dir");
-        let repo_path = temp_dir.path();
-
-        // Initialize git repo
-        Command::new("git")
-            .args(["init", "--quiet"])
-            .current_dir(repo_path)
-            .status()
-            .expect("Failed to run git init");
-
-        Command::new("git")
-            .args(["config", "user.name", "Test User"])
-            .current_dir(repo_path)
-            .status()
-            .expect("Failed to set git user name");
-
-        Command::new("git")
-            .args(["config", "user.email", "test@example.com"])
-            .current_dir(repo_path)
-            .status()
-            .expect("Failed to set git user email");
-
-        // Create a commit
-        fs::write(repo_path.join("test.txt"), "test content").expect("Failed to write test file");
-        Command::new("git")
-            .args(["add", "test.txt"])
-            .current_dir(repo_path)
-            .status()
-            .expect("Failed to git add");
-
-        Command::new("git")
-            .args(["commit", "-m", "test commit", "--quiet"])
-            .current_dir(repo_path)
-            .status()
-            .expect("Failed to git commit");
+        git_create_commit(dir.path(), "test.txt", b"test content", "test commit");
 
         // Get the full and short SHA
-        let full_sha_output = Command::new("git")
+        let full_sha_output = std::process::Command::new("git")
             .args(["rev-parse", "HEAD"])
-            .current_dir(repo_path)
+            .current_dir(dir.path())
             .output()
             .expect("Failed to get full SHA");
         let full_sha = String::from_utf8(full_sha_output.stdout)
             .expect("Invalid UTF-8")
             .trim()
             .to_owned();
-
-        let short_sha_output = Command::new("git")
+        let short_sha_output = std::process::Command::new("git")
             .args(["rev-parse", "--short", "HEAD"])
-            .current_dir(repo_path)
+            .current_dir(dir.path())
             .output()
             .expect("Failed to get short SHA");
         let short_sha = String::from_utf8(short_sha_output.stdout)
@@ -1527,7 +1489,7 @@ mod tests {
         // Test that partial SHA is treated as symbolic reference
         let spec = CommitSpec {
             repo: "test-repo".to_owned(),
-            path: Some(repo_path.to_path_buf()),
+            path: Some(dir.path().to_path_buf()),
             rev: short_sha.clone(),
             prev_rev: None,
         };
@@ -1537,7 +1499,7 @@ mod tests {
                 assert_eq!(s, short_sha);
 
                 // Now test that it resolves to the correct full SHA
-                let repo = git2::Repository::open(repo_path).expect("Failed to open git repo");
+                let repo = git2::Repository::open(dir.path()).expect("Failed to open git repo");
                 let resolved = repo
                     .revparse_single(&short_sha)
                     .expect("Failed to resolve short SHA");
