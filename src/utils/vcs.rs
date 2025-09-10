@@ -1353,8 +1353,8 @@ mod tests {
         let resolved = "abc123def0000000000000000000000000000000";
         assert_eq!(get_api_sha(original, resolved), "abc123def");
 
-        let original = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c";  // 39 chars
-        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c0";   // 40 chars  
+        let original = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c";
+        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c0";
         assert_eq!(
             get_api_sha(original, resolved),
             "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c"
