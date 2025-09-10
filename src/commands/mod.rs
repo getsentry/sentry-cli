@@ -392,7 +392,12 @@ pub fn main() -> ! {
     process::exit(exit_code);
 }
 
-#[test]
-fn verify_app() {
-    app().debug_assert();
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_app() {
+        app().debug_assert();
+    }
 }
