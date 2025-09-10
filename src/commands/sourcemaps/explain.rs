@@ -467,52 +467,57 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_resolve_sourcemap_url() {
-    // Tests coming from `tests/sentry/utils/test_urls.py` in `getsentry/sentry`
-    let cases = vec![
-        ("http://example.com/foo", "bar", "http://example.com/bar"),
-        ("http://example.com/foo", "/bar", "http://example.com/bar"),
-        ("https://example.com/foo", "/bar", "https://example.com/bar"),
-        (
-            "http://example.com/foo/baz",
-            "bar",
-            "http://example.com/foo/bar",
-        ),
-        (
-            "http://example.com/foo/baz",
-            "/bar",
-            "http://example.com/bar",
-        ),
-        ("aps://example.com/foo", "/bar", "aps://example.com/bar"),
-        (
-            "apsunknown://example.com/foo",
-            "/bar",
-            "apsunknown://example.com/bar",
-        ),
-        (
-            "apsunknown://example.com/foo",
-            "//aha/uhu",
-            "apsunknown://aha/uhu",
-        ),
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    for (base, to_join, expected) in cases {
-        assert_eq!(resolve_sourcemap_url(base, to_join).unwrap(), expected);
+    #[test]
+    fn test_resolve_sourcemap_url() {
+        // Tests coming from `tests/sentry/utils/test_urls.py` in `getsentry/sentry`
+        let cases = vec![
+            ("http://example.com/foo", "bar", "http://example.com/bar"),
+            ("http://example.com/foo", "/bar", "http://example.com/bar"),
+            ("https://example.com/foo", "/bar", "https://example.com/bar"),
+            (
+                "http://example.com/foo/baz",
+                "bar",
+                "http://example.com/foo/bar",
+            ),
+            (
+                "http://example.com/foo/baz",
+                "/bar",
+                "http://example.com/bar",
+            ),
+            ("aps://example.com/foo", "/bar", "aps://example.com/bar"),
+            (
+                "apsunknown://example.com/foo",
+                "/bar",
+                "apsunknown://example.com/bar",
+            ),
+            (
+                "apsunknown://example.com/foo",
+                "//aha/uhu",
+                "apsunknown://aha/uhu",
+            ),
+        ];
+
+        for (base, to_join, expected) in cases {
+            assert_eq!(resolve_sourcemap_url(base, to_join).unwrap(), expected);
+        }
     }
-}
 
-#[test]
-fn test_unify_artifact_url() {
-    let cases = vec![
-        (
-            "http://localhost:5000/dist/bundle.min.js",
-            "~/dist/bundle.min.js",
-        ),
-        ("/dist/bundle.js.map", "~/dist/bundle.js.map"),
-    ];
+    #[test]
+    fn test_unify_artifact_url() {
+        let cases = vec![
+            (
+                "http://localhost:5000/dist/bundle.min.js",
+                "~/dist/bundle.min.js",
+            ),
+            ("/dist/bundle.js.map", "~/dist/bundle.js.map"),
+        ];
 
-    for (path, expected) in cases {
-        assert_eq!(unify_artifact_url(path).unwrap(), expected);
+        for (path, expected) in cases {
+            assert_eq!(unify_artifact_url(path).unwrap(), expected);
+        }
     }
 }

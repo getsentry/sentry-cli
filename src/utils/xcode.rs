@@ -394,21 +394,26 @@ pub fn launched_from_xcode() -> bool {
     false
 }
 
-#[test]
-fn test_expansion() {
-    let mut vars = HashMap::new();
-    vars.insert("FOO_BAR".to_owned(), "foo bar baz / blah".to_owned());
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    assert_eq!(
-        expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B", &vars),
-        "Afoo-bar-baz-blahB"
-    );
-    assert_eq!(
-        expand_xcodevars("A$(FOO_BAR:identifier)B", &vars),
-        "Afoo_bar_baz_blahB"
-    );
-    assert_eq!(
-        expand_xcodevars("A${FOO_BAR:identifier}B", &vars),
-        "Afoo_bar_baz_blahB"
-    );
+    #[test]
+    fn test_expansion() {
+        let mut vars = HashMap::new();
+        vars.insert("FOO_BAR".to_owned(), "foo bar baz / blah".to_owned());
+
+        assert_eq!(
+            expand_xcodevars("A$(FOO_BAR:rfc1034identifier)B", &vars),
+            "Afoo-bar-baz-blahB"
+        );
+        assert_eq!(
+            expand_xcodevars("A$(FOO_BAR:identifier)B", &vars),
+            "Afoo_bar_baz_blahB"
+        );
+        assert_eq!(
+            expand_xcodevars("A${FOO_BAR:identifier}B", &vars),
+            "Afoo_bar_baz_blahB"
+        );
+    }
 }
