@@ -287,7 +287,7 @@ fn find_merge_base_ref(
 /// Returns the base repository name if a remote is found.
 pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
-    
+
     if let Some(first_remote) = remotes.iter().flatten().next() {
         match git_repo_remote_url(repo, first_remote) {
             Ok(remote_url) => {

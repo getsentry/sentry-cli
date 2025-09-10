@@ -215,7 +215,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        (vcs_provider, head_repo_name, head_ref, base_ref, base_repo_name)
+        (
+            vcs_provider,
+            head_repo_name,
+            head_ref,
+            base_ref,
+            base_repo_name,
+        )
     };
     let base_sha = matches.get_one("base_sha").map(String::as_str);
     let pr_number = matches
