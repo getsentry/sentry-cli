@@ -8,7 +8,7 @@ use chrono::{DateTime, FixedOffset, TimeZone as _};
 use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
-use log::{debug, info};
+use log::{debug, info, warn};
 use regex::Regex;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
@@ -281,6 +281,37 @@ fn find_merge_base_ref(
         merge_base_sha
     );
     Ok(merge_base_sha)
+}
+
+/// Attempts to get the base repository name from git remotes.
+/// Prefers "origin" remote if it exists, otherwise uses the first available remote.
+/// Returns the base repository name if a remote is found.
+pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
+    let remotes = repo.remotes()?;
+    let remote_names: Vec<&str> = remotes.iter().flatten().collect();
+
+    if remote_names.is_empty() {
+        warn!("No remotes found in repository");
+        return Ok(None);
+    }
+
+    // Prefer "origin" remote if it exists, otherwise use the first one
+    let chosen_remote = if remote_names.contains(&"origin") {
+        "origin"
+    } else {
+        remote_names[0]
+    };
+
+    match git_repo_remote_url(repo, chosen_remote) {
+        Ok(remote_url) => {
+            debug!("Found remote '{}': {}", chosen_remote, remote_url);
+            Ok(Some(get_repo_from_remote(&remote_url)))
+        }
+        Err(e) => {
+            warn!("Could not get URL for remote '{}': {}", chosen_remote, e);
+            Ok(None)
+        }
+    }
 }
 
 /// Attempts to get the PR number from GitHub Actions environment variables.
