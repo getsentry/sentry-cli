@@ -444,17 +444,17 @@ fn find_matching_submodule(
 /// otherwise returns the resolved SHA
 fn get_api_sha(original: &str, resolved: &str) -> String {
     // Check if original looks like a partial SHA (valid hex, 4-39 chars)
-    let is_partial = original.len() >= 4
+    let is_original_partial = original.len() >= 4
         && original.len() < 40
         && original.chars().all(|c| c.is_ascii_hexdigit());
 
     // Check if this looks like a padded partial SHA
     // The resolved SHA should start with the original and be padded with zeros
-    let is_padded = resolved.len() == 40
+    let is_resolved_padded = resolved.len() == 40
         && resolved.starts_with(original)
         && resolved[original.len()..].chars().all(|c| c == '0');
 
-    if is_padded && is_partial {
+    if is_resolved_padded && is_original_partial {
         original.to_owned() // Use original partial SHA
     } else {
         resolved.to_owned() // Use resolved SHA
