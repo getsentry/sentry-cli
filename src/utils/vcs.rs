@@ -440,18 +440,14 @@ fn find_matching_submodule(
 }
 
 /// Helper function to determine which SHA to use for the API
-/// Returns the original partial SHA if it looks like a partial SHA that would be padded,
+/// Returns the original partial SHA if it looks like a partial SHA,
 /// otherwise returns the resolved SHA
 fn get_api_sha(original: &str, resolved: &str) -> String {
     let is_original_partial = original.len() >= 4
         && original.len() < 40
         && original.chars().all(|c| c.is_ascii_hexdigit());
 
-    let is_resolved_padded = resolved.len() == 40
-        && resolved.starts_with(original)
-        && resolved[original.len()..].chars().all(|c| c == '0');
-
-    if is_resolved_padded && is_original_partial {
+    if is_original_partial {
         original.to_owned()
     } else {
         resolved.to_owned()
@@ -1341,5 +1337,63 @@ mod tests {
         assert_eq!(pr_number, None);
         std::env::remove_var("GITHUB_EVENT_NAME");
         std::env::remove_var("GITHUB_REF");
+    }
+
+    #[test]
+    fn test_get_api_sha_partial_sha() {
+        let original = "4eba";
+        let resolved = "4eba000000000000000000000000000000000000";
+        assert_eq!(get_api_sha(original, resolved), "4eba");
+
+        let original = "4ebad56";
+        let resolved = "4ebad56000000000000000000000000000000000";
+        assert_eq!(get_api_sha(original, resolved), "4ebad56");
+
+        let original = "abc123def";
+        let resolved = "abc123def0000000000000000000000000000000";
+        assert_eq!(get_api_sha(original, resolved), "abc123def");
+
+        let original = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8";
+        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c80";
+        assert_eq!(
+            get_api_sha(original, resolved),
+            "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8"
+        );
+    }
+
+    #[test]
+    fn test_get_api_sha_full_sha() {
+        let original = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
+        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
+        assert_eq!(get_api_sha(original, resolved), resolved);
+    }
+
+    #[test]
+    fn test_get_api_sha_too_short() {
+        let original = "4eb";
+        let resolved = "4eb0000000000000000000000000000000000000";
+        assert_eq!(get_api_sha(original, resolved), resolved);
+    }
+
+    #[test]
+    fn test_get_api_sha_symbolic() {
+        let original = "HEAD";
+        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
+        assert_eq!(get_api_sha(original, resolved), resolved);
+
+        let original = "main";
+        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
+        assert_eq!(get_api_sha(original, resolved), resolved);
+    }
+
+    #[test]
+    fn test_get_api_sha_mixed_case_hex() {
+        let original = "4EbAd56";
+        let resolved = "4EbAd56000000000000000000000000000000000";
+        assert_eq!(get_api_sha(original, resolved), "4EbAd56");
+
+        let original = "ABCDEF1";
+        let resolved = "ABCDEF1000000000000000000000000000000000";
+        assert_eq!(get_api_sha(original, resolved), "ABCDEF1");
     }
 }
