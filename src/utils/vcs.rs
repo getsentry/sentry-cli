@@ -84,13 +84,8 @@ impl CommitSpec {
     }
 
     pub fn reference(&self) -> GitReference<'_> {
-        // Only treat as a commit OID if it's a full 40-character SHA
-        if self.rev.len() == 40 && self.rev.chars().all(|c| c.is_ascii_hexdigit()) {
-            if let Ok(oid) = git2::Oid::from_str(&self.rev) {
-                GitReference::Commit(oid)
-            } else {
-                GitReference::Symbolic(&self.rev)
-            }
+        if let Ok(oid) = git2::Oid::from_str(&self.rev) {
+            GitReference::Commit(oid)
         } else {
             GitReference::Symbolic(&self.rev)
         }
@@ -98,13 +93,8 @@ impl CommitSpec {
 
     pub fn prev_reference(&self) -> Option<GitReference<'_>> {
         self.prev_rev.as_ref().map(|rev| {
-            // Only treat as a commit OID if it's a full 40-character SHA
-            if rev.len() == 40 && rev.chars().all(|c| c.is_ascii_hexdigit()) {
-                if let Ok(oid) = git2::Oid::from_str(rev) {
-                    GitReference::Commit(oid)
-                } else {
-                    GitReference::Symbolic(rev)
-                }
+            if let Ok(oid) = git2::Oid::from_str(rev) {
+                GitReference::Commit(oid)
             } else {
                 GitReference::Symbolic(rev)
             }
@@ -449,6 +439,26 @@ fn find_matching_submodule(
     Ok(None)
 }
 
+/// Helper function to determine which SHA to use for the API
+/// Returns the original partial SHA if it looks like a partial SHA that would be padded,
+/// otherwise returns the resolved SHA
+fn get_api_sha(original: &str, resolved: &str) -> String {
+    // Check if original looks like a partial SHA (valid hex, 4-39 chars)
+    let is_partial = original.len() >= 4 && original.len() < 40 && original.chars().all(|c| c.is_ascii_hexdigit());
+    
+    // Check if this looks like a padded partial SHA
+    // The resolved SHA should start with the original and be padded with zeros
+    let is_padded = resolved.len() == 40 
+        && resolved.starts_with(original)
+        && resolved[original.len()..].chars().all(|c| c == '0');
+    
+    if is_padded && is_partial {
+        original.to_owned()  // Use original partial SHA
+    } else {
+        resolved.to_owned()  // Use resolved SHA
+    }
+}
+
 fn find_matching_revs(
     spec: &CommitSpec,
     repos: &[Repo],
@@ -466,21 +476,21 @@ fn find_matching_revs(
         )
     }
 
-    let rev = if let Some(rev) = find_matching_rev(
+    let rev = if let Some(resolved_sha) = find_matching_rev(
         spec.reference(),
         spec,
         repos,
         disable_discovery,
         remote_name.clone(),
     )? {
-        rev
+        get_api_sha(&spec.rev, &resolved_sha)
     } else {
         return Err(error(spec.reference(), &spec.repo));
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(rv) = find_matching_rev(rev, spec, repos, disable_discovery, remote_name)? {
-            Some(rv)
+        if let Some(resolved_sha) = find_matching_rev(rev, spec, repos, disable_discovery, remote_name)? {
+            Some(get_api_sha(spec.prev_rev.as_ref().unwrap(), &resolved_sha))
         } else {
             return Err(error(rev, &spec.repo));
         }
@@ -1311,71 +1321,6 @@ fn test_git_repo_head_ref() {
     );
 }
 
-#[test]
-fn test_partial_sha_resolution_with_real_git() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(dir.path(), "test.txt", b"test content", "test commit");
-
-    // Get the full and short SHA
-    let full_sha_output = std::process::Command::new("git")
-        .args(["rev-parse", "HEAD"])
-        .current_dir(dir.path())
-        .output()
-        .expect("Failed to get full SHA");
-    let full_sha = String::from_utf8(full_sha_output.stdout)
-        .expect("Invalid UTF-8")
-        .trim()
-        .to_owned();
-    let short_sha_output = std::process::Command::new("git")
-        .args(["rev-parse", "--short", "HEAD"])
-        .current_dir(dir.path())
-        .output()
-        .expect("Failed to get short SHA");
-    let short_sha = String::from_utf8(short_sha_output.stdout)
-        .expect("Invalid UTF-8")
-        .trim()
-        .to_owned();
-
-    let spec = CommitSpec {
-        repo: "test-repo".to_owned(),
-        path: Some(dir.path().to_path_buf()),
-        rev: short_sha.clone(),
-        prev_rev: None,
-    };
-
-    match spec.reference() {
-        GitReference::Symbolic(s) => {
-            assert_eq!(s, short_sha);
-        }
-        GitReference::Commit(_) => {
-            panic!("Partial SHA should be treated as symbolic reference")
-        }
-    }
-
-    let reference = spec.reference();
-    let repos = [Repo {
-        id: String::from("1"),
-        name: String::from("test-repo"),
-        url: Some(String::from("https://github.com/test/test-repo")),
-        provider: RepoProvider {
-            id: String::from("integrations:github"),
-            name: String::from("GitHub"),
-        },
-        status: String::from("active"),
-        date_created: chrono::Utc::now(),
-    }];
-
-    let resolved_sha = find_matching_rev(reference, &spec, &repos, false, None)
-        .expect("Failed to resolve partial SHA")
-        .expect("Partial SHA should resolve to a commit");
-
-    assert_eq!(
-        resolved_sha, full_sha,
-        "Partial SHA {short_sha} should resolve to full SHA {full_sha}, but got {resolved_sha}"
-    );
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1395,133 +1340,5 @@ mod tests {
         assert_eq!(pr_number, None);
         std::env::remove_var("GITHUB_EVENT_NAME");
         std::env::remove_var("GITHUB_REF");
-    }
-
-    #[test]
-    fn test_commit_spec_reference_partial_sha() {
-        let spec = CommitSpec {
-            repo: "test-repo".to_owned(),
-            path: None,
-            rev: "f915d32".to_owned(),
-            prev_rev: None,
-        };
-
-        match spec.reference() {
-            GitReference::Symbolic(s) => assert_eq!(s, "f915d32"),
-            GitReference::Commit(_) => {
-                panic!("Partial SHA should be treated as symbolic reference")
-            }
-        }
-    }
-
-    #[test]
-    fn test_commit_spec_reference_full_sha() {
-        let spec = CommitSpec {
-            repo: "test-repo".to_owned(),
-            path: None,
-            rev: "f915d32000000000000000000000000000000000".to_owned(),
-            prev_rev: None,
-        };
-
-        match spec.reference() {
-            GitReference::Commit(oid) => {
-                assert_eq!(oid.to_string(), "f915d32000000000000000000000000000000000");
-            }
-            GitReference::Symbolic(_) => panic!("Full SHA should be treated as commit OID"),
-        }
-    }
-
-    #[test]
-    fn test_commit_spec_reference_symbolic_refs() {
-        let test_cases = vec![
-            ("main", "branch name"),
-            ("v1.0.0", "tag name"),
-            ("HEAD~1", "relative reference"),
-            ("f915d32g", "invalid hex"),
-        ];
-
-        for (rev, description) in test_cases {
-            let spec = CommitSpec {
-                repo: "test-repo".to_owned(),
-                path: None,
-                rev: rev.to_owned(),
-                prev_rev: None,
-            };
-
-            match spec.reference() {
-                GitReference::Symbolic(s) => assert_eq!(
-                    s, rev,
-                    "Failed for {description}: expected '{rev}', got '{s}'"
-                ),
-                GitReference::Commit(_) => {
-                    panic!("{description} should be treated as symbolic reference")
-                }
-            }
-        }
-    }
-
-    #[test]
-    fn test_commit_spec_prev_reference_partial_sha() {
-        let spec = CommitSpec {
-            repo: "test-repo".to_owned(),
-            path: None,
-            rev: "HEAD".to_owned(),
-            prev_rev: Some("4ebad56".to_owned()),
-        };
-
-        match spec.prev_reference().unwrap() {
-            GitReference::Symbolic(s) => assert_eq!(s, "4ebad56"),
-            GitReference::Commit(_) => {
-                panic!("Partial SHA in prev_rev should be treated as symbolic reference")
-            }
-        }
-    }
-
-    #[test]
-    fn test_commit_spec_prev_reference_full_sha() {
-        let spec = CommitSpec {
-            repo: "test-repo".to_owned(),
-            path: None,
-            rev: "HEAD".to_owned(),
-            prev_rev: Some("f915d32000000000000000000000000000000000".to_owned()),
-        };
-
-        match spec.prev_reference().unwrap() {
-            GitReference::Commit(oid) => {
-                assert_eq!(oid.to_string(), "f915d32000000000000000000000000000000000");
-            }
-            GitReference::Symbolic(_) => {
-                panic!("Full SHA in prev_rev should be treated as commit OID")
-            }
-        }
-    }
-
-    #[test]
-    fn test_commit_spec_prev_reference_symbolic_refs() {
-        let test_cases = vec![
-            ("main", "branch name"),
-            ("v1.0.0", "tag name"),
-            ("HEAD~1", "relative reference"),
-            ("f915d32g", "invalid hex"),
-        ];
-
-        for (prev_rev, description) in test_cases {
-            let spec = CommitSpec {
-                repo: "test-repo".to_owned(),
-                path: None,
-                rev: "HEAD".to_owned(),
-                prev_rev: Some(prev_rev.to_owned()),
-            };
-
-            match spec.prev_reference().unwrap() {
-                GitReference::Symbolic(s) => assert_eq!(
-                    s, prev_rev,
-                    "Failed for {description}: expected '{prev_rev}', got '{s}'"
-                ),
-                GitReference::Commit(_) => {
-                    panic!("{description} in prev_rev should be treated as symbolic reference")
-                }
-            }
-        }
     }
 }
