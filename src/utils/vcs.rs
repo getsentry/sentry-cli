@@ -283,25 +283,34 @@ fn find_merge_base_ref(
     Ok(merge_base_sha)
 }
 
-/// Attempts to get the base repository name from the first available remote.
+/// Attempts to get the base repository name from git remotes.
+/// Prefers "origin" remote if it exists, otherwise uses the first available remote.
 /// Returns the base repository name if a remote is found.
 pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
+    let remote_names: Vec<&str> = remotes.iter().flatten().collect();
 
-    if let Some(first_remote) = remotes.iter().flatten().next() {
-        match git_repo_remote_url(repo, first_remote) {
-            Ok(remote_url) => {
-                debug!("Found remote '{}': {}", first_remote, remote_url);
-                Ok(Some(get_repo_from_remote(&remote_url)))
-            }
-            Err(e) => {
-                warn!("Could not get URL for remote '{}': {}", first_remote, e);
-                Ok(None)
-            }
-        }
-    } else {
+    if remote_names.is_empty() {
         warn!("No remotes found in repository");
-        Ok(None)
+        return Ok(None);
+    }
+
+    // Prefer "origin" remote if it exists, otherwise use the first one
+    let chosen_remote = if remote_names.contains(&"origin") {
+        "origin"
+    } else {
+        remote_names[0]
+    };
+
+    match git_repo_remote_url(repo, chosen_remote) {
+        Ok(remote_url) => {
+            debug!("Found remote '{}': {}", chosen_remote, remote_url);
+            Ok(Some(get_repo_from_remote(&remote_url)))
+        }
+        Err(e) => {
+            warn!("Could not get URL for remote '{}': {}", chosen_remote, e);
+            Ok(None)
+        }
     }
 }
 
