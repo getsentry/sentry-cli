@@ -295,8 +295,10 @@ pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>
         return Ok(None);
     }
 
-    // Prefer "origin" remote if it exists, otherwise use the first one
-    let chosen_remote = if remote_names.contains(&"origin") {
+    // Prefer "upstream" if it exists, then "origin", otherwise use the first one
+    let chosen_remote = if remote_names.contains(&"upstream") {
+        "upstream"
+    } else if remote_names.contains(&"origin") {
         "origin"
     } else {
         remote_names[0]
