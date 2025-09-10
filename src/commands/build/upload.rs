@@ -25,7 +25,7 @@ use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
     self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref,
-    git_repo_head_ref, git_repo_remote_url,
+    git_repo_base_repo_name, git_repo_head_ref, git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -116,7 +116,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
-    let (vcs_provider, head_repo_name, head_ref, base_ref) = {
+    let (vcs_provider, head_repo_name, head_ref, base_ref, base_repo_name) = {
         // Try to open the repo and get the remote URL, but don't fail if not in a repo.
         let repo = git2::Repository::open_from_env().ok();
         let repo_ref = repo.as_ref();
@@ -191,10 +191,32 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .map(Cow::Owned)
             });
 
-        (vcs_provider, head_repo_name, head_ref, base_ref)
-    };
+        let base_repo_name = matches
+            .get_one("base_repo_name")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                // Try to get the base repo name from the VCS if not provided
+                repo_ref
+                    .and_then(|r| match git_repo_base_repo_name(r) {
+                        Ok(Some(base_repo_name)) => {
+                            debug!("Found base repository name: {}", base_repo_name);
+                            Some(base_repo_name)
+                        }
+                        Ok(None) => {
+                            debug!("No base repository found - not a fork");
+                            None
+                        }
+                        Err(e) => {
+                            warn!("Could not detect base repository name: {}", e);
+                            None
+                        }
+                    })
+                    .map(Cow::Owned)
+            });
 
-    let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
+        (vcs_provider, head_repo_name, head_ref, base_ref, base_repo_name)
+    };
     let base_sha = matches.get_one("base_sha").map(String::as_str);
     let pr_number = matches
         .get_one("pr_number")
@@ -261,7 +283,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_sha,
             vcs_provider: vcs_provider.as_deref(),
             head_repo_name: head_repo_name.as_deref(),
-            base_repo_name,
+            base_repo_name: base_repo_name.as_deref(),
             head_ref: head_ref.as_deref(),
             base_ref: base_ref.as_deref(),
             pr_number: pr_number.as_ref(),
