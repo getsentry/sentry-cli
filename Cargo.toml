@@ -98,6 +98,7 @@ with_crash_reporting = []
 allow-attributes = "warn"
 str-to-string = "warn"
 string-to-string = "warn"
+tests-outside-test-module = "warn"
 unnecessary-wraps = "warn"
 uninlined-format-args = "warn"
 unused-trait-names = "warn"

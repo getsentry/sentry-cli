@@ -8,7 +8,7 @@ use chrono::{DateTime, FixedOffset, TimeZone as _};
 use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
 use lazy_static::lazy_static;
-use log::{debug, info};
+use log::{debug, info, warn};
 use regex::Regex;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
@@ -281,6 +281,37 @@ fn find_merge_base_ref(
         merge_base_sha
     );
     Ok(merge_base_sha)
+}
+
+/// Attempts to get the base repository name from git remotes.
+/// Prefers "origin" remote if it exists, otherwise uses the first available remote.
+/// Returns the base repository name if a remote is found.
+pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
+    let remotes = repo.remotes()?;
+    let remote_names: Vec<&str> = remotes.iter().flatten().collect();
+
+    if remote_names.is_empty() {
+        warn!("No remotes found in repository");
+        return Ok(None);
+    }
+
+    // Prefer "origin" remote if it exists, otherwise use the first one
+    let chosen_remote = if remote_names.contains(&"origin") {
+        "origin"
+    } else {
+        remote_names[0]
+    };
+
+    match git_repo_remote_url(repo, chosen_remote) {
+        Ok(remote_url) => {
+            debug!("Found remote '{}': {}", chosen_remote, remote_url);
+            Ok(Some(get_repo_from_remote(&remote_url)))
+        }
+        Err(e) => {
+            warn!("Could not get URL for remote '{}': {}", chosen_remote, e);
+            Ok(None)
+        }
+    }
 }
 
 /// Attempts to get the PR number from GitHub Actions environment variables.
@@ -685,642 +716,639 @@ pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
 }
 
 #[cfg(test)]
-use {
-    crate::api::RepoProvider,
-    insta::{assert_debug_snapshot, assert_yaml_snapshot},
-    std::fs::File,
-    std::io::Write as _,
-    std::path::Path,
-    std::process::Command,
-    tempfile::{tempdir, TempDir},
-};
-
-#[test]
-fn test_find_matching_rev_with_lightweight_tag() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    let hash = git_create_tag(dir.path(), "1.9.2", false);
-
-    let reference = GitReference::Symbolic("1.9.2");
-    let spec = CommitSpec {
-        repo: String::from("getsentry/sentry-cli"),
-        path: Some(dir.path().to_path_buf()),
-        rev: String::from("1.9.2"),
-        prev_rev: Some(String::from("1.9.1")),
-    };
-
-    let repos = [Repo {
-        id: String::from("1"),
-        name: String::from("getsentry/sentry-cli"),
-        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
-        provider: RepoProvider {
-            id: String::from("integrations:github"),
-            name: String::from("GitHub"),
-        },
-        status: String::from("active"),
-        date_created: chrono::Utc::now(),
-    }];
-
-    let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false, None);
-    assert_eq!(res_with_lightweight_tag.unwrap(), Some(hash));
-}
-
-#[test]
-fn test_find_matching_rev_with_annotated_tag() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    let hash = git_create_tag(dir.path(), "1.9.2-hw", true);
-
-    let reference = GitReference::Symbolic("1.9.2-hw");
-    let spec = CommitSpec {
-        repo: String::from("getsentry/sentry-cli"),
-        path: Some(dir.path().to_path_buf()),
-        rev: String::from("1.9.2-hw"),
-        prev_rev: Some(String::from("1.9.1")),
-    };
-
-    let repos = [Repo {
-        id: String::from("1"),
-        name: String::from("getsentry/sentry-cli"),
-        url: Some(String::from("https://github.com/getsentry/sentry-cli")),
-        provider: RepoProvider {
-            id: String::from("integrations:github"),
-            name: String::from("GitHub"),
-        },
-        status: String::from("active"),
-        date_created: chrono::Utc::now(),
-    }];
-
-    let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false, None);
-    assert_eq!(res_with_annotated_tag.unwrap(), Some(hash));
-}
-
-#[test]
-fn test_url_parsing() {
-    assert_eq!(
-        VcsUrl::parse("http://github.com/mitsuhiko/flask"),
-        VcsUrl {
-            provider: "github.com".into(),
-            id: "mitsuhiko/flask".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@github.com:mitsuhiko/flask.git"),
-        VcsUrl {
-            provider: "github.com".into(),
-            id: "mitsuhiko/flask".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"),
-        VcsUrl {
-            provider: "bitbucket.org".into(),
-            id: "mitsuhiko/flask".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"),
-        VcsUrl {
-            provider: "bitbucket.org".into(),
-            id: "mitsuhiko/flask".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse(
-            "https://bitbucket.example.com/projects/laurynsentry/repos/helloworld/browse"
-        ),
-        VcsUrl {
-            provider: "bitbucket.example.com".into(),
-            id: "laurynsentry/helloworld".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://neilmanvar.visualstudio.com/_git/sentry-demo"),
-        VcsUrl {
-            provider: "neilmanvar.visualstudio.com".into(),
-            id: "neilmanvar/sentry-demo".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://project@mydomain.visualstudio.com/project/repo/_git"),
-        VcsUrl {
-            provider: "mydomain.visualstudio.com".into(),
-            id: "project/repo".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@ssh.dev.azure.com:v3/project/repo/repo"),
-        VcsUrl {
-            provider: "dev.azure.com".into(),
-            id: "project/repo".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online"),
-        VcsUrl {
-            provider: "dev.azure.com".into(),
-            id: "company/repo%20online".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://dev.azure.com/project/repo/_git/repo"),
-        VcsUrl {
-            provider: "dev.azure.com".into(),
-            id: "project/repo".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"),
-        VcsUrl {
-            provider: "dev.azure.com".into(),
-            id: "company/repo%20online".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
-        VcsUrl {
-            provider: "github.myenterprise.com".into(),
-            id: "mitsuhiko/flask".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://gitlab.example.com/gitlab-org/gitlab-ce"),
-        VcsUrl {
-            provider: "gitlab.example.com".into(),
-            id: "gitlab-org/gitlab-ce".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@gitlab.example.com:gitlab-org/gitlab-ce.git"),
-        VcsUrl {
-            provider: "gitlab.example.com".into(),
-            id: "gitlab-org/gitlab-ce".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("https://gitlab.com/gitlab-org/gitlab-ce"),
-        VcsUrl {
-            provider: "gitlab.com".into(),
-            id: "gitlab-org/gitlab-ce".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@gitlab.com:gitlab-org/gitlab-ce.git"),
-        VcsUrl {
-            provider: "gitlab.com".into(),
-            id: "gitlab-org/gitlab-ce".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse(
-            "https://source.developers.google.com/p/project-slug/r/github_org-slug_repo-slug"
-        ),
-        VcsUrl {
-            provider: "source.developers.google.com".into(),
-            id: "org-slug/repo-slug".into(),
-        }
-    );
-    assert_eq!(
-        VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
-        VcsUrl {
-            provider: "gitlab.com".into(),
-            id: "gitlab-org/gitlab-ce".into(),
-        }
-    );
-}
-
-#[test]
-fn test_url_normalization() {
-    assert!(!is_matching_url(
-        "http://github.mycompany.com/mitsuhiko/flask",
-        "git@github.com:mitsuhiko/flask.git"
-    ));
-    assert!(!is_matching_url(
-        "git@github.mycompany.com/mitsuhiko/flask",
-        "git@github.com:mitsuhiko/flask.git"
-    ));
-    assert!(is_matching_url(
-        "http://github.com/mitsuhiko/flask",
-        "git@github.com:mitsuhiko/flask.git"
-    ));
-    assert!(is_matching_url(
-        "https://gitlab.com/gitlab-org/gitlab-ce",
-        "git@gitlab.com:gitlab-org/gitlab-ce.git"
-    ));
-    assert!(is_matching_url(
-        "https://gitlab.example.com/gitlab-org/gitlab-ce",
-        "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
-    ));
-    assert!(is_matching_url(
-        "https://gitlab.example.com/gitlab-org/GitLab-CE",
-        "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
-    ));
-    assert!(is_matching_url(
-        "https://gitlab.example.com/gitlab-org/GitLab-CE",
-        "ssh://git@gitlab.example.com:22/gitlab-org/GitLab-CE"
-    ));
-    assert!(is_matching_url(
-        "git@ssh.dev.azure.com:v3/project/repo/repo",
-        "https://dev.azure.com/project/repo/_git/repo"
-    ));
-    assert!(is_matching_url(
-        "git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online",
-        "https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"
-    ));
-    assert!(is_matching_url(
-        "git://git@github.com/kamilogorek/picklerick.git",
-        "https://github.com/kamilogorek/picklerick"
-    ));
-    assert!(is_matching_url(
-        "git+ssh://git@github.com/kamilogorek/picklerick.git",
-        "https://github.com/kamilogorek/picklerick"
-    ));
-    assert!(is_matching_url(
-        "git+http://git@github.com/kamilogorek/picklerick.git",
-        "https://github.com/kamilogorek/picklerick"
-    ));
-    assert!(is_matching_url(
-        "git+https://git@github.com/kamilogorek/picklerick.git",
-        "https://github.com/kamilogorek/picklerick"
-    ));
-}
-
-#[cfg(test)]
-fn git_initialize_repo() -> TempDir {
-    let dir = tempdir().expect("Failed to generate temp dir.");
-
-    Command::new("git")
-        .args(["init", "--quiet"])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `git init`.")
-        .wait()
-        .expect("Failed to wait on `git init`.");
-
-    Command::new("git")
-        .args(["branch", "-M", "main"])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `git branch`.")
-        .wait()
-        .expect("Failed to wait on `git branch`.");
-
-    Command::new("git")
-        .args(["config", "--local", "user.name", "test"])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `git config`.")
-        .wait()
-        .expect("Failed to wait on `git config`.");
-
-    Command::new("git")
-        .args(["config", "--local", "user.email", "test@example.com"])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `git config`.")
-        .wait()
-        .expect("Failed to wait on `git config`.");
-
-    Command::new("git")
-        .args([
-            "remote",
-            "add",
-            "origin",
-            "https://github.com/getsentry/sentry-cli",
-        ])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `git remote add`.")
-        .wait()
-        .expect("Failed to wait on `git remote add`.");
-
-    Command::new("git")
-        .args(["config", "--local", "commit.gpgsign", "false"])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `config --local commit.gpgsign false`.")
-        .wait()
-        .expect("Failed to wait on `config --local commit.gpgsign false`.");
-
-    Command::new("git")
-        .args(["config", "--local", "tag.gpgsign", "false"])
-        .current_dir(&dir)
-        .spawn()
-        .expect("Failed to execute `config --local tag.gpgsign false`.")
-        .wait()
-        .expect("Failed to wait on `config --local tag.gpgsign false`.");
-
-    dir
-}
-
-#[cfg(test)]
-fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message: &str) {
-    let path = dir.join(file_path);
-    let mut file = File::create(path).expect("Failed to execute.");
-    file.write_all(content).expect("Failed to execute.");
-
-    let mut add = Command::new("git")
-        .args(["add", "-A"])
-        .current_dir(dir)
-        .spawn()
-        .expect("Failed to execute `git add .`");
-
-    add.wait().expect("Failed to wait on `git add`.");
-
-    let mut commit = Command::new("git")
-        .args([
-            "commit",
-            "-am",
-            commit_message,
-            "--author",
-            "John Doe <john.doe@example.com>",
-            "--quiet",
-            "--no-edit",
-        ])
-        .current_dir(dir)
-        .spawn()
-        .expect("Failed to execute `git commit -m {message}`.");
-
-    commit.wait().expect("Failed to wait on `git commit`.");
-}
-
-#[cfg(test)]
-fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
-    let mut tag_cmd = vec!["tag", tag_name];
-
-    if annotated {
-        tag_cmd.push("-a");
-        tag_cmd.push("-m");
-        tag_cmd.push("imannotatedtag");
-    }
-
-    let mut tag = Command::new("git")
-        .args(tag_cmd)
-        .current_dir(dir)
-        .spawn()
-        .unwrap_or_else(|_| panic!("Failed to execute `git tag {tag_name}`"));
-
-    tag.wait().expect("Failed to wait on `git tag`.");
-
-    let hash = Command::new("git")
-        .args(["rev-list", "-n", "1", tag_name])
-        .current_dir(dir)
-        .output()
-        .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {tag_name}`."));
-
-    String::from_utf8(hash.stdout)
-        .map(|s| s.trim().to_owned())
-        .expect("Invalid utf-8")
-}
-
-#[test]
-fn test_get_commits_from_git() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world! Part 2\");",
-        "\"second commit\"",
-    );
-
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
-
-    assert_debug_snapshot!(commits
-        .0
-        .iter()
-        .map(|c| {
-            (
-                c.author().name().unwrap().to_owned(),
-                c.author().email().unwrap().to_owned(),
-                c.summary(),
-            )
-        })
-        .collect::<Vec<_>>());
-}
-
-#[test]
-fn test_generate_patch_set_base() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world! Part 2\");",
-        "\"second commit\"",
-    );
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world! Part 3\");",
-        "\"third commit\"",
-    );
-
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
-    let patch_set =
-        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
-
-    assert_yaml_snapshot!(patch_set, {
-        ".*.id" => "[id]",
-        ".*.timestamp" => "[timestamp]"
-    });
-}
-
-#[test]
-fn test_generate_patch_set_previous_commit() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world! Part 2\");",
-        "\"second commit\"",
-    );
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world! Part 3\");",
-        "\"third commit\"",
-    );
-
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let head = repo.revparse_single("HEAD").expect("Failed");
-
-    git_create_commit(
-        dir.path(),
-        "foo4.js",
-        b"console.log(\"Hello, world! Part 4\");",
-        "\"fourth commit\"",
-    );
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world! Part 5\");",
-        "\"fifth commit\"",
-    );
-
-    let commits = get_commits_from_git(&repo, &head.id().to_string(), 20, false).expect("Failed");
-    let patch_set =
-        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
-
-    assert_yaml_snapshot!(patch_set, {
-        ".*.id" => "[id]",
-        ".*.timestamp" => "[timestamp]"
-    });
-}
-
-#[test]
-fn test_generate_patch_default_twenty() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    for n in 0..20 {
-        let file = format!("foo{n}.js");
-        git_create_commit(
-            dir.path(),
-            &file,
-            b"console.log(\"Hello, world! Part 2\");",
-            "\"another commit\"",
-        );
-    }
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world!\");",
-        "\"final commit\"",
-    );
-
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
-    let patch_set =
-        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
-
-    assert_yaml_snapshot!(patch_set, {
-        ".*.id" => "[id]",
-        ".*.timestamp" => "[timestamp]"
-    });
-}
-
-#[test]
-fn test_generate_patch_ignore_missing() {
-    let dir = git_initialize_repo();
-
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    for n in 0..5 {
-        let file = format!("foo{n}.js");
-        git_create_commit(
-            dir.path(),
-            &file,
-            b"console.log(\"Hello, world! Part 2\");",
-            "\"another commit\"",
-        );
-    }
-
-    git_create_commit(
-        dir.path(),
-        "foo2.js",
-        b"console.log(\"Hello, world!\");",
-        "\"final commit\"",
-    );
-
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
-    let commits = get_commits_from_git(&repo, "nonexistinghash", 5, true).expect("Failed");
-    let patch_set =
-        generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
-
-    assert_yaml_snapshot!(patch_set, {
-        ".*.id" => "[id]",
-        ".*.timestamp" => "[timestamp]"
-    });
-}
-
-#[test]
-fn test_git_repo_head_ref() {
-    let dir = git_initialize_repo();
-
-    // Create initial commit
-    git_create_commit(
-        dir.path(),
-        "foo.js",
-        b"console.log(\"Hello, world!\");",
-        "\"initial commit\"",
-    );
-
-    let repo = git2::Repository::open(dir.path()).expect("Failed");
-
-    // Test on a branch (should succeed)
-    let head_ref = git_repo_head_ref(&repo).expect("Should get branch reference");
-    assert_eq!(head_ref, "main");
-
-    // Test in detached HEAD state (should fail)
-    let head_commit = repo.head().unwrap().target().unwrap();
-    repo.set_head_detached(head_commit)
-        .expect("Failed to detach HEAD");
-
-    let head_ref_result = git_repo_head_ref(&repo);
-    assert!(head_ref_result.is_err());
-    assert_eq!(
-        head_ref_result.unwrap_err().to_string(),
-        "HEAD is detached - no branch reference available"
-    );
-}
-
-#[cfg(test)]
 mod tests {
+    use {
+        crate::api::RepoProvider,
+        insta::{assert_debug_snapshot, assert_yaml_snapshot},
+        std::fs::File,
+        std::io::Write as _,
+        std::path::Path,
+        std::process::Command,
+        tempfile::{tempdir, TempDir},
+    };
+
     use super::*;
+
+    #[test]
+    fn test_find_matching_rev_with_lightweight_tag() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        let hash = git_create_tag(dir.path(), "1.9.2", false);
+
+        let reference = GitReference::Symbolic("1.9.2");
+        let spec = CommitSpec {
+            repo: String::from("getsentry/sentry-cli"),
+            path: Some(dir.path().to_path_buf()),
+            rev: String::from("1.9.2"),
+            prev_rev: Some(String::from("1.9.1")),
+        };
+
+        let repos = [Repo {
+            id: String::from("1"),
+            name: String::from("getsentry/sentry-cli"),
+            url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+            provider: RepoProvider {
+                id: String::from("integrations:github"),
+                name: String::from("GitHub"),
+            },
+            status: String::from("active"),
+            date_created: chrono::Utc::now(),
+        }];
+
+        let res_with_lightweight_tag = find_matching_rev(reference, &spec, &repos, false, None);
+        assert_eq!(res_with_lightweight_tag.unwrap(), Some(hash));
+    }
+
+    #[test]
+    fn test_find_matching_rev_with_annotated_tag() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        let hash = git_create_tag(dir.path(), "1.9.2-hw", true);
+
+        let reference = GitReference::Symbolic("1.9.2-hw");
+        let spec = CommitSpec {
+            repo: String::from("getsentry/sentry-cli"),
+            path: Some(dir.path().to_path_buf()),
+            rev: String::from("1.9.2-hw"),
+            prev_rev: Some(String::from("1.9.1")),
+        };
+
+        let repos = [Repo {
+            id: String::from("1"),
+            name: String::from("getsentry/sentry-cli"),
+            url: Some(String::from("https://github.com/getsentry/sentry-cli")),
+            provider: RepoProvider {
+                id: String::from("integrations:github"),
+                name: String::from("GitHub"),
+            },
+            status: String::from("active"),
+            date_created: chrono::Utc::now(),
+        }];
+
+        let res_with_annotated_tag = find_matching_rev(reference, &spec, &repos, false, None);
+        assert_eq!(res_with_annotated_tag.unwrap(), Some(hash));
+    }
+
+    #[test]
+    fn test_url_parsing() {
+        assert_eq!(
+            VcsUrl::parse("http://github.com/mitsuhiko/flask"),
+            VcsUrl {
+                provider: "github.com".into(),
+                id: "mitsuhiko/flask".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@github.com:mitsuhiko/flask.git"),
+            VcsUrl {
+                provider: "github.com".into(),
+                id: "mitsuhiko/flask".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"),
+            VcsUrl {
+                provider: "bitbucket.org".into(),
+                id: "mitsuhiko/flask".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"),
+            VcsUrl {
+                provider: "bitbucket.org".into(),
+                id: "mitsuhiko/flask".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse(
+                "https://bitbucket.example.com/projects/laurynsentry/repos/helloworld/browse"
+            ),
+            VcsUrl {
+                provider: "bitbucket.example.com".into(),
+                id: "laurynsentry/helloworld".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://neilmanvar.visualstudio.com/_git/sentry-demo"),
+            VcsUrl {
+                provider: "neilmanvar.visualstudio.com".into(),
+                id: "neilmanvar/sentry-demo".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://project@mydomain.visualstudio.com/project/repo/_git"),
+            VcsUrl {
+                provider: "mydomain.visualstudio.com".into(),
+                id: "project/repo".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@ssh.dev.azure.com:v3/project/repo/repo"),
+            VcsUrl {
+                provider: "dev.azure.com".into(),
+                id: "project/repo".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online"),
+            VcsUrl {
+                provider: "dev.azure.com".into(),
+                id: "company/repo%20online".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://dev.azure.com/project/repo/_git/repo"),
+            VcsUrl {
+                provider: "dev.azure.com".into(),
+                id: "project/repo".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"),
+            VcsUrl {
+                provider: "dev.azure.com".into(),
+                id: "company/repo%20online".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
+            VcsUrl {
+                provider: "github.myenterprise.com".into(),
+                id: "mitsuhiko/flask".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://gitlab.example.com/gitlab-org/gitlab-ce"),
+            VcsUrl {
+                provider: "gitlab.example.com".into(),
+                id: "gitlab-org/gitlab-ce".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@gitlab.example.com:gitlab-org/gitlab-ce.git"),
+            VcsUrl {
+                provider: "gitlab.example.com".into(),
+                id: "gitlab-org/gitlab-ce".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("https://gitlab.com/gitlab-org/gitlab-ce"),
+            VcsUrl {
+                provider: "gitlab.com".into(),
+                id: "gitlab-org/gitlab-ce".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@gitlab.com:gitlab-org/gitlab-ce.git"),
+            VcsUrl {
+                provider: "gitlab.com".into(),
+                id: "gitlab-org/gitlab-ce".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse(
+                "https://source.developers.google.com/p/project-slug/r/github_org-slug_repo-slug"
+            ),
+            VcsUrl {
+                provider: "source.developers.google.com".into(),
+                id: "org-slug/repo-slug".into(),
+            }
+        );
+        assert_eq!(
+            VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
+            VcsUrl {
+                provider: "gitlab.com".into(),
+                id: "gitlab-org/gitlab-ce".into(),
+            }
+        );
+    }
+
+    #[test]
+    fn test_url_normalization() {
+        assert!(!is_matching_url(
+            "http://github.mycompany.com/mitsuhiko/flask",
+            "git@github.com:mitsuhiko/flask.git"
+        ));
+        assert!(!is_matching_url(
+            "git@github.mycompany.com/mitsuhiko/flask",
+            "git@github.com:mitsuhiko/flask.git"
+        ));
+        assert!(is_matching_url(
+            "http://github.com/mitsuhiko/flask",
+            "git@github.com:mitsuhiko/flask.git"
+        ));
+        assert!(is_matching_url(
+            "https://gitlab.com/gitlab-org/gitlab-ce",
+            "git@gitlab.com:gitlab-org/gitlab-ce.git"
+        ));
+        assert!(is_matching_url(
+            "https://gitlab.example.com/gitlab-org/gitlab-ce",
+            "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
+        ));
+        assert!(is_matching_url(
+            "https://gitlab.example.com/gitlab-org/GitLab-CE",
+            "git@gitlab.example.com:gitlab-org/gitlab-ce.git"
+        ));
+        assert!(is_matching_url(
+            "https://gitlab.example.com/gitlab-org/GitLab-CE",
+            "ssh://git@gitlab.example.com:22/gitlab-org/GitLab-CE"
+        ));
+        assert!(is_matching_url(
+            "git@ssh.dev.azure.com:v3/project/repo/repo",
+            "https://dev.azure.com/project/repo/_git/repo"
+        ));
+        assert!(is_matching_url(
+            "git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online",
+            "https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"
+        ));
+        assert!(is_matching_url(
+            "git://git@github.com/kamilogorek/picklerick.git",
+            "https://github.com/kamilogorek/picklerick"
+        ));
+        assert!(is_matching_url(
+            "git+ssh://git@github.com/kamilogorek/picklerick.git",
+            "https://github.com/kamilogorek/picklerick"
+        ));
+        assert!(is_matching_url(
+            "git+http://git@github.com/kamilogorek/picklerick.git",
+            "https://github.com/kamilogorek/picklerick"
+        ));
+        assert!(is_matching_url(
+            "git+https://git@github.com/kamilogorek/picklerick.git",
+            "https://github.com/kamilogorek/picklerick"
+        ));
+    }
+
+    fn git_initialize_repo() -> TempDir {
+        let dir = tempdir().expect("Failed to generate temp dir.");
+
+        Command::new("git")
+            .args(["init", "--quiet"])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `git init`.")
+            .wait()
+            .expect("Failed to wait on `git init`.");
+
+        Command::new("git")
+            .args(["branch", "-M", "main"])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `git branch`.")
+            .wait()
+            .expect("Failed to wait on `git branch`.");
+
+        Command::new("git")
+            .args(["config", "--local", "user.name", "test"])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `git config`.")
+            .wait()
+            .expect("Failed to wait on `git config`.");
+
+        Command::new("git")
+            .args(["config", "--local", "user.email", "test@example.com"])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `git config`.")
+            .wait()
+            .expect("Failed to wait on `git config`.");
+
+        Command::new("git")
+            .args([
+                "remote",
+                "add",
+                "origin",
+                "https://github.com/getsentry/sentry-cli",
+            ])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `git remote add`.")
+            .wait()
+            .expect("Failed to wait on `git remote add`.");
+
+        Command::new("git")
+            .args(["config", "--local", "commit.gpgsign", "false"])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `config --local commit.gpgsign false`.")
+            .wait()
+            .expect("Failed to wait on `config --local commit.gpgsign false`.");
+
+        Command::new("git")
+            .args(["config", "--local", "tag.gpgsign", "false"])
+            .current_dir(&dir)
+            .spawn()
+            .expect("Failed to execute `config --local tag.gpgsign false`.")
+            .wait()
+            .expect("Failed to wait on `config --local tag.gpgsign false`.");
+
+        dir
+    }
+
+    fn git_create_commit(dir: &Path, file_path: &str, content: &[u8], commit_message: &str) {
+        let path = dir.join(file_path);
+        let mut file = File::create(path).expect("Failed to execute.");
+        file.write_all(content).expect("Failed to execute.");
+
+        let mut add = Command::new("git")
+            .args(["add", "-A"])
+            .current_dir(dir)
+            .spawn()
+            .expect("Failed to execute `git add .`");
+
+        add.wait().expect("Failed to wait on `git add`.");
+
+        let mut commit = Command::new("git")
+            .args([
+                "commit",
+                "-am",
+                commit_message,
+                "--author",
+                "John Doe <john.doe@example.com>",
+                "--quiet",
+                "--no-edit",
+            ])
+            .current_dir(dir)
+            .spawn()
+            .expect("Failed to execute `git commit -m {message}`.");
+
+        commit.wait().expect("Failed to wait on `git commit`.");
+    }
+
+    fn git_create_tag(dir: &Path, tag_name: &str, annotated: bool) -> String {
+        let mut tag_cmd = vec!["tag", tag_name];
+
+        if annotated {
+            tag_cmd.push("-a");
+            tag_cmd.push("-m");
+            tag_cmd.push("imannotatedtag");
+        }
+
+        let mut tag = Command::new("git")
+            .args(tag_cmd)
+            .current_dir(dir)
+            .spawn()
+            .unwrap_or_else(|_| panic!("Failed to execute `git tag {tag_name}`"));
+
+        tag.wait().expect("Failed to wait on `git tag`.");
+
+        let hash = Command::new("git")
+            .args(["rev-list", "-n", "1", tag_name])
+            .current_dir(dir)
+            .output()
+            .unwrap_or_else(|_| panic!("Failed to execute `git rev-list -n 1 {tag_name}`."));
+
+        String::from_utf8(hash.stdout)
+            .map(|s| s.trim().to_owned())
+            .expect("Invalid utf-8")
+    }
+
+    #[test]
+    fn test_get_commits_from_git() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world! Part 2\");",
+            "\"second commit\"",
+        );
+
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+        let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
+
+        assert_debug_snapshot!(commits
+            .0
+            .iter()
+            .map(|c| {
+                (
+                    c.author().name().unwrap().to_owned(),
+                    c.author().email().unwrap().to_owned(),
+                    c.summary(),
+                )
+            })
+            .collect::<Vec<_>>());
+    }
+
+    #[test]
+    fn test_generate_patch_set_base() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world! Part 2\");",
+            "\"second commit\"",
+        );
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world! Part 3\");",
+            "\"third commit\"",
+        );
+
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+        let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
+        let patch_set =
+            generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+        assert_yaml_snapshot!(patch_set, {
+            ".*.id" => "[id]",
+            ".*.timestamp" => "[timestamp]"
+        });
+    }
+
+    #[test]
+    fn test_generate_patch_set_previous_commit() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world! Part 2\");",
+            "\"second commit\"",
+        );
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world! Part 3\");",
+            "\"third commit\"",
+        );
+
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+        let head = repo.revparse_single("HEAD").expect("Failed");
+
+        git_create_commit(
+            dir.path(),
+            "foo4.js",
+            b"console.log(\"Hello, world! Part 4\");",
+            "\"fourth commit\"",
+        );
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world! Part 5\");",
+            "\"fifth commit\"",
+        );
+
+        let commits =
+            get_commits_from_git(&repo, &head.id().to_string(), 20, false).expect("Failed");
+        let patch_set =
+            generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+        assert_yaml_snapshot!(patch_set, {
+            ".*.id" => "[id]",
+            ".*.timestamp" => "[timestamp]"
+        });
+    }
+
+    #[test]
+    fn test_generate_patch_default_twenty() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        for n in 0..20 {
+            let file = format!("foo{n}.js");
+            git_create_commit(
+                dir.path(),
+                &file,
+                b"console.log(\"Hello, world! Part 2\");",
+                "\"another commit\"",
+            );
+        }
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world!\");",
+            "\"final commit\"",
+        );
+
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+        let commits = get_commits_from_git(&repo, "", 20, false).expect("Failed");
+        let patch_set =
+            generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+        assert_yaml_snapshot!(patch_set, {
+            ".*.id" => "[id]",
+            ".*.timestamp" => "[timestamp]"
+        });
+    }
+
+    #[test]
+    fn test_generate_patch_ignore_missing() {
+        let dir = git_initialize_repo();
+
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        for n in 0..5 {
+            let file = format!("foo{n}.js");
+            git_create_commit(
+                dir.path(),
+                &file,
+                b"console.log(\"Hello, world! Part 2\");",
+                "\"another commit\"",
+            );
+        }
+
+        git_create_commit(
+            dir.path(),
+            "foo2.js",
+            b"console.log(\"Hello, world!\");",
+            "\"final commit\"",
+        );
+
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+        let commits = get_commits_from_git(&repo, "nonexistinghash", 5, true).expect("Failed");
+        let patch_set =
+            generate_patch_set(&repo, commits.0, commits.1, "example/test-repo").expect("Failed");
+
+        assert_yaml_snapshot!(patch_set, {
+            ".*.id" => "[id]",
+            ".*.timestamp" => "[timestamp]"
+        });
+    }
+
+    #[test]
+    fn test_git_repo_head_ref() {
+        let dir = git_initialize_repo();
+
+        // Create initial commit
+        git_create_commit(
+            dir.path(),
+            "foo.js",
+            b"console.log(\"Hello, world!\");",
+            "\"initial commit\"",
+        );
+
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+
+        // Test on a branch (should succeed)
+        let head_ref = git_repo_head_ref(&repo).expect("Should get branch reference");
+        assert_eq!(head_ref, "main");
+
+        // Test in detached HEAD state (should fail)
+        let head_commit = repo.head().unwrap().target().unwrap();
+        repo.set_head_detached(head_commit)
+            .expect("Failed to detach HEAD");
+
+        let head_ref_result = git_repo_head_ref(&repo);
+        assert!(head_ref_result.is_err());
+        assert_eq!(
+            head_ref_result.unwrap_err().to_string(),
+            "HEAD is detached - no branch reference available"
+        );
+    }
 
     #[test]
     fn test_get_github_pr_number() {
