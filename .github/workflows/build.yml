@@ -33,6 +33,9 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
+
       - name: Build
         run: cargo build --release --target=${{ matrix.target }} --locked
 
@@ -63,6 +66,9 @@ jobs:
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
 
       - name: Run Cargo Build
         run: cargo build --target=${{ matrix.target }} --release --locked
@@ -189,6 +195,9 @@ jobs:
 
       - name: Add Rustup Target
         run: rustup target add ${{ env.TARGET }}
+
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@98c8021b550208e191a6a3145459bfc9fb29c4c0 # 2.8.0
 
       - name: Run Cargo Build
         run: cargo build --target=${{ env.TARGET }} --release --locked
