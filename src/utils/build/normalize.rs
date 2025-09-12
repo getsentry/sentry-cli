@@ -17,10 +17,13 @@ use zip::{DateTime, ZipWriter};
 
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
     Ok(WalkDir::new(path)
-        .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_file())
+        .filter(|entry| {
+            let path = entry.path();
+            // Include both regular files and symlinks
+            path.is_file() || path.is_symlink()
+        })
         .map(|entry| {
             let entry_path = entry.into_path();
             let relative_path = entry_path.strip_prefix(path)?.to_owned();
@@ -52,9 +55,19 @@ fn add_entries_to_zip(
 
         let zip_path = format!("{directory_name}/{}", relative_path.to_string_lossy());
 
-        zip.start_file(zip_path, options)?;
-        let file_byteview = ByteView::open(&entry_path)?;
-        zip.write_all(file_byteview.as_slice())?;
+        if entry_path.is_symlink() {
+            // Handle symlinks by reading the target path and writing it as a symlink
+            let target = std::fs::read_link(&entry_path)?;
+            let target_str = target.to_string_lossy();
+
+            // Create a symlink entry in the zip
+            zip.add_symlink(zip_path, &target_str, options)?;
+        } else {
+            // Handle regular files
+            zip.start_file(zip_path, options)?;
+            let file_byteview = ByteView::open(&entry_path)?;
+            zip.write_all(file_byteview.as_slice())?;
+        }
         file_count += 1;
     }
 
