@@ -472,21 +472,6 @@ fn find_matching_submodule(
     Ok(None)
 }
 
-/// Helper function to determine which SHA to use for the API
-/// Returns the original partial SHA if it looks like a partial SHA,
-/// otherwise returns the resolved SHA
-fn get_api_sha(original: &str, resolved: &str) -> String {
-    let is_original_partial = original.len() >= 4
-        && original.len() < 40
-        && original.chars().all(|c| c.is_ascii_hexdigit());
-
-    if is_original_partial {
-        original.to_owned()
-    } else {
-        resolved.to_owned()
-    }
-}
-
 fn find_matching_revs(
     spec: &CommitSpec,
     repos: &[Repo],
@@ -504,23 +489,21 @@ fn find_matching_revs(
         )
     }
 
-    let rev = if let Some(resolved_sha) = find_matching_rev(
+    let rev = if let Some(rev) = find_matching_rev(
         spec.reference(),
         spec,
         repos,
         disable_discovery,
         remote_name.clone(),
     )? {
-        get_api_sha(&spec.rev, &resolved_sha)
+        rev
     } else {
         return Err(error(spec.reference(), &spec.repo));
     };
 
     let prev_rev = if let Some(rev) = spec.prev_reference() {
-        if let Some(resolved_sha) =
-            find_matching_rev(rev, spec, repos, disable_discovery, remote_name)?
-        {
-            Some(get_api_sha(spec.prev_rev.as_ref().unwrap(), &resolved_sha))
+        if let Some(rv) = find_matching_rev(rev, spec, repos, disable_discovery, remote_name)? {
+            Some(rv)
         } else {
             return Err(error(rev, &spec.repo));
         }
@@ -1367,63 +1350,5 @@ mod tests {
         assert_eq!(pr_number, None);
         std::env::remove_var("GITHUB_EVENT_NAME");
         std::env::remove_var("GITHUB_REF");
-    }
-
-    #[test]
-    fn test_get_api_sha_partial_sha() {
-        let original = "4eba";
-        let resolved = "4eba000000000000000000000000000000000000";
-        assert_eq!(get_api_sha(original, resolved), "4eba");
-
-        let original = "4ebad56";
-        let resolved = "4ebad56000000000000000000000000000000000";
-        assert_eq!(get_api_sha(original, resolved), "4ebad56");
-
-        let original = "abc123def";
-        let resolved = "abc123def0000000000000000000000000000000";
-        assert_eq!(get_api_sha(original, resolved), "abc123def");
-
-        let original = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c";
-        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c0";
-        assert_eq!(
-            get_api_sha(original, resolved),
-            "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c"
-        );
-    }
-
-    #[test]
-    fn test_get_api_sha_full_sha() {
-        let original = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
-        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
-        assert_eq!(get_api_sha(original, resolved), resolved);
-    }
-
-    #[test]
-    fn test_get_api_sha_too_short() {
-        let original = "4eb";
-        let resolved = "4eb0000000000000000000000000000000000000";
-        assert_eq!(get_api_sha(original, resolved), resolved);
-    }
-
-    #[test]
-    fn test_get_api_sha_symbolic() {
-        let original = "HEAD";
-        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
-        assert_eq!(get_api_sha(original, resolved), resolved);
-
-        let original = "main";
-        let resolved = "4ebad56f915d32a0b8c8c8c8c8c8c8c8c8c8c8c8c8";
-        assert_eq!(get_api_sha(original, resolved), resolved);
-    }
-
-    #[test]
-    fn test_get_api_sha_mixed_case_hex() {
-        let original = "4EbAd56";
-        let resolved = "4EbAd56000000000000000000000000000000000";
-        assert_eq!(get_api_sha(original, resolved), "4EbAd56");
-
-        let original = "ABCDEF1";
-        let resolved = "ABCDEF1000000000000000000000000000000000";
-        assert_eq!(get_api_sha(original, resolved), "ABCDEF1");
     }
 }
