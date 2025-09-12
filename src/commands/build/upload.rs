@@ -325,7 +325,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         );
         for (path, reason) in errored_paths_and_reasons {
-            warn!("  - {} ({})", path.display(), reason);
+            let reason_str = reason.to_string();
+            // Check if this is a specific API error we can provide better messaging for
+            if reason_str.contains("Project not found") {
+                warn!("  - {}", path.display());
+                warn!("    Project not found. Ensure that you configured the correct project and organization.");
+                warn!("    Use --project and --org flags to specify the correct values.");
+            } else if reason_str.contains("organization not found")
+                || reason_str.contains("Organization not found")
+            {
+                warn!("  - {}", path.display());
+                warn!("    Organization not found. Ensure that you configured the correct organization.");
+                warn!("    Use --org flag to specify the correct organization.");
+            } else {
+                warn!("  - {} ({})", path.display(), reason);
+            }
         }
     }
 
