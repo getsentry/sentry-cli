@@ -284,7 +284,7 @@ fn find_merge_base_ref(
 }
 
 /// Attempts to get the base repository name from git remotes.
-/// Prefers "origin" remote if it exists, otherwise uses the first available remote.
+/// Prefers "upstream" remote if it exists, then "origin", otherwise uses the first available remote.
 /// Returns the base repository name if a remote is found.
 pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
