@@ -75,6 +75,25 @@ fn command_build_upload_invalid_ipa() {
 }
 
 #[test]
+fn command_build_upload_nonexistent_project() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("build/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/nonexistentproject/files/preprodartifacts/assemble/",
+            )
+            .with_status(404)
+            .with_response_body(r#"{"detail":"Project not found. Ensure that you configured the correct project and organization."}"#),
+        )
+        .register_trycmd_test("build/build-upload-nonexistent-project.trycmd")
+        .with_default_token();
+}
+
+#[test]
 fn command_build_upload_apk_all_uploaded() {
     TestManager::new()
         .mock_endpoint(

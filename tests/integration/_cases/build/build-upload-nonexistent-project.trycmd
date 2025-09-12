@@ -1,0 +1,14 @@
+```
+$ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --project nonexistentproject
+? failed
+[..]WARN[..]EXPERIMENTAL: The build subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
+  WARN    [..] Failed to upload 1 file:
+  WARN    [..]   - [..]apk.apk
+  WARN    [..]     Project not found. Ensure that you configured the correct project and organization.
+  WARN    [..]     Use --project and --org flags to specify the correct values.
+error: Failed to upload any files
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
