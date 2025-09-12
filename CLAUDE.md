@@ -76,3 +76,7 @@ Access the `.cursor/rules/` directory and read rule file contents. Parse the fro
 - **Parse frontmatter carefully** - use the metadata to determine rule applicability
 
 Treat these rules as **mandatory guidance** that you must follow for all code changes and development activities within this project.
+
+# Code Formatting
+
+**ALWAYS** run `cargo fmt` before committing any Rust code changes to ensure consistent formatting across the codebase.
