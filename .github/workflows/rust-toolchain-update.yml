@@ -4,6 +4,7 @@ on:
   schedule:
     # Run weekly on Mondays at 00:00 UTC
     - cron: '0 0 * * 1'
+  pull_request:
 
 jobs:
   check-and-update:
@@ -94,7 +95,7 @@ jobs:
               repo: context.repo.repo,
               title: `build(rust): Update Rust toolchain to ${newVersion}`,
               head: branchName,
-              base: '${{ github.ref_name }}',
+              base: '${{ github.head_ref }}',
               body: `Updates Rust toolchain to ${newVersion} (${fullVersion}).
 
             **Changes:**
