@@ -2,6 +2,7 @@
 $ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --project nonexistentproject
 ? failed
 [..]WARN[..]EXPERIMENTAL: The build subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
+  WARN    [..] Could not detect base branch reference: [..]
   WARN    [..] Failed to upload 1 file:
   WARN    [..]   - [..]apk.apk
   WARN    [..]     Project not found. Ensure that you configured the correct project and organization.
