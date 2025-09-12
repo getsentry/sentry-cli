@@ -1,0 +1,52 @@
+```
+$ sentry-cli logs send --help
+? success
+Send a log entry to Sentry. Send a single log entry using the Sentry Logs envelope format.
+
+[BETA] The "logs" command is in beta. The command is subject to breaking changes, including removal,
+in any Sentry CLI release.
+
+Usage: sentry-cli logs send [OPTIONS] --message <MESSAGE>
+
+Options:
+      --level <LEVEL>
+          Log severity level.
+          
+          [default: info]
+          [possible values: trace, debug, info, warn, error, fatal]
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+      --message <MESSAGE>
+          Log message body.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+      --trace-id <TRACE_ID>
+          Optional 32-char hex trace id. If omitted, a random one is generated.
+
+  -r, --release <RELEASE>
+          Optional release identifier. Defaults to auto-detected value.
+
+  -E, --env <ENVIRONMENT>
+          Optional environment name.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+  -a, --attr <KEY:VALUE>
+          Add attributes to the log (key:value pairs). Can be used multiple times.
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: silent]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

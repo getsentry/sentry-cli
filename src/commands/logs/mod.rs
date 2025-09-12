@@ -1,6 +1,8 @@
 mod list;
+mod send;
 
 use self::list::ListLogsArgs;
+use self::send::SendLogsArgs;
 use super::derive_parser::{SentryCLI, SentryCLICommand};
 use anyhow::Result;
 use clap::ArgMatches;
@@ -10,6 +12,7 @@ const BETA_WARNING: &str = "[BETA] The \"logs\" command is in beta. The command 
     to breaking changes, including removal, in any Sentry CLI release.";
 
 const LIST_ABOUT: &str = "List logs from your organization";
+const SEND_ABOUT: &str = "Send a log entry to Sentry";
 
 #[derive(Args)]
 pub(super) struct LogsArgs {
@@ -32,6 +35,11 @@ enum LogsSubcommand {
     {BETA_WARNING}")
 )]
     List(ListLogsArgs),
+    #[command(about = format!("[BETA] {SEND_ABOUT}"))]
+    #[command(long_about = format!("{SEND_ABOUT}. \
+    Send a single log entry using the Sentry Logs envelope format.\n\n\
+    {BETA_WARNING}"))]
+    Send(SendLogsArgs),
 }
 
 pub(super) fn make_command(command: Command) -> Command {
@@ -47,5 +55,6 @@ pub(super) fn execute(_: &ArgMatches) -> Result<()> {
 
     match subcommand {
         LogsSubcommand::List(args) => list::execute(args),
+        LogsSubcommand::Send(args) => send::execute(args),
     }
 }
