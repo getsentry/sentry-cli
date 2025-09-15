@@ -58,8 +58,8 @@ pub fn make_command(command: Command) -> Command {
             .help("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
                     The value must be provided as `REPO@SHA` where SHA is a \
-                    Git commit SHA (full 40-character or partial 4+ characters). \
-                    To specify a range, use `REPO@PREV_SHA..SHA` format.\n\n\
+                    Git commit SHA. To specify a range, use `REPO@PREV_SHA..SHA` \
+                    format.\n\n\
                     Examples:\n\
                     - `my-repo@abc123` (partial SHA)\n\
                     - `my-repo@abc123def456789...` (full SHA)\n\
