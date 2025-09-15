@@ -82,9 +82,7 @@ fn strip_sha(sha: &str) -> &str {
 
 /// Validates that a string is a valid Git SHA (full or partial)
 fn is_valid_sha(sha: &str) -> bool {
-    lazy_static! {
-        static ref SHA_RE: Regex = Regex::new(r"^[a-fA-F0-9]{4,40}$").unwrap();
-    }
+    static SHA_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-fA-F0-9]{4,40}$").expect("Regex is valid"));
     SHA_RE.is_match(sha)
 }
 
