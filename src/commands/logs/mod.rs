@@ -1,4 +1,5 @@
 mod list;
+mod log;
 mod send;
 
 use self::list::ListLogsArgs;

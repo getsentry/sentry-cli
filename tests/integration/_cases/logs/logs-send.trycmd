@@ -1,5 +1,5 @@
 ```
-$ sentry-cli logs send --message "Hello from CLI" --level info
+$ sentry-cli[EXE] logs send --message "Hello from CLI" --level info
 ? success
 [BETA] The "logs" command is in beta. The command is subject to breaking changes, including removal, in any Sentry CLI release.
 Log sent.

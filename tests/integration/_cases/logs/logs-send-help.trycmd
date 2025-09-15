@@ -6,7 +6,7 @@ Send a log entry to Sentry. Send a single log entry using the Sentry Logs envelo
 [BETA] The "logs" command is in beta. The command is subject to breaking changes, including removal,
 in any Sentry CLI release.
 
-Usage: sentry-cli logs send [OPTIONS] --message <MESSAGE>
+Usage: sentry-cli[EXE] logs send [OPTIONS] --message <MESSAGE>
 
 Options:
       --level <LEVEL>
