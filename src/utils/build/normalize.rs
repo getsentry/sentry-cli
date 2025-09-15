@@ -75,6 +75,8 @@ fn add_entries_to_zip(
 }
 
 // For XCArchive directories, we'll zip the entire directory
+// It's important to not change the contents of the directory or the size
+// analysis will be wrong and the code signature will break.
 pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<TempFile> {
     debug!("Creating normalized zip for directory: {}", path.display());
 

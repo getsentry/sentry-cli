@@ -570,6 +570,7 @@ fn upload_file(
 mod tests {
     use super::*;
     use std::fs;
+    use std::os::unix::fs::symlink;
     use zip::ZipArchive;
 
     #[test]
@@ -653,10 +654,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(windows))]
     fn test_normalize_directory_preserves_symlinks() -> Result<()> {
-        use std::os::unix::fs::symlink;
-
         let temp_dir = crate::utils::fs::TempDir::create()?;
         let test_dir = temp_dir.path().join("TestApp.xcarchive");
         fs::create_dir_all(test_dir.join("Products"))?;
