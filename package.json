@@ -64,5 +64,8 @@
   "volta": {
     "node": "20.10.0",
     "yarn": "1.22.19"
+  },
+  "overrides": {
+    "browserslist": "<4.26.0 || >4.26.0"
   }
 }
