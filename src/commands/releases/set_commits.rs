@@ -1,5 +1,7 @@
 #![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
 
+use std::sync::LazyLock;
+
 use anyhow::{bail, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
@@ -82,7 +84,8 @@ fn strip_sha(sha: &str) -> &str {
 
 /// Validates that a string is a valid Git SHA (full or partial)
 fn is_valid_sha(sha: &str) -> bool {
-    static SHA_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-fA-F0-9]{4,40}$").expect("Regex is valid"));
+    static SHA_RE: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^[a-fA-F0-9]{4,40}$").expect("Regex is valid"));
     SHA_RE.is_match(sha)
 }
 
@@ -120,15 +123,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
 
             if !is_valid_sha(&commit_spec.rev) {
-                bail!(
-                    "Invalid commit SHA '{}'. Only Git SHAs (full or partial) are supported.",
+                eprintln!(
+                    "Warning: Invalid commit SHA '{}'. Only Git SHAs (full or partial) are supported. Proceeding anyway.",
                     commit_spec.rev
                 );
             }
 
             if let Some(ref prev_rev) = commit_spec.prev_rev {
                 if !is_valid_sha(prev_rev) {
-                    bail!("Invalid previous commit SHA '{}'. Only Git SHAs (full or partial) are supported.", prev_rev);
+                    eprintln!("Warning: Invalid previous commit SHA '{prev_rev}'. Only Git SHAs (full or partial) are supported. Proceeding anyway.");
                 }
             }
 
