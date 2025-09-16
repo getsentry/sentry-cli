@@ -1,7 +1,7 @@
 ### Description
 <!-- What changed and why? -->
 
-#### Issues
+### Issues
 <!--
 * resolves: #1234
 * resolves: LIN-1234
