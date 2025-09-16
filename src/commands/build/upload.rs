@@ -570,6 +570,7 @@ fn upload_file(
 mod tests {
     use super::*;
     use std::fs;
+    use std::os::unix::fs::symlink;
     use zip::ZipArchive;
 
     #[test]
@@ -649,6 +650,53 @@ mod tests {
             has_parsed_assets,
             "XCArchive upload should include parsed asset catalogs"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_normalize_directory_preserves_symlinks() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+
+        // Create a regular file
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        // Create a symlink pointing to the regular file
+        let symlink_path = test_dir.join("Products").join("app_link.txt");
+        symlink("app.txt", &symlink_path)?;
+
+        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        // Check that both the regular file and symlink are in the zip
+        let mut has_regular_file = false;
+        let mut has_symlink = false;
+
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            let file_name = file.name();
+
+            if file_name == "TestApp.xcarchive/Products/app.txt" {
+                has_regular_file = true;
+                // Verify it's actually a regular file, not a symlink
+                assert!(
+                    !file.is_symlink(),
+                    "app.txt should be a regular file, not a symlink"
+                );
+            } else if file_name == "TestApp.xcarchive/Products/app_link.txt" {
+                has_symlink = true;
+                // Verify it's actually a symlink
+                assert!(
+                    file.is_symlink(),
+                    "app_link.txt should be a symlink in the zip"
+                );
+            }
+        }
+
+        assert!(has_regular_file, "Regular file should be in zip");
+        assert!(has_symlink, "Symlink should be preserved in zip");
         Ok(())
     }
 }
