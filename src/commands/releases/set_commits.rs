@@ -7,6 +7,7 @@ use regex::Regex;
 
 use crate::api::{Api, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, Ref, UpdatedRelease};
 use crate::config::Config;
+use crate::constants::MAX_COMMIT_SHA_LENGTH;
 use crate::utils::args::ArgExt as _;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
@@ -53,16 +54,16 @@ pub fn make_command(command: Command) -> Command {
             .short('c')
             .value_name("SPEC")
             .action(ArgAction::Append)
-            .help("Defines a single commit for a repo as \
+            .help(format!("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
                     The value must be provided as `REPO@SHA` where SHA is \
-                    at most 64 characters. To specify a range, use `REPO@PREV_SHA..SHA` \
+                    at most {MAX_COMMIT_SHA_LENGTH} characters. To specify a range, use `REPO@PREV_SHA..SHA` \
                     format.\n\n\
                     Note: You must specify a previous commit when setting commits for the first release.\n\n\
                     Examples:\
                     \n  - `my-repo@abc123` (partial SHA)\
                     \n  - `my-repo@abc456def012ghi678jkl234mno890pqr456stu` (full SHA)\
-                    \n  - `my-repo@abc123..def456` (commit range)"))
+                    \n  - `my-repo@abc123..def456` (commit range)")))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
             .long("ignore-empty")
@@ -114,18 +115,20 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 bail!("Unknown repo '{}'", commit_spec.repo);
             }
 
-            if commit_spec.rev.len() > 64 {
+            if commit_spec.rev.len() > MAX_COMMIT_SHA_LENGTH {
                 bail!(
-                    "Invalid commit SHA '{}'. Commit SHAs must be 64 characters or less.",
-                    commit_spec.rev
+                    "Invalid commit SHA '{}'. Commit SHAs must be {} characters or less.",
+                    commit_spec.rev,
+                    MAX_COMMIT_SHA_LENGTH
                 );
             }
 
             if let Some(ref prev_rev) = commit_spec.prev_rev {
-                if prev_rev.len() > 64 {
+                if prev_rev.len() > MAX_COMMIT_SHA_LENGTH {
                     bail!(
-                        "Invalid previous commit SHA '{}'. Commit SHAs must be 64 characters or less.",
-                        prev_rev
+                        "Invalid previous commit SHA '{}'. Commit SHAs must be {} characters or less.",
+                        prev_rev,
+                        MAX_COMMIT_SHA_LENGTH
                     );
                 }
             }
