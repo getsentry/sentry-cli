@@ -59,10 +59,10 @@ pub fn make_command(command: Command) -> Command {
                     at most 64 characters. To specify a range, use `REPO@PREV_SHA..SHA` \
                     format.\n\n\
                     Note: You must specify a previous commit when setting commits for the first release.\n\n\
-                    Examples:\n\
-                    - `my-repo@abc123` (partial SHA)\n\
-                    - `my-repo@abc456def012ghi678jkl234mno890pqr456stu` (full SHA)\n\
-                    - `my-repo@abc123..def456` (commit range)"))
+                    Examples:\
+                    \n  - `my-repo@abc123` (partial SHA)\
+                    \n  - `my-repo@abc456def012ghi678jkl234mno890pqr456stu` (full SHA)\
+                    \n  - `my-repo@abc123..def456` (commit range)"))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
             .long("ignore-empty")
