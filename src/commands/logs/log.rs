@@ -7,7 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use crate::utils::event::get_sdk_info;
 use crate::utils::releases::detect_release_name;
 
-/// Builder for creating log entries with a fluent API similar to metrics.
+/// Log entry struct.
 pub struct Log {
     level: LogLevel,
     message: String,
