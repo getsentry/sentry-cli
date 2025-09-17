@@ -56,7 +56,7 @@ pub fn make_command(command: Command) -> Command {
             .help("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
                     The value must be provided as `REPO@SHA` where SHA is \
-                    less than 64 characters. To specify a range, use `REPO@PREV_SHA..SHA` \
+                    at most 64 characters. To specify a range, use `REPO@PREV_SHA..SHA` \
                     format.\n\n\
                     Note: You must specify a previous commit when setting commits for the first release.\n\n\
                     Examples:\n\
