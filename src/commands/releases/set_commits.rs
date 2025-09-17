@@ -1,7 +1,5 @@
 #![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
 
-use std::sync::LazyLock;
-
 use anyhow::{bail, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
@@ -57,12 +55,13 @@ pub fn make_command(command: Command) -> Command {
             .action(ArgAction::Append)
             .help("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
-                    The value must be provided as `REPO@SHA` where SHA is a \
-                    Git commit SHA. To specify a range, use `REPO@PREV_SHA..SHA` \
+                    The value must be provided as `REPO@SHA` where SHA is \
+                    less than 64 characters. To specify a range, use `REPO@PREV_SHA..SHA` \
                     format.\n\n\
+                    Note: You must specify a previous commit when setting commits for the first release.\n\n\
                     Examples:\n\
                     - `my-repo@abc123` (partial SHA)\n\
-                    - `my-repo@abc123def456789...` (full SHA)\n\
+                    - `my-repo@abc456def012ghi678jkl234mno890pqr456stu` (full SHA)\n\
                     - `my-repo@abc123..def456` (commit range)"))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
@@ -80,13 +79,6 @@ fn strip_sha(sha: &str) -> &str {
     } else {
         sha
     }
-}
-
-/// Validates that a string is a valid Git SHA (full or partial)
-fn is_valid_sha(sha: &str) -> bool {
-    static SHA_RE: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r"^[a-fA-F0-9]{4,40}$").expect("Regex is valid"));
-    SHA_RE.is_match(sha)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -122,16 +114,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 bail!("Unknown repo '{}'", commit_spec.repo);
             }
 
-            if !is_valid_sha(&commit_spec.rev) {
-                eprintln!(
-                    "Warning: Invalid commit SHA '{}'. Only Git SHAs (full or partial) are supported. Proceeding anyway.",
+            if commit_spec.rev.len() > 64 {
+                bail!(
+                    "Invalid commit SHA '{}'. Commit SHAs must be 64 characters or less.",
                     commit_spec.rev
                 );
             }
 
             if let Some(ref prev_rev) = commit_spec.prev_rev {
-                if !is_valid_sha(prev_rev) {
-                    eprintln!("Warning: Invalid previous commit SHA '{prev_rev}'. Only Git SHAs (full or partial) are supported. Proceeding anyway.");
+                if prev_rev.len() > 64 {
+                    bail!(
+                        "Invalid previous commit SHA '{}'. Commit SHAs must be 64 characters or less.",
+                        prev_rev
+                    );
                 }
             }
 
