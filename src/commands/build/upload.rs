@@ -325,12 +325,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         );
         for (path, reason) in errored_paths_and_reasons {
-            // Display the root cause (source) if available, otherwise show the main error
-            let error_msg = reason
-                .source()
-                .map(|source| source.to_string())
-                .unwrap_or_else(|| reason.to_string());
-            warn!("  - {} ({})", path.display(), error_msg);
+            warn!("  - {}", path.display());
+            if let Some(source) = reason.source() {
+                warn!("    Error: {}", reason);
+                warn!("    Cause: {}", source);
+            } else {
+                warn!("    Error: {}", reason);
+            }
         }
     }
 
