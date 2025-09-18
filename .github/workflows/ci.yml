@@ -28,6 +28,8 @@ jobs:
   test_node:
     name: Test Node
     uses: ./.github/workflows/test_node.yml
+    with:
+      triggered-by-release: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'release/') }}
 
   test_swift:
     name: Test Swift

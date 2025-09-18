@@ -1,5 +1,6 @@
 minVersion: 0.23.1
 changelogPolicy: auto
+postReleaseCommand: bash scripts/post-release.sh
 targets:
   - name: gcs
     bucket: sentry-sdk-assets
