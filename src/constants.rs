@@ -47,5 +47,7 @@ pub const DEFAULT_MAX_DIF_ITEM_SIZE: u64 = 1024 * 1024; // 1MB
 pub const DEFAULT_MAX_DIF_UPLOAD_SIZE: u64 = 35 * 1024 * 1024; // 35MB
 /// Default maximum time to wait for file assembly.
 pub const DEFAULT_MAX_WAIT: Duration = Duration::from_secs(5 * 60);
+/// Maximum length for commit SHA values, enforced in backend.
+pub const MAX_COMMIT_SHA_LENGTH: usize = 64;
 
 include!(concat!(env!("OUT_DIR"), "/constants.gen.rs"));
