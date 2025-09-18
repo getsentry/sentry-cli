@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.54.0
+
+### Various fixes & improvements
+
+- Fix: symlinks in normalized upload (#2744) by @noahsmartin
+- feat(vcs): Prefer upstream remote over origin for base repo name (#2737) by @runningcode
+- feat(build): Add auto-detection of base_repo_name from git remote (#2735) by @runningcode
+- feat(build): Add auto-detection of PR number from GitHub Actions (#2722) by @runningcode
+- feat(build): Auto-detect base_ref from git merge-base (#2720) by @runningcode
+- feat(logs): support log streaming (#2666) by @vgrozdanic
+
 ## 2.53.0
 
 ### Various fixes & improvements
@@ -22,7 +33,7 @@ Please note, the `build` commands are still experimental, and are therefore subj
 
 ## 2.53.0-alpha
 
-This release reintroduces the `build` (previously named `mobile-app`) commands. 
+This release reintroduces the `build` (previously named `mobile-app`) commands.
 
 ### Various fixes & improvements
 
