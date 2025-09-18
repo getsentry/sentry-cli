@@ -156,13 +156,13 @@ impl VcsUrl {
             let username = &caps[1];
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.to_lowercase(),
+                    provider: extract_provider_name(&host.to_lowercase()),
                     id: format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase()),
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.to_lowercase(),
+                    provider: extract_provider_name(&host.to_lowercase()),
                     id: caps[1].to_lowercase(),
                 };
             }
@@ -172,13 +172,13 @@ impl VcsUrl {
             let hostname = &caps[1];
             if let Some(caps) = AZUREDEV_VERSION_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: hostname.into(),
+                    provider: extract_provider_name(hostname),
                     id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: hostname.to_lowercase(),
+                    provider: extract_provider_name(hostname),
                     id: caps[1].to_lowercase(),
                 };
             }
@@ -187,7 +187,7 @@ impl VcsUrl {
         if host == GCB_DOMAIN {
             if let Some(caps) = GCB_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
-                    provider: host.into(),
+                    provider: extract_provider_name(host),
                     id: format!("{}/{}", &caps[1], &caps[2]),
                 };
             }
@@ -195,7 +195,7 @@ impl VcsUrl {
 
         if let Some(caps) = BITBUCKET_SERVER_PATH_RE.captures(path) {
             return VcsUrl {
-                provider: host.to_lowercase(),
+                provider: extract_provider_name(&host.to_lowercase()),
                 id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
             };
         }
@@ -803,28 +803,28 @@ mod tests {
         assert_eq!(
             VcsUrl::parse("http://github.com/mitsuhiko/flask"),
             VcsUrl {
-                provider: "github.com".into(),
+                provider: "github".into(),
                 id: "mitsuhiko/flask".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@github.com:mitsuhiko/flask.git"),
             VcsUrl {
-                provider: "github.com".into(),
+                provider: "github".into(),
                 id: "mitsuhiko/flask".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("http://bitbucket.org/mitsuhiko/flask"),
             VcsUrl {
-                provider: "bitbucket.org".into(),
+                provider: "bitbucket".into(),
                 id: "mitsuhiko/flask".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@bitbucket.org:mitsuhiko/flask.git"),
             VcsUrl {
-                provider: "bitbucket.org".into(),
+                provider: "bitbucket".into(),
                 id: "mitsuhiko/flask".into(),
             }
         );
@@ -833,84 +833,84 @@ mod tests {
                 "https://bitbucket.example.com/projects/laurynsentry/repos/helloworld/browse"
             ),
             VcsUrl {
-                provider: "bitbucket.example.com".into(),
+                provider: "example".into(),
                 id: "laurynsentry/helloworld".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://neilmanvar.visualstudio.com/_git/sentry-demo"),
             VcsUrl {
-                provider: "neilmanvar.visualstudio.com".into(),
+                provider: "visualstudio".into(),
                 id: "neilmanvar/sentry-demo".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://project@mydomain.visualstudio.com/project/repo/_git"),
             VcsUrl {
-                provider: "mydomain.visualstudio.com".into(),
+                provider: "visualstudio".into(),
                 id: "project/repo".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@ssh.dev.azure.com:v3/project/repo/repo"),
             VcsUrl {
-                provider: "dev.azure.com".into(),
+                provider: "azure".into(),
                 id: "project/repo".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@ssh.dev.azure.com:v3/company/Repo%20Online/Repo%20Online"),
             VcsUrl {
-                provider: "dev.azure.com".into(),
+                provider: "azure".into(),
                 id: "company/repo%20online".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://dev.azure.com/project/repo/_git/repo"),
             VcsUrl {
-                provider: "dev.azure.com".into(),
+                provider: "azure".into(),
                 id: "project/repo".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://dev.azure.com/company/Repo%20Online/_git/Repo%20Online"),
             VcsUrl {
-                provider: "dev.azure.com".into(),
+                provider: "azure".into(),
                 id: "company/repo%20online".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://github.myenterprise.com/mitsuhiko/flask.git"),
             VcsUrl {
-                provider: "github.myenterprise.com".into(),
+                provider: "myenterprise".into(),
                 id: "mitsuhiko/flask".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://gitlab.example.com/gitlab-org/gitlab-ce"),
             VcsUrl {
-                provider: "gitlab.example.com".into(),
+                provider: "example".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@gitlab.example.com:gitlab-org/gitlab-ce.git"),
             VcsUrl {
-                provider: "gitlab.example.com".into(),
+                provider: "example".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("https://gitlab.com/gitlab-org/gitlab-ce"),
             VcsUrl {
-                provider: "gitlab.com".into(),
+                provider: "gitlab".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@gitlab.com:gitlab-org/gitlab-ce.git"),
             VcsUrl {
-                provider: "gitlab.com".into(),
+                provider: "gitlab".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
         );
@@ -919,14 +919,14 @@ mod tests {
                 "https://source.developers.google.com/p/project-slug/r/github_org-slug_repo-slug"
             ),
             VcsUrl {
-                provider: "source.developers.google.com".into(),
+                provider: "google".into(),
                 id: "org-slug/repo-slug".into(),
             }
         );
         assert_eq!(
             VcsUrl::parse("git@gitlab.com:gitlab-org/GitLab-CE.git"),
             VcsUrl {
-                provider: "gitlab.com".into(),
+                provider: "gitlab".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
         );
