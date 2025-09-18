@@ -326,12 +326,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         );
         for (path, reason) in errored_paths_and_reasons {
             warn!("  - {}", path.display());
-            if let Some(source) = reason.source() {
-                warn!("    Error: {}", reason);
-                warn!("    Cause: {}", source);
-            } else {
-                warn!("    Error: {}", reason);
-            }
+            warn!("    Error: {reason:#}");
         }
     }
 
