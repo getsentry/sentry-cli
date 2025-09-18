@@ -309,7 +309,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
             Err(e) => {
                 debug!("Failed to upload file at path {}: {}", path.display(), e);
-                errored_paths_and_reasons.push((path.to_path_buf(), e));
+                // Check if this is the "Unsupported provider" error and provide a better message
+                let error_message = if let Some(source) = e.source() {
+                    let source_str = source.to_string();
+                    if source_str.contains("Unsupported provider") {
+                        if let Some(provider) = vcs_info.vcs_provider {
+                            anyhow!("The VCS provider '{}' is not supported. Please check the --vcs-provider parameter.", provider)
+                        } else {
+                            anyhow!("The VCS provider is not supported. Please check the --vcs-provider parameter.")
+                        }
+                    } else {
+                        e
+                    }
+                } else {
+                    e
+                };
+                errored_paths_and_reasons.push((path.to_path_buf(), error_message));
             }
         }
     }
