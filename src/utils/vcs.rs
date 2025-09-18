@@ -201,9 +201,19 @@ impl VcsUrl {
         }
 
         VcsUrl {
-            provider: host.to_lowercase(),
+            provider: extract_provider_name(&host.to_lowercase()),
             id: strip_git_suffix(path).to_lowercase(),
         }
+    }
+}
+
+fn extract_provider_name(host: &str) -> String {
+    // Take just the part immediately before the last dot
+    let parts: Vec<&str> = host.split('.').collect();
+    if parts.len() >= 2 {
+        parts[parts.len() - 2].to_string()
+    } else {
+        host.to_string()
     }
 }
 
