@@ -6,32 +6,12 @@
 
 ### Various fixes & improvements
 
-- ci(release): `npm install` in `test_node.yml` on release (#2768) by @szokeasaurusrex
 - Fix: symlinks in normalized upload (#2744) by @noahsmartin
-- build(deps): bump github/codeql-action from 3.30.1 to 3.30.3 (#2760) by @dependabot
-- build(deps): bump actions/create-github-app-token from 2.1.1 to 2.1.4 (#2761) by @dependabot
-- ci(rust): Auto-update rust-toolchain.toml (#2746) by @szokeasaurusrex
-- ci(node): Test newer node versions (#2756) by @szokeasaurusrex
-- build(node): Use `npm` in Volta (#2755) by @szokeasaurusrex
-- ci(node): Resolve `browserslist` to `4.25.4` (#2754) by @szokeasaurusrex
-- build: Pin Rust toolchain minor version (#2724) by @szokeasaurusrex
-- ci(build): Cache dependencies on release build (#2745) by @szokeasaurusrex
 - feat(vcs): Prefer upstream remote over origin for base repo name (#2737) by @runningcode
-- ref(send-event): Introduce constant for max breadcrumbs (#2716) by @szokeasaurusrex
-- docs: Add cargo fmt reminder to CLAUDE.md (#2738) by @runningcode
 - feat(build): Add auto-detection of base_repo_name from git remote (#2735) by @runningcode
-- ref(clippy): Enable `tests-outside-test-module` lint (#2736) by @szokeasaurusrex
-- build(macos): Allow compiling without Xcode (#2733) by @szokeasaurusrex
 - feat(build): Add auto-detection of PR number from GitHub Actions (#2722) by @runningcode
 - feat(build): Auto-detect base_ref from git merge-base (#2720) by @runningcode
-- ci(release): Use `container` in workflow instead of `build-in-docker.sh` (#2727) by @szokeasaurusrex
-- build(deps): bump github/codeql-action from 3.29.11 to 3.30.1 (#2730) by @dependabot
-- build(deps): bump actions/setup-node from 4.4.0 to 5.0.0 (#2731) by @dependabot
-- meta(claude): Add `CLAUDE.md` (#2728) by @szokeasaurusrex
-- build(deps): bump github/codeql-action from 3.29.8 to 3.29.11 (#2718) by @dependabot
-- feat(logs): support log streaming  (#2666) by @vgrozdanic
-
-_Plus 1 more_
+- feat(logs): support log streaming (#2666) by @vgrozdanic
 
 ## 2.53.0
 
@@ -53,7 +33,7 @@ Please note, the `build` commands are still experimental, and are therefore subj
 
 ## 2.53.0-alpha
 
-This release reintroduces the `build` (previously named `mobile-app`) commands. 
+This release reintroduces the `build` (previously named `mobile-app`) commands.
 
 ### Various fixes & improvements
 
