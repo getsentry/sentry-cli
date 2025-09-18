@@ -211,9 +211,9 @@ fn extract_provider_name(host: &str) -> String {
     // Take just the part immediately before the last dot
     let parts: Vec<&str> = host.split('.').collect();
     if parts.len() >= 2 {
-        parts[parts.len() - 2].to_string()
+        parts[parts.len() - 2].to_owned()
     } else {
-        host.to_string()
+        host.to_owned()
     }
 }
 
