@@ -12,7 +12,7 @@ NEW_VERSION="${2}"
 git checkout master
 
 # We need to update the package-lock.json to include the new version of the optional dependencies.
-npm install --package-lock-only
+npm install --package-lock-only --ignore-scripts
 
 git add package-lock.json
 
