@@ -62,7 +62,7 @@ pub fn make_command(command: Command) -> Command {
                     Note: You must specify a previous commit when setting commits for the first release.\n\n\
                     Examples:\
                     \n  - `my-repo@abc123` (partial SHA)\
-                    \n  - `my-repo@abc456def012ghi678jkl234mno890pqr456stu` (full SHA)\
+                    \n  - `my-repo@62aaca3ed186edc7671b4cca0ab6ec53cb7de8b5` (full SHA)\
                     \n  - `my-repo@abc123..def456` (commit range)")))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
