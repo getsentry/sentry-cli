@@ -15,6 +15,8 @@ use magic_string::{GenerateDecodedMapOptions, MagicString};
 use sentry::types::DebugId;
 use sourcemap::SourceMap;
 
+use crate::utils::file_upload::SourceFiles;
+
 const CODE_SNIPPET_TEMPLATE: &str = r#"!function(){try{var e="undefined"!=typeof window?window:"undefined"!=typeof global?global:"undefined"!=typeof globalThis?globalThis:"undefined"!=typeof self?self:{},n=(new e.Error).stack;n&&(e._sentryDebugIds=e._sentryDebugIds||{},e._sentryDebugIds[n]="__SENTRY_DEBUG_ID__")}catch(e){}}();"#;
 const DEBUGID_PLACEHOLDER: &str = "__SENTRY_DEBUG_ID__";
 const DEBUGID_COMMENT_PREFIX: &str = "//# debugId";
@@ -41,11 +43,19 @@ static USE_DIRECTIVE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 fn print_section_with_debugid(
     f: &mut fmt::Formatter<'_>,
     title: &str,
-    data: &[(PathBuf, DebugId)],
+    data: &[ReportItem],
+    sourcefiles: &SourceFiles,
 ) -> fmt::Result {
     print_section_title(f, title)?;
-    for (path, debug_id) in data.iter().sorted_by_key(|x| &x.0) {
-        writeln!(f, "    {debug_id} - {}", path.display())?;
+    for item in data.iter().sorted_by_key(|x| &x.path) {
+        writeln!(f, "    {} - {}", item.debug_id, item.path.display())?;
+        for (level, message) in sourcefiles
+            .get(&item.url)
+            .iter()
+            .flat_map(|sourcefile| &sourcefile.messages)
+        {
+            writeln!(f, "        - {}: {message}", style(&level).red())?;
+        }
     }
     Ok(())
 }
@@ -54,24 +64,57 @@ fn print_section_title(f: &mut fmt::Formatter<'_>, title: &str) -> fmt::Result {
     writeln!(f, "  {}", style(title).yellow().bold())
 }
 
-#[derive(Debug, Clone, Default)]
-pub struct InjectReport {
-    pub injected: Vec<(PathBuf, DebugId)>,
-    pub previously_injected: Vec<(PathBuf, DebugId)>,
-    pub sourcemaps: Vec<(PathBuf, DebugId)>,
-    pub skipped_sourcemaps: Vec<(PathBuf, DebugId)>,
+#[derive(Debug, Clone)]
+pub struct ReportItem {
+    path: PathBuf,
+    url: String,
+    debug_id: DebugId,
 }
 
-impl InjectReport {
+/// Report for the inject operation, including any warnings or errors from the sources.
+pub struct InjectReport<'a> {
+    inner: InjectReportBuilder,
+    sourcefiles: &'a SourceFiles,
+}
+
+/// Builder for the inject report.
+/// To print the report, we need to add the sources to the report,
+/// as we pull any warnings or errors from there.
+#[derive(Debug, Clone, Default)]
+pub struct InjectReportBuilder {
+    pub injected: Vec<ReportItem>,
+    pub previously_injected: Vec<ReportItem>,
+    pub sourcemaps: Vec<ReportItem>,
+    pub skipped_sourcemaps: Vec<ReportItem>,
+}
+
+impl ReportItem {
+    pub fn new(path: PathBuf, url: String, debug_id: DebugId) -> Self {
+        Self {
+            path,
+            url,
+            debug_id,
+        }
+    }
+}
+
+impl InjectReportBuilder {
     pub fn is_empty(&self) -> bool {
         self.injected.is_empty()
             && self.previously_injected.is_empty()
             && self.sourcemaps.is_empty()
             && self.skipped_sourcemaps.is_empty()
     }
+
+    pub fn into_report<'a>(self, sourcefiles: &'a SourceFiles) -> InjectReport<'a> {
+        InjectReport {
+            inner: self,
+            sourcefiles,
+        }
+    }
 }
 
-impl fmt::Display for InjectReport {
+impl fmt::Display for InjectReport<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(
             f,
@@ -79,35 +122,39 @@ impl fmt::Display for InjectReport {
             style("Source Map Debug ID Injection Report").dim().bold()
         )?;
 
-        if !self.injected.is_empty() {
+        if !self.inner.injected.is_empty() {
             print_section_with_debugid(
                 f,
                 "Modified: The following source files have been modified to have debug ids",
-                &self.injected,
+                &self.inner.injected,
+                self.sourcefiles,
             )?;
         }
 
-        if !self.sourcemaps.is_empty() {
+        if !self.inner.sourcemaps.is_empty() {
             print_section_with_debugid(
                 f,
                 "Modified: The following sourcemap files have been modified to have debug ids",
-                &self.sourcemaps,
+                &self.inner.sourcemaps,
+                self.sourcefiles,
             )?;
         }
 
-        if !self.previously_injected.is_empty() {
+        if !self.inner.previously_injected.is_empty() {
             print_section_with_debugid(
                 f,
                 "Ignored: The following source files already have debug ids",
-                &self.previously_injected,
+                &self.inner.previously_injected,
+                self.sourcefiles,
             )?;
         }
 
-        if !self.skipped_sourcemaps.is_empty() {
+        if !self.inner.skipped_sourcemaps.is_empty() {
             print_section_with_debugid(
                 f,
                 "Ignored: The following sourcemap files already have debug ids",
-                &self.skipped_sourcemaps,
+                &self.inner.skipped_sourcemaps,
+                self.sourcefiles,
             )?;
         }
 

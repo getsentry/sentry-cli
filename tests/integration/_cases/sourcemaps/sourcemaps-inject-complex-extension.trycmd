@@ -5,6 +5,7 @@ $ sentry-cli sourcemaps inject --ext="complex.js" --dry-run tests/integration/_f
 Source Map Debug ID Injection Report
   Modified: [..]
     [..] - tests/integration/_fixtures/inject_complex_extension/hello.complex.js
+        - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for tests/integration/_fixtures/inject_complex_extension/hello.complex.js)
 
 
 ```
