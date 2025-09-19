@@ -209,9 +209,7 @@ impl VcsUrl {
 
 fn extract_provider_name(host: &str) -> &str {
     let trimmed = host.trim_end_matches('.');
-    let mut iter = trimmed.rsplit('.');
-    iter.next(); // skip TLD
-    iter.next().unwrap_or(trimmed).to_owned()
+    trimmed.rsplit('.').nth(1).unwrap_or(trimmed)
 }
 
 fn is_matching_url(a: &str, b: &str) -> bool {
