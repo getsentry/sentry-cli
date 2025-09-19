@@ -208,15 +208,10 @@ impl VcsUrl {
 }
 
 fn extract_provider_name(host: &str) -> String {
-    let trimmed_host = host.trim_end_matches('.');
-
-    // Split by dots and take the second-to-last part if there are at least 2 parts
-    let parts: Vec<&str> = trimmed_host.split('.').collect();
-    if parts.len() >= 2 {
-        parts[parts.len() - 2].to_owned()
-    } else {
-        trimmed_host.to_owned()
-    }
+    let trimmed = host.trim_end_matches('.');
+    let mut iter = trimmed.rsplit('.');
+    iter.next(); // skip TLD
+    iter.next().unwrap_or(trimmed).to_owned()
 }
 
 fn is_matching_url(a: &str, b: &str) -> bool {
