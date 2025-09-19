@@ -223,7 +223,7 @@ pub fn get_repo_from_remote(repo: &str) -> String {
 
 pub fn get_provider_from_remote(remote: &str) -> String {
     let obj = VcsUrl::parse(remote);
-    extract_provider_name(&obj.provider)
+    extract_provider_name(&obj.provider).to_owned()
 }
 
 pub fn git_repo_remote_url(
