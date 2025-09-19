@@ -84,7 +84,9 @@ enum AssetUtil {
                 key.perform(Selector(("keyList"))),
                 to: UnsafeMutableRawPointer.self
             )
-            let rendition = createRendition(from: structuredThemeStore, keyList)
+            guard let rendition = createRendition(from: structuredThemeStore, keyList) else {
+                continue
+            }
 
             let data = rendition.value(forKey: "_srcData") as! Data
             let length = UInt(data.count)
@@ -198,13 +200,13 @@ enum AssetUtil {
     }
 
     private static func createRendition(from themeStore: NSObject, _ keyList: UnsafeMutableRawPointer)
-        -> NSObject
+        -> NSObject?
     {
         let renditionWithKeySelector = Selector(("renditionWithKey:"))
         let renditionWithKeyMethod = themeStore.method(for: renditionWithKeySelector)!
         let renditionWithKeyImp = unsafeBitCast(renditionWithKeyMethod, to: objectiveCMethodImp.self)
-        return renditionWithKeyImp(themeStore, renditionWithKeySelector, keyList)!.takeUnretainedValue()
-            as! NSObject
+        return renditionWithKeyImp(themeStore, renditionWithKeySelector, keyList)?.takeUnretainedValue()
+            as? NSObject
     }
 
     private static func handleReferenceKey(
@@ -222,7 +224,9 @@ enum AssetUtil {
             referenceKey.perform(Selector(("keyList"))),
             to: UnsafeMutableRawPointer.self
         )
-        let referenceRendition = createRendition(from: themeStore, referenceKeyList)
+        guard let referenceRendition = createRendition(from: themeStore, referenceKeyList) else {
+            return false
+        }
 
         if let result = referenceRendition.perform(Selector(("unslicedImage"))) {
             let image = result.takeUnretainedValue() as! CGImage
