@@ -221,6 +221,32 @@ pub fn get_repo_from_remote(repo: &str) -> String {
     obj.id
 }
 
+/// Like get_repo_from_remote but preserves the original case of the repository name.
+/// This is used specifically for build upload where case preservation is important.
+pub fn get_repo_from_remote_preserve_case(repo: &str) -> String {
+    // First get the lowercase version to ensure we handle all the complex VCS URL patterns correctly
+    let lowercase_result = get_repo_from_remote(repo);
+
+    // Then try to extract the case-preserved repository path using simple regex patterns
+    lazy_static! {
+        // Matches most common Git URL patterns to extract the repository path
+        static ref REPO_PATH_RE: Regex = Regex::new(
+            r"(?:https?://[^/]+/|git@[^:/]+[:/]|ssh://(?:[^@]+@)?[^/]+/)(.+?)(?:\.git)?/?$"
+        ).unwrap();
+    }
+
+    if let Some(caps) = REPO_PATH_RE.captures(repo) {
+        let case_preserved_path = &caps[1];
+        // Use the case-preserved version if it looks like a valid repo path (contains '/')
+        if case_preserved_path.contains('/') && case_preserved_path.len() > 1 {
+            return case_preserved_path.to_string();
+        }
+    }
+
+    // Fall back to the lowercase version if regex extraction fails
+    lowercase_result
+}
+
 pub fn get_provider_from_remote(remote: &str) -> String {
     let obj = VcsUrl::parse(remote);
     extract_provider_name(&obj.provider).to_owned()
@@ -292,6 +318,19 @@ fn find_merge_base_ref(
 /// Prefers "upstream" remote if it exists, then "origin", otherwise uses the first available remote.
 /// Returns the base repository name if a remote is found.
 pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
+    git_repo_base_repo_name_impl(repo, false)
+}
+
+/// Like git_repo_base_repo_name but preserves the original case of the repository name.
+/// This is used specifically for build upload where case preservation is important.
+pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<Option<String>> {
+    git_repo_base_repo_name_impl(repo, true)
+}
+
+fn git_repo_base_repo_name_impl(
+    repo: &git2::Repository,
+    preserve_case: bool,
+) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
     let remote_names: Vec<&str> = remotes.iter().flatten().collect();
 
@@ -312,7 +351,12 @@ pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>
     match git_repo_remote_url(repo, chosen_remote) {
         Ok(remote_url) => {
             debug!("Found remote '{}': {}", chosen_remote, remote_url);
-            Ok(Some(get_repo_from_remote(&remote_url)))
+            let repo_name = if preserve_case {
+                get_repo_from_remote_preserve_case(&remote_url)
+            } else {
+                get_repo_from_remote(&remote_url)
+            };
+            Ok(Some(repo_name))
         }
         Err(e) => {
             warn!("Could not get URL for remote '{}': {}", chosen_remote, e);
@@ -939,6 +983,43 @@ mod tests {
                 provider: "gitlab.com".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
+        );
+    }
+
+    #[test]
+    fn test_get_repo_from_remote_preserve_case() {
+        // Test that case-preserving function maintains original casing
+        assert_eq!(
+            get_repo_from_remote_preserve_case("https://github.com/MyOrg/MyRepo"),
+            "MyOrg/MyRepo"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("git@github.com:SentryOrg/SentryRepo.git"),
+            "SentryOrg/SentryRepo"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("https://gitlab.com/MyCompany/MyProject"),
+            "MyCompany/MyProject"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("git@bitbucket.org:TeamName/ProjectName.git"),
+            "TeamName/ProjectName"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("ssh://git@github.com/MyUser/MyRepo.git"),
+            "MyUser/MyRepo"
+        );
+
+        // Test that regular function still lowercases
+        assert_eq!(
+            get_repo_from_remote("https://github.com/MyOrg/MyRepo"),
+            "myorg/myrepo"
+        );
+
+        // Test edge cases - should fall back to lowercase when regex doesn't match
+        assert_eq!(
+            get_repo_from_remote_preserve_case("invalid-url"),
+            get_repo_from_remote("invalid-url")
         );
     }
 
