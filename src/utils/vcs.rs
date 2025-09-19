@@ -207,6 +207,11 @@ impl VcsUrl {
     }
 }
 
+fn extract_provider_name(host: &str) -> &str {
+    let trimmed = host.trim_end_matches('.');
+    trimmed.rsplit('.').nth(1).unwrap_or(trimmed)
+}
+
 fn is_matching_url(a: &str, b: &str) -> bool {
     VcsUrl::parse(a) == VcsUrl::parse(b)
 }
@@ -218,7 +223,7 @@ pub fn get_repo_from_remote(repo: &str) -> String {
 
 pub fn get_provider_from_remote(remote: &str) -> String {
     let obj = VcsUrl::parse(remote);
-    obj.provider
+    extract_provider_name(&obj.provider).to_owned()
 }
 
 pub fn git_repo_remote_url(
@@ -919,6 +924,63 @@ mod tests {
                 provider: "gitlab.com".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
+        );
+    }
+
+    #[test]
+    fn test_extract_provider_name() {
+        // Test basic provider name extraction
+        assert_eq!(extract_provider_name("github.com"), "github");
+        assert_eq!(extract_provider_name("gitlab.com"), "gitlab");
+        assert_eq!(extract_provider_name("bitbucket.org"), "bitbucket");
+
+        // Test edge case with trailing dots
+        assert_eq!(extract_provider_name("github.com."), "github");
+
+        // Test subdomain cases - we want the part before TLD, not the subdomain
+        assert_eq!(extract_provider_name("api.github.com"), "github");
+        assert_eq!(extract_provider_name("ssh.dev.azure.com"), "azure");
+        assert_eq!(extract_provider_name("dev.azure.com"), "azure");
+
+        // Test single component (no dots)
+        assert_eq!(extract_provider_name("localhost"), "localhost");
+        assert_eq!(extract_provider_name("myserver"), "myserver");
+
+        // Test empty string
+        assert_eq!(extract_provider_name(""), "");
+    }
+
+    #[test]
+    fn test_get_provider_from_remote() {
+        // Test that get_provider_from_remote normalizes provider names
+        assert_eq!(
+            get_provider_from_remote("https://github.com/user/repo"),
+            "github"
+        );
+        assert_eq!(
+            get_provider_from_remote("git@gitlab.com:user/repo.git"),
+            "gitlab"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://bitbucket.org/user/repo"),
+            "bitbucket"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://dev.azure.com/user/repo"),
+            "azure"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://github.mycompany.com/user/repo"),
+            "mycompany"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://source.developers.google.com/p/project/r/repo"),
+            "google"
+        );
+        // Test edge case with trailing dot in hostname
+        assert_eq!(
+            get_provider_from_remote("https://github.com./user/repo"),
+            "github"
         );
     }
 
