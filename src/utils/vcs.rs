@@ -1372,12 +1372,12 @@ mod tests {
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_BASE_REF", "main");
         let base_ref = get_github_base_ref();
-        assert_eq!(base_ref, Some("main".to_string()));
+        assert_eq!(base_ref, Some("main".to_owned()));
 
         // Test with different base branch
         std::env::set_var("GITHUB_BASE_REF", "develop");
         let base_ref = get_github_base_ref();
-        assert_eq!(base_ref, Some("develop".to_string()));
+        assert_eq!(base_ref, Some("develop".to_owned()));
 
         // Test when not in pull_request event
         std::env::set_var("GITHUB_EVENT_NAME", "push");
