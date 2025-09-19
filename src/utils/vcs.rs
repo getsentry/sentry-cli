@@ -239,7 +239,7 @@ pub fn get_repo_from_remote_preserve_case(repo: &str) -> String {
         let case_preserved_path = &caps[1];
         // Use the case-preserved version if it looks like a valid repo path (contains '/')
         if case_preserved_path.contains('/') && case_preserved_path.len() > 1 {
-            return case_preserved_path.to_string();
+            return case_preserved_path.to_owned();
         }
     }
 
@@ -312,13 +312,6 @@ fn find_merge_base_ref(
         merge_base_sha
     );
     Ok(merge_base_sha)
-}
-
-/// Attempts to get the base repository name from git remotes.
-/// Prefers "upstream" remote if it exists, then "origin", otherwise uses the first available remote.
-/// Returns the base repository name if a remote is found.
-pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
-    git_repo_base_repo_name_impl(repo, false)
 }
 
 /// Like git_repo_base_repo_name but preserves the original case of the repository name.
