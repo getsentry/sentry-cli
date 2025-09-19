@@ -287,7 +287,8 @@ impl SourceMapProcessor {
     /// Collect references to sourcemaps in minified source files
     /// and saves them in `self.sourcemap_references`.
     fn collect_sourcemap_references(&mut self) {
-        let sourcemaps = self
+        // Collect available sourcemaps
+        let sourcemaps: HashSet<_> = self
             .sources
             .iter()
             .map(|x| x.1)
@@ -295,45 +296,69 @@ impl SourceMapProcessor {
             .map(|x| x.url.clone())
             .collect();
 
-        for source in self.sources.values_mut() {
-            // Skip everything but minified JS files.
-            if source.ty != SourceFileType::MinifiedSource {
-                continue;
-            }
+        let mut already_associated_sourcemaps = HashSet::new();
 
-            if self.sourcemap_references.contains_key(&source.url) {
-                continue;
-            }
+        let unassociated_js_source_locations: HashMap<_, _> = self
+            .sources
+            .values_mut()
+            .filter(|source| source.ty == SourceFileType::MinifiedSource)
+            .filter(|source| !self.sourcemap_references.contains_key(&source.url))
+            .filter_map(|source| {
+                str::from_utf8(&source.contents.clone())
+                    .map(|contents| {
+                        (
+                            source,
+                            discover_sourcemaps_location(contents)
+                                .filter(|loc| !is_remote_sourcemap(loc))
+                                .map(String::from),
+                        )
+                    })
+                    .ok()
+            })
+            .collect();
 
-            let Ok(contents) = std::str::from_utf8(&source.contents) else {
-                continue;
-            };
+        // First pass: if location discovered, add to sourcemap_references
+        unassociated_js_source_locations
+            .iter()
+            .filter_map(|(source, location)| location.as_ref().map(|location| (source, location)))
+            .for_each(|(source, location)| {
+                // Add location to already associated sourcemaps, so we cannot guess it again.
+                already_associated_sourcemaps.insert(location.to_owned());
 
-            // If this is a full external URL, the code below is going to attempt
-            // to "normalize" it with the source path, resulting in a bogus path
-            // like "path/to/source/dir/https://some-static-host.example.com/path/to/foo.js.map"
-            // that can't be resolved to a source map file.
-            // Instead, we pretend we failed to discover the location, and we fall back to
-            // guessing the source map location based on the source location.
-            let location =
-                discover_sourcemaps_location(contents).filter(|loc| !is_remote_sourcemap(loc));
-            let sourcemap_reference = match location {
-                Some(url) => SourceMapReference::from_url(url.to_owned()),
-                None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
-                    Ok(target) => target,
-                    Err(err) => {
+                self.sourcemap_references.insert(
+                    source.url.clone(),
+                    Some(SourceMapReference::from_url(location.to_owned())),
+                );
+            });
+
+        // Second pass: for remaining sourcemaps, try to guess the location
+        unassociated_js_source_locations
+            .into_iter()
+            .filter(|(_, location)| location.is_none())
+            .for_each(|(source, _)| {
+                let sourcemap_reference = guess_sourcemap_reference(&sourcemaps, &source.url)
+                    .inspect_err(|err| {
                         source.warn(format!(
                             "could not determine a source map reference ({err})"
                         ));
-                        self.sourcemap_references.insert(source.url.clone(), None);
-                        continue;
-                    }
-                },
-            };
+                    })
+                    .ok()
+                    .filter(|sourcemap_reference| {
+                        !already_associated_sourcemaps.contains(&sourcemap_reference.url)
+                    })
+                    .inspect(|sourcemap_reference| {
+                        // In practice, original_url is always set in guess_sourcemap_reference
+                        if let Some(original_url) =
+                            sourcemap_reference.original_url.as_ref().cloned()
+                        {
+                            // Add original url to already associated sourcemaps, so we cannot guess it again.
+                            already_associated_sourcemaps.insert(original_url);
+                        }
+                    });
 
-            self.sourcemap_references
-                .insert(source.url.clone(), Some(sourcemap_reference));
-        }
+                self.sourcemap_references
+                    .insert(source.url.clone(), sourcemap_reference);
+            });
     }
 
     pub fn dump_log(&self, title: &str) {
