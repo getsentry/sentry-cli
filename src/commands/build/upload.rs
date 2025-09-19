@@ -325,7 +325,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         );
         for (path, reason) in errored_paths_and_reasons {
-            warn!("  - {} ({})", path.display(), reason);
+            warn!("  - {}", path.display());
+            warn!("    Error: {reason:#}");
         }
     }
 
