@@ -343,6 +343,21 @@ pub fn get_github_pr_number() -> Option<u32> {
     Some(pr_number)
 }
 
+/// Attempts to get the base branch from GitHub Actions environment variables.
+/// Returns the base branch name if running in a GitHub Actions pull request environment.
+pub fn get_github_base_ref() -> Option<String> {
+    let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
+
+    if event_name != "pull_request" {
+        debug!("Not running in pull_request event, got: {}", event_name);
+        return None;
+    }
+
+    let base_ref = std::env::var("GITHUB_BASE_REF").ok()?;
+    debug!("Auto-detected base ref from GitHub Actions: {}", base_ref);
+    Some(base_ref)
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
@@ -1412,5 +1427,31 @@ mod tests {
         assert_eq!(pr_number, None);
         std::env::remove_var("GITHUB_EVENT_NAME");
         std::env::remove_var("GITHUB_REF");
+    }
+
+    #[test]
+    fn test_get_github_base_ref() {
+        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
+        std::env::set_var("GITHUB_BASE_REF", "main");
+        let base_ref = get_github_base_ref();
+        assert_eq!(base_ref, Some("main".to_owned()));
+
+        // Test with different base branch
+        std::env::set_var("GITHUB_BASE_REF", "develop");
+        let base_ref = get_github_base_ref();
+        assert_eq!(base_ref, Some("develop".to_owned()));
+
+        // Test when not in pull_request event
+        std::env::set_var("GITHUB_EVENT_NAME", "push");
+        let base_ref = get_github_base_ref();
+        assert_eq!(base_ref, None);
+
+        // Test when GITHUB_BASE_REF is not set
+        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
+        std::env::remove_var("GITHUB_BASE_REF");
+        let base_ref = get_github_base_ref();
+        assert_eq!(base_ref, None);
+
+        std::env::remove_var("GITHUB_EVENT_NAME");
     }
 }
