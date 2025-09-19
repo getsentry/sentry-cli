@@ -935,12 +935,30 @@ mod tests {
     #[test]
     fn test_get_provider_from_remote() {
         // Test that get_provider_from_remote normalizes provider names
-        assert_eq!(get_provider_from_remote("https://github.com/user/repo"), "github");
-        assert_eq!(get_provider_from_remote("git@gitlab.com:user/repo.git"), "gitlab");
-        assert_eq!(get_provider_from_remote("https://bitbucket.org/user/repo"), "bitbucket");
-        assert_eq!(get_provider_from_remote("https://dev.azure.com/user/repo"), "azure");
-        assert_eq!(get_provider_from_remote("https://github.mycompany.com/user/repo"), "mycompany");
-        assert_eq!(get_provider_from_remote("https://source.developers.google.com/p/project/r/repo"), "google");
+        assert_eq!(
+            get_provider_from_remote("https://github.com/user/repo"),
+            "github"
+        );
+        assert_eq!(
+            get_provider_from_remote("git@gitlab.com:user/repo.git"),
+            "gitlab"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://bitbucket.org/user/repo"),
+            "bitbucket"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://dev.azure.com/user/repo"),
+            "azure"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://github.mycompany.com/user/repo"),
+            "mycompany"
+        );
+        assert_eq!(
+            get_provider_from_remote("https://source.developers.google.com/p/project/r/repo"),
+            "google"
+        );
     }
 
     #[test]
