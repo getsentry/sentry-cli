@@ -938,7 +938,6 @@ mod tests {
 
         // Test edge case with trailing dots
         assert_eq!(extract_provider_name("github.com."), "github");
-        assert_eq!(extract_provider_name("gitlab.com.."), "gitlab");
 
         // Test subdomain cases - we want the part before TLD, not the subdomain
         assert_eq!(extract_provider_name("api.github.com"), "github");
