@@ -24,8 +24,9 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref,
-    git_repo_base_repo_name, git_repo_head_ref, git_repo_remote_url,
+    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote_preserve_case,
+    git_repo_base_ref, git_repo_base_repo_name_preserve_case, git_repo_head_ref,
+    git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -140,7 +141,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .or_else(|| {
                 remote_url
                     .as_ref()
-                    .map(|url| get_repo_from_remote(url))
+                    .map(|url| get_repo_from_remote_preserve_case(url))
                     .map(Cow::Owned)
             });
 
@@ -198,7 +199,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .or_else(|| {
                 // Try to get the base repo name from the VCS if not provided
                 repo_ref
-                    .and_then(|r| match git_repo_base_repo_name(r) {
+                    .and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
                         Ok(Some(base_repo_name)) => {
                             debug!("Found base repository name: {}", base_repo_name);
                             Some(base_repo_name)
