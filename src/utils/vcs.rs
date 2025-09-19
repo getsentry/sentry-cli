@@ -208,12 +208,14 @@ impl VcsUrl {
 }
 
 fn extract_provider_name(host: &str) -> String {
-    // Take just the part immediately before the last dot
-    let parts: Vec<&str> = host.split('.').collect();
+    let trimmed_host = host.trim_end_matches('.');
+
+    // Split by dots and take the second-to-last part if there are at least 2 parts
+    let parts: Vec<&str> = trimmed_host.split('.').collect();
     if parts.len() >= 2 {
         parts[parts.len() - 2].to_owned()
     } else {
-        host.to_owned()
+        trimmed_host.to_owned()
     }
 }
 
@@ -933,6 +935,30 @@ mod tests {
     }
 
     #[test]
+    fn test_extract_provider_name() {
+        // Test basic provider name extraction
+        assert_eq!(extract_provider_name("github.com"), "github");
+        assert_eq!(extract_provider_name("gitlab.com"), "gitlab");
+        assert_eq!(extract_provider_name("bitbucket.org"), "bitbucket");
+
+        // Test edge case with trailing dots
+        assert_eq!(extract_provider_name("github.com."), "github");
+        assert_eq!(extract_provider_name("gitlab.com.."), "gitlab");
+
+        // Test subdomain cases - we want the part before TLD, not the subdomain
+        assert_eq!(extract_provider_name("api.github.com"), "github");
+        assert_eq!(extract_provider_name("ssh.dev.azure.com"), "azure");
+        assert_eq!(extract_provider_name("dev.azure.com"), "azure");
+
+        // Test single component (no dots)
+        assert_eq!(extract_provider_name("localhost"), "localhost");
+        assert_eq!(extract_provider_name("myserver"), "myserver");
+
+        // Test empty string
+        assert_eq!(extract_provider_name(""), "");
+    }
+
+    #[test]
     fn test_get_provider_from_remote() {
         // Test that get_provider_from_remote normalizes provider names
         assert_eq!(
@@ -958,6 +984,11 @@ mod tests {
         assert_eq!(
             get_provider_from_remote("https://source.developers.google.com/p/project/r/repo"),
             "google"
+        );
+        // Test edge case with trailing dot in hostname
+        assert_eq!(
+            get_provider_from_remote("https://github.com./user/repo"),
+            "github"
         );
     }
 
