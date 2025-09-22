@@ -17,7 +17,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let org = config.get_org(matches)?;
     let mut monitors = api.authenticated()?.list_organization_monitors(&org)?;
-    monitors.sort_by_key(|p| (p.name.clone()));
+    monitors.sort_by_key(|p| p.name.clone());
 
     let mut table = Table::new();
     table
