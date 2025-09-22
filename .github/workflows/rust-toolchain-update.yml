@@ -13,6 +13,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      actions: write
 
     steps:
       - name: Checkout Repository
@@ -127,3 +128,12 @@ jobs:
             });
 
             console.log(`Created PR #${pr.number}: ${pr.title}`);
+
+            // Run the CI workflow on the PR branch. Needed because GITHUB_TOKEN
+            // doesn't trigger workflows, except for workflow_dispatch.
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              ref: branchName,
+            });
