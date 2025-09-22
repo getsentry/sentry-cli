@@ -571,8 +571,8 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
     for (i, line) in lines.iter().enumerate() {
         if line.contains("\"head\":") {
             // Look for "sha" in the next few lines after finding "head"
-            for j in i..std::cmp::min(i + 10, lines.len()) {
-                if let Some(sha) = extract_sha_from_line(lines[j]) {
+            for line in lines.iter().take(std::cmp::min(i + 10, lines.len())).skip(i) {
+                if let Some(sha) = extract_sha_from_line(line) {
                     return Some(sha);
                 }
             }
@@ -587,11 +587,11 @@ fn extract_sha_from_line(line: &str) -> Option<String> {
     if line.contains("\"sha\":") {
         // Try with space first: "sha": "
         if let Some(sha_part) = line.split("\"sha\": \"").nth(1) {
-            return sha_part.split('"').next().map(|sha| sha.to_string());
+            return sha_part.split('"').next().map(|sha| sha.to_owned());
         }
         // Try without space: "sha":"
         if let Some(sha_part) = line.split("\"sha\":\"").nth(1) {
-            return sha_part.split('"').next().map(|sha| sha.to_string());
+            return sha_part.split('"').next().map(|sha| sha.to_owned());
         }
     }
     None
