@@ -551,9 +551,65 @@ fn find_matching_revs(
 }
 
 pub fn find_head() -> Result<String> {
+    // If GITHUB_EVENT_PATH is set, try to extract PR head SHA from the event payload
+    if let Ok(event_path) = std::env::var("GITHUB_EVENT_PATH") {
+        if let Ok(content) = std::fs::read_to_string(&event_path) {
+            if let Some(pr_head_sha) = extract_pr_head_sha_from_event(&content) {
+                debug!(
+                    "Using GitHub Actions PR head SHA from event payload: {}",
+                    pr_head_sha
+                );
+                return Ok(pr_head_sha);
+            }
+        }
+    }
+
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
     Ok(head.id().to_string())
+}
+
+/// Extracts the PR head SHA from GitHub Actions event payload JSON.
+/// Returns None if not a PR event or if SHA cannot be extracted.
+fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
+    // Simple JSON parsing to extract pull_request.head.sha
+    // Look for the pattern: "pull_request": { ... "head": { ... "sha": "..." ... } ... }
+    let lines: Vec<&str> = json_content.lines().collect();
+
+    // Find if this is a pull_request event
+    let has_pull_request = lines.iter().any(|line| line.contains("\"pull_request\""));
+    if !has_pull_request {
+        return None;
+    }
+
+    // Look for the head SHA within the pull_request section
+    for (i, line) in lines.iter().enumerate() {
+        if line.contains("\"head\":") {
+            // Look for "sha" in the next few lines after finding "head"
+            for j in i..std::cmp::min(i + 10, lines.len()) {
+                if let Some(sha) = extract_sha_from_line(lines[j]) {
+                    return Some(sha);
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Extracts SHA from a JSON line containing "sha": "abcd1234..." or "sha":"abcd1234..."
+fn extract_sha_from_line(line: &str) -> Option<String> {
+    if line.contains("\"sha\":") {
+        // Try with space first: "sha": "
+        if let Some(sha_part) = line.split("\"sha\": \"").nth(1) {
+            return sha_part.split('"').next().map(|sha| sha.to_string());
+        }
+        // Try without space: "sha":"
+        if let Some(sha_part) = line.split("\"sha\":\"").nth(1) {
+            return sha_part.split('"').next().map(|sha| sha.to_string());
+        }
+    }
+    None
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -1506,5 +1562,112 @@ mod tests {
         assert_eq!(base_ref, None);
 
         std::env::remove_var("GITHUB_EVENT_NAME");
+    }
+
+    #[test]
+    fn test_extract_sha_from_line() {
+        // Test valid SHA extraction
+        assert_eq!(
+            extract_sha_from_line("      \"sha\": \"abc123def456\","),
+            Some("abc123def456".to_string())
+        );
+
+        // Test with different spacing
+        assert_eq!(
+            extract_sha_from_line("\"sha\":\"def789ghi012\""),
+            Some("def789ghi012".to_string())
+        );
+
+        // Test line without SHA
+        assert_eq!(
+            extract_sha_from_line("      \"ref\": \"refs/heads/main\","),
+            None
+        );
+
+        // Test empty line
+        assert_eq!(extract_sha_from_line(""), None);
+    }
+
+    #[test]
+    fn test_extract_pr_head_sha_from_event() {
+        // Test valid PR event JSON
+        let pr_json = r#"{
+  "action": "opened",
+  "number": 123,
+  "pull_request": {
+    "id": 789,
+    "head": {
+      "ref": "feature-branch",
+      "sha": "abc123def456789"
+    },
+    "base": {
+      "ref": "main",
+      "sha": "def456ghi789012"
+    }
+  }
+}"#;
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(pr_json),
+            Some("abc123def456789".to_string())
+        );
+
+        // Test non-PR event
+        let push_json = r#"{
+  "action": "push",
+  "ref": "refs/heads/main",
+  "head_commit": {
+    "id": "xyz789abc123"
+  }
+}"#;
+
+        assert_eq!(extract_pr_head_sha_from_event(push_json), None);
+
+        // Test malformed JSON (missing head SHA)
+        let malformed_json = r#"{
+  "pull_request": {
+    "id": 789,
+    "head": {
+      "ref": "feature-branch"
+    }
+  }
+}"#;
+
+        assert_eq!(extract_pr_head_sha_from_event(malformed_json), None);
+
+        // Test empty JSON
+        assert_eq!(extract_pr_head_sha_from_event("{}"), None);
+    }
+
+    #[test]
+    fn test_find_head_with_github_event_path() {
+        use std::fs;
+
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let event_file = temp_dir.path().join("event.json");
+
+        // Test with valid PR event
+        let pr_json = r#"{
+  "action": "opened",
+  "pull_request": {
+    "head": {
+      "sha": "pr-head-sha-123"
+    }
+  }
+}"#;
+
+        fs::write(&event_file, pr_json).expect("Failed to write event file");
+
+        // Set GITHUB_EVENT_PATH and test find_head
+        std::env::set_var("GITHUB_EVENT_PATH", event_file.to_str().unwrap());
+
+        // Since we're not in a git repo, this would normally fail
+        // But with GITHUB_EVENT_PATH set, it should return the PR head SHA
+        let result = find_head();
+
+        std::env::remove_var("GITHUB_EVENT_PATH");
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "pr-head-sha-123");
     }
 }
