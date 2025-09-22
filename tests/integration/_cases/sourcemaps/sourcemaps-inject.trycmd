@@ -13,15 +13,19 @@ Source Map Debug ID Injection Report
     [..]-[..]-[..]-[..]-[..] - ./server/app/page.js
     [..]-[..]-[..]-[..]-[..] - ./server/chunks/1.js
     [..]-[..]-[..]-[..]-[..] - ./server/chunks/flight-server-css-manifest.js
+        - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for ./server/chunks/flight-server-css-manifest.js)
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_embedded.js
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted.js
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted_full.js
     [..]-[..]-[..]-[..]-[..] - ./server/flight-manifest.js
+        - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for ./server/flight-manifest.js)
     [..]-[..]-[..]-[..]-[..] - ./server/pages/_document.js
     [..]-[..]-[..]-[..]-[..] - ./server/pages/api/hello.js
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/575-bb7d7e0e6de8d623.js
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/app/client/layout-ba9c3036fc0dba78.js
+        - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for ./static/chunks/app/client/layout-ba9c3036fc0dba78.js)
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/app/head-172ad45600676c06.js
+        - warning: could not determine a source map reference (Could not auto-detect referenced sourcemap for ./static/chunks/app/head-172ad45600676c06.js)
     [..]-[..]-[..]-[..]-[..] - ./static/chunks/pages/asdf-05b39167abbe433b.js
   Modified: The following sourcemap files have been modified to have debug ids
     [..]-[..]-[..]-[..]-[..] - ./server/dummy_hosted.js.map

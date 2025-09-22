@@ -27,7 +27,7 @@ use crate::utils::file_upload::{
 };
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
-use crate::utils::sourcemaps::inject::InjectReport;
+use crate::utils::sourcemaps::inject::{InjectReportBuilder, ReportItem};
 
 pub mod inject;
 
@@ -801,7 +801,7 @@ impl SourceMapProcessor {
         self.collect_sourcemap_references();
         println!("{} Injecting debug ids", style(">").dim());
 
-        let mut report = InjectReport::default();
+        let mut report_builder = InjectReportBuilder::default();
 
         let mut sourcemaps = self
             .sources
@@ -821,9 +821,11 @@ impl SourceMapProcessor {
             }
 
             if let Some(debug_id) = self.debug_ids.get(source_url) {
-                report
-                    .previously_injected
-                    .push((source_url.into(), *debug_id));
+                report_builder.previously_injected.push(ReportItem::new(
+                    source_url.into(),
+                    source_url.clone(),
+                    *debug_id,
+                ));
                 continue;
             }
 
@@ -1017,13 +1019,17 @@ impl SourceMapProcessor {
                             }
 
                             if debug_id_fresh {
-                                report
-                                    .sourcemaps
-                                    .push((sourcemap_file.path.clone(), debug_id));
+                                report_builder.sourcemaps.push(ReportItem::new(
+                                    sourcemap_file.path.clone(),
+                                    sourcemap_file.url.clone(),
+                                    debug_id,
+                                ));
                             } else {
-                                report
-                                    .skipped_sourcemaps
-                                    .push((sourcemap_file.path.clone(), debug_id));
+                                report_builder.skipped_sourcemaps.push(ReportItem::new(
+                                    sourcemap_file.path.clone(),
+                                    sourcemap_file.url.clone(),
+                                    debug_id,
+                                ));
                             }
 
                             debug_id
@@ -1065,11 +1071,15 @@ impl SourceMapProcessor {
                 ))?;
             }
 
-            report.injected.push((source_file.path.clone(), debug_id));
+            report_builder.injected.push(ReportItem::new(
+                source_file.path.clone(),
+                source_file.url.clone(),
+                debug_id,
+            ));
         }
 
-        if !report.is_empty() {
-            println!("{report}");
+        if !report_builder.is_empty() {
+            println!("{}", report_builder.into_report(&self.sources));
         } else {
             println!("> Nothing to inject")
         }
