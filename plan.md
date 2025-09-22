@@ -3,7 +3,7 @@
 #### Goals
 - Identify every HTTP endpoint that sentry-cli can call, including dynamic and region-specific ones.
 - Ensure the enumeration is comprehensive and stays maintainable as the code evolves.
-- Prefer static analysis from code in `src/api/` (the network boundary), with optional automated checks and CI guardrails.
+- Prefer static analysis from code in `src/api/` (the network boundary).
 
 ### Background: Where network calls originate
 - The `src/api/mod.rs` module is the single low-level HTTP layer and also defines the high-level API methods used by commands.
@@ -109,76 +109,9 @@ find /workspace/tests/integration/_responses -type f -name '*.json' \
   - absolute: yes/no (absolute URL used)
   - notes: pagination, dynamic query params, error semantics
 
-8) Add guardrails so future endpoints can’t be missed
-- CI static checks:
-  - Fail if any `curl::easy::Easy` or other HTTP client is used outside `src/api/`:
-```bash
-rg -n --type rust "curl::|reqwest|hyper|ureq|isahc" /workspace/src --glob '!src/api/**' --quiet || true
-# Non-zero exit if matches found
-```
-  - Optional semgrep rule (below) to flag new sinks or raw HTTP calls outside `src/api/`.
 
 ### Optional tooling to improve confidence (justification and examples)
 - ripgrep (recommended): fast, zero-dependency, ideal for literal and regex-based searches. The commands above already cover most patterns.
-- semgrep (optional, for maintainability): lets us codify patterns for sinks and common path-building flows, catching future changes in CI.
-  - Pros: readable rules, works well for Rust for simple patterns; can track variable reuse within a function using ellipses.
-  - Cons: dataflow is limited; complex multi-function propagation is out-of-scope (but we don’t need it because paths are built within `src/api/`).
-- rust-analyzer (optional): interactive “Find References” on `get/post/put/delete/request` and `ApiRequest::send` to spot new call sites quickly during development.
-- tree-sitter (optional): for power users wanting AST-precise queries; overkill for this task.
-- We do not need heavyweight static analysis; endpoints are centrally defined and constructed in `src/api/` using clear patterns. `rg` + spot review is sufficient; semgrep adds helpful CI guardrails.
-
-Example semgrep rules (save as `.semgrep.yml`):
-```yaml
-rules:
-  - id: api-endpoint-sinks
-    languages: [rust]
-    message: API endpoint call
-    severity: INFO
-    pattern-either:
-      - pattern: $RECV.get($URL, ...)
-      - pattern: $RECV.post($URL, ...)
-      - pattern: $RECV.put($URL, ...)
-      - pattern: $RECV.delete($URL, ...)
-      - pattern: $RECV.request(Method::$M, $URL, ...)
-      - pattern: $RECV.download($URL, ...)
-    metadata:
-      category: sinks
-  - id: api-endpoint-inline-literal
-    languages: [rust]
-    message: Inline endpoint literal
-    severity: INFO
-    pattern-either:
-      - pattern: $RECV.get("$URLLIT", ...)
-      - pattern: $RECV.post("$URLLIT", ...)
-      - pattern: $RECV.put("$URLLIT", ...)
-      - pattern: $RECV.delete("$URLLIT", ...)
-      - pattern: $RECV.request(Method::$M, "$URLLIT", ...)
-      - pattern: $RECV.download("$URLLIT", ...)
-  - id: api-endpoint-from-format-var
-    languages: [rust]
-    message: Endpoint built via format! and later used
-    severity: INFO
-    patterns:
-      - pattern-inside: |
-          fn $F(..) {
-            ...
-            let $P = format!($FMT, ...);
-            ...
-            $CALL
-            ...
-          }
-      - pattern-either:
-          - pattern: $RECV.get(&$P, ...)
-          - pattern: $RECV.post(&$P, ...)
-          - pattern: $RECV.put(&$P, ...)
-          - pattern: $RECV.delete(&$P, ...)
-          - pattern: $RECV.request(Method::$M, &$P, ...)
-          - pattern: $RECV.download(&$P, ...)
-```
-Run:
-```bash
-semgrep --config .semgrep.yml --error --include /workspace/src/api
-```
 
 ### Edge cases and how to account for them
 - Server-provided URLs:
@@ -194,9 +127,7 @@ semgrep --config .semgrep.yml --error --include /workspace/src/api
 3) Manually review each function where a `path` is constructed to capture the final template and note optional query parameters.
 4) Cross-check with the response fixtures in `tests/integration/_responses/`; add any missing endpoints.
 5) Generate `docs/api_endpoints.md` with the structured inventory fields described above.
-6) Add the CI guardrails (ripgrep or semgrep checks) to prevent future drift.
 
 ### Deliverables
 - A human-readable list in `docs/api_endpoints.md` (or `.json`) containing all endpoint templates, with metadata (method, location, region-aware, absolute, notes).
-- Optional `.semgrep.yml` and CI hook to enforce network boundary and flag new sinks.
 - A short `README` in `docs/` explaining how to rerun the extraction.
