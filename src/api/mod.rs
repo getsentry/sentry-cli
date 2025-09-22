@@ -2178,18 +2178,6 @@ pub struct ReleaseCommit {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct GitHubAsset {
-    browser_download_url: String,
-    name: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-struct GitHubRelease {
-    tag_name: String,
-    assets: Vec<GitHubAsset>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 struct RegistryRelease {
     version: String,
     file_urls: HashMap<String, String>,
