@@ -330,13 +330,6 @@ fn find_merge_base_ref(
 /// Like git_repo_base_repo_name but preserves the original case of the repository name.
 /// This is used specifically for build upload where case preservation is important.
 pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<Option<String>> {
-    git_repo_base_repo_name_impl(repo, true)
-}
-
-fn git_repo_base_repo_name_impl(
-    repo: &git2::Repository,
-    preserve_case: bool,
-) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
     let remote_names: Vec<&str> = remotes.iter().flatten().collect();
 
@@ -357,11 +350,7 @@ fn git_repo_base_repo_name_impl(
     match git_repo_remote_url(repo, chosen_remote) {
         Ok(remote_url) => {
             debug!("Found remote '{}': {}", chosen_remote, remote_url);
-            let repo_name = if preserve_case {
-                get_repo_from_remote_preserve_case(&remote_url)
-            } else {
-                get_repo_from_remote(&remote_url)
-            };
+            let repo_name = get_repo_from_remote_preserve_case(&remote_url);
             Ok(Some(repo_name))
         }
         Err(e) => {
