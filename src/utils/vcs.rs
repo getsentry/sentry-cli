@@ -108,6 +108,14 @@ fn strip_git_suffix(s: &str) -> &str {
 
 impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
+        Self::parse_impl(url, false)
+    }
+
+    pub fn parse_preserve_case(url: &str) -> VcsUrl {
+        Self::parse_impl(url, true)
+    }
+
+    fn parse_impl(url: &str, preserve_case: bool) -> VcsUrl {
         lazy_static! {
             static ref GIT_URL_RE: Regex =
                 Regex::new(r"^(?:(?:git\+)?(?:git|ssh|https?))://(?:[^@]+@)?([^/]+)/(.+)$")
@@ -116,11 +124,11 @@ impl VcsUrl {
         }
 
         if let Some(caps) = GIT_URL_RE.captures(url) {
-            return VcsUrl::from_git_parts(&caps[1], &caps[2]);
+            return VcsUrl::from_git_parts(&caps[1], &caps[2], preserve_case);
         }
 
         if let Some(caps) = GIT_SSH_RE.captures(url) {
-            return VcsUrl::from_git_parts(&caps[1], &caps[2]);
+            return VcsUrl::from_git_parts(&caps[1], &caps[2], preserve_case);
         }
 
         VcsUrl {
@@ -129,7 +137,7 @@ impl VcsUrl {
         }
     }
 
-    fn from_git_parts(host: &str, path: &str) -> VcsUrl {
+    fn from_git_parts(host: &str, path: &str, preserve_case: bool) -> VcsUrl {
         // Azure Devops has multiple domains and multiple URL styles for the
         // various different API versions.
         lazy_static! {
@@ -149,7 +157,7 @@ impl VcsUrl {
         static GCB_DOMAIN: &str = "source.developers.google.com";
 
         if let Some(caps) = HOST_WITH_PORT.captures(host) {
-            return VcsUrl::from_git_parts(&caps[1], path);
+            return VcsUrl::from_git_parts(&caps[1], path, preserve_case);
         }
 
         if let Some(caps) = VS_DOMAIN_RE.captures(host) {
@@ -157,13 +165,21 @@ impl VcsUrl {
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.to_lowercase(),
-                    id: format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase()),
+                    id: if preserve_case {
+                        format!("{username}/{}", &caps[1])
+                    } else {
+                        format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase())
+                    },
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.to_lowercase(),
-                    id: caps[1].to_lowercase(),
+                    id: if preserve_case {
+                        caps[1].to_string()
+                    } else {
+                        caps[1].to_lowercase()
+                    },
                 };
             }
         }
@@ -173,13 +189,21 @@ impl VcsUrl {
             if let Some(caps) = AZUREDEV_VERSION_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: hostname.into(),
-                    id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+                    id: if preserve_case {
+                        format!("{}/{}", &caps[1], &caps[2])
+                    } else {
+                        format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase())
+                    },
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: hostname.to_lowercase(),
-                    id: caps[1].to_lowercase(),
+                    id: if preserve_case {
+                        caps[1].to_string()
+                    } else {
+                        caps[1].to_lowercase()
+                    },
                 };
             }
         }
@@ -196,13 +220,21 @@ impl VcsUrl {
         if let Some(caps) = BITBUCKET_SERVER_PATH_RE.captures(path) {
             return VcsUrl {
                 provider: host.to_lowercase(),
-                id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+                id: if preserve_case {
+                    format!("{}/{}", &caps[1], &caps[2])
+                } else {
+                    format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase())
+                },
             };
         }
 
         VcsUrl {
             provider: host.to_lowercase(),
-            id: strip_git_suffix(path).to_lowercase(),
+            id: if preserve_case {
+                strip_git_suffix(path).to_owned()
+            } else {
+                strip_git_suffix(path).to_lowercase()
+            },
         }
     }
 }
@@ -224,27 +256,8 @@ pub fn get_repo_from_remote(repo: &str) -> String {
 /// Like get_repo_from_remote but preserves the original case of the repository name.
 /// This is used specifically for build upload where case preservation is important.
 pub fn get_repo_from_remote_preserve_case(repo: &str) -> String {
-    // First get the lowercase version to ensure we handle all the complex VCS URL patterns correctly
-    let lowercase_result = get_repo_from_remote(repo);
-
-    // Then try to extract the case-preserved repository path using simple regex patterns
-    lazy_static! {
-        // Matches most common Git URL patterns to extract the repository path
-        static ref REPO_PATH_RE: Regex = Regex::new(
-            r"(?:https?://[^/]+/|git@[^:/]+[:/]|ssh://(?:[^@]+@)?[^/]+/)(.+?)(?:\.git)?/?$"
-        ).unwrap();
-    }
-
-    if let Some(caps) = REPO_PATH_RE.captures(repo) {
-        let case_preserved_path = &caps[1];
-        // Use the case-preserved version if it looks like a valid repo path (contains '/')
-        if case_preserved_path.contains('/') && case_preserved_path.len() > 1 {
-            return case_preserved_path.to_owned();
-        }
-    }
-
-    // Fall back to the lowercase version if regex extraction fails
-    lowercase_result
+    let obj = VcsUrl::parse_preserve_case(repo);
+    obj.id
 }
 
 pub fn get_provider_from_remote(remote: &str) -> String {
