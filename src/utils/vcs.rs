@@ -601,20 +601,7 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
     };
 
     // Extract the PR head SHA if present
-    let sha = payload.pull_request?.head.sha;
-
-    // Validate that the SHA is a 40-character hexadecimal string
-    if is_valid_git_sha(&sha) {
-        Some(sha)
-    } else {
-        debug!("Invalid SHA format in GitHub event payload: {}", sha);
-        None
-    }
-}
-
-/// Validates that a string is a valid Git SHA (40-character hexadecimal string)
-fn is_valid_git_sha(sha: &str) -> bool {
-    sha.len() == 40 && sha.chars().all(|c| c.is_ascii_hexdigit())
+    Some(payload.pull_request?.head.sha)
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -1570,37 +1557,6 @@ mod tests {
     }
 
     #[test]
-    fn test_is_valid_git_sha() {
-        // Test valid 40-character hex SHA (using existing SHA from real test)
-        assert!(is_valid_git_sha("19ef6adc4dbddf733db6e833e1f96fb056b6dba4"));
-
-        // Test valid SHA with all digits
-        assert!(is_valid_git_sha("1234567890123456789012345678901234567890"));
-
-        // Test valid SHA with mixed case
-        assert!(is_valid_git_sha("AbCdEf0123456789aBcDeF0123456789aBcDeF01"));
-
-        // Test invalid SHA - too short
-        assert!(!is_valid_git_sha("abc123def456"));
-
-        // Test invalid SHA - too long
-        assert!(!is_valid_git_sha(
-            "19ef6adc4dbddf733db6e833e1f96fb056b6dba4extra"
-        ));
-
-        // Test invalid SHA - contains non-hex characters
-        assert!(!is_valid_git_sha(
-            "19ef6adc4dbddf733db6e833e1f96fb056b6dbag"
-        ));
-
-        // Test valid SHA - all uppercase
-        assert!(is_valid_git_sha("19EF6ADC4DBDDF733DB6E833E1F96FB056B6DBA4"));
-
-        // Test empty string
-        assert!(!is_valid_git_sha(""));
-    }
-
-    #[test]
     fn test_extract_pr_head_sha_from_event() {
         // Test valid PR event JSON with valid 40-character SHA
         let pr_json = r#"{
@@ -1691,8 +1647,8 @@ mod tests {
             Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
         );
 
-        // Test invalid SHA format is rejected
-        let invalid_sha_json = r#"{
+        // Test that any SHA format is accepted (backend will validate)
+        let any_sha_json = r#"{
   "pull_request": {
     "head": {
       "sha": "invalid-sha-123"
@@ -1700,7 +1656,10 @@ mod tests {
   }
 }"#;
 
-        assert_eq!(extract_pr_head_sha_from_event(invalid_sha_json), None);
+        assert_eq!(
+            extract_pr_head_sha_from_event(any_sha_json),
+            Some("invalid-sha-123".to_owned())
+        );
 
         // Test invalid JSON is handled gracefully
         assert_eq!(extract_pr_head_sha_from_event("invalid json {"), None);
