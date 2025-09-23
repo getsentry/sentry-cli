@@ -2,6 +2,17 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.55.0
+
+### Various fixes & improvements
+
+- feat(build): preserve repository name case for build upload (#2777) by @runningcode
+- fix(sourcemaps): Display injection errors (#2775) by @szokeasaurusrex
+- feat: Normalize VCS provider names to match backend (#2770) by @runningcode
+- feat: Improve upload error message to show cause (#2765) by @runningcode
+- fix: Safer asset catalog reader for liquid glass (#2771) by @noahsmartin
+- fix(releases): handle partial SHAs correctly in commit resolution (#2734) by @srest2021
+
 ## 2.54.0
 
 ### Various fixes & improvements
