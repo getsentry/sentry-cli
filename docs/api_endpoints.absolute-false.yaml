@@ -364,15 +364,6 @@
       locations: ["api::AuthenticatedApi::get_chunk_upload_options"]
       region_aware: false
       notes: "Returns server-provided absolute upload URL"
-"<server-provided absolute URL>":
-  section: "Debug information files (DIFs) and chunk upload"
-  path_params: []
-  absolute: true
-  methods:
-    POST:
-      locations: ["api::Api::upload_chunks"]
-      region_aware: null
-      notes: "Authorization header is forced back on before sending"
 "/projects/{org}/{project}/files/dsyms/":
   section: "Debug information files (DIFs) and chunk upload"
   path_params: ["org", "project"]
@@ -429,40 +420,3 @@
     POST:
       locations: ["api::RegionSpecificApi::upload_dif_archive"]
       region_aware: true
-"https://{ingest-host}/api/{project_id}/envelope/":
-  section: "Ingest (Envelopes API)"
-  path_params: ["ingest-host", "project_id"]
-  absolute: true
-  methods:
-    POST:
-      locations: ["api::envelopes_api::EnvelopesApi::send_envelope"]
-      region_aware: null
-      auth: "x-sentry-auth"
-      notes: "DSN-derived host; uses X-Sentry-Auth header instead of Bearer token"
-"https://release-registry.services.sentry.io/apps/sentry-cli/latest":
-  section: "Absolute URLs (non-Sentry services)"
-  path_params: []
-  absolute: true
-  methods:
-    GET:
-      locations: ["api::Api::get_latest_sentrycli_release"]
-      region_aware: null
-      notes: "Checks for latest sentry-cli binary; returns file_urls"
-"{react-native-packager-url}/index.ios.bundle":
-  section: "Absolute URLs (non-Sentry services)"
-  path_params: ["react-native-packager-url"]
-  absolute: true
-  methods:
-    GET:
-      locations: ["commands::react_native::xcode::execute"]
-      region_aware: null
-      notes: "Download bundle when --allow-fetch and simulator detected; query params: platform=ios&dev=true"
-"{react-native-packager-url}/index.ios.map":
-  section: "Absolute URLs (non-Sentry services)"
-  path_params: ["react-native-packager-url"]
-  absolute: true
-  methods:
-    GET:
-      locations: ["commands::react_native::xcode::execute"]
-      region_aware: null
-      notes: "Download source map when --allow-fetch; query params: platform=ios&dev=true"
