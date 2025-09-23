@@ -133,11 +133,9 @@ impl VcsUrl {
         }
     }
 
-    fn into_lowercase(self) -> VcsUrl {
-        VcsUrl {
-            provider: self.provider,
-            id: self.id.to_lowercase(),
-        }
+    fn into_lowercase(mut self) -> VcsUrl {
+        self.id = self.id.to_lowercase();
+        self
     }
 
     fn from_git_parts(host: &str, path: &str) -> VcsUrl {
