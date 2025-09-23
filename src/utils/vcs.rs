@@ -1558,13 +1558,13 @@ mod tests {
         // Test valid SHA extraction
         assert_eq!(
             extract_sha_from_line("      \"sha\": \"abc123def456\","),
-            Some("abc123def456".to_string())
+            Some("abc123def456".to_owned())
         );
 
         // Test with different spacing
         assert_eq!(
             extract_sha_from_line("\"sha\":\"def789ghi012\""),
-            Some("def789ghi012".to_string())
+            Some("def789ghi012".to_owned())
         );
 
         // Test line without SHA
@@ -1598,7 +1598,7 @@ mod tests {
 
         assert_eq!(
             extract_pr_head_sha_from_event(pr_json),
-            Some("abc123def456789".to_string())
+            Some("abc123def456789".to_owned())
         );
 
         // Test non-PR event
