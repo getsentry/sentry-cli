@@ -536,9 +536,12 @@ fn find_matching_revs(
 }
 
 pub fn find_head() -> Result<String> {
+    debug!("Finding HEAD");
     // If GITHUB_EVENT_PATH is set, try to extract PR head SHA from the event payload
     if let Ok(event_path) = std::env::var("GITHUB_EVENT_PATH") {
+        debug!("Finding HEAD from event path: {}", event_path);
         if let Ok(content) = std::fs::read_to_string(&event_path) {
+            debug!("Finding HEAD from event path content: {}", content);
             if let Some(pr_head_sha) = extract_pr_head_sha_from_event(&content) {
                 debug!(
                     "Using GitHub Actions PR head SHA from event payload: {}",
