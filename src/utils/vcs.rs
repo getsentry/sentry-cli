@@ -574,26 +574,24 @@ pub fn find_head() -> Result<String> {
 fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
     // Simple JSON parsing to extract pull_request.head.sha
     // Look for the pattern: "pull_request": { ... "head": { ... "sha": "..." ... } ... }
-    let lines: Vec<&str> = json_content.lines().collect();
 
     // Find if this is a pull_request event
-    let has_pull_request = lines.iter().any(|line| line.contains("\"pull_request\""));
-    if !has_pull_request {
+    if !json_content.contains("\"pull_request\"") {
         return None;
     }
 
-    // Look for the head SHA within the pull_request section
-    for (i, line) in lines.iter().enumerate() {
-        if line.contains("\"head\":") {
-            // Look for "sha" in the next few lines after finding "head"
-            for line in lines
-                .iter()
-                .take(std::cmp::min(i + 10, lines.len()))
-                .skip(i)
-            {
-                if let Some(sha) = extract_sha_from_line(line) {
-                    return Some(sha);
-                }
+    // Find the pull_request section, then look for head.sha within it
+    if let Some(pr_start) = json_content.find("\"pull_request\":") {
+        let pr_section = &json_content[pr_start..];
+
+        // Look for "head": followed by "sha": within the pull_request section
+        if let Some(head_start) = pr_section.find("\"head\":") {
+            let head_section = &pr_section[head_start..];
+
+            // Find the next "sha": after "head":
+            if let Some(sha_start) = head_section.find("\"sha\":") {
+                let sha_line = &head_section[sha_start..];
+                return extract_sha_from_line(sha_line);
             }
         }
     }
@@ -1641,6 +1639,29 @@ mod tests {
 
         // Test empty JSON
         assert_eq!(extract_pr_head_sha_from_event("{}"), None);
+
+        // Test real GitHub Actions PR event format (simplified)
+        let real_gh_json = r#"{
+  "action": "synchronize",
+  "pull_request": {
+    "id": 2852219630,
+    "head": {
+      "label": "getsentry:no/test-pr-head-sha-workflow",
+      "ref": "no/test-pr-head-sha-workflow",
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba4"
+    },
+    "base": {
+      "label": "getsentry:master",
+      "ref": "master",
+      "sha": "55e6bc8c264ce95164314275d805f477650c440d"
+    }
+  }
+}"#;
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(real_gh_json),
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba4".to_owned())
+        );
     }
 
     #[test]
