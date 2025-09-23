@@ -76,7 +76,8 @@ jobs:
           echo "--- CLI OUTPUT START ---"
 
           # Test the CLI's head-sha detection with debug logging enabled
-          ./target/release/sentry-cli --log-level debug build upload test_artifacts/test.apk || true
+          # Using a dummy auth token to get past auth check and reach the head-sha detection logic
+          ./target/release/sentry-cli --log-level debug --auth-token dummy_token_for_testing build upload test_artifacts/test.apk || true
 
           echo "--- CLI OUTPUT END ---"
 
@@ -96,7 +97,7 @@ jobs:
           unset GITHUB_EVENT_NAME
 
           echo "Running CLI without GitHub Actions context (with debug logging)..."
-          ./target/release/sentry-cli --log-level debug build upload test_artifacts/test.apk || true
+          ./target/release/sentry-cli --log-level debug --auth-token dummy_token_for_testing build upload test_artifacts/test.apk || true
 
           echo ""
           echo "Expected: Should fall back to 'git rev-parse HEAD'"
