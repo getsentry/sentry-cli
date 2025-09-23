@@ -10,8 +10,27 @@ use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
+use serde::Deserialize;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
+
+/// Represents the structure of a GitHub Actions event payload for pull requests
+#[derive(Deserialize, Debug)]
+struct GitHubEventPayload {
+    pull_request: Option<GitHubPullRequest>,
+}
+
+/// Represents the pull request object in the GitHub event payload
+#[derive(Deserialize, Debug)]
+struct GitHubPullRequest {
+    head: GitHubHead,
+}
+
+/// Represents the head object in the GitHub pull request
+#[derive(Deserialize, Debug)]
+struct GitHubHead {
+    sha: String,
+}
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
@@ -572,46 +591,30 @@ pub fn find_head() -> Result<String> {
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
 fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
-    // Simple JSON parsing to extract pull_request.head.sha
-    // Look for the pattern: "pull_request": { ... "head": { ... "sha": "..." ... } ... }
-
-    // Find if this is a pull_request event
-    if !json_content.contains("\"pull_request\"") {
-        return None;
-    }
-
-    // Find the pull_request section, then look for head.sha within it
-    if let Some(pr_start) = json_content.find("\"pull_request\":") {
-        let pr_section = &json_content[pr_start..];
-
-        // Look for "head": followed by "sha": within the pull_request section
-        if let Some(head_start) = pr_section.find("\"head\":") {
-            let head_section = &pr_section[head_start..];
-
-            // Find the next "sha": after "head":
-            if let Some(sha_start) = head_section.find("\"sha\":") {
-                let sha_line = &head_section[sha_start..];
-                return extract_sha_from_line(sha_line);
-            }
+    // Parse the JSON payload using serde_json for robust parsing
+    let payload: GitHubEventPayload = match serde_json::from_str(json_content) {
+        Ok(payload) => payload,
+        Err(_) => {
+            debug!("Failed to parse GitHub event payload as JSON");
+            return None;
         }
-    }
+    };
 
-    None
+    // Extract the PR head SHA if present
+    let sha = payload.pull_request?.head.sha;
+
+    // Validate that the SHA is a 40-character hexadecimal string
+    if is_valid_git_sha(&sha) {
+        Some(sha)
+    } else {
+        debug!("Invalid SHA format in GitHub event payload: {}", sha);
+        None
+    }
 }
 
-/// Extracts SHA from a JSON line containing "sha": "abcd1234..." or "sha":"abcd1234..."
-fn extract_sha_from_line(line: &str) -> Option<String> {
-    if line.contains("\"sha\":") {
-        // Try with space first: "sha": "
-        if let Some(sha_part) = line.split("\"sha\": \"").nth(1) {
-            return sha_part.split('"').next().map(|sha| sha.to_owned());
-        }
-        // Try without space: "sha":"
-        if let Some(sha_part) = line.split("\"sha\":\"").nth(1) {
-            return sha_part.split('"').next().map(|sha| sha.to_owned());
-        }
-    }
-    None
+/// Validates that a string is a valid Git SHA (40-character hexadecimal string)
+fn is_valid_git_sha(sha: &str) -> bool {
+    sha.len() == 40 && sha.chars().all(|c| c.is_ascii_hexdigit())
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -1567,32 +1570,39 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_sha_from_line() {
-        // Test valid SHA extraction
-        assert_eq!(
-            extract_sha_from_line("      \"sha\": \"abc123def456\","),
-            Some("abc123def456".to_owned())
-        );
+    fn test_is_valid_git_sha() {
+        // Test valid 40-character hex SHA (using existing SHA from real test)
+        assert!(is_valid_git_sha("19ef6adc4dbddf733db6e833e1f96fb056b6dba4"));
 
-        // Test with different spacing
-        assert_eq!(
-            extract_sha_from_line("\"sha\":\"def789ghi012\""),
-            Some("def789ghi012".to_owned())
-        );
+        // Test valid SHA with all digits
+        assert!(is_valid_git_sha("1234567890123456789012345678901234567890"));
 
-        // Test line without SHA
-        assert_eq!(
-            extract_sha_from_line("      \"ref\": \"refs/heads/main\","),
-            None
-        );
+        // Test valid SHA with mixed case
+        assert!(is_valid_git_sha("AbCdEf0123456789aBcDeF0123456789aBcDeF01"));
 
-        // Test empty line
-        assert_eq!(extract_sha_from_line(""), None);
+        // Test invalid SHA - too short
+        assert!(!is_valid_git_sha("abc123def456"));
+
+        // Test invalid SHA - too long
+        assert!(!is_valid_git_sha(
+            "19ef6adc4dbddf733db6e833e1f96fb056b6dba4extra"
+        ));
+
+        // Test invalid SHA - contains non-hex characters
+        assert!(!is_valid_git_sha(
+            "19ef6adc4dbddf733db6e833e1f96fb056b6dbag"
+        ));
+
+        // Test valid SHA - all uppercase
+        assert!(is_valid_git_sha("19EF6ADC4DBDDF733DB6E833E1F96FB056B6DBA4"));
+
+        // Test empty string
+        assert!(!is_valid_git_sha(""));
     }
 
     #[test]
     fn test_extract_pr_head_sha_from_event() {
-        // Test valid PR event JSON
+        // Test valid PR event JSON with valid 40-character SHA
         let pr_json = r#"{
   "action": "opened",
   "number": 123,
@@ -1600,18 +1610,18 @@ mod tests {
     "id": 789,
     "head": {
       "ref": "feature-branch",
-      "sha": "abc123def456789"
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
     },
     "base": {
       "ref": "main",
-      "sha": "def456ghi789012"
+      "sha": "55e6bc8c264ce95164314275d805f477650c440d"
     }
   }
 }"#;
 
         assert_eq!(
             extract_pr_head_sha_from_event(pr_json),
-            Some("abc123def456789".to_owned())
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
         );
 
         // Test non-PR event
@@ -1662,6 +1672,38 @@ mod tests {
             extract_pr_head_sha_from_event(real_gh_json),
             Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba4".to_owned())
         );
+
+        // Test that user-controlled content with malicious patterns doesn't affect parsing
+        let malicious_json = r#"{
+  "action": "opened",
+  "pull_request": {
+    "title": "Fix \"pull_request\": {\"head\": {\"sha\": \"maliciousha123456789012345678901234567890\"}}",
+    "body": "This PR contains \"head\": and \"sha\": patterns in the description",
+    "head": {
+      "ref": "feature-branch",
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+    }
+  }
+}"#;
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(malicious_json),
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
+        );
+
+        // Test invalid SHA format is rejected
+        let invalid_sha_json = r#"{
+  "pull_request": {
+    "head": {
+      "sha": "invalid-sha-123"
+    }
+  }
+}"#;
+
+        assert_eq!(extract_pr_head_sha_from_event(invalid_sha_json), None);
+
+        // Test invalid JSON is handled gracefully
+        assert_eq!(extract_pr_head_sha_from_event("invalid json {"), None);
     }
 
     #[test]
@@ -1676,7 +1718,7 @@ mod tests {
   "action": "opened",
   "pull_request": {
     "head": {
-      "sha": "pr-head-sha-123"
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
     }
   }
 }"#;
@@ -1693,6 +1735,6 @@ mod tests {
         std::env::remove_var("GITHUB_EVENT_PATH");
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "pr-head-sha-123");
+        assert_eq!(result.unwrap(), "19ef6adc4dbddf733db6e833e1f96fb056b6dba5");
     }
 }
