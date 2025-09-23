@@ -2,6 +2,7 @@
 $ sentry-cli build upload tests/integration/_fixtures/build/apk.apk
 ? failed
 [..]WARN[..]EXPERIMENTAL: The build subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
+  WARN    [..] Could not detect base branch reference: [..]
 error: Auth token is required for this request. Please run `sentry-cli login` and try again!
 
 Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.

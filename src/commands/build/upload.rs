@@ -24,9 +24,9 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_github_base_ref, get_github_pr_number, get_provider_from_remote,
-    get_repo_from_remote_preserve_case, git_repo_base_ref, git_repo_base_repo_name_preserve_case,
-    git_repo_head_ref, git_repo_remote_url,
+    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote_preserve_case,
+    git_repo_base_ref, git_repo_base_repo_name_preserve_case, git_repo_head_ref,
+    git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -176,11 +176,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
-                // First try GitHub Actions environment variables
-                get_github_base_ref().map(Cow::Owned)
-            })
-            .or_else(|| {
-                // Fallback to git repository introspection
+                // Try to get the base ref from the VCS if not provided
+                // This attempts to find the merge-base with the remote tracking branch
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
                         Ok(base_ref_name) => {
