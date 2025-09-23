@@ -1,9 +1,7 @@
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-use std::path::Path;
-use walkdir::WalkDir;
-
 use anyhow::Result;
-use log::error;
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use {log::error, std::path::Path, walkdir::WalkDir};
 
 pub fn is_zip_file(bytes: &[u8]) -> bool {
     if bytes.len() < 4 {
