@@ -6,19 +6,12 @@
 
 ### Various fixes & improvements
 
-- revert: Revert GHA base branch detection (#2776) (#2789) by @szokeasaurusrex
 - feat(build): preserve repository name case for build upload (#2777) by @runningcode
-- feat: Add GitHub Actions base branch detection for EME-320 (#2776) by @runningcode
-- build(deps): bump swatinem/rust-cache from 2.8.0 to 2.8.1 (#2786) by @dependabot
 - fix(sourcemaps): Display injection errors (#2775) by @szokeasaurusrex
-- ci(rust): Run CI against toolchain update bot PRs (#2779) by @szokeasaurusrex
-- build(rust): Update Rust toolchain to 1.90 (#2778) by @github-actions
 - feat: Normalize VCS provider names to match backend (#2770) by @runningcode
 - feat: Improve upload error message to show cause (#2765) by @runningcode
 - fix: Safer asset catalog reader for liquid glass (#2771) by @noahsmartin
 - fix(releases): handle partial SHAs correctly in commit resolution (#2734) by @srest2021
-- ci: `--ignore-scripts` on post-release `npm install` (#2773) by @szokeasaurusrex
-- build(npm): Pin latest optional deps in `package-lock.json` (#2772) by @szokeasaurusrex
 
 ## 2.54.0
 
