@@ -25,8 +25,8 @@ use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
     self, get_github_base_ref, get_github_pr_number, get_provider_from_remote,
-    get_repo_from_remote_preserve_case, git_repo_base_ref,
-    git_repo_base_repo_name_preserve_case, git_repo_head_ref, git_repo_remote_url,
+    get_repo_from_remote_preserve_case, git_repo_base_ref, git_repo_base_repo_name_preserve_case,
+    git_repo_head_ref, git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
