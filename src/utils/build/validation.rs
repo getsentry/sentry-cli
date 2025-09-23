@@ -1,7 +1,11 @@
 use anyhow::Result;
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-use {log::error, std::path::Path, walkdir::WalkDir};
+use {
+    glob::{glob_with, MatchOptions},
+    log::error,
+    std::path::Path,
+};
 
 pub fn is_zip_file(bytes: &[u8]) -> bool {
     if bytes.len() < 4 {
@@ -73,28 +77,24 @@ where
         return false;
     }
 
-    // All .app bundles in Products/Applications/*.app should have an Info.plist file
-    let applications_dir = path.join("Products").join("Applications");
-    if applications_dir.exists() && applications_dir.is_dir() {
-        for entry in WalkDir::new(&applications_dir)
-            .max_depth(1)
-            .into_iter()
-            .flatten()
-        {
-            let entry_path = entry.path();
-            if entry_path.is_dir()
-                && entry_path != applications_dir
-                && entry_path.extension().and_then(|s| s.to_str()) == Some("app")
-            {
-                let app_info_plist = entry_path.join("Info.plist");
-                if !app_info_plist.exists() {
-                    error!(
-                        "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
-                        entry_path.display()
-                    );
-                    return false;
-                }
-            }
+    // All .app bundles within the XCArchive should have an Info.plist file
+    let paths = match glob_with(
+        &path.join("Products/**/*.app").to_string_lossy(),
+        MatchOptions::new(),
+    ) {
+        Ok(paths) => paths,
+        Err(err) => {
+            error!("Error creating glob pattern: {}", err);
+            return false;
+        }
+    };
+    for app_path in paths.flatten().filter(|path| path.is_dir()) {
+        if !app_path.join("Info.plist").exists() {
+            error!(
+                "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
+                app_path.display()
+            );
+            return false;
         }
     }
 
