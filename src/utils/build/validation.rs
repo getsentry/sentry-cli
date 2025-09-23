@@ -88,7 +88,14 @@ where
             return false;
         }
     };
-    for app_path in paths.flatten().filter(|path| path.is_dir()) {
+
+    let app_paths: Vec<_> = paths.flatten().filter(|path| path.is_dir()).collect();
+    if app_paths.is_empty() {
+        error!("Invalid XCArchive: No .app bundles found in the Products/ directory");
+        return false;
+    }
+
+    for app_path in app_paths {
         if !app_path.join("Info.plist").exists() {
             error!(
                 "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
