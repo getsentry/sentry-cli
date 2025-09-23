@@ -45,8 +45,6 @@ jobs:
           fi
 
       - name: Test Built CLI Head SHA Detection
-        env:
-          RUST_LOG: debug
         run: |
           echo "=== Testing Real sentry-cli Head SHA Detection ==="
           echo ""
@@ -70,11 +68,17 @@ jobs:
           echo "fake apk content" > test_artifacts/test.apk
 
           echo "=== Running sentry-cli build upload with debug logging ==="
-          echo "Command: ./target/release/sentry-cli build upload test_artifacts/test.apk --head-sha-from-detection"
+          echo "Command: ./target/release/sentry-cli --log-level debug build upload test_artifacts/test.apk"
           echo ""
+          echo "🔍 WATCH FOR DEBUG LOGS BELOW:"
+          echo "Expected debug log: 'Using GitHub Actions PR head SHA from event payload: ${{ github.event.pull_request.head.sha }}'"
+          echo ""
+          echo "--- CLI OUTPUT START ---"
 
-          # Test the CLI's head-sha detection (we'll expect it to fail due to no auth, but we can see the SHA detection)
-          ./target/release/sentry-cli build upload test_artifacts/test.apk || true
+          # Test the CLI's head-sha detection with debug logging enabled
+          ./target/release/sentry-cli --log-level debug build upload test_artifacts/test.apk || true
+
+          echo "--- CLI OUTPUT END ---"
 
           echo ""
           echo "=== Analysis ==="
@@ -91,8 +95,8 @@ jobs:
           unset GITHUB_EVENT_PATH
           unset GITHUB_EVENT_NAME
 
-          echo "Running CLI without GitHub Actions context..."
-          ./target/release/sentry-cli build upload test_artifacts/test.apk || true
+          echo "Running CLI without GitHub Actions context (with debug logging)..."
+          ./target/release/sentry-cli --log-level debug build upload test_artifacts/test.apk || true
 
           echo ""
           echo "Expected: Should fall back to 'git rev-parse HEAD'"
