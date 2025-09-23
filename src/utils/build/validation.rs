@@ -1,7 +1,9 @@
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use std::path::Path;
+use walkdir::WalkDir;
 
 use anyhow::Result;
+use log::error;
 
 pub fn is_zip_file(bytes: &[u8]) -> bool {
     if bytes.len() < 4 {
@@ -63,7 +65,42 @@ where
     let info_plist = path.join("Info.plist");
     let products_dir = path.join("Products");
 
-    info_plist.exists() && products_dir.exists() && products_dir.is_dir()
+    if !info_plist.exists() {
+        error!("Invalid XCArchive: Missing required Info.plist file at XCArchive root");
+        return false;
+    }
+
+    if !products_dir.exists() || !products_dir.is_dir() {
+        error!("Invalid XCArchive: Missing Products/ directory");
+        return false;
+    }
+
+    // All .app bundles in Products/Applications/*.app should have an Info.plist file
+    let applications_dir = path.join("Products").join("Applications");
+    if applications_dir.exists() && applications_dir.is_dir() {
+        for entry in WalkDir::new(&applications_dir)
+            .max_depth(1)
+            .into_iter()
+            .flatten()
+        {
+            let entry_path = entry.path();
+            if entry_path.is_dir()
+                && entry_path != applications_dir
+                && entry_path.extension().and_then(|s| s.to_str()) == Some("app")
+            {
+                let app_info_plist = entry_path.join("Info.plist");
+                if !app_info_plist.exists() {
+                    error!(
+                        "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
+                        entry_path.display()
+                    );
+                    return false;
+                }
+            }
+        }
+    }
+
+    true
 }
 
 /// A path is an Apple app if it points to an xarchive directory
