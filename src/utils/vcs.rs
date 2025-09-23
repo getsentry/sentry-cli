@@ -570,7 +570,6 @@ fn find_matching_revs(
 }
 
 pub fn find_head() -> Result<String> {
-    // If GITHUB_EVENT_PATH is set, try to extract PR head SHA from the event payload
     if let Ok(event_path) = std::env::var("GITHUB_EVENT_PATH") {
         if let Ok(content) = std::fs::read_to_string(&event_path) {
             if let Some(pr_head_sha) = extract_pr_head_sha_from_event(&content) {
@@ -591,7 +590,6 @@ pub fn find_head() -> Result<String> {
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
 fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
-    // Parse the JSON payload using serde_json for robust parsing
     let payload: GitHubEventPayload = match serde_json::from_str(json_content) {
         Ok(payload) => payload,
         Err(_) => {
@@ -600,7 +598,6 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
         }
     };
 
-    // Extract the PR head SHA if present
     Some(payload.pull_request?.head.sha)
 }
 
@@ -1558,7 +1555,6 @@ mod tests {
 
     #[test]
     fn test_extract_pr_head_sha_from_event() {
-        // Test valid PR event JSON with valid 40-character SHA
         let pr_json = r#"{
   "action": "opened",
   "number": 123,
@@ -1580,7 +1576,6 @@ mod tests {
             Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
         );
 
-        // Test non-PR event
         let push_json = r#"{
   "action": "push",
   "ref": "refs/heads/main",
@@ -1590,8 +1585,6 @@ mod tests {
 }"#;
 
         assert_eq!(extract_pr_head_sha_from_event(push_json), None);
-
-        // Test malformed JSON (missing head SHA)
         let malformed_json = r#"{
   "pull_request": {
     "id": 789,
@@ -1603,10 +1596,7 @@ mod tests {
 
         assert_eq!(extract_pr_head_sha_from_event(malformed_json), None);
 
-        // Test empty JSON
         assert_eq!(extract_pr_head_sha_from_event("{}"), None);
-
-        // Test real GitHub Actions PR event format (simplified)
         let real_gh_json = r#"{
   "action": "synchronize",
   "pull_request": {
@@ -1628,8 +1618,6 @@ mod tests {
             extract_pr_head_sha_from_event(real_gh_json),
             Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba4".to_owned())
         );
-
-        // Test that user-controlled content with malicious patterns doesn't affect parsing
         let malicious_json = r#"{
   "action": "opened",
   "pull_request": {
@@ -1646,8 +1634,6 @@ mod tests {
             extract_pr_head_sha_from_event(malicious_json),
             Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
         );
-
-        // Test that any SHA format is accepted (backend will validate)
         let any_sha_json = r#"{
   "pull_request": {
     "head": {
@@ -1661,7 +1647,6 @@ mod tests {
             Some("invalid-sha-123".to_owned())
         );
 
-        // Test invalid JSON is handled gracefully
         assert_eq!(extract_pr_head_sha_from_event("invalid json {"), None);
     }
 
@@ -1671,8 +1656,6 @@ mod tests {
 
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let event_file = temp_dir.path().join("event.json");
-
-        // Test with valid PR event
         let pr_json = r#"{
   "action": "opened",
   "pull_request": {
@@ -1684,13 +1667,8 @@ mod tests {
 
         fs::write(&event_file, pr_json).expect("Failed to write event file");
 
-        // Set GITHUB_EVENT_PATH and test find_head
         std::env::set_var("GITHUB_EVENT_PATH", event_file.to_str().unwrap());
-
-        // Since we're not in a git repo, this would normally fail
-        // But with GITHUB_EVENT_PATH set, it should return the PR head SHA
         let result = find_head();
-
         std::env::remove_var("GITHUB_EVENT_PATH");
 
         assert!(result.is_ok());
