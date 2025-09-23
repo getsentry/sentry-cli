@@ -108,6 +108,10 @@ fn strip_git_suffix(s: &str) -> &str {
 
 impl VcsUrl {
     pub fn parse(url: &str) -> VcsUrl {
+        Self::parse_preserve_case(url).into_lowercase()
+    }
+
+    pub fn parse_preserve_case(url: &str) -> VcsUrl {
         lazy_static! {
             static ref GIT_URL_RE: Regex =
                 Regex::new(r"^(?:(?:git\+)?(?:git|ssh|https?))://(?:[^@]+@)?([^/]+)/(.+)$")
@@ -127,6 +131,11 @@ impl VcsUrl {
             provider: "".into(),
             id: url.into(),
         }
+    }
+
+    fn into_lowercase(mut self) -> VcsUrl {
+        self.id = self.id.to_lowercase();
+        self
     }
 
     fn from_git_parts(host: &str, path: &str) -> VcsUrl {
@@ -157,13 +166,13 @@ impl VcsUrl {
             if let Some(caps) = VS_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.to_lowercase(),
-                    id: format!("{}/{}", username.to_lowercase(), &caps[1].to_lowercase()),
+                    id: format!("{username}/{}", &caps[1]),
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: host.to_lowercase(),
-                    id: caps[1].to_lowercase(),
+                    id: caps[1].to_string(),
                 };
             }
         }
@@ -173,13 +182,13 @@ impl VcsUrl {
             if let Some(caps) = AZUREDEV_VERSION_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: hostname.into(),
-                    id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+                    id: format!("{}/{}", &caps[1], &caps[2]),
                 };
             }
             if let Some(caps) = VS_TRAILING_GIT_PATH_RE.captures(path) {
                 return VcsUrl {
                     provider: hostname.to_lowercase(),
-                    id: caps[1].to_lowercase(),
+                    id: caps[1].to_string(),
                 };
             }
         }
@@ -196,13 +205,13 @@ impl VcsUrl {
         if let Some(caps) = BITBUCKET_SERVER_PATH_RE.captures(path) {
             return VcsUrl {
                 provider: host.to_lowercase(),
-                id: format!("{}/{}", &caps[1].to_lowercase(), &caps[2].to_lowercase()),
+                id: format!("{}/{}", &caps[1], &caps[2]),
             };
         }
 
         VcsUrl {
             provider: host.to_lowercase(),
-            id: strip_git_suffix(path).to_lowercase(),
+            id: strip_git_suffix(path).to_owned(),
         }
     }
 }
@@ -218,6 +227,13 @@ fn is_matching_url(a: &str, b: &str) -> bool {
 
 pub fn get_repo_from_remote(repo: &str) -> String {
     let obj = VcsUrl::parse(repo);
+    obj.id
+}
+
+/// Like get_repo_from_remote but preserves the original case of the repository name.
+/// This is used specifically for build upload where case preservation is important.
+pub fn get_repo_from_remote_preserve_case(repo: &str) -> String {
+    let obj = VcsUrl::parse_preserve_case(repo);
     obj.id
 }
 
@@ -288,10 +304,9 @@ fn find_merge_base_ref(
     Ok(merge_base_sha)
 }
 
-/// Attempts to get the base repository name from git remotes.
-/// Prefers "upstream" remote if it exists, then "origin", otherwise uses the first available remote.
-/// Returns the base repository name if a remote is found.
-pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>> {
+/// Like git_repo_base_repo_name but preserves the original case of the repository name.
+/// This is used specifically for build upload where case preservation is important.
+pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
     let remote_names: Vec<&str> = remotes.iter().flatten().collect();
 
@@ -312,7 +327,8 @@ pub fn git_repo_base_repo_name(repo: &git2::Repository) -> Result<Option<String>
     match git_repo_remote_url(repo, chosen_remote) {
         Ok(remote_url) => {
             debug!("Found remote '{}': {}", chosen_remote, remote_url);
-            Ok(Some(get_repo_from_remote(&remote_url)))
+            let repo_name = get_repo_from_remote_preserve_case(&remote_url);
+            Ok(Some(repo_name))
         }
         Err(e) => {
             warn!("Could not get URL for remote '{}': {}", chosen_remote, e);
@@ -939,6 +955,43 @@ mod tests {
                 provider: "gitlab.com".into(),
                 id: "gitlab-org/gitlab-ce".into(),
             }
+        );
+    }
+
+    #[test]
+    fn test_get_repo_from_remote_preserve_case() {
+        // Test that case-preserving function maintains original casing
+        assert_eq!(
+            get_repo_from_remote_preserve_case("https://github.com/MyOrg/MyRepo"),
+            "MyOrg/MyRepo"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("git@github.com:SentryOrg/SentryRepo.git"),
+            "SentryOrg/SentryRepo"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("https://gitlab.com/MyCompany/MyProject"),
+            "MyCompany/MyProject"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("git@bitbucket.org:TeamName/ProjectName.git"),
+            "TeamName/ProjectName"
+        );
+        assert_eq!(
+            get_repo_from_remote_preserve_case("ssh://git@github.com/MyUser/MyRepo.git"),
+            "MyUser/MyRepo"
+        );
+
+        // Test that regular function still lowercases
+        assert_eq!(
+            get_repo_from_remote("https://github.com/MyOrg/MyRepo"),
+            "myorg/myrepo"
+        );
+
+        // Test edge cases - should fall back to lowercase when regex doesn't match
+        assert_eq!(
+            get_repo_from_remote_preserve_case("invalid-url"),
+            get_repo_from_remote("invalid-url")
         );
     }
 
