@@ -52,7 +52,6 @@
       region_aware: false
 "/projects/{org}/{project}/releases/":
   section: "Releases"
-  path_params: ["org", "project"]
   absolute: false
   methods:
     GET:
@@ -71,7 +70,6 @@
       region_aware: false
 "/projects/{org}/{project}/releases/{version}/":
   section: "Releases"
-  path_params: ["org", "project", "version"]
   absolute: false
   methods:
     PUT:
@@ -100,7 +98,6 @@
     DELETE:
       locations: ["api::AuthenticatedApi::delete_release"]
       region_aware: false
-
 "/projects/{org}/{project}/releases/{version}/commits/":
   section: "Releases"
   absolute: false
@@ -124,28 +121,17 @@
       region_aware: false
 "/projects/{org}/{project}/releases/{release}/files/":
   section: "Release files (artifacts)"
-  path_params: ["org", "project", "release"]
   absolute: false
   methods:
     GET:
       locations: ["api::AuthenticatedApi::list_release_files_by_checksum"]
       region_aware: false
-      query_params:
-        cursor:
-          notes: "pagination cursor"
-        checksum:
-          repeatable: true
-          notes: "Appends multiple checksum params if total length <= 16k"
-      pagination:
-        param: "cursor"
     POST:
       locations: ["api::RegionSpecificApi::upload_release_file"]
       region_aware: true
       notes: "multipart"
-
 "/organizations/{org}/releases/{release}/files/":
   section: "Release files (artifacts)"
-  path_params: ["org", "release"]
   absolute: false
   methods:
     GET:
@@ -197,7 +183,6 @@
       region_aware: false
 "/organizations/{org}/releases/{version}/deploys/":
   section: "Deploys"
-  path_params: ["org", "version"]
   absolute: false
   methods:
     POST:
@@ -208,7 +193,6 @@
       region_aware: false
 "/projects/{org}/{project}/issues/":
   section: "Events and logs"
-  path_params: ["org", "project"]
   absolute: false
   methods:
     PUT:
@@ -272,7 +256,6 @@
       notes: "Authorization header is forced back on before sending"
 "/projects/{org}/{project}/files/dsyms/":
   section: "Region-specific uploads (wrapper)"
-  path_params: ["org", "project"]
   absolute: false
   methods:
     POST:
