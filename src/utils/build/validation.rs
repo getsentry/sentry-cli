@@ -3,7 +3,6 @@ use anyhow::Result;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use {
     glob::{glob_with, MatchOptions},
-    log::error,
     std::path::Path,
 };
 
