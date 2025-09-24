@@ -378,7 +378,7 @@ fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating build format for: {}", path.display());
 
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_apple_app(path) {
+    if is_apple_app(path)? {
         debug!("Detected XCArchive directory");
         return Ok(());
     }
@@ -452,7 +452,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 fn handle_directory(path: &Path) -> Result<TempFile> {
     let temp_dir = TempDir::create()?;
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_apple_app(path) {
+    if is_apple_app(path)? {
         handle_asset_catalogs(path, temp_dir.path());
     }
     normalize_directory(path, temp_dir.path())
