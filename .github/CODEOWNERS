@@ -1,1 +1,5 @@
 * @szokeasaurusrex @getsentry/owners-sentry-cli
+
+/src/commands/build @getsentry/emerge-tools @getsentry/owners-sentry-cli
+/src/utils/build @getsentry/emerge-tools @getsentry/owners-sentry-cli
+/tests/integration/build @getsentry/emerge-tools @getsentry/owners-sentry-cli 
