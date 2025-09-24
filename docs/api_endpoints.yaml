@@ -146,10 +146,7 @@
   absolute: false
   methods:
     GET:
-      locations: ["api::AuthenticatedApi::get_release_file"]
-      region_aware: false
-    GET_metadata:
-      locations: ["api::AuthenticatedApi::get_release_file_metadata"]
+      locations: ["api::AuthenticatedApi::get_release_file", "api::AuthenticatedApi::get_release_file_metadata"]
       region_aware: false
     DELETE:
       locations: ["api::AuthenticatedApi::delete_release_file"]
@@ -159,10 +156,7 @@
   absolute: false
   methods:
     GET:
-      locations: ["api::AuthenticatedApi::get_release_file"]
-      region_aware: false
-    GET_metadata:
-      locations: ["api::AuthenticatedApi::get_release_file_metadata"]
+      locations: ["api::AuthenticatedApi::get_release_file", "api::AuthenticatedApi::get_release_file_metadata"]
       region_aware: false
     DELETE:
       locations: ["api::AuthenticatedApi::delete_release_file"]
