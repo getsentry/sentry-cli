@@ -24,9 +24,9 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote_preserve_case,
-    git_repo_base_ref, git_repo_base_repo_name_preserve_case, git_repo_head_ref,
-    git_repo_remote_url,
+    self, get_github_base_ref, get_github_pr_number, get_provider_from_remote,
+    get_repo_from_remote_preserve_case, git_repo_base_ref, git_repo_base_repo_name_preserve_case,
+    git_repo_head_ref, git_repo_remote_url,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -176,8 +176,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
-                // Try to get the base ref from the VCS if not provided
-                // This attempts to find the merge-base with the remote tracking branch
+                // First try GitHub Actions environment variables
+                get_github_base_ref().map(Cow::Owned)
+            })
+            .or_else(|| {
+                // Fallback to git repository introspection
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
                         Ok(base_ref_name) => {
@@ -375,7 +378,7 @@ fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating build format for: {}", path.display());
 
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_apple_app(path) {
+    if is_apple_app(path)? {
         debug!("Detected XCArchive directory");
         return Ok(());
     }
@@ -449,7 +452,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 fn handle_directory(path: &Path) -> Result<TempFile> {
     let temp_dir = TempDir::create()?;
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_apple_app(path) {
+    if is_apple_app(path)? {
         handle_asset_catalogs(path, temp_dir.path());
     }
     normalize_directory(path, temp_dir.path())

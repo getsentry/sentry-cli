@@ -57,7 +57,7 @@ pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-pub fn is_xcarchive_directory<P>(path: P) -> bool
+pub fn validate_xcarchive_directory<P>(path: P) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -68,48 +68,42 @@ where
     let products_dir = path.join("Products");
 
     if !info_plist.exists() {
-        error!("Invalid XCArchive: Missing required Info.plist file at XCArchive root");
-        return false;
+        anyhow::bail!("Invalid XCArchive: Missing required Info.plist file at XCArchive root");
     }
 
     if !products_dir.exists() || !products_dir.is_dir() {
-        error!("Invalid XCArchive: Missing Products/ directory");
-        return false;
+        anyhow::bail!("Invalid XCArchive: Missing Products/ directory");
     }
 
     // All .app bundles within the XCArchive should have an Info.plist file
-    let paths = match glob_with(
+    let paths = glob_with(
         &path.join("Products/**/*.app").to_string_lossy(),
         MatchOptions::new(),
-    ) {
-        Ok(paths) => paths,
-        Err(err) => {
-            error!("Error creating glob pattern: {}", err);
-            return false;
-        }
-    };
+    )?;
 
     let app_paths: Vec<_> = paths.flatten().filter(|path| path.is_dir()).collect();
     if app_paths.is_empty() {
-        error!("Invalid XCArchive: No .app bundles found in the Products/ directory");
-        return false;
+        anyhow::bail!("Invalid XCArchive: No .app bundles found in the Products/ directory");
     }
 
     for app_path in app_paths {
         if !app_path.join("Info.plist").exists() {
-            error!(
+            anyhow::bail!(
                 "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
                 app_path.display()
             );
-            return false;
         }
     }
 
-    true
+    Ok(())
 }
 
 /// A path is an Apple app if it points to an xarchive directory
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-pub fn is_apple_app(path: &Path) -> bool {
-    path.is_dir() && is_xcarchive_directory(path)
+pub fn is_apple_app(path: &Path) -> Result<bool> {
+    if !path.is_dir() {
+        return Ok(false);
+    }
+    validate_xcarchive_directory(path)?;
+    Ok(true)
 }
