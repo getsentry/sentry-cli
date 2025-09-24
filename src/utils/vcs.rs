@@ -10,6 +10,7 @@ use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
+use serde_json::Value;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
 
@@ -551,9 +552,37 @@ fn find_matching_revs(
 }
 
 pub fn find_head() -> Result<String> {
+    if let Some(pr_head_sha) = std::env::var("GITHUB_EVENT_PATH")
+        .ok()
+        .and_then(|event_path| std::fs::read_to_string(event_path).ok())
+        .and_then(|content| extract_pr_head_sha_from_event(&content))
+    {
+        debug!(
+            "Using GitHub Actions PR head SHA from event payload: {}",
+            pr_head_sha
+        );
+        return Ok(pr_head_sha);
+    }
+
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
     Ok(head.id().to_string())
+}
+
+/// Extracts the PR head SHA from GitHub Actions event payload JSON.
+/// Returns None if not a PR event or if SHA cannot be extracted.
+fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
+    let v: Value = match serde_json::from_str(json_content) {
+        Ok(v) => v,
+        Err(_) => {
+            debug!("Failed to parse GitHub event payload as JSON");
+            return None;
+        }
+    };
+
+    v.pointer("/pull_request/head/sha")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_owned())
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -1506,5 +1535,128 @@ mod tests {
         assert_eq!(base_ref, None);
 
         std::env::remove_var("GITHUB_EVENT_NAME");
+    }
+
+    #[test]
+    fn test_extract_pr_head_sha_from_event() {
+        let pr_json = serde_json::json!({
+          "action": "opened",
+          "number": 123,
+          "pull_request": {
+            "id": 789,
+            "head": {
+              "ref": "feature-branch",
+              "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+            },
+            "base": {
+              "ref": "main",
+              "sha": "55e6bc8c264ce95164314275d805f477650c440d"
+            }
+          }
+        })
+        .to_string();
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(&pr_json),
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
+        );
+
+        let push_json = r#"{
+  "action": "push",
+  "ref": "refs/heads/main",
+  "head_commit": {
+    "id": "xyz789abc123"
+  }
+}"#;
+
+        assert_eq!(extract_pr_head_sha_from_event(push_json), None);
+        let malformed_json = r#"{
+  "pull_request": {
+    "id": 789,
+    "head": {
+      "ref": "feature-branch"
+    }
+  }
+}"#;
+
+        assert_eq!(extract_pr_head_sha_from_event(malformed_json), None);
+
+        assert_eq!(extract_pr_head_sha_from_event("{}"), None);
+        let real_gh_json = r#"{
+  "action": "synchronize",
+  "pull_request": {
+    "id": 2852219630,
+    "head": {
+      "label": "getsentry:no/test-pr-head-sha-workflow",
+      "ref": "no/test-pr-head-sha-workflow",
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba4"
+    },
+    "base": {
+      "label": "getsentry:master",
+      "ref": "master",
+      "sha": "55e6bc8c264ce95164314275d805f477650c440d"
+    }
+  }
+}"#;
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(real_gh_json),
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba4".to_owned())
+        );
+        let malicious_json = r#"{
+  "action": "opened",
+  "pull_request": {
+    "title": "Fix \"pull_request\": {\"head\": {\"sha\": \"maliciousha123456789012345678901234567890\"}}",
+    "body": "This PR contains \"head\": and \"sha\": patterns in the description",
+    "head": {
+      "ref": "feature-branch",
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+    }
+  }
+}"#;
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(malicious_json),
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
+        );
+        let any_sha_json = r#"{
+  "pull_request": {
+    "head": {
+      "sha": "invalid-sha-123"
+    }
+  }
+}"#;
+
+        assert_eq!(
+            extract_pr_head_sha_from_event(any_sha_json),
+            Some("invalid-sha-123".to_owned())
+        );
+
+        assert_eq!(extract_pr_head_sha_from_event("invalid json {"), None);
+    }
+
+    #[test]
+    fn test_find_head_with_github_event_path() {
+        use std::fs;
+
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let event_file = temp_dir.path().join("event.json");
+        let pr_json = r#"{
+  "action": "opened",
+  "pull_request": {
+    "head": {
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+    }
+  }
+}"#;
+
+        fs::write(&event_file, pr_json).expect("Failed to write event file");
+
+        std::env::set_var("GITHUB_EVENT_PATH", event_file.to_str().unwrap());
+        let result = find_head();
+        std::env::remove_var("GITHUB_EVENT_PATH");
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "19ef6adc4dbddf733db6e833e1f96fb056b6dba5");
     }
 }
