@@ -570,16 +570,16 @@ fn find_matching_revs(
 }
 
 pub fn find_head() -> Result<String> {
-    if let Ok(event_path) = std::env::var("GITHUB_EVENT_PATH") {
-        if let Ok(content) = std::fs::read_to_string(&event_path) {
-            if let Some(pr_head_sha) = extract_pr_head_sha_from_event(&content) {
-                debug!(
-                    "Using GitHub Actions PR head SHA from event payload: {}",
-                    pr_head_sha
-                );
-                return Ok(pr_head_sha);
-            }
-        }
+    if let Some(pr_head_sha) = std::env::var("GITHUB_EVENT_PATH")
+        .ok()
+        .and_then(|event_path| std::fs::read_to_string(event_path).ok())
+        .and_then(|content| extract_pr_head_sha_from_event(&content))
+    {
+        debug!(
+            "Using GitHub Actions PR head SHA from event payload: {}",
+            pr_head_sha
+        );
+        return Ok(pr_head_sha);
     }
 
     let repo = git2::Repository::open_from_env()?;
