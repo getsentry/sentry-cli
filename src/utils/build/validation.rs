@@ -79,7 +79,13 @@ where
         &path.join("Products/**/*.app").to_string_lossy(),
         MatchOptions::new(),
     )?;
-    for app_path in paths.flatten().filter(|path| path.is_dir()) {
+
+    let app_paths: Vec<_> = paths.flatten().filter(|path| path.is_dir()).collect();
+    if app_paths.is_empty() {
+        anyhow::bail!("Invalid XCArchive: No .app bundles found in the Products/ directory");
+    }
+
+    for app_path in app_paths {
         if !app_path.join("Info.plist").exists() {
             anyhow::bail!(
                 "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
