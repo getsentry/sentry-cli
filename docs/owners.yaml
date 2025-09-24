@@ -1,0 +1,136 @@
+/:
+  class: sentry.api.endpoints.index.IndexEndpoint
+  name: sentry-api-index
+  owner: unowned
+/organizations/:
+  class: sentry.core.endpoints.organization_index.OrganizationIndexEndpoint
+  name: sentry-api-0-organizations
+  owner: unowned
+/organizations/{org}/artifactbundle/assemble/:
+  class: sentry.api.endpoints.organization_artifactbundle_assemble.OrganizationArtifactBundleAssembleEndpoint
+  name: sentry-api-0-organization-artifactbundle-assemble
+  owner: ingest
+/organizations/{org}/chunk-upload/:
+  class: sentry.api.endpoints.chunk.ChunkUploadEndpoint
+  name: sentry-api-0-chunk-upload
+  owner: ingest
+/organizations/{org}/events/:
+  class: sentry.api.endpoints.organization_events.OrganizationEventsEndpoint
+  name: sentry-api-0-organization-events
+  owner: visibility
+/organizations/{org}/events/{event_id}/json/:
+  class: sentry.api.endpoints.catchall.CatchallEndpoint
+  name: sentry-api-catchall
+  owner: unowned
+/organizations/{org}/files/source-maps/:
+  class: sentry.api.endpoints.catchall.CatchallEndpoint
+  name: sentry-api-catchall
+  owner: unowned
+/organizations/{org}/monitors/:
+  class: sentry.monitors.endpoints.organization_monitor_index.OrganizationMonitorIndexEndpoint
+  name: sentry-api-0-organization-monitor-index
+  owner: crons
+/organizations/{org}/projects/:
+  class: sentry.core.endpoints.organization_projects.OrganizationProjectsEndpoint
+  name: sentry-api-0-organization-projects
+  owner: unowned
+/organizations/{org}/region/:
+  class: sentry.core.endpoints.organization_region.OrganizationRegionEndpoint
+  name: sentry-api-0-organization-region
+  owner: hybrid-cloud
+/organizations/{org}/releases/:
+  class: sentry.api.endpoints.organization_releases.OrganizationReleasesEndpoint
+  name: sentry-api-0-organization-releases
+  owner: unowned
+/organizations/{org}/releases/{release}/assemble/:
+  class: sentry.releases.endpoints.organization_release_assemble.OrganizationReleaseAssembleEndpoint
+  name: sentry-api-0-organization-release-assemble
+  owner: unowned
+/organizations/{org}/releases/{release}/files/:
+  class: sentry.releases.endpoints.organization_release_files.OrganizationReleaseFilesEndpoint
+  name: sentry-api-0-organization-release-files
+  owner: unowned
+/organizations/{org}/releases/{version}/:
+  class: sentry.releases.endpoints.organization_release_details.OrganizationReleaseDetailsEndpoint
+  name: sentry-api-0-organization-release-details
+  owner: unowned
+/organizations/{org}/releases/{version}/commits/:
+  class: sentry.releases.endpoints.organization_release_commits.OrganizationReleaseCommitsEndpoint
+  name: sentry-api-0-organization-release-commits
+  owner: unowned
+/organizations/{org}/releases/{version}/deploys/:
+  class: sentry.releases.endpoints.release_deploys.ReleaseDeploysEndpoint
+  name: sentry-api-0-organization-release-deploys
+  owner: unowned
+/organizations/{org}/releases/{version}/files/{file_id}/:
+  class: sentry.releases.endpoints.organization_release_file_details.OrganizationReleaseFileDetailsEndpoint
+  name: sentry-api-0-organization-release-file-details
+  owner: unowned
+/organizations/{org}/releases/{version}/previous-with-commits/:
+  class: sentry.issues.endpoints.organization_release_previous_commits.OrganizationReleasePreviousCommitsEndpoint
+  name: sentry-api-0-organization-release-previous-with-commits
+  owner: issue-workflow
+/organizations/{org}/repos/:
+  class: sentry.integrations.api.endpoints.organization_repositories.OrganizationRepositoriesEndpoint
+  name: sentry-api-0-organization-repositories
+  owner: product-owners-settings-integrations
+/projects/{org}/{project}/events/:
+  class: sentry.issues.endpoints.project_events.ProjectEventsEndpoint
+  name: sentry-api-0-project-events
+  owner: issue-workflow
+/projects/{org}/{project}/events/{event_id}/json/:
+  class: sentry.issues.endpoints.project_event_details.EventJsonEndpoint
+  name: sentry-api-0-event-json
+  owner: issue-workflow
+/projects/{org}/{project}/files/difs/assemble/:
+  class: sentry.api.endpoints.debug_files.DifAssembleEndpoint
+  name: sentry-api-0-assemble-dif-files
+  owner: ingest
+/projects/{org}/{project}/files/dsyms/:
+  class: sentry.api.endpoints.debug_files.DebugFilesEndpoint
+  name: sentry-api-0-dsym-files
+  owner: ingest
+/projects/{org}/{project}/files/dsyms/unknown/:
+  class: sentry.api.endpoints.debug_files.UnknownDebugFilesEndpoint
+  name: sentry-api-0-unknown-dsym-files
+  owner: ingest
+/projects/{org}/{project}/files/preprodartifacts/assemble/:
+  class: sentry.preprod.api.endpoints.organization_preprod_artifact_assemble.ProjectPreprodArtifactAssembleEndpoint
+  name: sentry-api-0-assemble-preprod-artifact-files
+  owner: emerge-tools
+/projects/{org}/{project}/files/proguard-artifact-releases:
+  class: sentry.api.endpoints.debug_files.ProguardArtifactReleasesEndpoint
+  name: sentry-api-0-proguard-artifact-releases
+  owner: ingest
+/projects/{org}/{project}/files/source-maps/:
+  class: sentry.api.endpoints.debug_files.SourceMapsEndpoint
+  name: sentry-api-0-source-maps
+  owner: ingest
+/projects/{org}/{project}/issues/:
+  class: sentry.issues.endpoints.project_group_index.ProjectGroupIndexEndpoint
+  name: sentry-api-0-project-group-index
+  owner: issue-workflow
+/projects/{org}/{project}/releases/:
+  class: sentry.releases.endpoints.project_releases.ProjectReleasesEndpoint
+  name: sentry-api-0-project-releases
+  owner: unowned
+/projects/{org}/{project}/releases/{release}/files/:
+  class: sentry.releases.endpoints.project_release_files.ProjectReleaseFilesEndpoint
+  name: sentry-api-0-project-release-files
+  owner: unowned
+/projects/{org}/{project}/releases/{version}/:
+  class: sentry.releases.endpoints.project_release_details.ProjectReleaseDetailsEndpoint
+  name: sentry-api-0-project-release-details
+  owner: unowned
+/projects/{org}/{project}/releases/{version}/commits/:
+  class: sentry.releases.endpoints.project_release_commits.ProjectReleaseCommitsEndpoint
+  name: sentry-api-0-project-release-commits
+  owner: unowned
+/projects/{org}/{project}/releases/{version}/files/{file_id}/:
+  class: sentry.releases.endpoints.project_release_file_details.ProjectReleaseFileDetailsEndpoint
+  name: sentry-api-0-project-release-file-details
+  owner: unowned
+/users/me/regions/:
+  class: sentry.users.api.endpoints.user_regions.UserRegionsEndpoint
+  name: sentry-api-0-user-regions
+  owner: hybrid-cloud
