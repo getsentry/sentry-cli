@@ -1555,24 +1555,25 @@ mod tests {
 
     #[test]
     fn test_extract_pr_head_sha_from_event() {
-        let pr_json = r#"{
-  "action": "opened",
-  "number": 123,
-  "pull_request": {
-    "id": 789,
-    "head": {
-      "ref": "feature-branch",
-      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
-    },
-    "base": {
-      "ref": "main",
-      "sha": "55e6bc8c264ce95164314275d805f477650c440d"
-    }
-  }
-}"#;
+        let pr_json = serde_json::json!({
+          "action": "opened",
+          "number": 123,
+          "pull_request": {
+            "id": 789,
+            "head": {
+              "ref": "feature-branch",
+              "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+            },
+            "base": {
+              "ref": "main",
+              "sha": "55e6bc8c264ce95164314275d805f477650c440d"
+            }
+          }
+        })
+        .to_string();
 
         assert_eq!(
-            extract_pr_head_sha_from_event(pr_json),
+            extract_pr_head_sha_from_event(&pr_json),
             Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
         );
 
