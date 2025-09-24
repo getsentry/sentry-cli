@@ -10,27 +10,10 @@ use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
-use serde::Deserialize;
+use serde_json::Value;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
 
-/// Represents the structure of a GitHub Actions event payload for pull requests
-#[derive(Deserialize, Debug)]
-struct GitHubEventPayload {
-    pull_request: Option<GitHubPullRequest>,
-}
-
-/// Represents the pull request object in the GitHub event payload
-#[derive(Deserialize, Debug)]
-struct GitHubPullRequest {
-    head: GitHubHead,
-}
-
-/// Represents the head object in the GitHub pull request
-#[derive(Deserialize, Debug)]
-struct GitHubHead {
-    sha: String,
-}
 
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
