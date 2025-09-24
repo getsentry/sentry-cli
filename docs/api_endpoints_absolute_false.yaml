@@ -1,0 +1,283 @@
+"/":
+  section: "Authentication and user info"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_auth_info"]
+      region_aware: false
+      notes: "Returns auth/user info"
+"/users/me/regions/":
+  section: "Authentication and user info"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_available_regions"]
+      region_aware: false
+      notes: "May be 404 on self-hosted; returns [] then"
+"/organizations/":
+  section: "Organizations"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_organizations"]
+      region_aware: true
+"/organizations/{org}/region/":
+  section: "Organizations"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_region_url"]
+      region_aware: false
+"/organizations/{org}/projects/":
+  section: "Projects"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_organization_projects"]
+      region_aware: false
+"/organizations/{org}/monitors/":
+  section: "Monitors"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_organization_monitors"]
+      region_aware: false
+"/organizations/{org}/repos/":
+  section: "Repositories"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_organization_repos"]
+      region_aware: false
+"/projects/{org}/{project}/releases/":
+  section: "Releases"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_releases"]
+      region_aware: false
+    POST:
+      locations: ["api::AuthenticatedApi::new_release"]
+      region_aware: false
+      notes: "Legacy single-project endpoint"
+"/organizations/{org}/releases/":
+  section: "Releases"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::new_release", "api::AuthenticatedApi::update_release"]
+      region_aware: false
+"/projects/{org}/{project}/releases/{version}/":
+  section: "Releases"
+  absolute: false
+  methods:
+    PUT:
+      locations: ["api::AuthenticatedApi::update_release"]
+      region_aware: false
+    GET:
+      locations: ["api::AuthenticatedApi::get_release"]
+      region_aware: false
+    DELETE:
+      locations: ["api::AuthenticatedApi::delete_release"]
+      region_aware: false
+"/organizations/{org}/releases/{version}/":
+  section: "Releases"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::update_release"]
+      region_aware: false
+      notes: "Creates a replacement when updating version"
+    PUT:
+      locations: ["api::AuthenticatedApi::update_release", "set_release_refs"]
+      region_aware: false
+    GET:
+      locations: ["api::AuthenticatedApi::get_release"]
+      region_aware: false
+    DELETE:
+      locations: ["api::AuthenticatedApi::delete_release"]
+      region_aware: false
+"/projects/{org}/{project}/releases/{version}/commits/":
+  section: "Releases"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_release_commits"]
+      region_aware: false
+"/organizations/{org}/releases/{version}/commits/":
+  section: "Releases"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_release_commits"]
+      region_aware: false
+"/organizations/{org}/releases/{version}/previous-with-commits/":
+  section: "Releases"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_previous_release_with_commits"]
+      region_aware: false
+"/projects/{org}/{project}/releases/{release}/files/":
+  section: "Release files (artifacts)"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_release_files_by_checksum"]
+      region_aware: false
+    POST:
+      locations: ["api::RegionSpecificApi::upload_release_file"]
+      region_aware: true
+      notes: "multipart"
+"/organizations/{org}/releases/{release}/files/":
+  section: "Release files (artifacts)"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_release_files_by_checksum"]
+      region_aware: false
+    POST:
+      locations: ["api::RegionSpecificApi::upload_release_file"]
+      region_aware: true
+      notes: "multipart"
+"/projects/{org}/{project}/releases/{version}/files/{file_id}/":
+  section: "Release files (artifacts)"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_release_file", "api::AuthenticatedApi::get_release_file_metadata"]
+      region_aware: false
+    DELETE:
+      locations: ["api::AuthenticatedApi::delete_release_file"]
+      region_aware: false
+"/organizations/{org}/releases/{version}/files/{file_id}/":
+  section: "Release files (artifacts)"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_release_file", "api::AuthenticatedApi::get_release_file_metadata"]
+      region_aware: false
+    DELETE:
+      locations: ["api::AuthenticatedApi::delete_release_file"]
+      region_aware: false
+"/projects/{org}/{project}/files/source-maps/":
+  section: "Release files (artifacts)"
+  absolute: false
+  methods:
+    DELETE:
+      locations: ["api::AuthenticatedApi::delete_release_files"]
+      region_aware: false
+"/organizations/{org}/files/source-maps/":
+  section: "Release files (artifacts)"
+  absolute: false
+  methods:
+    DELETE:
+      locations: ["api::AuthenticatedApi::delete_release_files"]
+      region_aware: false
+"/organizations/{org}/releases/{version}/deploys/":
+  section: "Deploys"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::create_deploy"]
+      region_aware: false
+    GET:
+      locations: ["api::AuthenticatedApi::list_deploys"]
+      region_aware: false
+"/projects/{org}/{project}/issues/":
+  section: "Events and logs"
+  absolute: false
+  methods:
+    PUT:
+      locations: ["api::AuthenticatedApi::bulk_update_issue"]
+      region_aware: false
+      notes: "Query string built from IssueFilter"
+    GET:
+      locations: ["api::AuthenticatedApi::list_organization_project_issues"]
+      region_aware: false
+"/projects/{org}/{project}/events/":
+  section: "Events and logs"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::list_organization_project_events"]
+      region_aware: false
+"/organizations/{org}/events/":
+  section: "Events and logs"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::fetch_organization_events"]
+      region_aware: false
+      notes: "Dataset-backed (e.g., dataset=logs); multiple field params; optional cursor, project"
+"/projects/{org}/{project}/events/{event_id}/json/":
+  section: "Events and logs"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_event"]
+      region_aware: false
+"/organizations/{org}/events/{event_id}/json/":
+  section: "Events and logs"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_event"]
+      region_aware: false
+"/projects/{org}/{project}/files/dsyms/unknown/":
+  section: "Debug information files (DIFs) and chunk upload"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::find_missing_dif_checksums"]
+      region_aware: false
+"/organizations/{org}/chunk-upload/":
+  section: "Debug information files (DIFs) and chunk upload"
+  absolute: false
+  methods:
+    GET:
+      locations: ["api::AuthenticatedApi::get_chunk_upload_options"]
+      region_aware: false
+      notes: "Returns server-provided absolute upload URL"
+"/projects/{org}/{project}/files/dsyms/":
+  section: "Region-specific uploads (wrapper)"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::RegionSpecificApi::upload_dif_archive"]
+      region_aware: true
+"/projects/{org}/{project}/files/difs/assemble/":
+  section: "Artifact assembly"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::assemble_difs"]
+      region_aware: false
+"/organizations/{org}/releases/{release}/assemble/":
+  section: "Artifact assembly"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::assemble_release_artifacts"]
+      region_aware: false
+"/organizations/{org}/artifactbundle/assemble/":
+  section: "Artifact assembly"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::assemble_artifact_bundle"]
+      region_aware: false
+"/projects/{org}/{project}/files/preprodartifacts/assemble/":
+  section: "Artifact assembly"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::assemble_build"]
+      region_aware: false
+"/projects/{org}/{project}/files/proguard-artifact-releases":
+  section: "Proguard"
+  absolute: false
+  methods:
+    POST:
+      locations: ["api::AuthenticatedApi::associate_proguard_mappings"]
+      region_aware: false
