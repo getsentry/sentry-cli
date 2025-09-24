@@ -138,21 +138,23 @@ def build_rows(yaml_map: t.Dict[str, t.Any]) -> t.Dict[str, t.List[t.Dict[str, t
     return sections
 
 
-def render_section(section: str, rows: t.List[t.Dict[str, t.Any]]) -> str:
-    # Sort rows: by path lexicographic, then by method order
-    rows_sorted = sorted(rows, key=lambda r: (r["path"], method_sort_key(r["method"])))
+def render_one_big_table(all_rows: t.List[t.Dict[str, t.Any]]) -> str:
+    # Sort rows: by section, then by path lexicographic, then by method order
+    rows_sorted = sorted(
+        all_rows,
+        key=lambda r: (r.get("section", ""), r["path"], method_sort_key(r["method"])),
+    )
 
     lines: t.List[str] = []
-    lines.append(f"### {section}")
-    lines.append("")
     lines.append(
-        "| Path | Method | Region-aware | Absolute | Owner | Endpoint Name | Class (in backend) | Locations used (in CLI) | Notes |"
+        "| Category | Path | Method | Region-aware | Absolute | Owner | Endpoint Name | Class (in backend) | Locations used (in CLI) | Notes |"
     )
     lines.append(
-        "| ---- | ------ | ------------ | -------- | ----- | ------------- | ------------------- | ----------------------- | ----- |"
+        "| -------- | ---- | ------ | ------------ | -------- | ----- | ------------- | ------------------- | ----------------------- | ----- |"
     )
 
     for r in rows_sorted:
+        category_cell = r.get("section") or ""
         path_cell = f"`{sanitize_code_span(r['path'])}`"
         method_cell = f"`{sanitize_code_span(r['method'])}`"
         region_cell = bool_to_yesno(r.get("region_aware", False))
@@ -172,7 +174,7 @@ def render_section(section: str, rows: t.List[t.Dict[str, t.Any]]) -> str:
         locations_cell = f"`{locations_raw}`" if locations_raw else ""
         notes_cell = r.get("notes") or ""
 
-        line = f"| {path_cell} | {method_cell} | {region_cell} | {absolute_cell} | {owner_cell} | {endpoint_cell} | {class_cell} | {locations_cell} | {notes_cell} |"
+        line = f"| {category_cell} | {path_cell} | {method_cell} | {region_cell} | {absolute_cell} | {owner_cell} | {endpoint_cell} | {class_cell} | {locations_cell} | {notes_cell} |"
         lines.append(line)
 
     return "\n".join(lines)
@@ -216,21 +218,19 @@ def main(argv: t.Optional[t.List[str]] = None) -> int:
 
     sections = build_rows(yaml_map)
 
-    # Determine section order
-    section_names = list(sections.keys())
+    # Flatten into a single list of rows, attaching section value to each row
+    all_rows: t.List[t.Dict[str, t.Any]] = []
+    for section_name, rows in sections.items():
+        for r in rows:
+            r_copy = dict(r)
+            r_copy["section"] = section_name
+            all_rows.append(r_copy)
+
     if not args.no_sort:
-        section_names = sorted(section_names)
+        # sorting is handled inside render_one_big_table
+        pass
 
-    out_parts: t.List[str] = []
-    first = True
-    for sec in section_names:
-        if not first:
-            out_parts.append("")
-        first = False
-        sec_md = render_section(sec, sections[sec])
-        out_parts.append(sec_md)
-
-    output_text = "\n\n".join(out_parts) + "\n"
+    output_text = render_one_big_table(all_rows) + "\n"
 
     try:
         if args.output == "-":
