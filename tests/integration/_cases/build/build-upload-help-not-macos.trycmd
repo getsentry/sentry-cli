@@ -8,8 +8,6 @@ Arguments:
   <PATH>...  The path to the build to upload. Supported files include Apk, and Aab.
 
 Options:
-  -o, --org <ORG>
-          The organization ID or slug.
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
           in key:value format.

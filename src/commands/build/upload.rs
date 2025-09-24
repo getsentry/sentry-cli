@@ -38,7 +38,6 @@ pub fn make_command(command: Command) -> Command {
         "The path to the build to upload. Supported files include Apk, and Aab.";
     command
         .about("[EXPERIMENTAL] Upload builds to a project.")
-        .org_arg()
         .project_arg(false)
         .arg(
             Arg::new("paths")
