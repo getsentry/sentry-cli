@@ -590,15 +590,17 @@ pub fn find_head() -> Result<String> {
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
 fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
-    let payload: GitHubEventPayload = match serde_json::from_str(json_content) {
-        Ok(payload) => payload,
+    let v: Value = match serde_json::from_str(json_content) {
+        Ok(v) => v,
         Err(_) => {
             debug!("Failed to parse GitHub event payload as JSON");
             return None;
         }
     };
 
-    Some(payload.pull_request?.head.sha)
+    v.pointer("/pull_request/head/sha")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_owned())
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
