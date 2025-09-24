@@ -14,7 +14,6 @@ use serde_json::Value;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
 
-
 #[derive(Copy, Clone)]
 pub enum GitReference<'a> {
     Commit(git2::Oid),
