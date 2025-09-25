@@ -1717,15 +1717,16 @@ mod tests {
         );
 
         // Test with push event (should return None)
-        let push_json = r#"{
-  "action": "push",
-  "ref": "refs/heads/main",
-  "head_commit": {
-    "id": "xyz789abc123"
-  }
-}"#;
+        let push_json = serde_json::json!({
+          "action": "push",
+          "ref": "refs/heads/main",
+          "head_commit": {
+            "id": "xyz789abc123"
+          }
+        })
+        .to_string();
 
-        assert_eq!(extract_pr_base_sha_from_event(push_json), None);
+        assert_eq!(extract_pr_base_sha_from_event(&push_json), None);
 
         // Test with malformed JSON
         assert_eq!(extract_pr_base_sha_from_event("invalid json {"), None);
