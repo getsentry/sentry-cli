@@ -569,6 +569,22 @@ pub fn find_head() -> Result<String> {
     Ok(head.id().to_string())
 }
 
+pub fn find_base_sha() -> Result<String> {
+    if let Some(pr_base_sha) = std::env::var("GITHUB_EVENT_PATH")
+        .ok()
+        .and_then(|event_path| std::fs::read_to_string(event_path).ok())
+        .and_then(|content| extract_pr_base_sha_from_event(&content))
+    {
+        debug!(
+            "Using GitHub Actions PR base SHA from event payload: {}",
+            pr_base_sha
+        );
+        return Ok(pr_base_sha);
+    }
+
+    Err(anyhow::anyhow!("No base SHA available"))
+}
+
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
 fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
@@ -581,6 +597,22 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
     };
 
     v.pointer("/pull_request/head/sha")
+        .and_then(|s| s.as_str())
+        .map(|s| s.to_owned())
+}
+
+/// Extracts the PR base SHA from GitHub Actions event payload JSON.
+/// Returns None if not a PR event or if SHA cannot be extracted.
+fn extract_pr_base_sha_from_event(json_content: &str) -> Option<String> {
+    let v: Value = match serde_json::from_str(json_content) {
+        Ok(v) => v,
+        Err(_) => {
+            debug!("Failed to parse GitHub event payload as JSON");
+            return None;
+        }
+    };
+
+    v.pointer("/pull_request/base/sha")
         .and_then(|s| s.as_str())
         .map(|s| s.to_owned())
 }
@@ -1658,5 +1690,90 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), "19ef6adc4dbddf733db6e833e1f96fb056b6dba5");
+    }
+
+    #[test]
+    fn test_extract_pr_base_sha_from_event() {
+        let pr_json = serde_json::json!({
+          "action": "opened",
+          "number": 123,
+          "pull_request": {
+            "id": 789,
+            "head": {
+              "ref": "feature-branch",
+              "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+            },
+            "base": {
+              "ref": "main",
+              "sha": "55e6bc8c264ce95164314275d805f477650c440d"
+            }
+          }
+        })
+        .to_string();
+
+        assert_eq!(
+            extract_pr_base_sha_from_event(&pr_json),
+            Some("55e6bc8c264ce95164314275d805f477650c440d".to_owned())
+        );
+
+        // Test with push event (should return None)
+        let push_json = r#"{
+  "action": "push",
+  "ref": "refs/heads/main",
+  "head_commit": {
+    "id": "xyz789abc123"
+  }
+}"#;
+
+        assert_eq!(extract_pr_base_sha_from_event(push_json), None);
+
+        // Test with malformed JSON
+        assert_eq!(extract_pr_base_sha_from_event("invalid json {"), None);
+
+        // Test with missing base SHA
+        let incomplete_json = r#"{
+  "pull_request": {
+    "head": {
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+    }
+  }
+}"#;
+
+        assert_eq!(extract_pr_base_sha_from_event(incomplete_json), None);
+    }
+
+    #[test]
+    fn test_find_base_sha() {
+        use std::fs;
+
+        // Clean up environment first
+        std::env::remove_var("GITHUB_EVENT_PATH");
+
+        // Test with PR event and event file
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let event_file = temp_dir.path().join("event.json");
+        let pr_json = r#"{
+  "action": "opened",
+  "pull_request": {
+    "head": {
+      "sha": "19ef6adc4dbddf733db6e833e1f96fb056b6dba5"
+    },
+    "base": {
+      "sha": "55e6bc8c264ce95164314275d805f477650c440d"
+    }
+  }
+}"#;
+
+        fs::write(&event_file, pr_json).expect("Failed to write event file");
+        std::env::set_var("GITHUB_EVENT_PATH", event_file.to_str().unwrap());
+
+        let result = find_base_sha();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), "55e6bc8c264ce95164314275d805f477650c440d");
+
+        // Test without GITHUB_EVENT_PATH
+        std::env::remove_var("GITHUB_EVENT_PATH");
+        let result = find_base_sha();
+        assert!(result.is_err());
     }
 }
