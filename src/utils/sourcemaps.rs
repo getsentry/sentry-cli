@@ -300,7 +300,7 @@ impl SourceMapProcessor {
 
         let mut explicitly_associated_sourcemaps = HashMap::new();
 
-        let unassociated_js_source_locations: HashMap<_, _> = self
+        let (sources_with_location, sources_without_location) = self
             .sources
             .values_mut()
             .filter(|source| source.ty == SourceFileType::MinifiedSource)
@@ -317,40 +317,47 @@ impl SourceMapProcessor {
                     })
                     .ok()
             })
-            .collect();
+            .fold(
+                (HashMap::new(), HashSet::new()),
+                |(mut sources_with_location, mut sources_without_location), (source, location)| {
+                    match location {
+                        Some(location) => {
+                            sources_with_location.insert(source, location);
+                        }
+                        None => {
+                            sources_without_location.insert(source);
+                        }
+                    }
+                    (sources_with_location, sources_without_location)
+                },
+            );
 
         // First pass: if location discovered, add to sourcemap_references
-        unassociated_js_source_locations
-            .iter()
-            .filter_map(|(source, location)| location.as_ref().map(|location| (source, location)))
-            .for_each(|(source, location)| {
-                // Add location to already associated sourcemaps, so we cannot guess it again.
-                explicitly_associated_sourcemaps.insert(
-                    fs::path_as_url(
-                        &source
-                            .path
-                            .parent()
-                            .expect("source path has a parent")
-                            .join(location),
-                    ),
-                    source.url.clone(),
-                );
+        sources_with_location.iter().for_each(|(source, location)| {
+            let full_sourcemap_path = source
+                .path
+                .parent()
+                .expect("source path has a parent")
+                .join(location);
 
-                self.sourcemap_references.insert(
-                    source.url.clone(),
-                    Some(SourceMapReference::from_url(location.to_owned())),
-                );
-            });
+            // Add location to already associated sourcemaps, so we cannot guess it again.
+            explicitly_associated_sourcemaps
+                .insert(fs::path_as_url(&full_sourcemap_path), source.url.clone());
+
+            self.sourcemap_references.insert(
+                source.url.clone(),
+                Some(SourceMapReference::from_url(location.to_owned())),
+            );
+        });
 
         // Second pass: for remaining sourcemaps, try to guess the location
-        unassociated_js_source_locations
+        sources_without_location
             .into_iter()
-            .filter(|(_, location)| location.is_none())
             .fold(
                 // Collect sources guessed as associated with each sourcemap. This way, we ensure
                 // we only associate the sourcemap with any sources if it is only guessed once.
                 HashMap::new(),
-                |mut sources_associated_with_sm, (source, _)| {
+                |mut sources_associated_with_sm, source| {
                     let sourcemap_reference = guess_sourcemap_reference(&sourcemaps, &source.url)
                         .inspect_err(|err| {
                             source.warn(format!(
