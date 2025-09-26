@@ -172,6 +172,7 @@ fn guess_sourcemap_reference(
 /// and original url with which the file was added to the processor.
 /// This enable us to look up the source map file based on the original url.
 /// Which can be used for example for debug id referencing.
+#[derive(Eq, Hash, PartialEq)]
 pub struct SourceMapReference {
     url: String,
     original_url: Option<String>,
@@ -287,6 +288,7 @@ impl SourceMapProcessor {
     /// Collect references to sourcemaps in minified source files
     /// and saves them in `self.sourcemap_references`.
     fn collect_sourcemap_references(&mut self) {
+        dbg!(&self.sources.iter().map(|x| x.0.clone()).collect::<Vec<_>>());
         // Collect available sourcemaps
         let sourcemaps: HashSet<_> = self
             .sources
@@ -296,7 +298,7 @@ impl SourceMapProcessor {
             .map(|x| x.url.clone())
             .collect();
 
-        let mut already_associated_sourcemaps = HashSet::new();
+        let mut explicitly_associated_sourcemaps = HashMap::new();
 
         let unassociated_js_source_locations: HashMap<_, _> = self
             .sources
@@ -323,7 +325,7 @@ impl SourceMapProcessor {
             .filter_map(|(source, location)| location.as_ref().map(|location| (source, location)))
             .for_each(|(source, location)| {
                 // Add location to already associated sourcemaps, so we cannot guess it again.
-                already_associated_sourcemaps.insert(location.to_owned());
+                explicitly_associated_sourcemaps.insert(location.to_owned(), source.url.clone());
 
                 self.sourcemap_references.insert(
                     source.url.clone(),
@@ -335,29 +337,64 @@ impl SourceMapProcessor {
         unassociated_js_source_locations
             .into_iter()
             .filter(|(_, location)| location.is_none())
-            .for_each(|(source, _)| {
-                let sourcemap_reference = guess_sourcemap_reference(&sourcemaps, &source.url)
-                    .inspect_err(|err| {
-                        source.warn(format!(
-                            "could not determine a source map reference ({err})"
-                        ));
-                    })
-                    .ok()
-                    .filter(|sourcemap_reference| {
-                        !already_associated_sourcemaps.contains(&sourcemap_reference.url)
-                    })
-                    .inspect(|sourcemap_reference| {
-                        // In practice, original_url is always set in guess_sourcemap_reference
-                        if let Some(original_url) =
-                            sourcemap_reference.original_url.as_ref().cloned()
-                        {
-                            // Add original url to already associated sourcemaps, so we cannot guess it again.
-                            already_associated_sourcemaps.insert(original_url);
-                        }
-                    });
+            .fold(
+                // Collect sources guessed as associated with each sourcemap. This way, we ensure
+                // we only associate the sourcemap with any sources if it is only guessed once.
+                HashMap::new(),
+                |mut sources_associated_with_sm, (source, _)| {
+                    let sourcemap_reference = guess_sourcemap_reference(&sourcemaps, &source.url)
+                        .inspect_err(|err| {
+                            source.warn(format!(
+                                "could not determine a source map reference ({err})"
+                            ));
+                            self.sourcemap_references.insert(source.url.clone(), None);
+                        })
+                        .ok()
+                        .filter(|sourcemap_reference| {
+                            explicitly_associated_sourcemaps
+                                .get(&sourcemap_reference.url)
+                                .inspect(|url| {
+                                    source.warn(format!(
+                                        "based on the file name, we guessed a source map \
+                                        reference ({}), which is already associated with source \
+                                        {url}. Please explicitly set the sourcemap URL with a \
+                                        `//# sourceMappingURL=...` comment in the source file.",
+                                        sourcemap_reference.url
+                                    ));
+                                })
+                                .is_none()
+                        });
 
-                self.sourcemap_references
-                    .insert(source.url.clone(), sourcemap_reference);
+                    if let Some(sourcemap_reference) = sourcemap_reference {
+                        sources_associated_with_sm
+                            .entry(sourcemap_reference)
+                            .or_insert_with(Vec::new)
+                            .push(source);
+                    }
+                    sources_associated_with_sm
+                },
+            )
+            .into_iter()
+            .for_each(|(sourcemap_reference, mut sources)| {
+                if let [source] = sources.as_slice() {
+                    // One source -> we can safely associate the sourcemap with it.
+                    self.sourcemap_references
+                        .insert(source.url.clone(), Some(sourcemap_reference));
+                } else {
+                    // Multiple sources -> it is unclear which source we should associate
+                    // the sourcemap with, so don't associate it with any of them.
+                    sources.iter_mut().for_each(|source| {
+                        source.warn(format!(
+                            "Could not associate this source with a source map. We \
+                            guessed the sourcemap reference {} for multiple sources, including \
+                            this one. Please explicitly set the sourcemap URL with a \
+                            `//# sourceMappingURL=...` comment in the source file, to make the \
+                            association clear.",
+                            sourcemap_reference.url
+                        ));
+                        self.sourcemap_references.insert(source.url.clone(), None);
+                    });
+                }
             });
     }
 
