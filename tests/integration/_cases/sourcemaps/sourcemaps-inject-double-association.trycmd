@@ -2,16 +2,27 @@
 $ sentry-cli sourcemaps inject ./
 ? success
 > Searching ./
-> Found 3 files
-> Analyzing 3 sources
+> Found 11 files
+> Analyzing 11 sources
 > Injecting debug ids
 
 Source Map Debug ID Injection Report
   Modified: The following source files have been modified to have debug ids
-    d577e31d-376c-5043-b751-add9ec84b7bc - ./app.min.js
-    f3aa1477-a45c-540a-9905-f6d9f6d1d7e1 - ./references_app.min.js
+    0fb38a98-fdda-5fd2-8e58-d8370f1596fb - ./app.min.js
+        - warning: based on the file name, we guessed a source map reference (app.min.js.map), which is already associated with source ./references_app.min.js. Please explicitly set the sourcemap URL with a `//# sourceMappingURL=...` comment in the source file.
+    2de47eef-a93e-5d79-8c45-afb649b15f9e - ./mapInSubdirectory.min.js
+    f369af08-3e09-58d4-92a9-7f432f7d51cb - ./otherApp.js
+        - warning: Could not associate this source with a source map. We guessed the sourcemap reference otherApp.map for multiple sources, including this one. Please explicitly set the sourcemap URL with a `//# sourceMappingURL=...` comment in the source file, to make the association clear.
+    4ee42454-c84d-5d2a-b0b9-8cda74c57838 - ./otherApp.min.js
+        - warning: Could not associate this source with a source map. We guessed the sourcemap reference otherApp.map for multiple sources, including this one. Please explicitly set the sourcemap URL with a `//# sourceMappingURL=...` comment in the source file, to make the association clear.
+    44931b59-c632-5017-a624-3bb0ac2a0317 - ./references_app.min.js
+    edefb3dc-9f7a-5540-9db0-270bbd81b8fd - ./subdirectory/app.min.js
+    228cdb31-bb0a-533c-ac4c-c2ab111ab148 - ./subdirectory/mapForFileInParentDirectory.min.js
+        - warning: based on the file name, we guessed a source map reference (mapForFileInParentDirectory.min.js.map), which is already associated with source ./mapInSubdirectory.min.js. Please explicitly set the sourcemap URL with a `//# sourceMappingURL=...` comment in the source file.
   Modified: The following sourcemap files have been modified to have debug ids
-    f3aa1477-a45c-540a-9905-f6d9f6d1d7e1 - ./app.min.js.map
+    44931b59-c632-5017-a624-3bb0ac2a0317 - ./app.min.js.map
+    edefb3dc-9f7a-5540-9db0-270bbd81b8fd - ./subdirectory/app.min.js.map
+    2de47eef-a93e-5d79-8c45-afb649b15f9e - ./subdirectory/mapForFileInParentDirectory.min.js.map
 
 
 ```

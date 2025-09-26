@@ -25,6 +25,7 @@ use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
 };
+use crate::utils::fs;
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
 use crate::utils::sourcemaps::inject::{InjectReportBuilder, ReportItem};
@@ -172,7 +173,7 @@ fn guess_sourcemap_reference(
 /// and original url with which the file was added to the processor.
 /// This enable us to look up the source map file based on the original url.
 /// Which can be used for example for debug id referencing.
-#[derive(Eq, Hash, PartialEq)]
+#[derive(Eq, Hash, PartialEq, Debug)]
 pub struct SourceMapReference {
     url: String,
     original_url: Option<String>,
@@ -288,7 +289,6 @@ impl SourceMapProcessor {
     /// Collect references to sourcemaps in minified source files
     /// and saves them in `self.sourcemap_references`.
     fn collect_sourcemap_references(&mut self) {
-        dbg!(&self.sources.iter().map(|x| x.0.clone()).collect::<Vec<_>>());
         // Collect available sourcemaps
         let sourcemaps: HashSet<_> = self
             .sources
@@ -325,7 +325,16 @@ impl SourceMapProcessor {
             .filter_map(|(source, location)| location.as_ref().map(|location| (source, location)))
             .for_each(|(source, location)| {
                 // Add location to already associated sourcemaps, so we cannot guess it again.
-                explicitly_associated_sourcemaps.insert(location.to_owned(), source.url.clone());
+                explicitly_associated_sourcemaps.insert(
+                    fs::path_as_url(
+                        &source
+                            .path
+                            .parent()
+                            .expect("source path has a parent")
+                            .join(location),
+                    ),
+                    source.url.clone(),
+                );
 
                 self.sourcemap_references.insert(
                     source.url.clone(),
@@ -347,12 +356,16 @@ impl SourceMapProcessor {
                             source.warn(format!(
                                 "could not determine a source map reference ({err})"
                             ));
-                            self.sourcemap_references.insert(source.url.clone(), None);
                         })
                         .ok()
                         .filter(|sourcemap_reference| {
                             explicitly_associated_sourcemaps
-                                .get(&sourcemap_reference.url)
+                                .get(
+                                    sourcemap_reference
+                                        .original_url
+                                        .as_ref()
+                                        .expect("original url set in guess_sourcemap_reference"),
+                                )
                                 .inspect(|url| {
                                     source.warn(format!(
                                         "based on the file name, we guessed a source map \
@@ -370,7 +383,10 @@ impl SourceMapProcessor {
                             .entry(sourcemap_reference)
                             .or_insert_with(Vec::new)
                             .push(source);
+                    } else {
+                        self.sourcemap_references.insert(source.url.clone(), None);
                     }
+
                     sources_associated_with_sm
                 },
             )
