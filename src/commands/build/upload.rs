@@ -227,7 +227,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_repo_name,
         )
     };
-    let base_sha = matches.get_one("base_sha").map(String::as_str);
+    let base_sha = matches
+        .get_one("base_sha")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| vcs::find_base_sha().ok().map(Cow::Owned));
     let pr_number = matches
         .get_one("pr_number")
         .copied()
@@ -290,7 +294,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let bytes = ByteView::open(zip.path())?;
         let vcs_info = VcsInfo {
             head_sha: head_sha.as_deref(),
-            base_sha,
+            base_sha: base_sha.as_deref(),
             vcs_provider: vcs_provider.as_deref(),
             head_repo_name: head_repo_name.as_deref(),
             base_repo_name: base_repo_name.as_deref(),
