@@ -107,7 +107,7 @@ pub fn get_sourcemap_reference_from_headers<'a, I: Iterator<Item = (&'a String, 
 }
 
 fn guess_sourcemap_reference(
-    sourcemaps: &HashSet<String>,
+    sourcemaps: &mut HashSet<String>,
     min_url: &str,
 ) -> Result<SourceMapReference> {
     let map_ext = "map";
@@ -116,6 +116,8 @@ fn guess_sourcemap_reference(
     // foo.min.js -> foo.map
     let url_with_path = unsplit_url(path, basename, Some("map"));
     if sourcemaps.contains(&url_with_path) {
+        // Remove the sourcemap from available set since we're associating it
+        sourcemaps.remove(&url_with_path);
         return Ok(
             SourceMapReference::from_url(unsplit_url(None, basename, Some("map")))
                 .with_original_url(url_with_path),
@@ -127,6 +129,8 @@ fn guess_sourcemap_reference(
         let new_ext = format!("{ext}.{map_ext}");
         let url_with_path = unsplit_url(path, basename, Some(&new_ext));
         if sourcemaps.contains(&url_with_path) {
+            // Remove the sourcemap from available set since we're associating it
+            sourcemaps.remove(&url_with_path);
             return Ok(
                 SourceMapReference::from_url(unsplit_url(None, basename, Some(&new_ext)))
                     .with_original_url(url_with_path),
@@ -138,6 +142,8 @@ fn guess_sourcemap_reference(
             let new_ext = format!("{rest}.{map_ext}");
             let url_with_path = unsplit_url(path, basename, Some(&new_ext));
             if sourcemaps.contains(&url_with_path) {
+                // Remove the sourcemap from available set since we're associating it
+                sourcemaps.remove(&url_with_path);
                 return Ok(SourceMapReference::from_url(unsplit_url(
                     None,
                     basename,
@@ -155,6 +161,8 @@ fn guess_sourcemap_reference(
             let new_ext = parts.join(".");
             let url_with_path = unsplit_url(path, basename, Some(&new_ext));
             if sourcemaps.contains(&url_with_path) {
+                // Remove the sourcemap from available set since we're associating it
+                sourcemaps.remove(&url_with_path);
                 return Ok(SourceMapReference::from_url(unsplit_url(
                     None,
                     basename,
@@ -287,7 +295,7 @@ impl SourceMapProcessor {
     /// Collect references to sourcemaps in minified source files
     /// and saves them in `self.sourcemap_references`.
     fn collect_sourcemap_references(&mut self) {
-        let sourcemaps = self
+        let mut available_sourcemaps: HashSet<String> = self
             .sources
             .iter()
             .map(|x| x.1)
@@ -295,6 +303,7 @@ impl SourceMapProcessor {
             .map(|x| x.url.clone())
             .collect();
 
+        // First pass: Process sources with explicit source mapping URLs
         for source in self.sources.values_mut() {
             // Skip everything but minified JS files.
             if source.ty != SourceFileType::MinifiedSource {
@@ -317,22 +326,44 @@ impl SourceMapProcessor {
             // guessing the source map location based on the source location.
             let location =
                 discover_sourcemaps_location(contents).filter(|loc| !is_remote_sourcemap(loc));
-            let sourcemap_reference = match location {
-                Some(url) => SourceMapReference::from_url(url.to_owned()),
-                None => match guess_sourcemap_reference(&sourcemaps, &source.url) {
-                    Ok(target) => target,
-                    Err(err) => {
-                        source.warn(format!(
-                            "could not determine a source map reference ({err})"
-                        ));
-                        self.sourcemap_references.insert(source.url.clone(), None);
-                        continue;
-                    }
-                },
-            };
+            
+            if let Some(url) = location {
+                let sourcemap_reference = SourceMapReference::from_url(url.to_owned());
+                
+                // Remove this sourcemap from available set if it exists
+                // Note: We don't remove for explicit references as multiple sources 
+                // might legitimately reference the same sourcemap via source mapping URL
+                
+                self.sourcemap_references
+                    .insert(source.url.clone(), Some(sourcemap_reference));
+            }
+        }
 
-            self.sourcemap_references
-                .insert(source.url.clone(), Some(sourcemap_reference));
+        // Second pass: Process sources without explicit source mapping URLs (guessing)
+        for source in self.sources.values_mut() {
+            // Skip everything but minified JS files.
+            if source.ty != SourceFileType::MinifiedSource {
+                continue;
+            }
+
+            // Skip if already processed in first pass
+            if self.sourcemap_references.contains_key(&source.url) {
+                continue;
+            }
+
+            // Try to guess the sourcemap reference
+            match guess_sourcemap_reference(&mut available_sourcemaps, &source.url) {
+                Ok(target) => {
+                    self.sourcemap_references
+                        .insert(source.url.clone(), Some(target));
+                }
+                Err(err) => {
+                    source.warn(format!(
+                        "could not determine a source map reference ({err})"
+                    ));
+                    self.sourcemap_references.insert(source.url.clone(), None);
+                }
+            }
         }
     }
 
