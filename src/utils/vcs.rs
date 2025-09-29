@@ -350,10 +350,7 @@ pub fn get_github_pr_number() -> Option<u32> {
     }
 
     let pr_number_str = github_ref.strip_prefix("refs/pull/")?;
-    debug!("Extracted PR reference: {}", pr_number_str);
-
     let pr_number_str = pr_number_str.split('/').next()?;
-    debug!("Parsing PR number from: {}", pr_number_str);
 
     let pr_number = pr_number_str.parse().ok()?;
     debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
