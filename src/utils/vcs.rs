@@ -805,6 +805,7 @@ pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
 mod tests {
     use {
         crate::api::RepoProvider,
+        serial_test::serial,
         insta::{assert_debug_snapshot, assert_yaml_snapshot},
         std::fs::File,
         std::io::Write as _,
@@ -1672,6 +1673,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(github_event_path)]
     fn test_find_head_with_github_event_path() {
         use std::fs;
 
@@ -1751,6 +1753,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(github_event_path)]
     fn test_find_base_sha() {
         use std::fs;
 
