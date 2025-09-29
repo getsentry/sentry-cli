@@ -805,8 +805,8 @@ pub fn get_commit_time(time: Time) -> DateTime<FixedOffset> {
 mod tests {
     use {
         crate::api::RepoProvider,
-        serial_test::serial,
         insta::{assert_debug_snapshot, assert_yaml_snapshot},
+        serial_test::serial,
         std::fs::File,
         std::io::Write as _,
         std::path::Path,
