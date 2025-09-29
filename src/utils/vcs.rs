@@ -375,6 +375,21 @@ pub fn get_github_base_ref() -> Option<String> {
     Some(base_ref)
 }
 
+/// Attempts to get the head branch from GitHub Actions environment variables.
+/// Returns the head branch name if running in a GitHub Actions pull request environment.
+pub fn get_github_head_ref() -> Option<String> {
+    let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
+
+    if event_name != "pull_request" {
+        debug!("Not running in pull_request event, got: {}", event_name);
+        return None;
+    }
+
+    let head_ref = std::env::var("GITHUB_HEAD_REF").ok()?;
+    debug!("Auto-detected head ref from GitHub Actions: {}", head_ref);
+    Some(head_ref)
+}
+
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     let mut non_git = false;
     for configured_repo in repos {
