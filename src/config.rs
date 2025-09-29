@@ -21,6 +21,7 @@ use crate::constants::CONFIG_INI_FILE_PATH;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
+use crate::utils::args;
 use crate::utils::auth_token::AuthToken;
 use crate::utils::auth_token::AuthTokenPayload;
 use crate::utils::http::is_absolute_url;
@@ -370,11 +371,21 @@ impl Config {
             .get_one::<String>("release")
             .cloned()
             .or_else(|| {
-                env::var("SENTRY_RELEASE")
-                    .ok()
-                    .filter(|v| !v.is_empty())
+                env::var("SENTRY_RELEASE").ok().filter(|v| {
+                    !v.is_empty()
+                        && args::validate_release(v)
+                            .inspect_err(|e| {
+                                warn!("Ignoring invalid SENTRY_RELEASE environment variable: {e}")
+                            })
+                            .is_ok()
+                })
             })
-            .ok_or_else(|| format_err!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
+            .ok_or_else(|| {
+                format_err!(
+                    "A release slug is required (provide with --release or by \
+                    setting the SENTRY_RELEASE environment variable)"
+                )
+            })
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
