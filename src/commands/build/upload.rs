@@ -24,7 +24,7 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_github_base_ref, get_github_pr_number, get_provider_from_remote,
+    self, get_github_base_ref, get_github_head_ref, get_github_pr_number, get_provider_from_remote,
     get_repo_from_remote_preserve_case, git_repo_base_ref, git_repo_base_repo_name_preserve_case,
     git_repo_head_ref, git_repo_remote_url,
 };
@@ -150,7 +150,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
-                // Try to get the current ref from the VCS if not provided
+                // First try GitHub Actions environment variables
+                get_github_head_ref().map(Cow::Owned)
+            })
+            .or_else(|| {
+                // Fallback to git repository introspection
                 // Note: git_repo_head_ref will return an error for detached HEAD states,
                 // which the error handling converts to None - this prevents sending "HEAD" as a branch name
                 // In that case, the user will need to provide a valid branch name.
