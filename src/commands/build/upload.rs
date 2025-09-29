@@ -192,7 +192,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                             Some(base_ref_name)
                         }
                         Err(e) => {
-                            warn!("Could not detect base branch reference: {}", e);
+                            info!("Could not detect base branch reference: {}", e);
                             None
                         }
                     })
