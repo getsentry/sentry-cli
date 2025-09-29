@@ -28,25 +28,28 @@ pub fn validate_project(v: &str) -> Result<String, String> {
     }
 }
 
-fn validate_release(v: &str) -> Result<String, String> {
+/// Validate a release string.
+pub fn validate_release(v: &str) -> Result<()> {
     if v.trim() != v {
-        Err(
+        anyhow::bail!(
             "Invalid release version. Releases must not contain leading or trailing spaces."
-                .to_owned(),
-        )
+        );
     } else if v.is_empty()
         || v == "."
         || v == ".."
         || v.find(&['\n', '\t', '\x0b', '\x0c', '\t', '/'][..])
             .is_some()
     {
-        Err(
+        anyhow::bail!(
             "Invalid release version. Slashes and certain whitespace characters are not permitted."
-                .to_owned(),
-        )
-    } else {
-        Ok(v.to_owned())
+        );
     }
+
+    Ok(())
+}
+
+fn parse_release(v: &str) -> Result<String> {
+    validate_release(v).map(|_| v.to_owned())
 }
 
 pub fn validate_distribution(v: &str) -> Result<String, String> {
@@ -123,7 +126,7 @@ impl ArgExt for Command {
                 .short('r')
                 .global(true)
                 .allow_hyphen_values(true)
-                .value_parser(validate_release)
+                .value_parser(parse_release)
                 .help("The release slug."),
         )
     }
@@ -135,7 +138,7 @@ impl ArgExt for Command {
                 // either specified for subcommands (global=true) or for this command (required=true)
                 .required(!global)
                 .global(global)
-                .value_parser(validate_release)
+                .value_parser(parse_release)
                 .help("The version of the release"),
         )
     }
