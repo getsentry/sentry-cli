@@ -231,7 +231,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_one("base_sha")
         .map(String::as_str)
         .map(Cow::Borrowed)
-        .or_else(|| vcs::find_base_sha().ok().map(Cow::Owned));
+        .or_else(|| {
+            vcs::find_base_sha()
+                .inspect_err(|e| debug!("Error finding base SHA: {}", e))
+                .ok()
+                .flatten()
+                .map(Cow::Owned)
+        });
     let pr_number = matches
         .get_one("pr_number")
         .copied()
