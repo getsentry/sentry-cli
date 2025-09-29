@@ -24,7 +24,8 @@ use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use backoff::backoff::Backoff as _;
-use brotli2::write::BrotliEncoder;
+use brotli::enc::BrotliEncoderParams;
+use brotli::CompressorWriter;
 #[cfg(target_os = "macos")]
 use chrono::Duration;
 use chrono::{DateTime, FixedOffset, Utc};
@@ -364,9 +365,17 @@ impl Api {
     fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
         Ok(match compression {
             ChunkCompression::Brotli => {
-                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
+                let mut encoder = CompressorWriter::with_params(
+                    Vec::new(),
+                    0,
+                    &BrotliEncoderParams {
+                        quality: 6,
+                        ..Default::default()
+                    },
+                );
                 encoder.write_all(data)?;
-                encoder.finish()?
+                encoder.flush()?;
+                encoder.into_inner()
             }
 
             ChunkCompression::Gzip => {
