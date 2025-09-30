@@ -161,14 +161,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 repo_ref
                     .and_then(|r| match git_repo_head_ref(r) {
                         Ok(ref_name) => {
-                            debug!("Found current branch reference: {}", ref_name);
+                            debug!("Found current branch reference: {ref_name}");
                             Some(ref_name)
                         }
                         Err(e) => {
-                            debug!(
-                                "No valid branch reference found (likely detached HEAD): {}",
-                                e
-                            );
+                            debug!("No valid branch reference found (likely detached HEAD): {e}");
                             None
                         }
                     })
@@ -188,11 +185,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
                         Ok(base_ref_name) => {
-                            debug!("Found base reference: {}", base_ref_name);
+                            debug!("Found base reference: {base_ref_name}");
                             Some(base_ref_name)
                         }
                         Err(e) => {
-                            info!("Could not detect base branch reference: {}", e);
+                            info!("Could not detect base branch reference: {e}");
                             None
                         }
                     })
@@ -208,7 +205,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 repo_ref
                     .and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
                         Ok(Some(base_repo_name)) => {
-                            debug!("Found base repository name: {}", base_repo_name);
+                            debug!("Found base repository name: {base_repo_name}");
                             Some(base_repo_name)
                         }
                         Ok(None) => {
@@ -216,7 +213,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                             None
                         }
                         Err(e) => {
-                            warn!("Could not detect base repository name: {}", e);
+                            warn!("Could not detect base repository name: {e}");
                             None
                         }
                     })
@@ -237,7 +234,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(Cow::Borrowed)
         .or_else(|| {
             vcs::find_base_sha()
-                .inspect_err(|e| debug!("Error finding base SHA: {}", e))
+                .inspect_err(|e| debug!("Error finding base SHA: {e}"))
                 .ok()
                 .flatten()
                 .map(Cow::Owned)
@@ -326,7 +323,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
             }
             Err(e) => {
-                debug!("Failed to upload file at path {}: {}", path.display(), e);
+                debug!("Failed to upload file at path {}: {e}", path.display());
                 errored_paths_and_reasons.push((path.to_path_buf(), e));
             }
         }
@@ -446,7 +443,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .to_str()
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
-    debug!("Adding file to zip: {}", file_name);
+    debug!("Adding file to zip: {file_name}");
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
@@ -486,11 +483,8 @@ fn upload_file(
         update to the latest version of Sentry to use the build upload command.";
 
     debug!(
-        "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
-        org,
-        project,
+        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, vcs_info: {vcs_info:?}",
         build_configuration.unwrap_or("unknown"),
-        vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
@@ -569,7 +563,7 @@ fn upload_file(
         // true for ChunkedFileState::NotFound.
         if response.state == ChunkedFileState::Error {
             let message = response.detail.as_deref().unwrap_or("unknown error");
-            bail!("Failed to process uploaded files: {}", message);
+            bail!("Failed to process uploaded files: {message}");
         }
 
         if let Some(artifact_url) = response.artifact_url {

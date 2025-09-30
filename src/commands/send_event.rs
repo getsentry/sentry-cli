@@ -185,7 +185,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .collect();
 
         if collected_paths.is_empty() {
-            warn!("Did not match any .json files for pattern: {}", path);
+            warn!("Did not match any .json files for pattern: {path}");
             return Ok(());
         }
 

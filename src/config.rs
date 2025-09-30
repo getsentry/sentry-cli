@@ -142,6 +142,7 @@ impl Config {
         set_max_level(self.get_log_level());
 
         #[cfg(not(windows))]
+        #[expect(deprecated)]
         {
             openssl_probe::init_ssl_cert_env_vars();
         }
@@ -205,10 +206,10 @@ impl Config {
     pub fn get_base_url(&self) -> Result<&str> {
         let base = self.cached_base_url.trim_end_matches('/');
         if !is_absolute_url(base) {
-            bail!("bad sentry url: unknown scheme ({})", base);
+            bail!("bad sentry url: unknown scheme ({base})");
         }
         if base.matches('/').count() != 2 {
-            bail!("bad sentry url: not on URL root ({})", base);
+            bail!("bad sentry url: not on URL root ({base})");
         }
         Ok(base)
     }
@@ -540,10 +541,7 @@ fn get_max_retries(ini: &Ini) -> u32 {
         Ok(Some(val)) => return val,
         Ok(None) => (),
         Err(e) => {
-            warn!(
-                "Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {}",
-                e
-            );
+            warn!("Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {e}");
         }
     };
 
@@ -551,7 +549,7 @@ fn get_max_retries(ini: &Ini) -> u32 {
         Ok(Some(val)) => return val,
         Ok(None) => (),
         Err(e) => {
-            warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {}", e);
+            warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {e}");
         }
     };
 
@@ -679,7 +677,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                 let props = match java_properties::read(f) {
                     Ok(props) => props,
                     Err(err) => {
-                        bail!("Could not load java style properties file: {}", err);
+                        bail!("Could not load java style properties file: {err}");
                     }
                 };
                 info!(
@@ -692,7 +690,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                         let section = iter.next();
                         rv.set_to(section, key.to_owned(), value);
                     } else {
-                        debug!("Incorrect properties file key: {}", key);
+                        debug!("Incorrect properties file key: {key}");
                     }
                 }
             }

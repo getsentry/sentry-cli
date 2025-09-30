@@ -17,7 +17,7 @@ pub fn execute(_matches: &ArgMatches) -> Result<()> {
     let regions = authenticated_api.list_available_regions()?;
 
     let mut organizations: Vec<Organization> = vec![];
-    debug!("Available regions: {:?}", regions);
+    debug!("Available regions: {regions:?}");
 
     // Self-hosted instances won't have a region instance or prefix, so we
     // need to check before fanning out.

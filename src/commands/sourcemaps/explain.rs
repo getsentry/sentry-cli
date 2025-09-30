@@ -108,19 +108,19 @@ fn extract_nth_frame(stacktrace: &Stacktrace, position: usize) -> Result<&Frame>
 
     let frame = in_app_frames
         .get(position)
-        .ok_or_else(|| format_err!("Selected frame ({}) is missing.", position))?;
+        .ok_or_else(|| format_err!("Selected frame ({position}) is missing."))?;
 
     let abs_path = frame
         .abs_path
         .as_ref()
-        .ok_or_else(|| format_err!("Selected frame ({}) is missing an abs_path", position))?;
+        .ok_or_else(|| format_err!("Selected frame ({position}) is missing an abs_path"))?;
 
     if let Ok(abs_path) = Url::parse(abs_path) {
         if Path::new(abs_path.path()).extension().is_none() {
-            bail!("Selected frame ({}) of event exception originates from the <script> tag, its not possible to resolve source maps", position);
+            bail!("Selected frame ({position}) of event exception originates from the <script> tag, its not possible to resolve source maps");
         }
     } else {
-        bail!("Event exception stacktrace selected frame ({}) has incorrect abs_path (valid url is required). Found {}", position, abs_path);
+        bail!("Event exception stacktrace selected frame ({position}) has incorrect abs_path (valid url is required). Found {abs_path}");
     }
 
     Ok(frame)
@@ -210,10 +210,8 @@ fn fetch_release_artifact_file(
         })
         .map_err(|err| {
             format_err!(
-                "Could not retrieve file {} from release {}: {:?}",
-                artifact.name,
-                release,
-                err
+                "Could not retrieve file {} from release {release}: {err:?}",
+                artifact.name
             )
         })?
 }
@@ -290,7 +288,7 @@ fn print_sourcemap(file: &TempFile, line: u32, column: u32) -> Result<()> {
         } else if token.get_source_view().is_none() {
             bail!("cannot find source");
         } else {
-            bail!("cannot find source for line {} column {}", line, column);
+            bail!("cannot find source for line {line} column {column}");
         }
     } else {
         bail!("invalid sourcemap location");
@@ -363,7 +361,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
         Err(_) => {
             let base = Url::parse("http://example.com").unwrap();
             base.join(abs_path)
-                .map_err(|_| format_err!("Cannot parse source map url {}", abs_path))
+                .map_err(|_| format_err!("Cannot parse source map url {abs_path}"))
         }
     }?;
     let mut filename = String::from("~");

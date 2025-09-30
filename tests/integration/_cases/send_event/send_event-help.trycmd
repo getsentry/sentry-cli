@@ -47,7 +47,7 @@ Options:
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           
-          [aliases: silent]
+          [aliases: --silent]
 
       --no-environ
           Do not send environment variables along
