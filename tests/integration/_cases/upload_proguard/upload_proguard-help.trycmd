@@ -30,7 +30,7 @@ Options:
                                      [defaults to 'android']
       --quiet                        Do not print any output while preserving correct exit code.
                                      This flag is currently implemented only for selected
-                                     subcommands. [aliases: silent]
+                                     subcommands. [aliases: --silent]
       --no-upload                    Disable the actual upload.
                                      This runs all steps for the processing but does not trigger the
                                      upload.  This is useful if you just want to verify the mapping

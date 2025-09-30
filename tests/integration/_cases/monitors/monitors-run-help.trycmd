@@ -34,7 +34,7 @@ Options:
           --schedule.
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: silent]
+          implemented only for selected subcommands. [aliases: --silent]
       --recovery-threshold <recovery_threshold>
           The number of consecutive successful check-ins that resolve an issue. Requires --schedule.
   -h, --help

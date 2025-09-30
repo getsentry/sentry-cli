@@ -27,7 +27,7 @@ Options:
                                  warn, error]
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
-                                 [aliases: silent]
+                                 [aliases: --silent]
   -h, --help                     Print help
 
 ```
