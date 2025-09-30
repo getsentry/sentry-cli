@@ -40,7 +40,7 @@ ignore = "0.4.20"
 # Do not update due to https://github.com/console-rs/indicatif/issues/317 and https://github.com/getsentry/sentry-cli/pull/1055
 indicatif = "0.14.0"
 itertools = "0.10.5"
-java-properties = "1.4.1"
+java-properties = "2.0.0"
 lazy_static = "1.4.0"
 libc = "0.2.139"
 log = { version = "0.4.17", features = ["std"] }
