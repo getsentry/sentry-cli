@@ -251,7 +251,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 upload.filter_format(DifFormat::BcSymbolMap);
                 upload.filter_format(DifFormat::PList)
             }
-            other => bail!("Unsupported type: {}", other),
+            other => bail!("Unsupported type: {other}"),
         };
     }
 

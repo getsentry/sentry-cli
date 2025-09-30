@@ -339,12 +339,12 @@ impl Api {
         };
 
         let ref_name = format!("sentry-cli-{}-{arch}{EXT}", capitalize_string(PLATFORM));
-        info!("Looking for file named: {}", ref_name);
+        info!("Looking for file named: {ref_name}");
 
         if resp.status() == 200 {
             let info: RegistryRelease = resp.convert()?;
             for (filename, _download_url) in info.file_urls {
-                info!("Found asset {}", filename);
+                info!("Found asset {filename}");
                 if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
                         version: info.version,
@@ -1728,7 +1728,7 @@ impl ApiRequest {
 
         match pipeline_env {
             Some(env) => {
-                debug!("pipeline: {}", env);
+                debug!("pipeline: {env}");
                 headers
                     .append(&format!("User-Agent: sentry-cli/{VERSION} {env}"))
                     .ok();
@@ -1817,7 +1817,7 @@ impl ApiRequest {
 
     /// enables or disables redirects.  The default is off.
     pub fn follow_location(mut self, val: bool) -> ApiResult<Self> {
-        debug!("follow redirects: {}", val);
+        debug!("follow redirects: {val}");
         self.handle.follow_location(val)?;
         Ok(self)
     }
@@ -1877,8 +1877,7 @@ impl ApiRequest {
                 .expect("should not return None, as there is no max_elapsed_time");
 
             debug!(
-                "retry number {}, retrying again in {} ms",
-                retry_number,
+                "retry number {retry_number}, retrying again in {} ms",
                 backoff_timeout.as_milliseconds()
             );
             std::thread::sleep(backoff_timeout);
@@ -1909,7 +1908,7 @@ impl ApiResponse {
     pub fn into_result(self) -> ApiResult<Self> {
         if let Some(ref body) = self.body {
             let body = String::from_utf8_lossy(body);
-            debug!("body: {}", body);
+            debug!("body: {body}");
         }
         if self.ok() {
             return Ok(self);
@@ -2046,7 +2045,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 };
                 format!("{}: {} {info}", &caps[1], &caps[2])
             });
-            debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
+            debug!("{} {replaced}", if is_response { ">" } else { "<" });
         }
     }
 }

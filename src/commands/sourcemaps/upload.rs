@@ -324,7 +324,7 @@ fn process_sources_from_bundle(
     if !prefixes.contains(&"~") {
         prefixes.push("~");
     }
-    debug!("Prefixes: {:?}", prefixes);
+    debug!("Prefixes: {prefixes:?}");
 
     processor.rewrite(&prefixes)?;
     processor.add_sourcemap_references();

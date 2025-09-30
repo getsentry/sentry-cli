@@ -94,11 +94,7 @@ impl Drop for TempFile {
     fn drop(&mut self) {
         let result = fs::remove_file(&self.path);
         if let Err(e) = result {
-            error!(
-                "Failed to delete TempFile {}: {:?}",
-                &self.path.display(),
-                e
-            );
+            error!("Failed to delete TempFile {}: {e:?}", &self.path.display());
         }
     }
 

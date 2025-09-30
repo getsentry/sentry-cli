@@ -191,7 +191,7 @@ pub fn upload_chunks(
         .cloned()
         .unwrap_or_default();
 
-    info!("using '{}' compression for chunk upload", compression);
+    info!("using '{compression}' compression for chunk upload");
 
     // The upload is executed in parallel batches. Each batch aggregates objects
     // until it exceeds the maximum size configured in ChunkServerOptions. We

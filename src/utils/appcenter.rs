@@ -139,7 +139,7 @@ pub fn get_appcenter_package(app: &str, deployment: &str) -> Result<AppCenterPac
     if let Some(latest) = history.into_iter().next_back() {
         Ok(latest)
     } else {
-        bail!("Could not find deployment {} for {}", deployment, app);
+        bail!("Could not find deployment {deployment} for {app}");
     }
 }
 
@@ -217,5 +217,5 @@ pub fn get_react_native_appcenter_release(
         bail!("Could not find AndroidManifest.xml");
     }
 
-    bail!("Unsupported platform '{}'", platform);
+    bail!("Unsupported platform '{platform}'");
 }
