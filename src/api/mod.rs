@@ -15,15 +15,15 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs::File;
 use std::io::{self, Read as _, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::{fmt, thread};
 
 use anyhow::{Context as _, Result};
-use backoff::backoff::Backoff as _;
+use backon::BlockingRetryable as _;
 use brotli::enc::BrotliEncoderParams;
 use brotli::CompressorWriter;
 #[cfg(target_os = "macos")]
@@ -45,7 +45,7 @@ use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
 use uuid::Uuid;
 
-use crate::api::errors::ProjectRenamedError;
+use crate::api::errors::{ProjectRenamedError, RetryError};
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::LegacyUploadContext;
@@ -1858,32 +1858,42 @@ impl ApiRequest {
     pub fn send(mut self) -> ApiResult<ApiResponse> {
         let max_retries = Config::current().max_retries();
 
-        let mut backoff = get_default_backoff();
-        let mut retry_number = 0;
+        let backoff = get_default_backoff().with_max_times(max_retries as usize);
+        let retry_number = RefCell::new(0);
 
-        loop {
+        let send_req = || {
             let mut out = vec![];
-            debug!("retry number {retry_number}, max retries: {max_retries}",);
+            let mut retry_number = retry_number.borrow_mut();
+
+            debug!("retry number {retry_number}, max retries: {max_retries}");
+            *retry_number += 1;
 
             let mut rv = self.send_into(&mut out)?;
-            if retry_number >= max_retries || !RETRY_STATUS_CODES.contains(&rv.status) {
-                rv.body = Some(out);
-                return Ok(rv);
+            rv.body = Some(out);
+
+            if RETRY_STATUS_CODES.contains(&rv.status) {
+                anyhow::bail!(RetryError::new(rv));
             }
 
-            // Exponential backoff
-            let backoff_timeout = backoff
-                .next_backoff()
-                .expect("should not return None, as there is no max_elapsed_time");
+            Ok(rv)
+        };
 
-            debug!(
-                "retry number {retry_number}, retrying again in {} ms",
-                backoff_timeout.as_milliseconds()
-            );
-            std::thread::sleep(backoff_timeout);
-
-            retry_number += 1;
-        }
+        send_req
+            .retry(backoff)
+            .sleep(thread::sleep)
+            .when(|e| e.is::<RetryError>())
+            .notify(|e, dur| {
+                debug!(
+                    "retry number {} failed due to {e:#}, retrying again in {} ms",
+                    *retry_number.borrow() - 1,
+                    dur.as_milliseconds()
+                );
+            })
+            .call()
+            .or_else(|err| match err.downcast::<RetryError>() {
+                Ok(err) => Ok(err.into_body()),
+                Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
+            })
     }
 }
 
