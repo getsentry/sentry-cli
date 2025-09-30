@@ -1,26 +1,16 @@
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
-use backoff::backoff::Backoff as _;
-use backoff::ExponentialBackoff;
+use backon::ExponentialBuilder;
 
-use crate::constants::{
-    DEFAULT_INITIAL_INTERVAL, DEFAULT_MAX_INTERVAL, DEFAULT_MULTIPLIER, DEFAULT_RANDOMIZATION,
-};
+use crate::constants::{DEFAULT_INITIAL_INTERVAL, DEFAULT_MAX_INTERVAL, DEFAULT_MULTIPLIER};
 
-/// Returns an ExponentialBackoff object instantianted with default values
-pub fn get_default_backoff() -> ExponentialBackoff {
-    let mut eb = ExponentialBackoff {
-        current_interval: Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
-        initial_interval: Duration::from_millis(DEFAULT_INITIAL_INTERVAL),
-        randomization_factor: DEFAULT_RANDOMIZATION,
-        multiplier: DEFAULT_MULTIPLIER,
-        max_interval: Duration::from_millis(DEFAULT_MAX_INTERVAL),
-        max_elapsed_time: None,
-        clock: Default::default(),
-        start_time: Instant::now(),
-    };
-    eb.reset();
-    eb
+/// Returns an exponential backoff builder instantianted with default values
+pub fn get_default_backoff() -> ExponentialBuilder {
+    ExponentialBuilder::new()
+        .with_min_delay(Duration::from_millis(DEFAULT_INITIAL_INTERVAL))
+        .with_max_delay(Duration::from_millis(DEFAULT_MAX_INTERVAL))
+        .with_jitter()
+        .with_factor(DEFAULT_MULTIPLIER)
 }
 
 /// Trait for displaying duration-like in milliseconds

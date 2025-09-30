@@ -11,7 +11,6 @@ rust-version = "1.86"
 [dependencies]
 anylog = "0.6.3"
 anyhow = { version = "1.0.69", features = ["backtrace"] }
-backoff = "0.4.0"
 bytecount = "0.6.3"
 chrono = { version = "0.4.31", features = ["serde"] }
 clap = { version = "4.1.6", default-features = false, features = [
@@ -79,6 +78,7 @@ magic_string = "0.3.4"
 chrono-tz = "0.8.4"
 secrecy = "0.8.0"
 lru = "0.16.0"
+backon = { version = "1.5.2", features = ["std", "std-blocking-sleep"] }
 brotli = "8.0.2"
 
 [dev-dependencies]
