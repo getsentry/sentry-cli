@@ -111,9 +111,8 @@ impl Drop for TempFile {
 
         if let Err(e) = result {
             error!(
-                "Failed to open {} to flag for delete: {:?}",
-                &self.path.display(),
-                e
+                "Failed to open {} to flag for delete: {e:?}",
+                &self.path.display()
             );
         }
     }
