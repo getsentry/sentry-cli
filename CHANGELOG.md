@@ -6,27 +6,19 @@
 
 ### Various fixes & improvements
 
-- build(deps): bump github/codeql-action from 3.30.3 to 3.30.5 (#2815) by @dependabot
-- build(deps): bump docker/login-action from 3.5.0 to 3.6.0 (#2814) by @dependabot
-- fix: lower log level for missing base ref detection (EME-369) (#2813) by @runningcode
-- build: Replace `brotli2` with `brotli` (#2809) by @szokeasaurusrex
-- build(rust): Remove `adler` dependency (#2810) by @szokeasaurusrex
-- fix: simplify debug logging for PR number detection (EME-362) (#2812) by @runningcode
-- fix: serialize VCS tests to prevent race conditions (EME-368) (#2811) by @runningcode
-- fix: Validate `SENTRY_RELEASE` environment variable (#2807) by @szokeasaurusrex
-- ref(vcs): Improve `find_base_sha` debuggability (#2806) by @szokeasaurusrex
 - feat: auto-fetch head-ref from GitHub Actions in detached HEAD state (#2805) by @runningcode
-- build: Lint against `dbg_macro` (#2803) by @szokeasaurusrex
 - feat: automatically fetch base SHA in GitHub Actions PR workflows (#2799) by @runningcode
 - feat(preprod): use deflated compression when creating the zip file (#2800) by @trevor-e
 - feat(preprod): make sure at least one app bundle is present for upload (#2795) by @trevor-e
 - feat(preprod): fail upload if app is missing Info.plist (#2793) by @trevor-e
-- Add codeowners for apple-catalog-parsing (#2798) by @trevor-e
-- fix: use actual PR head SHA in GitHub Actions instead of merge commit (#2785) by @runningcode
-- Add CODEOWNERS for emerge-tools team (#2794) by @trevor-e
 - feat: restore GitHub Actions base branch detection (#2792) by @runningcode
+- fix: lower log level for missing base ref detection (EME-369) (#2813) by @runningcode
+- fix: simplify debug logging for PR number detection (EME-362) (#2812) by @runningcode
+- fix: serialize VCS tests to prevent race conditions (EME-368) (#2811) by @runningcode
+- fix: Validate `SENTRY_RELEASE` environment variable (#2807) by @szokeasaurusrex
+- fix: use actual PR head SHA in GitHub Actions instead of merge commit (#2785) by @runningcode
 - fix: suppress warning messages in failing build upload tests (#2791) by @runningcode
-- build(npm): 🤖 Bump optional dependencies to 2.55.0 (55e6bc8c)
+
 
 ## 2.55.0
 
