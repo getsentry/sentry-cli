@@ -142,6 +142,7 @@ impl Config {
         set_max_level(self.get_log_level());
 
         #[cfg(not(windows))]
+        #[expect(deprecated)]
         {
             openssl_probe::init_ssl_cert_env_vars();
         }
