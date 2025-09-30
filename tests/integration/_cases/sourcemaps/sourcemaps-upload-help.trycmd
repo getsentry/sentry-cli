@@ -32,7 +32,7 @@ Options:
           Adds an optional note to the uploaded artifact bundle.
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: silent]
+          implemented only for selected subcommands. [aliases: --silent]
       --validate
           Enable basic sourcemap validation.
       --decompress

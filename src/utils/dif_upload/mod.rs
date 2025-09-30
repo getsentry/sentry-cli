@@ -527,7 +527,7 @@ where
                     if let Err(err) = walk_difs_zip(zip, options, &mut func) {
                         if let Some(e) = err.downcast_ref::<ZipError>() {
                             debug!("skipping zip archive {}", path.display());
-                            debug!("error: {}", e);
+                            debug!("error: {e}");
                             continue;
                         };
                         return Err(err);
@@ -537,7 +537,7 @@ where
                 }
                 Err(e) => {
                     debug!("skipping zip archive {}", path.display());
-                    debug!("error: {}", e);
+                    debug!("error: {e}");
                     continue;
                 }
                 Ok(None) => {
@@ -619,10 +619,9 @@ fn fix_pdb_ages(difs: &mut [DifMatch<'_>], age_overrides: &BTreeMap<Uuid, u32>) 
             }
 
             debug!(
-                "overriding age for {} ({} -> {})",
+                "overriding age for {} ({} -> {age})",
                 dif.name,
-                debug_id.appendix(),
-                age
+                debug_id.appendix()
             );
 
             dif.debug_id = Some(DebugId::from_parts(debug_id.uuid(), age));
@@ -652,7 +651,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
             continue;
         }
         walk_difs_directory(base_path, options, |source, name, buffer| {
-            debug!("trying to process {}", name);
+            debug!("trying to process {name}");
             pb.set_message(&name);
 
             if Archive::peek(&buffer) != FileFormat::Unknown {
@@ -741,11 +740,7 @@ fn collect_auxdif<'a>(
             if kind == AuxDifKind::BcSymbolMap {
                 // There are loads of plists in a normal XCode Archive that are not valid
                 // UUID mappings.  Warning for all these is pointless.
-                warn!(
-                    "Skipping {kind} with invalid filename: {name}",
-                    kind = kind,
-                    name = name
-                );
+                warn!("Skipping {kind} with invalid filename: {name}");
             }
             return Ok(None);
         }
@@ -757,12 +752,7 @@ fn collect_auxdif<'a>(
     let dif = match dif_result {
         Ok(dif) => dif,
         Err(err) => {
-            warn!(
-                "Skipping invalid {kind} file {name}: {err}",
-                kind = kind,
-                name = name,
-                err = err
-            );
+            warn!("Skipping invalid {kind} file {name}: {err}");
             return Ok(None);
         }
     };
@@ -801,11 +791,11 @@ fn collect_object_dif<'a>(
         return Ok(collected);
     }
 
-    debug!("trying to parse dif {}", name);
+    debug!("trying to parse dif {name}");
     let archive = match Archive::parse(&buffer) {
         Ok(archive) => archive,
         Err(e) => {
-            warn!("Skipping invalid debug file {}: {}", name, e);
+            warn!("Skipping invalid debug file {name}: {e}");
             return Ok(collected);
         }
     };
@@ -942,7 +932,7 @@ fn resolve_hidden_symbols<'a>(dif: DifMatch<'a>, symbol_map: &Path) -> Result<Di
 
     if !output.status.success() {
         if let Ok(error) = str::from_utf8(&output.stderr) {
-            bail!("Could not resolve BCSymbolMaps: {}", error);
+            bail!("Could not resolve BCSymbolMaps: {error}");
         } else {
             bail!("Could not resolve BCSymbolMaps due to an unknown error");
         }
@@ -1087,7 +1077,7 @@ pub fn filter_bad_sources(
 
     // Ignore files embedded in the object itself.
     if embedded_source.is_some() {
-        debug!("Skipping embedded source file: {}", path);
+        debug!("Skipping embedded source file: {path}");
         return false;
     }
 
@@ -1095,16 +1085,13 @@ pub fn filter_bad_sources(
     if let Ok(meta) = fs::metadata(path) {
         let item_size = meta.len();
         if item_size > max_size {
-            warn!(
-                "Source exceeded maximum item size limit ({}). {}",
-                item_size, path
-            );
+            warn!("Source exceeded maximum item size limit ({item_size}). {path}");
             return false;
         }
     }
 
     // if a file metadata could not be read it will be skipped later.
-    debug!("Trying to add source file: {}", path);
+    debug!("Trying to add source file: {path}");
     true
 }
 
@@ -1131,7 +1118,7 @@ fn create_source_bundles<'a>(
         let name = dif.path();
         pb.inc(1);
         pb.set_message(name);
-        debug!("trying to collect sources for {}", name);
+        debug!("trying to collect sources for {name}");
 
         let object = match dif.object() {
             Some(object) => object,
@@ -1149,7 +1136,7 @@ fn create_source_bundles<'a>(
             .with_skipped_file_callback(|skipped_info| info!("{skipped_info}"))
             .write_object_with_filter(object, dif.file_name(), filter_bad_sources)?;
         if !written {
-            debug!("No sources found for {}", name);
+            debug!("No sources found for {name}");
             continue;
         }
 

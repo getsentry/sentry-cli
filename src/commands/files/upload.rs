@@ -239,7 +239,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         if matches.get_flag("decompress") && is_gzip_compressed(&contents) {
             contents = decompress_gzip_content(&contents).unwrap_or_else(|_| {
-                warn!("Could not decompress: {}", name);
+                warn!("Could not decompress: {name}");
                 contents
             });
         }

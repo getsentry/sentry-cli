@@ -80,7 +80,7 @@ impl CommitSpec {
                 prev_rev,
             })
         } else {
-            bail!("Could not parse commit spec '{}'", s)
+            bail!("Could not parse commit spec '{s}'")
         }
     }
 
@@ -278,11 +278,7 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<S
     // Try to find the remote tracking branch
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
     let remote_ref = repo.find_reference(&remote_branch_name).map_err(|e| {
-        anyhow::anyhow!(
-            "Could not find remote tracking branch for {}: {}",
-            remote_name,
-            e
-        )
+        anyhow::anyhow!("Could not find remote tracking branch for {remote_name}: {e}")
     })?;
 
     find_merge_base_ref(repo, &head_commit, &remote_ref)
@@ -298,10 +294,7 @@ fn find_merge_base_ref(
 
     // Return the merge-base commit SHA as the base reference
     let merge_base_sha = merge_base_oid.to_string();
-    debug!(
-        "Found merge-base commit as base reference: {}",
-        merge_base_sha
-    );
+    debug!("Found merge-base commit as base reference: {merge_base_sha}");
     Ok(merge_base_sha)
 }
 
@@ -327,12 +320,12 @@ pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<
 
     match git_repo_remote_url(repo, chosen_remote) {
         Ok(remote_url) => {
-            debug!("Found remote '{}': {}", chosen_remote, remote_url);
+            debug!("Found remote '{chosen_remote}': {remote_url}");
             let repo_name = get_repo_from_remote_preserve_case(&remote_url);
             Ok(Some(repo_name))
         }
         Err(e) => {
-            warn!("Could not get URL for remote '{}': {}", chosen_remote, e);
+            warn!("Could not get URL for remote '{chosen_remote}': {e}");
             Ok(None)
         }
     }
@@ -345,7 +338,7 @@ pub fn get_github_pr_number() -> Option<u32> {
     let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
 
     if event_name != "pull_request" {
-        debug!("Not running in pull_request event, got: {}", event_name);
+        debug!("Not running in pull_request event, got: {event_name}");
         return None;
     }
 
@@ -353,7 +346,7 @@ pub fn get_github_pr_number() -> Option<u32> {
     let pr_number_str = pr_number_str.split('/').next()?;
 
     let pr_number = pr_number_str.parse().ok()?;
-    debug!("Auto-detected PR number from GitHub Actions: {}", pr_number);
+    debug!("Auto-detected PR number from GitHub Actions: {pr_number}");
     Some(pr_number)
 }
 
@@ -363,12 +356,12 @@ pub fn get_github_base_ref() -> Option<String> {
     let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
 
     if event_name != "pull_request" {
-        debug!("Not running in pull_request event, got: {}", event_name);
+        debug!("Not running in pull_request event, got: {event_name}");
         return None;
     }
 
     let base_ref = std::env::var("GITHUB_BASE_REF").ok()?;
-    debug!("Auto-detected base ref from GitHub Actions: {}", base_ref);
+    debug!("Auto-detected base ref from GitHub Actions: {base_ref}");
     Some(base_ref)
 }
 
@@ -378,12 +371,12 @@ pub fn get_github_head_ref() -> Option<String> {
     let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
 
     if event_name != "pull_request" {
-        debug!("Not running in pull_request event, got: {}", event_name);
+        debug!("Not running in pull_request event, got: {event_name}");
         return None;
     }
 
     let head_ref = std::env::var("GITHUB_HEAD_REF").ok()?;
-    debug!("Auto-detected head ref from GitHub Actions: {}", head_ref);
+    debug!("Auto-detected head ref from GitHub Actions: {head_ref}");
     Some(head_ref)
 }
 
@@ -407,12 +400,12 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
             | "integrations:bitbucket_server"
             | "integrations:vsts" => {
                 if let Some(ref url) = configured_repo.url {
-                    debug!("  Got reference URL for repo {}: {}", repo, url);
+                    debug!("  Got reference URL for repo {repo}: {url}");
                     return Ok(Some(url.clone()));
                 }
             }
             _ => {
-                debug!("  unknown repository {} skipped", configured_repo);
+                debug!("  unknown repository {configured_repo} skipped");
                 non_git = true;
             }
         }
@@ -421,7 +414,7 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
     if non_git {
         Ok(None)
     } else {
-        bail!("Could not find matching repository for {}", repo);
+        bail!("Could not find matching repository for {repo}");
     }
 }
 
@@ -432,7 +425,7 @@ fn find_matching_rev(
     disable_discovery: bool,
     remote_name: Option<String>,
 ) -> Result<Option<String>> {
-    info!("Resolving {} ({})", &reference, spec);
+    info!("Resolving {} ({spec})", &reference);
 
     let r = match reference {
         GitReference::Commit(commit) => {
@@ -459,7 +452,7 @@ fn find_matching_rev(
                 if let Some(url) = remote.url();
                 then {
                     if !discovery || is_matching_url(url, &reference_url) {
-                        debug!("  found match: {} == {}, {:?}", url, &reference_url, r);
+                        debug!("  found match: {url} == {}, {r:?}", &reference_url);
                         let head = repo.revparse_single(r)?;
                         if let Some(tag) = head.as_tag(){
                             if let Ok(tag_commit) = tag.target() {
@@ -468,7 +461,7 @@ fn find_matching_rev(
                         }
                         return Ok(Some(log_match!(head.id().to_string())));
                     } else {
-                        debug!("  not a match: {} != {}", url, &reference_url);
+                        debug!("  not a match: {url} != {}", &reference_url);
                     }
                 }
             }
@@ -489,11 +482,11 @@ fn find_matching_submodule(
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
         if let Some(submodule_url) = submodule.url() {
-            debug!("  found submodule with URL {}", submodule_url);
+            debug!("  found submodule with URL {submodule_url}");
             if is_matching_url(submodule_url, &reference_url) {
                 debug!(
-                    "  found submodule match: {} == {}",
-                    submodule_url, &reference_url
+                    "  found submodule match: {submodule_url} == {}",
+                    &reference_url
                 );
                 // heads on submodules is easier so let's start with that
                 // because that does not require the submodule to be
@@ -512,8 +505,8 @@ fn find_matching_submodule(
                 }
             } else {
                 debug!(
-                    "  not a submodule match: {} != {}",
-                    submodule_url, &reference_url
+                    "  not a submodule match: {submodule_url} != {}",
+                    &reference_url
                 );
             }
         }
@@ -529,12 +522,10 @@ fn find_matching_revs(
 ) -> Result<(Option<String>, String)> {
     fn error(r: GitReference<'_>, repo: &str) -> Error {
         format_err!(
-            "Could not find commit '{}' for '{}'. If you do not have local \
+            "Could not find commit '{r}' for '{repo}'. If you do not have local \
              checkouts of the repositories in question referencing tags or \
              other references will not work and you need to refer to \
-             revisions explicitly.",
-            r,
-            repo
+             revisions explicitly."
         )
     }
 
@@ -569,10 +560,7 @@ pub fn find_head() -> Result<String> {
         .and_then(|event_path| std::fs::read_to_string(event_path).ok())
         .and_then(|content| extract_pr_head_sha_from_event(&content))
     {
-        debug!(
-            "Using GitHub Actions PR head SHA from event payload: {}",
-            pr_head_sha
-        );
+        debug!("Using GitHub Actions PR head SHA from event payload: {pr_head_sha}");
         return Ok(pr_head_sha);
     }
 

@@ -107,9 +107,6 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
     }
 
     zip.finish()?;
-    debug!(
-        "Successfully created normalized zip for directory with {} files",
-        file_count
-    );
+    debug!("Successfully created normalized zip for directory with {file_count} files");
     Ok(temp_file)
 }
