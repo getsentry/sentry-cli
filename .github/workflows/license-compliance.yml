@@ -28,6 +28,14 @@ jobs:
         id: verify
         run: git diff --quiet ACKNOWLEDGEMENTS.md
 
+      - name: Upload generated ACKNOWLEDGEMENTS.md for debugging
+        if: failure() && steps.verify.outcome == 'failure'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        with:
+          name: generated-acknowledgements
+          path: ACKNOWLEDGEMENTS.md
+          retention-days: 7
+
       - name: Output helpful error message
         if: failure() && steps.verify.outcome == 'failure'
         run: |
@@ -42,6 +50,12 @@ jobs:
           There are several reasons why this check might have failed. Typically, this happens if one of the following scenarios occurred, and the `ACKNOWLEDGEMENTS.md` file was not updated:
             - A (transitive) dependency was added, removed, or updated.
             - As `cargo-about` fetches some license data from external services, the external service might have changed the license text.
+
+          ### How to debug 🔍
+
+          1. **Check the diff above** to see what changed
+          2. **Download the artifact**: The CI-generated `ACKNOWLEDGEMENTS.md` file has been uploaded as an artifact named `generated-acknowledgements`. You can download it from the workflow run summary page.
+          3. **Compare locally**: Download the artifact and compare it with your local version to identify platform-specific differences.
 
           ### How to fix 🛠️
 
