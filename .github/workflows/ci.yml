@@ -37,6 +37,10 @@ jobs:
     name: Test Swift
     uses: ./.github/workflows/swift-test.yml
 
+  license_compliance:
+    name: License Compliance
+    uses: ./.github/workflows/license-compliance.yml
+
   required:
     name: Check required jobs
     runs-on: ubuntu-24.04

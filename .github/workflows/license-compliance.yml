@@ -1,0 +1,62 @@
+name: License Compliance
+
+on:
+  workflow_call:
+    outputs:
+      matrix-result:
+        description: "Matrix job result"
+        value: ${{ jobs.acknowledgements.result }}
+
+jobs:
+  acknowledgements:
+    name: Verify that ACKNOWLEDGEMENTS.md is up to date
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
+
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
+
+      - name: Install `cargo-about`
+        run: cargo install cargo-about --version 0.8.2
+
+      - name: Generate ACKNOWLEDGEMENTS.md
+        run: cargo about generate --locked ACKNOWLEDGEMENTS.md.hbs > ACKNOWLEDGEMENTS.md
+
+      - name: Verify ACKNOWLEDGEMENTS.md is unchanged
+        id: verify
+        run: git diff --quiet ACKNOWLEDGEMENTS.md
+
+      - name: Output helpful error message
+        if: failure() && steps.verify.outcome == 'failure'
+        run: |
+          echo "::error::ACKNOWLEDGEMENTS.md is out of date."
+          cat >> $GITHUB_STEP_SUMMARY << 'EOF'
+          ## License acknowledgements outdated ❌
+
+          The `ACKNOWLEDGEMENTS.md` file is out of date with the current dependencies. Maintaining an up-to-date acknowledgements is required to comply with most open source licenses, as we distribute compiled copies of dependency code in our binaries.
+
+          ### Why did this check fail? 🤔
+
+          There are several reasons why this check might have failed. Typically, this happens if one of the following scenarios occurred, and the `ACKNOWLEDGEMENTS.md` file was not updated:
+            - A (transitive) dependency was added, removed, or updated.
+            - As `cargo-about` fetches some license data from external services, the external service might have changed the license text.
+
+          ### How to fix 🛠️
+
+          First, ensure you have `cargo-about` installed:
+
+          ```sh
+          cargo install cargo-about --version 0.8.2
+          ```
+
+          Then, generate the `ACKNOWLEDGEMENTS.md` file:
+
+          ```sh
+          cargo about generate --locked ACKNOWLEDGEMENTS.md.hbs > ACKNOWLEDGEMENTS.md
+          ```
+
+          Finally, commit the changes and push them to this PR 🚀
+          EOF
+          exit 1
