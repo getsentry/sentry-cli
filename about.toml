@@ -54,6 +54,14 @@ checksum = "3f3520a35d14c7b3cfbe95b19d75f04b1b32496f83b6cd9bb35a493d2c30f7cd"
 start = "Copyright (c) 2016 Djzin"
 end = "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
 
+[miniz_oxide.clarify]
+license = "MIT"
+
+[[miniz_oxide.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "4108245a1f2df9d4e94df8abed5b4ba0759bb2f9b40a6b939f1be141077ae50b"
+
 [sha1_smol.clarify]
 license = "BSD-3-Clause"
 
