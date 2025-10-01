@@ -1,0 +1,19 @@
+{{! This file is the template used by cargo-about to generate the acknowledgments page. }}
+# Acknowledgments
+
+The compiled Sentry CLI binaries contain code from several open source projects. These have been used with permission from their respective authors, in accordance with the licenses listed below.
+
+## All license text:
+
+{{#each licenses}}
+### {{name}}
+
+**Used by:**
+
+{{#each used_by}}
+- [{{crate.name}} {{crate.version}}]({{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}})
+{{/each}}
+
+<pre class="license-text" style="max-height:20em;overflow:auto;white-space:pre-wrap;word-break:break-word;padding:1rem;border:1px solid rgba(0,0,0,0.08);background:#fafafa;border-radius:6px;margin:0.5rem 0;">{{text}}</pre>
+
+{{/each}}

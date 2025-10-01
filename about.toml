@@ -1,0 +1,209 @@
+# This file configures cargo-about, which generates the acknowledgments page.
+
+accepted = [
+    "MIT-0",
+    "MIT",
+    "Apache-2.0",
+    "BSD-3-Clause",
+    "Zlib",
+    "Unicode-3.0",
+    "MPL-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+]
+
+targets = [
+    "i686-unknown-linux-musl",
+    "x86_64-unknown-linux-musl",
+    "armv7-unknown-linux-musleabi",
+    "aarch64-unknown-linux-musl",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+    "i686-pc-windows-msvc",
+    "x86_64-pc-windows-msvc",
+    "aarch64-pc-windows-msvc",
+]
+
+workarounds = ["chrono", "wasmtime"]
+
+ignore-dev-dependencies = true
+
+[brotli-decompressor.clarify]
+license = "BSD-3-Clause"
+
+[[brotli-decompressor.clarify.files]]
+path = "LICENSE"
+checksum = "c0c56f26d9c051cac4d200c34c84e7ae9aaa853e01a982a1df08b09931e518ae"
+
+[chrono-tz.clarify]
+license = "MIT OR Apache-2.0"
+
+[[chrono-tz.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "3f3520a35d14c7b3cfbe95b19d75f04b1b32496f83b6cd9bb35a493d2c30f7cd"
+start = "Copyright (c) 2016 Djzin"
+end = "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+
+[chrono-tz-build.clarify]
+license = "MIT OR Apache-2.0"
+
+[[chrono-tz-build.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "3f3520a35d14c7b3cfbe95b19d75f04b1b32496f83b6cd9bb35a493d2c30f7cd"
+start = "Copyright (c) 2016 Djzin"
+end = "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+
+[sha1_smol.clarify]
+license = "BSD-3-Clause"
+
+[[sha1_smol.clarify.files]]
+path = "LICENSE"
+license = "BSD-3-Clause"
+checksum = "282a21b0710441c364025461a447362daf18f5798a7b72ae2f801a2aa536da51"
+
+[symbolic.clarify]
+license = "MIT"
+
+[[symbolic.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "339412f703a36425703248a5a90148f42985363544501714804868050315085b"
+
+[symbolic-common.clarify]
+license = "MIT"
+
+[[symbolic-common.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "339412f703a36425703248a5a90148f42985363544501714804868050315085b"
+
+[ryu.clarify]
+license = "Apache-2.0"
+
+[[ryu.clarify.files]]
+path = "LICENSE-APACHE"
+license = "Apache-2.0"
+checksum = "62c7a1e35f56406896d7aa7ca52d0cc0d272ac022b5d2796e7d6905db8a3636a"
+
+[parse-zoneinfo.clarify]
+license = "MIT OR Apache-2.0"
+
+[[parse-zoneinfo.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "6c4d3df0c074035ab63c572f870632d180e834654b43f28a69f074809ea9e59f"
+start = "Copyright (c) 2016-2024 Benjamin Sago & the chronotope maintainers"
+end = "OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+
+[siphasher.clarify]
+license = "MIT"
+
+[[siphasher.clarify.files]]
+path = "COPYING"
+license = "MIT"
+checksum = "4d40ffd1478e61d103063fe87b133d13b6784688b8855acd7ebc2aeb64095c6d"
+
+[vsimd.clarify]
+license = "MIT"
+
+[[vsimd.clarify.files]]
+path = "LICENSE"
+license = "MIT"
+checksum = "71674605ec4c087fe9eb534e3e4f9e26eb2e4aabcd76a29fd156c6a844d44b3d"
+
+[whoami.clarify]
+license = "MIT"
+
+[[whoami.clarify.files]]
+path = "LICENSE_MIT"
+license = "MIT"
+checksum = "508a77d2e7b51d98adeed32648ad124b7b30241a8e70b2e72c99f92d8e5874d1"
+
+[windows-core.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-core.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-implement.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-implement.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-interface.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-interface.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-link.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-link.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-result.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-result.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-strings.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-strings.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-sys.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-sys.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows-targets.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows-targets.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows_aarch64_msvc.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows_aarch64_msvc.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows_i686_msvc.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows_i686_msvc.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
+
+[windows_x86_64_msvc.clarify]
+license = "MIT OR Apache-2.0"
+
+[[windows_x86_64_msvc.clarify.files]]
+path = "license-mit"
+license = "MIT"
+checksum = "c2cfccb812fe482101a8f04597dfc5a9991a6b2748266c47ac91b6a5aae15383"
