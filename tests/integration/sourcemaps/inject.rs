@@ -194,6 +194,28 @@ fn command_sourcemaps_inject_indexed() {
     assert_directories_equal(TESTCASE_PATH, EXPECTED_OUTPUT_PATH);
 }
 
+#[test]
+fn command_sourcemaps_inject_double_association() {
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-double-association.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_double_association/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    TestManager::new()
+        .register_trycmd_test("sourcemaps/sourcemaps-inject-double-association.trycmd");
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-double-association",
+    );
+}
+
 /// Recursively assert that the contents of two directories are equal.
 ///
 /// We only support directories that contain exclusively text files.
