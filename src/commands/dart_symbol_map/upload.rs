@@ -78,8 +78,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
     ids.dedup();
     match ids.len() {
         0 => bail!(
-            "No debug identifier found in the provided debug file ({}). Ensure the file contains an embedded Debug ID.",
-            debug_file_path
+            "No debug identifier found in the provided debug file ({debug_file_path}). Ensure the file contains an embedded Debug ID."
         ),
         1 => {
             let debug_id = ids.remove(0);
@@ -153,10 +152,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
             if (mapping_len as u64) > effective_max_file_size {
                 bail!(
-                    "The dartsymbolmap '{}' exceeds the maximum allowed size ({} bytes > {} bytes).",
-                    mapping_path,
-                    mapping_len,
-                    effective_max_file_size
+                    "The dartsymbolmap '{mapping_path}' exceeds the maximum allowed size ({mapping_len} bytes > {effective_max_file_size} bytes)."
                 );
             }
 
@@ -172,8 +168,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             Ok(())
         }
         _ => bail!(
-            "Multiple debug identifiers found in the provided debug file ({}): {}. Please provide a file that contains a single Debug ID.",
-            debug_file_path,
+            "Multiple debug identifiers found in the provided debug file ({debug_file_path}): {}. Please provide a file that contains a single Debug ID.",
             ids.into_iter().map(|id| id.to_string()).collect::<Vec<_>>().join(", ")
         ),
     }

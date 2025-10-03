@@ -45,7 +45,7 @@ fn add_entries_to_zip(
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
     // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
+        .compression_method(zip::CompressionMethod::Deflated)
         .last_modified_time(DateTime::default());
 
     for (entry_path, relative_path) in entries {
@@ -107,9 +107,6 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
     }
 
     zip.finish()?;
-    debug!(
-        "Successfully created normalized zip for directory with {} files",
-        file_count
-    );
+    debug!("Successfully created normalized zip for directory with {file_count} files");
     Ok(temp_file)
 }

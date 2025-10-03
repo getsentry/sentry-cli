@@ -32,7 +32,7 @@ Options:
                                  additional processable information (see other flags).
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
-                                 [aliases: silent]
+                                 [aliases: --silent]
       --id <ID>                  Search for specific debug identifiers.
       --require-all              Errors if not all identifiers specified with --id could be found.
       --symbol-maps <PATH>       Optional path to BCSymbolMap files which are used to resolve hidden

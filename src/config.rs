@@ -21,6 +21,7 @@ use crate::constants::CONFIG_INI_FILE_PATH;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
 use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
+use crate::utils::args;
 use crate::utils::auth_token::AuthToken;
 use crate::utils::auth_token::AuthTokenPayload;
 use crate::utils::http::is_absolute_url;
@@ -141,6 +142,7 @@ impl Config {
         set_max_level(self.get_log_level());
 
         #[cfg(not(windows))]
+        #[expect(deprecated)]
         {
             openssl_probe::init_ssl_cert_env_vars();
         }
@@ -204,10 +206,10 @@ impl Config {
     pub fn get_base_url(&self) -> Result<&str> {
         let base = self.cached_base_url.trim_end_matches('/');
         if !is_absolute_url(base) {
-            bail!("bad sentry url: unknown scheme ({})", base);
+            bail!("bad sentry url: unknown scheme ({base})");
         }
         if base.matches('/').count() != 2 {
-            bail!("bad sentry url: not on URL root ({})", base);
+            bail!("bad sentry url: not on URL root ({base})");
         }
         Ok(base)
     }
@@ -370,11 +372,21 @@ impl Config {
             .get_one::<String>("release")
             .cloned()
             .or_else(|| {
-                env::var("SENTRY_RELEASE")
-                    .ok()
-                    .filter(|v| !v.is_empty())
+                env::var("SENTRY_RELEASE").ok().filter(|v| {
+                    !v.is_empty()
+                        && args::validate_release(v)
+                            .inspect_err(|e| {
+                                warn!("Ignoring invalid SENTRY_RELEASE environment variable: {e}")
+                            })
+                            .is_ok()
+                })
             })
-            .ok_or_else(|| format_err!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
+            .ok_or_else(|| {
+                format_err!(
+                    "A release slug is required (provide with --release or by \
+                    setting the SENTRY_RELEASE environment variable)"
+                )
+            })
     }
 
     // Backward compatibility with `releases files <VERSION>` commands.
@@ -529,10 +541,7 @@ fn get_max_retries(ini: &Ini) -> u32 {
         Ok(Some(val)) => return val,
         Ok(None) => (),
         Err(e) => {
-            warn!(
-                "Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {}",
-                e
-            );
+            warn!("Ignoring invalid {MAX_RETRIES_ENV_VAR} environment variable: {e}");
         }
     };
 
@@ -540,7 +549,7 @@ fn get_max_retries(ini: &Ini) -> u32 {
         Ok(Some(val)) => return val,
         Ok(None) => (),
         Err(e) => {
-            warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {}", e);
+            warn!("Ignoring invalid {MAX_RETRIES_INI_KEY} ini key: {e}");
         }
     };
 
@@ -668,7 +677,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                 let props = match java_properties::read(f) {
                     Ok(props) => props,
                     Err(err) => {
-                        bail!("Could not load java style properties file: {}", err);
+                        bail!("Could not load java style properties file: {err}");
                     }
                 };
                 info!(
@@ -681,7 +690,7 @@ fn load_cli_config() -> Result<(PathBuf, Ini)> {
                         let section = iter.next();
                         rv.set_to(section, key.to_owned(), value);
                     } else {
-                        debug!("Incorrect properties file key: {}", key);
+                        debug!("Incorrect properties file key: {key}");
                     }
                 }
             }

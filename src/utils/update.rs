@@ -160,7 +160,7 @@ impl SentryCliUpdateInfo {
     pub fn download(&self) -> Result<()> {
         let exe = env::current_exe()?;
         let elevate = !is_writable(&exe);
-        info!("expecting elevation for update: {}", elevate);
+        info!("expecting elevation for update: {elevate}");
         let tmp_path = if elevate {
             env::temp_dir().join(".sentry-cli.part")
         } else {

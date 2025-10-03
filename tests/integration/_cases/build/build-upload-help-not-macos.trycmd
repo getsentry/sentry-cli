@@ -33,7 +33,7 @@ Options:
           not provided, the current repository will be used.
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: silent]
+          implemented only for selected subcommands. [aliases: --silent]
       --base-repo-name <base_repo_name>
           The name of the git repository to use for the upload (e.g. organization/repository). If
           not provided, the current repository will be used.

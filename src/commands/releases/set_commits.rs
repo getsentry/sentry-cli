@@ -117,18 +117,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             if commit_spec.rev.len() > MAX_COMMIT_SHA_LENGTH {
                 bail!(
-                    "Invalid commit SHA '{}'. Commit SHAs must be {} characters or less.",
-                    commit_spec.rev,
-                    MAX_COMMIT_SHA_LENGTH
+                    "Invalid commit SHA '{}'. Commit SHAs must be {MAX_COMMIT_SHA_LENGTH} characters or less.",
+                    commit_spec.rev
                 );
             }
 
             if let Some(ref prev_rev) = commit_spec.prev_rev {
                 if prev_rev.len() > MAX_COMMIT_SHA_LENGTH {
                     bail!(
-                        "Invalid previous commit SHA '{}'. Commit SHAs must be {} characters or less.",
-                        prev_rev,
-                        MAX_COMMIT_SHA_LENGTH
+                        "Invalid previous commit SHA '{prev_rev}'. Commit SHAs must be {MAX_COMMIT_SHA_LENGTH} characters or less."
                     );
                 }
             }

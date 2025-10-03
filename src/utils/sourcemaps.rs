@@ -166,7 +166,7 @@ fn guess_sourcemap_reference(
         }
     }
 
-    bail!("Could not auto-detect referenced sourcemap for {}", min_url);
+    bail!("Could not auto-detect referenced sourcemap for {min_url}");
 }
 
 /// Container to cary relative computed source map url.
@@ -486,7 +486,7 @@ impl SourceMapProcessor {
         for result in ram_bundle_iter {
             let (name, sourceview, sourcemap) = result?;
 
-            debug!("Inserting source for {}", name);
+            debug!("Inserting source for {name}");
             let source_url = join_url(bundle_source_url, &name)?;
             self.sources.insert(
                 source_url.clone(),
@@ -501,7 +501,7 @@ impl SourceMapProcessor {
                 },
             );
 
-            debug!("Inserting sourcemap for {}", name);
+            debug!("Inserting sourcemap for {name}");
             let sourcemap_name = format!("{name}.map");
             let sourcemap_url = join_url(bundle_source_url, &sourcemap_name)?;
             let mut sourcemap_content: Vec<u8> = vec![];
@@ -627,9 +627,8 @@ impl SourceMapProcessor {
 
                 if !self.debug_ids.contains_key(sourcemap_url) {
                     debug!(
-                        "{} No debug id found for {} to reference",
-                        style(">").dim(),
-                        sourcemap_url
+                        "{} No debug id found for {sourcemap_url} to reference",
+                        style(">").dim()
                     );
                     continue;
                 }
@@ -651,7 +650,7 @@ impl SourceMapProcessor {
                 debug!(
                     "{} Adding debug id {} reference to {}",
                     style(">").dim(),
-                    self.debug_ids[sourcemap_url].to_string(),
+                    self.debug_ids[sourcemap_url],
                     source.url
                 );
                 source.set_debug_id(self.debug_ids[sourcemap_url].to_string());
@@ -809,8 +808,7 @@ impl SourceMapProcessor {
             // We only allow injection into files that match the extension
             if !url_matches_extension(source_url, js_extensions) {
                 debug!(
-                    "skipping potential js file {} because it does not match extension",
-                    source_url
+                    "skipping potential js file {source_url} because it does not match extension"
                 );
                 continue;
             }
@@ -1031,7 +1029,7 @@ impl SourceMapProcessor {
                         } else {
                             // Case 4: We have a URL for the external sourcemap, but we can't find it.
                             // This is substantially the same as case 1.
-                            debug!("Sourcemap file {} not found", sourcemap_url);
+                            debug!("Sourcemap file {sourcemap_url} not found");
                             // source map cannot be found, fall back to hashing the contents.
                             let source_file = self.sources.get_mut(source_url).unwrap();
                             let debug_id =
@@ -1270,7 +1268,7 @@ fn validate_script(source: &mut SourceFile) -> Result<()> {
             );
         } else {
             let full_url = join_url(&source.url, url)?;
-            info!("found sourcemap for {} at {}", &source.url, full_url);
+            info!("found sourcemap for {} at {full_url}", &source.url);
         };
     } else if source.ty == SourceFileType::MinifiedSource {
         source.error("missing sourcemap!".into());
@@ -1287,7 +1285,7 @@ fn validate_regular(
     for idx in 0..sm.get_source_count() {
         let source_url = sm.get_source(idx).unwrap_or("??");
         if sm.get_source_contents(idx).is_some() || source_urls.contains(source_url) {
-            info!("validator found source ({})", source_url);
+            info!("validator found source ({source_url})");
         } else {
             source.warn(format!("missing sourcecode ({source_url})"));
         }

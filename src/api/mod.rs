@@ -15,16 +15,17 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 use std::ffi::OsStr;
-use std::fmt;
 use std::fs::File;
 use std::io::{self, Read as _, Write};
 use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
+use std::{fmt, thread};
 
 use anyhow::{Context as _, Result};
-use backoff::backoff::Backoff as _;
-use brotli2::write::BrotliEncoder;
+use backon::BlockingRetryable as _;
+use brotli::enc::BrotliEncoderParams;
+use brotli::CompressorWriter;
 #[cfg(target_os = "macos")]
 use chrono::Duration;
 use chrono::{DateTime, FixedOffset, Utc};
@@ -44,7 +45,7 @@ use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
 use uuid::Uuid;
 
-use crate::api::errors::ProjectRenamedError;
+use crate::api::errors::{ProjectRenamedError, RetryError};
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::LegacyUploadContext;
@@ -338,12 +339,12 @@ impl Api {
         };
 
         let ref_name = format!("sentry-cli-{}-{arch}{EXT}", capitalize_string(PLATFORM));
-        info!("Looking for file named: {}", ref_name);
+        info!("Looking for file named: {ref_name}");
 
         if resp.status() == 200 {
             let info: RegistryRelease = resp.convert()?;
             for (filename, _download_url) in info.file_urls {
-                info!("Found asset {}", filename);
+                info!("Found asset {filename}");
                 if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
                         version: info.version,
@@ -364,9 +365,17 @@ impl Api {
     fn compress(data: &[u8], compression: ChunkCompression) -> Result<Vec<u8>, io::Error> {
         Ok(match compression {
             ChunkCompression::Brotli => {
-                let mut encoder = BrotliEncoder::new(Vec::new(), 6);
+                let mut encoder = CompressorWriter::with_params(
+                    Vec::new(),
+                    0,
+                    &BrotliEncoderParams {
+                        quality: 6,
+                        ..Default::default()
+                    },
+                );
                 encoder.write_all(data)?;
-                encoder.finish()?
+                encoder.flush()?;
+                encoder.into_inner()
             }
 
             ChunkCompression::Gzip => {
@@ -1719,7 +1728,7 @@ impl ApiRequest {
 
         match pipeline_env {
             Some(env) => {
-                debug!("pipeline: {}", env);
+                debug!("pipeline: {env}");
                 headers
                     .append(&format!("User-Agent: sentry-cli/{VERSION} {env}"))
                     .ok();
@@ -1808,7 +1817,7 @@ impl ApiRequest {
 
     /// enables or disables redirects.  The default is off.
     pub fn follow_location(mut self, val: bool) -> ApiResult<Self> {
-        debug!("follow redirects: {}", val);
+        debug!("follow redirects: {val}");
         self.handle.follow_location(val)?;
         Ok(self)
     }
@@ -1849,33 +1858,42 @@ impl ApiRequest {
     pub fn send(mut self) -> ApiResult<ApiResponse> {
         let max_retries = Config::current().max_retries();
 
-        let mut backoff = get_default_backoff();
-        let mut retry_number = 0;
+        let backoff = get_default_backoff().with_max_times(max_retries as usize);
+        let retry_number = RefCell::new(0);
 
-        loop {
+        let send_req = || {
             let mut out = vec![];
-            debug!("retry number {retry_number}, max retries: {max_retries}",);
+            let mut retry_number = retry_number.borrow_mut();
+
+            debug!("retry number {retry_number}, max retries: {max_retries}");
+            *retry_number += 1;
 
             let mut rv = self.send_into(&mut out)?;
-            if retry_number >= max_retries || !RETRY_STATUS_CODES.contains(&rv.status) {
-                rv.body = Some(out);
-                return Ok(rv);
+            rv.body = Some(out);
+
+            if RETRY_STATUS_CODES.contains(&rv.status) {
+                anyhow::bail!(RetryError::new(rv));
             }
 
-            // Exponential backoff
-            let backoff_timeout = backoff
-                .next_backoff()
-                .expect("should not return None, as there is no max_elapsed_time");
+            Ok(rv)
+        };
 
-            debug!(
-                "retry number {}, retrying again in {} ms",
-                retry_number,
-                backoff_timeout.as_milliseconds()
-            );
-            std::thread::sleep(backoff_timeout);
-
-            retry_number += 1;
-        }
+        send_req
+            .retry(backoff)
+            .sleep(thread::sleep)
+            .when(|e| e.is::<RetryError>())
+            .notify(|e, dur| {
+                debug!(
+                    "retry number {} failed due to {e:#}, retrying again in {} ms",
+                    *retry_number.borrow() - 1,
+                    dur.as_milliseconds()
+                );
+            })
+            .call()
+            .or_else(|err| match err.downcast::<RetryError>() {
+                Ok(err) => Ok(err.into_body()),
+                Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
+            })
     }
 }
 
@@ -1900,7 +1918,7 @@ impl ApiResponse {
     pub fn into_result(self) -> ApiResult<Self> {
         if let Some(ref body) = self.body {
             let body = String::from_utf8_lossy(body);
-            debug!("body: {}", body);
+            debug!("body: {body}");
         }
         if self.ok() {
             return Ok(self);
@@ -2037,7 +2055,7 @@ fn log_headers(is_response: bool, data: &[u8]) {
                 };
                 format!("{}: {} {info}", &caps[1], &caps[2])
             });
-            debug!("{} {}", if is_response { ">" } else { "<" }, replaced);
+            debug!("{} {replaced}", if is_response { ">" } else { "<" });
         }
     }
 }

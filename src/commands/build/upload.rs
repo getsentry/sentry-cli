@@ -24,7 +24,7 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_github_base_ref, get_github_pr_number, get_provider_from_remote,
+    self, get_github_base_ref, get_github_head_ref, get_github_pr_number, get_provider_from_remote,
     get_repo_from_remote_preserve_case, git_repo_base_ref, git_repo_base_repo_name_preserve_case,
     git_repo_head_ref, git_repo_remote_url,
 };
@@ -150,21 +150,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
-                // Try to get the current ref from the VCS if not provided
+                // First try GitHub Actions environment variables
+                get_github_head_ref().map(Cow::Owned)
+            })
+            .or_else(|| {
+                // Fallback to git repository introspection
                 // Note: git_repo_head_ref will return an error for detached HEAD states,
                 // which the error handling converts to None - this prevents sending "HEAD" as a branch name
                 // In that case, the user will need to provide a valid branch name.
                 repo_ref
                     .and_then(|r| match git_repo_head_ref(r) {
                         Ok(ref_name) => {
-                            debug!("Found current branch reference: {}", ref_name);
+                            debug!("Found current branch reference: {ref_name}");
                             Some(ref_name)
                         }
                         Err(e) => {
-                            debug!(
-                                "No valid branch reference found (likely detached HEAD): {}",
-                                e
-                            );
+                            debug!("No valid branch reference found (likely detached HEAD): {e}");
                             None
                         }
                     })
@@ -184,11 +185,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
                         Ok(base_ref_name) => {
-                            debug!("Found base reference: {}", base_ref_name);
+                            debug!("Found base reference: {base_ref_name}");
                             Some(base_ref_name)
                         }
                         Err(e) => {
-                            warn!("Could not detect base branch reference: {}", e);
+                            info!("Could not detect base branch reference: {e}");
                             None
                         }
                     })
@@ -204,7 +205,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 repo_ref
                     .and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
                         Ok(Some(base_repo_name)) => {
-                            debug!("Found base repository name: {}", base_repo_name);
+                            debug!("Found base repository name: {base_repo_name}");
                             Some(base_repo_name)
                         }
                         Ok(None) => {
@@ -212,7 +213,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                             None
                         }
                         Err(e) => {
-                            warn!("Could not detect base repository name: {}", e);
+                            warn!("Could not detect base repository name: {e}");
                             None
                         }
                     })
@@ -227,7 +228,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_repo_name,
         )
     };
-    let base_sha = matches.get_one("base_sha").map(String::as_str);
+    let base_sha = matches
+        .get_one("base_sha")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| {
+            vcs::find_base_sha()
+                .inspect_err(|e| debug!("Error finding base SHA: {e}"))
+                .ok()
+                .flatten()
+                .map(Cow::Owned)
+        });
     let pr_number = matches
         .get_one("pr_number")
         .copied()
@@ -290,7 +301,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let bytes = ByteView::open(zip.path())?;
         let vcs_info = VcsInfo {
             head_sha: head_sha.as_deref(),
-            base_sha,
+            base_sha: base_sha.as_deref(),
             vcs_provider: vcs_provider.as_deref(),
             head_repo_name: head_repo_name.as_deref(),
             base_repo_name: base_repo_name.as_deref(),
@@ -312,7 +323,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
             }
             Err(e) => {
-                debug!("Failed to upload file at path {}: {}", path.display(), e);
+                debug!("Failed to upload file at path {}: {e}", path.display());
                 errored_paths_and_reasons.push((path.to_path_buf(), e));
             }
         }
@@ -432,7 +443,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .to_str()
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
-    debug!("Adding file to zip: {}", file_name);
+    debug!("Adding file to zip: {file_name}");
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
@@ -472,11 +483,8 @@ fn upload_file(
         update to the latest version of Sentry to use the build upload command.";
 
     debug!(
-        "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
-        org,
-        project,
+        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, vcs_info: {vcs_info:?}",
         build_configuration.unwrap_or("unknown"),
-        vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
@@ -555,7 +563,7 @@ fn upload_file(
         // true for ChunkedFileState::NotFound.
         if response.state == ChunkedFileState::Error {
             let message = response.detail.as_deref().unwrap_or("unknown error");
-            bail!("Failed to process uploaded files: {}", message);
+            bail!("Failed to process uploaded files: {message}");
         }
 
         if let Some(artifact_url) = response.artifact_url {

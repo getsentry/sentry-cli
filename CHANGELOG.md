@@ -2,6 +2,24 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.56.0
+
+### Various fixes & improvements
+
+- feat: auto-fetch head-ref from GitHub Actions in detached HEAD state (#2805) by @runningcode
+- feat: automatically fetch base SHA in GitHub Actions PR workflows (#2799) by @runningcode
+- feat(preprod): use deflated compression when creating the zip file (#2800) by @trevor-e
+- feat(preprod): make sure at least one app bundle is present for upload (#2795) by @trevor-e
+- feat(preprod): fail upload if app is missing Info.plist (#2793) by @trevor-e
+- feat: restore GitHub Actions base branch detection (#2792) by @runningcode
+- fix: lower log level for missing base ref detection (EME-369) (#2813) by @runningcode
+- fix: simplify debug logging for PR number detection (EME-362) (#2812) by @runningcode
+- fix: serialize VCS tests to prevent race conditions (EME-368) (#2811) by @runningcode
+- fix: Validate `SENTRY_RELEASE` environment variable (#2807) by @szokeasaurusrex
+- fix: use actual PR head SHA in GitHub Actions instead of merge commit (#2785) by @runningcode
+- fix: suppress warning messages in failing build upload tests (#2791) by @runningcode
+
+
 ## 2.55.0
 
 ### Various fixes & improvements

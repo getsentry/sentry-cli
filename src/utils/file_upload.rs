@@ -570,7 +570,7 @@ fn poll_assemble(
 
     if response.state.is_err() {
         let message = response.detail.as_deref().unwrap_or("unknown error");
-        bail!("Failed to process uploaded files: {}", message);
+        bail!("Failed to process uploaded files: {message}");
     }
 
     pb.finish_with_duration("Processing");
