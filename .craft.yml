@@ -115,3 +115,4 @@ requireNames:
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
   - /^sentry-cli-Windows-aarch64.exe$/
+  - /^sentry_cli-.*.tar.gz$/
