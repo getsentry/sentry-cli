@@ -1326,6 +1326,7 @@ fn upload_in_batches(
 }
 
 /// Uploads debug info files using the legacy endpoint.
+#[deprecated = "this non-chunked upload mechanism is deprecated in favor of upload_difs_chunked"]
 fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
     // Search for debug files in the file system and ZIPs
     let found = search_difs(options)?;
@@ -1647,6 +1648,16 @@ impl<'a> DifUpload<'a> {
         }
 
         self.validate_capabilities();
+
+        log::warn!(
+            "[DEPRECATION NOTICE] Your Sentry server does not support chunked uploads for debug \
+            files. Falling back to deprecated upload method. Support for this deprecated upload \
+            method will be removed in Sentry CLI 3.0.0. Please upgrade your Sentry server, or if \
+            you cannot upgrade, pin your Sentry CLI version to 2.x, so you don't get upgraded \
+            to 3.x when it is released."
+        );
+
+        #[expect(deprecated, reason = "fallback to legacy upload")]
         Ok((upload_difs_batched(&self)?, false))
     }
 
