@@ -1,6 +1,6 @@
 use parking_lot::RwLock;
 use std::env;
-use std::io::IsTerminal;
+use std::io::IsTerminal as _;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -62,7 +62,7 @@ impl ProgressBar {
             inner.finish_with_message(&msg);
             logging::set_progress_bar(None);
         } else {
-            println!("{}", msg);
+            println!("{msg}");
         }
     }
 

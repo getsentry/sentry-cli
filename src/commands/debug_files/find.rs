@@ -136,7 +136,7 @@ fn find_ids(
             pb.set_message(p);
         }
         pb.tick();
-        pb.set_prefix(&format!("{}", found_files.len()));
+        pb.set_prefix(format!("{}", found_files.len()));
 
         let found: Vec<_> = types
             .iter()
