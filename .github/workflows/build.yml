@@ -33,6 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 
+      - name: Add Rustup Target
+        run: |
+          rustup set profile minimal
+          rustup target add ${{ matrix.target }}
+
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
+
       - name: Build
         run: cargo build --release --target=${{ matrix.target }} --locked
 
@@ -63,6 +71,9 @@ jobs:
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
+
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
 
       - name: Run Cargo Build
         run: cargo build --target=${{ matrix.target }} --release --locked
@@ -190,6 +201,9 @@ jobs:
       - name: Add Rustup Target
         run: rustup target add ${{ env.TARGET }}
 
+      - name: Cache Dependencies
+        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
+
       - name: Run Cargo Build
         run: cargo build --target=${{ env.TARGET }} --release --locked
 
@@ -232,6 +246,49 @@ jobs:
         with:
           name: artifact-pkg-node
           path: '*.tgz'
+          if-no-files-found: 'error'
+
+  python-base:
+    name: python (base)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
+      - name: Add Rustup Target
+        run: rustup target add x86_64-unknown-linux-musl
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # 5.6.0
+        with:
+          python-version: '3.11'
+      - run: python3 -m pip install build && python3 -m build
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        with:
+          name: python-base
+          path: dist/*
+          if-no-files-found: 'error'
+
+  python:
+    name: python
+    runs-on: ubuntu-24.04
+    needs: [linux, sign-macos-binaries, windows, python-base]
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # 5.6.0
+        with:
+          python-version: '3.11'
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # 5.0.0
+        with:
+          pattern: artifact-bin-*
+          merge-multiple: true
+          path: binaries
+      - uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # 5.0.0
+        with:
+          name: python-base
+          merge-multiple: true
+          path: python-base
+      - run: scripts/wheels --binaries binaries --base python-base --dest dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
+        with:
+          name: artifact-pkg-python
+          path: dist/*
           if-no-files-found: 'error'
 
   npm-distributions:
@@ -297,7 +354,7 @@ jobs:
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # 3.11.1
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # 3.5.0
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # 3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -321,7 +378,7 @@ jobs:
       packages: write
     steps:
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@184bdaa0721073962dff0199f1fb9940f07167d1 # 3.5.0
+        uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # 3.6.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -336,7 +393,7 @@ jobs:
   merge:
     name: Create Release Artifact
     runs-on: ubuntu-24.04
-    needs: [linux, sign-macos-binaries, windows, npm-distributions, node]
+    needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
     steps:
       - uses: actions/upload-artifact/merge@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
         with:

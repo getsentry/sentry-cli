@@ -5,8 +5,9 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::api::{Api, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, UpdatedRelease};
+use crate::api::{Api, NewRelease, NoneReleaseInfo, OptionalReleaseInfo, Ref, UpdatedRelease};
 use crate::config::Config;
+use crate::constants::MAX_COMMIT_SHA_LENGTH;
 use crate::utils::args::ArgExt as _;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
@@ -53,19 +54,16 @@ pub fn make_command(command: Command) -> Command {
             .short('c')
             .value_name("SPEC")
             .action(ArgAction::Append)
-            .help("Defines a single commit for a repo as \
+            .help(format!("Defines a single commit for a repo as \
                     identified by the repo name in the remote Sentry config. \
-                    If no commit has been specified sentry-cli will attempt \
-                    to auto discover that repository in the local git repo \
-                    and then use the HEAD commit.  This will either use the \
-                    current git repository or attempt to auto discover a \
-                    submodule with a compatible URL.\n\n\
-                    The value can be provided as `REPO` in which case sentry-cli \
-                    will auto-discover the commit based on reachable repositories. \
-                    Alternatively it can be provided as `REPO#PATH` in which case \
-                    the current commit of the repository at the given PATH is \
-                    assumed.  To override the revision `@REV` can be appended \
-                    which will force the revision to a certain value."))
+                    The value must be provided as `REPO@SHA` where SHA is \
+                    at most {MAX_COMMIT_SHA_LENGTH} characters. To specify a range, use `REPO@PREV_SHA..SHA` \
+                    format.\n\n\
+                    Note: You must specify a previous commit when setting commits for the first release.\n\n\
+                    Examples:\
+                    \n  - `my-repo@abc123` (partial SHA)\
+                    \n  - `my-repo@62aaca3ed186edc7671b4cca0ab6ec53cb7de8b5` (full SHA)\
+                    \n  - `my-repo@abc123..def456` (commit range)")))
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(Arg::new("ignore-empty")
             .long("ignore-empty")
@@ -83,6 +81,7 @@ fn strip_sha(sha: &str) -> &str {
         sha
     }
 }
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
@@ -90,7 +89,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let version = matches.get_one::<String>("version").unwrap();
     let org = config.get_org(matches)?;
     let repos = authenticated_api.list_organization_repos(&org)?;
-    let mut commit_specs = vec![];
 
     let heads = if repos.is_empty() {
         None
@@ -105,30 +103,46 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Some(vec![])
     } else if matches.get_flag("local") {
         None
-    } else {
-        if let Some(commits) = matches.get_many::<String>("commits") {
-            for spec in commits {
-                let commit_spec = CommitSpec::parse(spec)?;
-                if repos
-                    .iter()
-                    .any(|r| r.name.to_lowercase() == commit_spec.repo.to_lowercase())
-                {
-                    commit_specs.push(commit_spec);
-                } else {
-                    bail!("Unknown repo '{}'", commit_spec.repo);
+    } else if let Some(commits) = matches.get_many::<String>("commits") {
+        let mut refs = vec![];
+        for spec in commits {
+            let commit_spec = CommitSpec::parse(spec)?;
+
+            if !repos
+                .iter()
+                .any(|r| r.name.to_lowercase() == commit_spec.repo.to_lowercase())
+            {
+                bail!("Unknown repo '{}'", commit_spec.repo);
+            }
+
+            if commit_spec.rev.len() > MAX_COMMIT_SHA_LENGTH {
+                bail!(
+                    "Invalid commit SHA '{}'. Commit SHAs must be {MAX_COMMIT_SHA_LENGTH} characters or less.",
+                    commit_spec.rev
+                );
+            }
+
+            if let Some(ref prev_rev) = commit_spec.prev_rev {
+                if prev_rev.len() > MAX_COMMIT_SHA_LENGTH {
+                    bail!(
+                        "Invalid previous commit SHA '{prev_rev}'. Commit SHAs must be {MAX_COMMIT_SHA_LENGTH} characters or less."
+                    );
                 }
             }
+
+            refs.push(Ref {
+                repo: commit_spec.repo,
+                rev: commit_spec.rev,
+                prev_rev: commit_spec.prev_rev,
+            });
         }
-        let commits = find_heads(
-            Some(commit_specs),
-            &repos,
-            Some(config.get_cached_vcs_remote()),
-        )?;
-        if commits.is_empty() {
+        if refs.is_empty() {
             None
         } else {
-            Some(commits)
+            Some(refs)
         }
+    } else {
+        None
     };
 
     // make sure the release exists if projects are given

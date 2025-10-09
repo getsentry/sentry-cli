@@ -108,19 +108,19 @@ fn extract_nth_frame(stacktrace: &Stacktrace, position: usize) -> Result<&Frame>
 
     let frame = in_app_frames
         .get(position)
-        .ok_or_else(|| format_err!("Selected frame ({}) is missing.", position))?;
+        .ok_or_else(|| format_err!("Selected frame ({position}) is missing."))?;
 
     let abs_path = frame
         .abs_path
         .as_ref()
-        .ok_or_else(|| format_err!("Selected frame ({}) is missing an abs_path", position))?;
+        .ok_or_else(|| format_err!("Selected frame ({position}) is missing an abs_path"))?;
 
     if let Ok(abs_path) = Url::parse(abs_path) {
         if Path::new(abs_path.path()).extension().is_none() {
-            bail!("Selected frame ({}) of event exception originates from the <script> tag, its not possible to resolve source maps", position);
+            bail!("Selected frame ({position}) of event exception originates from the <script> tag, its not possible to resolve source maps");
         }
     } else {
-        bail!("Event exception stacktrace selected frame ({}) has incorrect abs_path (valid url is required). Found {}", position, abs_path);
+        bail!("Event exception stacktrace selected frame ({position}) has incorrect abs_path (valid url is required). Found {abs_path}");
     }
 
     Ok(frame)
@@ -210,10 +210,8 @@ fn fetch_release_artifact_file(
         })
         .map_err(|err| {
             format_err!(
-                "Could not retrieve file {} from release {}: {:?}",
-                artifact.name,
-                release,
-                err
+                "Could not retrieve file {} from release {release}: {err:?}",
+                artifact.name
             )
         })?
 }
@@ -290,7 +288,7 @@ fn print_sourcemap(file: &TempFile, line: u32, column: u32) -> Result<()> {
         } else if token.get_source_view().is_none() {
             bail!("cannot find source");
         } else {
-            bail!("cannot find source for line {} column {}", line, column);
+            bail!("cannot find source for line {line} column {column}");
         }
     } else {
         bail!("invalid sourcemap location");
@@ -363,7 +361,7 @@ fn unify_artifact_url(abs_path: &str) -> Result<String> {
         Err(_) => {
             let base = Url::parse("http://example.com").unwrap();
             base.join(abs_path)
-                .map_err(|_| format_err!("Cannot parse source map url {}", abs_path))
+                .map_err(|_| format_err!("Cannot parse source map url {abs_path}"))
         }
     }?;
     let mut filename = String::from("~");
@@ -467,52 +465,57 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_resolve_sourcemap_url() {
-    // Tests coming from `tests/sentry/utils/test_urls.py` in `getsentry/sentry`
-    let cases = vec![
-        ("http://example.com/foo", "bar", "http://example.com/bar"),
-        ("http://example.com/foo", "/bar", "http://example.com/bar"),
-        ("https://example.com/foo", "/bar", "https://example.com/bar"),
-        (
-            "http://example.com/foo/baz",
-            "bar",
-            "http://example.com/foo/bar",
-        ),
-        (
-            "http://example.com/foo/baz",
-            "/bar",
-            "http://example.com/bar",
-        ),
-        ("aps://example.com/foo", "/bar", "aps://example.com/bar"),
-        (
-            "apsunknown://example.com/foo",
-            "/bar",
-            "apsunknown://example.com/bar",
-        ),
-        (
-            "apsunknown://example.com/foo",
-            "//aha/uhu",
-            "apsunknown://aha/uhu",
-        ),
-    ];
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    for (base, to_join, expected) in cases {
-        assert_eq!(resolve_sourcemap_url(base, to_join).unwrap(), expected);
+    #[test]
+    fn test_resolve_sourcemap_url() {
+        // Tests coming from `tests/sentry/utils/test_urls.py` in `getsentry/sentry`
+        let cases = vec![
+            ("http://example.com/foo", "bar", "http://example.com/bar"),
+            ("http://example.com/foo", "/bar", "http://example.com/bar"),
+            ("https://example.com/foo", "/bar", "https://example.com/bar"),
+            (
+                "http://example.com/foo/baz",
+                "bar",
+                "http://example.com/foo/bar",
+            ),
+            (
+                "http://example.com/foo/baz",
+                "/bar",
+                "http://example.com/bar",
+            ),
+            ("aps://example.com/foo", "/bar", "aps://example.com/bar"),
+            (
+                "apsunknown://example.com/foo",
+                "/bar",
+                "apsunknown://example.com/bar",
+            ),
+            (
+                "apsunknown://example.com/foo",
+                "//aha/uhu",
+                "apsunknown://aha/uhu",
+            ),
+        ];
+
+        for (base, to_join, expected) in cases {
+            assert_eq!(resolve_sourcemap_url(base, to_join).unwrap(), expected);
+        }
     }
-}
 
-#[test]
-fn test_unify_artifact_url() {
-    let cases = vec![
-        (
-            "http://localhost:5000/dist/bundle.min.js",
-            "~/dist/bundle.min.js",
-        ),
-        ("/dist/bundle.js.map", "~/dist/bundle.js.map"),
-    ];
+    #[test]
+    fn test_unify_artifact_url() {
+        let cases = vec![
+            (
+                "http://localhost:5000/dist/bundle.min.js",
+                "~/dist/bundle.min.js",
+            ),
+            ("/dist/bundle.js.map", "~/dist/bundle.js.map"),
+        ];
 
-    for (path, expected) in cases {
-        assert_eq!(unify_artifact_url(path).unwrap(), expected);
+        for (path, expected) in cases {
+            assert_eq!(unify_artifact_url(path).unwrap(), expected);
+        }
     }
 }

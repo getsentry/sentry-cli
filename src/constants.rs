@@ -30,9 +30,7 @@ pub const EXT: &str = ".exe";
 pub const EXT: &str = "";
 
 /// Backoff multiplier (1.5 which is 50% increase per backoff).
-pub const DEFAULT_MULTIPLIER: f64 = 1.5;
-/// Backoff randomization factor (0 means no randomization).
-pub const DEFAULT_RANDOMIZATION: f64 = 0.1;
+pub const DEFAULT_MULTIPLIER: f32 = 1.5;
 /// Initial backoff interval in milliseconds.
 pub const DEFAULT_INITIAL_INTERVAL: u64 = 1000;
 /// Maximum backoff interval in milliseconds.
@@ -47,5 +45,7 @@ pub const DEFAULT_MAX_DIF_ITEM_SIZE: u64 = 1024 * 1024; // 1MB
 pub const DEFAULT_MAX_DIF_UPLOAD_SIZE: u64 = 35 * 1024 * 1024; // 35MB
 /// Default maximum time to wait for file assembly.
 pub const DEFAULT_MAX_WAIT: Duration = Duration::from_secs(5 * 60);
+/// Maximum length for commit SHA values, enforced in backend.
+pub const MAX_COMMIT_SHA_LENGTH: usize = 64;
 
 include!(concat!(env!("OUT_DIR"), "/constants.gen.rs"));

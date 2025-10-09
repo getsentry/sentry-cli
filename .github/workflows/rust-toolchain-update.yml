@@ -1,0 +1,139 @@
+name: Rust Toolchain Update Bot
+
+on:
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+jobs:
+  check-and-update:
+    name: Check for Rust toolchain updates
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: write
+      pull-requests: write
+      actions: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for Rust toolchain update
+        id: rust-check
+        run: |
+          set -e
+
+          # Get latest stable Rust version
+          curl -s "https://static.rust-lang.org/dist/channel-rust-stable.toml" > channel.toml
+          LATEST_FULL=$(yq '.pkg.rust.version' channel.toml | sed 's/ (.*//')
+          LATEST_MINOR=$(echo "$LATEST_FULL" | cut -d. -f1,2)
+
+          # Get current version
+          CURRENT=$(yq '.toolchain.channel' rust-toolchain.toml)
+
+          echo "Current: $CURRENT, Latest: $LATEST_MINOR"
+
+          if [ "$LATEST_MINOR" != "$CURRENT" ]; then
+            echo "needs_update=true" >> $GITHUB_OUTPUT
+            echo "new_version=$LATEST_MINOR" >> $GITHUB_OUTPUT
+            echo "full_version=$LATEST_FULL" >> $GITHUB_OUTPUT
+            echo "✅ Update available: $CURRENT → $LATEST_MINOR"
+          else
+            echo "needs_update=false" >> $GITHUB_OUTPUT
+            echo "⭐ Already on latest version: $CURRENT"
+          fi
+
+      - name: Update toolchain file and create branch
+        id: rust-update
+        if: steps.rust-check.outputs.needs_update == 'true'
+        env:
+          NEW_VERSION: ${{ steps.rust-check.outputs.new_version }}
+        run: |
+          # Define commit title
+          COMMIT_TITLE="build(rust): Update Rust toolchain to $NEW_VERSION"
+
+          # Update rust-toolchain.toml
+          sed -i 's/channel = "[0-9.]*"/channel = "'$NEW_VERSION'"/' rust-toolchain.toml
+
+          # Create branch and commit
+          BRANCH_NAME="rust-toolchain/update-to-$NEW_VERSION"
+          git checkout -B "$BRANCH_NAME"
+          git add rust-toolchain.toml
+          git commit -m "$COMMIT_TITLE"
+          git push origin "$BRANCH_NAME" --force
+
+          # Set outputs for next step
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          echo "commit_title=$COMMIT_TITLE" >> $GITHUB_OUTPUT
+
+      - name: Create pull request
+        if: steps.rust-check.outputs.needs_update == 'true'
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # 8.0.0
+        with:
+          script: |
+            const newVersion = '${{ steps.rust-check.outputs.new_version }}';
+            const fullVersion = '${{ steps.rust-check.outputs.full_version }}';
+            const branchName = '${{ steps.rust-update.outputs.branch_name }}';
+            const commitTitle = '${{ steps.rust-update.outputs.commit_title }}';
+
+            // Check if PR already exists
+            try {
+              const { data: existingPRs } = await github.rest.pulls.list({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                head: `${context.repo.owner}:${branchName}`,
+                state: 'open'
+              });
+
+              if (existingPRs.length > 0) {
+                console.log(`PR already exists: #${existingPRs[0].number}`);
+                return;
+              }
+            } catch (error) {
+              console.log('No existing PR found, creating new one');
+            }
+
+            // Create new PR
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: commitTitle,
+              head: branchName,
+              base: '${{ github.ref_name }}',
+              body: `Update Rust toolchain to ${newVersion} (${fullVersion}).
+
+              **Changes:**
+              - Update \`rust-toolchain.toml\` channel to \`${newVersion}\`
+
+              **Release Notes:** https://github.com/rust-lang/rust/releases/tag/${fullVersion}
+
+              ---
+              🤖 *This PR was created automatically by the Rust toolchain update bot.*`
+            });
+
+            // Add labels
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['github_actions']
+            });
+
+            console.log(`Created PR #${pr.number}: ${pr.title}`);
+
+            // Run the CI workflow on the PR branch. Needed because GITHUB_TOKEN
+            // doesn't trigger workflows, except for workflow_dispatch.
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'ci.yml',
+              ref: branchName,
+            });

@@ -19,6 +19,8 @@ use crate::config::Config;
 use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
+const MAX_BREADCRUMBS: usize = 100;
+
 const BASH_SCRIPT: &str = include_str!("../bashsupport.sh");
 lazy_static! {
     static ref FRAME_RE: Regex = Regex::new(r"^(.*?):(.*):(\d+)$").unwrap();
@@ -188,7 +190,7 @@ fn send_event(
         }
     }
 
-    attach_logfile(&mut event, logfile, true)?;
+    attach_logfile(&mut event, logfile, true, MAX_BREADCRUMBS)?;
 
     event.exception.values.push(Exception {
         ty: "BashError".into(),

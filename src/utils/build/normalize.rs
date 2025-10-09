@@ -17,10 +17,13 @@ use zip::{DateTime, ZipWriter};
 
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
     Ok(WalkDir::new(path)
-        .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|entry| entry.path().is_file())
+        .filter(|entry| {
+            let path = entry.path();
+            // Include both regular files and symlinks
+            path.is_file() || path.is_symlink()
+        })
         .map(|entry| {
             let entry_path = entry.into_path();
             let relative_path = entry_path.strip_prefix(path)?.to_owned();
@@ -42,7 +45,7 @@ fn add_entries_to_zip(
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
     // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
+        .compression_method(zip::CompressionMethod::Deflated)
         .last_modified_time(DateTime::default());
 
     for (entry_path, relative_path) in entries {
@@ -52,9 +55,19 @@ fn add_entries_to_zip(
 
         let zip_path = format!("{directory_name}/{}", relative_path.to_string_lossy());
 
-        zip.start_file(zip_path, options)?;
-        let file_byteview = ByteView::open(&entry_path)?;
-        zip.write_all(file_byteview.as_slice())?;
+        if entry_path.is_symlink() {
+            // Handle symlinks by reading the target path and writing it as a symlink
+            let target = std::fs::read_link(&entry_path)?;
+            let target_str = target.to_string_lossy();
+
+            // Create a symlink entry in the zip
+            zip.add_symlink(zip_path, &target_str, options)?;
+        } else {
+            // Handle regular files
+            zip.start_file(zip_path, options)?;
+            let file_byteview = ByteView::open(&entry_path)?;
+            zip.write_all(file_byteview.as_slice())?;
+        }
         file_count += 1;
     }
 
@@ -62,6 +75,8 @@ fn add_entries_to_zip(
 }
 
 // For XCArchive directories, we'll zip the entire directory
+// It's important to not change the contents of the directory or the size
+// analysis will be wrong and the code signature will break.
 pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<TempFile> {
     debug!("Creating normalized zip for directory: {}", path.display());
 
@@ -92,9 +107,6 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
     }
 
     zip.finish()?;
-    debug!(
-        "Successfully created normalized zip for directory with {} files",
-        file_count
-    );
+    debug!("Successfully created normalized zip for directory with {file_count} files");
     Ok(temp_file)
 }

@@ -72,40 +72,45 @@ pub fn is_absolute_url(url: &str) -> bool {
     url.starts_with("http://") || url.starts_with("https://")
 }
 
-#[test]
-fn test_parse_link_header() {
-    let rv = parse_link_header("<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\", <https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0>; rel=\"next\"; results=\"true\"; cursor=\"100:1:0\"");
-    assert_eq!(rv.len(), 2);
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let a = &rv[0];
-    let b = &rv[1];
+    #[test]
+    fn test_parse_link_header() {
+        let rv = parse_link_header("<https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1>; rel=\"previous\"; results=\"false\"; cursor=\"100:-1:1\", <https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0>; rel=\"next\"; results=\"true\"; cursor=\"100:1:0\"");
+        assert_eq!(rv.len(), 2);
 
-    assert_eq!(
-        a.get("_link").unwrap(),
-        &"https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1"
-    );
-    assert_eq!(a.get("cursor").unwrap(), &"100:-1:1");
-    assert_eq!(a.get("rel").unwrap(), &"previous");
-    assert_eq!(a.get("results").unwrap(), &"false");
+        let a = &rv[0];
+        let b = &rv[1];
 
-    assert_eq!(
-        b.get("_link").unwrap(),
-        &"https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0"
-    );
-    assert_eq!(b.get("cursor").unwrap(), &"100:1:0");
-    assert_eq!(b.get("rel").unwrap(), &"next");
-    assert_eq!(b.get("results").unwrap(), &"true");
-}
+        assert_eq!(
+            a.get("_link").unwrap(),
+            &"https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:-1:1"
+        );
+        assert_eq!(a.get("cursor").unwrap(), &"100:-1:1");
+        assert_eq!(a.get("rel").unwrap(), &"previous");
+        assert_eq!(a.get("results").unwrap(), &"false");
 
-#[test]
-fn test_is_absolute_url() {
-    assert!(is_absolute_url("https://sentry.io"));
-    assert!(is_absolute_url("http://sentry.io"));
-    assert!(is_absolute_url("https://sentry.io/path"));
-    assert!(is_absolute_url("http://sentry.io/path"));
-    assert!(is_absolute_url("http://sentry.io/path?query=foo"));
-    assert!(is_absolute_url("https://sentry.io/path?query=foo"));
+        assert_eq!(
+            b.get("_link").unwrap(),
+            &"https://sentry.io/api/0/organizations/sentry/releases/?&cursor=100:1:0"
+        );
+        assert_eq!(b.get("cursor").unwrap(), &"100:1:0");
+        assert_eq!(b.get("rel").unwrap(), &"next");
+        assert_eq!(b.get("results").unwrap(), &"true");
+    }
 
-    assert!(!is_absolute_url("/path"));
-    assert!(!is_absolute_url("/path?query=foo"));
+    #[test]
+    fn test_is_absolute_url() {
+        assert!(is_absolute_url("https://sentry.io"));
+        assert!(is_absolute_url("http://sentry.io"));
+        assert!(is_absolute_url("https://sentry.io/path"));
+        assert!(is_absolute_url("http://sentry.io/path"));
+        assert!(is_absolute_url("http://sentry.io/path?query=foo"));
+        assert!(is_absolute_url("https://sentry.io/path?query=foo"));
+
+        assert!(!is_absolute_url("/path"));
+        assert!(!is_absolute_url("/path?query=foo"));
+    }
 }

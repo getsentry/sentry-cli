@@ -2,6 +2,46 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.56.0
+
+### Various fixes & improvements
+
+- feat: auto-fetch head-ref from GitHub Actions in detached HEAD state (#2805) by @runningcode
+- feat: automatically fetch base SHA in GitHub Actions PR workflows (#2799) by @runningcode
+- feat(preprod): use deflated compression when creating the zip file (#2800) by @trevor-e
+- feat(preprod): make sure at least one app bundle is present for upload (#2795) by @trevor-e
+- feat(preprod): fail upload if app is missing Info.plist (#2793) by @trevor-e
+- feat: restore GitHub Actions base branch detection (#2792) by @runningcode
+- fix: lower log level for missing base ref detection (EME-369) (#2813) by @runningcode
+- fix: simplify debug logging for PR number detection (EME-362) (#2812) by @runningcode
+- fix: serialize VCS tests to prevent race conditions (EME-368) (#2811) by @runningcode
+- fix: Validate `SENTRY_RELEASE` environment variable (#2807) by @szokeasaurusrex
+- fix: use actual PR head SHA in GitHub Actions instead of merge commit (#2785) by @runningcode
+- fix: suppress warning messages in failing build upload tests (#2791) by @runningcode
+
+
+## 2.55.0
+
+### Various fixes & improvements
+
+- feat(build): preserve repository name case for build upload (#2777) by @runningcode
+- fix(sourcemaps): Display injection errors (#2775) by @szokeasaurusrex
+- feat: Normalize VCS provider names to match backend (#2770) by @runningcode
+- feat: Improve upload error message to show cause (#2765) by @runningcode
+- fix: Safer asset catalog reader for liquid glass (#2771) by @noahsmartin
+- fix(releases): handle partial SHAs correctly in commit resolution (#2734) by @srest2021
+
+## 2.54.0
+
+### Various fixes & improvements
+
+- Fix: symlinks in normalized upload (#2744) by @noahsmartin
+- feat(vcs): Prefer upstream remote over origin for base repo name (#2737) by @runningcode
+- feat(build): Add auto-detection of base_repo_name from git remote (#2735) by @runningcode
+- feat(build): Add auto-detection of PR number from GitHub Actions (#2722) by @runningcode
+- feat(build): Auto-detect base_ref from git merge-base (#2720) by @runningcode
+- feat(logs): support log streaming (#2666) by @vgrozdanic
+
 ## 2.53.0
 
 ### Various fixes & improvements
@@ -22,7 +62,7 @@ Please note, the `build` commands are still experimental, and are therefore subj
 
 ## 2.53.0-alpha
 
-This release reintroduces the `build` (previously named `mobile-app`) commands. 
+This release reintroduces the `build` (previously named `mobile-app`) commands.
 
 ### Various fixes & improvements
 

@@ -9,6 +9,8 @@ on:
 
   pull_request:
 
+  workflow_dispatch:
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
   cancel-in-progress: true
@@ -28,6 +30,8 @@ jobs:
   test_node:
     name: Test Node
     uses: ./.github/workflows/test_node.yml
+    with:
+      triggered-by-release: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'release/') }}
 
   test_swift:
     name: Test Swift

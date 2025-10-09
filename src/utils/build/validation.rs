@@ -1,7 +1,10 @@
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-use std::path::Path;
-
 use anyhow::Result;
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use {
+    glob::{glob_with, MatchOptions},
+    std::path::Path,
+};
 
 pub fn is_zip_file(bytes: &[u8]) -> bool {
     if bytes.len() < 4 {
@@ -53,7 +56,7 @@ pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
 }
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-pub fn is_xcarchive_directory<P>(path: P) -> bool
+pub fn validate_xcarchive_directory<P>(path: P) -> Result<()>
 where
     P: AsRef<Path>,
 {
@@ -63,11 +66,43 @@ where
     let info_plist = path.join("Info.plist");
     let products_dir = path.join("Products");
 
-    info_plist.exists() && products_dir.exists() && products_dir.is_dir()
+    if !info_plist.exists() {
+        anyhow::bail!("Invalid XCArchive: Missing required Info.plist file at XCArchive root");
+    }
+
+    if !products_dir.exists() || !products_dir.is_dir() {
+        anyhow::bail!("Invalid XCArchive: Missing Products/ directory");
+    }
+
+    // All .app bundles within the XCArchive should have an Info.plist file
+    let paths = glob_with(
+        &path.join("Products/**/*.app").to_string_lossy(),
+        MatchOptions::new(),
+    )?;
+
+    let app_paths: Vec<_> = paths.flatten().filter(|path| path.is_dir()).collect();
+    if app_paths.is_empty() {
+        anyhow::bail!("Invalid XCArchive: No .app bundles found in the Products/ directory");
+    }
+
+    for app_path in app_paths {
+        if !app_path.join("Info.plist").exists() {
+            anyhow::bail!(
+                "Invalid XCArchive: Missing required Info.plist file in .app bundle: {}",
+                app_path.display()
+            );
+        }
+    }
+
+    Ok(())
 }
 
 /// A path is an Apple app if it points to an xarchive directory
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-pub fn is_apple_app(path: &Path) -> bool {
-    path.is_dir() && is_xcarchive_directory(path)
+pub fn is_apple_app(path: &Path) -> Result<bool> {
+    if !path.is_dir() {
+        return Ok(false);
+    }
+    validate_xcarchive_directory(path)?;
+    Ok(true)
 }

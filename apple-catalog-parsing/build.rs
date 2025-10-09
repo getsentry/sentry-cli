@@ -27,6 +27,12 @@ fn main() {
     // sandbox already. Nested sandboxes are not allowed on Darwin.
     println!("cargo:rerun-if-env-changed={SWIFT_DISABLE_SANDBOX}");
 
+    // Add necessary libraries to the linker search path. Without this line, compiling fails
+    // on systems without Xcode installed (xcode-select is still required).
+    println!(
+        "cargo:rustc-link-search=native=/Library/Developer/CommandLineTools/usr/lib/swift/macosx"
+    );
+
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR is set for build scripts");
 
     // Compile Swift code

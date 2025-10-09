@@ -24,7 +24,8 @@ use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
 use crate::utils::progress::ProgressBar;
 use crate::utils::vcs::{
-    self, get_github_pr_number, get_provider_from_remote, get_repo_from_remote, git_repo_base_ref,
+    self, get_github_base_ref, get_github_head_ref, get_github_pr_number, get_provider_from_remote,
+    get_repo_from_remote_preserve_case, git_repo_base_ref, git_repo_base_repo_name_preserve_case,
     git_repo_head_ref, git_repo_remote_url,
 };
 
@@ -116,7 +117,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
-    let (vcs_provider, head_repo_name, head_ref, base_ref) = {
+    let (vcs_provider, head_repo_name, head_ref, base_ref, base_repo_name) = {
         // Try to open the repo and get the remote URL, but don't fail if not in a repo.
         let repo = git2::Repository::open_from_env().ok();
         let repo_ref = repo.as_ref();
@@ -140,7 +141,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .or_else(|| {
                 remote_url
                     .as_ref()
-                    .map(|url| get_repo_from_remote(url))
+                    .map(|url| get_repo_from_remote_preserve_case(url))
                     .map(Cow::Owned)
             });
 
@@ -149,21 +150,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
-                // Try to get the current ref from the VCS if not provided
+                // First try GitHub Actions environment variables
+                get_github_head_ref().map(Cow::Owned)
+            })
+            .or_else(|| {
+                // Fallback to git repository introspection
                 // Note: git_repo_head_ref will return an error for detached HEAD states,
                 // which the error handling converts to None - this prevents sending "HEAD" as a branch name
                 // In that case, the user will need to provide a valid branch name.
                 repo_ref
                     .and_then(|r| match git_repo_head_ref(r) {
                         Ok(ref_name) => {
-                            debug!("Found current branch reference: {}", ref_name);
+                            debug!("Found current branch reference: {ref_name}");
                             Some(ref_name)
                         }
                         Err(e) => {
-                            debug!(
-                                "No valid branch reference found (likely detached HEAD): {}",
-                                e
-                            );
+                            debug!("No valid branch reference found (likely detached HEAD): {e}");
                             None
                         }
                     })
@@ -175,27 +177,68 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .map(String::as_str)
             .map(Cow::Borrowed)
             .or_else(|| {
-                // Try to get the base ref from the VCS if not provided
-                // This attempts to find the merge-base with the remote tracking branch
+                // First try GitHub Actions environment variables
+                get_github_base_ref().map(Cow::Owned)
+            })
+            .or_else(|| {
+                // Fallback to git repository introspection
                 repo_ref
                     .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
                         Ok(base_ref_name) => {
-                            debug!("Found base reference: {}", base_ref_name);
+                            debug!("Found base reference: {base_ref_name}");
                             Some(base_ref_name)
                         }
                         Err(e) => {
-                            warn!("Could not detect base branch reference: {}", e);
+                            info!("Could not detect base branch reference: {e}");
                             None
                         }
                     })
                     .map(Cow::Owned)
             });
 
-        (vcs_provider, head_repo_name, head_ref, base_ref)
-    };
+        let base_repo_name = matches
+            .get_one("base_repo_name")
+            .map(String::as_str)
+            .map(Cow::Borrowed)
+            .or_else(|| {
+                // Try to get the base repo name from the VCS if not provided
+                repo_ref
+                    .and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
+                        Ok(Some(base_repo_name)) => {
+                            debug!("Found base repository name: {base_repo_name}");
+                            Some(base_repo_name)
+                        }
+                        Ok(None) => {
+                            debug!("No base repository found - not a fork");
+                            None
+                        }
+                        Err(e) => {
+                            warn!("Could not detect base repository name: {e}");
+                            None
+                        }
+                    })
+                    .map(Cow::Owned)
+            });
 
-    let base_repo_name = matches.get_one("base_repo_name").map(String::as_str);
-    let base_sha = matches.get_one("base_sha").map(String::as_str);
+        (
+            vcs_provider,
+            head_repo_name,
+            head_ref,
+            base_ref,
+            base_repo_name,
+        )
+    };
+    let base_sha = matches
+        .get_one("base_sha")
+        .map(String::as_str)
+        .map(Cow::Borrowed)
+        .or_else(|| {
+            vcs::find_base_sha()
+                .inspect_err(|e| debug!("Error finding base SHA: {e}"))
+                .ok()
+                .flatten()
+                .map(Cow::Owned)
+        });
     let pr_number = matches
         .get_one("pr_number")
         .copied()
@@ -258,10 +301,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let bytes = ByteView::open(zip.path())?;
         let vcs_info = VcsInfo {
             head_sha: head_sha.as_deref(),
-            base_sha,
+            base_sha: base_sha.as_deref(),
             vcs_provider: vcs_provider.as_deref(),
             head_repo_name: head_repo_name.as_deref(),
-            base_repo_name,
+            base_repo_name: base_repo_name.as_deref(),
             head_ref: head_ref.as_deref(),
             base_ref: base_ref.as_deref(),
             pr_number: pr_number.as_ref(),
@@ -280,7 +323,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
             }
             Err(e) => {
-                debug!("Failed to upload file at path {}: {}", path.display(), e);
+                debug!("Failed to upload file at path {}: {e}", path.display());
                 errored_paths_and_reasons.push((path.to_path_buf(), e));
             }
         }
@@ -297,7 +340,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             }
         );
         for (path, reason) in errored_paths_and_reasons {
-            warn!("  - {} ({})", path.display(), reason);
+            warn!("  - {}", path.display());
+            warn!("    Error: {reason:#}");
         }
     }
 
@@ -345,7 +389,7 @@ fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
     debug!("Validating build format for: {}", path.display());
 
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_apple_app(path) {
+    if is_apple_app(path)? {
         debug!("Detected XCArchive directory");
         return Ok(());
     }
@@ -399,7 +443,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
         .to_str()
         .with_context(|| format!("Failed to get relative path for {}", path.display()))?;
 
-    debug!("Adding file to zip: {}", file_name);
+    debug!("Adding file to zip: {file_name}");
 
     // Need to set the last modified time to a fixed value to ensure consistent checksums
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
@@ -419,7 +463,7 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 fn handle_directory(path: &Path) -> Result<TempFile> {
     let temp_dir = TempDir::create()?;
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_apple_app(path) {
+    if is_apple_app(path)? {
         handle_asset_catalogs(path, temp_dir.path());
     }
     normalize_directory(path, temp_dir.path())
@@ -439,11 +483,8 @@ fn upload_file(
         update to the latest version of Sentry to use the build upload command.";
 
     debug!(
-        "Uploading file to organization: {}, project: {}, build_configuration: {}, vcs_info: {:?}",
-        org,
-        project,
+        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, vcs_info: {vcs_info:?}",
         build_configuration.unwrap_or("unknown"),
-        vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?.ok_or_else(|| {
@@ -522,7 +563,7 @@ fn upload_file(
         // true for ChunkedFileState::NotFound.
         if response.state == ChunkedFileState::Error {
             let message = response.detail.as_deref().unwrap_or("unknown error");
-            bail!("Failed to process uploaded files: {}", message);
+            bail!("Failed to process uploaded files: {message}");
         }
 
         if let Some(artifact_url) = response.artifact_url {
@@ -542,6 +583,7 @@ fn upload_file(
 mod tests {
     use super::*;
     use std::fs;
+    use std::os::unix::fs::symlink;
     use zip::ZipArchive;
 
     #[test]
@@ -621,6 +663,53 @@ mod tests {
             has_parsed_assets,
             "XCArchive upload should include parsed asset catalogs"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_normalize_directory_preserves_symlinks() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+
+        // Create a regular file
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        // Create a symlink pointing to the regular file
+        let symlink_path = test_dir.join("Products").join("app_link.txt");
+        symlink("app.txt", &symlink_path)?;
+
+        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        // Check that both the regular file and symlink are in the zip
+        let mut has_regular_file = false;
+        let mut has_symlink = false;
+
+        for i in 0..archive.len() {
+            let file = archive.by_index(i)?;
+            let file_name = file.name();
+
+            if file_name == "TestApp.xcarchive/Products/app.txt" {
+                has_regular_file = true;
+                // Verify it's actually a regular file, not a symlink
+                assert!(
+                    !file.is_symlink(),
+                    "app.txt should be a regular file, not a symlink"
+                );
+            } else if file_name == "TestApp.xcarchive/Products/app_link.txt" {
+                has_symlink = true;
+                // Verify it's actually a symlink
+                assert!(
+                    file.is_symlink(),
+                    "app_link.txt should be a symlink in the zip"
+                );
+            }
+        }
+
+        assert!(has_regular_file, "Regular file should be in zip");
+        assert!(has_symlink, "Symlink should be preserved in zip");
         Ok(())
     }
 }

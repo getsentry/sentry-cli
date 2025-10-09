@@ -2,6 +2,11 @@ name: Test Node
 
 on:
   workflow_call:
+    inputs:
+      triggered-by-release:
+        type: boolean
+        description: Whether the workflow was triggered by a release
+        default: false
     outputs:
       matrix-result:
         description: 'Matrix job result'
@@ -19,10 +24,16 @@ jobs:
         with:
           node-version-file: package.json
 
-      # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
-      # We have to use npm here because yarn fails on the non-existing existing optionalDependency version:
-      # https://github.com/yarnpkg/berry/issues/2425#issuecomment-1627807326
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install
+      - name: Install dependencies via npm ci
+        if: ${{ !inputs.triggered-by-release }}
+        run: npm ci
+
+      # For pushes to the release branch, we need to install the dependencies via `npm install`
+      # because the `package-lock.json` is not updated with the new versions of the optional
+      # dependencies yet. We also must skip the fallback download via --ignore-scripts.
+      - name: Install dependencies via npm install (for pushes to release branch)
+        if: ${{ inputs.triggered-by-release }}
+        run: npm install --omit=optional --ignore-scripts
 
       - run: npm run check:types
 
@@ -30,7 +41,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x]
+        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x]
 
     name: Test Node ${{ matrix.node-version }}
     runs-on: ubuntu-24.04
@@ -43,10 +54,16 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      # We need to skip the fallback download because downloading will fail on release branches because the new version isn't available yet.
-      # We have to use npm here because yarn fails on the non-existing existing optionalDependency version:
-      # https://github.com/yarnpkg/berry/issues/2425#issuecomment-1627807326
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install
+      - name: Install dependencies via npm ci
+        if: ${{ !inputs.triggered-by-release }}
+        run: npm ci
+
+      # For pushes to the release branch, we need to install the dependencies via `npm install`
+      # because the `package-lock.json` is not updated with the new versions of the optional
+      # dependencies yet. We also must skip the fallback download via --ignore-scripts.
+      - name: Install dependencies via npm install (for pushes to release branch)
+        if: ${{ inputs.triggered-by-release }}
+        run: npm install --omit=optional --ignore-scripts
 
       # older node versions need an older nft
       - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install @vercel/nft@0.22.1

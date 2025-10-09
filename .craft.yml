@@ -1,5 +1,6 @@
 minVersion: 0.23.1
 changelogPolicy: auto
+postReleaseCommand: bash scripts/post-release.sh
 targets:
   - name: gcs
     bucket: sentry-sdk-assets
@@ -94,6 +95,9 @@ targets:
         checksums:
           - algorithm: sha256
             format: hex
+  - name: pypi
+  - name: sentry-pypi
+    internalPypiRepo: getsentry/pypi
   - name: docker
     id: Docker Hub (release)
     source: ghcr.io/getsentry/sentry-cli
@@ -114,3 +118,5 @@ requireNames:
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
   - /^sentry-cli-Windows-aarch64.exe$/
+  - /^sentry_cli-.*.tar.gz$/
+  - /^sentry_cli-.*.whl$/

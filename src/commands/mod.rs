@@ -288,10 +288,7 @@ pub fn execute() -> Result<()> {
         );
     }
 
-    debug!(
-        "sentry-cli version: {}, platform: \"{}\", architecture: \"{}\"",
-        VERSION, PLATFORM, ARCH
-    );
+    debug!("sentry-cli version: {VERSION}, platform: \"{PLATFORM}\", architecture: \"{ARCH}\"");
 
     info!(
         "sentry-cli was invoked with the following command line: {}",
@@ -358,7 +355,7 @@ fn setup() {
     set_logger(&Logger).unwrap();
 
     if let Err(e) = load_dotenv_result {
-        log::warn!("Failed to load .env file: {}", e);
+        log::warn!("Failed to load .env file: {e}");
     }
 }
 
@@ -392,7 +389,12 @@ pub fn main() -> ! {
     process::exit(exit_code);
 }
 
-#[test]
-fn verify_app() {
-    app().debug_assert();
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verify_app() {
+        app().debug_assert();
+    }
 }
