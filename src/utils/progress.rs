@@ -8,10 +8,19 @@ use crate::utils::logging;
 
 pub use indicatif::ProgressStyle;
 
+/// By default, use the progress bar when we can detect we're running in a terminal.
+/// `SENTRY_NO_PROGRESS_BAR` takes precedence and can be used to disable the progress bar
+/// regardless of whether or not we're in a terminal.
 pub fn use_progress_bar() -> bool {
-    (env::var("SENTRY_NO_PROGRESS_BAR") != Ok("1".into())) || std::io::stdout().is_terminal()
+    if env::var("SENTRY_NO_PROGRESS_BAR") == Ok("1".into()) {
+        return false;
+    }
+    std::io::stdout().is_terminal() && std::io::stderr().is_terminal()
 }
 
+/// Wrapper that optionally holds a progress bar.
+/// If there's a progress bar, forward calls to it.
+/// Otherwise, log messages normally.
 pub struct ProgressBar {
     inner: Option<Arc<indicatif::ProgressBar>>,
     start: Instant,
@@ -62,7 +71,7 @@ impl ProgressBar {
             inner.finish_with_message(&msg);
             logging::set_progress_bar(None);
         } else {
-            println!("{msg}");
+            log::info!("{msg}");
         }
     }
 
@@ -83,7 +92,7 @@ impl ProgressBar {
         if let Some(inner) = &self.inner {
             inner.set_message(msg.as_ref());
         } else {
-            println!("{}", msg.as_ref());
+            log::debug!("{}", msg.as_ref());
         }
     }
 
