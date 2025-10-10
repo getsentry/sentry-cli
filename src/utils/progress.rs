@@ -15,7 +15,7 @@ pub fn use_progress_bar() -> bool {
     if env::var("SENTRY_NO_PROGRESS_BAR") == Ok("1".into()) {
         return false;
     }
-    std::io::stdout().is_terminal() && std::io::stderr().is_terminal()
+    std::io::stderr().is_terminal()
 }
 
 /// Wrapper that optionally holds a progress bar.
