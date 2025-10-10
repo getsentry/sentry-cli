@@ -98,7 +98,7 @@ impl ReleaseFileSearch {
         \n  found {prefix:.yellow} {msg:.dim}",
         );
 
-        let pb = ProgressBar::new_spinner();
+        let mut pb = ProgressBar::new_spinner();
         pb.enable_steady_tick(100);
         pb.set_style(progress_style);
 

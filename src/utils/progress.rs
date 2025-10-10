@@ -1,5 +1,4 @@
 use parking_lot::RwLock;
-use std::borrow::Cow;
 use std::env;
 use std::io::IsTerminal as _;
 use std::sync::Arc;

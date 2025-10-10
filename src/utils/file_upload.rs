@@ -680,7 +680,7 @@ fn build_artifact_bundle(
        \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(files.len());
+    let mut pb = ProgressBar::new(files.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 

@@ -636,7 +636,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
          \n  found {prefix:.yellow} {msg:.dim}",
     );
 
-    let pb = ProgressBar::new_spinner();
+    let mut pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
 
@@ -958,7 +958,7 @@ where
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(items.len());
+    let mut pb = ProgressBar::new(items.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
@@ -1019,7 +1019,7 @@ fn process_symbol_maps<'a>(
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(len);
+    let mut pb = ProgressBar::new(len);
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
@@ -1110,7 +1110,7 @@ fn create_source_bundles<'a>(
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(difs.len());
+    let mut pb = ProgressBar::new(difs.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
@@ -1166,7 +1166,7 @@ fn create_il2cpp_mappings<'a>(difs: &[DifMatch<'a>]) -> Result<Vec<DifMatch<'a>>
          \n{wide_bar}  {pos}/{len}",
     );
 
-    let pb = ProgressBar::new(difs.len());
+    let mut pb = ProgressBar::new(difs.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 
