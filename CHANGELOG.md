@@ -2,6 +2,24 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.56.1
+
+### Various fixes & improvements
+
+- chore(sourcemaps): Add deprecation notice for non-chunked uploads (#2837) by @szokeasaurusrex
+- fix(sourcemaps): Fix double association bug (#2764) by @szokeasaurusrex
+- chore(debug-files): Add deprecation notice for non-chunked uploads (#2836) by @szokeasaurusrex
+- build(deps): bump github/codeql-action from 3.30.5 to 3.30.6 (#2827) by @dependabot
+- build(deps): bump actions/setup-python from 5.6.0 to 6.0.0 (#2828) by @dependabot
+- test: Add #[serial] to GitHub env var tests (#2832) by @runningcode
+- ci: Add action to audit Rust dependencies (#2826) by @szokeasaurusrex
+- ci(pypi): Re-enable PyPI releases (#2825) by @szokeasaurusrex
+- meta: add pull request template (#2762) by @dingsdax
+- ref: Replace unmaintained `backoff` with `backon` (#2816) by @szokeasaurusrex
+- build(rust): Bump `java-properties` to `2.0.0` (#2819) by @szokeasaurusrex
+- build(rust): Update dependencies with `cargo update` (#2818) by @szokeasaurusrex
+- build(npm): 🤖 Bump optional dependencies to 2.56.0 (a0732450)
+
 ## 2.56.0
 
 ### Various fixes & improvements
