@@ -4,21 +4,16 @@
 
 ## 2.56.1
 
-### Various fixes & improvements
+### Deprecations
+- Added a deprecation notice for legacy uploading methods ([#2836](https://github.com/getsentry/sentry-cli/pull/2836), [#2837](https://github.com/getsentry/sentry-cli/pull/2837))
+  - Support for these legacy uploading methods, required to upload to self-hosted Sentry servers below version 10.0.0, will be removed in the next major release (3.x). If you observe these new deprecation notices, we recommend upgrading your self-hosted Sentry server, or pinning Sentry CLI to a compatible version (2.x).
+  - You may encounter these deprecation notices when uploading debug files or sourcemaps.
 
-- chore(sourcemaps): Add deprecation notice for non-chunked uploads (#2837) by @szokeasaurusrex
-- fix(sourcemaps): Fix double association bug (#2764) by @szokeasaurusrex
-- chore(debug-files): Add deprecation notice for non-chunked uploads (#2836) by @szokeasaurusrex
-- build(deps): bump github/codeql-action from 3.30.5 to 3.30.6 (#2827) by @dependabot
-- build(deps): bump actions/setup-python from 5.6.0 to 6.0.0 (#2828) by @dependabot
-- test: Add #[serial] to GitHub env var tests (#2832) by @runningcode
-- ci: Add action to audit Rust dependencies (#2826) by @szokeasaurusrex
-- ci(pypi): Re-enable PyPI releases (#2825) by @szokeasaurusrex
-- meta: add pull request template (#2762) by @dingsdax
-- ref: Replace unmaintained `backoff` with `backon` (#2816) by @szokeasaurusrex
-- build(rust): Bump `java-properties` to `2.0.0` (#2819) by @szokeasaurusrex
-- build(rust): Update dependencies with `cargo update` (#2818) by @szokeasaurusrex
-- build(npm): 🤖 Bump optional dependencies to 2.56.0 (a0732450)
+### Fixes & improvements
+
+- Fixed a bug with sourcemap injection ([#2764](https://github.com/getsentry/sentry-cli/pull/2764)) by @szokeasaurusrex
+  - This change ensures we do not attempt to associate multiple compiled sources with the same sourcemap. As there should be at most one sourcemap for each compiled source, associating multiple compiled sources with the same sourcemap would lead to an invalid state.
+- Updated some outdated dependencies ([#2816](https://github.com/getsentry/sentry-cli/pull/2816), [#2818](https://github.com/getsentry/sentry-cli/pull/2818), and [#2819](https://github.com/getsentry/sentry-cli/pull/2819))
 
 ## 2.56.0
 
