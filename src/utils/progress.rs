@@ -1,4 +1,5 @@
 use parking_lot::RwLock;
+use std::borrow::Cow;
 use std::env;
 use std::io::IsTerminal as _;
 use std::sync::Arc;
@@ -24,6 +25,7 @@ pub fn use_progress_bar() -> bool {
 pub struct ProgressBar {
     inner: Option<Arc<indicatif::ProgressBar>>,
     start: Instant,
+    prefix: Option<String>,
 }
 
 impl ProgressBar {
@@ -49,6 +51,7 @@ impl ProgressBar {
         ProgressBar {
             inner: Some(inner),
             start: Instant::now(),
+            prefix: None,
         }
     }
 
@@ -56,6 +59,7 @@ impl ProgressBar {
         ProgressBar {
             inner: None,
             start: Instant::now(),
+            prefix: None,
         }
     }
 
@@ -71,7 +75,7 @@ impl ProgressBar {
             inner.finish_with_message(&msg);
             logging::set_progress_bar(None);
         } else {
-            log::info!("{msg}");
+            log::info!("> {msg}");
         }
     }
 
@@ -92,7 +96,14 @@ impl ProgressBar {
         if let Some(inner) = &self.inner {
             inner.set_message(msg.as_ref());
         } else {
-            log::debug!("{}", msg.as_ref());
+            log::debug!(
+                "{}{}",
+                self.prefix
+                    .as_deref()
+                    .map(|s| format!("{s} "))
+                    .unwrap_or_else(|| String::new()),
+                msg.as_ref()
+            );
         }
     }
 
@@ -102,9 +113,11 @@ impl ProgressBar {
         }
     }
 
-    pub fn set_prefix<S: AsRef<str>>(&self, prefix: S) {
+    pub fn set_prefix<S: AsRef<str>>(&mut self, prefix: S) {
         if let Some(inner) = &self.inner {
             inner.set_prefix(prefix.as_ref());
+        } else {
+            self.prefix = Some(prefix.as_ref().to_owned());
         }
     }
 
