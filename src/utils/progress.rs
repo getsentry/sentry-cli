@@ -20,7 +20,7 @@ pub fn use_progress_bar() -> bool {
 
 /// Wrapper that optionally holds a progress bar.
 /// If there's a progress bar, forward calls to it.
-/// Otherwise, log messages normally.
+/// Otherwise, forward messages to `log` calls.
 pub struct ProgressBar {
     inner: Option<Arc<indicatif::ProgressBar>>,
     start: Instant,
