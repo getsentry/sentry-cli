@@ -100,7 +100,7 @@ impl ProgressBar {
                 self.prefix
                     .as_deref()
                     .map(|s| format!("{s} "))
-                    .unwrap_or_default();
+                    .unwrap_or_default(),
                 msg.as_ref()
             );
         }
