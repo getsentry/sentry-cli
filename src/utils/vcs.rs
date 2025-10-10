@@ -1517,6 +1517,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(github_env)]
     fn test_get_github_pr_number() {
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_REF", "refs/pull/123/merge");
@@ -1534,6 +1535,7 @@ mod tests {
     }
 
     #[test]
+    #[serial(github_env)]
     fn test_get_github_base_ref() {
         std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
         std::env::set_var("GITHUB_BASE_REF", "main");
@@ -1658,7 +1660,7 @@ mod tests {
     }
 
     #[test]
-    #[serial(github_event_path)]
+    #[serial(github_env)]
     fn test_find_head_with_github_event_path() {
         use std::fs;
 
@@ -1738,7 +1740,7 @@ mod tests {
     }
 
     #[test]
-    #[serial(github_event_path)]
+    #[serial(github_env)]
     fn test_find_base_sha() {
         use std::fs;
 

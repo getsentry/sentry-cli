@@ -2,6 +2,19 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## 2.56.1
+
+### Deprecations
+- Added a deprecation notice for legacy uploading methods ([#2836](https://github.com/getsentry/sentry-cli/pull/2836), [#2837](https://github.com/getsentry/sentry-cli/pull/2837))
+  - Support for these legacy uploading methods, required to upload to self-hosted Sentry servers below version 10.0.0, will be removed in the next major release (3.x). If you observe these new deprecation notices, we recommend upgrading your self-hosted Sentry server, or pinning Sentry CLI to a compatible version (2.x).
+  - You may encounter these deprecation notices when uploading debug files or sourcemaps.
+
+### Fixes & improvements
+
+- Fixed a bug with sourcemap injection ([#2764](https://github.com/getsentry/sentry-cli/pull/2764)) by @szokeasaurusrex
+  - This change ensures we do not attempt to associate multiple compiled sources with the same sourcemap. As there should be at most one sourcemap for each compiled source, associating multiple compiled sources with the same sourcemap would lead to an invalid state.
+- Updated some outdated dependencies ([#2816](https://github.com/getsentry/sentry-cli/pull/2816), [#2818](https://github.com/getsentry/sentry-cli/pull/2818), and [#2819](https://github.com/getsentry/sentry-cli/pull/2819))
+
 ## 2.56.0
 
 ### Various fixes & improvements

@@ -211,7 +211,7 @@ impl<'a> TryFrom<&'a UploadContext<'_>> for LegacyUploadContext<'a> {
     }
 }
 
-#[derive(Eq, PartialEq, Debug, Copy, Clone)]
+#[derive(Eq, PartialEq, Debug, Copy, Clone, Hash)]
 pub enum LogLevel {
     Warning,
     Error,
@@ -226,7 +226,7 @@ impl fmt::Display for LogLevel {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SourceFile {
     pub url: String,
     pub path: PathBuf,
@@ -377,10 +377,12 @@ impl<'a> FileUpload<'a> {
         }
 
         log::warn!(
-            "Your Sentry server does not support chunked uploads. \
-            We are falling back to a legacy upload method, which \
-            has fewer features and is less reliable. Please consider \
-            upgrading your Sentry server or switching to our SaaS offering."
+            "[DEPRECATION NOTICE] Your Sentry server does not support chunked uploads for \
+            sourcemaps/release files. Falling back to deprecated upload method, which has fewer \
+            features and is less reliable. Support for this deprecated upload method will be \
+            removed in Sentry CLI 3.0.0. Please upgrade your Sentry server, or if you cannot \
+            upgrade, pin your Sentry CLI version to 2.x, so you don't get upgraded to 3.x when \
+            it is released."
         );
 
         // Do not permit uploads of more than 20k files if the server does not
@@ -411,6 +413,7 @@ impl<'a> FileUpload<'a> {
             )
         })?;
 
+        #[expect(deprecated, reason = "fallback to legacy upload")]
         upload_files_parallel(legacy_context, &self.files, concurrency)
     }
 
@@ -419,6 +422,7 @@ impl<'a> FileUpload<'a> {
     }
 }
 
+#[deprecated = "this non-chunked upload mechanism is deprecated in favor of upload_files_chunked"]
 fn upload_files_parallel(
     context: &LegacyUploadContext,
     files: &SourceFiles,
