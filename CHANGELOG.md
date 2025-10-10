@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Fixes
+
+- Don't use hidden progress bar ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)) by @lcian
+  - Fixed an issue where log messages would not show up when redirecting stderr to a file and using any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`.
+
 ## 2.56.1
 
 ### Deprecations

@@ -182,7 +182,7 @@ where
     );
 
     let api = Api::current();
-    let pb = ProgressBar::new(chunked_objects.len());
+    let mut pb = ProgressBar::new(chunked_objects.len());
     pb.set_style(progress_style);
     pb.set_prefix(">");
 

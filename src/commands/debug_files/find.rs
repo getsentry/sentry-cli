@@ -117,7 +117,7 @@ fn find_ids(
         .filter(|e| e.file_type().is_file());
 
     let mut found_files = vec![];
-    let pb = ProgressBar::new_spinner();
+    let mut pb = ProgressBar::new_spinner();
     pb.set_style(
         ProgressStyle::default_spinner()
             .tick_chars("/|\\- ")
@@ -136,7 +136,7 @@ fn find_ids(
             pb.set_message(p);
         }
         pb.tick();
-        pb.set_prefix(&format!("{}", found_files.len()));
+        pb.set_prefix(format!("{}", found_files.len()));
 
         let found: Vec<_> = types
             .iter()
