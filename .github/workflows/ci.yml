@@ -37,14 +37,32 @@ jobs:
     name: Test Swift
     uses: ./.github/workflows/swift-test.yml
 
+  danger:
+    name: Run Danger Checks
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+    if: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - name: Run Danger
+        uses: getsentry/github-workflows/danger@13be9bec4ec5cd67061b747972b996e9c80f4f3b # 3.1.0
+
   required:
     name: Check required jobs
     runs-on: ubuntu-24.04
-    needs: [lint, test, test_node, test_swift]
+    needs: [lint, test, test_node, test_swift, danger]
     if: always()
     steps:
       - name: Check for failure
-        if: ${{ needs.lint.result != 'success' || needs.test.result != 'success' || needs.test_node.result != 'success' || needs.test_swift.result != 'success' }}
+        if: ${{
+          needs.lint.result != 'success' ||
+          needs.test.result != 'success' ||
+          needs.test_node.result != 'success' ||
+          needs.test_swift.result != 'success' ||
+          (needs.danger.result != 'success' && needs.danger.result != 'skipped')
+          }}
         run: |
           echo "One or more jobs failed"
           exit 1
