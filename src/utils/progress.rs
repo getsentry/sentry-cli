@@ -100,7 +100,7 @@ impl ProgressBar {
                 self.prefix
                     .as_deref()
                     .map(|s| format!("{s} "))
-                    .unwrap_or_else(|| String::new()),
+                    .unwrap_or_else(String::new),
                 msg.as_ref()
             );
         }
