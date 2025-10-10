@@ -2,6 +2,13 @@
 
 "You know what they say. Fool me once, strike one, but fool me twice... strike three." — Michael Scott
 
+## Unreleased
+
+### Fixes
+
+- Don't use hidden progress bar ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)) by @lcian
+  - Fixed an issue where log messages would not show up when redirecting stdout to a file and using any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`.
+
 ## 2.56.1
 
 ### Deprecations
@@ -444,7 +451,7 @@ We made several refactors and added several tests in this release. These changes
 
 <details>
 <summary><h3>Changes to tests</h3></summary>
-  
+
 - ref(test): Broaden `with_header_matcher` types (#2261) by @szokeasaurusrex
 - ref(test): Accept `impl Into<Matcher>` for `with_matcher` (#2260) by @szokeasaurusrex
 - ref(test): Align `with_reponse_body` parameter to `mockito` (#2259) by @szokeasaurusrex
