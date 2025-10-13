@@ -992,6 +992,7 @@ impl<'a> AuthenticatedApi<'a> {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
+    #[deprecated = "release bundle uploads are deprecated in favor of artifact bundle uploads"]
     pub fn assemble_release_artifacts(
         &self,
         org: &str,

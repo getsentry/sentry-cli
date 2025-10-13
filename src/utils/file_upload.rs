@@ -556,6 +556,14 @@ fn poll_assemble(
                 context.dist,
             )?
         } else {
+            log::warn!(
+                "[DEPRECATION NOTICE] Your Sentry server does not support artifact bundle \
+                uploads. Falling back to deprecated release bundle upload. Support for this \
+                deprecated upload method will be removed in Sentry CLI 3.0.0. Please upgrade your \
+                Sentry server, or if you cannot upgrade, pin your Sentry CLI version to 2.x, so \
+                you don't get upgraded to 3.x when it is released."
+            );
+            #[expect(deprecated, reason = "fallback to legacy upload")]
             authenticated_api.assemble_release_artifacts(
                 context.org,
                 context.release()?,
