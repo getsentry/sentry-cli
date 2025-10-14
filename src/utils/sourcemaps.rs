@@ -677,9 +677,9 @@ impl SourceMapProcessor {
 
         // This endpoint only supports at most one project, and a release is required.
         // If the upload contains multiple projects or no release, we do not use deduplication.
-        let (project, release) = match (context.projects, context.release) {
-            ([project], Some(release)) => (Some(project.as_str()), release),
-            ([], Some(release)) => (None, release),
+        let (project, release) = match (context.projects.as_deref(), context.release) {
+            (Some([project]), Some(release)) => (Some(project.as_str()), release),
+            (None, Some(release)) => (None, release),
             _ => return files_needing_upload,
         };
 

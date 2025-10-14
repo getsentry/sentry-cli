@@ -196,7 +196,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             processor.upload(&UploadContext {
                 org: &org,
-                projects: &projects,
+                projects: Some(projects.as_non_empty_slice()),
                 release: Some(&release),
                 dist: None,
                 note: None,
@@ -215,7 +215,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
                 processor.upload(&UploadContext {
                     org: &org,
-                    projects: &projects,
+                    projects: Some(projects.as_non_empty_slice()),
                     release: Some(&release),
                     dist: Some(dist),
                     note: None,

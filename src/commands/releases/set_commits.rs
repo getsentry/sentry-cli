@@ -151,7 +151,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             &org,
             &NewRelease {
                 version: version.into(),
-                projects,
+                projects: projects.into(),
                 ..Default::default()
             },
         )?;
