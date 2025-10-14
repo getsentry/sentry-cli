@@ -1020,7 +1020,7 @@ impl<'a> AuthenticatedApi<'a> {
     pub fn assemble_artifact_bundle(
         &self,
         org: &str,
-        projects: NonEmptySlice<String>,
+        projects: NonEmptySlice<'_, String>,
         checksum: Digest,
         chunks: &[Digest],
         version: Option<&str>,
