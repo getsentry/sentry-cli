@@ -1468,7 +1468,7 @@ pub struct FetchEventsOptions<'a> {
     pub sort: &'a str,
 }
 
-impl<'a> FetchEventsOptions<'a> {
+impl FetchEventsOptions<'_> {
     /// Generate query parameters as a vector of strings
     pub fn to_query_params(&self) -> Vec<String> {
         let mut params = vec![format!("dataset={}", QueryArg(self.dataset.as_str()))];
