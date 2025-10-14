@@ -98,6 +98,7 @@ with_crash_reporting = []
 [workspace.lints.clippy]
 allow-attributes = "warn"
 dbg-macro = "warn"
+elidable-lifetime-names = "warn"
 str-to-string = "warn"
 string-to-string = "warn"
 tests-outside-test-module = "warn"
