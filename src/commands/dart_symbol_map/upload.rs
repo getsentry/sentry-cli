@@ -20,19 +20,19 @@ struct DartSymbolMapObject<'a> {
     debug_id: DebugId,
 }
 
-impl<'a> AsRef<[u8]> for DartSymbolMapObject<'a> {
+impl AsRef<[u8]> for DartSymbolMapObject<'_> {
     fn as_ref(&self) -> &[u8] {
         self.bytes
     }
 }
 
-impl<'a> Display for DartSymbolMapObject<'a> {
+impl Display for DartSymbolMapObject<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "dartsymbolmap {}", self.name)
     }
 }
 
-impl<'a> Assemblable for DartSymbolMapObject<'a> {
+impl Assemblable for DartSymbolMapObject<'_> {
     fn name(&self) -> Cow<'_, str> {
         Cow::Borrowed(self.name)
     }
