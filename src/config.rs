@@ -26,6 +26,7 @@ use crate::utils::auth_token::AuthToken;
 use crate::utils::auth_token::AuthTokenPayload;
 use crate::utils::http::is_absolute_url;
 
+use crate::utils::non_empty::NonEmptyVec;
 #[cfg(target_os = "macos")]
 use crate::utils::xcode;
 
@@ -404,12 +405,15 @@ impl Config {
     }
 
     /// Given a match object from clap, this returns the projects from it.
-    pub fn get_projects(&self, matches: &ArgMatches) -> Result<Vec<String>> {
-        if let Some(projects) = matches.get_many::<String>("project") {
-            Ok(projects.cloned().collect())
-        } else {
-            Ok(vec![self.get_project_default()?])
-        }
+    pub fn get_projects(&self, matches: &ArgMatches) -> Result<NonEmptyVec<String>> {
+        Ok(match matches.get_many::<String>("project") {
+            Some(projects) => projects
+                .cloned()
+                .collect::<Vec<_>>()
+                .try_into()
+                .expect("if matches.get_many() is Some, the returned iterator is non-empty"),
+            None => [self.get_project_default()?].into(),
+        })
     }
 
     /// Given a match object from clap, this returns a tuple in the

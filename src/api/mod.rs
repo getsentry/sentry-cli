@@ -50,6 +50,7 @@ use crate::config::{Auth, Config};
 use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::file_upload::LegacyUploadContext;
 use crate::utils::http::{self, is_absolute_url};
+use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode};
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds as _};
 use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
@@ -1019,7 +1020,7 @@ impl<'a> AuthenticatedApi<'a> {
     pub fn assemble_artifact_bundle(
         &self,
         org: &str,
-        projects: &[String],
+        projects: NonEmptySlice<String>,
         checksum: Digest,
         chunks: &[Digest],
         version: Option<&str>,
@@ -1031,7 +1032,7 @@ impl<'a> AuthenticatedApi<'a> {
             .with_json_body(&ChunkedArtifactRequest {
                 checksum,
                 chunks,
-                projects,
+                projects: projects.into(),
                 version,
                 dist,
             })?

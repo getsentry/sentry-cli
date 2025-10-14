@@ -37,7 +37,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         &config.get_org(matches)?,
         &NewRelease {
             version: version.to_owned(),
-            projects: config.get_projects(matches)?,
+            projects: config.get_projects(matches)?.into(),
             url: matches.get_one::<String>("url").cloned(),
             date_started: Some(Utc::now()),
             date_released: if matches.get_flag("finalize") {
