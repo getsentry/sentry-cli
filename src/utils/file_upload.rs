@@ -538,12 +538,31 @@ fn poll_assemble(
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
-    let artifact_bundle_projects = {
-        (options.supports(ChunkUploadCapability::ArtifactBundles)
-            || options.supports(ChunkUploadCapability::ArtifactBundlesV2))
+
+    let server_supports_artifact_bundles = options.supports(ChunkUploadCapability::ArtifactBundles)
+        || options.supports(ChunkUploadCapability::ArtifactBundlesV2);
+
+    if !server_supports_artifact_bundles {
+        log::warn!(
+            "[DEPRECATION NOTICE] Your Sentry server does not support artifact bundle \
+            uploads. Falling back to deprecated release bundle upload. Support for this \
+            deprecated upload method will be removed in Sentry CLI 3.0.0. Please upgrade your \
+            Sentry server, or if you cannot upgrade, pin your Sentry CLI version to 2.x, so \
+            you don't get upgraded to 3.x when it is released."
+        );
+    }
+
+    // We fall back to legacy release upload if server lacks artifact bundle support, or if
+    // no projects are specified. context.projects has Some(projects) in all cases, besides
+    // the following:
+    //   - For `files upload`, we can have None projects. We don't need a separate warning,
+    //     because `files upload` is already deprecated.
+    //   - For `debug-files bundle-jvm`, but although that codepath uses the `UploadContext`,
+    //     it does not actually use it to perform an upload, so we never hit this codepath.
+    let artifact_bundle_projects = server_supports_artifact_bundles
         .then_some(context.projects)
-        .flatten()
-    };
+        .flatten();
+
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
         let response = if let Some(projects) = artifact_bundle_projects {
@@ -556,6 +575,7 @@ fn poll_assemble(
                 context.dist,
             )?
         } else {
+            #[expect(deprecated, reason = "fallback to legacy upload")]
             authenticated_api.assemble_release_artifacts(
                 context.org,
                 context.release()?,
