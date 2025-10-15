@@ -46,7 +46,7 @@ pub fn make_command(command: Command) -> Command {
                      of your app.\n\
                      Sentry SaaS and self-hosted version 25.9.0 and later no \
                      longer display this association, as it has no effect on \
-                     symbol resolution. This flag is scheduled for removal in \
+                     deobfuscation. This flag is scheduled for removal in \
                      Sentry CLI 3.0.0.",
                 ),
         )
@@ -63,7 +63,7 @@ pub fn make_command(command: Command) -> Command {
                      go with which version of your app.\n\
                      Sentry SaaS and self-hosted version 25.9.0 and later no \
                      longer display this association, as it has no effect on \
-                     symbol resolution. This flag is scheduled for removal in \
+                     deobfuscation. This flag is scheduled for removal in \
                      Sentry CLI 3.0.0.",
                 ),
         )
@@ -79,7 +79,7 @@ pub fn make_command(command: Command) -> Command {
                      then easily tell them apart.\n\
                      Sentry SaaS and self-hosted version 25.9.0 and later no \
                      longer display this association, as it has no effect on \
-                     symbol resolution. This flag is scheduled for removal in \
+                     deobfuscation. This flag is scheduled for removal in \
                      Sentry CLI 3.0.0.",
                 ),
         )
@@ -286,7 +286,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         log::warn!(
             "[DEPRECATION NOTICE] The --app-id, --version, and --version-code flags are deprecated. \
             and scheduled for removal in Sentry CLI 3.0.0. \
-            These values have no effect on symbol resolution, and are no longer displayed anywhere \
+            These values have no effect on deobfuscation, and are no longer displayed anywhere \
             in the Sentry UI (neither in SaaS nor in self-hosted versions 25.9.0 and later)."
         );
 
