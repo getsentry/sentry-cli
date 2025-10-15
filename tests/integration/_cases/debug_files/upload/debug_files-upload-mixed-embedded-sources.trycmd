@@ -5,9 +5,7 @@ $ sentry-cli --log-level=debug debug-files upload --include-sources tests/integr
 ...
 > Found 1 debug information file (1 with embedded sources)
   DEBUG   [..] trying to collect sources for SrcGenSampleApp.pdb
-...
-> Resolved source code for 0 debug information files
-> Prepared debug information file for upload
+  DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/Program.cs
 ...
 
 ```
