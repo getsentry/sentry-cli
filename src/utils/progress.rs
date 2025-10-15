@@ -100,7 +100,7 @@ impl ProgressBar {
         }
     }
 
-    pub fn set_prefix<S: AsRef<str>>(&mut self, prefix: S) {
+    pub fn set_prefix<S: AsRef<str>>(&self, prefix: S) {
         if let Some(inner) = &self.inner {
             inner.set_prefix(prefix.as_ref());
         }
