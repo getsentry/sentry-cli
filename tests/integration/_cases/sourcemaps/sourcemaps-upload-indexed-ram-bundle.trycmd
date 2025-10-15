@@ -2,17 +2,17 @@
 $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/indexed-ram-bundle/main.jsbundle --bundle-sourcemap tests/integration/_fixtures/indexed-ram-bundle/main.jsbundle.packager.map --release=wat-release
 ? success
 > Analyzing 1 sources
-> Analyzing completed in 0s
+> Analyzing completed in [..]
 > Rewriting sources
-> Rewriting completed in 0.7s
+> Rewriting completed in [..]
 > Adding source map references
-> Bundling completed in 9.755s
+> Bundling completed in [..]
 > Bundled 2107 files for upload
-> Bundle ID: 42cba25d-4463-546b-b515-bbe467fca122
-> Optimizing completed in 0.098s
-> Uploading completed in 0.02s
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Optimizing completed in [..]
+> Uploading completed in [..]
 > Uploaded files to Sentry
-> Processing completed in 0s
+> Processing completed in [..]
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project

@@ -6,7 +6,7 @@ $ sentry-cli sourcemaps inject ./server ./static
 > Searching ./static
 > Found 8 files
 > Analyzing 24 sources
-> Analyzing completed in 0.026s
+> Analyzing completed in [..]
 > Injecting debug ids
 
 Source Map Debug ID Injection Report

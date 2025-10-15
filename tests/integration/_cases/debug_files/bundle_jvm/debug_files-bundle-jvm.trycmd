@@ -2,9 +2,9 @@
 $ sentry-cli debug-files bundle-jvm --output . --debug-id a4368a48-0880-40d7-9a26-c9ef5a84d156 ./io
 ? success
 > Found 2 files
-> Bundling completed in 0.017s
+> Bundling completed in [..]
 > Bundled 2 files for upload
-> Bundle ID: a4368a48-0880-40d7-9a26-c9ef5a84d156
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
 Created ./a4368a48-0880-40d7-9a26-c9ef5a84d156.zip
 
 ```

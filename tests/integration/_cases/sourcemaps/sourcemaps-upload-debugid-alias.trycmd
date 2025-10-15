@@ -3,17 +3,17 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_debugid_alias
 ? success
 > Found 2 files
 > Analyzing 2 sources
-> Analyzing completed in 0s
+> Analyzing completed in [..]
 > Rewriting sources
-> Rewriting completed in 0s
+> Rewriting completed in [..]
 > Adding source map references
-> Bundling completed in 0.018s
+> Bundling completed in [..]
 > Bundled 2 files for upload
-> Bundle ID: 267ff9c5-2d00-5fb5-9a19-00978fbfd398
-> Optimizing completed in 0s
-> Uploading completed in 0.002s
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Optimizing completed in [..]
+> Uploading completed in [..]
 > Uploaded files to Sentry
-> Processing completed in 0.001s
+> Processing completed in [..]
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project

@@ -5,9 +5,9 @@ react-native-xcode.sh called with args:
 Using React Native Packager bundle and source map.
 Processing react-native sourcemaps for Sentry upload.
 > Analyzing 2 sources
-> Analyzing completed in 0s
+> Analyzing completed in [..]
 > Rewriting sources
-> Rewriting completed in 0s
+> Rewriting completed in [..]
 > Adding source map references
 error: Info.plist was not found or an parsing error occurred
 
