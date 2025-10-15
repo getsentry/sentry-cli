@@ -4,17 +4,29 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tes
 > Found 1 file
 > Found 1 file
 > Analyzing 2 sources
+> Analyzing completed in 0s
 > Rewriting sources
+> Rewriting completed in 0.001s
 > Adding source map references
+> Bundling completed in 0.019s
 > Bundled 2 files for upload
-> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Bundle ID: ef321dda-d768-5296-82da-0e5150e02a27
+> Optimizing completed in 0s
+> Uploading completed in 0.005s
 > Uploaded files to Sentry
+> Processing completed in 0s
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project
 > Release: None
 > Dist: None
 > Upload type: artifact bundle
+
+Source Map Upload Report
+  Source Maps
+    ~/bundle.min.js.map
+    ~/vendor.min.js.map
+
 
 Source Map Upload Report
   Source Maps

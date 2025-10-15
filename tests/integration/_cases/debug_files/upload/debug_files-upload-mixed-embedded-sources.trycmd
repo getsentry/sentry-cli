@@ -4,10 +4,9 @@ $ sentry-cli --log-level=debug debug-files upload --include-sources tests/integr
   INFO    [..] Loaded config from [CWD]/.sentryclirc
 ...
 > Found 1 debug information file (1 with embedded sources)
-  DEBUG   [..] > SrcGenSampleApp.pdb
+  DEBUG   2025-10-15 16:02:36.445165 +02:00 trying to collect sources for SrcGenSampleApp.pdb
 ...
 > Resolved source code for 0 debug information files
-  DEBUG   [..] > SrcGenSampleApp.pdb
 > Prepared debug information file for upload
 ...
 

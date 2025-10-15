@@ -3,6 +3,7 @@ $ sentry-cli releases files wat-release upload-sourcemaps --url-prefix '~/assets
 ? success
 ⚠ DEPRECATION NOTICE: This functionality will be removed in a future version of `sentry-cli`. Use the `sourcemaps` command instead.
 > Rewriting sources
+> Rewriting completed in 0s
 > Adding source map references
 > Nothing to upload
 

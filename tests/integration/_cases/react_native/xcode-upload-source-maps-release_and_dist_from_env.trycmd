@@ -8,11 +8,17 @@ react-native-xcode.sh called with args:
 Using React Native Packager bundle and source map.
 Processing react-native sourcemaps for Sentry upload.
 > Analyzing 2 sources
+> Analyzing completed in 0s
 > Rewriting sources
+> Rewriting completed in 0s
 > Adding source map references
+> Bundling completed in 0.023s
 > Bundled 2 files for upload
-> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Bundle ID: d1c0c04c-7540-5c1a-9f16-872493ee070d
+> Optimizing completed in 0s
+> Uploading completed in 0.003s
 > Uploaded files to Sentry
+> Processing completed in 0s
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project

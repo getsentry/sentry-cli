@@ -2,11 +2,17 @@
 $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-ram-bundle/index.android.bundle --bundle-sourcemap tests/integration/_fixtures/file-ram-bundle/index.android.bundle.packager.map --release=wat-release
 ? success
 > Analyzing 1 sources
+> Analyzing completed in 0s
 > Rewriting sources
+> Rewriting completed in 0.008s
 > Adding source map references
+> Bundling completed in 0.086s
 > Bundled 14 files for upload
-> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Bundle ID: 388c172d-ba7d-53f3-b533-66ace21dfd78
+> Optimizing completed in 0.001s
+> Uploading completed in 0.002s
 > Uploaded files to Sentry
+> Processing completed in 0s
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project

@@ -3,7 +3,9 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
 ? success
 > Found 20 files
 > Analyzing 20 sources
+> Analyzing completed in 0.035s
 > Rewriting sources
+> Rewriting completed in 0.239s
 > Adding source map references
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] Some source files don't have debug ids:
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/app/page.js
@@ -13,9 +15,13 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_some_debugids
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/server/pages/api/hello.js
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/static/chunks/575-bb7d7e0e6de8d623.js
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] - ~/static/chunks/pages/asdf-05b39167abbe433b.js
+> Bundling completed in 0.542s
 > Bundled 20 files for upload
-> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Bundle ID: b398cc10-5607-5c32-b6b7-eae773f1ac77
+> Optimizing completed in 0.02s
+> Uploading completed in 0.005s
 > Uploaded files to Sentry
+> Processing completed in 0s
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project
@@ -45,6 +51,12 @@ Source Map Upload Report
   Source Maps
     ~/server/chunks/1.js.map (debug id 2297b93d-928d-421e-8910-127c786382da)
     ~/server/edge-runtime-webpack.js.map
+    ~/server/pages/_document.js.map
+    ~/server/pages/asdf.js.map
+    ~/static/chunks/575-bb7d7e0e6de8d623.js.map
+    ~/static/chunks/app/client/page-d5742c254d9533f8.js.map
+    ~/static/chunks/pages/asdf-05b39167abbe433b.js.map (debug id 2297b93d-928d-421e-8910-127c786382df)
+
     ~/server/pages/_document.js.map
     ~/server/pages/asdf.js.map
     ~/static/chunks/575-bb7d7e0e6de8d623.js.map
