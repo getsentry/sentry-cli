@@ -24,7 +24,6 @@ pub fn use_progress_bar() -> bool {
 pub struct ProgressBar {
     inner: Option<Arc<indicatif::ProgressBar>>,
     start: Instant,
-    prefix: Option<String>,
 }
 
 impl ProgressBar {
@@ -50,7 +49,6 @@ impl ProgressBar {
         ProgressBar {
             inner: Some(inner),
             start: Instant::now(),
-            prefix: None,
         }
     }
 
@@ -58,7 +56,6 @@ impl ProgressBar {
         ProgressBar {
             inner: None,
             start: Instant::now(),
-            prefix: None,
         }
     }
 
@@ -74,7 +71,7 @@ impl ProgressBar {
             inner.finish_with_message(&msg);
             logging::set_progress_bar(None);
         } else {
-            log::info!("> {msg}");
+            eprintln!("> {msg}");
         }
     }
 
@@ -94,15 +91,6 @@ impl ProgressBar {
     pub fn set_message<S: AsRef<str>>(&self, msg: S) {
         if let Some(inner) = &self.inner {
             inner.set_message(msg.as_ref());
-        } else {
-            log::debug!(
-                "{}{}",
-                self.prefix
-                    .as_deref()
-                    .map(|s| format!("{s} "))
-                    .unwrap_or_default(),
-                msg.as_ref()
-            );
         }
     }
 
@@ -115,8 +103,6 @@ impl ProgressBar {
     pub fn set_prefix<S: AsRef<str>>(&mut self, prefix: S) {
         if let Some(inner) = &self.inner {
             inner.set_prefix(prefix.as_ref());
-        } else {
-            self.prefix = Some(prefix.as_ref().to_owned());
         }
     }
 
