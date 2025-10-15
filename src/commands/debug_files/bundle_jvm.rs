@@ -59,7 +59,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let context = &UploadContext {
         org: &org,
-        projects: &project.into_iter().collect::<Vec<_>>(),
+        projects: project.as_slice().try_into().ok(),
         release: None,
         dist: None,
         note: None,

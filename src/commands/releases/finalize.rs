@@ -51,7 +51,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         &config.get_org(matches)?,
         version,
         &UpdatedRelease {
-            projects: config.get_projects(matches).ok(),
+            projects: config.get_projects(matches).ok().map(Into::into),
             url: matches.get_one::<String>("url").cloned(),
             date_released: Some(
                 matches

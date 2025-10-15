@@ -123,7 +123,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
             processor.upload(&UploadContext {
                 org: &org,
-                projects: &projects,
+                projects: Some(projects.as_non_empty_slice()),
                 release: Some(version),
                 dist: Some(dist),
                 note: None,
@@ -137,7 +137,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Debug Id Upload
         processor.upload(&UploadContext {
             org: &org,
-            projects: &projects,
+            projects: Some(projects.as_non_empty_slice()),
             release: None,
             dist: None,
             note: None,

@@ -9,6 +9,10 @@
 - Don't use hidden progress bar ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)) by @lcian
   - Fixed an issue where log messages would not show up when redirecting stderr to a file and using any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`.
 
+### Deprecations
+
+- Added a deprecation notice for release bundle uploads, a legacy method for uploading sourcemaps ([#2844](https://github.com/getsentry/sentry-cli/pull/2844)). Release bundle uploads will be removed in Sentry CLI 3.x in favor of artifact bundles, the newer sourcemap upload method [introduced in Sentry version 23.6.2](https://github.com/getsentry/sentry/commit/f90f764fda09575f3f94caf32d04589098384616). **Self-hosted users**: You must upgrade to Sentry 23.6.2 or later before upgrading to Sentry CLI 3.x.
+
 ## 2.56.1
 
 ### Deprecations

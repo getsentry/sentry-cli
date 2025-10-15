@@ -106,7 +106,7 @@ impl InjectReportBuilder {
             && self.skipped_sourcemaps.is_empty()
     }
 
-    pub fn into_report<'a>(self, sourcefiles: &'a SourceFiles) -> InjectReport<'a> {
+    pub fn into_report(self, sourcefiles: &SourceFiles) -> InjectReport<'_> {
         InjectReport {
             inner: self,
             sourcefiles,

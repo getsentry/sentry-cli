@@ -29,6 +29,7 @@ use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
+use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 
 use super::file_search::ReleaseFileMatch;
@@ -46,7 +47,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     // need to do anything here.  Artifact bundles will also only work
     // if a project is provided which is technically unnecessary for the
     // legacy upload though it will unlikely to be what users want.
-    if !context.projects.is_empty()
+    if context.projects.is_some()
         && context.chunk_upload_options.is_some_and(|x| {
             x.supports(ChunkUploadCapability::ArtifactBundles)
                 || x.supports(ChunkUploadCapability::ArtifactBundlesV2)
@@ -56,7 +57,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     }
 
     // TODO: make this into an error later down the road
-    if context.projects.is_empty() {
+    if context.projects.is_none() {
         eprintln!(
             "{}",
             style(
@@ -75,7 +76,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
             context.org,
             &NewRelease {
                 version: version.to_owned(),
-                projects: context.projects.to_vec(),
+                projects: context.projects.map(Vec::from).unwrap_or_default(),
                 ..Default::default()
             },
         )?;
@@ -88,7 +89,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
-    pub projects: &'a [String],
+    pub projects: Option<NonEmptySlice<'a, String>>,
     pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
     pub note: Option<&'a str>,
@@ -194,11 +195,13 @@ impl<'a> TryFrom<&'a UploadContext<'_>> for LegacyUploadContext<'a> {
             ..
         } = value;
 
-        let project = match projects {
-            [] => None,
-            [project] => Some(project.as_str()),
-            [_, _, ..] => Err(LegacyUploadContextError::ProjectMultiple)?,
-        };
+        let project = projects
+            .map(|projects| match <&[_]>::from(projects) {
+                [] => unreachable!("NonEmptySlice cannot be empty"),
+                [project] => Ok(project.as_str()),
+                [_, _, ..] => Err(LegacyUploadContextError::ProjectMultiple),
+            })
+            .transpose()?;
 
         let release = release.ok_or(LegacyUploadContextError::ReleaseMissing)?;
 
@@ -535,21 +538,44 @@ fn poll_assemble(
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
-    let use_artifact_bundle = (options.supports(ChunkUploadCapability::ArtifactBundles)
-        || options.supports(ChunkUploadCapability::ArtifactBundlesV2))
-        && !context.projects.is_empty();
+
+    let server_supports_artifact_bundles = options.supports(ChunkUploadCapability::ArtifactBundles)
+        || options.supports(ChunkUploadCapability::ArtifactBundlesV2);
+
+    if !server_supports_artifact_bundles {
+        log::warn!(
+            "[DEPRECATION NOTICE] Your Sentry server does not support artifact bundle \
+            uploads. Falling back to deprecated release bundle upload. Support for this \
+            deprecated upload method will be removed in Sentry CLI 3.0.0. Please upgrade your \
+            Sentry server, or if you cannot upgrade, pin your Sentry CLI version to 2.x, so \
+            you don't get upgraded to 3.x when it is released."
+        );
+    }
+
+    // We fall back to legacy release upload if server lacks artifact bundle support, or if
+    // no projects are specified. context.projects has Some(projects) in all cases, besides
+    // the following:
+    //   - For `files upload`, we can have None projects. We don't need a separate warning,
+    //     because `files upload` is already deprecated.
+    //   - For `debug-files bundle-jvm`, but although that codepath uses the `UploadContext`,
+    //     it does not actually use it to perform an upload, so we never hit this codepath.
+    let artifact_bundle_projects = server_supports_artifact_bundles
+        .then_some(context.projects)
+        .flatten();
+
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
-        let response = if use_artifact_bundle {
+        let response = if let Some(projects) = artifact_bundle_projects {
             authenticated_api.assemble_artifact_bundle(
                 context.org,
-                context.projects,
+                projects,
                 checksum,
                 chunks,
                 context.release,
                 context.dist,
             )?
         } else {
+            #[expect(deprecated, reason = "fallback to legacy upload")]
             authenticated_api.assemble_release_artifacts(
                 context.org,
                 context.release()?,
@@ -629,11 +655,15 @@ fn upload_files_chunked(
 
     // Filter out chunks that are already on the server. This only matters if the server supports
     // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
-    if options.supports(ChunkUploadCapability::ArtifactBundlesV2) && !context.projects.is_empty() {
+    if let Some(projects) = options
+        .supports(ChunkUploadCapability::ArtifactBundlesV2)
+        .then_some(context.projects)
+        .flatten()
+    {
         let api = Api::current();
         let response = api.authenticated()?.assemble_artifact_bundle(
             context.org,
-            context.projects,
+            projects,
             checksum,
             &checksums,
             context.release,
@@ -700,7 +730,7 @@ fn build_artifact_bundle(
     }
 
     bundle.set_attribute("org".to_owned(), context.org.to_owned());
-    if let [project] = context.projects {
+    if let Some([project]) = context.projects.as_deref() {
         // Only set project if there is exactly one project
         bundle.set_attribute("project".to_owned(), project);
     }
@@ -794,7 +824,7 @@ fn print_upload_context_details(context: &UploadContext) {
     println!(
         "{} {}",
         style("> Projects:").dim(),
-        style(context.projects.join(", ")).yellow()
+        style(context.projects.as_deref().unwrap_or_default().join(", ")).yellow()
     );
     println!(
         "{} {}",
@@ -863,9 +893,10 @@ mod tests {
 
     #[test]
     fn build_artifact_bundle_deterministic() {
+        let projects_slice = &["wat-project".into()];
         let context = UploadContext {
             org: "wat-org",
-            projects: &["wat-project".into()],
+            projects: Some(projects_slice.into()),
             release: None,
             dist: None,
             note: None,
