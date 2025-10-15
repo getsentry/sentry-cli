@@ -35,36 +35,52 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(
             Arg::new("version")
+                .hide(true)
                 .long("version")
                 .value_name("VERSION")
                 .requires("app_id")
                 .help(
-                    "Optionally associate the mapping files with a human \
-                     readable version.{n}This helps you understand which \
-                     ProGuard files go with which version of your app.",
+                    "[DEPRECATED] Optionally associate the mapping files \
+                     with a human readable version.{n}This helps you \
+                     understand which ProGuard files go with which version \
+                     of your app.\n\
+                     Sentry SaaS and self-hosted version 25.9.0 and later no \
+                     longer display this association, as it has no effect on \
+                     symbol resolution. This flag is scheduled for removal in \
+                     Sentry CLI 3.0.0.",
                 ),
         )
         .arg(
             Arg::new("version_code")
+                .hide(true)
                 .long("version-code")
                 .value_name("VERSION_CODE")
                 .requires("app_id")
                 .requires("version")
                 .help(
-                    "Optionally associate the mapping files with a version \
+                    "[DEPRECATED] Optionally associate the mapping files with a version \
                      code.{n}This helps you understand which ProGuard files \
-                     go with which version of your app.",
+                     go with which version of your app.\n\
+                     Sentry SaaS and self-hosted version 25.9.0 and later no \
+                     longer display this association, as it has no effect on \
+                     symbol resolution. This flag is scheduled for removal in \
+                     Sentry CLI 3.0.0.",
                 ),
         )
         .arg(
             Arg::new("app_id")
+                .hide(true)
                 .long("app-id")
                 .value_name("APP_ID")
                 .requires("version")
                 .help(
-                    "Optionally associate the mapping files with an application \
+                    "[DEPRECATED] Optionally associate the mapping files with an application \
                      ID.{n}If you have multiple apps in one sentry project, you can \
-                     then easily tell them apart.",
+                     then easily tell them apart.\n\
+                     Sentry SaaS and self-hosted version 25.9.0 and later no \
+                     longer display this association, as it has no effect on \
+                     symbol resolution. This flag is scheduled for removal in \
+                     Sentry CLI 3.0.0.",
                 ),
         )
         .arg(
@@ -267,6 +283,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // if values are given associate
     if let Some(app_id) = matches.get_one::<String>("app_id") {
+        log::warn!(
+            "[DEPRECATION NOTICE] The --app-id, --version, and --version-code flags are deprecated. \
+            and scheduled for removal in Sentry CLI 3.0.0. \
+            These values have no effect on symbol resolution, and are no longer displayed anywhere \
+            in the Sentry UI (neither in SaaS nor in self-hosted versions 25.9.0 and later)."
+        );
+
         #[expect(clippy::unwrap_used, reason = "legacy code")]
         let version = matches.get_one::<String>("version").unwrap().to_owned();
         let build: Option<String> = matches.get_one::<String>("version_code").cloned();
