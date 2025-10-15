@@ -4,6 +4,7 @@ $ sentry-cli sourcemaps inject .
 > Searching .
 > Found 18 files
 > Analyzing 18 sources
+> Analyzing completed in [..]
 > Injecting debug ids
 
 Source Map Debug ID Injection Report

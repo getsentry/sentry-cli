@@ -139,7 +139,7 @@ impl ReleaseFileSearch {
             if file.file_type().is_some_and(|t| t.is_dir()) {
                 continue;
             }
-            pb.set_message(&format!("{}", file.path().display()));
+            pb.set_message(format!("{}", file.path().display()));
 
             info!("found: {} ({} bytes)", file.path().display(), {
                 #[expect(clippy::unwrap_used, reason = "legacy code")]
@@ -164,7 +164,7 @@ impl ReleaseFileSearch {
             };
             collected.push(file_match);
 
-            pb.set_prefix(&collected.len().to_string());
+            pb.set_prefix(collected.len().to_string());
         }
 
         pb.finish_and_clear();

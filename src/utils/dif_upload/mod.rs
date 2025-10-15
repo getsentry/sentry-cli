@@ -668,7 +668,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
                 }
             };
 
-            pb.set_prefix(&collected.len().to_string());
+            pb.set_prefix(collected.len().to_string());
             Ok(())
         })?;
     }

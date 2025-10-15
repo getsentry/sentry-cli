@@ -4,6 +4,11 @@
 
 ## Unreleased
 
+### Fixes
+
+- Don't use hidden progress bar ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)) by @lcian
+  - Fixed an issue where log messages would not show up when redirecting stderr to a file and using any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`.
+
 ### Deprecations
 
 - Deprecated the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` flags ([#2852](https://github.com/getsentry/sentry-cli/pull/2852)), as we plan to remove these flags in Sentry CLI 3.x. Users should simply stop using the flags; the values specified there have never had an effect on deobfuscation, and are no longer visible in Sentry.

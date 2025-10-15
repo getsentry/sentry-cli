@@ -1,6 +1,6 @@
 use parking_lot::RwLock;
 use std::env;
-use std::ops::Deref;
+use std::io::IsTerminal as _;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -8,69 +8,120 @@ use crate::utils::logging;
 
 pub use indicatif::ProgressStyle;
 
-pub fn is_progress_bar_visible() -> bool {
-    env::var("SENTRY_NO_PROGRESS_BAR") != Ok("1".into())
+/// By default, use the progress bar when we can detect we're running in a terminal.
+/// `SENTRY_NO_PROGRESS_BAR` takes precedence and can be used to disable the progress bar
+/// regardless of whether or not we're in a terminal.
+pub fn use_progress_bar() -> bool {
+    if env::var("SENTRY_NO_PROGRESS_BAR") == Ok("1".into()) {
+        return false;
+    }
+    std::io::stderr().is_terminal()
 }
 
+/// Wrapper that optionally holds a progress bar.
+/// If there's a progress bar, forward calls to it.
+/// Otherwise, forward messages to `log` calls.
 pub struct ProgressBar {
-    inner: Arc<indicatif::ProgressBar>,
+    inner: Option<Arc<indicatif::ProgressBar>>,
     start: Instant,
 }
 
 impl ProgressBar {
     pub fn new(len: usize) -> Self {
-        if is_progress_bar_visible() {
-            indicatif::ProgressBar::new(len as u64).into()
+        if use_progress_bar() {
+            Self::from_indicatif(indicatif::ProgressBar::new(len as u64))
         } else {
-            Self::hidden()
+            Self::no_progress_bar()
         }
     }
 
     pub fn new_spinner() -> Self {
-        if is_progress_bar_visible() {
-            indicatif::ProgressBar::new_spinner().into()
+        if use_progress_bar() {
+            Self::from_indicatif(indicatif::ProgressBar::new_spinner())
         } else {
-            Self::hidden()
+            Self::no_progress_bar()
         }
     }
 
-    pub fn hidden() -> Self {
-        indicatif::ProgressBar::hidden().into()
+    fn from_indicatif(pb: indicatif::ProgressBar) -> Self {
+        let inner = Arc::new(pb);
+        logging::set_progress_bar(Some(Arc::downgrade(&inner)));
+        ProgressBar {
+            inner: Some(inner),
+            start: Instant::now(),
+        }
+    }
+
+    fn no_progress_bar() -> Self {
+        ProgressBar {
+            inner: None,
+            start: Instant::now(),
+        }
     }
 
     pub fn finish_with_duration(&self, op: &str) {
         let dur = self.start.elapsed();
         // We could use `dur.as_secs_f64()`, but its unnecessarily precise (micros). Millis are enough for our purpose.
         let msg = format!("{op} completed in {}s", dur.as_millis() as f64 / 1000.0);
-        let progress_style = ProgressStyle::default_bar().template("{prefix:.dim} {msg}");
-        self.inner.set_style(progress_style);
-        self.inner.set_prefix(">");
-        self.inner.finish_with_message(&msg);
-        logging::set_progress_bar(None);
+
+        if let Some(inner) = &self.inner {
+            let progress_style = ProgressStyle::default_bar().template("{prefix:.dim} {msg}");
+            inner.set_style(progress_style);
+            inner.set_prefix(">");
+            inner.finish_with_message(&msg);
+            logging::set_progress_bar(None);
+        } else {
+            eprintln!("> {msg}");
+        }
     }
 
     pub fn finish_and_clear(&self) {
-        self.inner.finish_and_clear();
-        logging::set_progress_bar(None);
-    }
-}
-
-impl From<indicatif::ProgressBar> for ProgressBar {
-    fn from(pb: indicatif::ProgressBar) -> Self {
-        let inner = Arc::new(pb);
-        logging::set_progress_bar(Some(Arc::downgrade(&inner)));
-        ProgressBar {
-            inner,
-            start: Instant::now(),
+        if let Some(inner) = &self.inner {
+            inner.finish_and_clear();
+            logging::set_progress_bar(None);
         }
     }
-}
 
-impl Deref for ProgressBar {
-    type Target = indicatif::ProgressBar;
+    pub fn set_style(&self, style: ProgressStyle) {
+        if let Some(inner) = &self.inner {
+            inner.set_style(style);
+        }
+    }
 
-    fn deref(&self) -> &Self::Target {
-        &self.inner
+    pub fn set_message<S: AsRef<str>>(&self, msg: S) {
+        if let Some(inner) = &self.inner {
+            inner.set_message(msg.as_ref());
+        }
+    }
+
+    pub fn tick(&self) {
+        if let Some(inner) = &self.inner {
+            inner.tick();
+        }
+    }
+
+    pub fn set_prefix<S: AsRef<str>>(&self, prefix: S) {
+        if let Some(inner) = &self.inner {
+            inner.set_prefix(prefix.as_ref());
+        }
+    }
+
+    pub fn set_position(&self, pos: u64) {
+        if let Some(inner) = &self.inner {
+            inner.set_position(pos);
+        }
+    }
+
+    pub fn inc(&self, delta: u64) {
+        if let Some(inner) = &self.inner {
+            inner.inc(delta);
+        }
+    }
+
+    pub fn enable_steady_tick(&self, interval: u64) {
+        if let Some(inner) = &self.inner {
+            inner.enable_steady_tick(interval);
+        }
     }
 }
 

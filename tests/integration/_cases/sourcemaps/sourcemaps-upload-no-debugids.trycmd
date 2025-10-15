@@ -3,7 +3,9 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_no_debugids
 ? 1
 > Found 20 files
 > Analyzing 20 sources
+> Analyzing completed in [..]
 > Rewriting sources
+> Rewriting completed in [..]
 > Adding source map references
 error: Cannot upload: You must either specify a release or have debug ids injected into your sources
 
