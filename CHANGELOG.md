@@ -6,6 +6,7 @@
 
 ### Deprecations
 
+- Deprecated the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` flags ([#2852](https://github.com/getsentry/sentry-cli/pull/2852)), as we plan to remove these flags in Sentry CLI 3.x. Users should simply stop using the flags; the values specified there have never had an effect on symbol resolution, and are no longer visible in Sentry.
 - Added a deprecation notice for release bundle uploads, a legacy method for uploading sourcemaps ([#2844](https://github.com/getsentry/sentry-cli/pull/2844)). Release bundle uploads will be removed in Sentry CLI 3.x in favor of artifact bundles, the newer sourcemap upload method [introduced in Sentry version 23.6.2](https://github.com/getsentry/sentry/commit/f90f764fda09575f3f94caf32d04589098384616). **Self-hosted users**: You must upgrade to Sentry 23.6.2 or later before upgrading to Sentry CLI 3.x.
 
 ## 2.56.1
