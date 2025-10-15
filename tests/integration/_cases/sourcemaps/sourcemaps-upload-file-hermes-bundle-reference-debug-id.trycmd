@@ -9,7 +9,7 @@ $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-hermes-
 > Adding source map references
 > Bundling completed in [..]
 > Bundled 2 files for upload
-> Bundle ID: [..]-[..]-[..]-[..]-[..]
+> Bundle ID: 0b10dfbf-7d11-52a5-9107-d16f625896ad
 > Optimizing completed in [..]
 > Uploading completed in [..]
 > Uploaded files to Sentry

@@ -10,9 +10,9 @@ $ sentry-cli sourcemaps inject ./code ./maps ./maps2 --log-level warn
 > Analyzing 5 sources
 > Analyzing completed in [..]
 > Injecting debug ids
-  WARN    [..]-[..]-[..] [..] Ambiguous matches for sourcemap path ./code/foo/index.js.map:
-  WARN    [..]-[..]-[..] [..] ./maps/foo/index.js.map
-  WARN    [..]-[..]-[..] [..] ./maps2/foo/index.js.map
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] Ambiguous matches for sourcemap path ./code/foo/index.js.map:
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] ./maps/foo/index.js.map
+  WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] ./maps2/foo/index.js.map
 
 Source Map Debug ID Injection Report
   Modified: The following source files have been modified to have debug ids
