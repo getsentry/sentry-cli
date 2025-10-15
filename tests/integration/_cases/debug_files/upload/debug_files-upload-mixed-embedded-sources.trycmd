@@ -6,6 +6,15 @@ $ sentry-cli --log-level=debug debug-files upload --include-sources tests/integr
 > Found 1 debug information file (1 with embedded sources)
   DEBUG   [..] trying to collect sources for SrcGenSampleApp.pdb
   DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/Program.cs
+  DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/SrcGenSampleApp.GlobalUsings.g.cs
+  DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/.NETCoreApp,Version=v6.0.AssemblyAttributes.cs
+  DEBUG   [..] Trying to add source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/obj/Release/net6.0/SrcGenSampleApp.AssemblyInfo.cs
+  DEBUG   [..] Skipping embedded source file: /Users/matt/Code/temp/SrcGenSampleApp/SrcGenSampleApp/MySourceGenerator/MySourceGenerator.HelloSourceGenerator/Program.g.cs
+  DEBUG   [..] No sources found for SrcGenSampleApp.pdb
+> Resolved source code for 0 debug information files
+> Prepared debug information file for upload
+...
+> Nothing to upload, all files are on the server
 ...
 
 ```
