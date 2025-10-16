@@ -78,6 +78,7 @@ enum AssetUtil {
         let (structuredThemeStore, assetKeys) = initializeCatalog(from: file)
 
         var images: [String: CGImage] = [:]
+        var vectorAssets: [String: Data] = [:]
 
         for key in assetKeys {
             let keyList = unsafeBitCast(
@@ -129,7 +130,12 @@ enum AssetUtil {
             let (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
             let assetType = determineAssetType(key)
             let imageId = UUID().uuidString
-            images[imageId] = unslicedImage
+            
+            if isVector {
+                vectorAssets[imageId] = data
+            } else {
+                images[imageId] = unslicedImage
+            }
 
             let asset = AssetCatalogEntry(
                 imageId: imageId,
@@ -178,6 +184,17 @@ enum AssetUtil {
 
             CGImageDestinationAddImage(dest, cgImage, nil)
             CGImageDestinationFinalize(dest)
+        }
+        
+        for (id, vectorData) in vectorAssets {
+            let fileURL = folder.appendingPathComponent(id)
+                .appendingPathExtension("pdf")
+            
+            do {
+                try vectorData.write(to: fileURL)
+            } catch {
+                print("⚠️  Could not write vector asset to \(fileURL.path): \(error)")
+            }
         }
         return assets
     }
