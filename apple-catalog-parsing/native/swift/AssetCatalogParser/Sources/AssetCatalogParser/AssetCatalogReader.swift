@@ -1,4 +1,5 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -78,6 +79,7 @@ enum AssetUtil {
         let (structuredThemeStore, assetKeys) = initializeCatalog(from: file)
 
         var images: [String: CGImage] = [:]
+        var seenImageKeys: [String: String] = [:]  // SHA256 -> imageId mapping
 
         for key in assetKeys {
             let keyList = unsafeBitCast(
@@ -128,8 +130,17 @@ enum AssetUtil {
             let isVector = type == 9
             let (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
             let assetType = determineAssetType(key)
-            let imageId = UUID().uuidString
-            images[imageId] = unslicedImage
+            
+            let imageKey = generateImageKey(from: rendition, className: className, data: data)
+            
+            let imageId: String
+            if let existingImageId = seenImageKeys[imageKey] {
+                continue
+            } else {
+                imageId = UUID().uuidString
+                seenImageKeys[imageKey] = imageId
+                images[imageId] = unslicedImage
+            }
 
             let asset = AssetCatalogEntry(
                 imageId: imageId,
@@ -292,6 +303,26 @@ enum AssetUtil {
         }
 
         return (width, height, unslicedImage)
+    }
+    
+    private static func generateImageKey(from rendition: NSObject, className: String, data: Data) -> String {
+        if let unslicedImage = rendition.perform(Selector(("unslicedImage"))) {
+            let image = unslicedImage.takeUnretainedValue() as! CGImage
+            if let imageData = image.dataProvider?.data as? Data {
+                return imageData.sha256()
+            }
+        } else if className == "_CUIThemePDFRendition" {
+            return data.sha256()
+        }
+
+        return data.sha256()
+    }
+}
+
+extension Data {
+    func sha256() -> String {
+        let digest = SHA256.hash(data: self)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 }
 
