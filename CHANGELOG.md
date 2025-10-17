@@ -9,9 +9,14 @@
 - Deprecated the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` flags ([#2852](https://github.com/getsentry/sentry-cli/pull/2852)), as we plan to remove these flags in Sentry CLI 3.x. Users should simply stop using the flags; the values specified there have never had an effect on deobfuscation, and are no longer visible in Sentry.
 - Added a deprecation notice for release bundle uploads, a legacy method for uploading sourcemaps ([#2844](https://github.com/getsentry/sentry-cli/pull/2844)). Release bundle uploads will be removed in Sentry CLI 3.x in favor of artifact bundles, the newer sourcemap upload method [introduced in Sentry version 23.6.2](https://github.com/getsentry/sentry/commit/f90f764fda09575f3f94caf32d04589098384616). **Self-hosted users**: You must upgrade to Sentry 23.6.2 or later before upgrading to Sentry CLI 3.x.
 
+### Fixes & imrpovements
+
+- Add `projects` field to `SentryCliUploadSourceMapsOptions` ([#2856](https://github.com/getsentry/sentry-cli/pull/2856))
+
 ## 2.56.1
 
 ### Deprecations
+
 - Added a deprecation notice for legacy uploading methods ([#2836](https://github.com/getsentry/sentry-cli/pull/2836), [#2837](https://github.com/getsentry/sentry-cli/pull/2837))
   - Support for these legacy uploading methods, required to upload to self-hosted Sentry servers below version 10.0.0, will be removed in the next major release (3.x). If you observe these new deprecation notices, we recommend upgrading your self-hosted Sentry server, or pinning Sentry CLI to a compatible version (2.x).
   - You may encounter these deprecation notices when uploading debug files or sourcemaps.
@@ -38,7 +43,6 @@
 - fix: Validate `SENTRY_RELEASE` environment variable (#2807) by @szokeasaurusrex
 - fix: use actual PR head SHA in GitHub Actions instead of merge commit (#2785) by @runningcode
 - fix: suppress warning messages in failing build upload tests (#2791) by @runningcode
-
 
 ## 2.55.0
 
