@@ -131,10 +131,10 @@ enum AssetUtil {
             let imageId = UUID().uuidString
             
             let fileExtension = (renditionTypeName as NSString).pathExtension.lowercased()
-            let originalFormat = fileExtension.isEmpty ? "png" : fileExtension
             
-            if originalFormat != "svg", let unslicedImage = unslicedImage {
-                images[imageId] = (cgImage: unslicedImage, format: originalFormat)
+            // Skip files without an extension or SVGs
+            if !fileExtension.isEmpty && fileExtension != "svg", let unslicedImage = unslicedImage {
+                images[imageId] = (cgImage: unslicedImage, format: fileExtension)
             }
 
             let asset = AssetCatalogEntry(
@@ -172,7 +172,11 @@ enum AssetUtil {
             let cgImage = imageInfo.cgImage
             let fileURL = folder.appendingPathComponent(id).appendingPathExtension(format)
             
-            let utType = utTypeForExtension(format)
+            guard let utType = utTypeForExtension(format) else {
+                print("⚠️  Unsupported format '\(format)' for \(id), skipping")
+                continue
+            }
+            
             guard let dest = CGImageDestinationCreateWithURL(fileURL as CFURL, utType as CFString, 1, nil) else {
                 print("⚠️  Could not create destination for \(fileURL.path)")
                 continue
@@ -296,7 +300,9 @@ enum AssetUtil {
         return (width, height, unslicedImage)
     }
     
-    private static func utTypeForExtension(_ ext: String) -> String {
+    /// Maps a file extension to its corresponding UTType identifier
+    /// Returns nil for unknown or unsupported formats
+    private static func utTypeForExtension(_ ext: String) -> String? {
         switch ext {
         case "jpg", "jpeg":
             return UTType.jpeg.identifier
@@ -317,7 +323,7 @@ enum AssetUtil {
         case "bmp":
             return UTType.bmp.identifier
         default:
-            return UTType.png.identifier
+            return nil
         }
     }
 }
