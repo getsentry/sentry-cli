@@ -38,6 +38,8 @@ struct AssetCatalogEntry: Encodable {
     let height: Int?
     let filename: String?
     let type: AssetType?
+    let idiom: String?
+    let colorspace: String?
 }
 
 enum Error: Swift.Error {
@@ -49,6 +51,31 @@ typealias objectiveCMethodImp = @convention(c) (AnyObject, Selector, UnsafeRawPo
 >?
 
 enum AssetUtil {
+    private static func idiomToString(_ idiom: UInt?) -> String? {
+        guard let idiom = idiom else { return nil }
+        switch idiom {
+        case 0: return "universal"
+        case 1: return "phone"
+        case 2: return "pad"
+        case 3: return "tv"
+        case 4: return "carplay"
+        case 5: return "watch"
+        case 6: return "marketing"
+        default: return nil
+        }
+    }
+    
+    private static func colorSpaceIDToString(_ colorSpaceID: UInt?) -> String? {
+        guard let colorSpaceID = colorSpaceID else { return nil }
+        switch colorSpaceID {
+        case 1: return "srgb"
+        case 2: return "gray gamma 22"
+        case 3: return "displayP3"
+        case 4: return "extended srgb"
+        default: return nil
+        }
+    }
+    
     private static func createResultsPath(assetURL: URL, outputURL: URL) throws -> URL {
         var archiveURL = assetURL
         var tailComponents: [String] = []
@@ -136,6 +163,9 @@ enum AssetUtil {
             if !fileExtension.isEmpty && fileExtension != "svg", let unslicedImage = unslicedImage {
                 images[imageId] = (cgImage: unslicedImage, format: fileExtension)
             }
+            
+            let idiomValue = key.getUInt(forKey: "themeIdiom")
+            let colorSpaceID = rendition.getUInt(forKey: "colorSpaceID")
 
             let asset = AssetCatalogEntry(
                 imageId: imageId,
@@ -145,7 +175,9 @@ enum AssetUtil {
                 width: width,
                 height: height,
                 filename: renditionTypeName,
-                type: assetType
+                type: assetType,
+                idiom: idiomToString(idiomValue),
+                colorspace: colorSpaceIDToString(colorSpaceID)
             )
             assets.append(asset)
         }
@@ -158,7 +190,9 @@ enum AssetUtil {
             width: nil,
             height: nil,
             filename: nil,
-            type: nil
+            type: nil,
+            idiom: nil,
+            colorspace: nil
         ))
 
         let data = try! JSONEncoder().encode(assets)
