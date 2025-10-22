@@ -2,7 +2,7 @@
 authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 name = "sentry-cli"
-version = "2.56.1"
+version = "2.57.0"
 edition = "2021"
 rust-version = "1.86"
 
