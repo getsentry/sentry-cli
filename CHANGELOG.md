@@ -4,19 +4,18 @@
 
 ## Unreleased
 
+### New Features
+
+- (JS API) Add `projects` field to `SentryCliUploadSourceMapsOptions` ([#2856](https://github.com/getsentry/sentry-cli/pull/2856))
+
 ### Deprecations
 
 - Deprecated the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` flags ([#2852](https://github.com/getsentry/sentry-cli/pull/2852)), as we plan to remove these flags in Sentry CLI 3.x. Users should simply stop using the flags; the values specified there have never had an effect on deobfuscation, and are no longer visible in Sentry.
-- Added a deprecation notice for release bundle uploads, a legacy method for uploading sourcemaps ([#2844](https://github.com/getsentry/sentry-cli/pull/2844)). Release bundle uploads will be removed in Sentry CLI 3.x in favor of artifact bundles, the newer sourcemap upload method [introduced in Sentry version 23.6.2](https://github.com/getsentry/sentry/commit/f90f764fda09575f3f94caf32d04589098384616). **Self-hosted users**: You must upgrade to Sentry 23.6.2 or later before upgrading to Sentry CLI 3.x.
-
-### New Features
-
-- Add `projects` field to `SentryCliUploadSourceMapsOptions` ([#2856](https://github.com/getsentry/sentry-cli/pull/2856))
+- Added a deprecation notice for release bundle uploads, a legacy method for uploading source maps ([#2844](https://github.com/getsentry/sentry-cli/pull/2844)). Release bundle uploads will be removed in Sentry CLI 3.x in favor of artifact bundles, the newer source map upload method [introduced in Sentry version 23.6.2](https://github.com/getsentry/sentry/commit/f90f764fda09575f3f94caf32d04589098384616). **Self-hosted users**: You must upgrade to Sentry 23.6.2 or later before upgrading to Sentry CLI 3.x.
 
 ### Fixes
 
-- Don't use hidden progress bar ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)) by @lcian
-  - Fixed an issue where log messages would not show up when redirecting stderr to a file and using any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`.
+- Fixed a bug where some log messages would not show up in CI environments or when redirecting stderr to a file ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)). Specifically, this bug was affecting any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`. Any stderr output during the progress bar was lost if stderr was redirected.
 
 ## 2.56.1
 
