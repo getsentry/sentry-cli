@@ -106,6 +106,10 @@ declare module '@sentry/cli' {
      */
     stripCommonPrefix?: boolean;
     /**
+     * The projects to upload the sourcemaps to. If not provided, the sourcemaps will be uploaded to the default project.
+     */
+    projects?: string[];
+    /**
      * This attempts sourcemap validation before upload when rewriting is not enabled.
      * It will spot a variety of issues with source maps and cancel the upload if any are found.
      * This is not enabled by default as this can cause false positives.

@@ -77,7 +77,7 @@ enum AssetUtil {
 
         let (structuredThemeStore, assetKeys) = initializeCatalog(from: file)
 
-        var images: [String: CGImage] = [:]
+        var images: [String: (cgImage: CGImage, format: String)] = [:]
 
         for key in assetKeys {
             let keyList = unsafeBitCast(
@@ -129,7 +129,13 @@ enum AssetUtil {
             let (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
             let assetType = determineAssetType(key)
             let imageId = UUID().uuidString
-            images[imageId] = unslicedImage
+            
+            let fileExtension = (renditionTypeName as NSString).pathExtension.lowercased()
+            
+            // Skip files without an extension or SVGs
+            if !fileExtension.isEmpty && fileExtension != "svg", let unslicedImage = unslicedImage {
+                images[imageId] = (cgImage: unslicedImage, format: fileExtension)
+            }
 
             let asset = AssetCatalogEntry(
                 imageId: imageId,
@@ -161,17 +167,17 @@ enum AssetUtil {
             .appendingPathComponent("Assets")
             .appendingPathExtension("json")
         try! data.write(to: url, options: [])
-        for (id, cgImage) in images {
-            let fileURL = folder.appendingPathComponent(id)
-                .appendingPathExtension("png")
-
-            guard let dest = CGImageDestinationCreateWithURL(
-                fileURL as CFURL,
-                UTType.png.identifier as CFString,
-                1,
-                nil
-            )
-            else {
+        for (id, imageInfo) in images {
+            let format = imageInfo.format
+            let cgImage = imageInfo.cgImage
+            let fileURL = folder.appendingPathComponent(id).appendingPathExtension(format)
+            
+            guard let utType = utTypeForExtension(format) else {
+                print("⚠️  Unsupported format '\(format)' for \(id), skipping")
+                continue
+            }
+            
+            guard let dest = CGImageDestinationCreateWithURL(fileURL as CFURL, utType as CFString, 1, nil) else {
                 print("⚠️  Could not create destination for \(fileURL.path)")
                 continue
             }
@@ -292,6 +298,33 @@ enum AssetUtil {
         }
 
         return (width, height, unslicedImage)
+    }
+    
+    /// Maps a file extension to its corresponding UTType identifier
+    /// Returns nil for unknown or unsupported formats
+    private static func utTypeForExtension(_ ext: String) -> String? {
+        switch ext {
+        case "jpg", "jpeg":
+            return UTType.jpeg.identifier
+        case "png":
+            return UTType.png.identifier
+        case "heic", "heif":
+            return UTType.heic.identifier
+        case "gif":
+            return UTType.gif.identifier
+        case "webp":
+            return UTType.webP.identifier
+        case "pdf":
+            return UTType.pdf.identifier
+        case "svg":
+            return UTType.svg.identifier
+        case "tiff", "tif":
+            return UTType.tiff.identifier
+        case "bmp":
+            return UTType.bmp.identifier
+        default:
+            return nil
+        }
     }
 }
 
