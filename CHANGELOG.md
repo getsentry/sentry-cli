@@ -13,6 +13,11 @@
 
 - Add `projects` field to `SentryCliUploadSourceMapsOptions` ([#2856](https://github.com/getsentry/sentry-cli/pull/2856))
 
+### Fixes
+
+- Don't use hidden progress bar ([#2830](https://github.com/getsentry/sentry-cli/pull/2830)) by @lcian
+  - Fixed an issue where log messages would not show up when redirecting stderr to a file and using any subcommand that uses a progress bar, such as `sentry-cli debug-files bundle-jvm` and `sentry-cli sourcemaps upload`.
+
 ## 2.56.1
 
 ### Deprecations

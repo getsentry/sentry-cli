@@ -2,6 +2,7 @@
 $ sentry-cli debug-files bundle-jvm --output i-do-not-exist --debug-id 0B693ABA-531C-4EB6-99E4-B7320C3C85DA jvm
 ? success
 > Found 2 files
+> Bundling completed in [..]
 > Bundled 2 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 Created i-do-not-exist/0b693aba-531c-4eb6-99e4-b7320c3c85da.zip

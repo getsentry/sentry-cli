@@ -2,6 +2,7 @@
 $ sentry-cli debug-files bundle-jvm --output ./file.txt --debug-id D384DC3B-AB2F-4DC7-903D-2C851E27E094 ./io
 ? failed
 > Found 2 files
+> Bundling completed in [..]
 > Bundled 2 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 error: Unable to write source bundle

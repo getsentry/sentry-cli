@@ -8,6 +8,7 @@ $ sentry-cli sourcemaps inject ./code ./maps ./maps2 --log-level warn
 > Searching ./maps2
 > Found 1 file
 > Analyzing 5 sources
+> Analyzing completed in [..]
 > Injecting debug ids
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] Ambiguous matches for sourcemap path ./code/foo/index.js.map:
   WARN    [..]-[..]-[..] [..]:[..]:[..].[..] [..]:[..] ./maps/foo/index.js.map
