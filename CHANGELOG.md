@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Deprecations
+
+- Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
+
 ## 2.57.0
 
 ### New Features

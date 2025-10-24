@@ -85,12 +85,13 @@ pub fn make_command(command: Command) -> Command {
         )
         .arg(
             Arg::new("platform")
+                .hide(true)
                 .long("platform")
                 .value_name("PLATFORM")
                 .requires("app_id")
                 .help(
-                    "Optionally defines the platform for the app association. \
-                     [defaults to 'android']",
+                    "[DEPRECATED] This flag is a no-op, scheduled \
+                    for removal in Sentry CLI 3.0.0.",
                 ),
         )
         .arg(
@@ -145,6 +146,14 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    if matches.get_one::<String>("platform").is_some() {
+        log::warn!(
+            "[DEPRECATION NOTICE] The --platform argument is deprecated, \
+            and is scheduled for removal in Sentry CLI 3.0.0. \
+            The argument is a no-op."
+        );
+    }
+
     let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
