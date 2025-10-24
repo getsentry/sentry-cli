@@ -7,7 +7,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
 use crate::utils::fs::TempFile;
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use itertools::Itertools as _;
 use log::debug;
 use symbolic::common::ByteView;
@@ -61,10 +61,12 @@ fn add_entries_to_zip(
             let target_str = target.to_string_lossy();
 
             // Create a symlink entry in the zip
-            zip.add_symlink(zip_path, &target_str, options)?;
+            zip.add_symlink(zip_path.as_str(), &target_str, options)
+                .with_context(|| format!("Failed to add symlink '{zip_path}' to zip archive"))?;
         } else {
             // Handle regular files
-            zip.start_file(zip_path, options)?;
+            zip.start_file(zip_path.as_str(), options)
+                .with_context(|| format!("Failed to add file '{zip_path}' to zip archive"))?;
             let file_byteview = ByteView::open(&entry_path)?;
             zip.write_all(file_byteview.as_slice())?;
         }
