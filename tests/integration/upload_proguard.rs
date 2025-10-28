@@ -152,38 +152,14 @@ fn chunk_upload_needs_upload() {
                             }\
                         }"
                     }
-                    2 => {
-                        // Third call: Assembly completed
-                        "{\
-                            \"297ecd9143fc2882e4b6758c1ccd13ea82930eeb\":{\
-                                \"state\":\"ok\",\
-                                \"detail\":null,\
-                                \"missingChunks\":[],\
-                                \"dif\":{\
-                                    \"id\":\"12\",\
-                                    \"uuid\":\"c038584d-c366-570c-ad1e-034fa0d194d7\",\
-                                    \"debugId\":\"c038584d-c366-570c-ad1e-034fa0d194d7\",\
-                                    \"codeId\":null,\
-                                    \"cpuName\":\"any\",\
-                                    \"objectName\":\"proguard-mapping\",\
-                                    \"symbolType\":\"proguard\",\
-                                    \"headers\":{\"Content-Type\":\"text/x-proguard+plain\"},\
-                                    \"size\":155,\
-                                    \"sha1\":\"297ecd9143fc2882e4b6758c1ccd13ea82930eeb\",\
-                                    \"dateCreated\":\"1776-07-04T12:00:00.000Z\",\
-                                    \"data\":{\"features\":[\"mapping\"]}\
-                                }\
-                            }\
-                        }"
-                    }
                     n => panic!(
-                        "Only 3 calls to the assemble endpoint expected, but there were {}.",
+                        "Only 2 calls to the assemble endpoint expected, but there were {}.",
                         n + 1
                     ),
                 }
                 .into()
             })
-            .expect(3),
+            .expect(2),
         )
         .assert_cmd([
             "upload-proguard",
@@ -298,57 +274,14 @@ fn chunk_upload_two_files() {
                             }\
                         }"
                     }
-                    2 => {
-                        // Third call: Assembly completed
-                        "{\
-                            \"297ecd9143fc2882e4b6758c1ccd13ea82930eeb\":{\
-                                \"state\":\"ok\",\
-                                \"detail\":null,\
-                                \"missingChunks\":[],\
-                                \"dif\":{\
-                                    \"id\":\"12\",\
-                                    \"uuid\":\"c038584d-c366-570c-ad1e-034fa0d194d7\",\
-                                    \"debugId\":\"c038584d-c366-570c-ad1e-034fa0d194d7\",\
-                                    \"codeId\":null,\
-                                    \"cpuName\":\"any\",\
-                                    \"objectName\":\"proguard-mapping\",\
-                                    \"symbolType\":\"proguard\",\
-                                    \"headers\":{\"Content-Type\":\"text/x-proguard+plain\"},\
-                                    \"size\":155,\
-                                    \"sha1\":\"297ecd9143fc2882e4b6758c1ccd13ea82930eeb\",\
-                                    \"dateCreated\":\"1776-07-04T12:00:00.000Z\",\
-                                    \"data\":{\"features\":[\"mapping\"]}\
-                                }\
-                            },\
-                            \"e5329624a8d06e084941f133c75b5874f793ee7c\":{\
-                                \"state\":\"ok\",\
-                                \"detail\":null,\
-                                \"missingChunks\":[],\
-                                \"dif\":{\
-                                    \"id\":\"13\",\
-                                    \"uuid\":\"747e1d76-509b-5225-8a5b-db7b7d4067d4\",\
-                                    \"debugId\":\"747e1d76-509b-5225-8a5b-db7b7d4067d4\",\
-                                    \"codeId\":null,\
-                                    \"cpuName\":\"any\",\
-                                    \"objectName\":\"proguard-mapping\",\
-                                    \"symbolType\":\"proguard\",\
-                                    \"headers\":{\"Content-Type\":\"text/x-proguard+plain\"},\
-                                    \"size\":158,\
-                                    \"sha1\":\"e5329624a8d06e084941f133c75b5874f793ee7c\",\
-                                    \"dateCreated\":\"1776-07-04T12:00:00.000Z\",\
-                                    \"data\":{\"features\":[\"mapping\"]}\
-                                }\
-                            }\
-                        }"
-                    }
                     n => panic!(
-                        "Only 3 calls to the assemble endpoint expected, but there were {}.",
+                        "Only 2 calls to the assemble endpoint expected, but there were {}.",
                         n + 1
                     ),
                 }
                 .into()
             })
-            .expect(3),
+            .expect(2),
         )
         .assert_cmd([
             "upload-proguard",
