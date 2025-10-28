@@ -9,7 +9,6 @@ use symbolic::common::ByteView;
 use uuid::Uuid;
 
 use crate::api::Api;
-use crate::api::AssociateProguard;
 use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt as _;
@@ -34,61 +33,10 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append),
         )
         .arg(
-            Arg::new("version")
-                .hide(true)
-                .long("version")
-                .value_name("VERSION")
-                .requires("app_id")
-                .help(
-                    "[DEPRECATED] Optionally associate the mapping files \
-                     with a human readable version.{n}This helps you \
-                     understand which ProGuard files go with which version \
-                     of your app.\n\
-                     Sentry SaaS and self-hosted version 25.9.0 and later no \
-                     longer display this association, as it has no effect on \
-                     deobfuscation. This flag is scheduled for removal in \
-                     Sentry CLI 3.0.0.",
-                ),
-        )
-        .arg(
-            Arg::new("version_code")
-                .hide(true)
-                .long("version-code")
-                .value_name("VERSION_CODE")
-                .requires("app_id")
-                .requires("version")
-                .help(
-                    "[DEPRECATED] Optionally associate the mapping files with a version \
-                     code.{n}This helps you understand which ProGuard files \
-                     go with which version of your app.\n\
-                     Sentry SaaS and self-hosted version 25.9.0 and later no \
-                     longer display this association, as it has no effect on \
-                     deobfuscation. This flag is scheduled for removal in \
-                     Sentry CLI 3.0.0.",
-                ),
-        )
-        .arg(
-            Arg::new("app_id")
-                .hide(true)
-                .long("app-id")
-                .value_name("APP_ID")
-                .requires("version")
-                .help(
-                    "[DEPRECATED] Optionally associate the mapping files with an application \
-                     ID.{n}If you have multiple apps in one sentry project, you can \
-                     then easily tell them apart.\n\
-                     Sentry SaaS and self-hosted version 25.9.0 and later no \
-                     longer display this association, as it has no effect on \
-                     deobfuscation. This flag is scheduled for removal in \
-                     Sentry CLI 3.0.0.",
-                ),
-        )
-        .arg(
             Arg::new("platform")
                 .hide(true)
                 .long("platform")
                 .value_name("PLATFORM")
-                .requires("app_id")
                 .help(
                     "[DEPRECATED] This flag is a no-op, scheduled \
                     for removal in Sentry CLI 3.0.0.",
@@ -109,7 +57,6 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("android_manifest")
                 .long("android-manifest")
                 .value_name("PATH")
-                .conflicts_with("app_id")
                 .hide(true)
                 .help(
                     "[DEPRECATED] This flag is a no-op, scheduled \
@@ -301,41 +248,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             for df in rv {
                 println!("  {}", style(&df.id()).dim());
             }
-        }
-    }
-
-    // if values are given associate
-    if let Some(app_id) = matches.get_one::<String>("app_id") {
-        log::warn!(
-            "[DEPRECATION NOTICE] The --app-id, --version, and --version-code flags are deprecated. \
-            and scheduled for removal in Sentry CLI 3.0.0. \
-            These values have no effect on deobfuscation, and are no longer displayed anywhere \
-            in the Sentry UI (neither in SaaS nor in self-hosted versions 25.9.0 and later)."
-        );
-
-        #[expect(clippy::unwrap_used, reason = "legacy code")]
-        let version = matches.get_one::<String>("version").unwrap().to_owned();
-        let build: Option<String> = matches.get_one::<String>("version_code").cloned();
-
-        let mut release_name = app_id.to_owned();
-        release_name.push('@');
-        release_name.push_str(&version);
-
-        if let Some(build_str) = build {
-            release_name.push('+');
-            release_name.push_str(&build_str);
-        }
-
-        for mapping in &mappings {
-            let uuid = forced_uuid.copied().unwrap_or(mapping.uuid());
-            authenticated_api.associate_proguard_mappings(
-                &org,
-                &project,
-                &AssociateProguard {
-                    release_name: release_name.to_owned(),
-                    proguard_uuid: uuid.to_string(),
-                },
-            )?;
         }
     }
 

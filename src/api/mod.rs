@@ -1059,36 +1059,6 @@ impl<'a> AuthenticatedApi<'a> {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
-    pub fn associate_proguard_mappings(
-        &self,
-        org: &str,
-        project: &str,
-        data: &AssociateProguard,
-    ) -> ApiResult<()> {
-        let path = format!(
-            "/projects/{}/{}/files/proguard-artifact-releases",
-            PathArg(org),
-            PathArg(project)
-        );
-        let resp: ApiResponse = self
-            .request(Method::Post, &path)?
-            .with_json_body(data)?
-            .send()?;
-        if resp.status() == 201 {
-            Ok(())
-        } else if resp.status() == 409 {
-            info!(
-                "Release association for release '{}', UUID '{}' already exists.",
-                data.release_name, data.proguard_uuid
-            );
-            Ok(())
-        } else if resp.status() == 404 {
-            Err(ApiErrorKind::ResourceNotFound.into())
-        } else {
-            resp.convert()
-        }
-    }
-
     /// List all organizations associated with the authenticated token
     /// in the given `Region`. If no `Region` is provided, we assume
     /// we're issuing a request to a monolith deployment.
@@ -2242,12 +2212,6 @@ impl DebugInfoFile {
     pub fn id(&self) -> DebugId {
         self.id.or(self.uuid).unwrap_or_default()
     }
-}
-
-#[derive(Debug, Serialize)]
-pub struct AssociateProguard {
-    pub release_name: String,
-    pub proguard_uuid: String,
 }
 
 #[derive(Deserialize)]
