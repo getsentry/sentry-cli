@@ -36,6 +36,9 @@ pub enum ChunkUploadCapability {
     /// Upload of preprod artifacts
     PreprodArtifacts,
 
+    /// Upload of ProGuard mappings
+    Proguard,
+
     /// Any other unsupported capability (ignored)
     Unknown,
 }
@@ -57,6 +60,7 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
             "il2cpp" => ChunkUploadCapability::Il2Cpp,
             "dartsymbolmap" => ChunkUploadCapability::DartSymbolMap,
             "preprod_artifacts" => ChunkUploadCapability::PreprodArtifacts,
+            "proguard" => ChunkUploadCapability::Proguard,
             _ => ChunkUploadCapability::Unknown,
         })
     }
