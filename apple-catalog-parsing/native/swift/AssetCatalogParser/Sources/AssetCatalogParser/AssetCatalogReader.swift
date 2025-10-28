@@ -153,15 +153,32 @@ enum AssetUtil {
             let type = rendition.getUInt(forKey: "type") ?? 0
 
             let isVector = type == 9
-            let (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
+            let isMultisizeImageSet = type == 1010
             let assetType = determineAssetType(key)
             let imageId = UUID().uuidString
-            
             let fileExtension = (renditionTypeName as NSString).pathExtension.lowercased()
             
-            // Skip files without an extension or SVGs
-            if !fileExtension.isEmpty && fileExtension != "svg", let unslicedImage = unslicedImage {
-                images[imageId] = (cgImage: unslicedImage, format: fileExtension)
+            var width: Int?
+            var height: Int?
+            var unslicedImage: CGImage?
+            
+            if isMultisizeImageSet {
+                // Look up the actual image rendition from the multisize set
+                if let result = findImageForMultisizeSet(rendition, key, assetKeys, structuredThemeStore) {
+                    unslicedImage = result.image
+                    width = result.width
+                    height = result.height
+                    images[imageId] = (cgImage: unslicedImage!, format: "png")
+                }
+            } else {
+                // Get image dimensions from regular rendition
+                (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
+                
+                // Skip SVGs, but save images even if they don't have an extension (default to png)
+                if fileExtension != "svg", let unslicedImage = unslicedImage {
+                    let format = fileExtension.isEmpty ? "png" : fileExtension
+                    images[imageId] = (cgImage: unslicedImage, format: format)
+                }
             }
             
             let idiomValue = key.getUInt(forKey: "themeIdiom")
@@ -275,6 +292,65 @@ enum AssetUtil {
             }
         }
         return true
+    }
+    
+    private static func findImageForMultisizeSet(
+        _ rendition: NSObject,
+        _ key: NSObject,
+        _ assetKeys: [NSObject],
+        _ structuredThemeStore: NSObject
+    ) -> (image: CGImage, width: Int, height: Int)? {
+        // Get the sizeIndexes to find the actual image
+        guard rendition.responds(to: Selector(("sizeIndexes"))),
+              let sizeIndexesResult = rendition.perform(Selector(("sizeIndexes"))),
+              let sizeIndexesArray = sizeIndexesResult.takeUnretainedValue() as? NSArray,
+              sizeIndexesArray.count > 0 else {
+            return nil
+        }
+        
+        // Get the first size index
+        let sizeIndexObj = sizeIndexesArray.object(at: 0) as! NSObject
+        
+        // Get the idiom and subtype from the size index
+        let idiom = sizeIndexObj.getUInt(forKey: "idiom") ?? 0
+        let subtype = sizeIndexObj.getUInt(forKey: "subtype") ?? 0
+        let keyElement = key.getUInt(forKey: "themeElement") ?? 0
+        
+        // Look for a rendition with matching idiom and subtype in the asset keys
+        for otherKey in assetKeys {
+            let otherKeyIdiom = otherKey.getUInt(forKey: "themeIdiom") ?? 0
+            let otherKeySubtype = otherKey.getUInt(forKey: "themeSubtype") ?? 0
+            let otherKeyElement = otherKey.getUInt(forKey: "themeElement") ?? 0
+            
+            // Find a key with matching element, idiom, and subtype
+            guard otherKeyElement == keyElement,
+                  otherKeyIdiom == idiom,
+                  otherKeySubtype == subtype else {
+                continue
+            }
+            
+            let otherKeyList = unsafeBitCast(
+                otherKey.perform(Selector(("keyList"))),
+                to: UnsafeMutableRawPointer.self
+            )
+            
+            guard let imageRendition = createRendition(from: structuredThemeStore, otherKeyList) else {
+                continue
+            }
+            
+            let renditionType = imageRendition.getUInt(forKey: "type") ?? 0
+            
+            // Skip if this is another multisize set (type 1010)
+            guard renditionType != 1010,
+                  let result = imageRendition.perform(Selector(("unslicedImage"))) else {
+                continue
+            }
+            
+            let image = result.takeUnretainedValue() as! CGImage
+            return (image, image.width, image.height)
+        }
+        
+        return nil
     }
 
     private static func determineAssetType(_ key: NSObject) -> AssetType {
