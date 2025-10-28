@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- Removed the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
+
 ### Deprecations
 
 - Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
