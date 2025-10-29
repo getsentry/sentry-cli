@@ -50,6 +50,14 @@ typealias objectiveCMethodImp = @convention(c) (AnyObject, Selector, UnsafeRawPo
     AnyObject
 >?
 
+private struct MultisizeSetInfo {
+    let name: String
+    let element: UInt
+    let part: UInt
+    let identifier: UInt
+    let sizeIndexes: [(idiom: UInt, subtype: UInt)]
+}
+
 enum AssetUtil {
     private static func idiomToString(_ idiom: UInt?) -> String? {
         guard let idiom = idiom else { return nil }
@@ -105,8 +113,12 @@ enum AssetUtil {
         let (structuredThemeStore, assetKeys) = initializeCatalog(from: file)
 
         var images: [String: (cgImage: CGImage, format: String)] = [:]
-
-        for key in assetKeys {
+        
+        // First pass: Build map of multisize sets and cache renditions for performance
+        var multisizeSets: [MultisizeSetInfo] = []
+        var renditionCache: [Int: NSObject] = [:]
+        
+        for (index, key) in assetKeys.enumerated() {
             let keyList = unsafeBitCast(
                 key.perform(Selector(("keyList"))),
                 to: UnsafeMutableRawPointer.self
@@ -114,6 +126,49 @@ enum AssetUtil {
             guard let rendition = createRendition(from: structuredThemeStore, keyList) else {
                 continue
             }
+            renditionCache[index] = rendition
+            
+            let type = rendition.getUInt(forKey: "type") ?? 0
+            if type == 1010 {  // Multisize image set
+                let renditionTypeName = rendition.perform(Selector(("name"))).takeUnretainedValue() as! String
+                let keyElement = key.getUInt(forKey: "themeElement") ?? 0
+                let keyPart = key.getUInt(forKey: "themePart") ?? 0
+                let keyIdentifier = key.getUInt(forKey: "themeIdentifier") ?? 0
+                
+                // Extract size indexes to identify which images belong to this set
+                var sizeIndexes: [(idiom: UInt, subtype: UInt)] = []
+                if rendition.responds(to: Selector(("sizeIndexes"))),
+                   let sizeIndexesResult = rendition.perform(Selector(("sizeIndexes"))),
+                   let sizeIndexesArray = sizeIndexesResult.takeUnretainedValue() as? NSArray {
+                    for sizeIndexObj in sizeIndexesArray {
+                        if let obj = sizeIndexObj as? NSObject {
+                            let idiom = obj.getUInt(forKey: "idiom") ?? 0
+                            let subtype = obj.getUInt(forKey: "subtype") ?? 0
+                            sizeIndexes.append((idiom: idiom, subtype: subtype))
+                        }
+                    }
+                }
+                
+                multisizeSets.append(MultisizeSetInfo(
+                    name: renditionTypeName,
+                    element: keyElement,
+                    part: keyPart,
+                    identifier: keyIdentifier,
+                    sizeIndexes: sizeIndexes
+                ))
+            }
+        }
+
+        // Second pass: Process all assets using cached renditions
+        for (index, key) in assetKeys.enumerated() {
+            guard let rendition = renditionCache[index] else {
+                continue
+            }
+            
+            let keyList = unsafeBitCast(
+                key.perform(Selector(("keyList"))),
+                to: UnsafeMutableRawPointer.self
+            )
 
             let data = rendition.value(forKey: "_srcData") as! Data
             let length = UInt(data.count)
@@ -163,13 +218,7 @@ enum AssetUtil {
             var unslicedImage: CGImage?
             
             if isMultisizeImageSet {
-                // Look up the actual image rendition from the multisize set
-                if let result = findImageForMultisizeSet(rendition, key, assetKeys, structuredThemeStore) {
-                    unslicedImage = result.image
-                    width = result.width
-                    height = result.height
-                    images[imageId] = (cgImage: unslicedImage!, format: "png")
-                }
+                continue
             } else {
                 // Get image dimensions from regular rendition
                 (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
@@ -183,11 +232,19 @@ enum AssetUtil {
             
             let idiomValue = key.getUInt(forKey: "themeIdiom")
             let colorSpaceID = rendition.getUInt(forKey: "colorSpaceID")
+            
+            // Include multisize set name in the name field if it exists
+            let finalName: String
+            if let setName = findMultisizeSetName(key, in: multisizeSets) {
+                finalName = "\(setName)/\(name)"
+            } else {
+                finalName = name
+            }
 
             let asset = AssetCatalogEntry(
                 imageId: imageId,
                 size: length,
-                name: name,
+                name: finalName,
                 vector: isVector,
                 width: width,
                 height: height,
@@ -293,65 +350,6 @@ enum AssetUtil {
         }
         return true
     }
-    
-    private static func findImageForMultisizeSet(
-        _ rendition: NSObject,
-        _ key: NSObject,
-        _ assetKeys: [NSObject],
-        _ structuredThemeStore: NSObject
-    ) -> (image: CGImage, width: Int, height: Int)? {
-        // Get the sizeIndexes to find the actual image
-        guard rendition.responds(to: Selector(("sizeIndexes"))),
-              let sizeIndexesResult = rendition.perform(Selector(("sizeIndexes"))),
-              let sizeIndexesArray = sizeIndexesResult.takeUnretainedValue() as? NSArray,
-              sizeIndexesArray.count > 0 else {
-            return nil
-        }
-        
-        // Get the first size index
-        let sizeIndexObj = sizeIndexesArray.object(at: 0) as! NSObject
-        
-        // Get the idiom and subtype from the size index
-        let idiom = sizeIndexObj.getUInt(forKey: "idiom") ?? 0
-        let subtype = sizeIndexObj.getUInt(forKey: "subtype") ?? 0
-        let keyElement = key.getUInt(forKey: "themeElement") ?? 0
-        
-        // Look for a rendition with matching idiom and subtype in the asset keys
-        for otherKey in assetKeys {
-            let otherKeyIdiom = otherKey.getUInt(forKey: "themeIdiom") ?? 0
-            let otherKeySubtype = otherKey.getUInt(forKey: "themeSubtype") ?? 0
-            let otherKeyElement = otherKey.getUInt(forKey: "themeElement") ?? 0
-            
-            // Find a key with matching element, idiom, and subtype
-            guard otherKeyElement == keyElement,
-                  otherKeyIdiom == idiom,
-                  otherKeySubtype == subtype else {
-                continue
-            }
-            
-            let otherKeyList = unsafeBitCast(
-                otherKey.perform(Selector(("keyList"))),
-                to: UnsafeMutableRawPointer.self
-            )
-            
-            guard let imageRendition = createRendition(from: structuredThemeStore, otherKeyList) else {
-                continue
-            }
-            
-            let renditionType = imageRendition.getUInt(forKey: "type") ?? 0
-            
-            // Skip if this is another multisize set (type 1010)
-            guard renditionType != 1010,
-                  let result = imageRendition.perform(Selector(("unslicedImage"))) else {
-                continue
-            }
-            
-            let image = result.takeUnretainedValue() as! CGImage
-            return (image, image.width, image.height)
-        }
-        
-        return nil
-    }
 
     private static func determineAssetType(_ key: NSObject) -> AssetType {
         let themeElement = key.getUInt(forKey: "themeElement") ?? 0
@@ -363,6 +361,30 @@ enum AssetUtil {
             return .imageSet
         }
         return .image
+    }
+    
+    private static func findMultisizeSetName(
+        _ key: NSObject,
+        in multisizeSets: [MultisizeSetInfo]
+    ) -> String? {
+        let element = key.getUInt(forKey: "themeElement") ?? 0
+        let identifier = key.getUInt(forKey: "themeIdentifier") ?? 0
+        let idiom = key.getUInt(forKey: "themeIdiom") ?? 0
+        let subtype = key.getUInt(forKey: "themeSubtype") ?? 0
+        
+        for setInfo in multisizeSets {
+            guard setInfo.element == element,
+                  setInfo.identifier == identifier else {
+                continue
+            }
+            
+            for sizeIndex in setInfo.sizeIndexes {
+                if sizeIndex.idiom == idiom && sizeIndex.subtype == subtype {
+                    return setInfo.name
+                }
+            }
+        }
+        return nil
     }
 
     private static func resolveRenditionName(
