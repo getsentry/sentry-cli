@@ -114,10 +114,11 @@ enum AssetUtil {
 
         var images: [String: (cgImage: CGImage, format: String)] = [:]
         
-        // First pass: Build map of multisize sets and map element+idiom+subtype to the specific set
+        // First pass: Build map of multisize sets and cache renditions for performance
         var multisizeSets: [MultisizeSetInfo] = []
+        var renditionCache: [Int: NSObject] = [:]
         
-        for key in assetKeys {
+        for (index, key) in assetKeys.enumerated() {
             let keyList = unsafeBitCast(
                 key.perform(Selector(("keyList"))),
                 to: UnsafeMutableRawPointer.self
@@ -125,6 +126,7 @@ enum AssetUtil {
             guard let rendition = createRendition(from: structuredThemeStore, keyList) else {
                 continue
             }
+            renditionCache[index] = rendition
             
             let type = rendition.getUInt(forKey: "type") ?? 0
             if type == 1010 {  // Multisize image set
@@ -157,15 +159,16 @@ enum AssetUtil {
             }
         }
 
-        // Second pass: Process all assets
-        for key in assetKeys {
+        // Second pass: Process all assets using cached renditions
+        for (index, key) in assetKeys.enumerated() {
+            guard let rendition = renditionCache[index] else {
+                continue
+            }
+            
             let keyList = unsafeBitCast(
                 key.perform(Selector(("keyList"))),
                 to: UnsafeMutableRawPointer.self
             )
-            guard let rendition = createRendition(from: structuredThemeStore, keyList) else {
-                continue
-            }
 
             let data = rendition.value(forKey: "_srcData") as! Data
             let length = UInt(data.count)
