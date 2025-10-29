@@ -14,6 +14,7 @@ use crate::api::{
     Api, AuthenticatedApi, ChunkUploadCapability, ChunkedBuildRequest, ChunkedFileState, VcsInfo,
 };
 use crate::config::Config;
+use crate::constants::VERSION;
 use crate::utils::args::ArgExt as _;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::build::{handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file};
@@ -454,6 +455,9 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 
     zip.start_file(file_name, options)?;
     zip.write_all(bytes)?;
+
+    zip.start_file(".sentry-cli-metadata.txt", options)?;
+    writeln!(zip, "sentry-cli-version: {VERSION}")?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for file");
