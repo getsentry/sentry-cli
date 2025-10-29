@@ -653,24 +653,26 @@ fn upload_files_chunked(
         style(">").dim(),
     ));
 
+    // Skip this optimization for profiling purposes.
+    //
     // Filter out chunks that are already on the server. This only matters if the server supports
     // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
-    if let Some(projects) = options
-        .supports(ChunkUploadCapability::ArtifactBundlesV2)
-        .then_some(context.projects)
-        .flatten()
-    {
-        let api = Api::current();
-        let response = api.authenticated()?.assemble_artifact_bundle(
-            context.org,
-            projects,
-            checksum,
-            &checksums,
-            context.release,
-            context.dist,
-        )?;
-        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
-    };
+    // if let Some(projects) = options
+    //     .supports(ChunkUploadCapability::ArtifactBundlesV2)
+    //     .then_some(context.projects)
+    //     .flatten()
+    // {
+    //     let api = Api::current();
+    //     let response = api.authenticated()?.assemble_artifact_bundle(
+    //         context.org,
+    //         projects,
+    //         checksum,
+    //         &checksums,
+    //         context.release,
+    //         context.dist,
+    //     )?;
+    //     chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+    // };
 
     if !chunks.is_empty() {
         upload_chunks(&chunks, options, progress_style)?;

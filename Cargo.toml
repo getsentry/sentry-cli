@@ -134,7 +134,9 @@ windows-sys = { version = "0.59.0", features = ["Win32_Storage_FileSystem"] }
 [profile.release]
 opt-level = 2       # I obtained the smallest binary size with opt-level 2 on my system.
 panic = "abort"
-strip = "debuginfo" # Only strip debuginfo (not symbols) to keep backtraces useful.
+debug = "line-tables-only"
+
+# strip = "debuginfo" # Only strip debuginfo (not symbols) to keep backtraces useful.
 codegen-units = 1   # Parallel compilation prevents some optimizations.
 # We do not enable link-time optimizations (lto) because they cause the
 # CLI to timeout when run in Xcode Cloud.
