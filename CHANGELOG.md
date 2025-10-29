@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Various fixes & improvements
+
+- Add CLI version metadata to build upload archives for debugging purposes ([#2890](https://github.com/getsentry/sentry-cli/pull/2890))
+
 ### Deprecations
 
 - Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
