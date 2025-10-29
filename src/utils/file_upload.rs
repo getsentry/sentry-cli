@@ -1,7 +1,7 @@
 //! Searches, processes and uploads release files.
 use std::collections::{BTreeMap, HashMap};
 use std::ffi::OsStr;
-use std::fmt::{self, Display};
+use std::fmt::{self, Debug, Display, Formatter, Result as FmtResult};
 use std::io::BufWriter;
 use std::path::PathBuf;
 use std::str;
@@ -229,7 +229,7 @@ impl fmt::Display for LogLevel {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct SourceFile {
     pub url: String,
     pub path: PathBuf,
@@ -338,6 +338,22 @@ impl SourceFile {
 
     pub fn error(&mut self, msg: String) {
         self.log(LogLevel::Error, msg);
+    }
+}
+
+impl Debug for SourceFile {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        let contents_placeholder = format!("[array of {} bytes]", self.contents.len());
+
+        f.debug_struct("SourceFile")
+            .field("url", &self.url)
+            .field("path", &self.path)
+            .field("contents", &contents_placeholder)
+            .field("ty", &self.ty)
+            .field("headers", &self.headers)
+            .field("messages", &self.messages)
+            .field("already_uploaded", &self.already_uploaded)
+            .finish()
     }
 }
 
