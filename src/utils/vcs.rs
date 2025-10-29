@@ -554,7 +554,7 @@ fn find_matching_revs(
     Ok((prev_rev, rev))
 }
 
-pub fn find_head() -> Result<String> {
+pub fn find_head_sha() -> Result<String> {
     if let Some(pr_head_sha) = std::env::var("GITHUB_EVENT_PATH")
         .ok()
         .and_then(|event_path| std::fs::read_to_string(event_path).ok())
@@ -1678,7 +1678,7 @@ mod tests {
         fs::write(&event_file, pr_json).expect("Failed to write event file");
 
         std::env::set_var("GITHUB_EVENT_PATH", event_file.to_str().unwrap());
-        let result = find_head();
+        let result = find_head_sha();
         std::env::remove_var("GITHUB_EVENT_PATH");
 
         assert!(result.is_ok());
