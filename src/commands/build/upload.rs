@@ -113,7 +113,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_one("head_sha")
         .map(String::as_str)
         .map(Cow::Borrowed)
-        .or_else(|| vcs::find_head().ok().map(Cow::Owned));
+        .or_else(|| vcs::find_head_sha().ok().map(Cow::Owned));
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
