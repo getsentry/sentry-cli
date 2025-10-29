@@ -6,6 +6,10 @@
 
 - Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
 
+### Fixes
+
+- Fix auto filled git metadata when using the `build upload` subcommand in non-github workflow contexts ([#2888](https://github.com/getsentry/sentry-cli/pull/2888))
+
 ## 2.57.0
 
 ### New Features

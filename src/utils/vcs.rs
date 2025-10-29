@@ -3,7 +3,7 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use anyhow::{bail, format_err, Context as _, Error, Result};
+use anyhow::{bail, format_err, Error, Result};
 use chrono::{DateTime, FixedOffset, TimeZone as _};
 use git2::{Commit, Repository, Time};
 use if_chain::if_chain;
@@ -272,30 +272,27 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
 }
 
 pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<String> {
-    // Get the current HEAD commit
-    let head_commit = repo.head()?.peel_to_commit()?;
-
-    // Try to find the remote tracking branch
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
     let remote_ref = repo.find_reference(&remote_branch_name).map_err(|e| {
         anyhow::anyhow!("Could not find remote tracking branch for {remote_name}: {e}")
     })?;
 
-    find_merge_base_ref(repo, &head_commit, &remote_ref)
-}
+    let name = remote_ref
+        .resolve()?
+        .shorthand()
+        .ok_or(anyhow::anyhow!(
+            "Could not find remote tracking branch for {remote_name}"
+        ))?
+        .to_owned();
 
-fn find_merge_base_ref(
-    repo: &git2::Repository,
-    head_commit: &git2::Commit,
-    remote_ref: &git2::Reference,
-) -> Result<String> {
-    let remote_commit = remote_ref.peel_to_commit()?;
-    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
-
-    // Return the merge-base commit SHA as the base reference
-    let merge_base_sha = merge_base_oid.to_string();
-    debug!("Found merge-base commit as base reference: {merge_base_sha}");
-    Ok(merge_base_sha)
+    let expected_prefix = format!("{remote_name}/");
+    if let Some(branch_name) = name.strip_prefix(&expected_prefix) {
+        Ok(branch_name.to_owned())
+    } else {
+        Err(anyhow::anyhow!(
+            "Remote branch name '{name}' does not start with expected prefix '{expected_prefix}'"
+        ))
+    }
 }
 
 /// Like git_repo_base_repo_name but preserves the original case of the repository name.
@@ -569,13 +566,31 @@ pub fn find_head_sha() -> Result<String> {
     Ok(head.id().to_string())
 }
 
-pub fn find_base_sha() -> Result<Option<String>> {
-    let github_event = std::env::var("GITHUB_EVENT_PATH")
-        .map_err(Error::from)
-        .and_then(|event_path| std::fs::read_to_string(event_path).map_err(Error::from))
-        .context("Failed to read GitHub event path")?;
+pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
+    if let Some(pr_base_sha) = std::env::var("GITHUB_EVENT_PATH")
+        .ok()
+        .and_then(|event_path| std::fs::read_to_string(event_path).ok())
+        .and_then(|content| extract_pr_base_sha_from_event(&content))
+    {
+        debug!("Using GitHub Actions PR base SHA from event payload: {pr_base_sha}");
+        return Ok(Some(pr_base_sha));
+    }
 
-    extract_pr_base_sha_from_event(&github_event)
+    let repo = git2::Repository::open_from_env()?;
+
+    let head_commit = repo.head()?.peel_to_commit()?;
+
+    // Try to find the remote tracking branch
+    let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
+    let remote_ref = repo.find_reference(&remote_branch_name).map_err(|e| {
+        anyhow::anyhow!("Could not find remote tracking branch for {remote_name}: {e}")
+    })?;
+
+    let remote_commit = remote_ref.peel_to_commit()?;
+    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
+    let merge_base_sha = merge_base_oid.to_string();
+    debug!("Found merge-base commit as base reference: {merge_base_sha}");
+    Ok(Some(merge_base_sha))
 }
 
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
@@ -595,15 +610,19 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
 }
 
 /// Extracts the PR base SHA from GitHub Actions event payload JSON.
-/// Returns Ok(None) if not a PR event or if SHA cannot be extracted.
-/// Returns an error if we cannot parse the JSON.
-fn extract_pr_base_sha_from_event(json_content: &str) -> Result<Option<String>> {
-    let v: Value = serde_json::from_str(json_content)
-        .context("Failed to parse GitHub event payload as JSON")?;
+/// Returns None if not a PR event or if SHA cannot be extracted.
+fn extract_pr_base_sha_from_event(json_content: &str) -> Option<String> {
+    let v: Value = match serde_json::from_str(json_content) {
+        Ok(v) => v,
+        Err(_) => {
+            debug!("Failed to parse GitHub event payload as JSON");
+            return None;
+        }
+    };
 
-    Ok(v.pointer("/pull_request/base/sha")
+    v.pointer("/pull_request/base/sha")
         .and_then(|s| s.as_str())
-        .map(|s| s.to_owned()))
+        .map(|s| s.to_owned())
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -1705,7 +1724,7 @@ mod tests {
         .to_string();
 
         assert_eq!(
-            extract_pr_base_sha_from_event(&pr_json).unwrap(),
+            extract_pr_base_sha_from_event(&pr_json),
             Some("55e6bc8c264ce95164314275d805f477650c440d".to_owned())
         );
 
@@ -1719,10 +1738,7 @@ mod tests {
         })
         .to_string();
 
-        assert_eq!(extract_pr_base_sha_from_event(&push_json).unwrap(), None);
-
-        // Test with malformed JSON
-        assert!(extract_pr_base_sha_from_event("invalid json {").is_err());
+        assert_eq!(extract_pr_base_sha_from_event(&push_json), None);
 
         // Test with missing base SHA
         let incomplete_json = r#"{
@@ -1733,10 +1749,7 @@ mod tests {
   }
 }"#;
 
-        assert_eq!(
-            extract_pr_base_sha_from_event(incomplete_json).unwrap(),
-            None
-        );
+        assert_eq!(extract_pr_base_sha_from_event(incomplete_json), None);
     }
 
     #[test]
@@ -1765,7 +1778,7 @@ mod tests {
         fs::write(&event_file, pr_json).expect("Failed to write event file");
         std::env::set_var("GITHUB_EVENT_PATH", event_file.to_str().unwrap());
 
-        let result = find_base_sha();
+        let result = find_base_sha("origin");
         assert_eq!(
             result.unwrap().unwrap(),
             "55e6bc8c264ce95164314275d805f477650c440d"
@@ -1773,7 +1786,7 @@ mod tests {
 
         // Test without GITHUB_EVENT_PATH
         std::env::remove_var("GITHUB_EVENT_PATH");
-        let result = find_base_sha();
+        let result = find_base_sha("origin");
         assert!(result.is_err());
     }
 }
