@@ -508,7 +508,7 @@ fn upload_file(
     pb.set_style(progress_style);
 
     let chunk_size = chunk_upload_options.chunk_size as usize;
-    let (checksum, checksums) = get_sha1_checksums(bytes, chunk_size)?;
+    let (checksum, checksums) = get_sha1_checksums(bytes, chunk_size.try_into()?);
     let mut chunks = bytes
         .chunks(chunk_size)
         .zip(checksums.iter())

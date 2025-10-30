@@ -64,7 +64,7 @@ where
     /// Creates a new `ChunkedObject` from the given object, using
     /// the given chunk size.
     pub fn from(object: T, chunk_size: usize) -> Result<Self> {
-        let (checksum, chunks) = fs::get_sha1_checksums(object.as_ref(), chunk_size)?;
+        let (checksum, chunks) = fs::get_sha1_checksums(object.as_ref(), chunk_size.try_into()?);
         Ok(Self {
             object,
             checksum,
