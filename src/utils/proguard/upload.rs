@@ -26,10 +26,11 @@ pub fn chunk_upload(
     org: &str,
     project: &str,
 ) -> Result<()> {
+    let chunk_size = (chunk_upload_options.chunk_size as usize).try_into()?;
     let chunked_mappings = mappings
         .iter()
-        .map(|mapping| Chunked::from(mapping, chunk_upload_options.chunk_size as usize))
-        .collect::<Result<Vec<_>>>()?;
+        .map(|mapping| Chunked::from(mapping, chunk_size))
+        .collect::<Vec<_>>();
 
     let options =
         ChunkOptions::new(chunk_upload_options, org, project).with_max_wait(ASSEMBLE_POLL_TIMEOUT);

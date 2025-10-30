@@ -1236,10 +1236,10 @@ fn upload_difs_chunked(
         processed.extend(source_bundles);
     }
 
+    let chunk_size = (chunk_options.chunk_size as usize).try_into()?;
+
     // Calculate checksums and chunks
-    let chunked = prepare_difs(processed, |m| {
-        Chunked::from(m, chunk_options.chunk_size as usize)
-    })?;
+    let chunked = prepare_difs(processed, |m| Ok(Chunked::from(m, chunk_size)))?;
 
     if options.no_upload {
         println!("{} skipping upload.", style(">").dim());
