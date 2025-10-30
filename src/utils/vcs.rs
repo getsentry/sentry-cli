@@ -1598,7 +1598,6 @@ mod tests {
 }"#;
 
         assert_eq!(extract_pr_head_sha_from_event(push_json), None);
-
         let malformed_json = r#"{
   "pull_request": {
     "id": 789,
