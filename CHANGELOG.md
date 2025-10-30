@@ -7,6 +7,10 @@
 - Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
 - Deprecated the `upload-proguard` subcommand's `--android-manifest` flag ([#2891](https://github.com/getsentry/sentry-cli/pull/2891)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
 
+### Fixes
+
+- Fix autofilled git base metadata (`--base-ref`, `--base-sha`) when using the `build upload` subcommand in git repos. Previously this worked only in the contexts of github workflows ([#2897](https://github.com/getsentry/sentry-cli/pull/2897))
+
 ## 2.57.0
 
 ### New Features
