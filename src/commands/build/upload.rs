@@ -507,10 +507,10 @@ fn upload_file(
     pb.enable_steady_tick(100);
     pb.set_style(progress_style);
 
-    let chunk_size = chunk_upload_options.chunk_size as usize;
-    let (checksum, checksums) = get_sha1_checksums(bytes, chunk_size.try_into()?);
+    let chunk_size = chunk_upload_options.chunk_size;
+    let (checksum, checksums) = get_sha1_checksums(bytes, chunk_size);
     let mut chunks = bytes
-        .chunks(chunk_size)
+        .chunks(chunk_size.into())
         .zip(checksums.iter())
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();

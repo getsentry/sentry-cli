@@ -159,7 +159,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             let options = ChunkOptions::new(chunk_upload_options, org, project)
                 .with_max_wait(DEFAULT_MAX_WAIT);
 
-            let chunked = Chunked::from(object, (options.server_options().chunk_size as usize).try_into()?);
+            let chunked = Chunked::from(object, options.server_options().chunk_size);
             let (_uploaded, has_processing_errors) = upload_chunked_objects(&[chunked], options)?;
             if has_processing_errors {
                 bail!("Some symbol maps did not process correctly");
