@@ -214,6 +214,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
+    // We are done constructing the mappings, redeclare as immutable.
+    let mappings = mappings;
+
     let api = Api::current();
     let config = Config::current();
 
