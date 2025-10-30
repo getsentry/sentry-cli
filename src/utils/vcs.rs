@@ -575,17 +575,17 @@ pub fn find_base_sha() -> Result<Option<String>> {
         .and_then(|event_path| std::fs::read_to_string(event_path).map_err(Error::from))
         .context("Failed to read GitHub event path")?;
 
-    extract_pr_base_sha_from_event(&github_event)
+    Ok(extract_pr_base_sha_from_event(&github_event))
 }
 
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
+/// Panics if json is malformed.
 fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
     let v: Value = match serde_json::from_str(json_content) {
         Ok(v) => v,
         Err(_) => {
-            debug!("Failed to parse GitHub event payload as JSON");
-            return None;
+            panic!("Failed to parse GitHub event payload as JSON");
         }
     };
 
@@ -595,15 +595,19 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
 }
 
 /// Extracts the PR base SHA from GitHub Actions event payload JSON.
-/// Returns Ok(None) if not a PR event or if SHA cannot be extracted.
-/// Returns an error if we cannot parse the JSON.
-fn extract_pr_base_sha_from_event(json_content: &str) -> Result<Option<String>> {
-    let v: Value = serde_json::from_str(json_content)
-        .context("Failed to parse GitHub event payload as JSON")?;
+/// Returns None if not a PR event or if SHA cannot be extracted.
+/// Panics if json is malformed.
+fn extract_pr_base_sha_from_event(json_content: &str) -> Option<String> {
+    let v: Value = match serde_json::from_str(json_content) {
+        Ok(v) => v,
+        Err(_) => {
+            panic!("Failed to parse GitHub event payload as JSON");
+        }
+    };
 
-    Ok(v.pointer("/pull_request/base/sha")
+    v.pointer("/pull_request/base/sha")
         .and_then(|s| s.as_str())
-        .map(|s| s.to_owned()))
+        .map(|s| s.to_owned())
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -1594,6 +1598,7 @@ mod tests {
 }"#;
 
         assert_eq!(extract_pr_head_sha_from_event(push_json), None);
+
         let malformed_json = r#"{
   "pull_request": {
     "id": 789,
@@ -1602,7 +1607,6 @@ mod tests {
     }
   }
 }"#;
-
         assert_eq!(extract_pr_head_sha_from_event(malformed_json), None);
 
         assert_eq!(extract_pr_head_sha_from_event("{}"), None);
@@ -1655,8 +1659,19 @@ mod tests {
             extract_pr_head_sha_from_event(any_sha_json),
             Some("invalid-sha-123".to_owned())
         );
+    }
 
-        assert_eq!(extract_pr_head_sha_from_event("invalid json {"), None);
+    #[test]
+    #[serial(github_env)]
+    #[should_panic]
+    fn test_extract_pr_base_sha_from_event_invalid() {
+        extract_pr_base_sha_from_event("invalid json {");
+    }
+    #[test]
+    #[serial(github_env)]
+    #[should_panic]
+    fn test_extract_pr_head_sha_from_event_invalid() {
+        extract_pr_head_sha_from_event("invalid json {");
     }
 
     #[test]
@@ -1705,7 +1720,7 @@ mod tests {
         .to_string();
 
         assert_eq!(
-            extract_pr_base_sha_from_event(&pr_json).unwrap(),
+            extract_pr_base_sha_from_event(&pr_json),
             Some("55e6bc8c264ce95164314275d805f477650c440d".to_owned())
         );
 
@@ -1719,10 +1734,7 @@ mod tests {
         })
         .to_string();
 
-        assert_eq!(extract_pr_base_sha_from_event(&push_json).unwrap(), None);
-
-        // Test with malformed JSON
-        assert!(extract_pr_base_sha_from_event("invalid json {").is_err());
+        assert_eq!(extract_pr_base_sha_from_event(&push_json), None);
 
         // Test with missing base SHA
         let incomplete_json = r#"{
@@ -1733,10 +1745,7 @@ mod tests {
   }
 }"#;
 
-        assert_eq!(
-            extract_pr_base_sha_from_event(incomplete_json).unwrap(),
-            None
-        );
+        assert_eq!(extract_pr_base_sha_from_event(incomplete_json), None);
     }
 
     #[test]
