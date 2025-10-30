@@ -638,10 +638,9 @@ fn upload_files_chunked(
     pb.set_style(progress_style);
 
     let view = ByteView::open(archive.path())?;
-    let (checksum, checksums) =
-        get_sha1_checksums(&view, (options.chunk_size as usize).try_into()?);
+    let (checksum, checksums) = get_sha1_checksums(&view, options.chunk_size);
     let mut chunks = view
-        .chunks(options.chunk_size as usize)
+        .chunks(options.chunk_size.into())
         .zip(checksums.iter())
         .map(|(data, checksum)| Chunk((*checksum, data)))
         .collect::<Vec<_>>();

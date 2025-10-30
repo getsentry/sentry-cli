@@ -26,7 +26,7 @@ pub fn chunk_upload(
     org: &str,
     project: &str,
 ) -> Result<()> {
-    let chunk_size = (chunk_upload_options.chunk_size as usize).try_into()?;
+    let chunk_size = chunk_upload_options.chunk_size;
     let chunked_mappings = mappings
         .iter()
         .map(|mapping| Chunked::from(mapping, chunk_size))

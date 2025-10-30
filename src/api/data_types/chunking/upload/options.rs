@@ -1,3 +1,5 @@
+use std::num::NonZeroUsize;
+
 use serde::Deserialize;
 
 use super::{ChunkCompression, ChunkHashAlgorithm, ChunkUploadCapability};
@@ -17,7 +19,7 @@ pub struct ChunkServerOptions {
     pub max_wait: u64,
     #[expect(dead_code)]
     pub hash_algorithm: ChunkHashAlgorithm,
-    pub chunk_size: u64,
+    pub chunk_size: NonZeroUsize,
     pub concurrency: u8,
     #[serde(default)]
     pub compression: Vec<ChunkCompression>,
