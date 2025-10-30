@@ -1236,7 +1236,7 @@ fn upload_difs_chunked(
         processed.extend(source_bundles);
     }
 
-    let chunk_size = (chunk_options.chunk_size as usize).try_into()?;
+    let chunk_size = chunk_options.chunk_size;
 
     // Calculate checksums and chunks
     let chunked = prepare_difs(processed, |m| Ok(Chunked::from(m, chunk_size)))?;
