@@ -2,8 +2,8 @@
 
 use std::borrow::Cow;
 use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::num::NonZeroUsize;
 
-use anyhow::Result;
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 
@@ -37,7 +37,7 @@ pub struct Chunked<T> {
     chunks: Vec<Digest>,
 
     /// Size of a single chunk
-    chunk_size: usize,
+    chunk_size: NonZeroUsize,
 }
 
 impl<T> Chunked<T> {
@@ -63,14 +63,14 @@ where
 {
     /// Creates a new `ChunkedObject` from the given object, using
     /// the given chunk size.
-    pub fn from(object: T, chunk_size: usize) -> Result<Self> {
-        let (checksum, chunks) = fs::get_sha1_checksums(object.as_ref(), chunk_size.try_into()?);
-        Ok(Self {
+    pub fn from(object: T, chunk_size: NonZeroUsize) -> Self {
+        let (checksum, chunks) = fs::get_sha1_checksums(object.as_ref(), chunk_size);
+        Self {
             object,
             checksum,
             chunks,
             chunk_size,
-        })
+        }
     }
 
     /// Returns an iterator over all chunks of the object.
@@ -79,7 +79,7 @@ where
     pub fn iter_chunks(&self) -> impl Iterator<Item = Chunk<'_>> {
         self.object
             .as_ref()
-            .chunks(self.chunk_size)
+            .chunks(self.chunk_size.into())
             .zip(self.chunk_hashes().iter())
             .map(|(data, checksum)| Chunk((*checksum, data)))
     }
