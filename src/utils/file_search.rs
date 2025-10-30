@@ -22,7 +22,7 @@ pub struct ReleaseFileSearch {
     decompress: bool,
 }
 
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Eq, PartialEq, Hash, Debug)]
 pub struct ReleaseFileMatch {
     pub base_path: PathBuf,
     pub path: PathBuf,

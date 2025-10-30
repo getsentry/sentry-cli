@@ -193,6 +193,7 @@ impl SourceMapReference {
     }
 }
 
+#[derive(Debug)]
 pub struct SourceMapProcessor {
     pending_sources: HashSet<(String, ReleaseFileMatch)>,
     sources: SourceFiles,
@@ -668,6 +669,7 @@ impl SourceMapProcessor {
 
     /// Flags the collected sources whether they have already been uploaded before
     /// (based on their checksum), and returns the number of files that *do* need an upload.
+    #[tracing::instrument]
     fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) -> usize {
         let mut files_needing_upload = self.sources.len();
 

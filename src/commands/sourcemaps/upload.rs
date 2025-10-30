@@ -333,6 +333,7 @@ fn process_sources_from_bundle(
     Ok(())
 }
 
+#[tracing::instrument]
 fn process_sources_from_paths(
     matches: &ArgMatches,
     processor: &mut SourceMapProcessor,

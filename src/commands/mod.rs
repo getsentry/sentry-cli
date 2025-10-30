@@ -363,6 +363,8 @@ fn setup() {
 pub fn main() -> ! {
     setup();
 
+    let _guard = tracing_profile::init_tracing().expect("Failed to initialize tracing");
+
     let exit_code = match execute() {
         Ok(()) => 0,
         Err(err) => {

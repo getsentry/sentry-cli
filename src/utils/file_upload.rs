@@ -639,6 +639,7 @@ fn poll_assemble(
     Ok(())
 }
 
+#[tracing::instrument]
 fn upload_files_chunked(
     context: &UploadContext,
     files: &SourceFiles,
@@ -722,6 +723,7 @@ fn build_debug_id(files: &SourceFiles) -> DebugId {
     DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
 }
 
+#[tracing::instrument]
 fn build_artifact_bundle(
     context: &UploadContext,
     files: &SourceFiles,
