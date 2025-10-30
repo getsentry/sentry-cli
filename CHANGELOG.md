@@ -8,7 +8,7 @@
 
 ### Fixes
 
-- Fix auto filled git metadata when using the `build upload` subcommand in non-github workflow contexts ([#2897](https://github.com/getsentry/sentry-cli/pull/2897))
+- Fix auto filled git metadata when using the `build upload` subcommand in non-github workflow contexts ([#2897](https://github.com/getsentry/sentry-cli/pull/2897)) ([#2898](https://github.com/getsentry/sentry-cli/pull/2898))
 
 ## 2.57.0
 
