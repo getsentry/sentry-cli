@@ -233,7 +233,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(String::as_str)
         .map(Cow::Borrowed)
         .or_else(|| {
-            vcs::find_base_sha()
+            vcs::find_base_sha(&cached_remote)
                 .inspect_err(|e| debug!("Error finding base SHA: {e}"))
                 .ok()
                 .flatten()
