@@ -77,6 +77,23 @@ fn add_entries_to_zip(
     Ok(file_count)
 }
 
+/// Creates file options with consistent compression and timestamp settings for metadata files.
+/// Uses Deflated compression to match other files in the archive.
+fn metadata_file_options() -> SimpleFileOptions {
+    SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .last_modified_time(DateTime::default())
+}
+
+/// Writes the CLI version metadata to a zip archive.
+pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
+    zip: &mut ZipWriter<W>,
+) -> Result<()> {
+    zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
+    writeln!(zip, "sentry-cli-version: {VERSION}")?;
+    Ok(())
+}
+
 // For XCArchive directories, we'll zip the entire directory
 // It's important to not change the contents of the directory or the size
 // analysis will be wrong and the code signature will break.
@@ -109,11 +126,7 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
         )?;
     }
 
-    let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated)
-        .last_modified_time(DateTime::default());
-    zip.start_file(".sentry-cli-metadata.txt", options)?;
-    writeln!(zip, "sentry-cli-version: {VERSION}")?;
+    write_version_metadata(&mut zip)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for directory with {file_count} files");
