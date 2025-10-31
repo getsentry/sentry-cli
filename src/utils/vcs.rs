@@ -272,30 +272,25 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
 }
 
 pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<String> {
-    // Get the current HEAD commit
-    let head_commit = repo.head()?.peel_to_commit()?;
-
-    // Try to find the remote tracking branch
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
     let remote_ref = repo.find_reference(&remote_branch_name).map_err(|e| {
         anyhow::anyhow!("Could not find remote tracking branch for {remote_name}: {e}")
     })?;
 
-    find_merge_base_ref(repo, &head_commit, &remote_ref)
-}
+    let name = remote_ref
+        .resolve()?
+        .shorthand()
+        .ok_or(anyhow::anyhow!("Remote branch name is not valid UTF-8"))?
+        .to_owned();
 
-fn find_merge_base_ref(
-    repo: &git2::Repository,
-    head_commit: &git2::Commit,
-    remote_ref: &git2::Reference,
-) -> Result<String> {
-    let remote_commit = remote_ref.peel_to_commit()?;
-    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
-
-    // Return the merge-base commit SHA as the base reference
-    let merge_base_sha = merge_base_oid.to_string();
-    debug!("Found merge-base commit as base reference: {merge_base_sha}");
-    Ok(merge_base_sha)
+    let expected_prefix = format!("{remote_name}/");
+    if let Some(branch_name) = name.strip_prefix(&expected_prefix) {
+        Ok(branch_name.to_owned())
+    } else {
+        Err(anyhow::anyhow!(
+            "Remote branch name '{name}' does not start with expected prefix '{expected_prefix}'"
+        ))
+    }
 }
 
 /// Like git_repo_base_repo_name but preserves the original case of the repository name.
