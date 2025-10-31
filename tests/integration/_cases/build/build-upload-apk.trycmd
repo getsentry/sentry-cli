@@ -3,7 +3,8 @@ $ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --head-sha t
 ? success
   WARN    [..] EXPERIMENTAL: The build subcommand is experimental. The command is subject to breaking changes and may be removed without notice in any release.
 > Preparing for upload completed in [..]
+> Uploading completed in [..]
 Successfully uploaded 1 file to Sentry
-  - tests/integration/_fixtures/build/apk.apk (http://sentry.io/wat-org/preprod/wat-project/42)
+  - tests/integration/_fixtures/build/apk.apk (http[..]/wat-org/preprod/wat-project/42)
 
 ```
