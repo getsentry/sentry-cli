@@ -4,7 +4,7 @@
 
 ### Features
 
-- Add CLI version metadata to build upload archives for debugging purposes ([#2890](https://github.com/getsentry/sentry-cli/pull/2890))
+- Build uploads now include CLI version metadata in the uploaded archive ([#2890](https://github.com/getsentry/sentry-cli/pull/2890))
 
 ### Deprecations
 

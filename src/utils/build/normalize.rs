@@ -77,15 +77,12 @@ fn add_entries_to_zip(
     Ok(file_count)
 }
 
-/// Creates file options with consistent compression and timestamp settings for metadata files.
-/// Uses Deflated compression to match other files in the archive.
 fn metadata_file_options() -> SimpleFileOptions {
     SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated)
         .last_modified_time(DateTime::default())
 }
 
-/// Writes the CLI version metadata to a zip archive.
 pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<W>,
 ) -> Result<()> {
