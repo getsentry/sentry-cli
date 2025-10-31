@@ -579,7 +579,7 @@ pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
         return Ok(Some(pr_base_sha));
     }
 
-    let repo = git2::Repository::open_from_env()?;
+    let repo = git2::Repository::open_from_env().context("Could not open repository")?;
 
     let head_commit = repo.head()?.peel_to_commit()?;
 
