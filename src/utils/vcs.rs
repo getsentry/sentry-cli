@@ -581,7 +581,9 @@ pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
 
     let repo = git2::Repository::open_from_env().context("Could not open repository")?;
 
-    let head_commit = repo.head()?.peel_to_commit()?;
+    let head_commit = repo.head()
+        .and_then(|h| h.peel_to_commit())
+        .context("Could not find head commit")?;
 
     let remote_branch_name = format!("refs/remotes/{remote_name}/HEAD");
     let remote_ref = repo
