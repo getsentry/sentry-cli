@@ -6,6 +6,7 @@ use std::io::Write as _;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
+use crate::constants::VERSION;
 use crate::utils::fs::TempFile;
 use anyhow::{Context as _, Result};
 use itertools::Itertools as _;
@@ -76,6 +77,20 @@ fn add_entries_to_zip(
     Ok(file_count)
 }
 
+fn metadata_file_options() -> SimpleFileOptions {
+    SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .last_modified_time(DateTime::default())
+}
+
+pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
+    zip: &mut ZipWriter<W>,
+) -> Result<()> {
+    zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
+    writeln!(zip, "sentry-cli-version: {VERSION}")?;
+    Ok(())
+}
+
 // For XCArchive directories, we'll zip the entire directory
 // It's important to not change the contents of the directory or the size
 // analysis will be wrong and the code signature will break.
@@ -107,6 +122,8 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
             &format!("{}/ParsedAssets", directory_name.to_string_lossy()),
         )?;
     }
+
+    write_version_metadata(&mut zip)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for directory with {file_count} files");
