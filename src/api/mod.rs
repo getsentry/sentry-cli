@@ -311,7 +311,7 @@ impl Api {
             match self.request(Method::Get, url, None)?.send() {
                 Ok(_) => return Ok(true),
                 Err(err) => {
-                    if err.kind() != ApiErrorKind::RequestFailed {
+                    if err.kind() != &ApiErrorKind::RequestFailed {
                         return Err(err);
                     }
                 }
@@ -964,7 +964,7 @@ impl<'a> AuthenticatedApi<'a> {
         {
             Ok(options) => Ok(Some(options)),
             Err(error) => {
-                if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
+                if error.kind() == &ApiErrorKind::ChunkUploadNotSupported {
                     Ok(None)
                 } else {
                     Err(error)

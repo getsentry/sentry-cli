@@ -8,7 +8,7 @@ pub struct ApiError {
 }
 
 /// Represents API errors.
-#[derive(Copy, Clone, Eq, PartialEq, Debug, thiserror::Error)]
+#[derive(Clone, Eq, PartialEq, Debug, thiserror::Error)]
 pub(in crate::api) enum ApiErrorKind {
     #[error("could not serialize value as JSON")]
     CannotSerializeAsJson,
@@ -63,8 +63,8 @@ impl ApiError {
         }
     }
 
-    pub(in crate::api) fn kind(&self) -> ApiErrorKind {
-        self.inner
+    pub(in crate::api) fn kind(&self) -> &ApiErrorKind {
+        &self.inner
     }
 
     fn set_source<E: Into<anyhow::Error>>(mut self, source: E) -> ApiError {
