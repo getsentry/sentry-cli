@@ -324,7 +324,7 @@ where
 {
     ids.filter_map(|id| {
         if remaining.contains(&id) {
-            return Some((id.to_owned(), t));
+            return Some((id, t));
         }
         None
     })
