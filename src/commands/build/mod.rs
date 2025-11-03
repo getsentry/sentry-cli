@@ -25,9 +25,7 @@ pub fn make_command(mut command: Command) -> Command {
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()
-        .project_arg(true)
-        // TODO: Remove this when ready for release
-        .hide(true);
+        .project_arg(true);
     each_subcommand!(add_subcommand);
     command
 }
