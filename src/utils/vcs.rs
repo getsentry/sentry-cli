@@ -284,13 +284,14 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<S
         .to_owned();
 
     let expected_prefix = format!("{remote_name}/");
-    if let Some(branch_name) = name.strip_prefix(&expected_prefix) {
-        Ok(branch_name.to_owned())
-    } else {
-        Err(anyhow::anyhow!(
-            "Remote branch name '{name}' does not start with expected prefix '{expected_prefix}'"
-        ))
-    }
+    name.strip_prefix(&expected_prefix)
+        .map(|s| s.to_owned())
+        .ok_or_else(|| {
+            anyhow::anyhow!(
+                "Remote branch name '{name}' does not start with expected prefix \
+                '{expected_prefix}'"
+            )
+        })
 }
 
 /// Like git_repo_base_repo_name but preserves the original case of the repository name.
