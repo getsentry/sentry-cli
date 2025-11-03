@@ -588,11 +588,12 @@ pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
         .find_reference(&remote_branch_name)
         .with_context(|| "Could not find default branch for {remote_name}")?;
 
-    let remote_commit = remote_ref.peel_to_commit()?;
-    let merge_base_oid = repo.merge_base(head_commit.id(), remote_commit.id())?;
-    let merge_base_sha = merge_base_oid.to_string();
-    debug!("Found merge-base commit as base reference: {merge_base_sha}");
-    Ok(Some(merge_base_sha))
+    Ok(remote_ref
+        .peel_to_commit()
+        .and_then(|remote_commit| repo.merge_base(head_commit.id(), remote_commit.id()))
+        .map(|oid| oid.to_string())
+        .ok()
+        .inspect(|sha| debug!("Found merge-base commit as base reference: {sha}")))
 }
 
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
