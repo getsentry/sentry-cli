@@ -9,7 +9,7 @@
 
 ### Fixes
 
-- Fix autofilled git base metadata (`--base-ref`, `--base-sha`) when using the `build upload` subcommand in git repos. Previously this worked only in the contexts of github workflows ([#2897](https://github.com/getsentry/sentry-cli/pull/2897))
+- Fix autofilled git base metadata (`--base-ref`, `--base-sha`) when using the `build upload` subcommand in git repos. Previously this worked only in the contexts of GitHub workflows ([#2897](https://github.com/getsentry/sentry-cli/pull/2897)).
 
 ## 2.57.0
 
