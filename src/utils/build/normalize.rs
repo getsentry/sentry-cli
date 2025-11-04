@@ -17,14 +17,7 @@ use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
 fn get_version() -> String {
-    #[cfg(test)]
-    {
-        std::env::var("SENTRY_CLI_VERSION_OVERRIDE").unwrap_or_else(|_| VERSION.to_owned())
-    }
-    #[cfg(not(test))]
-    {
-        VERSION.to_owned()
-    }
+    std::env::var("SENTRY_CLI_VERSION_OVERRIDE").unwrap_or_else(|_| VERSION.to_owned())
 }
 
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
