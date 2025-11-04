@@ -1,0 +1,17 @@
+```
+$ sentry-cli api organizations/
+? success
+[
+  {
+    "id": "1",
+    "slug": "sentry",
+    "name": "Sentry",
+    "dateCreated": "2014-12-15T12:00:00.000Z",
+    "isEarlyAdopter": true,
+    "require2FA": false,
+    "requireEmailVerification": false,
+    "features": []
+  }
+]
+
+```

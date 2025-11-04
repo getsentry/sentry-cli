@@ -19,6 +19,7 @@ use crate::utils::system::{load_dotenv, print_error, set_panic_hook, QuietExit};
 use crate::utils::update::run_sentrycli_update_nagger;
 use crate::utils::value_parsers::auth_token_parser;
 
+mod api;
 mod bash_hook;
 mod build;
 mod dart_symbol_map;
@@ -51,6 +52,7 @@ mod upload_proguard;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
+        $mac!(api);
         $mac!(bash_hook);
         $mac!(build);
         $mac!(debug_files);

@@ -1,0 +1,14 @@
+```
+$ sentry-cli api --method POST organizations/wat-org/releases/
+? success
+{
+  "version": "1.0.0",
+  "url": null,
+  "dateCreated": "2024-01-15T12:00:00.000Z",
+  "dateReleased": null,
+  "lastEvent": null,
+  "newGroups": 0,
+  "projects": []
+}
+
+```

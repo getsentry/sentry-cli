@@ -11,6 +11,7 @@ Usage: sentry-cli[EXE] [OPTIONS] <COMMAND>
 
 Commands:
   completions      Generate completions for the specified shell.
+  api              Make a raw API request to the Sentry API.
   debug-files      Locate, analyze or upload debug information files. [aliases: dif]
   deploys          Manage deployments for Sentry releases.
   events           Manage events on Sentry.

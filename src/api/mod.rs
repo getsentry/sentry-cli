@@ -102,7 +102,6 @@ pub enum Method {
     Post,
     Put,
     Delete,
-    Patch,
 }
 
 impl fmt::Display for Method {
@@ -112,7 +111,6 @@ impl fmt::Display for Method {
             Method::Post => write!(f, "POST"),
             Method::Put => write!(f, "PUT"),
             Method::Delete => write!(f, "DELETE"),
-            Method::Patch => write!(f, "PATCH"),
         }
     }
 }
@@ -471,7 +469,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Convenience method to call self.api.request.
-    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+    pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         self.api.request(method, url, None)
     }
 
@@ -1749,7 +1747,6 @@ impl ApiRequest {
             Method::Post => handle.custom_request("POST")?,
             Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,
-            Method::Patch => handle.custom_request("PATCH")?,
         }
 
         handle.url(url)?;
@@ -1899,6 +1896,15 @@ impl ApiRequest {
                 Ok(err) => Ok(err.into_body()),
                 Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
             })
+    }
+}
+
+impl fmt::Display for ApiResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.body {
+            Some(ref body) => write!(f, "{}", String::from_utf8_lossy(body)),
+            None => Ok(()),
+        }
     }
 }
 

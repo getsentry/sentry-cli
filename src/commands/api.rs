@@ -21,7 +21,7 @@ pub fn make_command(command: Command) -> Command {
                 .short('m')
                 .long("method")
                 .value_name("METHOD")
-                .value_parser(["GET", "POST", "PUT", "DELETE", "PATCH"])
+                .value_parser(["GET", "POST", "PUT", "DELETE"])
                 .default_value("GET")
                 .action(ArgAction::Set)
                 .help("The HTTP method to use for the request."),
@@ -29,26 +29,27 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let endpoint = matches.get_one::<String>("endpoint").unwrap();
-    let method_str = matches.get_one::<String>("method").unwrap();
+    let endpoint = matches
+        .get_one::<String>("endpoint")
+        .expect("endpoint is required");
+    let method_str = matches
+        .get_one::<String>("method")
+        .expect("method has a default value");
 
     let method = match method_str.as_str() {
         "GET" => Method::Get,
         "POST" => Method::Post,
         "PUT" => Method::Put,
         "DELETE" => Method::Delete,
-        "PATCH" => Method::Patch,
         _ => unreachable!("Invalid method value"),
     };
 
     let api = Api::current();
-    let resp = api.request(method, endpoint, None)?.send()?;
+    let authenticated_api = api.authenticated()?;
+    let resp = authenticated_api.request(method, endpoint)?.send()?;
 
     // Print the response body as-is to stdout
-    if let Some(body) = resp.body {
-        let body_str = String::from_utf8_lossy(&body);
-        println!("{}", body_str);
-    }
+    println!("{resp}");
 
     Ok(())
 }
