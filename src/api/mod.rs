@@ -102,6 +102,7 @@ pub enum Method {
     Post,
     Put,
     Delete,
+    Patch,
 }
 
 impl fmt::Display for Method {
@@ -111,6 +112,7 @@ impl fmt::Display for Method {
             Method::Post => write!(f, "POST"),
             Method::Put => write!(f, "PUT"),
             Method::Delete => write!(f, "DELETE"),
+            Method::Patch => write!(f, "PATCH"),
         }
     }
 }
@@ -1747,6 +1749,7 @@ impl ApiRequest {
             Method::Post => handle.custom_request("POST")?,
             Method::Put => handle.custom_request("PUT")?,
             Method::Delete => handle.custom_request("DELETE")?,
+            Method::Patch => handle.custom_request("PATCH")?,
         }
 
         handle.url(url)?;
