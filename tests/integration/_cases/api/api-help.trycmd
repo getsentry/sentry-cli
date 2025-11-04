@@ -1,0 +1,24 @@
+```
+$ sentry-cli api --help
+? success
+Make a raw API request to the Sentry API.
+
+Usage: sentry-cli[EXE] api [OPTIONS] <ENDPOINT>
+
+Arguments:
+  <ENDPOINT>
+          The API endpoint to request (e.g., 'organizations/' or
+          '/projects/my-org/my-project/releases/').
+          The endpoint will be prefixed with '/api/0/' automatically.
+
+Options:
+  -m, --method <METHOD>
+          The HTTP method to use for the request.
+          
+          [default: GET]
+          [possible values: GET, POST, PUT, DELETE]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

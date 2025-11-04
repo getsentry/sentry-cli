@@ -469,7 +469,7 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Convenience method to call self.api.request.
-    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
+    pub fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
         self.api.request(method, url, None)
     }
 
@@ -1896,6 +1896,15 @@ impl ApiRequest {
                 Ok(err) => Ok(err.into_body()),
                 Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
             })
+    }
+}
+
+impl fmt::Display for ApiResponse {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.body {
+            Some(ref body) => write!(f, "{}", String::from_utf8_lossy(body)),
+            None => Ok(()),
+        }
     }
 }
 
