@@ -288,8 +288,8 @@ function getPath() {
  *    exits with a non-zero exit code.
  * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
  * @param {string} [configFile] Relative or absolute path to the configuration file.
- * @param {Object} [config] More configuration to pass to the CLI
- * @returns {Promise.<string>} A promise that resolves to the standard output.
+ * @param {import('./index').SentryCliOptions} [config] More configuration to pass to the CLI
+ * @returns {Promise<string>} A promise that resolves to the standard output.
  */
 async function execute(args, live, silent, configFile, config = {}) {
   const env = { ...process.env };

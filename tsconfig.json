@@ -7,7 +7,8 @@
     "moduleResolution": "node",
     "skipLibCheck": true,
     "rootDir": "js",
-    "outDir": "js-dist"
+    "outDir": "js-dist",
+    "declaration": true
   },
   "include": ["js/**/*.ts", "js/**/*.js"],
   "exclude": ["**/__tests__/**", "**/__mocks__/**"]

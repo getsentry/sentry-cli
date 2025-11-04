@@ -5,6 +5,15 @@ const helper = require('./helper');
 const Releases = require('./releases');
 
 /**
+ * @typedef {import('./types').SentryCliOptions} SentryCliOptions
+ * @typedef {import('./types').SentryCliUploadSourceMapsOptions} SentryCliUploadSourceMapsOptions
+ * @typedef {import('./types').SourceMapsPathDescriptor} SourceMapsPathDescriptor
+ * @typedef {import('./types').SentryCliNewDeployOptions} SentryCliNewDeployOptions
+ * @typedef {import('./types').SentryCliCommitsOptions} SentryCliCommitsOptions
+ * @typedef {import('./types').SentryCliReleases} SentryCliReleases
+ */
+
+/**
  * Interface to and wrapper around the `sentry-cli` executable.
  *
  * Commands are grouped into namespaces. See the respective namespaces for more
@@ -27,8 +36,10 @@ class SentryCli {
    * location and the value specified in the `SENTRY_PROPERTIES` environment variable is
    * overridden.
    *
-   * @param {string} [configFile] Relative or absolute path to the configuration file.
-   * @param {Object} [options] More options to pass to the CLI
+   * @param {string | null} [configFile] - Path to Sentry CLI config properties, as described in https://docs.sentry.io/learn/cli/configuration/#properties-files.
+   * By default, the config file is looked for upwards from the current path and defaults from ~/.sentryclirc are always loaded.
+   * This value will update `SENTRY_PROPERTIES` env variable.
+   * @param {SentryCliOptions} [options] - More options to pass to the CLI
    */
   constructor(configFile, options) {
     if (typeof configFile === 'string') {
@@ -62,7 +73,7 @@ class SentryCli {
    *  - `false` to not inherit stdio and return the output as a string.
    *  - `'rejectOnError'` to inherit stdio and reject the promise if the command
    *    exits with a non-zero exit code.
-   * @returns {Promise.<string>} A promise that resolves to the standard output.
+   * @returns {Promise<string>} A promise that resolves to the standard output.
    */
   execute(args, live) {
     return helper.execute(args, live, this.options.silent, this.configFile, this.options);
