@@ -42,8 +42,9 @@
     "@sentry/cli-win32-arm64": "2.58.0"
   },
   "scripts": {
-    "postinstall": "npm run build && npm run install-cli",
+    "postinstall": "npm run install-cli",
     "build": "tsc",
+    "postbuild": "npm run install-cli",
     "install-cli": "node ./scripts/install.js",
     "prepack": "npm run build",
     "fix": "npm-run-all fix:eslint fix:prettier",
