@@ -16,6 +16,17 @@ use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
+fn get_version() -> String {
+    #[cfg(test)]
+    {
+        std::env::var("SENTRY_CLI_VERSION_OVERRIDE").unwrap_or_else(|_| VERSION.to_owned())
+    }
+    #[cfg(not(test))]
+    {
+        VERSION.to_owned()
+    }
+}
+
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
     Ok(WalkDir::new(path)
         .into_iter()
@@ -86,8 +97,9 @@ fn metadata_file_options() -> SimpleFileOptions {
 pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<W>,
 ) -> Result<()> {
+    let version = get_version();
     zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
-    writeln!(zip, "sentry-cli-version: {VERSION}")?;
+    writeln!(zip, "sentry-cli-version: {version}")?;
     Ok(())
 }
 

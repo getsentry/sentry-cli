@@ -109,6 +109,9 @@ static CONTENT_TYPE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 /// and that the data sent to the chunk upload endpoint is exactly as expected.
 /// It also verifies that the correct calls are made to the assemble endpoint.
 fn command_build_upload_apk_chunked() {
+    // Override version for deterministic binary comparison of chunk content
+    std::env::set_var("SENTRY_CLI_VERSION_OVERRIDE", "0.0.0-test");
+
     let is_first_assemble_call = AtomicBool::new(true);
     let expected_chunk_body = fs::read("tests/integration/_expected_requests/build/apk_chunk.bin")
         .expect("expected chunk body file should be present");
@@ -162,7 +165,7 @@ fn command_build_upload_apk_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["985f82b2ff9f3749f9d4c71ecb02e0396b9bc5a3"]
+                        "missingChunks": ["4c57ae0573fd4342c8996f9b2c9efd00ac84b5ea"]
                     }"#
                 } else {
                     r#"{
