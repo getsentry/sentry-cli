@@ -6,7 +6,7 @@
 !README.md
 !LICENSE
 !bin/sentry-cli
-!js
+!js-dist
 !scripts/install.js
 !checksums.txt
 

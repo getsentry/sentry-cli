@@ -3,7 +3,7 @@
 'use strict';
 
 const childProcess = require('child_process');
-const SentryCli = require('../js');
+const SentryCli = require('../js-dist');
 
 const child = childProcess
   .spawn(SentryCli.getPath(), process.argv.slice(2), {
