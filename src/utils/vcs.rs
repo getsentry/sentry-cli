@@ -1795,7 +1795,7 @@ mod tests {
 
         // Test without GITHUB_EVENT_PATH
         std::env::remove_var("GITHUB_EVENT_PATH");
-        let result = find_base_sha("origin");
+        let result = find_base_sha("no_such_remote");
         assert!(result.is_err());
     }
 }
