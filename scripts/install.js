@@ -16,9 +16,9 @@ const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
 const which = require('which');
 
-const helper = require('../js/helper');
+const helper = require('../js-dist/helper');
 const pkgInfo = require('../package.json');
-const Logger = require('../js/logger');
+const Logger = require('../js-dist/logger');
 
 const logger = new Logger(getLogStream('stderr'));
 

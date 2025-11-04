@@ -9,8 +9,8 @@
   "engines": {
     "node": ">= 10"
   },
-  "main": "js/index.js",
-  "types": "js/index.d.ts",
+  "main": "js-dist/index.js",
+  "types": "js-dist/index.d.ts",
   "bin": {
     "sentry-cli": "bin/sentry-cli"
   },
@@ -29,7 +29,7 @@
     "jest": "^27.5.1",
     "npm-run-all": "^4.1.5",
     "prettier": "2.8.8",
-    "typescript": "~5.8.3"
+    "typescript": "5.8.3"
   },
   "optionalDependencies": {
     "@sentry/cli-darwin": "2.58.2",
@@ -42,7 +42,9 @@
     "@sentry/cli-win32-arm64": "2.58.2"
   },
   "scripts": {
-    "postinstall": "node ./scripts/install.js",
+    "postinstall": "npm run build && node ./scripts/install.js",
+    "build": "tsc",
+    "prepack": "npm run build",
     "fix": "npm-run-all fix:eslint fix:prettier",
     "fix:eslint": "eslint --fix bin/* scripts/**/*.js js/**/*.js",
     "fix:prettier": "prettier --write bin/* scripts/**/*.js js/**/*.js",

@@ -228,6 +228,9 @@ jobs:
         with:
           node-version: '20.10.0'
 
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
       - name: Download compiled binaries
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
         with:
