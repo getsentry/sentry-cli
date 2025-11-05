@@ -20,8 +20,9 @@ use zip::{DateTime, ZipWriter};
 fn get_version() -> Cow<'static, str> {
     let version = Cow::Borrowed(VERSION);
 
-    #[cfg(test)]
-    let version = std::env::var("SENTRY_CLI_VERSION_OVERRIDE")
+    // Integration tests can override the version for consistent test results.
+    // This ensures deterministic checksums in test fixtures by using a fixed version.
+    let version = std::env::var("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE")
         .map(Cow::Owned)
         .unwrap_or(version);
 
