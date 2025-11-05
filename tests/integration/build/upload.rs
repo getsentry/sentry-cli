@@ -176,6 +176,8 @@ fn command_build_upload_apk_chunked() {
             .expect(2),
         )
         .register_trycmd_test("build/build-upload-apk.trycmd")
+        // We override the version in the metadata field to ensure a consistent checksum
+        // for the uploaded files.
         .env("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE", "0.0.0-test")
         .with_default_token();
 }

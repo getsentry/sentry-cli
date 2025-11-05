@@ -18,13 +18,11 @@ use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
 fn get_version() -> Cow<'static, str> {
-    let version = Cow::Borrowed(VERSION);
-
     // Integration tests can override the version for consistent test results.
     // This ensures deterministic checksums in test fixtures by using a fixed version.
     std::env::var("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE")
         .map(Cow::Owned)
-        .unwrap_or(version)
+        .unwrap_or(Cow::Borrowed(VERSION))
 }
 
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
