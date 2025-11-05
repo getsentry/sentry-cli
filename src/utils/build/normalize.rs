@@ -22,11 +22,9 @@ fn get_version() -> Cow<'static, str> {
 
     // Integration tests can override the version for consistent test results.
     // This ensures deterministic checksums in test fixtures by using a fixed version.
-    let version = std::env::var("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE")
+    std::env::var("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE")
         .map(Cow::Owned)
-        .unwrap_or(version);
-
-    version
+        .unwrap_or(version)
 }
 
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
