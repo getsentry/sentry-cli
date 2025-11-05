@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 #[cfg(not(windows))]
 use std::fs;
 use std::fs::File;
