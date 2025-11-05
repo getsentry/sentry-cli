@@ -4,22 +4,22 @@
 
 ### New Features
 
-- Promote `sentry-cli build upload` command to non-experimental ([#2899](https://github.com/getsentry/sentry-cli/pull/2899), [#2905](https://github.com/getsentry/sentry-cli/pull/2905)).
-- Build uploads now include CLI version metadata in the uploaded archive ([#2890](https://github.com/getsentry/sentry-cli/pull/2890))
+- Removed experimental status from the `sentry-cli build upload` commands ([#2899](https://github.com/getsentry/sentry-cli/pull/2899), [#2905](https://github.com/getsentry/sentry-cli/pull/2905)). At the time of this release, build uploads are still in closed beta on the server side, so most customers cannot use this functionality quite yet.
+- Added CLI version metadata to build upload archives ([#2890](https://github.com/getsentry/sentry-cli/pull/2890)).
 
 ### Deprecations
 
-- Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
-- Deprecated the `upload-proguard` subcommand's `--android-manifest` flag ([#2891](https://github.com/getsentry/sentry-cli/pull/2891)). This flag appears to have been a no-op for some time, so we will remove it in the next major.
-- Deprecated the `sentry-cli sourcemaps upload` command's `--no-dedupe` flag ([#2913](https://github.com/getsentry/sentry-cli/pull/2913)). The flag was no longer relevant for sourcemap uploads to modern Sentry servers; the flag is now a no-op.
+- Deprecated the `upload-proguard` subcommand's `--platform` flag ([#2863](https://github.com/getsentry/sentry-cli/pull/2863)). This flag was a no-op for some time, so we will remove it in the next major.
+- Deprecated the `upload-proguard` subcommand's `--android-manifest` flag ([#2891](https://github.com/getsentry/sentry-cli/pull/2891)). This flag was a no-op for some time, so we will remove it in the next major.
+- Deprecated the `sentry-cli sourcemaps upload` command's `--no-dedupe` flag ([#2913](https://github.com/getsentry/sentry-cli/pull/2913)). The flag was no longer relevant for sourcemap uploads to modern Sentry servers and was made a no-op.
 
 ### Fixes
 
-- Fix autofilled git base metadata (`--base-ref`, `--base-sha`) when using the `build upload` subcommand in git repos. Previously this worked only in the contexts of GitHub workflows ([#2897](https://github.com/getsentry/sentry-cli/pull/2897), [#2898](https://github.com/getsentry/sentry-cli/pull/2898)).
+- Fixed autofilled git base metadata (`--base-ref`, `--base-sha`) when using the `build upload` subcommand in git repos. Previously this worked only in the context of GitHub workflows ([#2897](https://github.com/getsentry/sentry-cli/pull/2897), [#2898](https://github.com/getsentry/sentry-cli/pull/2898)).
 
 ### Performance
 
-- Slightly sped up the `sentry-cli sourcemaps upload` command by elminating an HTTP request to the Sentry server, which was not required in most cases ([#2913](https://github.com/getsentry/sentry-cli/pull/2913)).
+- Slightly sped up the `sentry-cli sourcemaps upload` command by eliminating an HTTP request to the Sentry server, which was not required in most cases ([#2913](https://github.com/getsentry/sentry-cli/pull/2913)).
 
 ## 2.57.0
 
