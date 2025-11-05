@@ -162,7 +162,7 @@ fn command_build_upload_apk_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["18e40e6e932d0b622d631e887be454cc2003dbb5"]
+                        "missingChunks": ["60863d91bb673a1b1b92dbbe91b1de5cc0dde146"]
                     }"#
                 } else {
                     r#"{
@@ -176,6 +176,7 @@ fn command_build_upload_apk_chunked() {
             .expect(2),
         )
         .register_trycmd_test("build/build-upload-apk.trycmd")
+        .env("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE", "0.0.0-test")
         .with_default_token();
 }
 

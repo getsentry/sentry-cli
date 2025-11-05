@@ -17,7 +17,9 @@ use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::build::{handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file};
-use crate::utils::build::{is_aab_file, is_apk_file, is_zip_file, normalize_directory};
+use crate::utils::build::{
+    is_aab_file, is_apk_file, is_zip_file, normalize_directory, write_version_metadata,
+};
 use crate::utils::chunks::{upload_chunks, Chunk};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempDir;
@@ -454,6 +456,8 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
 
     zip.start_file(file_name, options)?;
     zip.write_all(bytes)?;
+
+    write_version_metadata(&mut zip)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for file");

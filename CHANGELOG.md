@@ -5,6 +5,7 @@
 ### New Features
 
 - Promote `sentry-cli build upload` command to non-experimental ([#2899](https://github.com/getsentry/sentry-cli/pull/2899), [#2905](https://github.com/getsentry/sentry-cli/pull/2905)).
+- Build uploads now include CLI version metadata in the uploaded archive ([#2890](https://github.com/getsentry/sentry-cli/pull/2890))
 
 ### Deprecations
 

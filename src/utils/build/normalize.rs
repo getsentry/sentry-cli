@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 #[cfg(not(windows))]
 use std::fs;
 use std::fs::File;
@@ -6,6 +7,7 @@ use std::io::Write as _;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
+use crate::constants::VERSION;
 use crate::utils::fs::TempFile;
 use anyhow::{Context as _, Result};
 use itertools::Itertools as _;
@@ -14,6 +16,16 @@ use symbolic::common::ByteView;
 use walkdir::WalkDir;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
+
+fn get_version() -> Cow<'static, str> {
+    let version = Cow::Borrowed(VERSION);
+
+    // Integration tests can override the version for consistent test results.
+    // This ensures deterministic checksums in test fixtures by using a fixed version.
+    std::env::var("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE")
+        .map(Cow::Owned)
+        .unwrap_or(version)
+}
 
 fn sort_entries(path: &Path) -> Result<impl Iterator<Item = (PathBuf, PathBuf)>> {
     Ok(WalkDir::new(path)
@@ -76,6 +88,21 @@ fn add_entries_to_zip(
     Ok(file_count)
 }
 
+fn metadata_file_options() -> SimpleFileOptions {
+    SimpleFileOptions::default()
+        .compression_method(zip::CompressionMethod::Deflated)
+        .last_modified_time(DateTime::default())
+}
+
+pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
+    zip: &mut ZipWriter<W>,
+) -> Result<()> {
+    let version = get_version();
+    zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
+    writeln!(zip, "sentry-cli-version: {version}")?;
+    Ok(())
+}
+
 // For XCArchive directories, we'll zip the entire directory
 // It's important to not change the contents of the directory or the size
 // analysis will be wrong and the code signature will break.
@@ -107,6 +134,8 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
             &format!("{}/ParsedAssets", directory_name.to_string_lossy()),
         )?;
     }
+
+    write_version_metadata(&mut zip)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for directory with {file_count} files");
