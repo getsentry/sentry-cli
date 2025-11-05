@@ -14,13 +14,6 @@ fn command_sourcemaps_upload() {
 fn command_sourcemaps_upload_successfully_upload_file() {
     TestManager::new()
         .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
-        .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=&checksum=38ed853073df85147960ea3a5bced6170ec389b0",
-            )
-            .with_response_body("[]"),
-        )
         .register_trycmd_test("sourcemaps/sourcemaps-upload-successfully-upload-file.trycmd")
         .with_default_token()
         .assert_mock_endpoints();
@@ -30,22 +23,6 @@ fn command_sourcemaps_upload_successfully_upload_file() {
 fn command_sourcemaps_upload_skip_already_uploaded() {
     TestManager::new()
         .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
-        .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=&checksum=38ed853073df85147960ea3a5bced6170ec389b0&checksum=f3673e2cea68bcb86bb74254a9efaa381d74929f",
-            )
-            .with_response_body(
-                r#"[{
-                    "id": "1337",
-                    "name": "~/vendor.min.js.map",
-                    "headers": {},
-                    "size": 1522,
-                    "sha1": "f3673e2cea68bcb86bb74254a9efaa381d74929f",
-                    "dateCreated": "2022-05-12T11:08:01.496220Z"
-                }]"#,
-            ),
-        )
         .register_trycmd_test("sourcemaps/sourcemaps-upload-skip-already-uploaded.trycmd")
         .with_default_token()
         .assert_mock_endpoints();

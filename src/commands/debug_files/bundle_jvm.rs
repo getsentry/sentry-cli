@@ -65,7 +65,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         note: None,
         wait: true,
         max_wait: DEFAULT_MAX_WAIT,
-        dedupe: false,
         chunk_upload_options: chunk_upload_options.as_ref(),
     };
     let path = matches.get_one::<PathBuf>("path").unwrap();

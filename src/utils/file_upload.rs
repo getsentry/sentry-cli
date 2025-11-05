@@ -28,7 +28,7 @@ use crate::api::NewRelease;
 use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
-use crate::utils::fs::{get_sha1_checksum, get_sha1_checksums, TempFile};
+use crate::utils::fs::{get_sha1_checksums, TempFile};
 use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 
@@ -95,7 +95,6 @@ pub struct UploadContext<'a> {
     pub note: Option<&'a str>,
     pub wait: bool,
     pub max_wait: Duration,
-    pub dedupe: bool,
     pub chunk_upload_options: Option<&'a ChunkServerOptions>,
 }
 
@@ -306,11 +305,6 @@ impl SourceFile {
             source_file.set_debug_id(debug_id.to_string());
         }
         source_file
-    }
-
-    /// Calculates and returns the SHA1 checksum of the file.
-    pub fn checksum(&self) -> Result<Digest> {
-        get_sha1_checksum(&**self.contents)
     }
 
     /// Returns the value of the "debug-id" header.
@@ -902,7 +896,6 @@ mod tests {
             note: None,
             wait: false,
             max_wait: DEFAULT_MAX_WAIT,
-            dedupe: true,
             chunk_upload_options: None,
         };
 

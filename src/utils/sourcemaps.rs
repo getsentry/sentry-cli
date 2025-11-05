@@ -6,7 +6,6 @@ use std::io::Write as _;
 use std::mem;
 use std::path::{Path, PathBuf};
 use std::str;
-use std::str::FromStr as _;
 use std::sync::Arc;
 
 use anyhow::{anyhow, bail, Context as _, Error, Result};
@@ -14,13 +13,11 @@ use console::style;
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
 use sentry::types::DebugId;
-use sha1_smol::Digest;
 use sourcemap::{DecodedMap, SourceMap};
 use symbolic::debuginfo::js::discover_sourcemaps_location;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
-use crate::api::Api;
 use crate::utils::file_search::ReleaseFileMatch;
 use crate::utils::file_upload::{
     initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
@@ -666,54 +663,6 @@ impl SourceMapProcessor {
         }
     }
 
-    /// Flags the collected sources whether they have already been uploaded before
-    /// (based on their checksum), and returns the number of files that *do* need an upload.
-    fn flag_uploaded_sources(&mut self, context: &UploadContext<'_>) -> usize {
-        let mut files_needing_upload = self.sources.len();
-
-        if !context.dedupe {
-            return files_needing_upload;
-        }
-
-        // This endpoint only supports at most one project, and a release is required.
-        // If the upload contains multiple projects or no release, we do not use deduplication.
-        let (project, release) = match (context.projects.as_deref(), context.release) {
-            (Some([project]), Some(release)) => (Some(project.as_str()), release),
-            (None, Some(release)) => (None, release),
-            _ => return files_needing_upload,
-        };
-
-        let mut sources_checksums: Vec<_> = self
-            .sources
-            .values()
-            .filter_map(|s| s.checksum().map(|c| c.to_string()).ok())
-            .collect();
-
-        // Checksums need to be sorted in order to satisfy integration tests constraints.
-        sources_checksums.sort();
-
-        let api = Api::current();
-
-        if let Ok(artifacts) = api.authenticated().and_then(|api| {
-            api.list_release_files_by_checksum(context.org, project, release, &sources_checksums)
-        }) {
-            let already_uploaded_checksums: HashSet<_> = artifacts
-                .into_iter()
-                .filter_map(|artifact| Digest::from_str(&artifact.sha1).ok())
-                .collect();
-
-            for source in self.sources.values_mut() {
-                if let Ok(checksum) = source.checksum() {
-                    if already_uploaded_checksums.contains(&checksum) {
-                        source.already_uploaded = true;
-                        files_needing_upload -= 1;
-                    }
-                }
-            }
-        }
-        files_needing_upload
-    }
-
     /// Uploads all files, and on success, returns the number of files that were
     /// uploaded, wrapped in Ok()
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<usize> {
@@ -752,7 +701,7 @@ impl SourceMapProcessor {
                 }
             }
         }
-        let files_needing_upload = self.flag_uploaded_sources(context);
+        let files_needing_upload = self.sources.len();
         if files_needing_upload > 0 {
             let mut uploader = FileUpload::new(context);
             uploader.files(&self.sources);

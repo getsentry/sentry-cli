@@ -9,7 +9,7 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tes
 > Rewriting completed in [..]
 > Adding source map references
 > Bundling completed in [..]
-> Bundled 1 file for upload
+> Bundled 2 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Optimizing completed in [..]
 > Uploading completed in [..]
@@ -26,6 +26,6 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/bundle.min.js.map tes
 Source Map Upload Report
   Source Maps
     ~/bundle.min.js.map
-    ~/vendor.min.js.map (skipped; already uploaded)
+    ~/vendor.min.js.map
 
 ```
