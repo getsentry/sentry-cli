@@ -193,11 +193,8 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("no_dedupe")
                 .long("no-dedupe")
                 .action(ArgAction::SetTrue)
-                .help(
-                    "Skip artifacts deduplication prior to uploading. \
-                    This will force all artifacts to be uploaded, \
-                    no matter whether they are already present on the server.",
-                ),
+                .hide(true)
+                .help("[DEPRECATED] This flag has no effect and is scheduled for removal."),
         )
         .arg(
             Arg::new("extensions")
@@ -419,6 +416,13 @@ fn process_sources_from_paths(
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    if matches.get_flag("no_dedupe") {
+        log::warn!(
+            "[DEPRECATION NOTICE] The --no-dedupe flag is deprecated and has no \
+            effect. It will be removed in the next major version."
+        );
+    }
+
     let config = Config::current();
     let version = config.get_release_with_legacy_fallback(matches).ok();
     let org = config.get_org(matches)?;
@@ -457,7 +461,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         note: matches.get_one::<String>("note").map(String::as_str),
         wait,
         max_wait,
-        dedupe: !matches.get_flag("no_dedupe"),
         chunk_upload_options: chunk_upload_options.as_ref(),
     };
 

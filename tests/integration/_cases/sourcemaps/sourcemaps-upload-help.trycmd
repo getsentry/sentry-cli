@@ -74,9 +74,6 @@ Options:
           Path to the application bundle (indexed, file, or regular)
       --bundle-sourcemap <BUNDLE_SOURCEMAP>
           Path to the bundle sourcemap
-      --no-dedupe
-          Skip artifacts deduplication prior to uploading. This will force all artifacts to be
-          uploaded, no matter whether they are already present on the server.
   -x, --ext <EXT>
           Set the file extensions that are considered for upload. This overrides the default
           extensions. To add an extension, all default extensions must be repeated. Specify once per

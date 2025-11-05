@@ -129,7 +129,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 note: None,
                 wait,
                 max_wait,
-                dedupe: false,
                 chunk_upload_options: chunk_upload_options.as_ref(),
             })?;
         }
@@ -143,7 +142,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             note: None,
             wait,
             max_wait,
-            dedupe: false,
             chunk_upload_options: chunk_upload_options.as_ref(),
         })?;
     }
