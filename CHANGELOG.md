@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.58.0
 
 ### New Features
 
