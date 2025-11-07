@@ -230,7 +230,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_repo_name,
         )
     };
-    let base_sha = matches
+
+    // Track whether base_sha and base_ref were explicitly provided by the user
+    let base_sha_from_user = matches.get_one::<String>("base_sha").is_some();
+    let base_ref_from_user = matches.get_one::<String>("base_ref").is_some();
+
+    let mut base_sha = matches
         .get_one("base_sha")
         .map(String::as_str)
         .map(Cow::Borrowed)
@@ -241,6 +246,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .flatten()
                 .map(Cow::Owned)
         });
+
+    let mut base_ref = base_ref;
+
+    // If base_sha equals head_sha and both were auto-inferred, skip setting base_sha and base_ref
+    // but keep head_sha (since comparing a commit to itself provides no meaningful baseline)
+    if !base_sha_from_user
+        && !base_ref_from_user
+        && base_sha.is_some()
+        && head_sha.is_some()
+        && base_sha.as_deref() == head_sha.as_deref()
+    {
+        debug!(
+            "Base SHA equals head SHA ({}), and both were auto-inferred. Skipping base_sha and base_ref, but keeping head_sha.",
+            base_sha.as_deref().unwrap()
+        );
+        base_sha = None;
+        base_ref = None;
+    }
     let pr_number = matches
         .get_one("pr_number")
         .copied()
