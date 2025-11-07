@@ -12,7 +12,6 @@ use console::style;
 use parking_lot::RwLock;
 use rayon::prelude::*;
 use rayon::ThreadPoolBuilder;
-use sentry::types::DebugId;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::js;
@@ -23,7 +22,7 @@ use crate::api::NewRelease;
 use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
-use crate::utils::fs::{get_sha1_checksums, TempFile};
+use crate::utils::fs::get_sha1_checksums;
 use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 use crate::utils::source_bundle;
@@ -408,10 +407,6 @@ impl<'a> FileUpload<'a> {
 
         #[expect(deprecated, reason = "fallback to legacy upload")]
         upload_files_parallel(legacy_context, &self.files, concurrency)
-    }
-
-    pub fn build_jvm_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
-        source_bundle::build(self.context, self.files.values(), debug_id)
     }
 }
 

@@ -1,12 +1,11 @@
 #![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
 
-use crate::api::Api;
 use crate::config::Config;
-use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt as _;
 use crate::utils::file_search::ReleaseFileSearch;
-use crate::utils::file_upload::{FileUpload, SourceFile, UploadContext};
+use crate::utils::file_upload::SourceFile;
 use crate::utils::fs::path_as_url;
+use crate::utils::source_bundle::{self, BundleContext};
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use sentry::types::DebugId;
@@ -54,19 +53,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches).ok();
-    let api = Api::current();
-    let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 
-    let context = &UploadContext {
-        org: &org,
-        projects: project.as_slice().try_into().ok(),
-        release: None,
-        dist: None,
-        note: None,
-        wait: true,
-        max_wait: DEFAULT_MAX_WAIT,
-        chunk_upload_options: chunk_upload_options.as_ref(),
-    };
+    let context = BundleContext::new(&org).with_projects(project.as_slice());
     let path = matches.get_one::<PathBuf>("path").unwrap();
     let output_path = matches.get_one::<PathBuf>("output").unwrap();
     let debug_id = matches.get_one::<DebugId>("debug_id").unwrap();
@@ -88,30 +76,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     let sources = ReleaseFileSearch::new(path.to_path_buf()).collect_files()?;
-    let files = sources
-        .iter()
-        .map(|source| {
-            let local_path = source.path.strip_prefix(&source.base_path).unwrap();
-            let local_path_jvm_ext = local_path.with_extension("jvm");
-            let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
-            (
-                url.clone(),
-                SourceFile {
-                    url,
-                    path: source.path.clone(),
-                    contents: Arc::new(source.contents.clone()),
-                    ty: SourceFileType::Source,
-                    headers: BTreeMap::new(),
-                    messages: vec![],
-                    already_uploaded: false,
-                },
-            )
-        })
-        .collect();
+    let files = sources.iter().map(|source| {
+        let local_path = source.path.strip_prefix(&source.base_path).unwrap();
+        let local_path_jvm_ext = local_path.with_extension("jvm");
+        let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
 
-    let tempfile = FileUpload::new(context)
-        .files(&files)
-        .build_jvm_bundle(Some(*debug_id))
+        SourceFile {
+            url,
+            path: source.path.clone(),
+            contents: Arc::new(source.contents.clone()),
+            ty: SourceFileType::Source,
+            headers: BTreeMap::new(),
+            messages: vec![],
+            already_uploaded: false,
+        }
+    });
+
+    let tempfile = source_bundle::build(context, files, Some(*debug_id))
         .context("Unable to create source bundle")?;
 
     fs::copy(tempfile.path(), &out).context("Unable to write source bundle")?;

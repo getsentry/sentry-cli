@@ -23,6 +23,22 @@ pub struct BundleContext<'a> {
     dist: Option<&'a str>,
 }
 
+impl<'a> BundleContext<'a> {
+    /// Make a new context with the given organization; other fields
+    /// are left to None.
+    pub fn new(org: &'a str) -> Self {
+        Self {
+            org,
+            ..Default::default()
+        }
+    }
+
+    pub fn with_projects(mut self, projects: &'a [String]) -> Self {
+        self.projects = projects.try_into().ok();
+        self
+    }
+}
+
 impl<'a> From<&'a UploadContext<'a>> for BundleContext<'a> {
     fn from(context: &'a UploadContext<'a>) -> Self {
         Self {
