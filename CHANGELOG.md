@@ -6,6 +6,10 @@
 
 - The `sentry-cli debug-files bundle-jvm` no longer makes any HTTP requests to Sentry, meaning auth tokenms are no longer needed, and the command can be run offline ([#2926](https://github.com/getsentry/sentry-cli/pull/2926)).
 
+### Fixes
+
+- Skip setting `base_sha` and `base_ref` when they equal `head_sha` during auto-inference, since comparing a commit to itself provides no meaningful baseline ([#2924](https://github.com/getsentry/sentry-cli/pull/2924)).
+
 ## 2.58.0
 
 ### New Features
@@ -22,7 +26,6 @@
 ### Fixes
 
 - Fixed autofilled git base metadata (`--base-ref`, `--base-sha`) when using the `build upload` subcommand in git repos. Previously this worked only in the context of GitHub workflows ([#2897](https://github.com/getsentry/sentry-cli/pull/2897), [#2898](https://github.com/getsentry/sentry-cli/pull/2898)).
-- Skip setting `base_sha` and `base_ref` when they equal `head_sha` during auto-inference, since comparing a commit to itself provides no meaningful baseline ([#2924](https://github.com/getsentry/sentry-cli/pull/2924)).
 
 ### Performance
 
