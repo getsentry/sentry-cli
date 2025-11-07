@@ -10,17 +10,39 @@ use url::Url;
 
 use crate::utils::file_upload::{SourceFiles, UploadContext};
 use crate::utils::fs::TempFile;
+use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::ProgressBar;
+
+#[derive(Clone, Copy, Debug, Default)]
+pub struct BundleContext<'a> {
+    org: &'a str,
+    projects: Option<NonEmptySlice<'a, String>>,
+    note: Option<&'a str>,
+    release: Option<&'a str>,
+    dist: Option<&'a str>,
+}
+
+impl<'a> From<&'a UploadContext<'a>> for BundleContext<'a> {
+    fn from(context: &'a UploadContext<'a>) -> Self {
+        Self {
+            org: context.org,
+            projects: context.projects,
+            note: context.note,
+            release: context.release,
+            dist: context.dist,
+        }
+    }
+}
 
 /// Builds a source bundle from a list of source files, setting the metadata
 /// from the upload context.
 ///
 /// Returns a `TempFile` containing the source bundle.
-pub fn build(
-    context: &UploadContext,
-    files: &SourceFiles,
-    debug_id: Option<DebugId>,
-) -> Result<TempFile> {
+pub fn build<'a, C>(context: C, files: &SourceFiles, debug_id: Option<DebugId>) -> Result<TempFile>
+where
+    C: Into<BundleContext<'a>>,
+{
+    let context = context.into();
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
@@ -152,7 +174,7 @@ mod tests {
     use sha1_smol::Sha1;
     use symbolic::debuginfo::sourcebundle::SourceFileType;
 
-    use crate::{constants::DEFAULT_MAX_WAIT, utils::file_upload::SourceFile};
+    use crate::utils::file_upload::SourceFile;
 
     use super::*;
 
@@ -184,15 +206,12 @@ mod tests {
     #[test]
     fn build_deterministic() {
         let projects_slice = &["wat-project".into()];
-        let context = UploadContext {
+        let context = BundleContext {
             org: "wat-org",
             projects: Some(projects_slice.into()),
             release: None,
             dist: None,
             note: None,
-            wait: false,
-            max_wait: DEFAULT_MAX_WAIT,
-            chunk_upload_options: None,
         };
 
         let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
@@ -213,7 +232,7 @@ mod tests {
             })
             .collect();
 
-        let file = build(&context, &source_files, None).unwrap();
+        let file = build(context, &source_files, None).unwrap();
 
         let buf = std::fs::read(file.path()).unwrap();
         let hash = Sha1::from(buf);
