@@ -259,7 +259,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     {
         debug!(
             "Base SHA equals head SHA ({}), and both were auto-inferred. Skipping base_sha and base_ref, but keeping head_sha.",
-            base_sha.as_deref().unwrap()
+            base_sha.as_deref().expect("base_sha is Some at this point")
         );
         base_sha = None;
         base_ref = None;
