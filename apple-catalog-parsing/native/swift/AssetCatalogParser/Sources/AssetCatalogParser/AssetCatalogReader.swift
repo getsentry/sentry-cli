@@ -11,7 +11,7 @@ public func swift_inspect_asset_catalog(_ path: UnsafePointer<CChar>, outputPath
     let pathString = String(cString: path)
     let outputPathString = String(cString: outputPath)
     if #available(macOS 13.0, *) {
-        let supportedVersions = [13, 14, 15]
+        let supportedVersions = [13, 14, 15, 26]
         let version = ProcessInfo.processInfo.operatingSystemVersion
         if supportedVersions.contains(version.majorVersion) {
             AssetUtil.disect(file: URL(filePath: pathString), outputURL: URL(filePath: outputPathString))
