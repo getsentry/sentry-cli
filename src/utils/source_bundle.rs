@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::io::BufWriter;
 
 use anyhow::Result;
@@ -8,7 +9,7 @@ use symbolic::debuginfo::sourcebundle::{
 };
 use url::Url;
 
-use crate::utils::file_upload::{SourceFiles, UploadContext};
+use crate::utils::file_upload::{SourceFile, UploadContext};
 use crate::utils::fs::TempFile;
 use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::ProgressBar;
@@ -38,11 +39,15 @@ impl<'a> From<&'a UploadContext<'a>> for BundleContext<'a> {
 /// from the upload context.
 ///
 /// Returns a `TempFile` containing the source bundle.
-pub fn build<'a, C>(context: C, files: &SourceFiles, debug_id: Option<DebugId>) -> Result<TempFile>
+pub fn build<'a, C, F, S>(context: C, files: F, debug_id: Option<DebugId>) -> Result<TempFile>
 where
     C: Into<BundleContext<'a>>,
+    F: IntoIterator<Item = S>,
+    S: Borrow<SourceFile>,
 {
     let context = context.into();
+    let files = files.into_iter().collect::<Vec<_>>();
+
     let progress_style = ProgressStyle::default_bar().template(
         "{prefix:.dim} Bundling files for upload... {msg:.dim}\
        \n{wide_bar}  {pos}/{len}",
@@ -56,7 +61,7 @@ where
     let mut bundle = SourceBundleWriter::start(BufWriter::new(archive.open()?))?;
 
     // source bundles get a random UUID as debug id
-    let debug_id = debug_id.unwrap_or_else(|| build_debug_id(files));
+    let debug_id = debug_id.unwrap_or_else(|| build_debug_id(&files));
     bundle.set_attribute("debug_id", debug_id.to_string());
 
     if let Some(note) = context.note {
@@ -77,7 +82,7 @@ where
 
     let mut bundle_file_count = 0;
 
-    for file in files.values() {
+    for file in files.iter().map(Borrow::borrow) {
         pb.inc(1);
         pb.set_message(&file.url);
 
@@ -128,9 +133,12 @@ where
 
 /// Creates a debug id from a map of source files by hashing each file's
 /// URL, contents, type, and headers.
-fn build_debug_id(files: &SourceFiles) -> DebugId {
+fn build_debug_id<S>(files: &[S]) -> DebugId
+where
+    S: Borrow<SourceFile>,
+{
     let mut hash = sha1_smol::Sha1::new();
-    for source_file in files.values() {
+    for source_file in files.iter().map(Borrow::borrow) {
         hash.update(source_file.url.as_bytes());
         hash.update(&source_file.contents);
         hash.update(format!("{:?}", source_file.ty).as_bytes());
@@ -216,21 +224,18 @@ mod tests {
 
         let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
             .into_iter()
-            .map(|name| {
-                let file = SourceFile {
-                    url: format!("~/{name}"),
-                    path: format!("tests/integration/_fixtures/{name}").into(),
-                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
-                        .unwrap()
-                        .into(),
-                    ty: SourceFileType::SourceMap,
-                    headers: Default::default(),
-                    messages: Default::default(),
-                    already_uploaded: false,
-                };
-                (format!("~/{name}"), file)
+            .map(|name| SourceFile {
+                url: format!("~/{name}"),
+                path: format!("tests/integration/_fixtures/{name}").into(),
+                contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
+                    .unwrap()
+                    .into(),
+                ty: SourceFileType::SourceMap,
+                headers: Default::default(),
+                messages: Default::default(),
+                already_uploaded: false,
             })
-            .collect();
+            .collect::<Vec<_>>();
 
         let file = build(context, &source_files, None).unwrap();
 

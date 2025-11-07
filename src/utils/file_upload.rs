@@ -411,7 +411,7 @@ impl<'a> FileUpload<'a> {
     }
 
     pub fn build_jvm_bundle(&self, debug_id: Option<DebugId>) -> Result<TempFile> {
-        source_bundle::build(self.context, &self.files, debug_id)
+        source_bundle::build(self.context, self.files.values(), debug_id)
     }
 }
 
@@ -618,7 +618,7 @@ fn upload_files_chunked(
     files: &SourceFiles,
     options: &ChunkServerOptions,
 ) -> Result<()> {
-    let archive = source_bundle::build(context, files, None)?;
+    let archive = source_bundle::build(context, files.values(), None)?;
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Optimizing bundle for upload...");
