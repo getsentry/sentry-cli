@@ -20,7 +20,7 @@ This is **sentry-cli**, a command-line utility for working with Sentry. It's pri
 ## Project Structure
 
 - `src/` - Core Rust source code with command modules and utilities
-- `js/` - JavaScript wrapper and npm package code
+- `lib/` - JavaScript wrapper and npm package code
 - `scripts/` - Build and utility scripts
 - `tests/integration/` - Integration tests using `.trycmd` format
 - `npm-binary-distributions/` - Platform-specific binary packages
