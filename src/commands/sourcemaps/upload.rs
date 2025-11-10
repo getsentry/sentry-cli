@@ -437,10 +437,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         log::warn!("The --use-artifact-bundle option and the SENTRY_FORCE_ARTIFACT_BUNDLES environment variable \
                     are both deprecated, and both will be removed in the next major version.");
 
-        if let Some(ref mut options) = chunk_upload_options {
-            if !options.supports(ChunkUploadCapability::ArtifactBundles) {
-                options.accept.push(ChunkUploadCapability::ArtifactBundles);
-            }
+        if !chunk_upload_options.supports(ChunkUploadCapability::ArtifactBundles) {
+            chunk_upload_options
+                .accept
+                .push(ChunkUploadCapability::ArtifactBundles);
         }
     }
 
@@ -461,7 +461,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         note: matches.get_one::<String>("note").map(String::as_str),
         wait,
         max_wait,
-        chunk_upload_options: chunk_upload_options.as_ref(),
+        chunk_upload_options: &chunk_upload_options,
     };
 
     if matches.get_flag("strict") {

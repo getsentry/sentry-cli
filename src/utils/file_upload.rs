@@ -29,9 +29,6 @@ use crate::utils::source_bundle;
 
 use super::file_search::ReleaseFileMatch;
 
-/// Fallback concurrency for release file uploads.
-static DEFAULT_CONCURRENCY: usize = 4;
-
 /// Old versions of Sentry cannot assemble artifact bundles straight away, they require
 /// that those bundles are associated to a release.
 ///
@@ -42,11 +39,10 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     // need to do anything here.  Artifact bundles will also only work
     // if a project is provided which is technically unnecessary for the
     // legacy upload though it will unlikely to be what users want.
+    let chunk_options = context.chunk_upload_options;
     if context.projects.is_some()
-        && context.chunk_upload_options.is_some_and(|x| {
-            x.supports(ChunkUploadCapability::ArtifactBundles)
-                || x.supports(ChunkUploadCapability::ArtifactBundlesV2)
-        })
+        && (chunk_options.supports(ChunkUploadCapability::ArtifactBundles)
+            || chunk_options.supports(ChunkUploadCapability::ArtifactBundlesV2))
     {
         return Ok(());
     }
@@ -75,19 +71,8 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
                 ..Default::default()
             },
         )?;
-    } else if context.chunk_upload_options.is_some() {
-        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)");
     } else {
-        // We got a 404 when trying to get the chunk options from the server. Most likely, the
-        // organization does not exist, though old self-hosted Sentry servers may also completely
-        // lack support for chunked uploads.
-        bail!(
-            "The provided organization \"{}\" does not exist. If you are using a self-hosted \
-            Sentry server, it is also possible that your Sentry server lacks support for \
-            uploading artifact bundles, in which case you need to provide a release slug with \
-            --release or by setting the SENTRY_RELEASE environment variable.",
-            context.org
-        );
+        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)");
     }
     Ok(())
 }
@@ -101,7 +86,7 @@ pub struct UploadContext<'a> {
     pub note: Option<&'a str>,
     pub wait: bool,
     pub max_wait: Duration,
-    pub chunk_upload_options: Option<&'a ChunkServerOptions>,
+    pub chunk_upload_options: &'a ChunkServerOptions,
 }
 
 impl UploadContext<'_> {
@@ -372,11 +357,17 @@ impl<'a> FileUpload<'a> {
         // multiple projects OK
         initialize_legacy_release_upload(self.context)?;
 
-        if let Some(chunk_options) = self.context.chunk_upload_options {
-            if chunk_options.supports(ChunkUploadCapability::ReleaseFiles) {
-                // multiple projects OK
-                return upload_files_chunked(self.context, &self.files, chunk_options);
-            }
+        if self
+            .context
+            .chunk_upload_options
+            .supports(ChunkUploadCapability::ReleaseFiles)
+        {
+            // multiple projects OK
+            return upload_files_chunked(
+                self.context,
+                &self.files,
+                self.context.chunk_upload_options,
+            );
         }
 
         log::warn!(
@@ -398,10 +389,7 @@ impl<'a> FileUpload<'a> {
             );
         }
 
-        let concurrency = self
-            .context
-            .chunk_upload_options
-            .map_or(DEFAULT_CONCURRENCY, |o| usize::from(o.concurrency));
+        let concurrency = self.context.chunk_upload_options.concurrency as usize;
 
         let legacy_context = &self.context.try_into().map_err(|e| {
             anyhow::anyhow!(
@@ -701,15 +689,16 @@ fn print_upload_context_details(context: &UploadContext) {
         style("> Dist:").dim(),
         style(context.dist.unwrap_or("None")).yellow()
     );
-    let upload_type = match context.chunk_upload_options {
-        None => "single file",
-        Some(opts)
-            if opts.supports(ChunkUploadCapability::ArtifactBundles)
-                || opts.supports(ChunkUploadCapability::ArtifactBundlesV2) =>
-        {
-            "artifact bundle"
-        }
-        _ => "release bundle",
+    let upload_type = if context
+        .chunk_upload_options
+        .supports(ChunkUploadCapability::ArtifactBundles)
+        || context
+            .chunk_upload_options
+            .supports(ChunkUploadCapability::ArtifactBundlesV2)
+    {
+        "artifact bundle"
+    } else {
+        "release bundle"
     };
     println!(
         "{} {}",
