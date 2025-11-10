@@ -75,8 +75,19 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
                 ..Default::default()
             },
         )?;
-    } else {
+    } else if context.chunk_upload_options.is_some() {
         bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)");
+    } else {
+        // We got a 404 when trying to get the chunk options from the server. Most likely, the
+        // organization does not exist, though old self-hosted Sentry servers may also completely
+        // lack support for chunked uploads.
+        bail!(
+            "The provided organization \"{}\" does not exist. If you are using a self-hosted \
+            Sentry server, it is also possible that your Sentry server lacks support for \
+            uploading artifact bundles, in which case you need to provide a release slug with \
+            --release or by setting the SENTRY_RELEASE environment variable.",
+            context.org
+        );
     }
     Ok(())
 }
