@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- The `sentry-cli debug-files bundle-jvm` no longer makes any HTTP requests to Sentry, meaning auth tokenms are no longer needed, and the command can be run offline ([#2926](https://github.com/getsentry/sentry-cli/pull/2926)).
+- The `sentry-cli debug-files bundle-jvm` no longer makes any HTTP requests to Sentry, meaning auth tokens are no longer needed, and the command can be run offline ([#2926](https://github.com/getsentry/sentry-cli/pull/2926)).
 
 ## 2.58.0
 
