@@ -6,6 +6,10 @@
 
 - The `sentry-cli debug-files bundle-jvm` no longer makes any HTTP requests to Sentry, meaning auth tokens are no longer needed, and the command can be run offline ([#2926](https://github.com/getsentry/sentry-cli/pull/2926)).
 
+### Fixes
+
+- Skip setting `base_sha` and `base_ref` when they equal `head_sha` during auto-inference, since comparing a commit to itself provides no meaningful baseline ([#2924](https://github.com/getsentry/sentry-cli/pull/2924)).
+
 ## 2.58.0
 
 ### New Features
