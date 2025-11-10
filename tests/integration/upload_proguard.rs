@@ -8,13 +8,7 @@ use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
 fn command_upload_proguard() {
-    TestManager::new()
-        .mock_endpoint(
-            MockEndpointBuilder::new("POST", "/api/0/projects/wat-org/wat-project/files/dsyms/")
-                .with_response_body("[]"),
-        )
-        .register_trycmd_test("upload_proguard/*.trycmd")
-        .with_default_token();
+    TestManager::new().register_trycmd_test("upload_proguard/*.trycmd");
 }
 
 #[test]
@@ -72,7 +66,6 @@ fn chunk_upload_already_there() {
             "tests/integration/_fixtures/upload_proguard/mapping.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
         .run_and_assert(AssertCommand::Success)
 }
 
@@ -166,7 +159,6 @@ fn chunk_upload_needs_upload() {
             "tests/integration/_fixtures/upload_proguard/mapping.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
         .run_and_assert(AssertCommand::Success)
 }
 
@@ -289,6 +281,5 @@ fn chunk_upload_two_files() {
             "tests/integration/_fixtures/upload_proguard/mapping-2.txt",
         ])
         .with_default_token()
-        .env("SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD", "1")
         .run_and_assert(AssertCommand::Success)
 }
