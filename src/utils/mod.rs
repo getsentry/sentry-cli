@@ -21,6 +21,7 @@ pub mod progress;
 pub mod proguard;
 pub mod releases;
 pub mod retry;
+pub mod source_bundle;
 pub mod sourcemaps;
 pub mod system;
 pub mod ui;
