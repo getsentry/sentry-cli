@@ -159,7 +159,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         note: None,
         wait,
         max_wait,
-        chunk_upload_options: chunk_upload_options.as_ref(),
+        chunk_upload_options: &chunk_upload_options,
     };
 
     let path = Path::new(matches.get_one::<String>("path").unwrap());

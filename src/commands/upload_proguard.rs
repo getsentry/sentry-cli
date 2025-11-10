@@ -184,17 +184,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         authenticated_api = api.authenticated()?;
         (org, project) = config.get_org_and_project(matches)?;
 
-        let chunk_upload_options = authenticated_api
-            .get_chunk_upload_options(&org)
-            .map_err(|e| anyhow::anyhow!(e))
-            .and_then(|options| {
-                options.ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "server does not support chunked uploading. unset \
-                         {CHUNK_UPLOAD_ENV_VAR} to continue."
-                    )
-                })
-            })?;
+        let chunk_upload_options = authenticated_api.get_chunk_upload_options(&org)?;
 
         proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)?;
     } else {
