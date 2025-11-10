@@ -19,11 +19,6 @@ pub struct ProguardMapping<'a> {
 }
 
 impl<'a> ProguardMapping<'a> {
-    /// Get the length of the mapping in bytes.
-    pub fn len(&self) -> usize {
-        self.bytes.len()
-    }
-
     /// Get the UUID of the mapping.
     pub fn uuid(&self) -> Uuid {
         self.uuid
