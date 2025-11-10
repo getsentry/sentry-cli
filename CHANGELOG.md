@@ -10,6 +10,10 @@
 
 - Removed the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
 
+### Fixes
+
+- Fixed misleading error message claiming the server doesn't support chunk uploading when the actual error was a non-existent organization ([#2930](https://github.com/getsentry/sentry-cli/pull/2930)).
+
 ## 2.58.3
 
 ### Improvements

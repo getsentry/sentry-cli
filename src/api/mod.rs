@@ -956,21 +956,10 @@ impl<'a> AuthenticatedApi<'a> {
     }
 
     /// Get the server configuration for chunked file uploads.
-    pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<Option<ChunkServerOptions>> {
+    pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<ChunkServerOptions> {
         let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
-        match self
-            .get(&url)?
-            .convert_rnf::<ChunkServerOptions>(ApiErrorKind::ChunkUploadNotSupported)
-        {
-            Ok(options) => Ok(Some(options)),
-            Err(error) => {
-                if error.kind() == ApiErrorKind::ChunkUploadNotSupported {
-                    Ok(None)
-                } else {
-                    Err(error)
-                }
-            }
-        }
+        self.get(&url)?
+            .convert_rnf::<ChunkServerOptions>(ApiErrorKind::OrganizationNotFound)
     }
 
     /// Request DIF assembling and processing from chunks.
