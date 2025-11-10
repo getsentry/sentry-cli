@@ -140,6 +140,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 fn get_org_from_auth(auth: &Auth) -> Option<&str> {
     match auth {
         Auth::Token(token) => get_org_from_token(token),
+        #[expect(deprecated, reason = "API key is deprecated.")]
         Auth::Key(_) => None,
     }
 }

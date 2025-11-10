@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Deprecations
+
+- Deprecated API key authentication (#2934)[https://github.com/getsentry/sentry-cli/pull/2934]. Users who are still using API keys to authenticate Sentry CLI should generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/) instead. 
+
 ### Improvements
 
 - The `sentry-cli debug-files bundle-jvm` no longer makes any HTTP requests to Sentry, meaning auth tokens are no longer needed, and the command can be run offline ([#2926](https://github.com/getsentry/sentry-cli/pull/2926)).
