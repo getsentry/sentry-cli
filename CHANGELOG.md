@@ -9,6 +9,7 @@
 ### Fixes
 
 - Skip setting `base_sha` and `base_ref` when they equal `head_sha` during auto-inference, since comparing a commit to itself provides no meaningful baseline ([#2924](https://github.com/getsentry/sentry-cli/pull/2924)).
+- Improved error message when supplying a non-existent organization to `sentry-cli sourcemaps upload`. The error now correctly indicates the organization doesn't exist, rather than incorrectly suggesting the Sentry server lacks artifact bundle support ([#2931](https://github.com/getsentry/sentry-cli/pull/2931)).
 
 ## 2.58.0
 
