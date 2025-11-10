@@ -202,7 +202,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 note: None,
                 wait,
                 max_wait,
-                chunk_upload_options: chunk_upload_options.as_ref(),
+                chunk_upload_options: &chunk_upload_options,
             })?;
         }
         Some(dists) => {
@@ -220,7 +220,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     note: None,
                     wait,
                     max_wait,
-                    chunk_upload_options: chunk_upload_options.as_ref(),
+                    chunk_upload_options: &chunk_upload_options,
                 })?;
             }
         }
