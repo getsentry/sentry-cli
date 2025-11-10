@@ -1625,26 +1625,25 @@ impl<'a> DifUpload<'a> {
         }
 
         let api = Api::current();
-        if let Some(chunk_options) = api.authenticated()?.get_chunk_upload_options(self.org)? {
-            if chunk_options.max_file_size > 0 {
-                self.max_file_size = chunk_options.max_file_size;
-            }
-            if chunk_options.max_wait > 0 {
-                self.max_wait = self
-                    .max_wait
-                    .min(Duration::from_secs(chunk_options.max_wait));
-            }
+        let chunk_options = api.authenticated()?.get_chunk_upload_options(self.org)?;
+        if chunk_options.max_file_size > 0 {
+            self.max_file_size = chunk_options.max_file_size;
+        }
+        if chunk_options.max_wait > 0 {
+            self.max_wait = self
+                .max_wait
+                .min(Duration::from_secs(chunk_options.max_wait));
+        }
 
-            self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
-            self.portablepdbs_allowed = chunk_options.supports(ChunkUploadCapability::PortablePdbs);
-            self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
-            self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
-            self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
+        self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
+        self.portablepdbs_allowed = chunk_options.supports(ChunkUploadCapability::PortablePdbs);
+        self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
+        self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
+        self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
 
-            if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
-                self.validate_capabilities();
-                return upload_difs_chunked(self, chunk_options);
-            }
+        if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
+            self.validate_capabilities();
+            return upload_difs_chunked(self, chunk_options);
         }
 
         self.validate_capabilities();
