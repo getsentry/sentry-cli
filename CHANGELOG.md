@@ -6,9 +6,17 @@
 as the changelog is updated for minor releases. Prior to merging the PR stack for 3.0,
 we should rename this section to "Unreleased" -->
 
+### New Sentry Support Policy
+
+`sentry-cli` 3.0.0 and above only officially supports Sentry SaaS and Sentry self-hosted versions [25.10.0](https://github.com/getsentry/sentry/releases/tag/25.10.0) and higher. While many Sentry CLI features may, in practice, continue working with some older Sentry versions, continued support for Sentry versions older than 25.10.0 is not guaranteed. Changes which break support for Sentry versions below 25.10.0 may occur in minor or patch releases.
+
 ### Breaking Changes
 
 - Removed the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
+
+### Fixes
+
+- Fixed misleading error message claiming the server doesn't support chunk uploading when the actual error was a non-existent organization ([#2930](https://github.com/getsentry/sentry-cli/pull/2930)).
 
 ## 2.58.2
 
