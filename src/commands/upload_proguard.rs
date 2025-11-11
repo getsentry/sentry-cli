@@ -50,16 +50,6 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-            Arg::new("android_manifest")
-                .long("android-manifest")
-                .value_name("PATH")
-                .hide(true)
-                .help(
-                    "[DEPRECATED] This flag is a no-op, scheduled \
-                    for removal in Sentry CLI 3.0.0.",
-                ),
-        )
-        .arg(
             Arg::new("write_properties")
                 .long("write-properties")
                 .value_name("PATH")
@@ -95,14 +85,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if matches.get_one::<String>("platform").is_some() {
         log::warn!(
             "[DEPRECATION NOTICE] The --platform argument is deprecated, \
-            and is scheduled for removal in Sentry CLI 3.0.0. \
-            The argument is a no-op."
-        );
-    }
-
-    if matches.get_one::<String>("android_manifest").is_some() {
-        log::warn!(
-            "[DEPRECATION NOTICE] The --android-manifest argument is deprecated, \
             and is scheduled for removal in Sentry CLI 3.0.0. \
             The argument is a no-op."
         );
