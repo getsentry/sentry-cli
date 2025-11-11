@@ -25,15 +25,15 @@ Options:
           current and remote branch will be used.
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: --silent]
       --vcs-provider <vcs_provider>
           The VCS provider to use for the upload. If not provided, the current provider will be
           used.
       --head-repo-name <head_repo_name>
           The name of the git repository to use for the upload (e.g. organization/repository). If
           not provided, the current repository will be used.
-      --quiet
-          Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: --silent]
       --base-repo-name <base_repo_name>
           The name of the git repository to use for the upload (e.g. organization/repository). If
           not provided, the current repository will be used.

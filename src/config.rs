@@ -36,8 +36,6 @@ const MAX_RETRIES_INI_KEY: &str = "max_retries";
 /// Represents the auth information
 #[derive(Debug, Clone)]
 pub enum Auth {
-    #[deprecated(note = "Auth Key authentication is deprecated.")]
-    Key(String),
     Token(AuthToken),
 }
 
@@ -181,7 +179,6 @@ impl Config {
     pub fn set_auth(&mut self, auth: Auth) {
         self.cached_auth = Some(auth);
 
-        self.ini.delete_from(Some("auth"), "api_key");
         self.ini.delete_from(Some("auth"), "token");
         match self.cached_auth {
             Some(Auth::Token(ref val)) => {
@@ -196,10 +193,6 @@ impl Config {
                     "token".into(),
                     val.raw().expose_secret().clone(),
                 );
-            }
-            #[expect(deprecated, reason = "API key is deprecated.")]
-            Some(Auth::Key(ref val)) => {
-                self.ini.set_to(Some("auth"), "api_key".into(), val.clone());
             }
             None => {}
         }
@@ -739,26 +732,9 @@ impl Clone for Config {
 fn get_default_auth(ini: &Ini) -> Option<Auth> {
     if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
         Some(Auth::Token(val.into()))
-    } else if let Ok(val) = env::var("SENTRY_API_KEY") {
-        log::warn!(
-            "[DEPRECTATION NOTICE] API key authentication and the `SENTRY_API_KEY` environment \
-            variable are deprecated. \
-            Please generate and set an auth token using `SENTRY_AUTH_TOKEN` instead."
-        );
-        #[expect(deprecated, reason = "API key is deprecated.")]
-        Some(Auth::Key(val))
-    } else if let Some(val) = ini.get_from(Some("auth"), "token") {
-        Some(Auth::Token(val.into()))
-    } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
-        log::warn!(
-            "[DEPRECTATION NOTICE] API key authentication and the `api_key` field in the \
-            Sentry CLI config file are deprecated. \
-            Please generate and set an auth token instead."
-        );
-        #[expect(deprecated, reason = "API key is deprecated.")]
-        Some(Auth::Key(val.to_owned()))
     } else {
-        None
+        ini.get_from(Some("auth"), "token")
+            .map(|val| Auth::Token(val.into()))
     }
 }
 
