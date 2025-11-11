@@ -4,7 +4,7 @@
 /.cursor/rules/javascript-development.mdc @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /.npmignore @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /bin/ @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli  # these are the JS "binaries"
-/js @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
+/lib @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /package.json @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /scripts/*.js @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /tsconfig.json @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
