@@ -14,9 +14,9 @@ Options:
   -T, --show-tags                Display the Tags column.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
       --max-rows <MAX_ROWS>      Maximum number of rows to print.
-      --pages <PAGES>            Maximum number of pages to fetch (100 events/page). [default: 5]
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]
+      --pages <PAGES>            Maximum number of pages to fetch (100 events/page). [default: 5]
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: --silent]
