@@ -17,13 +17,6 @@ export interface SentryCliOptions {
    */
   authToken?: string;
   /**
-   * API key to authenticate any HTTP requests to Sentry (legacy authentication method).
-   * This value will update `SENTRY_API_KEY` env variable.
-   * @deprecated Use auth-token-based authentication via `authToken` instead.
-   *     This option is scheduled for removal in the next major release.
-   */
-  apiKey?: string;
-  /**
    * Sentry DSN.
    * This value will update `SENTRY_DSN` env variable.
    */
@@ -67,7 +60,6 @@ export interface SentryCliOptions {
 export type SourceMapsPathDescriptor = Omit<SentryCliUploadSourceMapsOptions, 'include'> & {
   paths: string[];
 };
-
 
 /**
  * Options for uploading source maps
@@ -222,7 +214,7 @@ export interface SentryCliCommitsOptions {
  * Release management interface
  */
 export interface SentryCliReleases {
-  new(release: string, options?: { projects: string[] } | string[]): Promise<string>;
+  new (release: string, options?: { projects: string[] } | string[]): Promise<string>;
 
   setCommits(release: string, options: SentryCliCommitsOptions): Promise<string>;
 
@@ -241,4 +233,3 @@ export interface SentryCliReleases {
 
   execute(args: string[], live: boolean | 'rejectOnError'): Promise<string>;
 }
-
