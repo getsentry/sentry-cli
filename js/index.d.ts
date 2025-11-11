@@ -14,13 +14,6 @@ declare module '@sentry/cli' {
      */
     authToken?: string;
     /**
-     * API key to authenticate any HTTP requests to Sentry (legacy authentication method).
-     * This value will update `SENTRY_API_KEY` env variable.
-     * @deprecated Use auth-token-based authentication via `authToken` instead.
-     *    This option is scheduled for removal in the next major release.
-     */
-    apiKey?: string;
-    /**
      * Sentry DSN.
      * This value will update `SENTRY_DSN` env variable.
      */
