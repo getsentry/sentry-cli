@@ -4,7 +4,7 @@
 
 ### Deprecations
 
-- Deprecated API key authentication ([#2934](https://github.com/getsentry/sentry-cli/pull/2934)). Users who are still using API keys to authenticate Sentry CLI should generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/) instead.
+- Deprecated API key authentication ([#2934](https://github.com/getsentry/sentry-cli/pull/2934), [#2937](https://github.com/getsentry/sentry-cli/pull/2937)). Users who are still using API keys to authenticate Sentry CLI should generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/) instead.
 
 ### Improvements
 
