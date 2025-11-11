@@ -1,5 +1,5 @@
 ```
-$ sentry-cli build upload tests/integration/_fixtures/build/ipa.ipa --head-sha test_head_sha
+$ sentry-cli build upload tests/integration/_fixtures/build/ipa.ipa --head-sha deadbeef12345678deadbeef12345678deadbeef
 ? success
 > Preparing for upload completed in [..]
 Successfully uploaded 1 file to Sentry

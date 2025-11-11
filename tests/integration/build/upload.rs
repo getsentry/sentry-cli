@@ -92,6 +92,11 @@ fn command_build_upload_apk_all_uploaded() {
         .with_default_token();
 }
 
+#[test]
+fn command_build_upload_apk_invlid_sha() {
+    TestManager::new().register_trycmd_test("build/build-invalid-*-sha.trycmd");
+}
+
 /// This regex is used to extract the boundary from the content-type header.
 /// We need to match the boundary, since it changes with each request.
 /// The regex matches the format as specified in
@@ -233,5 +238,43 @@ fn command_build_upload_ipa_chunked() {
             .expect(2),
         )
         .register_trycmd_test("build/build-upload-ipa.trycmd")
+        .with_default_token();
+}
+
+#[test]
+fn command_build_upload_empty_shas() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("build/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
+            )
+            .with_response_fn(move |req| {
+                let body = req.body().expect("body should be readable");
+                let json: serde_json::Value =
+                    serde_json::from_slice(body).expect("body should be valid JSON");
+                assert!(
+                    json.get("head_sha").is_none(),
+                    "head_sha should not be present"
+                );
+                assert!(
+                    json.get("base_sha").is_none(),
+                    "base_sha should not be present"
+                );
+
+                serde_json::json!({
+                    "state": "created",
+                    "missingChunks": [],
+                    "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/42"
+                })
+                .to_string()
+                .into()
+            }),
+        )
+        .register_trycmd_test("build/build-upload-empty-shas.trycmd")
         .with_default_token();
 }

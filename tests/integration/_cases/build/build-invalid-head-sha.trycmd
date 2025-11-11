@@ -1,0 +1,8 @@
+```
+$ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --head-sha test_head_sha
+? failed
+error: invalid value 'test_head_sha' for '--head-sha <head_sha>': test_head_sha is not a valid SHA1 digest
+
+For more information, try '--help'.
+
+```

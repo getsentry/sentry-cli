@@ -6,6 +6,7 @@ use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use indicatif::ProgressStyle;
 use log::{debug, info, warn};
+use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
@@ -53,11 +54,13 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("head_sha")
                 .long("head-sha")
+                .value_parser(parse_sha_allow_empty)
                 .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
         )
         .arg(
             Arg::new("base_sha")
                 .long("base-sha")
+                .value_parser(parse_sha_allow_empty)
                 .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
         )
         .arg(
@@ -112,10 +115,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .expect("paths argument is required");
 
     let head_sha = matches
-        .get_one("head_sha")
-        .map(String::as_str)
-        .map(Cow::Borrowed)
-        .or_else(|| vcs::find_head_sha().ok().map(Cow::Owned));
+        .get_one::<Option<Digest>>("head_sha")
+        .map(|d| d.as_ref().cloned())
+        .or_else(|| Some(vcs::find_head_sha().ok()))
+        .flatten();
 
     let cached_remote = config.get_cached_vcs_remote();
     // Try to open the git repository and find the remote, but handle errors gracefully.
@@ -232,20 +235,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     // Track whether base_sha and base_ref were explicitly provided by the user
-    let base_sha_from_user = matches.get_one::<String>("base_sha").is_some();
+    let base_sha_from_user = matches.get_one::<Option<Digest>>("base_sha").is_some();
     let base_ref_from_user = matches.get_one::<String>("base_ref").is_some();
 
     let mut base_sha = matches
-        .get_one("base_sha")
-        .map(String::as_str)
-        .map(Cow::Borrowed)
+        .get_one::<Option<Digest>>("base_sha")
+        .map(|d| d.as_ref().cloned())
         .or_else(|| {
-            vcs::find_base_sha(&cached_remote)
-                .inspect_err(|e| debug!("Error finding base SHA: {e}"))
-                .ok()
-                .flatten()
-                .map(Cow::Owned)
-        });
+            Some(
+                vcs::find_base_sha(&cached_remote)
+                    .inspect_err(|e| debug!("Error finding base SHA: {e}"))
+                    .ok()
+                    .flatten(),
+            )
+        })
+        .flatten();
 
     let mut base_ref = base_ref;
 
@@ -255,11 +259,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         && !base_ref_from_user
         && base_sha.is_some()
         && head_sha.is_some()
-        && base_sha.as_deref() == head_sha.as_deref()
+        && base_sha == head_sha
     {
         debug!(
             "Base SHA equals head SHA ({}), and both were auto-inferred. Skipping base_sha and base_ref, but keeping head_sha.",
-            base_sha.as_deref().expect("base_sha is Some at this point")
+            base_sha.expect("base_sha is Some at this point")
         );
         base_sha = None;
         base_ref = None;
@@ -325,8 +329,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
         let vcs_info = VcsInfo {
-            head_sha: head_sha.as_deref(),
-            base_sha: base_sha.as_deref(),
+            head_sha,
+            base_sha,
             vcs_provider: vcs_provider.as_deref(),
             head_repo_name: head_repo_name.as_deref(),
             base_repo_name: base_repo_name.as_deref(),
@@ -596,6 +600,22 @@ fn upload_file(
     };
 
     result
+}
+
+/// Utility function to parse a SHA1 digest, allowing empty strings.
+///
+/// Empty strings result in Ok(None), otherwise we return the parsed digest
+/// or an error if the SHA is invalid.
+fn parse_sha_allow_empty(sha: &str) -> Result<Option<Digest>> {
+    if sha.is_empty() {
+        return Ok(None);
+    }
+
+    let digest = sha
+        .parse()
+        .with_context(|| format!("{sha} is not a valid SHA1 digest"))?;
+
+    Ok(Some(digest))
 }
 
 #[cfg(not(windows))]

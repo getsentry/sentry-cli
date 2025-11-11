@@ -11,6 +11,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use regex::Regex;
 use serde_json::Value;
+use sha1_smol::Digest;
 
 use crate::api::{GitCommit, PatchSet, Ref, Repo};
 
@@ -550,7 +551,7 @@ fn find_matching_revs(
     Ok((prev_rev, rev))
 }
 
-pub fn find_head_sha() -> Result<String> {
+pub fn find_head_sha() -> Result<Digest> {
     if let Some(pr_head_sha) = std::env::var("GITHUB_EVENT_PATH")
         .ok()
         .and_then(|event_path| std::fs::read_to_string(event_path).ok())
@@ -562,10 +563,14 @@ pub fn find_head_sha() -> Result<String> {
 
     let repo = git2::Repository::open_from_env()?;
     let head = repo.revparse_single("HEAD")?;
-    Ok(head.id().to_string())
+    Ok(head
+        .id()
+        .to_string()
+        .parse()
+        .expect("Repo SHA should be a valid SHA1 digest"))
 }
 
-pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
+pub fn find_base_sha(remote_name: &str) -> Result<Option<Digest>> {
     if let Some(pr_base_sha) = std::env::var("GITHUB_EVENT_PATH")
         .ok()
         .and_then(|event_path| std::fs::read_to_string(event_path).ok())
@@ -587,7 +592,11 @@ pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
     Ok(remote_ref
         .peel_to_commit()
         .and_then(|remote_commit| repo.merge_base(head_commit.id(), remote_commit.id()))
-        .map(|oid| oid.to_string())
+        .map(|oid| {
+            oid.to_string()
+                .parse()
+                .expect("Repo SHA should be a valid SHA1 digest")
+        })
         .ok()
         .inspect(|sha| debug!("Found merge-base commit as base reference: {sha}")))
 }
@@ -595,7 +604,7 @@ pub fn find_base_sha(remote_name: &str) -> Result<Option<String>> {
 /// Extracts the PR head SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
 /// Panics if json is malformed.
-fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
+fn extract_pr_head_sha_from_event(json_content: &str) -> Option<Digest> {
     let v: Value = match serde_json::from_str(json_content) {
         Ok(v) => v,
         Err(_) => {
@@ -605,13 +614,13 @@ fn extract_pr_head_sha_from_event(json_content: &str) -> Option<String> {
 
     v.pointer("/pull_request/head/sha")
         .and_then(|s| s.as_str())
-        .map(|s| s.to_owned())
+        .map(|s| s.parse().expect("GitHub Actions provided an invalid SHA"))
 }
 
 /// Extracts the PR base SHA from GitHub Actions event payload JSON.
 /// Returns None if not a PR event or if SHA cannot be extracted.
 /// Panics if json is malformed.
-fn extract_pr_base_sha_from_event(json_content: &str) -> Option<String> {
+fn extract_pr_base_sha_from_event(json_content: &str) -> Option<Digest> {
     let v: Value = match serde_json::from_str(json_content) {
         Ok(v) => v,
         Err(_) => {
@@ -621,7 +630,7 @@ fn extract_pr_base_sha_from_event(json_content: &str) -> Option<String> {
 
     v.pointer("/pull_request/base/sha")
         .and_then(|s| s.as_str())
-        .map(|s| s.to_owned())
+        .map(|s| s.parse().expect("GitHub Actions provided an invalid SHA"))
 }
 
 /// Given commit specs, repos and remote_name this returns a list of head
@@ -810,10 +819,7 @@ mod tests {
         crate::api::RepoProvider,
         insta::{assert_debug_snapshot, assert_yaml_snapshot},
         serial_test::serial,
-        std::fs::File,
-        std::io::Write as _,
-        std::path::Path,
-        std::process::Command,
+        std::{fs::File, io::Write as _, path::Path, process::Command},
         tempfile::{tempdir, TempDir},
     };
 
@@ -1600,7 +1606,7 @@ mod tests {
 
         assert_eq!(
             extract_pr_head_sha_from_event(&pr_json),
-            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".parse().unwrap())
         );
 
         let push_json = r#"{
@@ -1642,7 +1648,7 @@ mod tests {
 
         assert_eq!(
             extract_pr_head_sha_from_event(real_gh_json),
-            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba4".to_owned())
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba4".parse().unwrap())
         );
         let malicious_json = r#"{
   "action": "opened",
@@ -1658,20 +1664,23 @@ mod tests {
 
         assert_eq!(
             extract_pr_head_sha_from_event(malicious_json),
-            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".to_owned())
+            Some("19ef6adc4dbddf733db6e833e1f96fb056b6dba5".parse().unwrap())
         );
-        let any_sha_json = r#"{
-  "pull_request": {
-    "head": {
-      "sha": "invalid-sha-123"
     }
-  }
-}"#;
 
-        assert_eq!(
-            extract_pr_head_sha_from_event(any_sha_json),
-            Some("invalid-sha-123".to_owned())
-        );
+    #[test]
+    #[should_panic]
+    fn test_extract_pr_head_sha_from_event_invalid_sha() {
+        let any_sha_json = serde_json::json!({
+            "pull_request": {
+                "head": {
+                    "sha": "invalid-sha-123"
+                }
+            }
+        })
+        .to_string();
+
+        extract_pr_head_sha_from_event(&any_sha_json);
     }
 
     #[test]
@@ -1710,7 +1719,10 @@ mod tests {
         std::env::remove_var("GITHUB_EVENT_PATH");
 
         assert!(result.is_ok());
-        assert_eq!(result.unwrap(), "19ef6adc4dbddf733db6e833e1f96fb056b6dba5");
+        assert_eq!(
+            result.unwrap(),
+            "19ef6adc4dbddf733db6e833e1f96fb056b6dba5".parse().unwrap()
+        );
     }
 
     #[test]
@@ -1734,7 +1746,7 @@ mod tests {
 
         assert_eq!(
             extract_pr_base_sha_from_event(&pr_json),
-            Some("55e6bc8c264ce95164314275d805f477650c440d".to_owned())
+            Some("55e6bc8c264ce95164314275d805f477650c440d".parse().unwrap())
         );
 
         // Test with push event (should return None)
@@ -1790,7 +1802,7 @@ mod tests {
         let result = find_base_sha("origin");
         assert_eq!(
             result.unwrap().unwrap(),
-            "55e6bc8c264ce95164314275d805f477650c440d"
+            "55e6bc8c264ce95164314275d805f477650c440d".parse().unwrap()
         );
 
         // Test without GITHUB_EVENT_PATH

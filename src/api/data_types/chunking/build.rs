@@ -28,9 +28,9 @@ pub struct AssembleBuildResponse {
 #[derive(Debug, Serialize)]
 pub struct VcsInfo<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_sha: Option<&'a str>,
+    pub head_sha: Option<Digest>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_sha: Option<&'a str>,
+    pub base_sha: Option<Digest>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "provider")]
     pub vcs_provider: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]

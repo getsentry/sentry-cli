@@ -1,0 +1,8 @@
+```
+$ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --base-sha test_base_sha
+? failed
+error: invalid value 'test_base_sha' for '--base-sha <base_sha>': test_base_sha is not a valid SHA1 digest
+
+For more information, try '--help'.
+
+```

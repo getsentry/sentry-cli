@@ -1,5 +1,5 @@
 ```
-$ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --head-sha test_head_sha
+$ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --head-sha 12345678deadbeef78900987feebdaed87654321
 ? success
 > Preparing for upload completed in [..]
 > Uploading completed in [..]

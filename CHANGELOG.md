@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- Added validation for the `sentry-cli build upload` command's `--head-sha` and `--base-sha` arguments ([#2945](https://github.com/getsentry/sentry-cli/pull/2945)). The CLI now validates that these are valid SHA1 sums. Passing an empty string is also allowed; this prevents the default values from being used, causing the values to instead be unset.
+
 ## 2.58.1
 
 ### Deprecations

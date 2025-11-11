@@ -160,7 +160,7 @@ pub fn detect_release_name() -> Result<String> {
 
     // finally try the git sha
     match vcs::find_head_sha() {
-        Ok(head) => Ok(head),
+        Ok(head) => Ok(head.to_string()),
         Err(e) => Err(anyhow!(
             "Could not automatically determine release name:\n\t {e} \n\n\
             Please ensure your version control system is configured correctly, \
