@@ -93,7 +93,7 @@ fn get_xcode_project_info(path: &Path) -> Result<Option<XcodeProjectInfo>> {
     for entry in (fs::read_dir(path)?).flatten() {
         if let Some(filename) = entry.file_name().to_str() {
             if filename.ends_with(".xcodeproj") {
-                projects.push(entry.path().to_path_buf());
+                projects.push(entry.path().clone());
             }
         }
     }

@@ -75,7 +75,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ))?;
     }
 
-    let sources = ReleaseFileSearch::new(path.to_path_buf()).collect_files()?;
+    let sources = ReleaseFileSearch::new(path.clone()).collect_files()?;
     let files = sources.iter().map(|source| {
         let local_path = source.path.strip_prefix(&source.base_path).unwrap();
         let local_path_jvm_ext = local_path.with_extension("jvm");

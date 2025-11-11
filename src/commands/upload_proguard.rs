@@ -332,7 +332,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 &org,
                 &project,
                 &AssociateProguard {
-                    release_name: release_name.to_owned(),
+                    release_name: release_name.clone(),
                     proguard_uuid: uuid.to_string(),
                 },
             )?;
