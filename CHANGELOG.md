@@ -12,6 +12,11 @@ we should rename this section to "Unreleased" -->
 
 ### Breaking Changes
 
+- Removed support for the legacy API key authentication method ([#2935](https://github.com/getsentry/sentry-cli/pull/2935)). Sentry CLI now only supports authenticating with Auth Tokens. If you are using API key authentication via any of the following methods, you need to generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/), instead:
+  - `--api-key` CLI flag
+  - `SENTRY_API_KEY` environment variable
+  - `api_key` configuration file field
+  - `apiKey` option in the JavaScript API
 - Removed the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
 
 ### Improvements

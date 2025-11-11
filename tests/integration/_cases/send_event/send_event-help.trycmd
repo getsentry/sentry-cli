@@ -31,23 +31,23 @@ Options:
       --timestamp <TIMESTAMP>
           Optional event timestamp in one of supported formats: unix timestamp, RFC2822 or RFC3339.
 
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
   -r, --release <RELEASE>
           Optional identifier of the release.
 
   -d, --dist <DISTRIBUTION>
           Set the distribution.
 
-      --log-level <LOG_LEVEL>
-          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
-
-  -E, --env <ENVIRONMENT>
-          Send with a specific environment.
-
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           
           [aliases: --silent]
+
+  -E, --env <ENVIRONMENT>
+          Send with a specific environment.
 
       --no-environ
           Do not send environment variables along

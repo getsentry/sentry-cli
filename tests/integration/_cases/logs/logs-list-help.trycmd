@@ -28,6 +28,9 @@ Options:
           
           [default: 100]
 
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
       --query <QUERY>
           Query to filter logs. Example: "level:error"
           
@@ -36,19 +39,16 @@ Options:
       --live
           Live stream logs.
 
-      --log-level <LOG_LEVEL>
-          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
-
-      --poll-interval <POLL_INTERVAL>
-          Poll interval in seconds (must be > 0). Only used when --live is specified.
-          
-          [default: 2]
-
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           
           [aliases: --silent]
+
+      --poll-interval <POLL_INTERVAL>
+          Poll interval in seconds (must be > 0). Only used when --live is specified.
+          
+          [default: 2]
 
   -h, --help
           Print help (see a summary with '-h')

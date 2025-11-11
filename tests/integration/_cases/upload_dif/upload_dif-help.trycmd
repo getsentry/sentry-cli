@@ -17,22 +17,22 @@ Options:
   -t, --type <TYPE>              Only consider debug information files of the given type.  By
                                  default, all types are considered. [possible values: bcsymbolmap,
                                  breakpad, dsym, elf, jvm, pdb, pe, portablepdb, sourcebundle, wasm]
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
       --no-unwind                Do not scan for stack unwinding information. Specify this flag for
                                  builds with disabled FPO, or when stackwalking occurs on the
                                  device. This usually excludes executables and dynamic libraries.
                                  They might still be uploaded, if they contain additional
                                  processable information (see other flags).
-      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
-                                 warn, error]
       --no-debug                 Do not scan for debugging information. This will usually exclude
                                  debug companion files. They might still be uploaded, if they
                                  contain additional processable information (see other flags).
-      --no-sources               Do not scan for source information. This will usually exclude
-                                 source bundle files. They might still be uploaded, if they contain
-                                 additional processable information (see other flags).
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: --silent]
+      --no-sources               Do not scan for source information. This will usually exclude
+                                 source bundle files. They might still be uploaded, if they contain
+                                 additional processable information (see other flags).
       --id <ID>                  Search for specific debug identifiers.
       --require-all              Errors if not all identifiers specified with --id could be found.
       --symbol-maps <PATH>       Optional path to BCSymbolMap files which are used to resolve hidden
