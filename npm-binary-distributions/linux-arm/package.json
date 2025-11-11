@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli-linux-arm",
-  "version": "2.58.0",
+  "version": "2.58.1",
   "description": "The linux arm distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "BSD-3-Clause",
