@@ -1,5 +1,4 @@
 [package]
-authors = ["Armin Ronacher <armin.ronacher@active-4.com>"]
 build = "build.rs"
 name = "sentry-cli"
 version = "2.58.1"
