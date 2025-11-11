@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 
+use crate::api::VcsInfo;
+
 use super::ChunkedFileState;
 
 #[derive(Debug, Serialize)]
@@ -11,23 +13,8 @@ pub struct ChunkedBuildRequest<'a> {
     pub build_configuration: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_notes: Option<&'a str>,
-    // VCS fields
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_sha: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_sha: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub provider: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_repo_name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_repo_name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_ref: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_ref: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pr_number: Option<&'a u32>,
+    #[serde(flatten)]
+    pub vcs_info: &'a VcsInfo<'a>,
 }
 
 #[derive(Debug, Deserialize)]

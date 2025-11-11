@@ -566,14 +566,7 @@ fn upload_file(
                 chunks: &checksums,
                 build_configuration,
                 release_notes,
-                head_sha: vcs_info.head_sha,
-                base_sha: vcs_info.base_sha,
-                provider: vcs_info.vcs_provider,
-                head_repo_name: vcs_info.head_repo_name,
-                base_repo_name: vcs_info.base_repo_name,
-                head_ref: vcs_info.head_ref,
-                base_ref: vcs_info.base_ref,
-                pr_number: vcs_info.pr_number,
+                vcs_info,
             },
         )?;
         chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
