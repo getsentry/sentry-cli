@@ -1,8 +1,0 @@
-```
-$ sentry-cli sourcemaps explain 43a57a55cd5a4207ac520c03e1dee1b4
-? failed
-⚠ DEPRECATION: `sourcemaps explain` has drifted from how sourcemap processing actually operates and its output may not be accurate. It will be removed in a future version of `sentry-cli`.
-✖ Could not retrieve event 43a57a55cd5a4207ac520c03e1dee1b4
-ℹ Make sure that event ID you used is valid.
-
-```
