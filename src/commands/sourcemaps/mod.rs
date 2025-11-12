@@ -3,14 +3,12 @@ use clap::{ArgMatches, Command};
 
 use crate::utils::args::ArgExt as _;
 
-pub mod explain;
 pub mod inject;
 pub mod resolve;
 pub mod upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
-        $mac!(explain);
         $mac!(inject);
         $mac!(resolve);
         $mac!(upload);
