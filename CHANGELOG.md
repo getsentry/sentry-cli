@@ -14,7 +14,7 @@
   - `SENTRY_API_KEY` environment variable
   - `api_key` configuration file field
   - `apiKey` option in the JavaScript API
-- Removed the `upload-proguard` subcommand's `--app-id`, `--version`, `--version-code`, and `--android-manifest` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876), [#2940](https://github.com/getsentry/sentry-cli/pull/2940)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
+- Removed the `upload-proguard` subcommand's `--app-id`, `--version`, `--version-code`, `--android-manifest`, and `--platform` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876), [#2940](https://github.com/getsentry/sentry-cli/pull/2940), [#2948](https://github.com/getsentry/sentry-cli/pull/2948)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
 
 #### Node.js Wrapper Breakages
 

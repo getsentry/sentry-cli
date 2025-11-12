@@ -14,17 +14,17 @@ Options:
                                  in key:value format.
   -p, --project <PROJECT>        The project ID or slug.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
-      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
-                                 warn, error]
       --no-upload                Disable the actual upload.
                                  This runs all steps for the processing but does not trigger the
                                  upload.  This is useful if you just want to verify the mapping
                                  files and write the proguard UUIDs into a properties file.
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --write-properties <PATH>  Write the UUIDs for the processed mapping files into the given
+                                 properties file.
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: --silent]
-      --write-properties <PATH>  Write the UUIDs for the processed mapping files into the given
-                                 properties file.
       --require-one              Requires at least one file to upload or the command will error.
   -u, --uuid <UUID>              Explicitly override the UUID of the mapping file with another one.
                                  This should be used with caution as it means that you can upload
