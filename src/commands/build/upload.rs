@@ -137,7 +137,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .as_ref()
                     .map(|url| get_provider_from_remote(url))
                     .map(Cow::Owned)
-            });
+            })
+            .unwrap_or_default();
 
         let head_repo_name = matches
             .get_one("head_repo_name")
@@ -148,7 +149,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     .as_ref()
                     .map(|url| get_repo_from_remote_preserve_case(url))
                     .map(Cow::Owned)
-            });
+            })
+            .unwrap_or_default();
 
         let head_ref = matches
             .get_one("head_ref")
@@ -175,7 +177,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         }
                     })
                     .map(Cow::Owned)
-            });
+            })
+            .unwrap_or_default();
 
         let base_ref = matches
             .get_one("base_ref")
@@ -199,7 +202,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         }
                     })
                     .map(Cow::Owned)
-            });
+            })
+            .unwrap_or_default();
 
         let base_repo_name = matches
             .get_one("base_repo_name")
@@ -223,7 +227,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         }
                     })
                     .map(Cow::Owned)
-            });
+            })
+            .unwrap_or_default();
 
         (
             vcs_provider,
@@ -266,7 +271,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_sha.expect("base_sha is Some at this point")
         );
         base_sha = None;
-        base_ref = None;
+        base_ref = "".into();
     }
     let pr_number = matches
         .get_one("pr_number")
@@ -331,11 +336,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         let vcs_info = VcsInfo {
             head_sha,
             base_sha,
-            vcs_provider: vcs_provider.as_deref(),
-            head_repo_name: head_repo_name.as_deref(),
-            base_repo_name: base_repo_name.as_deref(),
-            head_ref: head_ref.as_deref(),
-            base_ref: base_ref.as_deref(),
+            vcs_provider: &vcs_provider,
+            head_repo_name: &head_repo_name,
+            base_repo_name: &base_repo_name,
+            head_ref: &head_ref,
+            base_ref: &base_ref,
             pr_number: pr_number.as_ref(),
         };
         match upload_file(

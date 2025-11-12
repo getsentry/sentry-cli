@@ -278,3 +278,57 @@ fn command_build_upload_empty_shas() {
         .register_trycmd_test("build/build-upload-empty-shas.trycmd")
         .with_default_token();
 }
+
+/// Verify that all string-based arguments to `build upload` can be set to an empty string,
+/// and that setting to empty string results in the corresponding fields being omitted from
+/// the request body.
+#[test]
+fn command_build_upload_empty_refs() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("build/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
+            )
+            .with_response_fn(move |req| {
+                let body = req.body().expect("body should be readable");
+                let json: serde_json::Value =
+                    serde_json::from_slice(body).expect("body should be valid JSON");
+
+                assert!(json.get("provider").is_none());
+                assert!(json.get("head_repo_name").is_none());
+                assert!(json.get("base_repo_name").is_none());
+                assert!(json.get("head_ref").is_none());
+                assert!(json.get("base_ref").is_none());
+
+                serde_json::json!({
+                    "state": "created",
+                    "missingChunks": [],
+                    "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/42"
+                })
+                .to_string()
+                .into()
+            }),
+        )
+        .assert_cmd([
+            "build",
+            "upload",
+            "tests/integration/_fixtures/build/apk.apk",
+            "--vcs-provider",
+            "",
+            "--head-repo-name",
+            "",
+            "--base-repo-name",
+            "",
+            "--head-ref",
+            "",
+            "--base-ref",
+            "",
+        ])
+        .with_default_token()
+        .run_and_assert(AssertCommand::Success);
+}

@@ -31,16 +31,16 @@ pub struct VcsInfo<'a> {
     pub head_sha: Option<Digest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_sha: Option<Digest>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "provider")]
-    pub vcs_provider: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_repo_name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_repo_name: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_ref: Option<&'a str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_ref: Option<&'a str>,
+    #[serde(skip_serializing_if = "str::is_empty", rename = "provider")]
+    pub vcs_provider: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub head_repo_name: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub base_repo_name: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub head_ref: &'a str,
+    #[serde(skip_serializing_if = "str::is_empty")]
+    pub base_ref: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pr_number: Option<&'a u32>,
 }
