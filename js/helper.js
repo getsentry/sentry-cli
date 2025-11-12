@@ -302,9 +302,6 @@ async function execute(args, live, silent, configFile, config = {}) {
   if (config.authToken) {
     env.SENTRY_AUTH_TOKEN = config.authToken;
   }
-  if (config.apiKey) {
-    env.SENTRY_API_KEY = config.apiKey;
-  }
   if (config.dsn) {
     env.SENTRY_DSN = config.dsn;
   }

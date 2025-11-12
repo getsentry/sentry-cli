@@ -27,11 +27,11 @@ Options:
           Metric tags as key:value pairs. Tags allow you to add dimensions to your metrics and can
           be filtered or grouped by in Sentry.
 
-  -v, --value <VALUE>
-          Metric value, any finite 64 bit float.
-
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+  -v, --value <VALUE>
+          Metric value, any finite 64 bit float.
 
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently

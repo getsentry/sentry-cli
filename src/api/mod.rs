@@ -1370,14 +1370,6 @@ impl<'a> AuthenticatedApi<'a> {
                     region_url.ok().map(|url| url.into())
                 }
             },
-            #[expect(deprecated, reason = "Auth key is deprecated.")]
-            Auth::Key(_) => {
-                log::warn!(
-                    "Auth key is not supported for region-specific API. Falling back to default region."
-                );
-
-                None
-            }
         };
 
         RegionSpecificApi {
@@ -1731,12 +1723,6 @@ impl ApiRequest {
     pub fn with_auth(mut self, auth: &Auth) -> ApiResult<Self> {
         self.is_authenticated = true;
         match *auth {
-            #[expect(deprecated, reason = "API key is deprecated.")]
-            Auth::Key(ref key) => {
-                self.handle.username(key)?;
-                debug!("using deprecated key based authentication");
-                Ok(self)
-            }
             Auth::Token(ref token) => {
                 debug!("using token authentication");
                 self.with_header(
