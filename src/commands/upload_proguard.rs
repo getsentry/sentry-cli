@@ -29,16 +29,6 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append),
         )
         .arg(
-            Arg::new("platform")
-                .hide(true)
-                .long("platform")
-                .value_name("PLATFORM")
-                .help(
-                    "[DEPRECATED] This flag is a no-op, scheduled \
-                    for removal in Sentry CLI 3.0.0.",
-                ),
-        )
-        .arg(
             Arg::new("no_upload")
                 .long("no-upload")
                 .action(ArgAction::SetTrue)
@@ -82,14 +72,6 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    if matches.get_one::<String>("platform").is_some() {
-        log::warn!(
-            "[DEPRECATION NOTICE] The --platform argument is deprecated, \
-            and is scheduled for removal in Sentry CLI 3.0.0. \
-            The argument is a no-op."
-        );
-    }
-
     let paths: Vec<_> = match matches.get_many::<String>("paths") {
         Some(paths) => paths.collect(),
         None => {
