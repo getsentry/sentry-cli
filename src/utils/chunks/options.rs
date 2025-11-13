@@ -31,10 +31,6 @@ impl<'a> ChunkOptions<'a> {
         self
     }
 
-    pub fn should_strip_debug_ids(&self) -> bool {
-        self.server_options.should_strip_debug_ids()
-    }
-
     pub fn org(&self) -> &str {
         self.org
     }
