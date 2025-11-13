@@ -14,7 +14,6 @@ use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Read as _, Seek as _, Write as _};
 use std::iter::IntoIterator;
 use std::mem::transmute;
-use std::ops::Deref;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::str;
@@ -23,7 +22,6 @@ use std::time::Duration;
 use anyhow::{bail, format_err, Error, Result};
 use console::style;
 use log::{debug, info, warn};
-use sha1_smol::Digest;
 use symbolic::common::{Arch, AsSelf, ByteView, DebugId, SelfCell, Uuid};
 use symbolic::debuginfo::macho::{BcSymbolMap, UuidMapping};
 use symbolic::debuginfo::pe::PeObject;
@@ -33,25 +31,20 @@ use symbolic::il2cpp::ObjectLineMapping;
 use walkdir::WalkDir;
 use which::which;
 use zip::result::ZipError;
-use zip::write::SimpleFileOptions;
-use zip::{ZipArchive, ZipWriter};
+use zip::ZipArchive;
 
 use self::error::ValidationError;
 use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks;
-use crate::utils::chunks::{Assemblable, BatchedSliceExt as _, ChunkOptions, Chunked, ItemSize};
+use crate::utils::chunks::{Assemblable, ChunkOptions, Chunked};
 use crate::utils::dif::ObjectDifFeatures;
-use crate::utils::fs::{get_sha1_checksum, TempDir, TempFile};
+use crate::utils::fs::{TempDir, TempFile};
 use crate::utils::progress::{ProgressBar, ProgressStyle};
-use crate::utils::ui::{copy_with_progress, make_byte_progress_bar};
 
 /// A debug info file on the server.
 pub use crate::api::DebugInfoFile;
-
-/// Fallback maximum number of chunks in a batch for the legacy upload.
-static MAX_CHUNKS: u64 = 64;
 
 /// A Debug Information File.
 ///
@@ -212,11 +205,6 @@ impl<'data> DifMatch<'data> {
         }
     }
 
-    /// Returns the size of of this DIF in bytes.
-    pub fn size(&self) -> u64 {
-        self.data().len() as u64
-    }
-
     /// Returns the path of this DIF relative to the search origin.
     pub fn path(&self) -> &str {
         &self.name
@@ -312,40 +300,6 @@ impl Assemblable for DifMatch<'_> {
 
     fn debug_id(&self) -> Option<DebugId> {
         self.debug_id
-    }
-}
-
-/// A `DifMatch` with computed SHA1 checksum.
-#[derive(Debug)]
-struct HashedDifMatch<'data> {
-    inner: DifMatch<'data>,
-    checksum: Digest,
-}
-
-impl<'data> HashedDifMatch<'data> {
-    /// Calculates the SHA1 checksum for the given DIF.
-    fn from(inner: DifMatch<'data>) -> Result<Self> {
-        let checksum = get_sha1_checksum(inner.data())?;
-        Ok(HashedDifMatch { inner, checksum })
-    }
-
-    /// Returns the SHA1 checksum of this DIF.
-    fn checksum(&self) -> Digest {
-        self.checksum
-    }
-}
-
-impl<'data> Deref for HashedDifMatch<'data> {
-    type Target = DifMatch<'data>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl ItemSize for HashedDifMatch<'_> {
-    fn size(&self) -> u64 {
-        self.deref().size()
     }
 }
 
@@ -1250,130 +1204,6 @@ fn upload_difs_chunked(
     chunks::upload_chunked_objects(&chunked, options)
 }
 
-/// Returns debug files missing on the server.
-fn get_missing_difs<'data>(
-    objects: Vec<HashedDifMatch<'data>>,
-    options: &DifUpload,
-) -> Result<Vec<HashedDifMatch<'data>>> {
-    info!(
-        "Checking for missing debug information files: {:#?}",
-        &objects
-    );
-
-    let api = Api::current();
-    let missing_checksums = {
-        let checksums = objects.iter().map(HashedDifMatch::checksum);
-        api.authenticated()?
-            .find_missing_dif_checksums(options.org, options.project, checksums)?
-    };
-
-    let missing = objects
-        .into_iter()
-        .filter(|sym| missing_checksums.contains(&sym.checksum()))
-        .collect();
-
-    info!("Missing debug information files: {:#?}", &missing);
-    Ok(missing)
-}
-
-/// Compresses the given batch into a ZIP archive.
-fn create_batch_archive(difs: &[HashedDifMatch<'_>]) -> Result<TempFile> {
-    let total_bytes = difs.iter().map(ItemSize::size).sum();
-    let pb = make_byte_progress_bar(total_bytes);
-    let tf = TempFile::create()?;
-
-    {
-        let mut zip = ZipWriter::new(tf.open()?);
-
-        for symbol in difs {
-            zip.start_file(symbol.file_name(), SimpleFileOptions::default())?;
-            copy_with_progress(&pb, &mut symbol.data(), &mut zip)?;
-        }
-    }
-
-    pb.finish_and_clear();
-    Ok(tf)
-}
-
-/// Uploads the given DIFs to the server in batched ZIP archives.
-fn upload_in_batches(
-    objects: &[HashedDifMatch<'_>],
-    options: &DifUpload,
-) -> Result<Vec<DebugInfoFile>> {
-    let api = Api::current();
-    let max_size = Config::current().get_max_dif_archive_size();
-    let mut dsyms = Vec::new();
-
-    for (i, (batch, _)) in objects.batches(max_size, MAX_CHUNKS).enumerate() {
-        println!("\n{}", style(format!("Batch {}", i + 1)).bold());
-
-        println!(
-            "{} Compressing {} debug symbol files",
-            style(">").dim(),
-            style(batch.len()).yellow()
-        );
-        let archive = create_batch_archive(batch)?;
-
-        println!("{} Uploading debug symbol files", style(">").dim());
-        dsyms.extend(
-            api.authenticated()?
-                .region_specific(options.org)
-                .upload_dif_archive(options.project, archive.path())?,
-        );
-    }
-
-    Ok(dsyms)
-}
-
-/// Uploads debug info files using the legacy endpoint.
-#[deprecated = "this non-chunked upload mechanism is deprecated in favor of upload_difs_chunked"]
-fn upload_difs_batched(options: &DifUpload) -> Result<Vec<DebugInfoFile>> {
-    // Search for debug files in the file system and ZIPs
-    let found = search_difs(options)?;
-    if found.is_empty() {
-        println!("{} No debug information files found", style(">").dim());
-        return Ok(Default::default());
-    }
-
-    // Try to resolve BCSymbolMaps
-    let symbol_map = options.symbol_map.as_deref();
-    let processed = process_symbol_maps(found, symbol_map)?;
-
-    // Calculate checksums
-    let hashed = prepare_difs(processed, HashedDifMatch::from)?;
-
-    // Check which files are missing on the server
-    let missing = get_missing_difs(hashed, options)?;
-    if missing.is_empty() {
-        println!(
-            "{} Nothing to upload, all files are on the server",
-            style(">").dim()
-        );
-        println!("{} Nothing to upload", style(">").dim());
-        return Ok(Default::default());
-    }
-    if options.no_upload {
-        println!("{} skipping upload.", style(">").dim());
-        return Ok(Default::default());
-    }
-
-    // Upload missing DIFs in batches
-    let uploaded = upload_in_batches(&missing, options)?;
-    if !uploaded.is_empty() {
-        println!("{} File upload complete:\n", style(">").dim());
-        for dif in &uploaded {
-            println!(
-                "  {} ({}; {})",
-                style(&dif.id()).dim(),
-                &dif.object_name,
-                dif.cpu_name
-            );
-        }
-    }
-
-    Ok(uploaded)
-}
-
 /// The format of a Debug Information File (DIF).
 ///
 /// Most DIFs are also object files, but we also know of some auxiliary DIF formats.
@@ -1641,23 +1471,16 @@ impl<'a> DifUpload<'a> {
         self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
         self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
 
-        if chunk_options.supports(ChunkUploadCapability::DebugFiles) {
-            self.validate_capabilities();
-            return upload_difs_chunked(self, chunk_options);
+        if !chunk_options.supports(ChunkUploadCapability::DebugFiles) {
+            anyhow::bail!(
+                "Your Sentry server does not support chunked uploads for debug files. Please upgrade \
+                your Sentry server, or if you cannot upgrade your server, downgrade your Sentry \
+                CLI version to 2.x."
+            );
         }
 
         self.validate_capabilities();
-
-        log::warn!(
-            "[DEPRECATION NOTICE] Your Sentry server does not support chunked uploads for debug \
-            files. Falling back to deprecated upload method. Support for this deprecated upload \
-            method will be removed in Sentry CLI 3.0.0. Please upgrade your Sentry server, or if \
-            you cannot upgrade, pin your Sentry CLI version to 2.x, so you don't get upgraded \
-            to 3.x when it is released."
-        );
-
-        #[expect(deprecated, reason = "fallback to legacy upload")]
-        Ok((upload_difs_batched(&self)?, false))
+        upload_difs_chunked(self, chunk_options)
     }
 
     /// Validate that the server supports all requested capabilities.
