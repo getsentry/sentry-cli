@@ -143,21 +143,6 @@ pub fn set_executable_mode<P: AsRef<Path>>(path: P) -> Result<()> {
     Ok(())
 }
 
-/// Returns the SHA1 hash of the given input.
-pub fn get_sha1_checksum<R: Read>(rdr: R) -> Result<Digest> {
-    let mut sha = Sha1::new();
-    let mut buf = [0u8; 16384];
-    let mut rdr = io::BufReader::new(rdr);
-    loop {
-        let read = rdr.read(&mut buf)?;
-        if read == 0 {
-            break;
-        }
-        sha.update(&buf[..read]);
-    }
-    Ok(sha.digest())
-}
-
 /// Returns the SHA1 hash for the entire input, as well as each chunk of it. The
 /// `chunk_size` must be non-zero.
 pub fn get_sha1_checksums(data: &[u8], chunk_size: NonZeroUsize) -> (Digest, Vec<Digest>) {
