@@ -1,5 +1,5 @@
 use std::io;
-use std::io::{Read, Write};
+use std::io::Write as _;
 
 use crate::utils::progress::{ProgressBar, ProgressStyle};
 
@@ -43,27 +43,6 @@ pub fn capitalize_string(s: &str) -> String {
     bytes[0] = bytes[0].to_ascii_uppercase();
     #[expect(clippy::unwrap_used, reason = "legacy code")]
     String::from_utf8(bytes).unwrap()
-}
-
-/// Like ``io::copy`` but advances a progress bar set to bytes.
-pub fn copy_with_progress<R, W>(pb: &ProgressBar, reader: &mut R, writer: &mut W) -> io::Result<u64>
-where
-    R: Read + ?Sized,
-    W: Write + ?Sized,
-{
-    let mut buf = [0; 16384];
-    let mut written = 0;
-    loop {
-        let len = match reader.read(&mut buf) {
-            Ok(0) => return Ok(written),
-            Ok(len) => len,
-            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
-            Err(e) => return Err(e),
-        };
-        writer.write_all(&buf[..len])?;
-        written += len as u64;
-        pb.inc(len as u64);
-    }
 }
 
 /// Creates a progress bar for byte stuff
