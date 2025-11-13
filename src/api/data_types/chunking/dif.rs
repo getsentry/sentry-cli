@@ -52,21 +52,6 @@ pub struct ChunkedDifResponse {
 #[serde(transparent)]
 pub struct AssembleDifsRequest<'a>(HashMap<Digest, ChunkedDifRequest<'a>>);
 
-impl AssembleDifsRequest<'_> {
-    /// Strips the debug_id from all requests in the request. We need
-    /// to strip the debug_ids whenever the server does not support chunked
-    /// uploading of PDBs, to maintain backwards compatibility. The
-    /// calling code is responsible for calling this function when needed.
-    ///
-    /// See: https://github.com/getsentry/sentry-cli/issues/980
-    /// See: https://github.com/getsentry/sentry-cli/issues/1056
-    pub fn strip_debug_ids(&mut self) {
-        for r in self.0.values_mut() {
-            r.debug_id = None;
-        }
-    }
-}
-
 impl<'a, T> FromIterator<T> for AssembleDifsRequest<'a>
 where
     T: Into<ChunkedDifRequest<'a>>,

@@ -34,7 +34,7 @@ use zip::result::ZipError;
 use zip::ZipArchive;
 
 use self::error::ValidationError;
-use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
+use crate::api::{Api, ChunkServerOptions};
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks;
@@ -1267,14 +1267,9 @@ pub struct DifUpload<'a> {
     zips_allowed: bool,
     max_file_size: u64,
     max_wait: Duration,
-    pdbs_allowed: bool,
-    portablepdbs_allowed: bool,
-    sources_allowed: bool,
     include_sources: bool,
-    bcsymbolmaps_allowed: bool,
     wait: bool,
     upload_il2cpp_mappings: bool,
-    il2cpp_mappings_allowed: bool,
     no_upload: bool,
 }
 
@@ -1308,14 +1303,9 @@ impl<'a> DifUpload<'a> {
             zips_allowed: true,
             max_file_size: DEFAULT_MAX_DIF_SIZE,
             max_wait: DEFAULT_MAX_WAIT,
-            pdbs_allowed: false,
-            portablepdbs_allowed: false,
-            sources_allowed: false,
             include_sources: false,
-            bcsymbolmaps_allowed: false,
             wait: false,
             upload_il2cpp_mappings: false,
-            il2cpp_mappings_allowed: false,
             no_upload: false,
         }
     }
@@ -1465,67 +1455,7 @@ impl<'a> DifUpload<'a> {
                 .min(Duration::from_secs(chunk_options.max_wait));
         }
 
-        self.pdbs_allowed = chunk_options.supports(ChunkUploadCapability::Pdbs);
-        self.portablepdbs_allowed = chunk_options.supports(ChunkUploadCapability::PortablePdbs);
-        self.sources_allowed = chunk_options.supports(ChunkUploadCapability::Sources);
-        self.bcsymbolmaps_allowed = chunk_options.supports(ChunkUploadCapability::BcSymbolmap);
-        self.il2cpp_mappings_allowed = chunk_options.supports(ChunkUploadCapability::Il2Cpp);
-
-        if !chunk_options.supports(ChunkUploadCapability::DebugFiles) {
-            anyhow::bail!(
-                "Your Sentry server does not support chunked uploads for debug files. Please upgrade \
-                your Sentry server, or if you cannot upgrade your server, downgrade your Sentry \
-                CLI version to 2.x."
-            );
-        }
-
-        self.validate_capabilities();
         upload_difs_chunked(self, chunk_options)
-    }
-
-    /// Validate that the server supports all requested capabilities.
-    fn validate_capabilities(&mut self) {
-        // Checks whether source bundles are *explicitly* requested on the command line.
-        if (self
-            .formats
-            .contains(&DifFormat::Object(FileFormat::SourceBundle))
-            || self.include_sources)
-            && !self.sources_allowed
-        {
-            warn!("Source uploads are not supported by the configured Sentry server");
-            self.include_sources = false;
-        }
-
-        // Checks whether PDBs or PEs were *explicitly* requested on the command line.
-        if (self.formats.contains(&DifFormat::Object(FileFormat::Pdb))
-            || self.formats.contains(&DifFormat::Object(FileFormat::Pe)))
-            && !self.pdbs_allowed
-        {
-            warn!("PDBs and PEs are not supported by the configured Sentry server");
-            // This is validated additionally in .valid_format()
-        }
-
-        // Checks whether Portable PDBs were *explicitly* requested on the command line.
-        if self
-            .formats
-            .contains(&DifFormat::Object(FileFormat::PortablePdb))
-            && !self.portablepdbs_allowed
-        {
-            warn!("Portable PDBs are not supported by the configured Sentry server");
-            // This is validated additionally in .valid_format()
-        }
-
-        // Checks whether BCSymbolMaps and PLists are **explicitly** requested on the command line.
-        if (self.formats.contains(&DifFormat::BcSymbolMap)
-            || self.formats.contains(&DifFormat::PList))
-            && !self.bcsymbolmaps_allowed
-        {
-            warn!("BCSymbolMaps are not supported by the configured Sentry server");
-        }
-
-        if self.upload_il2cpp_mappings && !self.il2cpp_mappings_allowed {
-            warn!("il2cpp line mappings are not supported by the configured Sentry server");
-        }
     }
 
     /// Determines if this `DebugId` matches the search criteria.
@@ -1542,11 +1472,6 @@ impl<'a> DifUpload<'a> {
     fn valid_format(&self, format: DifFormat) -> bool {
         match format {
             DifFormat::Object(FileFormat::Unknown) => false,
-            DifFormat::Object(FileFormat::Pdb) if !self.pdbs_allowed => false,
-            DifFormat::Object(FileFormat::Pe) if !self.pdbs_allowed => false,
-            DifFormat::Object(FileFormat::SourceBundle) if !self.sources_allowed => false,
-            DifFormat::Object(FileFormat::PortablePdb) if !self.portablepdbs_allowed => false,
-            DifFormat::BcSymbolMap | DifFormat::PList if !self.bcsymbolmaps_allowed => false,
             format => self.formats.is_empty() || self.formats.contains(&format),
         }
     }
