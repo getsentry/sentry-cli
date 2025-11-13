@@ -13,7 +13,7 @@ mod pagination;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{self, Read as _, Write};
@@ -90,7 +90,6 @@ pub struct AuthenticatedApi<'a> {
 
 pub struct RegionSpecificApi<'a> {
     api: &'a AuthenticatedApi<'a>,
-    org: &'a str,
     region_url: Option<Box<str>>,
 }
 
@@ -863,34 +862,6 @@ impl<'a> AuthenticatedApi<'a> {
         .map(|_| true)
     }
 
-    /// Given a list of checksums for DIFs, this returns a list of those
-    /// that do not exist for the project yet.
-    pub fn find_missing_dif_checksums<I>(
-        &self,
-        org: &str,
-        project: &str,
-        checksums: I,
-    ) -> ApiResult<HashSet<Digest>>
-    where
-        I: IntoIterator<Item = Digest>,
-    {
-        let mut url = format!(
-            "/projects/{}/{}/files/dsyms/unknown/?",
-            PathArg(org),
-            PathArg(project)
-        );
-        for (idx, checksum) in checksums.into_iter().enumerate() {
-            if idx > 0 {
-                url.push('&');
-            }
-            url.push_str("checksums=");
-            url.push_str(&checksum.to_string());
-        }
-
-        let state: MissingChecksumsResponse = self.get(&url)?.convert()?;
-        Ok(state.missing)
-    }
-
     /// Get the server configuration for chunked file uploads.
     pub fn get_chunk_upload_options(&self, org: &str) -> ApiResult<ChunkServerOptions> {
         let url = format!("/organizations/{}/chunk-upload/", PathArg(org));
@@ -1252,7 +1223,6 @@ impl<'a> AuthenticatedApi<'a> {
             // Do not specify a region URL unless the URL is configured to https://sentry.io (i.e. the default).
             return RegionSpecificApi {
                 api: self,
-                org,
                 region_url: None,
             };
         }
@@ -1279,7 +1249,6 @@ impl<'a> AuthenticatedApi<'a> {
 
         RegionSpecificApi {
             api: self,
-            org,
             region_url,
         }
     }
@@ -1361,22 +1330,6 @@ impl RegionSpecificApi<'_> {
         self.api
             .api
             .request(method, url, self.region_url.as_deref())
-    }
-
-    /// Uploads a ZIP archive containing DIFs from the given path.
-    pub fn upload_dif_archive(&self, project: &str, file: &Path) -> ApiResult<Vec<DebugInfoFile>> {
-        let path = format!(
-            "/projects/{}/{}/files/dsyms/",
-            PathArg(self.org),
-            PathArg(project)
-        );
-        let mut form = curl::easy::Form::new();
-        form.part("file").file(file).add()?;
-        self.request(Method::Post, &path)?
-            .with_form_data(form)?
-            .progress_bar_mode(ProgressBarMode::Request)
-            .send()?
-            .convert()
     }
 
     /// Uploads a new release file.  The file is loaded directly from the file
@@ -2094,11 +2047,6 @@ impl DebugInfoFile {
     pub fn id(&self) -> DebugId {
         self.id.or(self.uuid).unwrap_or_default()
     }
-}
-
-#[derive(Deserialize)]
-struct MissingChecksumsResponse {
-    missing: HashSet<Digest>,
 }
 
 #[derive(Clone, Debug, Deserialize)]
