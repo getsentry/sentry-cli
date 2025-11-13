@@ -53,11 +53,7 @@ where
     T: AsRef<[u8]> + Assemblable,
 {
     let api = Api::current();
-    let mut request: AssembleDifsRequest<'_> = objects.iter().collect();
-
-    if options.should_strip_debug_ids() {
-        request.strip_debug_ids();
-    }
+    let request: AssembleDifsRequest<'_> = objects.iter().collect();
 
     let response =
         api.authenticated()?
@@ -188,10 +184,7 @@ where
 
     let assemble_start = Instant::now();
 
-    let mut request: AssembleDifsRequest<'_> = chunked_objects.iter().copied().collect();
-    if options.should_strip_debug_ids() {
-        request.strip_debug_ids();
-    }
+    let request: AssembleDifsRequest<'_> = chunked_objects.iter().copied().collect();
 
     let response = loop {
         let response =
