@@ -1,7 +1,7 @@
 //! Searches, processes and uploads release files.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::ffi::OsStr;
-use std::fmt::{self, Display};
+use std::fmt;
 use std::path::PathBuf;
 use std::str;
 use std::sync::Arc;
@@ -9,14 +9,10 @@ use std::time::{Duration, Instant};
 
 use anyhow::{anyhow, bail, Result};
 use console::style;
-use parking_lot::RwLock;
-use rayon::prelude::*;
-use rayon::ThreadPoolBuilder;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::js;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
-use thiserror::Error;
 
 use crate::api::NewRelease;
 use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
@@ -24,7 +20,7 @@ use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::non_empty::NonEmptySlice;
-use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
+use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::source_bundle;
 
 use super::file_search::ReleaseFileMatch;
@@ -78,112 +74,6 @@ impl UploadContext<'_> {
     pub fn release(&self) -> Result<&str> {
         self.release
             .ok_or_else(|| anyhow!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum LegacyUploadContextError {
-    #[error("a release is required for this upload")]
-    ReleaseMissing,
-    #[error("only a single project is supported for this upload")]
-    ProjectMultiple,
-}
-
-/// Represents the context for legacy release uploads.
-///
-/// `LegacyUploadContext` contains information needed for legacy (non-chunked)
-/// uploads. Legacy uploads are primarily used when uploading to old self-hosted
-/// Sentry servers, which do not support receiving chunked uploads.
-///
-/// Unlike chunked uploads, legacy uploads require a release to be set,
-/// and do not need to have chunk-upload-related fields.
-#[derive(Debug, Default)]
-pub struct LegacyUploadContext<'a> {
-    org: &'a str,
-    project: Option<&'a str>,
-    release: &'a str,
-    dist: Option<&'a str>,
-}
-
-impl LegacyUploadContext<'_> {
-    pub fn org(&self) -> &str {
-        self.org
-    }
-
-    pub fn project(&self) -> Option<&str> {
-        self.project
-    }
-
-    pub fn release(&self) -> &str {
-        self.release
-    }
-
-    pub fn dist(&self) -> Option<&str> {
-        self.dist
-    }
-}
-
-impl Display for LegacyUploadContext<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
-            f,
-            "{} {}",
-            style("> Organization:").dim(),
-            style(self.org).yellow()
-        )?;
-        writeln!(
-            f,
-            "{} {}",
-            style("> Project:").dim(),
-            style(self.project.unwrap_or("None")).yellow()
-        )?;
-        writeln!(
-            f,
-            "{} {}",
-            style("> Release:").dim(),
-            style(self.release).yellow()
-        )?;
-        writeln!(
-            f,
-            "{} {}",
-            style("> Dist:").dim(),
-            style(self.dist.unwrap_or("None")).yellow()
-        )?;
-        write!(
-            f,
-            "{} {}",
-            style("> Upload type:").dim(),
-            style("single file/legacy upload").yellow()
-        )
-    }
-}
-
-impl<'a> TryFrom<&'a UploadContext<'_>> for LegacyUploadContext<'a> {
-    type Error = LegacyUploadContextError;
-
-    fn try_from(value: &'a UploadContext) -> Result<Self, Self::Error> {
-        let &UploadContext {
-            org,
-            projects,
-            release,
-            dist,
-            ..
-        } = value;
-
-        let project = Some(match <&[_]>::from(projects) {
-            [] => unreachable!("NonEmptySlice cannot be empty"),
-            [project] => Ok(project.as_str()),
-            [_, _, ..] => Err(LegacyUploadContextError::ProjectMultiple),
-        }?);
-
-        let release = release.ok_or(LegacyUploadContextError::ReleaseMissing)?;
-
-        Ok(Self {
-            org,
-            project,
-            release,
-            dist,
-        })
     }
 }
 
@@ -339,148 +229,8 @@ impl<'a> FileUpload<'a> {
     pub fn upload(&self) -> Result<()> {
         // multiple projects OK
         initialize_legacy_release_upload(self.context)?;
-
-        if self
-            .context
-            .chunk_upload_options
-            .supports(ChunkUploadCapability::ReleaseFiles)
-        {
-            // multiple projects OK
-            return upload_files_chunked(
-                self.context,
-                &self.files,
-                self.context.chunk_upload_options,
-            );
-        }
-
-        log::warn!(
-            "[DEPRECATION NOTICE] Your Sentry server does not support chunked uploads for \
-            sourcemaps/release files. Falling back to deprecated upload method, which has fewer \
-            features and is less reliable. Support for this deprecated upload method will be \
-            removed in Sentry CLI 3.0.0. Please upgrade your Sentry server, or if you cannot \
-            upgrade, pin your Sentry CLI version to 2.x, so you don't get upgraded to 3.x when \
-            it is released."
-        );
-
-        // Do not permit uploads of more than 20k files if the server does not
-        // support artifact bundles.  This is a temporary downside protection to
-        // protect users from uploading more sources than we support.
-        if self.files.len() > 20_000 {
-            bail!(
-                "Too many sources: {} exceeds maximum allowed files per release",
-                &self.files.len()
-            );
-        }
-
-        let concurrency = self.context.chunk_upload_options.concurrency as usize;
-
-        let legacy_context = &self.context.try_into().map_err(|e| {
-            anyhow::anyhow!(
-                "Error while performing legacy upload: {e}. \
-                If you would like to upload files {}, you need to upgrade your Sentry server \
-                or switch to our SaaS offering.",
-                match e {
-                    LegacyUploadContextError::ReleaseMissing => "without specifying a release",
-                    LegacyUploadContextError::ProjectMultiple =>
-                        "to multiple projects simultaneously",
-                }
-            )
-        })?;
-
-        #[expect(deprecated, reason = "fallback to legacy upload")]
-        upload_files_parallel(legacy_context, &self.files, concurrency)
+        upload_files_chunked(self.context, &self.files, self.context.chunk_upload_options)
     }
-}
-
-#[deprecated = "this non-chunked upload mechanism is deprecated in favor of upload_files_chunked"]
-fn upload_files_parallel(
-    context: &LegacyUploadContext,
-    files: &SourceFiles,
-    num_threads: usize,
-) -> Result<()> {
-    let api = Api::current();
-    let release = context.release();
-
-    // get a list of release files first so we know the file IDs of
-    // files that already exist.
-    let release_files: HashMap<_, _> = api
-        .authenticated()?
-        .list_release_files(context.org, context.project(), release)?
-        .into_iter()
-        .map(|artifact| ((artifact.dist, artifact.name), artifact.id))
-        .collect();
-
-    println!(
-        "{} Uploading source maps for release {}",
-        style(">").dim(),
-        style(release).cyan()
-    );
-
-    let progress_style = ProgressStyle::default_bar().template(&format!(
-        "{} Uploading {} source map{}...\
-     \n{{wide_bar}}  {{bytes}}/{{total_bytes}} ({{eta}})",
-        style(">").dim(),
-        style(files.len().to_string()).yellow(),
-        if files.len() == 1 { "" } else { "s" }
-    ));
-
-    let total_bytes = files.values().map(|file| file.contents.len()).sum();
-    let files = files.iter().collect::<Vec<_>>();
-
-    let pb = Arc::new(ProgressBar::new(total_bytes));
-    pb.set_style(progress_style);
-
-    let pool = ThreadPoolBuilder::new().num_threads(num_threads).build()?;
-    let bytes = Arc::new(RwLock::new(vec![0u64; files.len()]));
-
-    pool.install(|| {
-        files
-            .into_par_iter()
-            .enumerate()
-            .map(|(index, (_, file))| -> Result<()> {
-                let api = Api::current();
-                let authenticated_api = api.authenticated()?;
-                let mode = ProgressBarMode::Shared((
-                    pb.clone(),
-                    file.contents.len() as u64,
-                    index,
-                    bytes.clone(),
-                ));
-
-                if let Some(old_id) =
-                    release_files.get(&(context.dist.map(|x| x.into()), file.url.clone()))
-                {
-                    authenticated_api
-                        .delete_release_file(context.org, context.project, release, old_id)
-                        .ok();
-                }
-
-                authenticated_api
-                    .region_specific(context.org)
-                    .upload_release_file(
-                        context,
-                        &file.contents,
-                        &file.url,
-                        Some(
-                            file.headers
-                                .iter()
-                                .map(|(k, v)| (k.clone(), v.clone()))
-                                .collect::<Vec<_>>()
-                                .as_slice(),
-                        ),
-                        mode,
-                    )?;
-
-                Ok(())
-            })
-            .collect::<Result<(), _>>()
-    })?;
-
-    pb.finish_and_clear();
-
-    println!("{context}");
-
-    Ok(())
 }
 
 fn poll_assemble(
