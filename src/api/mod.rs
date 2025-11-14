@@ -14,10 +14,8 @@ mod pagination;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::OsStr;
 use std::fs::File;
 use std::io::{self, Read as _, Write};
-use std::path::Path;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::{fmt, thread};
@@ -46,8 +44,7 @@ use uuid::Uuid;
 
 use crate::api::errors::{ProjectRenamedError, RetryError};
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, DEFAULT_URL, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
-use crate::utils::file_upload::LegacyUploadContext;
+use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::http::{self, is_absolute_url};
 use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode};
@@ -85,11 +82,6 @@ pub struct Api {
 /// functions that make API requests requiring authentication via auth token.
 pub struct AuthenticatedApi<'a> {
     api: &'a Api,
-}
-
-pub struct RegionSpecificApi<'a> {
-    api: &'a AuthenticatedApi<'a>,
-    region_url: Option<Box<str>>,
 }
 
 /// Represents an HTTP method that is used by the API.
@@ -446,7 +438,7 @@ impl Api {
     }
 }
 
-impl<'a> AuthenticatedApi<'a> {
+impl AuthenticatedApi<'_> {
     // Pass through low-level methods to API.
 
     /// Convenience method to call self.api.get.
@@ -480,110 +472,6 @@ impl<'a> AuthenticatedApi<'a> {
     /// current token.
     pub fn get_auth_info(&self) -> ApiResult<AuthInfo> {
         self.get("/")?.convert()
-    }
-
-    /// Lists release files for the given `release`, filtered by a set of checksums.
-    /// When empty checksums list is provided, fetches all possible artifacts.
-    pub fn list_release_files_by_checksum(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-        checksums: &[String],
-    ) -> ApiResult<Vec<Artifact>> {
-        let mut rv = vec![];
-        let mut cursor = "".to_owned();
-        loop {
-            let mut path = if let Some(project) = project {
-                format!(
-                    "/projects/{}/{}/releases/{}/files/?cursor={}",
-                    PathArg(org),
-                    PathArg(project),
-                    PathArg(release),
-                    QueryArg(&cursor),
-                )
-            } else {
-                format!(
-                    "/organizations/{}/releases/{}/files/?cursor={}",
-                    PathArg(org),
-                    PathArg(release),
-                    QueryArg(&cursor),
-                )
-            };
-
-            let mut checksums_qs = String::new();
-            for checksum in checksums.iter() {
-                checksums_qs.push_str(&format!("&checksum={}", QueryArg(checksum)));
-            }
-            // We have a 16kb buffer for reach request configured in nginx,
-            // so do not even bother trying if it's too long.
-            // (16_384 limit still leaves us with 384 bytes for the url itself).
-            if !checksums_qs.is_empty() && checksums_qs.len() <= 16_000 {
-                path.push_str(&checksums_qs);
-            }
-
-            let resp = self.get(&path)?;
-            if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
-                if rv.is_empty() {
-                    return Err(ApiErrorKind::ReleaseNotFound.into());
-                } else {
-                    break;
-                }
-            }
-
-            let pagination = resp.pagination();
-            rv.extend(resp.convert::<Vec<Artifact>>()?);
-            if let Some(next) = pagination.into_next_cursor() {
-                cursor = next;
-            } else {
-                break;
-            }
-        }
-        Ok(rv)
-    }
-
-    /// Lists all the release files for the given `release`.
-    pub fn list_release_files(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        release: &str,
-    ) -> ApiResult<Vec<Artifact>> {
-        self.list_release_files_by_checksum(org, project, release, &[])
-    }
-
-    /// Deletes a single release file.  Returns `true` if the file was
-    /// deleted or `false` otherwise.
-    pub fn delete_release_file(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-        file_id: &str,
-    ) -> ApiResult<bool> {
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/files/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/{}/",
-                PathArg(org),
-                PathArg(version),
-                PathArg(file_id)
-            )
-        };
-
-        let resp = self.delete(&path)?;
-        if resp.status() == 404 {
-            Ok(false)
-        } else {
-            resp.into_result().map(|_| true)
-        }
     }
 
     /// Creates a new release.
@@ -1181,50 +1069,6 @@ impl<'a> AuthenticatedApi<'a> {
         }
         Ok(rv)
     }
-
-    fn get_region_url(&self, org: &str) -> ApiResult<String> {
-        self.get(&format!("/organizations/{org}/region/"))
-            .and_then(|resp| resp.convert::<Region>())
-            .map(|region| region.url)
-    }
-
-    pub fn region_specific(&'a self, org: &'a str) -> RegionSpecificApi<'a> {
-        let base_url = self.api.config.get_base_url();
-        if base_url.is_err()
-            || base_url.expect("base_url should not be error") != DEFAULT_URL.trim_end_matches('/')
-        {
-            // Do not specify a region URL unless the URL is configured to https://sentry.io (i.e. the default).
-            return RegionSpecificApi {
-                api: self,
-                region_url: None,
-            };
-        }
-
-        let region_url = match self
-            .api
-            .config
-            .get_auth()
-            .expect("auth should not be None for authenticated API!")
-        {
-            Auth::Token(token) => match token.payload() {
-                Some(payload) => Some(payload.region_url.clone().into()),
-                None => {
-                    let region_url = self.get_region_url(org);
-                    if let Err(err) = &region_url {
-                        log::warn!("Failed to get region URL due to following error: {err}");
-                        log::info!("Failling back to the default region.");
-                    }
-
-                    region_url.ok().map(|url| url.into())
-                }
-            },
-        };
-
-        RegionSpecificApi {
-            api: self,
-            region_url,
-        }
-    }
 }
 
 /// Available datasets for fetching organization events
@@ -1295,73 +1139,6 @@ impl FetchEventsOptions<'_> {
         params.push(format!("sort={}", QueryArg(self.sort)));
 
         params
-    }
-}
-
-impl RegionSpecificApi<'_> {
-    fn request(&self, method: Method, url: &str) -> ApiResult<ApiRequest> {
-        self.api
-            .api
-            .request(method, url, self.region_url.as_deref())
-    }
-
-    /// Uploads a new release file.  The file is loaded directly from the file
-    /// system and uploaded as `name`.
-    pub fn upload_release_file(
-        &self,
-        context: &LegacyUploadContext,
-        contents: &[u8],
-        name: &str,
-        headers: Option<&[(String, String)]>,
-        progress_bar_mode: ProgressBarMode,
-    ) -> ApiResult<Option<Artifact>> {
-        let path = if let Some(project) = context.project() {
-            format!(
-                "/projects/{}/{}/releases/{}/files/",
-                PathArg(context.org()),
-                PathArg(project),
-                PathArg(context.release())
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/files/",
-                PathArg(context.org()),
-                PathArg(context.release())
-            )
-        };
-
-        let mut form = curl::easy::Form::new();
-
-        let filename = Path::new(name)
-            .file_name()
-            .and_then(OsStr::to_str)
-            .unwrap_or("unknown.bin");
-        form.part("file")
-            .buffer(filename, contents.to_vec())
-            .add()?;
-        form.part("name").contents(name.as_bytes()).add()?;
-        if let Some(dist) = context.dist() {
-            form.part("dist").contents(dist.as_bytes()).add()?;
-        }
-
-        if let Some(headers) = headers {
-            for (key, value) in headers {
-                form.part("header")
-                    .contents(format!("{key}:{value}").as_bytes())
-                    .add()?;
-            }
-        }
-
-        let resp = self
-            .request(Method::Post, &path)?
-            .with_form_data(form)?
-            .progress_bar_mode(progress_bar_mode)
-            .send()?;
-        if resp.status() == 409 {
-            Ok(None)
-        } else {
-            resp.convert_rnf(ApiErrorKind::ReleaseNotFound)
-        }
     }
 }
 
@@ -1856,14 +1633,6 @@ pub struct User {
 pub struct AuthInfo {
     pub auth: Option<AuthDetails>,
     pub user: Option<User>,
-}
-
-/// A release artifact
-#[derive(Clone, Deserialize, Debug)]
-pub struct Artifact {
-    pub id: String,
-    pub name: String,
-    pub dist: Option<String>,
 }
 
 /// Information for new releases
