@@ -19,9 +19,7 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 use url::Url;
 
 use crate::utils::file_search::ReleaseFileMatch;
-use crate::utils::file_upload::{
-    initialize_legacy_release_upload, FileUpload, SourceFile, SourceFiles, UploadContext,
-};
+use crate::utils::file_upload::{FileUpload, SourceFile, SourceFiles, UploadContext};
 use crate::utils::fs;
 use crate::utils::logging::is_quiet_mode;
 use crate::utils::progress::ProgressBar;
@@ -666,7 +664,6 @@ impl SourceMapProcessor {
     /// Uploads all files, and on success, returns the number of files that were
     /// uploaded, wrapped in Ok()
     pub fn upload(&mut self, context: &UploadContext<'_>) -> Result<usize> {
-        initialize_legacy_release_upload(context)?;
         self.flush_pending_sources();
 
         // If there is no release, we have to check that the files at least
