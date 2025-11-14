@@ -26,7 +26,6 @@ mod debug_files;
 mod deploys;
 mod derive_parser;
 mod events;
-mod files;
 mod info;
 mod issues;
 mod login;
@@ -56,7 +55,6 @@ macro_rules! each_subcommand {
         $mac!(debug_files);
         $mac!(deploys);
         $mac!(events);
-        $mac!(files);
         $mac!(info);
         $mac!(issues);
         $mac!(login);

@@ -42,13 +42,6 @@ pub fn make_command(mut command: Command) -> Command {
         .arg_required_else_help(true)
         .org_arg()
         .project_arg(true)
-        // Backward compatibility with `releases files <VERSION>` commands.
-        .subcommand(
-            crate::commands::files::make_command(Command::new("files"))
-                .allow_hyphen_values(true)
-                .version_arg(true)
-                .hide(true),
-        )
         // Backward compatibility with `releases deploys <VERSION>` commands.
         .subcommand(
             crate::commands::deploys::make_command(Command::new("deploys"))
@@ -73,10 +66,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     each_subcommand!(execute_subcommand);
 
-    // To preserve backward compatibility
-    if let Some(sub_matches) = matches.subcommand_matches("files") {
-        return crate::commands::files::execute(sub_matches);
-    }
     // To preserve backward compatibility
     if let Some(sub_matches) = matches.subcommand_matches("deploys") {
         return crate::commands::deploys::execute(sub_matches);

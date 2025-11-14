@@ -52,7 +52,6 @@ use crate::utils::http::{self, is_absolute_url};
 use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode};
 use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds as _};
-use crate::utils::sourcemaps::get_sourcemap_reference_from_headers;
 use crate::utils::ui::{capitalize_string, make_byte_progress_bar};
 
 use self::pagination::Pagination;
@@ -585,32 +584,6 @@ impl<'a> AuthenticatedApi<'a> {
         } else {
             resp.into_result().map(|_| true)
         }
-    }
-
-    /// Deletes all release files.  Returns `true` if files were
-    /// deleted or `false` otherwise.
-    pub fn delete_release_files(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<()> {
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/files/source-maps/?name={}",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            )
-        } else {
-            format!(
-                "/organizations/{}/files/source-maps/?name={}",
-                PathArg(org),
-                PathArg(version)
-            )
-        };
-
-        self.delete(&path)?.into_result().map(|_| ())
     }
 
     /// Creates a new release.
@@ -1440,19 +1413,9 @@ fn handle_req<W: Write>(
         } else if progress_bar_mode.active() {
             let pb_progress = pb.clone();
             #[expect(clippy::unwrap_used, reason = "legacy code")]
-            handle.progress_function(move |a, b, c, d| {
-                let (down_len, down_pos, up_len, up_pos) = (a as u64, b as u64, c as u64, d as u64);
+            handle.progress_function(move |a, b, _, _| {
+                let (down_len, down_pos) = (a as u64, b as u64);
                 let mut pb = pb_progress.borrow_mut();
-                if up_len > 0 && progress_bar_mode.request() {
-                    if up_pos < up_len {
-                        if pb.is_none() {
-                            *pb = Some(make_byte_progress_bar(up_len));
-                        }
-                        pb.as_ref().unwrap().set_position(up_pos);
-                    } else if pb.is_some() {
-                        pb.take().unwrap().finish_and_clear();
-                    }
-                }
                 if down_len > 0 && progress_bar_mode.response() {
                     if down_pos < down_len {
                         if pb.is_none() {
@@ -1899,17 +1862,8 @@ pub struct AuthInfo {
 #[derive(Clone, Deserialize, Debug)]
 pub struct Artifact {
     pub id: String,
-    pub sha1: String,
     pub name: String,
-    pub size: u64,
     pub dist: Option<String>,
-    pub headers: HashMap<String, String>,
-}
-
-impl Artifact {
-    pub fn get_sourcemap_reference(&self) -> Option<&str> {
-        get_sourcemap_reference_from_headers(self.headers.iter())
-    }
 }
 
 /// Information for new releases
