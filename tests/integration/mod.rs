@@ -34,7 +34,7 @@ use std::io;
 use std::path::Path;
 
 use test_utils::MockEndpointBuilder;
-use test_utils::{chunk_upload, env, AssertCommand, ChunkOptions, ServerBehavior, TestManager};
+use test_utils::{chunk_upload, env, AssertCommand, TestManager};
 
 pub const UTC_DATE_FORMAT: &str = r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{6,9}Z";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
