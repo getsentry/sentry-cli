@@ -40,25 +40,10 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
     // if a project is provided which is technically unnecessary for the
     // legacy upload though it will unlikely to be what users want.
     let chunk_options = context.chunk_upload_options;
-    if context.projects.is_some()
-        && (chunk_options.supports(ChunkUploadCapability::ArtifactBundles)
-            || chunk_options.supports(ChunkUploadCapability::ArtifactBundlesV2))
+    if chunk_options.supports(ChunkUploadCapability::ArtifactBundles)
+        || chunk_options.supports(ChunkUploadCapability::ArtifactBundlesV2)
     {
         return Ok(());
-    }
-
-    // TODO: make this into an error later down the road
-    if context.projects.is_none() {
-        eprintln!(
-            "{}",
-            style(
-                "warning: no project specified. \
-                    While this upload will succeed it will be unlikely that \
-                    this is what you wanted. Future versions of sentry will \
-                    require a project to be set."
-            )
-            .red()
-        );
     }
 
     if let Some(version) = context.release {
@@ -67,7 +52,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
             context.org,
             &NewRelease {
                 version: version.to_owned(),
-                projects: context.projects.map(Vec::from).unwrap_or_default(),
+                projects: context.projects.into(),
                 ..Default::default()
             },
         )?;
@@ -80,7 +65,7 @@ pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
 #[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
     pub org: &'a str,
-    pub projects: Option<NonEmptySlice<'a, String>>,
+    pub projects: NonEmptySlice<'a, String>,
     pub release: Option<&'a str>,
     pub dist: Option<&'a str>,
     pub note: Option<&'a str>,
@@ -185,13 +170,11 @@ impl<'a> TryFrom<&'a UploadContext<'_>> for LegacyUploadContext<'a> {
             ..
         } = value;
 
-        let project = projects
-            .map(|projects| match <&[_]>::from(projects) {
-                [] => unreachable!("NonEmptySlice cannot be empty"),
-                [project] => Ok(project.as_str()),
-                [_, _, ..] => Err(LegacyUploadContextError::ProjectMultiple),
-            })
-            .transpose()?;
+        let project = Some(match <&[_]>::from(projects) {
+            [] => unreachable!("NonEmptySlice cannot be empty"),
+            [project] => Ok(project.as_str()),
+            [_, _, ..] => Err(LegacyUploadContextError::ProjectMultiple),
+        }?);
 
         let release = release.ok_or(LegacyUploadContextError::ReleaseMissing)?;
 
@@ -536,23 +519,12 @@ fn poll_assemble(
         );
     }
 
-    // We fall back to legacy release upload if server lacks artifact bundle support, or if
-    // no projects are specified. context.projects has Some(projects) in all cases, besides
-    // the following:
-    //   - For `files upload`, we can have None projects. We don't need a separate warning,
-    //     because `files upload` is already deprecated.
-    //   - For `debug-files bundle-jvm`, but although that codepath uses the `UploadContext`,
-    //     it does not actually use it to perform an upload, so we never hit this codepath.
-    let artifact_bundle_projects = server_supports_artifact_bundles
-        .then_some(context.projects)
-        .flatten();
-
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
-        let response = if let Some(projects) = artifact_bundle_projects {
+        let response = if server_supports_artifact_bundles {
             authenticated_api.assemble_artifact_bundle(
                 context.org,
-                projects,
+                context.projects,
                 checksum,
                 chunks,
                 context.release,
@@ -642,7 +614,6 @@ fn upload_files_chunked(
     if let Some(projects) = options
         .supports(ChunkUploadCapability::ArtifactBundlesV2)
         .then_some(context.projects)
-        .flatten()
     {
         let api = Api::current();
         let response = api.authenticated()?.assemble_artifact_bundle(
@@ -677,7 +648,7 @@ fn print_upload_context_details(context: &UploadContext) {
     println!(
         "{} {}",
         style("> Projects:").dim(),
-        style(context.projects.as_deref().unwrap_or_default().join(", ")).yellow()
+        style(context.projects.join(", ")).yellow()
     );
     println!(
         "{} {}",
