@@ -128,7 +128,6 @@ impl ProgressBar {
 #[derive(Clone)]
 pub enum ProgressBarMode {
     Disabled,
-    Request,
     #[cfg(not(feature = "managed"))]
     Response,
     Shared((Arc<ProgressBar>, u64, usize, Arc<RwLock<Vec<u64>>>)),
@@ -138,11 +137,6 @@ impl ProgressBarMode {
     /// Returns if progress bars are generally enabled.
     pub fn active(&self) -> bool {
         !matches!(*self, ProgressBarMode::Disabled)
-    }
-
-    /// Returns whether a progress bar should be displayed during upload.
-    pub fn request(&self) -> bool {
-        matches!(*self, ProgressBarMode::Request)
     }
 
     /// Returns whether a progress bar should be displayed during download.
