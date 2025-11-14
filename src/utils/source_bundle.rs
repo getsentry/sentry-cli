@@ -43,7 +43,7 @@ impl<'a> From<&'a UploadContext<'a>> for BundleContext<'a> {
     fn from(context: &'a UploadContext<'a>) -> Self {
         Self {
             org: context.org,
-            projects: context.projects,
+            projects: Some(context.projects),
             note: context.note,
             release: context.release,
             dist: context.dist,
