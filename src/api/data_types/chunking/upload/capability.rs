@@ -2,13 +2,6 @@ use serde::{Deserialize, Deserializer};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ChunkUploadCapability {
-    /// Chunked upload of standalone artifact bundles
-    ArtifactBundles,
-
-    /// Like `ArtifactBundles`, but with deduplicated chunk
-    /// upload.
-    ArtifactBundlesV2,
-
     /// Upload of Dart symbol maps
     DartSymbolMap,
 
@@ -28,8 +21,6 @@ impl<'de> Deserialize<'de> for ChunkUploadCapability {
         D: Deserializer<'de>,
     {
         Ok(match String::deserialize(deserializer)?.as_str() {
-            "artifact_bundles" => ChunkUploadCapability::ArtifactBundles,
-            "artifact_bundles_v2" => ChunkUploadCapability::ArtifactBundlesV2,
             "dartsymbolmap" => ChunkUploadCapability::DartSymbolMap,
             "preprod_artifacts" => ChunkUploadCapability::PreprodArtifacts,
             "proguard" => ChunkUploadCapability::Proguard,

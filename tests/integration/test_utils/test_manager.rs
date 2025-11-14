@@ -8,7 +8,7 @@ use trycmd::TestCases;
 
 use crate::integration::{env, MockEndpointBuilder, VERSION};
 
-use super::{mock_common_endpoints, ChunkOptions, MockServerInfo, ServerBehavior};
+use super::{mock_common_endpoints, MockServerInfo};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -45,11 +45,15 @@ impl TestManager {
     /// Mock the common upload endpoints.
     pub fn mock_common_upload_endpoints(
         self,
-        behavior: ServerBehavior,
-        chunk_options: ChunkOptions,
+        chunk_size: Option<usize>,
+        initial_missing_chunks: Option<Vec<&'static str>>,
     ) -> Self {
-        mock_common_endpoints::common_upload_endpoints(self.server_url(), behavior, chunk_options)
-            .fold(self, |manager, builder| manager.mock_endpoint(builder))
+        mock_common_endpoints::common_upload_endpoints(
+            self.server_url(),
+            chunk_size,
+            initial_missing_chunks,
+        )
+        .fold(self, |manager, builder| manager.mock_endpoint(builder))
     }
 
     /// Assert that all mocks have been called the correct number of times.

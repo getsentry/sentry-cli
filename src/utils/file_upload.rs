@@ -7,15 +7,14 @@ use std::str;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use console::style;
 use sha1_smol::Digest;
 use symbolic::common::ByteView;
 use symbolic::debuginfo::js;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
-use crate::api::NewRelease;
-use crate::api::{Api, ChunkServerOptions, ChunkUploadCapability};
+use crate::api::{Api, ChunkServerOptions};
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::fs::get_sha1_checksums;
@@ -24,39 +23,6 @@ use crate::utils::progress::{ProgressBar, ProgressStyle};
 use crate::utils::source_bundle;
 
 use super::file_search::ReleaseFileMatch;
-
-/// Old versions of Sentry cannot assemble artifact bundles straight away, they require
-/// that those bundles are associated to a release.
-///
-/// This function checks whether the configured server supports artifact bundles
-/// and only creates a release if the server requires that.
-pub fn initialize_legacy_release_upload(context: &UploadContext) -> Result<()> {
-    // if the remote sentry service supports artifact bundles, we don't
-    // need to do anything here.  Artifact bundles will also only work
-    // if a project is provided which is technically unnecessary for the
-    // legacy upload though it will unlikely to be what users want.
-    let chunk_options = context.chunk_upload_options;
-    if chunk_options.supports(ChunkUploadCapability::ArtifactBundles)
-        || chunk_options.supports(ChunkUploadCapability::ArtifactBundlesV2)
-    {
-        return Ok(());
-    }
-
-    if let Some(version) = context.release {
-        let api = Api::current();
-        api.authenticated()?.new_release(
-            context.org,
-            &NewRelease {
-                version: version.to_owned(),
-                projects: context.projects.into(),
-                ..Default::default()
-            },
-        )?;
-    } else {
-        bail!("This version of Sentry does not support artifact bundles. A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)");
-    }
-    Ok(())
-}
 
 #[derive(Debug, Clone)]
 pub struct UploadContext<'a> {
@@ -68,13 +34,6 @@ pub struct UploadContext<'a> {
     pub wait: bool,
     pub max_wait: Duration,
     pub chunk_upload_options: &'a ChunkServerOptions,
-}
-
-impl UploadContext<'_> {
-    pub fn release(&self) -> Result<&str> {
-        self.release
-            .ok_or_else(|| anyhow!("A release slug is required (provide with --release or by setting the SENTRY_RELEASE environment variable)"))
-    }
 }
 
 #[derive(Eq, PartialEq, Debug, Copy, Clone, Hash)]
@@ -227,8 +186,6 @@ impl<'a> FileUpload<'a> {
     }
 
     pub fn upload(&self) -> Result<()> {
-        // multiple projects OK
-        initialize_legacy_release_upload(self.context)?;
         upload_files_chunked(self.context, &self.files, self.context.chunk_upload_options)
     }
 }
@@ -256,39 +213,16 @@ fn poll_assemble(
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
 
-    let server_supports_artifact_bundles = options.supports(ChunkUploadCapability::ArtifactBundles)
-        || options.supports(ChunkUploadCapability::ArtifactBundlesV2);
-
-    if !server_supports_artifact_bundles {
-        log::warn!(
-            "[DEPRECATION NOTICE] Your Sentry server does not support artifact bundle \
-            uploads. Falling back to deprecated release bundle upload. Support for this \
-            deprecated upload method will be removed in Sentry CLI 3.0.0. Please upgrade your \
-            Sentry server, or if you cannot upgrade, pin your Sentry CLI version to 2.x, so \
-            you don't get upgraded to 3.x when it is released."
-        );
-    }
-
     let response = loop {
         // prefer standalone artifact bundle upload over legacy release based upload
-        let response = if server_supports_artifact_bundles {
-            authenticated_api.assemble_artifact_bundle(
-                context.org,
-                context.projects,
-                checksum,
-                chunks,
-                context.release,
-                context.dist,
-            )?
-        } else {
-            #[expect(deprecated, reason = "fallback to legacy upload")]
-            authenticated_api.assemble_release_artifacts(
-                context.org,
-                context.release()?,
-                checksum,
-                chunks,
-            )?
-        };
+        let response = authenticated_api.assemble_artifact_bundle(
+            context.org,
+            context.projects,
+            checksum,
+            chunks,
+            context.release,
+            context.dist,
+        )?;
 
         // Poll until there is a response, unless the user has specified to skip polling. In
         // that case, we return the potentially partial response from the server. This might
@@ -359,23 +293,16 @@ fn upload_files_chunked(
         style(">").dim(),
     ));
 
-    // Filter out chunks that are already on the server. This only matters if the server supports
-    // `ArtifactBundlesV2`, otherwise the `missing_chunks` field is meaningless.
-    if let Some(projects) = options
-        .supports(ChunkUploadCapability::ArtifactBundlesV2)
-        .then_some(context.projects)
-    {
-        let api = Api::current();
-        let response = api.authenticated()?.assemble_artifact_bundle(
-            context.org,
-            projects,
-            checksum,
-            &checksums,
-            context.release,
-            context.dist,
-        )?;
-        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
-    };
+    let api = Api::current();
+    let response = api.authenticated()?.assemble_artifact_bundle(
+        context.org,
+        context.projects,
+        checksum,
+        &checksums,
+        context.release,
+        context.dist,
+    )?;
+    chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
 
     if !chunks.is_empty() {
         upload_chunks(&chunks, options, progress_style)?;
@@ -410,21 +337,10 @@ fn print_upload_context_details(context: &UploadContext) {
         style("> Dist:").dim(),
         style(context.dist.unwrap_or("None")).yellow()
     );
-    let upload_type = if context
-        .chunk_upload_options
-        .supports(ChunkUploadCapability::ArtifactBundles)
-        || context
-            .chunk_upload_options
-            .supports(ChunkUploadCapability::ArtifactBundlesV2)
-    {
-        "artifact bundle"
-    } else {
-        "release bundle"
-    };
     println!(
         "{} {}",
         style("> Upload type:").dim(),
-        style(upload_type).yellow()
+        style("artifact bundle").yellow()
     );
 }
 
