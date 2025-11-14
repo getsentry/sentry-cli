@@ -14,7 +14,6 @@ pub struct OrgAuthToken {
 /// Represents the payload data of an org auth token.
 #[derive(Clone, Debug, Deserialize)]
 pub struct AuthTokenPayload {
-    pub region_url: String,
     pub org: String,
 
     // URL may be missing from some old auth tokens, see getsentry/sentry#57123
