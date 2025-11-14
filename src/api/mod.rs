@@ -749,32 +749,6 @@ impl AuthenticatedApi<'_> {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
-    #[deprecated = "release bundle uploads are deprecated in favor of artifact bundle uploads"]
-    pub fn assemble_release_artifacts(
-        &self,
-        org: &str,
-        release: &str,
-        checksum: Digest,
-        chunks: &[Digest],
-    ) -> ApiResult<AssembleArtifactsResponse> {
-        let url = format!(
-            "/organizations/{}/releases/{}/assemble/",
-            PathArg(org),
-            PathArg(release)
-        );
-
-        self.request(Method::Post, &url)?
-            .with_json_body(&ChunkedArtifactRequest {
-                checksum,
-                chunks,
-                projects: &[],
-                version: None,
-                dist: None,
-            })?
-            .send()?
-            .convert_rnf(ApiErrorKind::ReleaseNotFound)
-    }
-
     pub fn assemble_artifact_bundle(
         &self,
         org: &str,
