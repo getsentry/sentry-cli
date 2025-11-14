@@ -135,10 +135,6 @@ fn command_debug_files_upload_mixed_embedded_sources() {
                 }"#,
             ),
         )
-        // TODO this isn't tested properly at the moment, because `indicatif` ProgressBar (at least at the current version)
-        //      swallows debug logs printed while the progress bar is active and the session is not attended.
-        //      See how it's supposed to look like `debug_files-bundle_sources-mixed-embedded-sources.trycmd` and try it out
-        //      after an update of `indicatif` to the latest version (currently it's blocked by some other issues).
         .register_trycmd_test("debug_files/upload/debug_files-upload-mixed-embedded-sources.trycmd")
         .with_default_token();
 }
