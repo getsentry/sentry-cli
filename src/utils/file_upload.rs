@@ -665,7 +665,11 @@ fn upload_files_chunked(
             context.release,
             context.dist,
         )?;
-        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
+        // Retain all chunks, even if they are not missing, for testing purposes.
+        // This way, we ensure that we measure the time of a full upload, without
+        // caching.
+        #[expect(clippy::overly_complex_bool_expr)]
+        chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest) || true);
     };
 
     if !chunks.is_empty() {
