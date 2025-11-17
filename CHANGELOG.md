@@ -46,6 +46,10 @@
 
 - Slightly sped up the `sentry-cli sourcemaps upload` command by eliminating an HTTP request to the Sentry server, which was not required in most cases ([#2913](https://github.com/getsentry/sentry-cli/pull/2913)).
 
+### Internal changes
+
+- Migrated JavaScript wrapper to TypeScript for better type safety ([#2910](https://github.com/getsentry/sentry-cli/pull/2910))
+
 ## 2.57.0
 
 ### New Features

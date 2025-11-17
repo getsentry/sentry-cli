@@ -4,6 +4,7 @@ target
 node_modules
 coverage
 dist
+js
 dump
 checksums.txt
 yarn-error.log
