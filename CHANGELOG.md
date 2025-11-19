@@ -20,6 +20,8 @@ we should rename this section to "Unreleased" -->
   - `api_key` configuration file field
   - `apiKey` option in the JavaScript API
 - Removed the `upload-proguard` subcommand's `--app-id`, `--version`, `--version-code`, `--android-manifest`, and `--platform` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876), [#2940](https://github.com/getsentry/sentry-cli/pull/2940), [#2948](https://github.com/getsentry/sentry-cli/pull/2948)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
+- In the JS API, the `SentryCli.execute` method's `live` parameter now only takes boolean values ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). Setting `live` to `true` now behaves like `'rejectOnError'` did previously, with a zero exit status resolving the returned promise with `"success (live mode)"` and a non-zero status rejecting the promise with an error message.
+- In the JS API, the `option` parameter to `Releases.uploadSourceMaps` no longer takes a `live` property ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). We now always execute the command with `live` set to `true`.
 
 ### Improvements
 
