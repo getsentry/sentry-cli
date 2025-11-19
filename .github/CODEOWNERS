@@ -6,6 +6,7 @@
 /bin/ @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli  # these are the JS "binaries"
 /lib @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /package.json @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
+/package-lock.json @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /scripts/*.js @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /tsconfig.json @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 
