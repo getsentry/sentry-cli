@@ -224,12 +224,12 @@ export interface SentryCliReleases {
 
   uploadSourceMaps(
     release: string,
-    options: SentryCliUploadSourceMapsOptions & { live?: boolean | 'rejectOnError' }
+    options: SentryCliUploadSourceMapsOptions & { live?: boolean }
   ): Promise<string[]>;
 
   listDeploys(release: string): Promise<string>;
 
   newDeploy(release: string, options: SentryCliNewDeployOptions): Promise<string>;
 
-  execute(args: string[], live: boolean | 'rejectOnError'): Promise<string>;
+  execute(args: string[], live: boolean): Promise<string>;
 }
