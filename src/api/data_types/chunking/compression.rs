@@ -7,8 +7,6 @@ use serde::Deserialize;
 pub enum ChunkCompression {
     /// GZIP compression (including header)
     Gzip = 10,
-    /// Brotli compression
-    Brotli = 20,
     /// No compression should be applied
     #[default]
     #[serde(other)]
@@ -20,7 +18,6 @@ impl ChunkCompression {
         match self {
             ChunkCompression::Uncompressed => "file",
             ChunkCompression::Gzip => "file_gzip",
-            ChunkCompression::Brotli => "file_brotli",
         }
     }
 }
@@ -30,7 +27,6 @@ impl fmt::Display for ChunkCompression {
         match *self {
             ChunkCompression::Uncompressed => write!(f, "uncompressed"),
             ChunkCompression::Gzip => write!(f, "gzip"),
-            ChunkCompression::Brotli => write!(f, "brotli"),
         }
     }
 }
