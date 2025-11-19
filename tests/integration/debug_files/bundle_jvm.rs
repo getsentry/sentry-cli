@@ -1,4 +1,4 @@
-use crate::integration::{copy_recursively, ServerBehavior, TestManager};
+use crate::integration::{copy_recursively, TestManager};
 use std::fs::{create_dir, remove_dir_all, write};
 
 #[test]
@@ -16,7 +16,6 @@ fn command_bundle_jvm_out_not_found_creates_dir() {
     .unwrap();
 
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test(
             "debug_files/bundle_jvm/debug_files-bundle-jvm-output-not-found.trycmd",
         )
@@ -35,7 +34,6 @@ fn command_bundle_jvm_fails_out_is_file() {
     write(testcase_cwd_path.join("file.txt"), "some file content").unwrap();
 
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm-output-is-file.trycmd")
         .with_default_token();
 }
@@ -43,7 +41,6 @@ fn command_bundle_jvm_fails_out_is_file() {
 #[test]
 fn command_bundle_jvm_fails_input_not_found() {
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test(
             "debug_files/bundle_jvm/debug_files-bundle-jvm-input-not-found.trycmd",
         )
@@ -53,7 +50,6 @@ fn command_bundle_jvm_fails_input_not_found() {
 #[test]
 fn command_bundle_jvm_fails_input_is_file() {
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm-input-is-file.trycmd")
         .with_default_token();
 }
@@ -69,7 +65,6 @@ fn command_bundle_jvm_input_dir_empty() {
     copy_recursively("tests/integration/_fixtures/jvm/", testcase_cwd_path).unwrap();
     create_dir(testcase_cwd_path.join("empty-dir")).unwrap();
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test(
             "debug_files/bundle_jvm/debug_files-bundle-jvm-input-dir-empty.trycmd",
         )
@@ -79,7 +74,6 @@ fn command_bundle_jvm_input_dir_empty() {
 #[test]
 fn command_bundle_jvm_fails_invalid_uuid() {
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm-invalid-uuid.trycmd");
 }
 
@@ -92,7 +86,6 @@ fn command_bundle_jvm() {
     }
     copy_recursively("tests/integration/_fixtures/jvm/", testcase_cwd_path).unwrap();
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
         .register_trycmd_test("debug_files/bundle_jvm/debug_files-bundle-jvm.trycmd")
         .with_default_token();
 }
