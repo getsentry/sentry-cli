@@ -27,17 +27,17 @@ Options:
           Metric tags as key:value pairs. Tags allow you to add dimensions to your metrics and can
           be filtered or grouped by in Sentry.
 
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
   -v, --value <VALUE>
           Value to add to the set. If the set already contains the provided value, the set's unique
           count will not increase.
 
-      --log-level <LOG_LEVEL>
-          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
-
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
-[..]
+          
           [aliases: --silent]
 
   -h, --help

@@ -59,8 +59,6 @@ fn describe_auth(auth: Option<&Auth>) -> &str {
     match auth {
         None => "Unauthorized",
         Some(&Auth::Token(_)) => "Auth Token",
-        #[expect(deprecated, reason = "API key is deprecated.")]
-        Some(&Auth::Key(_)) => "API Key (deprecated)",
     }
 }
 
@@ -75,8 +73,6 @@ fn get_config_status_json() -> Result<()> {
 
     rv.auth.auth_type = config.get_auth().map(|val| match val {
         Auth::Token(_) => "token".into(),
-        #[expect(deprecated, reason = "API key is deprecated.")]
-        Auth::Key(_) => "api_key".into(),
     });
     rv.auth.successful =
         config.get_auth().is_some() && Api::current().authenticated()?.get_auth_info().is_ok();
