@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased (3.0.0)
+
+<!-- TODO: We are using a different heading for this section to avoid merge conflicts
+as the changelog is updated for minor releases. Prior to merging the PR stack for 3.0,
+we should rename this section to "Unreleased" -->
+
+### Breaking Changes
+
+- Removed the `upload-proguard` subcommand's `--app-id`, `--version`, and `--version-code` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
+
 ## 2.58.2
 
 ### Improvements
