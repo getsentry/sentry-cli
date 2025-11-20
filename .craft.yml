@@ -51,7 +51,7 @@ targets:
         desc "Sentry command-line client for some generic tasks"
         homepage "https://github.com/getsentry/sentry-cli"
         version "{{version}}"
-        license "BSD-3-Clause"
+        license "FSL-1.1-MIT"
         if OS.mac?
           url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal"
           sha256 "{{checksums.sentry-cli-Darwin-universal}}"
