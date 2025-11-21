@@ -3,7 +3,7 @@
   "version": "2.58.2",
   "description": "The linux x64 distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
-  "license": "BSD-3-Clause",
+  "license": "FSL-1.1-MIT",
   "publishConfig": {
     "access": "public"
   },
