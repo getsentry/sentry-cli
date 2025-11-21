@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Features
+
+- Add `--git-metadata` flag with CI auto-detection to `sentry-cli build upload` command ([#2974](https://github.com/getsentry/sentry-cli/pull/2974))
+  - Git metadata is now automatically collected only when running in CI environments (GitHub Actions, GitLab CI, Jenkins, etc.)
+  - Local development builds no longer trigger GitHub status checks by default
+  - Users can force enable with `--git-metadata` or disable with `--git-metadata=false`
+
 ### Improvements
 
 - The `sentry-cli build upload` command now automatically detects the correct branch or tag reference in non-PR GitHub Actions workflows ([#2976](https://github.com/getsentry/sentry-cli/pull/2976)). Previously, `--head-ref` was only auto-detected for pull request workflows. Now it works for push, release, and other workflow types by using the `GITHUB_REF_NAME` environment variable.
