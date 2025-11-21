@@ -5,6 +5,7 @@ pub mod args;
 pub mod auth_token;
 pub mod build;
 pub mod chunks;
+pub mod ci;
 pub mod cordova;
 pub mod dif;
 pub mod dif_upload;
