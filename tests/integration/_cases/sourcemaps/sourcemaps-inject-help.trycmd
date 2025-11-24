@@ -15,7 +15,8 @@ Arguments:
 
 Options:
   -i, --ignore <IGNORE>
-          Ignores all files and folders matching the given glob
+          Ignores all files and folders matching the given glob. Patterns are relative to the
+          current directory, or absolute if starting with `/`.
 
   -o, --org <ORG>
           The organization ID or slug.

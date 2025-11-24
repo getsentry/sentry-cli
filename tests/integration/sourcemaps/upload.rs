@@ -107,3 +107,25 @@ fn command_sourcemaps_upload_skip_invalid_utf8() {
         .register_trycmd_test("sourcemaps/sourcemaps-with-invalid-utf8.trycmd")
         .with_default_token();
 }
+
+#[test]
+fn command_sourcemaps_upload_ignore_relative() {
+    use crate::integration::copy_recursively;
+    use std::fs::remove_dir_all;
+
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-upload-ignore-relative.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/ignore_test/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    TestManager::new()
+        .mock_common_upload_endpoints(ServerBehavior::Modern, Default::default())
+        .register_trycmd_test("sourcemaps/sourcemaps-upload-ignore-relative.trycmd")
+        .with_default_token();
+}

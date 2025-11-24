@@ -161,7 +161,7 @@ pub fn make_command(command: Command) -> Command {
                 .short('i')
                 .value_name("IGNORE")
                 .action(ArgAction::Append)
-                .help("Ignores all files and folders matching the given glob"),
+                .help("Ignores all files and folders matching the given glob. Patterns are relative to the current directory, or absolute if starting with `/`."),
         )
         .arg(
             Arg::new("ignore_file")

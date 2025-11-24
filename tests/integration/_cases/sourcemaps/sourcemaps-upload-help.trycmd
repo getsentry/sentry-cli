@@ -67,7 +67,8 @@ Options:
       --strip-common-prefix
           Similar to --strip-prefix but strips the most common prefix on all sources references.
   -i, --ignore <IGNORE>
-          Ignores all files and folders matching the given glob
+          Ignores all files and folders matching the given glob. Patterns are relative to the
+          current directory, or absolute if starting with `/`.
   -I, --ignore-file <IGNORE_FILE>
           Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
       --bundle <BUNDLE>

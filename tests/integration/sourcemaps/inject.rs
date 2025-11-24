@@ -216,6 +216,22 @@ fn command_sourcemaps_inject_double_association() {
     );
 }
 
+#[test]
+fn command_sourcemaps_inject_ignore_relative() {
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-ignore-relative.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/ignore_test/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    TestManager::new().register_trycmd_test("sourcemaps/sourcemaps-inject-ignore-relative.trycmd");
+}
+
 /// Recursively assert that the contents of two directories are equal.
 ///
 /// We only support directories that contain exclusively text files.

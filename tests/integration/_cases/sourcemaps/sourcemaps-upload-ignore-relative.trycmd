@@ -1,0 +1,17 @@
+```
+$ sentry-cli sourcemaps upload path_a path_b --ignore "**/path_a/test/**" --url-prefix "~/" --validate
+? failed
+> Found 2 files
+> Found 4 files
+> Analyzing 6 sources
+> Analyzing completed in [..]
+> Rewriting sources
+> Rewriting completed in [..]
+> Adding source map references
+> Validating sources
+error: Cannot upload: You must either specify a release or have debug ids injected into your sources
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

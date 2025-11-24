@@ -1,11 +1,12 @@
 use std::collections::BTreeSet;
+use std::env;
 use std::fs;
 use std::io::Read as _;
 use std::path::PathBuf;
 
 use anyhow::Result;
 use console::style;
-use ignore::overrides::OverrideBuilder;
+use glob::Pattern;
 use ignore::types::TypesBuilder;
 use ignore::WalkBuilder;
 use log::{info, warn};
@@ -126,12 +127,43 @@ impl ReleaseFileSearch {
             builder.add_ignore(ignore_file);
         }
 
-        if !&self.ignores.is_empty() {
-            let mut override_builder = OverrideBuilder::new(&self.path);
-            for ignore in &self.ignores {
-                override_builder.add(ignore)?;
-            }
-            builder.overrides(override_builder.build()?);
+        // Compile ignore patterns relative to CWD (not relative to search path)
+        let cwd = env::current_dir()?;
+        let ignore_patterns: Vec<Pattern> = self
+            .ignores
+            .iter()
+            .filter_map(|pattern| {
+                // Patterns starting with ! are negations (handled in upload.rs/inject.rs)
+                // Remove the ! prefix for glob pattern compilation
+                let pattern_str = pattern.strip_prefix('!').unwrap_or(pattern);
+                match Pattern::new(pattern_str) {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        warn!("Invalid ignore pattern '{}': {}", pattern_str, e);
+                        None
+                    }
+                }
+            })
+            .collect();
+
+        // Use filter_entry to match patterns relative to CWD
+        if !ignore_patterns.is_empty() {
+            builder.filter_entry(move |entry| {
+                let entry_path = entry.path();
+
+                // Try to make the path relative to CWD, or use absolute path if that fails
+                let check_path = entry_path.strip_prefix(&cwd).unwrap_or(entry_path);
+
+                // Check if any pattern matches - if so, ignore (return false)
+                for pattern in &ignore_patterns {
+                    if pattern.matches_path(check_path) {
+                        return false;
+                    }
+                }
+
+                // No patterns matched, keep this entry
+                true
+            });
         }
 
         for result in builder.build() {

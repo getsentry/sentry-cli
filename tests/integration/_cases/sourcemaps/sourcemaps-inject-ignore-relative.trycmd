@@ -1,0 +1,23 @@
+```
+$ sentry-cli sourcemaps inject path_a path_b --ignore "**/path_a/test/**" --dry-run
+? success
+> Searching path_a
+> Found 2 files
+> Searching path_b
+> Found 4 files
+> Analyzing 6 sources
+> Analyzing completed in [..]
+> Injecting debug ids
+
+Source Map Debug ID Injection Report
+  Modified: The following source files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - path_a/keep/file3.js
+    [..]-[..]-[..]-[..]-[..] - path_b/keep/file4.js
+    [..]-[..]-[..]-[..]-[..] - path_b/test/file2.js
+  Modified: The following sourcemap files have been modified to have debug ids
+    [..]-[..]-[..]-[..]-[..] - path_a/keep/file3.js.map
+    [..]-[..]-[..]-[..]-[..] - path_b/keep/file4.js.map
+    [..]-[..]-[..]-[..]-[..] - path_b/test/file2.js.map
+
+
+```
