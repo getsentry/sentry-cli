@@ -125,7 +125,7 @@ fn command_sourcemaps_upload_ignore_relative() {
     .unwrap();
 
     TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Modern, Default::default())
+        .mock_common_upload_endpoints(None, None)
         .register_trycmd_test("sourcemaps/sourcemaps-upload-ignore-relative.trycmd")
         .with_default_token();
 }
