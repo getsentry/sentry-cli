@@ -363,18 +363,23 @@ pub fn get_github_base_ref() -> Option<String> {
 }
 
 /// Attempts to get the head branch from GitHub Actions environment variables.
-/// Returns the head branch name if running in a GitHub Actions pull request environment.
+/// Returns the head branch name if running in a GitHub Actions environment.
+/// For pull requests, returns the source branch. For other workflows, returns the branch or tag being built.
 pub fn get_github_head_ref() -> Option<String> {
     let event_name = std::env::var("GITHUB_EVENT_NAME").ok()?;
 
-    if event_name != "pull_request" {
-        debug!("Not running in pull_request event, got: {event_name}");
-        return None;
+    if event_name == "pull_request" {
+        // For PRs, use GITHUB_HEAD_REF which contains the source branch
+        let head_ref = std::env::var("GITHUB_HEAD_REF").ok()?;
+        debug!("Auto-detected head ref from GitHub Actions PR: {head_ref}");
+        Some(head_ref)
+    } else {
+        // For non-PR workflows (push, release, etc.), use GITHUB_REF_NAME
+        // which contains the short name of the branch or tag (e.g., "main", "v1.0.0")
+        let ref_name = std::env::var("GITHUB_REF_NAME").ok()?;
+        debug!("Auto-detected head ref from GitHub Actions: {ref_name}");
+        Some(ref_name)
     }
-
-    let head_ref = std::env::var("GITHUB_HEAD_REF").ok()?;
-    debug!("Auto-detected head ref from GitHub Actions: {head_ref}");
-    Some(head_ref)
 }
 
 fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
@@ -1583,6 +1588,51 @@ mod tests {
         assert_eq!(base_ref, None);
 
         std::env::remove_var("GITHUB_EVENT_NAME");
+    }
+
+    #[test]
+    #[serial(github_env)]
+    fn test_get_github_head_ref() {
+        // Test PR workflow - should use GITHUB_HEAD_REF
+        std::env::set_var("GITHUB_EVENT_NAME", "pull_request");
+        std::env::set_var("GITHUB_HEAD_REF", "feature-branch");
+        std::env::set_var("GITHUB_REF_NAME", "123/merge"); // PR workflows also set this, but we prefer HEAD_REF
+        let head_ref = get_github_head_ref();
+        assert_eq!(head_ref, Some("feature-branch".to_owned()));
+
+        // Test push workflow - should use GITHUB_REF_NAME
+        std::env::set_var("GITHUB_EVENT_NAME", "push");
+        std::env::remove_var("GITHUB_HEAD_REF"); // Not set for non-PR workflows
+        std::env::set_var("GITHUB_REF_NAME", "main");
+        let head_ref = get_github_head_ref();
+        assert_eq!(head_ref, Some("main".to_owned()));
+
+        // Test push to feature branch
+        std::env::set_var("GITHUB_EVENT_NAME", "push");
+        std::env::set_var("GITHUB_REF_NAME", "feature/my-feature");
+        let head_ref = get_github_head_ref();
+        assert_eq!(head_ref, Some("feature/my-feature".to_owned()));
+
+        // Test release workflow with tag
+        std::env::set_var("GITHUB_EVENT_NAME", "release");
+        std::env::set_var("GITHUB_REF_NAME", "v1.0.0");
+        let head_ref = get_github_head_ref();
+        assert_eq!(head_ref, Some("v1.0.0".to_owned()));
+
+        // Test when GITHUB_REF_NAME is not set for non-PR workflow
+        std::env::set_var("GITHUB_EVENT_NAME", "push");
+        std::env::remove_var("GITHUB_REF_NAME");
+        let head_ref = get_github_head_ref();
+        assert_eq!(head_ref, None);
+
+        // Test when GITHUB_EVENT_NAME is not set (not in GitHub Actions)
+        std::env::remove_var("GITHUB_EVENT_NAME");
+        let head_ref = get_github_head_ref();
+        assert_eq!(head_ref, None);
+
+        // Clean up
+        std::env::remove_var("GITHUB_HEAD_REF");
+        std::env::remove_var("GITHUB_REF_NAME");
     }
 
     #[test]
