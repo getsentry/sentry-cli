@@ -54,8 +54,8 @@ Options:
           The release notes to use for the upload.
       --git-metadata [<git_metadata>]
           Controls whether to collect and send git metadata (branch, commit, etc.). Use
-          --git-metadata to force enable, --git-metadata=false to disable. If not specified, git
-          metadata is automatically collected only when running in a CI environment. [possible
+          --git-metadata to force enable, --git-metadata=false to force disable. If not specified,
+          git metadata is automatically collected only when running in a CI environment. [possible
           values: true, false]
   -h, --help
           Print help
