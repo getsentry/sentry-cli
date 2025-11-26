@@ -4,11 +4,8 @@ use crate::integration::{MockEndpointBuilder, TestManager};
 fn shows_release_details() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_response_file("releases/get-release.json"),
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_response_file("releases/get-release.json"),
         )
         .register_trycmd_test("releases/releases-info.trycmd")
         .with_default_token();
@@ -18,16 +15,13 @@ fn shows_release_details() {
 fn shows_release_details_with_projects_and_commits() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_response_file("releases/get-release.json"),
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_response_file("releases/get-release.json"),
         )
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/commits/",
+                "/api/0/organizations/wat-org/releases/wat-release/commits/",
             )
             .with_response_file("releases/get-release-commits.json"),
         )
@@ -39,11 +33,8 @@ fn shows_release_details_with_projects_and_commits() {
 fn doesnt_print_output_with_quiet_flag() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_response_file("releases/get-release.json"),
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_response_file("releases/get-release.json"),
         )
         .register_trycmd_test("releases/releases-info-quiet.trycmd")
         .with_default_token();
@@ -53,11 +44,8 @@ fn doesnt_print_output_with_quiet_flag() {
 fn doesnt_print_output_with_silent_flag() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_response_file("releases/get-release.json"),
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_response_file("releases/get-release.json"),
         )
         .register_trycmd_test("releases/releases-info-silent.trycmd")
         .with_default_token();
@@ -69,7 +57,7 @@ fn preserve_valid_exit_code_with_quiet_flag() {
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET",
-                "/api/0/projects/wat-org/wat-project/releases/unknown-release/",
+                "/api/0/organizations/wat-org/releases/unknown-release/",
             )
             .with_status(404),
         )
@@ -81,11 +69,8 @@ fn preserve_valid_exit_code_with_quiet_flag() {
 fn exits_if_no_release_found() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_status(404),
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_status(404),
         )
         .register_trycmd_test("releases/releases-info-not-found.trycmd")
         .with_default_token();
