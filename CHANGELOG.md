@@ -25,6 +25,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 - The `SentryCli.execute` method's `live` parameter now only takes boolean values ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). Setting `live` to `true` now behaves like `'rejectOnError'` did previously, with a zero exit status resolving the returned promise with `"success (live mode)"` and a non-zero status rejecting the promise with an error message.
 - The `option` parameter to `Releases.uploadSourceMaps` no longer takes a `live` property ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). We now always execute the command with `live` set to `true`.
 - Removed the `apiKey` option from `SentryCliOptions` ([#2935](https://github.com/getsentry/sentry-cli/pull/2935)). If you are using `apiKey`, you need to generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/) via the `authToken` option, instead.
+- Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
 
 ### Improvements
 
