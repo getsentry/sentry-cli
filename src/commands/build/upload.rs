@@ -119,6 +119,156 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
+pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
+    let path_strings = matches
+        .get_many::<String>("paths")
+        .expect("paths argument is required");
+
+    // Determine if we should collect git metadata
+    let should_collect_git_metadata =
+        if let Some(&git_metadata) = matches.get_one::<bool>("git_metadata") {
+            // --git-metadata or --git-metadata=true/false was specified
+            git_metadata
+        } else {
+            // Default behavior: auto-detect CI
+            is_ci()
+        };
+
+    debug!(
+        "Git metadata collection: {}",
+        if should_collect_git_metadata {
+            "enabled"
+        } else {
+            "disabled (use --git-metadata to enable)"
+        }
+    );
+
+    // Always collect git metadata, but only perform automatic inference when enabled
+    let git_metadata = collect_git_metadata(matches, &config, should_collect_git_metadata);
+
+    let build_configuration = matches.get_one("build_configuration").map(String::as_str);
+    let release_notes = matches.get_one("release_notes").map(String::as_str);
+
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+
+    debug!("Starting upload for {} paths", path_strings.len());
+
+    let mut normalized_zips = vec![];
+    for path_string in path_strings {
+        let path: &Path = path_string.as_ref();
+        debug!("Processing artifact at path: {}", path.display());
+
+        if !path.exists() {
+            return Err(anyhow!("Path does not exist: {}", path.display()));
+        }
+
+        let byteview = ByteView::open(path)?;
+        debug!("Loaded file with {} bytes", byteview.len());
+
+        validate_is_supported_build(path, &byteview)?;
+
+        let normalized_zip = if path.is_file() {
+            debug!("Normalizing file: {}", path.display());
+            handle_file(path, &byteview)?
+        } else if path.is_dir() {
+            debug!("Normalizing directory: {}", path.display());
+            handle_directory(path).with_context(|| {
+                format!(
+                    "Failed to generate uploadable bundle for directory {}",
+                    path.display()
+                )
+            })?
+        } else {
+            Err(anyhow!(
+                "Path {} is neither a file nor a directory, cannot upload",
+                path.display()
+            ))?
+        };
+
+        debug!(
+            "Successfully normalized to: {}",
+            normalized_zip.path().display()
+        );
+        normalized_zips.push((path, normalized_zip));
+    }
+
+    let config = Config::current();
+    let (org, project) = config.get_org_and_project(matches)?;
+
+    let mut uploaded_paths_and_urls = vec![];
+    let mut errored_paths_and_reasons = vec![];
+    for (path, zip) in normalized_zips {
+        info!("Uploading file: {}", path.display());
+        let bytes = ByteView::open(zip.path())?;
+        let vcs_info = VcsInfo {
+            head_sha: git_metadata.head_sha,
+            base_sha: git_metadata.base_sha,
+            vcs_provider: &git_metadata.vcs_provider,
+            head_repo_name: &git_metadata.head_repo_name,
+            base_repo_name: &git_metadata.base_repo_name,
+            head_ref: &git_metadata.head_ref,
+            base_ref: &git_metadata.base_ref,
+            pr_number: git_metadata.pr_number.as_ref(),
+        };
+        match upload_file(
+            &authenticated_api,
+            &bytes,
+            &org,
+            &project,
+            build_configuration,
+            release_notes,
+            &vcs_info,
+        ) {
+            Ok(artifact_url) => {
+                info!("Successfully uploaded file: {}", path.display());
+                uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
+            }
+            Err(e) => {
+                debug!("Failed to upload file at path {}: {e}", path.display());
+                errored_paths_and_reasons.push((path.to_path_buf(), e));
+            }
+        }
+    }
+
+    if !errored_paths_and_reasons.is_empty() {
+        warn!(
+            "Failed to upload {} file{}:",
+            errored_paths_and_reasons.len(),
+            if errored_paths_and_reasons.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
+        );
+        for (path, reason) in errored_paths_and_reasons {
+            warn!("  - {}", path.display());
+            warn!("    Error: {reason:#}");
+        }
+    }
+
+    if uploaded_paths_and_urls.is_empty() {
+        bail!("Failed to upload any files");
+    } else {
+        println!(
+            "Successfully uploaded {} file{} to Sentry",
+            uploaded_paths_and_urls.len(),
+            if uploaded_paths_and_urls.len() == 1 {
+                ""
+            } else {
+                "s"
+            }
+        );
+        if uploaded_paths_and_urls.len() < 3 {
+            for (path, artifact_url) in &uploaded_paths_and_urls {
+                println!("  - {} ({artifact_url})", path.display());
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Holds git metadata collected for build uploads.
 #[derive(Debug, Default)]
 struct GitMetadata {
@@ -352,156 +502,6 @@ fn collect_git_metadata(matches: &ArgMatches, config: &Config, auto_collect: boo
         base_sha,
         pr_number,
     }
-}
-
-pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let config = Config::current();
-    let path_strings = matches
-        .get_many::<String>("paths")
-        .expect("paths argument is required");
-
-    // Determine if we should collect git metadata
-    let should_collect_git_metadata =
-        if let Some(&git_metadata) = matches.get_one::<bool>("git_metadata") {
-            // --git-metadata or --git-metadata=true/false was specified
-            git_metadata
-        } else {
-            // Default behavior: auto-detect CI
-            is_ci()
-        };
-
-    debug!(
-        "Git metadata collection: {}",
-        if should_collect_git_metadata {
-            "enabled"
-        } else {
-            "disabled (use --git-metadata to enable)"
-        }
-    );
-
-    // Always collect git metadata, but only perform automatic inference when enabled
-    let git_metadata = collect_git_metadata(matches, &config, should_collect_git_metadata);
-
-    let build_configuration = matches.get_one("build_configuration").map(String::as_str);
-    let release_notes = matches.get_one("release_notes").map(String::as_str);
-
-    let api = Api::current();
-    let authenticated_api = api.authenticated()?;
-
-    debug!("Starting upload for {} paths", path_strings.len());
-
-    let mut normalized_zips = vec![];
-    for path_string in path_strings {
-        let path: &Path = path_string.as_ref();
-        debug!("Processing artifact at path: {}", path.display());
-
-        if !path.exists() {
-            return Err(anyhow!("Path does not exist: {}", path.display()));
-        }
-
-        let byteview = ByteView::open(path)?;
-        debug!("Loaded file with {} bytes", byteview.len());
-
-        validate_is_supported_build(path, &byteview)?;
-
-        let normalized_zip = if path.is_file() {
-            debug!("Normalizing file: {}", path.display());
-            handle_file(path, &byteview)?
-        } else if path.is_dir() {
-            debug!("Normalizing directory: {}", path.display());
-            handle_directory(path).with_context(|| {
-                format!(
-                    "Failed to generate uploadable bundle for directory {}",
-                    path.display()
-                )
-            })?
-        } else {
-            Err(anyhow!(
-                "Path {} is neither a file nor a directory, cannot upload",
-                path.display()
-            ))?
-        };
-
-        debug!(
-            "Successfully normalized to: {}",
-            normalized_zip.path().display()
-        );
-        normalized_zips.push((path, normalized_zip));
-    }
-
-    let config = Config::current();
-    let (org, project) = config.get_org_and_project(matches)?;
-
-    let mut uploaded_paths_and_urls = vec![];
-    let mut errored_paths_and_reasons = vec![];
-    for (path, zip) in normalized_zips {
-        info!("Uploading file: {}", path.display());
-        let bytes = ByteView::open(zip.path())?;
-        let vcs_info = VcsInfo {
-            head_sha: git_metadata.head_sha,
-            base_sha: git_metadata.base_sha,
-            vcs_provider: &git_metadata.vcs_provider,
-            head_repo_name: &git_metadata.head_repo_name,
-            base_repo_name: &git_metadata.base_repo_name,
-            head_ref: &git_metadata.head_ref,
-            base_ref: &git_metadata.base_ref,
-            pr_number: git_metadata.pr_number,
-        };
-        match upload_file(
-            &authenticated_api,
-            &bytes,
-            &org,
-            &project,
-            build_configuration,
-            release_notes,
-            &vcs_info,
-        ) {
-            Ok(artifact_url) => {
-                info!("Successfully uploaded file: {}", path.display());
-                uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
-            }
-            Err(e) => {
-                debug!("Failed to upload file at path {}: {e}", path.display());
-                errored_paths_and_reasons.push((path.to_path_buf(), e));
-            }
-        }
-    }
-
-    if !errored_paths_and_reasons.is_empty() {
-        warn!(
-            "Failed to upload {} file{}:",
-            errored_paths_and_reasons.len(),
-            if errored_paths_and_reasons.len() == 1 {
-                ""
-            } else {
-                "s"
-            }
-        );
-        for (path, reason) in errored_paths_and_reasons {
-            warn!("  - {}", path.display());
-            warn!("    Error: {reason:#}");
-        }
-    }
-
-    if uploaded_paths_and_urls.is_empty() {
-        bail!("Failed to upload any files");
-    } else {
-        println!(
-            "Successfully uploaded {} file{} to Sentry",
-            uploaded_paths_and_urls.len(),
-            if uploaded_paths_and_urls.len() == 1 {
-                ""
-            } else {
-                "s"
-            }
-        );
-        if uploaded_paths_and_urls.len() < 3 {
-            for (path, artifact_url) in &uploaded_paths_and_urls {
-                println!("  - {} ({artifact_url})", path.display());
-            }
-        }
-    }
-    Ok(())
 }
 
 fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
