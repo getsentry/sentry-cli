@@ -119,6 +119,19 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
+/// Holds git metadata collected for build uploads.
+#[derive(Debug, Default)]
+struct GitMetadata {
+    head_sha: Option<Digest>,
+    vcs_provider: String,
+    head_repo_name: String,
+    head_ref: String,
+    base_ref: String,
+    base_repo_name: String,
+    base_sha: Option<Digest>,
+    pr_number: Option<u32>,
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let path_strings = matches
@@ -267,19 +280,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
     Ok(())
-}
-
-/// Holds git metadata collected for build uploads.
-#[derive(Debug, Default)]
-struct GitMetadata {
-    head_sha: Option<Digest>,
-    vcs_provider: String,
-    head_repo_name: String,
-    head_ref: String,
-    base_ref: String,
-    base_repo_name: String,
-    base_sha: Option<Digest>,
-    pr_number: Option<u32>,
 }
 
 /// Collects git metadata from arguments and VCS introspection.
