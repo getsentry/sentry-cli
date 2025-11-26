@@ -1,7 +1,9 @@
+import { OptionsSchema } from '../../helper';
+
 /**
- * @type {import('../../helper').OptionsSchema}
+ * Schema for the `deploys new` command.
  */
-module.exports = {
+export const DEPLOYS_OPTIONS = {
   env: {
     param: '--env',
     type: 'string',
@@ -26,4 +28,4 @@ module.exports = {
     param: '--url',
     type: 'string',
   },
-};
+} satisfies OptionsSchema;

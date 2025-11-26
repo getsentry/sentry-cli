@@ -29,6 +29,25 @@ we should rename this section to "Unreleased" -->
 The following changes only apply when using `sentry-cli` via the npm package [`@sentry/cli`](https://www.npmjs.com/package/@sentry/cli):
 
 - Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
+- The JavaScript wrapper now uses named exports instead of default exports ([#2989](https://github.com/getsentry/sentry-cli/pull/2989))
+. You need to update your imports:
+  ```js
+  // Old (default import)
+  const SentryCli = require('@sentry/cli');
+
+  // New (named import)
+  const { SentryCli } = require('@sentry/cli');
+  ```
+
+  For ESM imports:
+  ```js
+  // Old
+  import SentryCli from '@sentry/cli';
+
+  // New
+  import { SentryCli } from '@sentry/cli';
+  ```
+
 
 ### Improvements
 
@@ -546,7 +565,7 @@ We made several refactors and added several tests in this release. These changes
 
 <details>
 <summary><h3>Changes to tests</h3></summary>
-  
+
 - ref(test): Broaden `with_header_matcher` types (#2261) by @szokeasaurusrex
 - ref(test): Accept `impl Into<Matcher>` for `with_matcher` (#2260) by @szokeasaurusrex
 - ref(test): Align `with_reponse_body` parameter to `mockito` (#2259) by @szokeasaurusrex

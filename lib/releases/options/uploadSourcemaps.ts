@@ -1,7 +1,9 @@
+import { OptionsSchema } from "../../helper";
+
 /**
- * @type {import('../../helper').OptionsSchema}
+ * Schema for the `upload-sourcemaps` command.
  */
-module.exports = {
+export const SOURCEMAPS_OPTIONS = {
   ignore: {
     param: '--ignore',
     type: 'array',
@@ -59,4 +61,4 @@ module.exports = {
     param: '--use-artifact-bundle',
     type: 'boolean',
   },
-};
+} satisfies OptionsSchema;
