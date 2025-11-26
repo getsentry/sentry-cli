@@ -7,7 +7,7 @@
   "author": "Sentry",
   "license": "FSL-1.1-MIT",
   "engines": {
-    "node": ">= 10"
+    "node": ">= 18"
   },
   "main": "js/index.js",
   "types": "js/index.d.ts",
