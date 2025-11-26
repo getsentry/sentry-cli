@@ -4,7 +4,7 @@ use crate::integration::{MockEndpointBuilder, TestManager};
 fn displays_releases() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/")
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/")
                 .with_response_file("releases/get-releases.json"),
         )
         .register_trycmd_test("releases/releases-list.trycmd")
@@ -15,7 +15,7 @@ fn displays_releases() {
 fn displays_releases_with_projects() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/")
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/")
                 .with_response_file("releases/get-releases.json"),
         )
         .register_trycmd_test("releases/releases-list-with-projects.trycmd")
@@ -26,7 +26,7 @@ fn displays_releases_with_projects() {
 fn doesnt_fail_with_empty_response() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/")
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/")
                 .with_response_body("[]"),
         )
         .register_trycmd_test("releases/releases-list-empty.trycmd")
@@ -37,7 +37,7 @@ fn doesnt_fail_with_empty_response() {
 fn can_override_org() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/projects/whynot/wat-project/releases/")
+            MockEndpointBuilder::new("GET", "/api/0/organizations/whynot/releases/")
                 .with_response_file("releases/get-releases.json"),
         )
         .register_trycmd_test("releases/releases-list-override-org.trycmd")
@@ -48,7 +48,7 @@ fn can_override_org() {
 fn displays_releases_in_raw_mode() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/")
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/")
                 .with_response_file("releases/get-releases.json"),
         )
         .register_trycmd_test("releases/releases-list-raw.trycmd")
@@ -59,7 +59,7 @@ fn displays_releases_in_raw_mode() {
 fn displays_releases_in_raw_mode_with_delimiter() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new("GET", "/api/0/projects/wat-org/wat-project/releases/")
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/releases/")
                 .with_response_file("releases/get-releases.json"),
         )
         .register_trycmd_test("releases/releases-list-raw-delimiter.trycmd")
