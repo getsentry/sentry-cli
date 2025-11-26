@@ -24,6 +24,12 @@ we should rename this section to "Unreleased" -->
 - In the JS API, the `SentryCli.execute` method's `live` parameter now only takes boolean values ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). Setting `live` to `true` now behaves like `'rejectOnError'` did previously, with a zero exit status resolving the returned promise with `"success (live mode)"` and a non-zero status rejecting the promise with an error message.
 - In the JS API, the `option` parameter to `Releases.uploadSourceMaps` no longer takes a `live` property ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). We now always execute the command with `live` set to `true`.
 
+#### Node.js Wrapper Breakages
+
+The following changes only apply when using `sentry-cli` via the npm package [`@sentry/cli`](https://www.npmjs.com/package/@sentry/cli):
+
+- Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
+
 ### Improvements
 
 - The `sentry-cli upload-proguard` command now uses chunked uploading by default ([#2918](https://github.com/getsentry/sentry-cli/pull/2918)). Users who previously set the `SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD` environment variable to opt into this behavior no longer need to set the variable.
@@ -31,6 +37,7 @@ we should rename this section to "Unreleased" -->
 ### Fixes
 
 - Fixed misleading error message claiming the server doesn't support chunk uploading when the actual error was a non-existent organization ([#2930](https://github.com/getsentry/sentry-cli/pull/2930)).
+
 
 ## 2.58.2
 

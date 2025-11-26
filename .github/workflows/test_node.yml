@@ -64,7 +64,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        node-version: [10.x, 12.x, 14.x, 16.x, 18.x, 20.x, 22.x, 24.x]
+        node-version: [18.x, 20.x, 22.x, 24.x]
 
     name: Test Node ${{ matrix.node-version }}
     runs-on: ubuntu-24.04
@@ -96,9 +96,5 @@ jobs:
 
       - name: Install CLI
         run: npm run install-cli
-
-      # older node versions need an older nft
-      - run: SENTRYCLI_SKIP_DOWNLOAD=1 npm install @vercel/nft@0.22.1
-        if: matrix.node-version == '10.x' || matrix.node-version == '12.x'
 
       - run: npm test
