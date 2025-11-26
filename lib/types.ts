@@ -5,7 +5,7 @@
 /**
  * Options for configuring the Sentry CLI
  */
-export interface SentryCliOptions {
+export type SentryCliOptions = {
   /**
    * The URL of the Sentry instance you are connecting to. Defaults to https://sentry.io/.
    * This value will update `SENTRY_URL` env variable.
@@ -64,7 +64,7 @@ export type SourceMapsPathDescriptor = Omit<SentryCliUploadSourceMapsOptions, 'i
 /**
  * Options for uploading source maps
  */
-export interface SentryCliUploadSourceMapsOptions {
+export type SentryCliUploadSourceMapsOptions = {
   /**
    * One or more paths that Sentry CLI should scan recursively for sources.
    * It will upload all .map files and match associated .js files.
@@ -142,7 +142,7 @@ export interface SentryCliUploadSourceMapsOptions {
 /**
  * Options for creating a new deployment
  */
-export interface SentryCliNewDeployOptions {
+export type SentryCliNewDeployOptions = {
   /**
    * Environment for this release. Values that make sense here would be `production` or `staging`.
    */
@@ -172,7 +172,7 @@ export interface SentryCliNewDeployOptions {
 /**
  * Options for setting commits on a release
  */
-export interface SentryCliCommitsOptions {
+export type SentryCliCommitsOptions = {
   /**
    * Automatically choose the associated commit (uses the current commit). Overrides other setCommit options.
    */
@@ -200,28 +200,4 @@ export interface SentryCliCommitsOptions {
    * When the flag is set, command will not fail and just exit silently if no new commits for a given release have been found.
    */
   ignoreEmpty?: boolean;
-}
-
-/**
- * Release management interface
- */
-export interface SentryCliReleases {
-  new (release: string, options?: { projects: string[] } | string[]): Promise<string>;
-
-  setCommits(release: string, options: SentryCliCommitsOptions): Promise<string>;
-
-  finalize(release: string): Promise<string>;
-
-  proposeVersion(): Promise<string>;
-
-  uploadSourceMaps(
-    release: string,
-    options: SentryCliUploadSourceMapsOptions & { live?: boolean }
-  ): Promise<string[]>;
-
-  listDeploys(release: string): Promise<string>;
-
-  newDeploy(release: string, options: SentryCliNewDeployOptions): Promise<string>;
-
-  execute(args: string[], live: boolean): Promise<string>;
 }

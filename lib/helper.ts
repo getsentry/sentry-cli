@@ -1,9 +1,10 @@
 'use strict';
 
-const os = require('os');
-const path = require('path');
-const fs = require('fs');
-const childProcess = require('child_process');
+import * as os from 'node:os';
+import * as path from 'node:path';
+import * as fs from 'node:fs';
+import * as childProcess from 'node:child_process';
+import { SentryCliOptions } from './types';
 
 const BINARY_DISTRIBUTIONS = [
   { packageName: '@sentry/cli-darwin', subpath: 'bin/sentry-cli' },
@@ -23,9 +24,9 @@ const BINARY_DISTRIBUTIONS = [
  * Without this, the binary can be detected as an asset and included by bundlers
  * that use @vercel/nft.
  *
- * @returns {string} The path to the sentry-cli binary
+ * @returns The path to the sentry-cli binary
  */
-function getFallbackBinaryPath() {
+function getFallbackBinaryPath(): string {
   const parts = [];
   parts.push(__dirname);
   parts.push('..');
@@ -93,9 +94,9 @@ function getDistributionForThisPlatform() {
 /**
  * Throws an error with a message stating that Sentry CLI doesn't support the current platform.
  *
- * @returns {never} nothing. It throws.
+ * @returns nothing. It throws.
  */
-function throwUnsupportedPlatformError() {
+function throwUnsupportedPlatformError(): void {
   throw new Error(
     `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
 
@@ -110,9 +111,9 @@ Sentry CLI supports:
  * Tries to find the installed Sentry CLI binary - either by looking into the relevant
  * optional dependencies or by trying to resolve the fallback binary.
  *
- * @returns {string} The path to the sentry-cli binary
+ * @returns The path to the sentry-cli binary
  */
-function getBinaryPath() {
+function getBinaryPath(): string {
   if (process.env.SENTRY_BINARY_PATH) {
     return process.env.SENTRY_BINARY_PATH;
   }
@@ -161,47 +162,41 @@ It seems like none of the "@sentry/cli" package's optional dependencies got inst
 
 /**
  * Will be used as the binary path when defined with `mockBinaryPath`.
- * @type {string | undefined}
  */
-let mockedBinaryPath;
+let mockedBinaryPath: string | undefined;
 
 /**
  * Overrides the default binary path with a mock value, useful for testing.
  *
- * @param {string} mockPath The new path to the mock sentry-cli binary
+ * @param mockPath The new path to the mock sentry-cli binary
  * @deprecated This was used in tests internally and will be removed in the next major version.
  */
 // TODO(v3): Remove this function
-function mockBinaryPath(mockPath) {
+function mockBinaryPath(mockPath: string) {
   mockedBinaryPath = mockPath;
 }
 
-/**
- * The javascript type of a command line option.
- * @typedef {'array'|'string'|'boolean'|'inverted-boolean'} OptionType
- */
-
-/**
- * Schema definition of a command line option.
- * @typedef {object} OptionSchema
- * @prop {string} param The flag of the command line option including dashes.
- * @prop {OptionType} type The value type of the command line option.
- * @prop {string} [invertedParam] The flag of the command line option including dashes (optional).
- */
-
-/**
- * Schema definition for a command.
- * @typedef {Object.<string, OptionSchema>} OptionsSchema
- */
+export type OptionsSchema = Record<
+  string,
+  | {
+      param: string;
+      type: 'array' | 'string' | 'number' | 'boolean' | 'inverted-boolean';
+      invertedParam?: string;
+    }
+  | {
+      param?: never;
+      type: 'array' | 'string' | 'number' | 'boolean' | 'inverted-boolean';
+      invertedParam: string;
+    }
+>;
 
 /**
  * Serializes command line options into an arguments array.
  *
- * @param {OptionsSchema} schema An options schema required by the command.
- * @param {object} options An options object according to the schema.
- * @returns {string[]} An arguments array that can be passed via command line.
+ * @param schema An options schema required by the command.
+ * @param options An options object according to the schema.
  */
-function serializeOptions(schema, options) {
+function serializeOptions(schema: OptionsSchema, options: Record<string, unknown>): string[] {
   return Object.keys(schema).reduce((newOptions, option) => {
     const paramValue = options[option];
     if (paramValue === undefined || paramValue === null) {
@@ -246,20 +241,23 @@ function serializeOptions(schema, options) {
 /**
  * Serializes the command and its options into an arguments array.
  *
- * @param {string[]} command The literal name of the command.
- * @param {OptionsSchema} [schema] An options schema required by the command.
- * @param {object} [options] An options object according to the schema.
- * @returns {string[]} An arguments array that can be passed via command line.
+ * @param command The literal name of the command.
+ * @param schema An options schema required by the command.
+ * @param options An options object according to the schema.
+ * @returns An arguments array that can be passed via command line.
  */
-function prepareCommand(command, schema, options) {
+function prepareCommand(
+  command: string[],
+  schema: OptionsSchema,
+  options: Record<string, unknown>
+): string[] {
   return command.concat(serializeOptions(schema || {}, options || {}));
 }
 
 /**
  * Returns the absolute path to the `sentry-cli` binary.
- * @returns {string}
  */
-function getPath() {
+function getPath(): string {
   return mockedBinaryPath !== undefined ? mockedBinaryPath : getBinaryPath();
 }
 
@@ -280,17 +278,23 @@ function getPath() {
  * const output = await execute(['--version']);
  * expect(output.trim()).toBe('sentry-cli x.y.z');
  *
- * @param {string[]} args Command line arguments passed to `sentry-cli`.
- * @param {boolean} live can be set to:
+ * @param args Command line arguments passed to `sentry-cli`.
+ * @param live can be set to:
  *  - `true` to inherit stdio and reject the promise if the command
  *    exits with a non-zero exit code.
  *  - `false` to not inherit stdio and return the output as a string.
- * @param {boolean} silent Disable stdout for silents build (CI/Webpack Stats, ...)
- * @param {string} [configFile] Relative or absolute path to the configuration file.
- * @param {import('./index').SentryCliOptions} [config] More configuration to pass to the CLI
- * @returns {Promise<string>} A promise that resolves to the standard output.
+ * @param silent Disable stdout for silents build (CI/Webpack Stats, ...)
+ * @param configFile Relative or absolute path to the configuration file.
+ * @param config More configuration to pass to the CLI
+ * @returns A promise that resolves to the standard output.
  */
-async function execute(args, live, silent, configFile, config = {}) {
+async function execute(
+  args: string[],
+  live: boolean,
+  silent: boolean,
+  configFile: string | undefined,
+  config: SentryCliOptions = {}
+): Promise<string> {
   const env = { ...process.env };
   if (configFile) {
     env.SENTRY_PROPERTIES = configFile;
@@ -353,7 +357,7 @@ function getProjectFlagsFromOptions({ projects = [] } = {}) {
   return projects.reduce((flags, project) => flags.concat('-p', project), []);
 }
 
-module.exports = {
+export {
   execute,
   getPath,
   getProjectFlagsFromOptions,
