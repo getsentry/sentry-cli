@@ -209,27 +209,3 @@ export interface SentryCliCommitsOptions {
    */
   ignoreEmpty?: boolean;
 }
-
-/**
- * Release management interface
- */
-export interface SentryCliReleases {
-  new (release: string, options?: { projects: string[] } | string[]): Promise<string>;
-
-  setCommits(release: string, options: SentryCliCommitsOptions): Promise<string>;
-
-  finalize(release: string): Promise<string>;
-
-  proposeVersion(): Promise<string>;
-
-  uploadSourceMaps(
-    release: string,
-    options: SentryCliUploadSourceMapsOptions & { live?: boolean }
-  ): Promise<string[]>;
-
-  listDeploys(release: string): Promise<string>;
-
-  newDeploy(release: string, options: SentryCliNewDeployOptions): Promise<string>;
-
-  execute(args: string[], live: boolean): Promise<string>;
-}
