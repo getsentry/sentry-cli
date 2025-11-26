@@ -878,7 +878,7 @@ mod tests {
         // Bind a minimal config
         Config::from_cli_config().unwrap().bind_to_process();
 
-        // Create a mock ArgMatches with explicit --head-sha value
+        // Create a mock ArgMatches with explicit --head-sha and --vcs-provider values
         let app = make_command(Command::new("test"));
         let matches = app
             .try_get_matches_from(vec![
@@ -889,6 +889,8 @@ mod tests {
                 "test-project",
                 "--head-sha",
                 "1234567890123456789012345678901234567890",
+                "--vcs-provider",
+                "custom-vcs",
                 "dummy.apk",
             ])
             .unwrap();
@@ -898,16 +900,20 @@ mod tests {
         // When auto_collect is false, explicit values should still be collected
         let metadata = collect_git_metadata(&matches, &config, false);
 
-        // The explicit head_sha should be present
+        // Explicit values should be present
         assert!(
             metadata.head_sha.is_some(),
             "Explicit --head-sha should be collected even with auto_collect=false"
         );
-
-        // But automatic inference should not happen (these would be empty since auto_collect=false)
         assert_eq!(
-            metadata.vcs_provider, "",
-            "vcs_provider should be empty with auto_collect=false and no explicit value"
+            metadata.vcs_provider, "custom-vcs",
+            "Explicit --vcs-provider should be used with auto_collect=false"
+        );
+
+        // But automatic inference should not happen for fields without explicit values
+        assert_eq!(
+            metadata.head_repo_name, "",
+            "head_repo_name should be empty with auto_collect=false and no explicit value"
         );
     }
 
@@ -958,47 +964,6 @@ mod tests {
         assert_eq!(
             metadata.head_ref, "",
             "head_ref should be empty with auto_collect=false and no explicit value"
-        );
-    }
-
-    #[test]
-    fn test_collect_git_metadata_with_explicit_vcs_provider() {
-        use std::env;
-        use tempfile::TempDir;
-
-        // Create a temporary directory for config
-        let temp_dir = TempDir::new().unwrap();
-        env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Create a minimal config file
-        let config_path = temp_dir.path().join(".sentryclirc");
-        std::fs::write(&config_path, "[defaults]\n").unwrap();
-
-        // Bind a minimal config
-        Config::from_cli_config().unwrap().bind_to_process();
-
-        // Test that explicit --vcs-provider is respected with auto_collect=false
-        let app = make_command(Command::new("test"));
-        let matches = app
-            .try_get_matches_from(vec![
-                "test",
-                "--org",
-                "test-org",
-                "--project",
-                "test-project",
-                "--vcs-provider",
-                "custom-vcs",
-                "dummy.apk",
-            ])
-            .unwrap();
-
-        let config = Config::current();
-
-        let metadata = collect_git_metadata(&matches, &config, false);
-
-        assert_eq!(
-            metadata.vcs_provider, "custom-vcs",
-            "Explicit --vcs-provider should be used with auto_collect=false"
         );
     }
 }
