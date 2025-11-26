@@ -1,49 +1,25 @@
 'use strict';
 
-const helper = require('../helper');
+import {
+  SentryCliCommitsOptions,
+  SentryCliNewDeployOptions,
+  SentryCliOptions,
+  SentryCliUploadSourceMapsOptions,
+} from '../types';
+import { DEPLOYS_OPTIONS } from './options/deploys';
+import { SOURCEMAPS_OPTIONS } from './options/uploadSourcemaps';
+import * as helper from '../helper';
 
 /**
  * Default arguments for the `--ignore` option.
- * @type {string[]}
  */
-const DEFAULT_IGNORE = ['node_modules'];
-
-/**
- * Schema for the `upload-sourcemaps` command.
- * @type {import('../helper').OptionsSchema}
- */
-const SOURCEMAPS_SCHEMA = require('./options/uploadSourcemaps');
-
-/**
- * Schema for the `deploys new` command.
- * @type {import('../helper').OptionsSchema}
- */
-const DEPLOYS_SCHEMA = require('./options/deploys');
-
-/**
- * @typedef {import('../types').SentryCliUploadSourceMapsOptions} SentryCliUploadSourceMapsOptions
- * @typedef {import('../types').SourceMapsPathDescriptor} SourceMapsPathDescriptor
- * @typedef {import('../types').SentryCliNewDeployOptions} SentryCliNewDeployOptions
- * @typedef {import('../types').SentryCliCommitsOptions} SentryCliCommitsOptions
- */
+const DEFAULT_IGNORE: string[] = ['node_modules'];
 
 /**
  * Manages releases and release artifacts on Sentry.
- * @namespace SentryReleases
  */
-class Releases {
-  /**
-   * Creates a new `Releases` instance.
-   *
-   * @param {Object} [options] More options to pass to the CLI
-   */
-  constructor(options) {
-    this.options = options || {};
-    if (typeof this.options.configFile === 'string') {
-      this.configFile = this.options.configFile;
-    }
-    delete this.options.configFile;
-  }
+export class Releases {
+  constructor(public options: SentryCliOptions = {}, private configFile: string | null) {}
 
   /**
    * Registers a new release with sentry.
@@ -51,12 +27,11 @@ class Releases {
    * The given release name should be unique and deterministic. It can later be used to
    * upload artifacts, such as source maps.
    *
-   * @param {string} release Unique name of the new release.
-   * @param {{projects?: string[]}} [options] The list of project slugs for a release.
-   * @returns {Promise<string>} A promise that resolves when the release has been created.
-   * @memberof SentryReleases
+   * @param release Unique name of the new release.
+   * @param options The list of project slugs for a release.
+   * @returns A promise that resolves when the release has been created.
    */
-  async new(release, options) {
+  async new(release: string, options: { projects?: string[] }): Promise<string> {
     const args = ['releases', 'new', release].concat(helper.getProjectFlagsFromOptions(options));
     return this.execute(args, null);
   }
@@ -64,12 +39,11 @@ class Releases {
   /**
    * Specifies the set of commits covered in this release.
    *
-   * @param {string} release Unique name of the release
-   * @param {SentryCliCommitsOptions} options A set of options to configure the commits to include
-   * @returns {Promise<string>} A promise that resolves when the commits have been associated
-   * @memberof SentryReleases
+   * @param release Unique name of the release
+   * @param options A set of options to configure the commits to include
+   * @returns A promise that resolves when the commits have been associated
    */
-  async setCommits(release, options) {
+  async setCommits(release: string, options: SentryCliCommitsOptions): Promise<string> {
     if (!options || (!options.auto && (!options.repo || !options.commit))) {
       throw new Error('options.auto, or options.repo and options.commit must be specified');
     }
@@ -95,11 +69,10 @@ class Releases {
    * Marks this release as complete. This should be called once all artifacts has been
    * uploaded.
    *
-   * @param {string} release Unique name of the release.
-   * @returns {Promise<string>} A promise that resolves when the release has been finalized.
-   * @memberof SentryReleases
+   * @param release Unique name of the release.
+   * @returns A promise that resolves when the release has been finalized.
    */
-  async finalize(release) {
+  async finalize(release: string): Promise<string> {
     return this.execute(['releases', 'finalize', release], null);
   }
 
@@ -107,10 +80,9 @@ class Releases {
    * Creates a unique, deterministic version identifier based on the project type and
    * source files. This identifier can be used as release name.
    *
-   * @returns {Promise<string>} A promise that resolves to the version string.
-   * @memberof SentryReleases
+   * @returns A promise that resolves to the version string.
    */
-  async proposeVersion() {
+  async proposeVersion(): Promise<string> {
     const version = await this.execute(['releases', 'propose-version'], null);
     return version.trim();
   }
@@ -144,12 +116,14 @@ class Releases {
    *   decompress: false          // decompress gzip files before uploading
    * });
    *
-   * @param {string} release Unique name of the release.
-   * @param {SentryCliUploadSourceMapsOptions} options Options to configure the source map upload.
-   * @returns {Promise<string[]>} A promise that resolves when the upload has completed successfully.
-   * @memberof SentryReleases
+   * @param release Unique name of the release.
+   * @param options Options to configure the source map upload.
+   * @returns A promise that resolves when the upload has completed successfully.
    */
-  async uploadSourceMaps(release, options) {
+  async uploadSourceMaps(
+    release: string,
+    options: SentryCliUploadSourceMapsOptions
+  ): Promise<string[]> {
     if (!options || !options.include || !Array.isArray(options.include)) {
       throw new Error(
         '`options.include` must be a valid array of paths and/or path descriptor objects.'
@@ -192,7 +166,7 @@ class Releases {
 
       return uploadPaths.map((path) =>
         // `execute()` is async and thus we're returning a promise here
-        this.execute(helper.prepareCommand([...args, path], SOURCEMAPS_SCHEMA, newOptions), true)
+        this.execute(helper.prepareCommand([...args, path], SOURCEMAPS_OPTIONS, newOptions), true)
       );
     });
 
@@ -207,11 +181,10 @@ class Releases {
   /**
    * List all deploys for a given release.
    *
-   * @param {string} release Unique name of the release.
-   * @returns {Promise<string>} A promise that resolves when the list comes back from the server.
-   * @memberof SentryReleases
+   * @param release Unique name of the release.
+   * @returns A promise that resolves when the list comes back from the server.
    */
-  async listDeploys(release) {
+  async listDeploys(release: string): Promise<string> {
     return this.execute(['releases', 'deploys', release, 'list'], null);
   }
 
@@ -232,31 +205,28 @@ class Releases {
    *   url: 'https://example.com', // URL that points to the deployment
    * });
    *
-   * @param {string} release Unique name of the release.
-   * @param {SentryCliNewDeployOptions} options Options to configure the new release deploy.
-   * @returns {Promise<string>} A promise that resolves when the deploy has been created.
-   * @memberof SentryReleases
+   * @param release Unique name of the release.
+   * @param options Options to configure the new release deploy.
+   * @returns A promise that resolves when the deploy has been created.
    */
-  async newDeploy(release, options) {
+  async newDeploy(release: string, options: SentryCliNewDeployOptions): Promise<string> {
     if (!options || !options.env) {
       throw new Error('options.env must be a valid name');
     }
     const args = ['releases', 'deploys', release, 'new'];
-    return this.execute(helper.prepareCommand(args, DEPLOYS_SCHEMA, options), null);
+    return this.execute(helper.prepareCommand(args, DEPLOYS_OPTIONS, options), null);
   }
 
   /**
    * See {helper.execute} docs.
-   * @param {string[]} args Command line arguments passed to `sentry-cli`.
-   * @param {boolean} live can be set to:
+   * @param args Command line arguments passed to `sentry-cli`.
+   * @param live can be set to:
    *  - `true` to inherit stdio and reject the promise if the command
    *    exits with a non-zero exit code.
    *  - `false` to not inherit stdio and return the output as a string.
-   * @returns {Promise<string>} A promise that resolves to the standard output.
+   * @returns A promise that resolves to the standard output.
    */
-  async execute(args, live) {
+  async execute(args: string[], live: boolean): Promise<string> {
     return helper.execute(args, live, this.options.silent, this.configFile, this.options);
   }
 }
-
-module.exports = Releases;
