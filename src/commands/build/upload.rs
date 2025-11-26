@@ -33,6 +33,92 @@ use crate::utils::vcs::{
     git_repo_head_ref, git_repo_remote_url,
 };
 
+pub fn make_command(command: Command) -> Command {
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    const HELP_TEXT: &str =
+        "The path to the build to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+    const HELP_TEXT: &str =
+        "The path to the build to upload. Supported files include Apk, and Aab.";
+    command
+        .about("Upload builds to a project.")
+        .org_arg()
+        .project_arg(false)
+        .arg(
+            Arg::new("paths")
+                .value_name("PATH")
+                .help(HELP_TEXT)
+                .num_args(1..)
+                .action(ArgAction::Append)
+                .required(true),
+        )
+        .arg(
+            Arg::new("head_sha")
+                .long("head-sha")
+                .value_parser(parse_sha_allow_empty)
+                .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
+        )
+        .arg(
+            Arg::new("base_sha")
+                .long("base-sha")
+                .value_parser(parse_sha_allow_empty)
+                .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
+        )
+        .arg(
+            Arg::new("vcs_provider")
+                .long("vcs-provider")
+                .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
+        )
+        .arg(
+            Arg::new("head_repo_name")
+                .long("head-repo-name")
+                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+        )
+        .arg(
+            Arg::new("base_repo_name")
+                .long("base-repo-name")
+                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+        )
+        .arg(
+            Arg::new("head_ref")
+                .long("head-ref")
+                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+        )
+        .arg(
+            Arg::new("base_ref")
+                .long("base-ref")
+                .help("The base reference (branch) to use for the upload. If not provided, the merge-base with the remote tracking branch will be used.")
+        )
+        .arg(
+            Arg::new("pr_number")
+                .long("pr-number")
+                .value_parser(clap::value_parser!(u32))
+                .help("The pull request number to use for the upload. If not provided and running \
+                    in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
+                    detected from GitHub Actions environment variables.")
+        )
+        .arg(
+            Arg::new("build_configuration")
+                .long("build-configuration")
+                .help("The build configuration to use for the upload. If not provided, the current version will be used.")
+        )
+        .arg(
+            Arg::new("release_notes")
+                .long("release-notes")
+                .help("The release notes to use for the upload.")
+        )
+        .arg(
+            Arg::new("git_metadata")
+                .long("git-metadata")
+                .num_args(0..=1)
+                .default_missing_value("true")
+                .value_parser(clap::value_parser!(bool))
+                .help("Controls whether to collect and send git metadata (branch, commit, etc.). \
+                    Use --git-metadata to force enable, --git-metadata=false to force disable. \
+                    If not specified, git metadata is automatically collected only when running in a CI environment.")
+        )
+}
+
 /// Holds git metadata collected for build uploads.
 #[derive(Debug, Default)]
 struct GitMetadata {
@@ -266,92 +352,6 @@ fn collect_git_metadata(matches: &ArgMatches, config: &Config, auto_collect: boo
         base_sha,
         pr_number,
     }
-}
-
-pub fn make_command(command: Command) -> Command {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    const HELP_TEXT: &str =
-        "The path to the build to upload. Supported files include Apk, Aab, XCArchive, and IPA.";
-    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
-    const HELP_TEXT: &str =
-        "The path to the build to upload. Supported files include Apk, and Aab.";
-    command
-        .about("Upload builds to a project.")
-        .org_arg()
-        .project_arg(false)
-        .arg(
-            Arg::new("paths")
-                .value_name("PATH")
-                .help(HELP_TEXT)
-                .num_args(1..)
-                .action(ArgAction::Append)
-                .required(true),
-        )
-        .arg(
-            Arg::new("head_sha")
-                .long("head-sha")
-                .value_parser(parse_sha_allow_empty)
-                .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
-        )
-        .arg(
-            Arg::new("base_sha")
-                .long("base-sha")
-                .value_parser(parse_sha_allow_empty)
-                .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
-        )
-        .arg(
-            Arg::new("vcs_provider")
-                .long("vcs-provider")
-                .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
-        )
-        .arg(
-            Arg::new("head_repo_name")
-                .long("head-repo-name")
-                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
-        )
-        .arg(
-            Arg::new("base_repo_name")
-                .long("base-repo-name")
-                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
-        )
-        .arg(
-            Arg::new("head_ref")
-                .long("head-ref")
-                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
-        )
-        .arg(
-            Arg::new("base_ref")
-                .long("base-ref")
-                .help("The base reference (branch) to use for the upload. If not provided, the merge-base with the remote tracking branch will be used.")
-        )
-        .arg(
-            Arg::new("pr_number")
-                .long("pr-number")
-                .value_parser(clap::value_parser!(u32))
-                .help("The pull request number to use for the upload. If not provided and running \
-                    in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
-                    detected from GitHub Actions environment variables.")
-        )
-        .arg(
-            Arg::new("build_configuration")
-                .long("build-configuration")
-                .help("The build configuration to use for the upload. If not provided, the current version will be used.")
-        )
-        .arg(
-            Arg::new("release_notes")
-                .long("release-notes")
-                .help("The release notes to use for the upload.")
-        )
-        .arg(
-            Arg::new("git_metadata")
-                .long("git-metadata")
-                .num_args(0..=1)
-                .default_missing_value("true")
-                .value_parser(clap::value_parser!(bool))
-                .help("Controls whether to collect and send git metadata (branch, commit, etc.). \
-                    Use --git-metadata to force enable, --git-metadata=false to force disable. \
-                    If not specified, git metadata is automatically collected only when running in a CI environment.")
-        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
