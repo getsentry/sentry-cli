@@ -27,7 +27,6 @@ use chrono::Duration;
 use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
 use flate2::write::GzEncoder;
-use if_chain::if_chain;
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
@@ -460,21 +459,9 @@ impl AuthenticatedApi<'_> {
 
     /// Creates a new release.
     pub fn new_release(&self, org: &str, release: &NewRelease) -> ApiResult<ReleaseInfo> {
-        // for single project releases use the legacy endpoint that is project bound.
-        // This means we can support both old and new servers.
-        if release.projects.len() == 1 {
-            let path = format!(
-                "/projects/{}/{}/releases/",
-                PathArg(org),
-                PathArg(&release.projects[0])
-            );
-            self.post(&path, release)?
-                .convert_rnf(ApiErrorKind::ProjectNotFound)
-        } else {
-            let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.post(&path, release)?
-                .convert_rnf(ApiErrorKind::OrganizationNotFound)
-        }
+        let path = format!("/organizations/{}/releases/", PathArg(org));
+        self.post(&path, release)?
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
     }
 
     /// Updates a release.
@@ -484,29 +471,20 @@ impl AuthenticatedApi<'_> {
         version: &str,
         release: &UpdatedRelease,
     ) -> ApiResult<ReleaseInfo> {
-        if_chain! {
-            if let Some(ref projects) = release.projects;
-            if projects.len() == 1;
-            then {
-                let path = format!("/projects/{}/{}/releases/{}/",
-                    PathArg(org),
-                    PathArg(&projects[0]),
-                    PathArg(version)
-                );
-                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-            } else {
-                if release.version.is_some() {
-                    let path = format!("/organizations/{}/releases/",
-                                    PathArg(org));
-                    return self.post(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-                }
-
-                let path = format!("/organizations/{}/releases/{}/",
-                                PathArg(org),
-                                PathArg(version));
-                self.put(&path, release)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
-            }
+        if release.version.is_some() {
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            return self
+                .post(&path, release)?
+                .convert_rnf(ApiErrorKind::ReleaseNotFound);
         }
+
+        let path = format!(
+            "/organizations/{}/releases/{}/",
+            PathArg(org),
+            PathArg(version)
+        );
+        self.put(&path, release)?
+            .convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
     /// Sets release commits
@@ -530,28 +508,14 @@ impl AuthenticatedApi<'_> {
     }
 
     /// Deletes an already existing release.  Returns `true` if it was deleted
-    /// or `false` if not.  The project is needed to support the old deletion
-    /// API.
-    pub fn delete_release(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<bool> {
-        let resp = if let Some(project) = project {
-            self.delete(&format!(
-                "/projects/{}/{}/releases/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            ))?
-        } else {
-            self.delete(&format!(
-                "/organizations/{}/releases/{}/",
-                PathArg(org),
-                PathArg(version)
-            ))?
-        };
+    /// or `false` if not.
+    pub fn delete_release(&self, org: &str, version: &str) -> ApiResult<bool> {
+        let resp = self.delete(&format!(
+            "/organizations/{}/releases/{}/",
+            PathArg(org),
+            PathArg(version)
+        ))?;
+
         if resp.status() == 404 {
             Ok(false)
         } else {
@@ -561,26 +525,12 @@ impl AuthenticatedApi<'_> {
 
     /// Looks up a release and returns it.  If it does not exist `None`
     /// will be returned.
-    pub fn get_release(
-        &self,
-        org: &str,
-        project: Option<&str>,
-        version: &str,
-    ) -> ApiResult<Option<ReleaseInfo>> {
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/",
-                PathArg(org),
-                PathArg(version)
-            )
-        };
+    pub fn get_release(&self, org: &str, version: &str) -> ApiResult<Option<ReleaseInfo>> {
+        let path = format!(
+            "/organizations/{}/releases/{}/",
+            PathArg(org),
+            PathArg(version)
+        );
         let resp = self.get(&path)?;
         if resp.status() == 404 {
             Ok(None)
@@ -591,16 +541,10 @@ impl AuthenticatedApi<'_> {
 
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
-        if let Some(project) = project {
-            let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
-            self.get(&path)?
-                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
-        } else {
-            let path = format!("/organizations/{}/releases/", PathArg(org));
-            self.get(&path)?
-                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
-        }
+    pub fn list_releases(&self, org: &str) -> ApiResult<Vec<ReleaseInfo>> {
+        let path = format!("/organizations/{}/releases/", PathArg(org));
+        self.get(&path)?
+            .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
     }
 
     /// Looks up a release commits and returns it.  If it does not exist `None`
@@ -608,23 +552,13 @@ impl AuthenticatedApi<'_> {
     pub fn get_release_commits(
         &self,
         org: &str,
-        project: Option<&str>,
         version: &str,
     ) -> ApiResult<Option<Vec<ReleaseCommit>>> {
-        let path = if let Some(project) = project {
-            format!(
-                "/projects/{}/{}/releases/{}/commits/",
-                PathArg(org),
-                PathArg(project),
-                PathArg(version)
-            )
-        } else {
-            format!(
-                "/organizations/{}/releases/{}/commits/",
-                PathArg(org),
-                PathArg(version)
-            )
-        };
+        let path = format!(
+            "/organizations/{}/releases/{}/commits/",
+            PathArg(org),
+            PathArg(version)
+        );
         let resp = self.get(&path)?;
         if resp.status() == 404 {
             Ok(None)
