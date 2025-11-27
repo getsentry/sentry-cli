@@ -4,6 +4,7 @@
 
 ### Improvements
 
+- The `sentry-cli build upload` command now accepts `--gradle-plugin-version` and `--fastlane-plugin-version` parameters to track plugin versions ([#2994](https://github.com/getsentry/sentry-cli/pull/2994)). These versions are written to the `.sentry-cli-metadata.txt` file in uploaded build archives, enabling the backend to store plugin version information for size analysis and build distribution tracking.
 - The `sentry-cli build upload` command now automatically detects the correct branch or tag reference in non-PR GitHub Actions workflows ([#2976](https://github.com/getsentry/sentry-cli/pull/2976)). Previously, `--head-ref` was only auto-detected for pull request workflows. Now it works for push, release, and other workflow types by using the `GITHUB_REF_NAME` environment variable.
 
 ## 2.58.2
