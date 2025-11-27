@@ -59,6 +59,10 @@ Options:
           most CI environments.
       --no-git-metadata
           Disable collection and sending of git metadata.
+      --gradle-plugin-version <gradle_plugin_version>
+          The version of the Sentry Gradle plugin used to build the artifact.
+      --fastlane-plugin-version <fastlane_plugin_version>
+          The version of the Sentry Fastlane plugin used to build the artifact.
   -h, --help
           Print help
 

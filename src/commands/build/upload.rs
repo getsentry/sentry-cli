@@ -123,6 +123,16 @@ pub fn make_command(command: Command) -> Command {
                 .conflicts_with("force_git_metadata")
                 .help("Disable collection and sending of git metadata.")
         )
+        .arg(
+            Arg::new("gradle_plugin_version")
+                .long("gradle-plugin-version")
+                .help("The version of the Sentry Gradle plugin used to build the artifact.")
+        )
+        .arg(
+            Arg::new("fastlane_plugin_version")
+                .long("fastlane-plugin-version")
+                .help("The version of the Sentry Fastlane plugin used to build the artifact.")
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -149,6 +159,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
+    let gradle_plugin_version = matches.get_one("gradle_plugin_version").map(String::as_str);
+    let fastlane_plugin_version = matches
+        .get_one("fastlane_plugin_version")
+        .map(String::as_str);
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
@@ -171,15 +185,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let normalized_zip = if path.is_file() {
             debug!("Normalizing file: {}", path.display());
-            handle_file(path, &byteview)?
+            handle_file(
+                path,
+                &byteview,
+                gradle_plugin_version,
+                fastlane_plugin_version,
+            )?
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
-            handle_directory(path).with_context(|| {
-                format!(
-                    "Failed to generate uploadable bundle for directory {}",
-                    path.display()
-                )
-            })?
+            handle_directory(path, gradle_plugin_version, fastlane_plugin_version).with_context(
+                || {
+                    format!(
+                        "Failed to generate uploadable bundle for directory {}",
+                        path.display()
+                    )
+                },
+            )?
         } else {
             Err(anyhow!(
                 "Path {} is neither a file nor a directory, cannot upload",
@@ -259,6 +280,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
+<<<<<<< HEAD
 /// Collects git metadata from arguments and VCS introspection.
 ///
 /// When `auto_collect` is false, only explicitly provided values are collected;
@@ -434,18 +456,31 @@ fn collect_git_metadata(
     }
 }
 
-fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
+fn handle_file(
+    path: &Path,
+    byteview: &ByteView,
+    gradle_plugin_version: Option<&str>,
+    fastlane_plugin_version: Option<&str>,
+) -> Result<TempFile> {
     // Handle IPA files by converting them to XCArchive
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_zip_file(byteview) && is_ipa_file(byteview)? {
         debug!("Converting IPA file to XCArchive structure");
         let archive_temp_dir = TempDir::create()?;
         return ipa_to_xcarchive(path, byteview, &archive_temp_dir)
-            .and_then(|path| handle_directory(&path))
+            .and_then(|path| {
+                handle_directory(&path, gradle_plugin_version, fastlane_plugin_version)
+            })
             .with_context(|| format!("Failed to process IPA file {}", path.display()));
     }
 
-    normalize_file(path, byteview).with_context(|| {
+    normalize_file(
+        path,
+        byteview,
+        gradle_plugin_version,
+        fastlane_plugin_version,
+    )
+    .with_context(|| {
         format!(
             "Failed to generate uploadable bundle for file {}",
             path.display()
@@ -499,7 +534,12 @@ fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 // For APK and AAB files, we'll copy them directly into the zip
-fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
+fn normalize_file(
+    path: &Path,
+    bytes: &[u8],
+    gradle_plugin_version: Option<&str>,
+    fastlane_plugin_version: Option<&str>,
+) -> Result<TempFile> {
     debug!("Creating normalized zip for file: {}", path.display());
 
     let temp_file = TempFile::create()?;
@@ -523,20 +563,29 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     zip.start_file(file_name, options)?;
     zip.write_all(bytes)?;
 
-    write_version_metadata(&mut zip)?;
+    write_version_metadata(&mut zip, gradle_plugin_version, fastlane_plugin_version)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for file");
     Ok(temp_file)
 }
 
-fn handle_directory(path: &Path) -> Result<TempFile> {
+fn handle_directory(
+    path: &Path,
+    gradle_plugin_version: Option<&str>,
+    fastlane_plugin_version: Option<&str>,
+) -> Result<TempFile> {
     let temp_dir = TempDir::create()?;
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_apple_app(path)? {
         handle_asset_catalogs(path, temp_dir.path());
     }
-    normalize_directory(path, temp_dir.path())
+    normalize_directory(
+        path,
+        temp_dir.path(),
+        gradle_plugin_version,
+        fastlane_plugin_version,
+    )
 }
 
 /// Returns artifact url if upload was successful.
@@ -674,7 +723,7 @@ mod tests {
         fs::create_dir_all(test_dir.join("Products"))?;
         fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
 
-        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
+        let result_zip = normalize_directory(&test_dir, temp_dir.path(), None, None)?;
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
         let file = archive.by_index(0)?;
@@ -690,7 +739,7 @@ mod tests {
         let xcarchive_path = Path::new("tests/integration/_fixtures/build/archive.xcarchive");
 
         // Process the XCArchive directory
-        let result = handle_directory(xcarchive_path)?;
+        let result = handle_directory(xcarchive_path, None, None)?;
 
         // Verify the resulting zip contains parsed assets
         let zip_file = fs::File::open(result.path())?;
@@ -723,7 +772,7 @@ mod tests {
         let byteview = ByteView::open(ipa_path)?;
 
         // Process the IPA file - this should work even without asset catalogs
-        let result = handle_file(ipa_path, &byteview)?;
+        let result = handle_file(ipa_path, &byteview, None, None)?;
 
         let zip_file = fs::File::open(result.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
@@ -760,7 +809,7 @@ mod tests {
         let symlink_path = test_dir.join("Products").join("app_link.txt");
         symlink("app.txt", &symlink_path)?;
 
-        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
+        let result_zip = normalize_directory(&test_dir, temp_dir.path(), None, None)?;
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
 
@@ -795,6 +844,7 @@ mod tests {
     }
 
     #[test]
+<<<<<<< HEAD
     fn test_collect_git_metadata_respects_explicit_values_when_auto_collect_disabled() {
         // Create a mock ArgMatches with explicit --head-sha and --vcs-provider values
         let app = make_command(Command::new("test"));
@@ -876,5 +926,36 @@ mod tests {
             "",
             "head_ref should be empty with auto_collect=false and no explicit value"
         );
+    }
+
+    #[test]
+    fn test_metadata_includes_plugin_versions() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        let result_zip =
+            normalize_directory(&test_dir, temp_dir.path(), Some("4.12.0"), Some("1.2.3"))?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        // Find and read the metadata file
+        let metadata_file = archive.by_name(".sentry-cli-metadata.txt")?;
+        let metadata_content = std::io::read_to_string(metadata_file)?;
+
+        assert!(
+            metadata_content.contains("sentry-cli-version:"),
+            "Metadata should contain sentry-cli-version"
+        );
+        assert!(
+            metadata_content.contains("gradle-plugin-version: 4.12.0"),
+            "Metadata should contain gradle-plugin-version"
+        );
+        assert!(
+            metadata_content.contains("fastlane-plugin-version: 1.2.3"),
+            "Metadata should contain fastlane-plugin-version"
+        );
+        Ok(())
     }
 }
