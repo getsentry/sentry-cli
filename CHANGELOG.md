@@ -29,6 +29,7 @@ we should rename this section to "Unreleased" -->
 The following changes only apply when using `sentry-cli` via the npm package [`@sentry/cli`](https://www.npmjs.com/package/@sentry/cli):
 
 - Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
+- The type export `SentryCliReleases` has been removed
 - The JavaScript wrapper now uses named exports instead of default exports ([#2989](https://github.com/getsentry/sentry-cli/pull/2989))
 . You need to update your imports:
   ```js

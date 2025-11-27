@@ -11,7 +11,6 @@ export type {
   SourceMapsPathDescriptor,
   SentryCliNewDeployOptions,
   SentryCliCommitsOptions,
-  SentryCliReleases,
 } from './types';
 
 /**
