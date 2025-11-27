@@ -6,12 +6,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
-const zlib = require('zlib');
 const stream = require('stream');
 const process = require('process');
 
-const fetch = require('node-fetch');
-const HttpsProxyAgent = require('https-proxy-agent');
+const { ProxyAgent, fetch } = require('undici');
 const ProgressBar = require('progress');
 const Proxy = require('proxy-from-env');
 const which = require('which');
@@ -89,7 +87,7 @@ function getDownloadUrl(platform, arch) {
 }
 
 function createProgressBar(name, total) {
-  const incorrectTotal = typeof total !== 'number' || Number.isNaN(total);
+  const incorrectTotal = typeof total !== 'number' || Number.isNaN(total) || total <= 0;
 
   if (incorrectTotal || !shouldRenderProgressBar()) {
     return {
@@ -220,7 +218,7 @@ async function downloadBinary() {
   }
 
   const proxyUrl = Proxy.getProxyForUrl(downloadUrl);
-  const agent = proxyUrl ? new HttpsProxyAgent(proxyUrl) : null;
+  const dispatcher = proxyUrl ? new ProxyAgent(proxyUrl) : undefined;
 
   logger.log(`Downloading from ${downloadUrl}`);
 
@@ -231,12 +229,8 @@ async function downloadBinary() {
   let response;
   try {
     response = await fetch(downloadUrl, {
-      agent,
-      compress: false,
-      headers: {
-        'accept-encoding': 'gzip, deflate, br',
-      },
       redirect: 'follow',
+      dispatcher,
     });
   } catch (error) {
     let errorMsg = `Unable to download sentry-cli binary from ${downloadUrl}.\nError message: ${error.message}`;
@@ -254,39 +248,38 @@ async function downloadBinary() {
     throw new Error(errorMsg);
   }
 
-  const contentEncoding = response.headers.get('content-encoding');
-  let decompressor;
-  if (/\bgzip\b/.test(contentEncoding)) {
-    decompressor = zlib.createGunzip();
-  } else if (/\bdeflate\b/.test(contentEncoding)) {
-    decompressor = zlib.createInflate();
-  } else if (/\bbr\b/.test(contentEncoding)) {
-    decompressor = zlib.createBrotliDecompress();
-  } else {
-    decompressor = new stream.PassThrough();
-  }
   const name = downloadUrl.match(/.*\/(.*?)$/)[1];
   let downloadedBytes = 0;
-  const totalBytes = parseInt(response.headers.get('content-length'), 10);
+
+  // Note: content-length might not be available if response was compressed,
+  // as native fetch decompresses transparently
+  const contentLength = response.headers.get('content-length');
+  const totalBytes = contentLength ? parseInt(contentLength, 10) : 0;
   const progressBar = createProgressBar(name, totalBytes);
   const tempPath = getTempFile(cachedPath);
   fs.mkdirSync(path.dirname(tempPath), { recursive: true });
 
   await new Promise((resolve, reject) => {
-    response.body
+    // Convert Web ReadableStream to Node.js stream
+    const nodeStream = stream.Readable.fromWeb(response.body);
+
+    nodeStream
       .on('error', (e) => reject(e))
       .on('data', (chunk) => {
         downloadedBytes += chunk.length;
-        progressBar.tick(chunk.length);
+
+        if (!progressBar.complete) {
+          progressBar.tick(chunk.length);
+        }
       })
-      .pipe(decompressor)
       .pipe(fs.createWriteStream(tempPath, { mode: '0755' }))
       .on('error', (e) => reject(e))
-      .on('close', () => {
-        if (downloadedBytes >= totalBytes) {
-          resolve();
-        } else {
+      .on('finish', () => {
+        // Check if we have a total size to validate against
+        if (totalBytes > 0 && downloadedBytes < totalBytes) {
           reject(new Error('connection interrupted'));
+        } else {
+          resolve();
         }
       });
   });

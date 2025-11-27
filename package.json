@@ -15,10 +15,9 @@
     "sentry-cli": "bin/sentry-cli"
   },
   "dependencies": {
-    "https-proxy-agent": "^5.0.0",
-    "node-fetch": "^2.6.7",
     "progress": "^2.0.3",
     "proxy-from-env": "^1.1.0",
+    "undici": "^6.22.0",
     "which": "^2.0.2"
   },
   "devDependencies": {
