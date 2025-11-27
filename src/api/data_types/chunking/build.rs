@@ -11,6 +11,8 @@ pub struct ChunkedBuildRequest<'a> {
     pub build_configuration: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_notes: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub date_built: Option<&'a str>,
     #[serde(flatten)]
     pub vcs_info: &'a VcsInfo<'a>,
 }

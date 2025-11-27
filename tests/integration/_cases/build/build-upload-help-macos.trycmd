@@ -53,6 +53,9 @@ Options:
           be used.
       --release-notes <release_notes>
           The release notes to use for the upload.
+      --date-built <date_built>
+          The date and time when the build was created (ISO 8601 format with timezone, e.g.,
+          '2025-11-26T10:30:00Z')
   -h, --help
           Print help
 

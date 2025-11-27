@@ -106,6 +106,11 @@ pub fn make_command(command: Command) -> Command {
                 .long("release-notes")
                 .help("The release notes to use for the upload.")
         )
+        .arg(
+            Arg::new("date_built")
+                .long("date-built")
+                .help("The date and time when the build was created (ISO 8601 format with timezone, e.g., '2025-11-26T10:30:00Z')")
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -280,6 +285,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
+    let date_built = matches.get_one("date_built").map(String::as_str);
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
@@ -350,6 +356,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             &project,
             build_configuration,
             release_notes,
+            date_built,
             &vcs_info,
         ) {
             Ok(artifact_url) => {
@@ -513,6 +520,7 @@ fn upload_file(
     project: &str,
     build_configuration: Option<&str>,
     release_notes: Option<&str>,
+    date_built: Option<&str>,
     vcs_info: &VcsInfo<'_>,
 ) -> Result<String> {
     const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
@@ -575,6 +583,7 @@ fn upload_file(
                 chunks: &checksums,
                 build_configuration,
                 release_notes,
+                date_built,
                 vcs_info,
             },
         )?;
