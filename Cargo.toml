@@ -3,7 +3,7 @@ build = "build.rs"
 name = "sentry-cli"
 version = "2.58.2"
 edition = "2021"
-rust-version = "1.86"
+rust-version = "1.91"
 
 [workspace]
 
@@ -93,6 +93,7 @@ trycmd = "0.14.11"
 default = []
 managed = []
 with_crash_reporting = []
+objectstore = []
 
 [workspace.lints.clippy]
 allow-attributes = "warn"
