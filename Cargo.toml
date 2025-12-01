@@ -93,7 +93,6 @@ trycmd = "0.14.11"
 default = []
 managed = []
 with_crash_reporting = []
-objectstore = []
 
 [workspace.lints.clippy]
 allow-attributes = "warn"
