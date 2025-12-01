@@ -5,7 +5,7 @@
 /**
  * Options for configuring the Sentry CLI
  */
-export interface SentryCliOptions {
+export type SentryCliOptions = {
   /**
    * The URL of the Sentry instance you are connecting to. Defaults to https://sentry.io/.
    * This value will update `SENTRY_URL` env variable.
@@ -64,7 +64,7 @@ export type SourceMapsPathDescriptor = Omit<SentryCliUploadSourceMapsOptions, 'i
 /**
  * Options for uploading source maps
  */
-export interface SentryCliUploadSourceMapsOptions {
+export type SentryCliUploadSourceMapsOptions = {
   /**
    * One or more paths that Sentry CLI should scan recursively for sources.
    * It will upload all .map files and match associated .js files.
@@ -150,7 +150,7 @@ export interface SentryCliUploadSourceMapsOptions {
 /**
  * Options for creating a new deployment
  */
-export interface SentryCliNewDeployOptions {
+export type SentryCliNewDeployOptions = {
   /**
    * Environment for this release. Values that make sense here would be `production` or `staging`.
    */
@@ -180,7 +180,7 @@ export interface SentryCliNewDeployOptions {
 /**
  * Options for setting commits on a release
  */
-export interface SentryCliCommitsOptions {
+export type SentryCliCommitsOptions = {
   /**
    * Automatically choose the associated commit (uses the current commit). Overrides other setCommit options.
    */

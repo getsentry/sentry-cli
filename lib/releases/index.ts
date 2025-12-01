@@ -8,8 +8,7 @@ import {
 } from '../types';
 import { DEPLOYS_OPTIONS } from './options/deploys';
 import { SOURCEMAPS_OPTIONS } from './options/uploadSourcemaps';
-
-const helper = require('../helper');
+import * as helper from '../helper';
 
 /**
  * Default arguments for the `--ignore` option.
@@ -19,7 +18,7 @@ const DEFAULT_IGNORE: string[] = ['node_modules'];
 /**
  * Manages releases and release artifacts on Sentry.
  */
-export default class Releases {
+export class Releases {
   constructor(public options: SentryCliOptions = {}, private configFile: string | null) {}
 
   /**

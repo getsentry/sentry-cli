@@ -2,7 +2,7 @@
 
 import * as pkgInfo from '../package.json';
 import * as helper from './helper';
-import Releases from './releases';
+import { Releases } from './releases';
 import type { SentryCliOptions } from './types';
 
 export type {
