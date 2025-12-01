@@ -1,4 +1,4 @@
-FROM rust:1.87.0-alpine3.20@sha256:126df0f2a57e675f9306fe180b833982ffb996e90a92a793bb75253cfeed5475 AS sentry-build
+FROM rust:1.91.1-alpine3.20@sha256:79a1bf22657dda835c5e2cf08e3aba4099ed36af3f28167103feb688a3e2604b AS sentry-build
 
 # Install build dependencies
 RUN apk add musl-dev perl openssl-dev make
