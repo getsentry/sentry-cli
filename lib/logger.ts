@@ -1,11 +1,9 @@
 'use strict';
 
-const format = require('util').format;
+import { format } from 'node:util';
 
-module.exports = class Logger {
-  constructor(stream) {
-    this.stream = stream;
-  }
+export class Logger {
+  constructor(public stream: NodeJS.WriteStream) {}
 
   log() {
     const message = format(...arguments);

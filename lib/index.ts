@@ -1,17 +1,17 @@
 'use strict';
 
-const pkgInfo = require('../package.json');
-const helper = require('./helper');
-const Releases = require('./releases');
+import * as pkgInfo from '../package.json';
+import * as helper from './helper';
+import { Releases } from './releases';
+import type { SentryCliOptions } from './types';
 
-/**
- * @typedef {import('./types').SentryCliOptions} SentryCliOptions
- * @typedef {import('./types').SentryCliUploadSourceMapsOptions} SentryCliUploadSourceMapsOptions
- * @typedef {import('./types').SourceMapsPathDescriptor} SourceMapsPathDescriptor
- * @typedef {import('./types').SentryCliNewDeployOptions} SentryCliNewDeployOptions
- * @typedef {import('./types').SentryCliCommitsOptions} SentryCliCommitsOptions
- * @typedef {import('./types').SentryCliReleases} SentryCliReleases
- */
+export type {
+  SentryCliOptions,
+  SentryCliUploadSourceMapsOptions,
+  SourceMapsPathDescriptor,
+  SentryCliNewDeployOptions,
+  SentryCliCommitsOptions,
+} from './types';
 
 /**
  * Interface to and wrapper around the `sentry-cli` executable.
@@ -28,7 +28,9 @@ const Releases = require('./releases');
  * const release = await cli.releases.proposeVersion());
  * console.log(release);
  */
-class SentryCli {
+export class SentryCli {
+  public releases: Releases;
+
   /**
    * Creates a new `SentryCli` instance.
    *
@@ -36,47 +38,43 @@ class SentryCli {
    * location and the value specified in the `SENTRY_PROPERTIES` environment variable is
    * overridden.
    *
-   * @param {string | null} [configFile] - Path to Sentry CLI config properties, as described in https://docs.sentry.io/learn/cli/configuration/#properties-files.
+   * @param configFile Path to Sentry CLI config properties, as described in https://docs.sentry.io/learn/cli/configuration/#properties-files.
    * By default, the config file is looked for upwards from the current path and defaults from ~/.sentryclirc are always loaded.
    * This value will update `SENTRY_PROPERTIES` env variable.
-   * @param {SentryCliOptions} [options] - More options to pass to the CLI
+   * @param options More options to pass to the CLI
    */
-  constructor(configFile, options) {
+  constructor(public configFile: string | null, public options: SentryCliOptions) {
     if (typeof configFile === 'string') {
       this.configFile = configFile;
     }
     this.options = options || { silent: false };
-    this.releases = new Releases({ ...this.options, configFile });
+    this.releases = new Releases(this.options, configFile);
   }
 
   /**
    * Returns the version of the installed `sentry-cli` binary.
-   * @returns {string}
    */
-  static getVersion() {
+  static getVersion(): string {
     return pkgInfo.version;
   }
 
   /**
    * Returns an absolute path to the `sentry-cli` binary.
-   * @returns {string}
    */
-  static getPath() {
+  static getPath(): string {
     return helper.getPath();
   }
 
   /**
    * See {helper.execute} docs.
-   * @param {string[]} args Command line arguments passed to `sentry-cli`.
-   * @param {boolean} live can be set to:
+   * @param args Command line arguments passed to `sentry-cli`.
+   * @param live can be set to:
    *  - `true` to inherit stdio and reject the promise if the command
    *    exits with a non-zero exit code.
    *  - `false` to not inherit stdio and return the output as a string.
-   * @returns {Promise<string>} A promise that resolves to the standard output.
+   * @returns A promise that resolves to the standard output.
    */
-  execute(args, live) {
+  execute(args: string[], live: boolean): Promise<string> {
     return helper.execute(args, live, this.options.silent, this.configFile, this.options);
   }
 }
-
-module.exports = SentryCli;
