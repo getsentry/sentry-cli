@@ -17,6 +17,7 @@
   - `apiKey` option in the JavaScript API
 - Removed the `upload-proguard` subcommand's `--app-id`, `--version`, `--version-code`, `--android-manifest`, and `--platform` arguments ([#2876](https://github.com/getsentry/sentry-cli/pull/2876), [#2940](https://github.com/getsentry/sentry-cli/pull/2940), [#2948](https://github.com/getsentry/sentry-cli/pull/2948)). Users using these arguments should stop using them, as they are unnecessary. The information passed to these arguments is no longer visible in Sentry.
 - Removed the `--started` argument from the `sentry-cli releases finalize` command ([#2972](https://github.com/getsentry/sentry-cli/pull/2972)). This argument is a no-op, so any users using it should simply stop using it.
+- Removed the `--use-artifact-bundle` flag from `sentry-cli sourcemaps upload` ([#3002](https://github.com/getsentry/sentry-cli/pull/3002)). The flag was a no-op that only emitted a deprecation warning.
 
 #### Node.js Wrapper Breakages
 
@@ -25,6 +26,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 - The `SentryCli.execute` method's `live` parameter now only takes boolean values ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). Setting `live` to `true` now behaves like `'rejectOnError'` did previously, with a zero exit status resolving the returned promise with `"success (live mode)"` and a non-zero status rejecting the promise with an error message.
 - The `option` parameter to `Releases.uploadSourceMaps` no longer takes a `live` property ([#2971](https://github.com/getsentry/sentry-cli/pull/2971)). We now always execute the command with `live` set to `true`.
 - Removed the `apiKey` option from `SentryCliOptions` ([#2935](https://github.com/getsentry/sentry-cli/pull/2935)). If you are using `apiKey`, you need to generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/) via the `authToken` option, instead.
+- Removed the `useArtifactBundle` option from `SentryCliUploadSourceMapsOptions` ([#3002](https://github.com/getsentry/sentry-cli/pull/3002)). This deprecated option was a no-op that users should simply stop passing.
 - Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
 
 ### Improvements
