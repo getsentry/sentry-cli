@@ -90,7 +90,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
                 serde_json::from_slice(mapping_file_bytes.as_ref())
                     .context("Invalid dartsymbolmap: expected a JSON array of strings")?;
 
-            if mapping_entries.len() % 2 != 0 {
+            if !mapping_entries.len().is_multiple_of(2) {
                 bail!(
                     "Invalid dartsymbolmap: expected an even number of entries, got {}",
                     mapping_entries.len()
