@@ -294,130 +294,85 @@ fn collect_git_metadata(
 
         let vcs_provider = matches
             .get_one("vcs_provider")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
+            .cloned()
             .or_else(|| {
-                if auto_collect {
-                    remote_url
-                        .as_ref()
-                        .map(|url| get_provider_from_remote(url))
-                        .map(Cow::Owned)
-                } else {
-                    None
-                }
+                auto_collect
+                    .then(|| remote_url.as_ref().map(|url| get_provider_from_remote(url)))?
             })
             .unwrap_or_default();
 
         let head_repo_name = matches
             .get_one("head_repo_name")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
+            .cloned()
             .or_else(|| {
-                if auto_collect {
+                auto_collect.then(|| {
                     remote_url
                         .as_ref()
                         .map(|url| get_repo_from_remote_preserve_case(url))
-                        .map(Cow::Owned)
-                } else {
-                    None
-                }
+                })?
             })
             .unwrap_or_default();
 
         let head_ref = matches
             .get_one("head_ref")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
+            .cloned()
+            .or_else(|| auto_collect.then(get_github_head_ref)?)
             .or_else(|| {
-                if auto_collect {
-                    // First try GitHub Actions environment variables
-                    get_github_head_ref().map(Cow::Owned)
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                if auto_collect {
-                    // Fallback to git repository introspection
-                    repo_ref
-                        .and_then(|r| match git_repo_head_ref(r) {
-                            Ok(ref_name) => {
-                                debug!("Found current branch reference: {ref_name}");
-                                Some(ref_name)
-                            }
-                            Err(e) => {
-                                debug!(
-                                    "No valid branch reference found (likely detached HEAD): {e}"
-                                );
-                                None
-                            }
-                        })
-                        .map(Cow::Owned)
-                } else {
-                    None
-                }
+                auto_collect.then(|| {
+                    repo_ref.and_then(|r| match git_repo_head_ref(r) {
+                        Ok(ref_name) => {
+                            debug!("Found current branch reference: {ref_name}");
+                            Some(ref_name)
+                        }
+                        Err(e) => {
+                            debug!("No valid branch reference found (likely detached HEAD): {e}");
+                            None
+                        }
+                    })
+                })?
             })
             .unwrap_or_default();
 
         let base_ref = matches
             .get_one("base_ref")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
+            .cloned()
+            .or_else(|| auto_collect.then(get_github_base_ref)?)
             .or_else(|| {
-                if auto_collect {
-                    // First try GitHub Actions environment variables
-                    get_github_base_ref().map(Cow::Owned)
-                } else {
-                    None
-                }
-            })
-            .or_else(|| {
-                if auto_collect {
-                    // Fallback to git repository introspection
-                    repo_ref
-                        .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
-                            Ok(base_ref_name) => {
-                                debug!("Found base reference: {base_ref_name}");
-                                Some(base_ref_name)
-                            }
-                            Err(e) => {
-                                info!("Could not detect base branch reference: {e}");
-                                None
-                            }
-                        })
-                        .map(Cow::Owned)
-                } else {
-                    None
-                }
+                auto_collect.then(|| {
+                    repo_ref.and_then(|r| match git_repo_base_ref(r, &cached_remote) {
+                        Ok(base_ref_name) => {
+                            debug!("Found base reference: {base_ref_name}");
+                            Some(base_ref_name)
+                        }
+                        Err(e) => {
+                            info!("Could not detect base branch reference: {e}");
+                            None
+                        }
+                    })
+                })?
             })
             .unwrap_or_default();
 
         let base_repo_name = matches
             .get_one("base_repo_name")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
+            .cloned()
             .or_else(|| {
-                if auto_collect {
-                    // Try to get the base repo name from the VCS if not provided
-                    repo_ref
-                        .and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
-                            Ok(Some(base_repo_name)) => {
-                                debug!("Found base repository name: {base_repo_name}");
-                                Some(base_repo_name)
-                            }
-                            Ok(None) => {
-                                debug!("No base repository found - not a fork");
-                                None
-                            }
-                            Err(e) => {
-                                warn!("Could not detect base repository name: {e}");
-                                None
-                            }
-                        })
-                        .map(Cow::Owned)
-                } else {
-                    None
-                }
+                auto_collect.then(|| {
+                    repo_ref.and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
+                        Ok(Some(base_repo_name)) => {
+                            debug!("Found base repository name: {base_repo_name}");
+                            Some(base_repo_name)
+                        }
+                        Ok(None) => {
+                            debug!("No base repository found - not a fork");
+                            None
+                        }
+                        Err(e) => {
+                            warn!("Could not detect base repository name: {e}");
+                            None
+                        }
+                    })
+                })?
             })
             .unwrap_or_default();
 
@@ -478,11 +433,11 @@ fn collect_git_metadata(
     VcsInfo {
         head_sha,
         base_sha,
-        vcs_provider: Cow::Owned(vcs_provider.into_owned()),
-        head_repo_name: Cow::Owned(head_repo_name.into_owned()),
-        base_repo_name: Cow::Owned(base_repo_name.into_owned()),
-        head_ref: Cow::Owned(head_ref.into_owned()),
-        base_ref: Cow::Owned(base_ref.into_owned()),
+        vcs_provider: Cow::Owned(vcs_provider),
+        head_repo_name: Cow::Owned(head_repo_name),
+        base_repo_name: Cow::Owned(base_repo_name),
+        head_ref: Cow::Owned(head_ref),
+        base_ref: Cow::Owned(base_ref),
         pr_number,
     }
 }
