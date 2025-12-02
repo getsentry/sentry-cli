@@ -290,9 +290,7 @@ fn collect_git_metadata(matches: &ArgMatches, config: &Config, auto_collect: boo
     let head_sha = matches
         .get_one::<Option<Digest>>("head_sha")
         .map(|d| d.as_ref().cloned())
-        .or_else(|| {
-            auto_collect.then(|| vcs::find_head_sha().ok())
-        })
+        .or_else(|| auto_collect.then(|| vcs::find_head_sha().ok()))
         .flatten();
 
     let cached_remote = config.get_cached_vcs_remote();
