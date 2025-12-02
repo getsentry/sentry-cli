@@ -864,19 +864,8 @@ mod tests {
 
     #[test]
     fn test_collect_git_metadata_respects_explicit_values_when_auto_collect_disabled() {
-        use std::env;
-        use tempfile::TempDir;
-
-        // Create a temporary directory for config
-        let temp_dir = TempDir::new().unwrap();
-        env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Create a minimal config file
-        let config_path = temp_dir.path().join(".sentryclirc");
-        std::fs::write(&config_path, "[defaults]\n").unwrap();
-
-        // Bind a minimal config
-        Config::from_cli_config().unwrap().bind_to_process();
+        use ini::Ini;
+        use std::path::PathBuf;
 
         // Create a mock ArgMatches with explicit --head-sha and --vcs-provider values
         let app = make_command(Command::new("test"));
@@ -895,7 +884,8 @@ mod tests {
             ])
             .unwrap();
 
-        let config = Config::current();
+        // Create a minimal config without binding it globally
+        let config = Config::from_file(PathBuf::from("dummy.ini"), Ini::new());
 
         // When auto_collect is false, explicit values should still be collected
         let metadata = collect_git_metadata(&matches, &config, false);
@@ -919,19 +909,8 @@ mod tests {
 
     #[test]
     fn test_collect_git_metadata_skips_auto_inference_when_disabled() {
-        use std::env;
-        use tempfile::TempDir;
-
-        // Create a temporary directory for config
-        let temp_dir = TempDir::new().unwrap();
-        env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Create a minimal config file
-        let config_path = temp_dir.path().join(".sentryclirc");
-        std::fs::write(&config_path, "[defaults]\n").unwrap();
-
-        // Bind a minimal config
-        Config::from_cli_config().unwrap().bind_to_process();
+        use ini::Ini;
+        use std::path::PathBuf;
 
         // Create a mock ArgMatches without any explicit git metadata values
         let app = make_command(Command::new("test"));
@@ -946,7 +925,8 @@ mod tests {
             ])
             .unwrap();
 
-        let config = Config::current();
+        // Create a minimal config without binding it globally
+        let config = Config::from_file(PathBuf::from("dummy.ini"), Ini::new());
 
         // When auto_collect is false and no explicit values provided,
         // we should get empty metadata
