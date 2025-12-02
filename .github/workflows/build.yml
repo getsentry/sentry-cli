@@ -39,7 +39,7 @@ jobs:
           rustup target add ${{ matrix.target }}
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
+        uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # 2.8.2
 
       - name: Build
         run: cargo build --release --target=${{ matrix.target }} --locked
@@ -73,7 +73,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
+        uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # 2.8.2
 
       - name: Run Cargo Build
         run: cargo build --target=${{ matrix.target }} --release --locked
@@ -202,7 +202,7 @@ jobs:
         run: rustup target add ${{ env.TARGET }}
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@f13886b937689c021905a6b90929199931d60db1 # 2.8.1
+        uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # 2.8.2
 
       - name: Run Cargo Build
         run: cargo build --target=${{ env.TARGET }} --release --locked
