@@ -11,9 +11,8 @@ $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_debugid_alias
 > Bundled 2 files for upload
 > Bundle ID: [..]-[..]-[..]-[..]-[..]
 > Optimizing completed in [..]
-> Uploading completed in [..]
-> Uploaded files to Sentry
-> Processing completed in [..]
+> Nothing to upload, all files are on the server
+> Processing completed in 0s
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project

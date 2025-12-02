@@ -543,15 +543,12 @@ pub fn wrap_call() -> Result<()> {
             if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) =
                 (packager_sourcemap_result, hermes_sourcemap_result)
             {
-                if !hermes_sourcemap.contains_key("debugId")
-                    && !hermes_sourcemap.contains_key("debug_id")
-                {
+                if !hermes_sourcemap.contains_key("debugId") {
                     if let Some(debug_id) = packager_sourcemap
                         .get("debugId")
                         .or_else(|| packager_sourcemap.get("debug_id"))
                     {
                         hermes_sourcemap.insert("debugId".to_owned(), debug_id.clone());
-                        hermes_sourcemap.insert("debug_id".to_owned(), debug_id.clone());
 
                         hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
                         serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
