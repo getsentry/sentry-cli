@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::{ArgMatches, Command};
 
-pub mod appcenter;
 pub mod gradle;
 #[cfg(target_os = "macos")]
 pub mod xcode;
@@ -9,7 +8,6 @@ pub mod xcode;
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(gradle);
-        $mac!(appcenter);
         #[cfg(target_os = "macos")]
         $mac!(xcode);
     };
