@@ -108,13 +108,13 @@ pub fn make_command(command: Command) -> Command {
                 .help("The release notes to use for the upload.")
         )
         .arg(
-            Arg::new("git_metadata")
-                .long("git-metadata")
+            Arg::new("force_git_metadata")
+                .long("force-git-metadata")
                 .num_args(0..=1)
                 .default_missing_value("true")
                 .value_parser(clap::value_parser!(bool))
                 .help("Controls whether to collect and send git metadata (branch, commit, etc.). \
-                    Use --git-metadata to force enable, --git-metadata=false to force disable. \
+                    Use --force-git-metadata to force enable, --force-git-metadata=false to force disable. \
                     If not specified, git metadata is automatically collected only when running in a CI environment.")
         )
 }
@@ -140,9 +140,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     // Determine if we should collect git metadata
     let should_collect_git_metadata =
-        if let Some(&git_metadata) = matches.get_one::<bool>("git_metadata") {
-            // --git-metadata or --git-metadata=true/false was specified
-            git_metadata
+        if let Some(&force_git_metadata) = matches.get_one::<bool>("force_git_metadata") {
+            // --force-git-metadata or --force-git-metadata=true/false was specified
+            force_git_metadata
         } else {
             // Default behavior: auto-detect CI
             is_ci()
@@ -153,7 +153,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if should_collect_git_metadata {
             "enabled"
         } else {
-            "disabled (use --git-metadata to enable)"
+            "disabled (use --force-git-metadata to enable)"
         }
     );
 
