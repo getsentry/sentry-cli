@@ -223,7 +223,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_repo_name: &git_metadata.base_repo_name,
             head_ref: &git_metadata.head_ref,
             base_ref: &git_metadata.base_ref,
-            pr_number: git_metadata.pr_number.as_ref(),
+            pr_number: git_metadata.pr_number,
         };
         match upload_file(
             &authenticated_api,
@@ -291,11 +291,7 @@ fn collect_git_metadata(matches: &ArgMatches, config: &Config, auto_collect: boo
         .get_one::<Option<Digest>>("head_sha")
         .map(|d| d.as_ref().cloned())
         .or_else(|| {
-            if auto_collect {
-                Some(vcs::find_head_sha().ok())
-            } else {
-                None
-            }
+            auto_collect.then(|| vcs::find_head_sha().ok())
         })
         .flatten();
 
