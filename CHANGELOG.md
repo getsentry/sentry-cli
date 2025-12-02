@@ -53,7 +53,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 ### Improvements
 
 - The `sentry-cli upload-proguard` command now uses chunked uploading by default ([#2918](https://github.com/getsentry/sentry-cli/pull/2918)). Users who previously set the `SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD` environment variable to opt into this behavior no longer need to set the variable.
-- In the JavaScript API, added multi-project support to `releases.finalize()`, `releases.setCommits()`, and `releases.newDeploy()` methods. These methods now accept a `projects` option (array of project slugs), aligning them with the Rust CLI's multi-project capabilities and matching the existing behavior of `releases.new()` and `releases.uploadSourceMaps()`.
+- In the JavaScript API, added multi-project support to `releases.finalize()`, `releases.setCommits()`, and `releases.newDeploy()` methods. These methods now accept a `projects` option (array of project slugs), aligning them with the Rust CLI's multi-project capabilities and matching the existing behavior of `releases.new()` and `releases.uploadSourceMaps()` ([#3001](https://github.com/getsentry/sentry-cli/pull/3001)).
 
 
 ### Fixes
