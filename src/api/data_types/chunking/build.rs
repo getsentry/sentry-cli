@@ -5,10 +5,6 @@ use sha1_smol::Digest;
 
 use super::ChunkedFileState;
 
-fn is_cow_str_empty(s: &Cow<str>) -> bool {
-    s.is_empty()
-}
-
 #[derive(Debug, Serialize)]
 pub struct ChunkedBuildRequest<'a> {
     pub checksum: Digest,
@@ -37,15 +33,15 @@ pub struct VcsInfo<'a> {
     pub head_sha: Option<Digest>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_sha: Option<Digest>,
-    #[serde(skip_serializing_if = "is_cow_str_empty", rename = "provider")]
+    #[serde(skip_serializing_if = "str::is_empty", rename = "provider")]
     pub vcs_provider: Cow<'a, str>,
-    #[serde(skip_serializing_if = "is_cow_str_empty")]
+    #[serde(skip_serializing_if = "str::is_empty")]
     pub head_repo_name: Cow<'a, str>,
-    #[serde(skip_serializing_if = "is_cow_str_empty")]
+    #[serde(skip_serializing_if = "str::is_empty")]
     pub base_repo_name: Cow<'a, str>,
-    #[serde(skip_serializing_if = "is_cow_str_empty")]
+    #[serde(skip_serializing_if = "str::is_empty")]
     pub head_ref: Cow<'a, str>,
-    #[serde(skip_serializing_if = "is_cow_str_empty")]
+    #[serde(skip_serializing_if = "str::is_empty")]
     pub base_ref: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pr_number: Option<u32>,
