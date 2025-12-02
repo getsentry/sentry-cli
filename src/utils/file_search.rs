@@ -80,7 +80,7 @@ impl ReleaseFileSearch {
 
     pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch> {
         // NOTE: `collect_file` currently do not handle gzip decompression,
-        // as its mostly used for 3rd tools like xcode, appcenter or gradle.
+        // as its mostly used for 3rd tools like xcode or gradle.
         let mut f = fs::File::open(path.clone())?;
         let mut contents = Vec::new();
         f.read_to_end(&mut contents)?;
