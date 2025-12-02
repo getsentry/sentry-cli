@@ -341,7 +341,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             base_repo_name: &base_repo_name,
             head_ref: &head_ref,
             base_ref: &base_ref,
-            pr_number: pr_number.as_ref(),
+            pr_number,
         };
         match upload_file(
             &authenticated_api,

@@ -42,5 +42,5 @@ pub struct VcsInfo<'a> {
     #[serde(skip_serializing_if = "str::is_empty")]
     pub base_ref: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pr_number: Option<&'a u32>,
+    pub pr_number: Option<u32>,
 }
