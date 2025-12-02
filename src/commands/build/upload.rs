@@ -110,12 +110,18 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("force_git_metadata")
                 .long("force-git-metadata")
-                .num_args(0..=1)
-                .default_missing_value("true")
-                .value_parser(clap::value_parser!(bool))
-                .help("Controls whether to collect and send git metadata (branch, commit, etc.). \
-                    Use --force-git-metadata to force enable, --force-git-metadata=false to force disable. \
-                    If not specified, git metadata is automatically collected only when running in a CI environment.")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("no_git_metadata")
+                .help("Force collection and sending of git metadata (branch, commit, etc.). \
+                    If neither this nor --no-git-metadata is specified, git metadata is \
+                    automatically collected when running in most CI environments.")
+        )
+        .arg(
+            Arg::new("no_git_metadata")
+                .long("no-git-metadata")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("force_git_metadata")
+                .help("Disable collection and sending of git metadata.")
         )
 }
 
@@ -126,21 +132,23 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .expect("paths argument is required");
 
     // Determine if we should collect git metadata
-    let should_collect_git_metadata =
-        if let Some(&force_git_metadata) = matches.get_one::<bool>("force_git_metadata") {
-            // --force-git-metadata or --force-git-metadata=true/false was specified
-            force_git_metadata
-        } else {
-            // Default behavior: auto-detect CI
-            is_ci()
-        };
+    let should_collect_git_metadata = if matches.get_flag("force_git_metadata") {
+        // --force-git-metadata was specified
+        true
+    } else if matches.get_flag("no_git_metadata") {
+        // --no-git-metadata was specified
+        false
+    } else {
+        // Default behavior: auto-detect CI
+        is_ci()
+    };
 
     debug!(
         "Git metadata collection: {}",
         if should_collect_git_metadata {
             "enabled"
         } else {
-            "disabled (use --force-git-metadata to enable)"
+            "disabled"
         }
     );
 
@@ -706,8 +714,10 @@ fn parse_sha_allow_empty(sha: &str) -> Result<Option<Digest>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ini::Ini;
     use std::fs;
     use std::os::unix::fs::symlink;
+    use std::path::PathBuf;
     use zip::ZipArchive;
 
     #[test]
@@ -839,9 +849,6 @@ mod tests {
 
     #[test]
     fn test_collect_git_metadata_respects_explicit_values_when_auto_collect_disabled() {
-        use ini::Ini;
-        use std::path::PathBuf;
-
         // Create a mock ArgMatches with explicit --head-sha and --vcs-provider values
         let app = make_command(Command::new("test"));
         let matches = app
@@ -886,9 +893,6 @@ mod tests {
 
     #[test]
     fn test_collect_git_metadata_skips_auto_inference_when_disabled() {
-        use ini::Ini;
-        use std::path::PathBuf;
-
         // Create a mock ArgMatches without any explicit git metadata values
         let app = make_command(Command::new("test"));
         let matches = app

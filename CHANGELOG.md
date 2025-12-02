@@ -4,10 +4,10 @@
 
 ### Features
 
-- Add `--force-git-metadata` flag with CI auto-detection to `sentry-cli build upload` command ([#2974](https://github.com/getsentry/sentry-cli/pull/2974))
-  - Git metadata is now automatically collected only when running in CI environments (GitHub Actions, GitLab CI, Jenkins, etc.)
+- Add `--force-git-metadata` and `--no-git-metadata` flags with CI auto-detection to `sentry-cli build upload` command ([#2974](https://github.com/getsentry/sentry-cli/pull/2974))
+  - Git metadata is now automatically collected only when running in most CI environments (GitHub Actions, GitLab CI, Jenkins, etc.)
   - Local development builds no longer trigger GitHub status checks by default
-  - Users can force enable with `--force-git-metadata` or disable with `--force-git-metadata=false`
+  - Users can force enable with `--force-git-metadata` or disable with `--no-git-metadata`
 
 ### Improvements
 
