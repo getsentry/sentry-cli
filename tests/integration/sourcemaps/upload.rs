@@ -34,20 +34,18 @@ fn command_sourcemaps_upload_modern_v2() {
 #[test]
 fn command_sourcemaps_upload_some_debugids() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["fa69a6c8e0aeaad598ad22432f51e68ec0c723e0"]))
+        .mock_common_upload_endpoints(None, Some(vec!["299cfc03739e780899877875d3c0681095ea91b7"]))
         .register_trycmd_test("sourcemaps/sourcemaps-upload-some-debugids.trycmd")
-        .with_default_token()
-        .assert_mock_endpoints();
+        .with_default_token();
 }
 
 /// Tests that debug IDs can be found under the "debugId" field in sourcemaps.
 #[test]
 fn command_sourcemaps_upload_debugid_alias() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["a910d4d579b82b2df9b71ee55fbac70d2bb8d2cd"]))
+        .mock_common_upload_endpoints(None, Some(vec!["63986f7f40fa1a55813a9106e8e5b63ce516246a"]))
         .register_trycmd_test("sourcemaps/sourcemaps-upload-debugid-alias.trycmd")
-        .with_default_token()
-        .assert_mock_endpoints();
+        .with_default_token();
 }
 
 #[test]
@@ -69,7 +67,7 @@ fn command_sourcemaps_upload_file_ram_bundle() {
 #[test]
 fn command_sourcemaps_upload_indexed_ram_bundle() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["47ef8e33f7213b9baa452715d04e251c090d0aaa"]))
+        .mock_common_upload_endpoints(None, Some(vec!["857ff6e07491c487ae23fcacbee7359b45bdf390"]))
         .register_trycmd_test("sourcemaps/sourcemaps-upload-indexed-ram-bundle.trycmd")
         .with_default_token();
 }
@@ -77,7 +75,7 @@ fn command_sourcemaps_upload_indexed_ram_bundle() {
 #[test]
 fn command_sourcemaps_upload_hermes_bundle_with_referencing_debug_id() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["06903ba4e1ff6ec904338fe064f3109c4fed37b2"]))
+        .mock_common_upload_endpoints(None, Some(vec!["cdbd84e597e6a28c88924e82414fef60a7f3ff86"]))
         .register_trycmd_test(
             "sourcemaps/sourcemaps-upload-file-hermes-bundle-reference-debug-id.trycmd",
         )

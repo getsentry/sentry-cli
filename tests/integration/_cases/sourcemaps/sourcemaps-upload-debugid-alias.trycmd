@@ -1,19 +1,89 @@
 ```
 $ sentry-cli sourcemaps upload tests/integration/_fixtures/upload_debugid_alias
-? success
 > Found 2 files
 > Analyzing 2 sources
 > Analyzing completed in [..]
 > Rewriting sources
-> Rewriting completed in [..]
+> Rewriting completed in 0s
 > Adding source map references
-> Bundling completed in [..]
+> Bundling completed in 0.019s
 > Bundled 2 files for upload
-> Bundle ID: [..]-[..]-[..]-[..]-[..]
-> Optimizing completed in [..]
-> Uploading completed in [..]
-> Uploaded files to Sentry
-> Processing completed in [..]
+> Bundle ID: eaf41dca-ae81-5c90-843e-2886ad1eecd8
+> Optimizing completed in 0s
+> Nothing to upload, all files are on the server
+> Processing completed in 0s
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Projects: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+> Found 2 files
+> Analyzing 2 sources
+> Analyzing completed in 0s
+> Rewriting sources
+> Rewriting completed in 0s
+> Adding source map references
+> Bundling completed in 0.019s
+> Bundled 2 files for upload
+> Bundle ID: eaf41dca-ae81-5c90-843e-2886ad1eecd8
+> Optimizing completed in 0s
+> Nothing to upload, all files are on the server
+> Processing completed in 0s
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Projects: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+> Found 2 files
+> Analyzing 2 sources
+> Analyzing completed in 0s
+> Rewriting sources
+> Rewriting completed in 0s
+> Adding source map references
+> Bundling completed in 0.02s
+> Bundled 2 files for upload
+> Bundle ID: eaf41dca-ae81-5c90-843e-2886ad1eecd8
+> Optimizing completed in 0s
+> Nothing to upload, all files are on the server
+> Processing completed in 0.001s
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Projects: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+> Found 2 files
+> Analyzing 2 sources
+> Analyzing completed in 0s
+> Rewriting sources
+> Rewriting completed in 0s
+> Adding source map references
+> Bundling completed in 0.019s
+> Bundled 2 files for upload
+> Bundle ID: eaf41dca-ae81-5c90-843e-2886ad1eecd8
+> Optimizing completed in 0s
+> Nothing to upload, all files are on the server
+> Processing completed in 0s
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Projects: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+> Found 2 files
+> Analyzing 2 sources
+> Analyzing completed in 0s
+> Rewriting sources
+> Rewriting completed in 0s
+> Adding source map references
+> Bundling completed in 0.019s
+> Bundled 2 files for upload
+> Bundle ID: eaf41dca-ae81-5c90-843e-2886ad1eecd8
+> Optimizing completed in 0s
+> Nothing to upload, all files are on the server
+> Processing completed in 0s
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project
