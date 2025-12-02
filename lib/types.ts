@@ -137,14 +137,6 @@ export interface SentryCliUploadSourceMapsOptions {
    * Usually your build number.
    */
   dist?: string;
-  /**
-   * Force use of new Artifact Bundles upload, that enables use of Debug ID for Source Maps discovery,
-   * even when the Sentry server does not declare support for it.
-   *
-   * @deprecated This option is deprecated and will be removed in the next major version. Sentry CLI
-   *     should always respect what the server says it supports.
-   */
-  useArtifactBundle?: boolean;
 }
 
 /**
