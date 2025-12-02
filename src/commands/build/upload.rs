@@ -119,19 +119,6 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
-/// Holds git metadata collected for build uploads.
-#[derive(Debug, Default)]
-struct GitMetadata {
-    head_sha: Option<Digest>,
-    vcs_provider: String,
-    head_repo_name: String,
-    head_ref: String,
-    base_ref: String,
-    base_repo_name: String,
-    base_sha: Option<Digest>,
-    pr_number: Option<u32>,
-}
-
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let path_strings = matches
@@ -158,7 +145,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     // Always collect git metadata, but only perform automatic inference when enabled
-    let git_metadata = collect_git_metadata(matches, &config, should_collect_git_metadata);
+    let vcs_info = collect_git_metadata(matches, &config, should_collect_git_metadata);
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
@@ -215,16 +202,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        let vcs_info = VcsInfo {
-            head_sha: git_metadata.head_sha,
-            base_sha: git_metadata.base_sha,
-            vcs_provider: &git_metadata.vcs_provider,
-            head_repo_name: &git_metadata.head_repo_name,
-            base_repo_name: &git_metadata.base_repo_name,
-            head_ref: &git_metadata.head_ref,
-            base_ref: &git_metadata.base_ref,
-            pr_number: git_metadata.pr_number,
-        };
         match upload_file(
             &authenticated_api,
             &bytes,
@@ -286,7 +263,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 ///
 /// When `auto_collect` is false, only explicitly provided values are collected;
 /// automatic inference from git repository and CI environment is skipped.
-fn collect_git_metadata(matches: &ArgMatches, config: &Config, auto_collect: bool) -> GitMetadata {
+fn collect_git_metadata(
+    matches: &ArgMatches,
+    config: &Config,
+    auto_collect: bool,
+) -> VcsInfo<'static> {
     let head_sha = matches
         .get_one::<Option<Digest>>("head_sha")
         .map(|d| d.as_ref().cloned())
@@ -486,14 +467,14 @@ fn collect_git_metadata(matches: &ArgMatches, config: &Config, auto_collect: boo
         }
     });
 
-    GitMetadata {
+    VcsInfo {
         head_sha,
-        vcs_provider: vcs_provider.into_owned(),
-        head_repo_name: head_repo_name.into_owned(),
-        head_ref: head_ref.into_owned(),
-        base_ref: base_ref.into_owned(),
-        base_repo_name: base_repo_name.into_owned(),
         base_sha,
+        vcs_provider: Cow::Owned(vcs_provider.into_owned()),
+        head_repo_name: Cow::Owned(head_repo_name.into_owned()),
+        base_repo_name: Cow::Owned(base_repo_name.into_owned()),
+        head_ref: Cow::Owned(head_ref.into_owned()),
+        base_ref: Cow::Owned(base_ref.into_owned()),
         pr_number,
     }
 }
@@ -890,13 +871,15 @@ mod tests {
             "Explicit --head-sha should be collected even with auto_collect=false"
         );
         assert_eq!(
-            metadata.vcs_provider, "custom-vcs",
+            metadata.vcs_provider.as_ref(),
+            "custom-vcs",
             "Explicit --vcs-provider should be used with auto_collect=false"
         );
 
         // But automatic inference should not happen for fields without explicit values
         assert_eq!(
-            metadata.head_repo_name, "",
+            metadata.head_repo_name.as_ref(),
+            "",
             "head_repo_name should be empty with auto_collect=false and no explicit value"
         );
     }
@@ -928,15 +911,18 @@ mod tests {
 
         // With auto_collect=false, we should get empty values
         assert_eq!(
-            metadata.vcs_provider, "",
+            metadata.vcs_provider.as_ref(),
+            "",
             "vcs_provider should be empty with auto_collect=false and no explicit value"
         );
         assert_eq!(
-            metadata.head_repo_name, "",
+            metadata.head_repo_name.as_ref(),
+            "",
             "head_repo_name should be empty with auto_collect=false and no explicit value"
         );
         assert_eq!(
-            metadata.head_ref, "",
+            metadata.head_ref.as_ref(),
+            "",
             "head_ref should be empty with auto_collect=false and no explicit value"
         );
     }
