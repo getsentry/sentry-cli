@@ -148,6 +148,16 @@ export type SentryCliUploadSourceMapsOptions = {
 }
 
 /**
+ * Options for finalizing a release
+ */
+export interface SentryCliFinalizeReleaseOptions {
+  /**
+   * The projects to finalize the release for. If not provided, the release will be finalized for the default project.
+   */
+  projects?: string[];
+}
+
+/**
  * Options for creating a new deployment
  */
 export type SentryCliNewDeployOptions = {
@@ -175,6 +185,10 @@ export type SentryCliNewDeployOptions = {
    * URL that points to the deployment.
    */
   url?: string;
+  /**
+   * The projects to deploy the release to. If not provided, the deployment will be created for the default project.
+   */
+  projects?: string[];
 }
 
 /**
@@ -208,4 +222,8 @@ export type SentryCliCommitsOptions = {
    * When the flag is set, command will not fail and just exit silently if no new commits for a given release have been found.
    */
   ignoreEmpty?: boolean;
+  /**
+   * The projects to set commits for. If not provided, commits will be set for the default project.
+   */
+  projects?: string[];
 }
