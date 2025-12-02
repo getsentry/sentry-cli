@@ -32,6 +32,41 @@ pub mod inject;
 /// Data URLs are used to embed sourcemaps directly in javascript source files.
 const DATA_PREAMBLE: &str = "data:application/json;base64,";
 
+/// Normalize sourcemap debug id fields to use camelCase (`debugId`) as per the
+/// debug ID specification. Older versions of sentry-cli emitted `debug_id` so
+/// we eagerly convert any serialized sourcemap bytes to the canonical casing.
+fn normalize_debug_id_key(bytes: &mut Vec<u8>) -> Result<()> {
+    const LEGACY_KEY: &[u8] = b"\"debug_id\"";
+
+    if bytes.len() < LEGACY_KEY.len()
+        || !bytes
+            .windows(LEGACY_KEY.len())
+            .any(|window| window == LEGACY_KEY)
+    {
+        return Ok(());
+    }
+
+    let mut json: serde_json::Value = serde_json::from_slice(bytes)
+        .context("Failed to parse sourcemap while normalizing debug id key")?;
+
+    let Some(object) = json.as_object_mut() else {
+        return Ok(());
+    };
+
+    let removed = object.remove("debug_id");
+    if let Some(value) = removed {
+        object.entry("debugId".to_owned()).or_insert(value);
+    } else {
+        return Ok(());
+    }
+
+    bytes.clear();
+    serde_json::to_writer(bytes, &json)
+        .context("Failed to serialize sourcemap while normalizing debug id key")?;
+
+    Ok(())
+}
+
 fn join_url(base_url: &str, url: &str) -> Result<String> {
     if base_url.starts_with("~/") {
         match Url::parse(&format!("http://{base_url}"))?.join(url) {
@@ -462,6 +497,7 @@ impl SourceMapProcessor {
         {
             let mut index_sourcemap_content: Vec<u8> = vec![];
             index_section.to_writer(&mut index_sourcemap_content)?;
+            normalize_debug_id_key(&mut index_sourcemap_content)?;
             self.sources.insert(
                 sourcemap_source.url.clone(),
                 SourceFile {
@@ -501,6 +537,7 @@ impl SourceMapProcessor {
             let sourcemap_url = join_url(bundle_source_url, &sourcemap_name)?;
             let mut sourcemap_content: Vec<u8> = vec![];
             sourcemap.to_writer(&mut sourcemap_content)?;
+            normalize_debug_id_key(&mut sourcemap_content)?;
             self.sources.insert(
                 sourcemap_url.clone(),
                 SourceFile {
@@ -580,6 +617,7 @@ impl SourceMapProcessor {
                     .flatten_and_rewrite(&options)?
                     .to_writer(&mut new_source)?,
             };
+            normalize_debug_id_key(&mut new_source)?;
             source.contents = new_source.into();
             pb.inc(1);
         }
@@ -845,6 +883,7 @@ impl SourceMapProcessor {
 
                         decoded.clear();
                         sourcemap.to_writer(&mut decoded)?;
+                        normalize_debug_id_key(&mut decoded)?;
 
                         let encoded = data_encoding::BASE64.encode(&decoded);
                         let new_sourcemap_url = format!("{DATA_PREAMBLE}{encoded}");
@@ -945,7 +984,8 @@ impl SourceMapProcessor {
                             let sourcemap_file_contents =
                                 Arc::make_mut(&mut sourcemap_file.contents);
                             sourcemap_file_contents.clear();
-                            sourcemap.to_writer(sourcemap_file_contents)?;
+                            sourcemap.to_writer(&mut *sourcemap_file_contents)?;
+                            normalize_debug_id_key(sourcemap_file_contents)?;
 
                             sourcemap_file.set_debug_id(debug_id.to_string());
 
@@ -1310,5 +1350,20 @@ mod tests {
         assert!(url_matches_extension("foo.mjs", &["js", "mjs"][..]));
         assert!(!url_matches_extension("js", &["js"][..]));
         assert!(url_matches_extension("foo.test.js", &["test.js"][..]));
+    }
+
+    #[test]
+    fn normalize_debug_id_key_converts_legacy_field() {
+        let mut bytes = br#"{"debug_id":"abcd","version":3}"#.to_vec();
+        normalize_debug_id_key(&mut bytes).unwrap();
+        assert_eq!(bytes, br#"{"debugId":"abcd","version":3}"#);
+    }
+
+    #[test]
+    fn normalize_debug_id_key_is_noop_without_legacy_field() {
+        let original = br#"{"debugId":"abcd","version":3}"#.to_vec();
+        let mut bytes = original.clone();
+        normalize_debug_id_key(&mut bytes).unwrap();
+        assert_eq!(bytes, original);
     }
 }

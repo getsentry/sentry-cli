@@ -543,23 +543,37 @@ pub fn wrap_call() -> Result<()> {
             if let (Ok(packager_sourcemap), Ok(mut hermes_sourcemap)) =
                 (packager_sourcemap_result, hermes_sourcemap_result)
             {
-                if !hermes_sourcemap.contains_key("debugId")
-                    && !hermes_sourcemap.contains_key("debug_id")
-                {
-                    if let Some(debug_id) = packager_sourcemap
-                        .get("debugId")
-                        .or_else(|| packager_sourcemap.get("debug_id"))
-                    {
-                        hermes_sourcemap.insert("debugId".to_owned(), debug_id.clone());
-                        hermes_sourcemap.insert("debug_id".to_owned(), debug_id.clone());
+                let hermes_has_modern_key = hermes_sourcemap.contains_key("debugId");
+                let hermes_has_legacy_key = hermes_sourcemap.contains_key("debug_id");
 
+                if hermes_has_modern_key {
+                    if hermes_has_legacy_key {
+                        hermes_sourcemap.remove("debug_id");
                         hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
                         serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
+                        println!("Removed legacy debug_id field from Hermes combined source map.");
                     } else {
-                        println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
+                        println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
                     }
+                } else if hermes_has_legacy_key {
+                    if let Some(debug_id_value) = hermes_sourcemap.remove("debug_id") {
+                        hermes_sourcemap.insert("debugId".to_owned(), debug_id_value);
+                        hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
+                        serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
+                        println!(
+                            "Normalized legacy debug_id field to debugId in Hermes combined source map."
+                        );
+                    }
+                } else if let Some(debug_id) = packager_sourcemap
+                    .get("debugId")
+                    .or_else(|| packager_sourcemap.get("debug_id"))
+                {
+                    hermes_sourcemap.insert("debugId".to_owned(), debug_id.clone());
+
+                    hermes_sourcemap_file = fs::File::create(hermes_sourcemap_path)?;
+                    serde_json::to_writer(&mut hermes_sourcemap_file, &hermes_sourcemap)?;
                 } else {
-                    println!("Hermes combined source map already contains a debug id, skipping copy from packager source map.");
+                    println!("No debug id found in packager source map, skipping copy to Hermes combined source map.");
                 }
             }
         } else {
