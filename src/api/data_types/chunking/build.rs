@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 
@@ -32,15 +34,15 @@ pub struct VcsInfo<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_sha: Option<Digest>,
     #[serde(skip_serializing_if = "str::is_empty", rename = "provider")]
-    pub vcs_provider: &'a str,
+    pub vcs_provider: Cow<'a, str>,
     #[serde(skip_serializing_if = "str::is_empty")]
-    pub head_repo_name: &'a str,
+    pub head_repo_name: Cow<'a, str>,
     #[serde(skip_serializing_if = "str::is_empty")]
-    pub base_repo_name: &'a str,
+    pub base_repo_name: Cow<'a, str>,
     #[serde(skip_serializing_if = "str::is_empty")]
-    pub head_ref: &'a str,
+    pub head_ref: Cow<'a, str>,
     #[serde(skip_serializing_if = "str::is_empty")]
-    pub base_ref: &'a str,
+    pub base_ref: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pr_number: Option<u32>,
 }
