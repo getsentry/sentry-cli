@@ -66,7 +66,9 @@ pub(super) struct ListLogsArgs {
     max_rows: NonZeroUsize,
 
     #[arg(long = "query", default_value = "")]
-    #[arg(help = "Query to filter logs. Example: \"level:error\"")]
+    #[arg(
+        help = "Query to filter logs. Example: \"level:error\". See https://docs.sentry.io/concepts/search/ for syntax."
+    )]
     query: String,
 
     #[arg(long = "live")]
