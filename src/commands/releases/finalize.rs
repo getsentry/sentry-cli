@@ -18,14 +18,6 @@ pub fn make_command(command: Command) -> Command {
                 .help("Optional URL to the release for information purposes."),
         )
         .arg(
-            Arg::new("started")
-                .long("started")
-                .hide(true)
-                .value_parser(get_timestamp)
-                .value_name("TIMESTAMP")
-                .help("[DEPRECATED] This value is ignored."),
-        )
-        .arg(
             Arg::new("released")
                 .long("released")
                 .value_parser(get_timestamp)
@@ -39,13 +31,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     #[expect(clippy::unwrap_used, reason = "legacy code")]
     let version = matches.get_one::<String>("version").unwrap();
-
-    if matches.get_one::<DateTime<Utc>>("started").is_some() {
-        log::warn!(
-            "The --started flag is deprecated. Its value is ignored, \
-            and the argument will be completely removed in a future version."
-        );
-    }
 
     api.authenticated()?.update_release(
         &config.get_org(matches)?,
