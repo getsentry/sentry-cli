@@ -1,6 +1,5 @@
 #![expect(clippy::unwrap_used, reason = "contains legacy code which uses unwrap")]
 
-use std::env;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -223,17 +222,6 @@ pub fn make_command(command: Command) -> Command {
                      uploaded.",
                 ),
         )
-        .arg(
-            Arg::new("use_artifact_bundle")
-                .long("use-artifact-bundle")
-                .action(ArgAction::SetTrue)
-                .help(
-                    "[DEPRECATED] Force artifact bundles to be used for upload, even when not \
-                    supported by the server. This option has always only been intended for \
-                    internal use, and it is now officially deprecated.",
-                )
-                .hide(true),
-        )
         // Legacy flag that has no effect, left hidden for backward compatibility
         .arg(
             Arg::new("rewrite")
@@ -430,13 +418,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
     let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
-
-    if matches.get_flag("use_artifact_bundle")
-        || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
-    {
-        log::warn!("The --use-artifact-bundle option and the SENTRY_FORCE_ARTIFACT_BUNDLES environment variable \
-                    are both deprecated, and both will be removed in the next major version.");
-    }
 
     if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
         process_sources_from_bundle(matches, &mut processor)?;
