@@ -1,8 +1,0 @@
-```
-$ sentry-cli --log-level debug send-metric distribution -v 1 -n 1mymetric
-? failed
-error: invalid value '1mymetric' for '--name <NAME>': metric name must start with an alphabetic character
-
-For more information, try '--help'.
-
-```
