@@ -33,6 +33,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 ### Improvements
 
 - The `sentry-cli upload-proguard` command now uses chunked uploading by default ([#2918](https://github.com/getsentry/sentry-cli/pull/2918)). Users who previously set the `SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD` environment variable to opt into this behavior no longer need to set the variable.
+- We now place source map debug IDs under the source map's `debugId` field, per the [TC39 Debug ID proposal](https://github.com/tc39/ecma426/blob/main/proposals/debug-id.md#debug-ids-in-source-maps) ([#3005](https://github.com/getsentry/sentry-cli/pull/3005)). This change affects the `sentry-cli sourcemaps inject` command and, unless `--no-rewrite` is passed, the `sentry-cli sourcemaps upload` command. Sentry CLI can still read the `debug_id` field, but whenever the CLI writes or rewrites a source map, we always use `debugId`.
 
 ### Fixes
 
