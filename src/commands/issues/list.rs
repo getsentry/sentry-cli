@@ -28,7 +28,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("query")
                 .value_name("QUERY")
                 .default_value("")
-                .help("Query to pass at the request. An example is \"is:unresolved\""),
+                .help("Query to filter issues. Example: \"is:unresolved\". See https://docs.sentry.io/concepts/search/ for syntax."),
         )
 }
 
