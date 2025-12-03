@@ -17,13 +17,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let api = Api::current();
     #[expect(clippy::unwrap_used, reason = "legacy code")]
     let version = matches.get_one::<String>("version").unwrap();
-    let project = config.get_project(matches).ok();
 
-    if api.authenticated()?.delete_release(
-        &config.get_org(matches)?,
-        project.as_deref(),
-        version,
-    )? {
+    if api
+        .authenticated()?
+        .delete_release(&config.get_org(matches)?, version)?
+    {
         println!("Deleted release {version}!");
     } else {
         println!("Did nothing. Release with this version ({version}) does not exist.");
