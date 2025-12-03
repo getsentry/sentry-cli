@@ -28,8 +28,6 @@ pub(in crate::api) enum ApiErrorKind {
     ProjectNotFound,
     #[error("Release not found. Ensure that you configured the correct release, project, and organization.")]
     ReleaseNotFound,
-    #[error("chunk upload endpoint not supported by sentry server")]
-    ChunkUploadNotSupported,
     #[error("API request failed")]
     RequestFailed,
     #[error("could not compress data")]
@@ -63,6 +61,9 @@ impl ApiError {
         }
     }
 
+    // This method is currently only used in the macOS binary, there is no reason
+    // why not to expose it on other platforms, if we ever need it.
+    #[cfg(target_os = "macos")]
     pub(in crate::api) fn kind(&self) -> ApiErrorKind {
         self.inner
     }
