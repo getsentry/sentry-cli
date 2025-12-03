@@ -131,17 +131,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    // Determine if we should collect git metadata
-    let should_collect_git_metadata = if matches.get_flag("force_git_metadata") {
-        // --force-git-metadata was specified
-        true
-    } else if matches.get_flag("no_git_metadata") {
-        // --no-git-metadata was specified
-        false
-    } else {
-        // Default behavior: auto-detect CI
-        is_ci()
-    };
+    // Collect git metadata if running in CI, unless explicitly enabled or disabled.
+    let should_collect_git_metadata =
+        matches.get_flag("force_git_metadata") || (!matches.get_flag("no_git_metadata") && is_ci());
 
     debug!(
         "Git metadata collection: {}",
