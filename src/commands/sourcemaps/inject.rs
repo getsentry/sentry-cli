@@ -87,20 +87,20 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .map(|ignores| ignores.map(|i| format!("!{i}")).collect())
         .unwrap_or_default();
 
-    let mut extensions = matches
+    let js_extensions = matches
         .get_many::<String>("extensions")
         .map(|extensions| extensions.map(|ext| ext.trim_start_matches('.')).collect())
         .unwrap_or_else(|| vec!["js", "cjs", "mjs"]);
 
     // Sourcemaps should be discovered regardless of which JavaScript extensions have been selected.
-    extensions.push("map");
+    let search_extensions: Vec<_> = js_extensions.iter().copied().chain(["map"]).collect();
 
     for path in paths {
         println!("> Searching {}", path.display());
         let sources = ReleaseFileSearch::new(path)
             .ignore_file(ignore_file)
             .ignores(&ignores)
-            .extensions(extensions.clone())
+            .extensions(search_extensions.clone())
             .collect_files()?;
         for source in sources {
             let url = path_as_url(&source.path);
@@ -108,6 +108,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    processor.inject_debug_ids(dry_run, &extensions)?;
+    processor.inject_debug_ids(dry_run, &js_extensions)?;
     Ok(())
 }
