@@ -34,17 +34,17 @@ fn command_sourcemaps_upload_modern_v2() {
 #[test]
 fn command_sourcemaps_upload_some_debugids() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["fa69a6c8e0aeaad598ad22432f51e68ec0c723e0"]))
+        .mock_common_upload_endpoints(None, Some(vec!["5c854c641249fb5ba1075735c68980f9f7ed72b6"]))
         .register_trycmd_test("sourcemaps/sourcemaps-upload-some-debugids.trycmd")
         .with_default_token()
         .assert_mock_endpoints();
 }
 
-/// Tests that debug IDs can be found under the "debugId" field in sourcemaps.
+/// Tests that debug IDs can be found under the old "debug_id" field in sourcemaps.
 #[test]
 fn command_sourcemaps_upload_debugid_alias() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["a910d4d579b82b2df9b71ee55fbac70d2bb8d2cd"]))
+        .mock_common_upload_endpoints(None, Some(vec!["4d668e3d5e4e436057d4b7157a450a9b7f130dfa"]))
         .register_trycmd_test("sourcemaps/sourcemaps-upload-debugid-alias.trycmd")
         .with_default_token()
         .assert_mock_endpoints();
@@ -77,7 +77,7 @@ fn command_sourcemaps_upload_indexed_ram_bundle() {
 #[test]
 fn command_sourcemaps_upload_hermes_bundle_with_referencing_debug_id() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["06903ba4e1ff6ec904338fe064f3109c4fed37b2"]))
+        .mock_common_upload_endpoints(None, Some(vec!["a67a1e76159fc49e2fcc432fba8dbcd5d9696a73"]))
         .register_trycmd_test(
             "sourcemaps/sourcemaps-upload-file-hermes-bundle-reference-debug-id.trycmd",
         )
