@@ -58,9 +58,6 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 
 - Fixed misleading error message claiming the server doesn't support chunk uploading when the actual error was a non-existent organization ([#2930](https://github.com/getsentry/sentry-cli/pull/2930)).
 
-### Internal changes
-
-- Removed `node-fetch` dependency when using the NPM package ([#2993](https://github.com/getsentry/sentry-cli/pull/2993))
 
 ## 2.58.2
 
