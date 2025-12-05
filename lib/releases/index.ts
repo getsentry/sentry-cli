@@ -2,6 +2,7 @@
 
 import {
   SentryCliCommitsOptions,
+  SentryCliFinalizeReleaseOptions,
   SentryCliNewDeployOptions,
   SentryCliOptions,
   SentryCliUploadSourceMapsOptions,
@@ -62,7 +63,13 @@ export class Releases {
       commitFlags.push('--ignore-missing');
     }
 
-    return this.execute(['releases', 'set-commits', release].concat(commitFlags), false);
+    return this.execute(
+      ['releases', 'set-commits']
+        .concat(helper.getProjectFlagsFromOptions(options))
+        .concat([release])
+        .concat(commitFlags),
+      false
+    );
   }
 
   /**
@@ -70,10 +77,14 @@ export class Releases {
    * uploaded.
    *
    * @param release Unique name of the release.
+   * @param options Options to configure which projects to finalize the release for.
    * @returns A promise that resolves when the release has been finalized.
    */
-  async finalize(release: string): Promise<string> {
-    return this.execute(['releases', 'finalize', release], null);
+  async finalize(release: string, options?: SentryCliFinalizeReleaseOptions): Promise<string> {
+    const args = ['releases', 'finalize']
+      .concat(helper.getProjectFlagsFromOptions(options))
+      .concat([release]);
+    return this.execute(args, null);
   }
 
   /**
@@ -203,6 +214,7 @@ export class Releases {
    *   time: 1295,                 // deployment duration in seconds. This can be specified alternatively to `started` and `finished`
    *   name: 'PickleRick',         // human readable name for this deployment
    *   url: 'https://example.com', // URL that points to the deployment
+   *   projects: ['project1', 'project2'], // list of projects to deploy to
    * });
    *
    * @param release Unique name of the release.
@@ -213,7 +225,9 @@ export class Releases {
     if (!options || !options.env) {
       throw new Error('options.env must be a valid name');
     }
-    const args = ['releases', 'deploys', release, 'new'];
+    const args = ['releases', 'deploys']
+      .concat(helper.getProjectFlagsFromOptions(options))
+      .concat([release, 'new']);
     return this.execute(helper.prepareCommand(args, DEPLOYS_OPTIONS, options), null);
   }
 
