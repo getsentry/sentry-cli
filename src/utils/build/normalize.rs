@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::HashMap;
 #[cfg(not(windows))]
 use std::fs;
 use std::fs::File;
@@ -94,17 +95,19 @@ fn metadata_file_options() -> SimpleFileOptions {
 
 pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<W>,
-    gradle_plugin_version: Option<&str>,
-    fastlane_plugin_version: Option<&str>,
+    metadata: &HashMap<String, String>,
 ) -> Result<()> {
     let version = get_version();
     zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
     writeln!(zip, "sentry-cli-version: {version}")?;
-    if let Some(gradle_version) = gradle_plugin_version {
-        writeln!(zip, "gradle-plugin-version: {gradle_version}")?;
-    }
-    if let Some(fastlane_version) = fastlane_plugin_version {
-        writeln!(zip, "fastlane-plugin-version: {fastlane_version}")?;
+
+    // Write metadata in sorted order for deterministic output
+    let mut keys: Vec<_> = metadata.keys().collect();
+    keys.sort();
+    for key in keys {
+        if let Some(value) = metadata.get(key) {
+            writeln!(zip, "{key}: {value}")?;
+        }
     }
     Ok(())
 }
@@ -115,8 +118,7 @@ pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
 pub fn normalize_directory(
     path: &Path,
     parsed_assets_path: &Path,
-    gradle_plugin_version: Option<&str>,
-    fastlane_plugin_version: Option<&str>,
+    metadata: &HashMap<String, String>,
 ) -> Result<TempFile> {
     debug!("Creating normalized zip for directory: {}", path.display());
 
@@ -146,7 +148,7 @@ pub fn normalize_directory(
         )?;
     }
 
-    write_version_metadata(&mut zip, gradle_plugin_version, fastlane_plugin_version)?;
+    write_version_metadata(&mut zip, metadata)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for directory with {file_count} files");
