@@ -166,7 +166,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .filter_map(|s| {
                     let parts: Vec<&str> = s.splitn(2, '=').collect();
                     if parts.len() == 2 {
-                        Some((parts[0].to_string(), parts[1].to_string()))
+                        Some((parts[0].to_owned(), parts[1].to_owned()))
                     } else {
                         warn!("Ignoring invalid metadata format: {s}. Expected format: KEY=VALUE");
                         None
@@ -920,8 +920,8 @@ mod tests {
         fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
 
         let mut metadata = HashMap::new();
-        metadata.insert("gradle-plugin".to_string(), "4.12.0".to_string());
-        metadata.insert("fastlane-plugin".to_string(), "1.2.3".to_string());
+        metadata.insert("gradle-plugin".to_owned(), "4.12.0".to_owned());
+        metadata.insert("fastlane-plugin".to_owned(), "1.2.3".to_owned());
 
         let result_zip = normalize_directory(&test_dir, temp_dir.path(), &metadata)?;
         let zip_file = fs::File::open(result_zip.path())?;
