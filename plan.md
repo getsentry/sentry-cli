@@ -7,10 +7,10 @@ This plan details the implementation of a new `send-apple-crash` command for sen
 ## 🎯 Goals
 
 1. Create a new `send-apple-crash` command that accepts `.ips` files
-2. Parse the `.ips` JSON format into a Sentry Event structure
+2. Parse the `.ips` JSON format using serde into a Sentry Event structure
 3. Send the event to Sentry via an envelope (similar to `send-event`)
 4. Let Sentry's backend handle symbolication (no local symbolication)
-5. Support both single files and glob patterns for batch uploads
+5. Support multiple file paths (no glob patterns initially)
 
 ## 📚 Background Context
 
@@ -58,30 +58,90 @@ Report success/failure
 
 **File**: `src/utils/apple_crash.rs`
 
-**Purpose**: Parse `.ips` JSON format and convert to Sentry Event
+**Purpose**: Parse `.ips` JSON format using serde and convert to Sentry Event
 
-**Key Functions**:
+**Key Structures**:
+
+Define Rust structs that map to the IPS JSON format using serde:
 
 ```rust
-// Main parsing function
-pub fn parse_ips_crash_report(content: &str) -> Result<Event<'static>>
+use serde::Deserialize;
 
-// Helper to extract exception information
-fn extract_exception(crash_json: &Value) -> Result<Vec<Exception>>
+/// Root structure of an .ips crash report
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpsCrashReport {
+    pub incident: Option<String>,
+    pub crash_reporter_key: Option<String>,
+    pub os_version: Option<String>,
+    pub bundle_id: Option<String>,
+    pub app_version: Option<String>,
+    pub exception: Option<IpsException>,
+    pub threads: Option<Vec<IpsThread>>,
+    pub used_images: Option<Vec<IpsImage>>,
+}
 
-// Helper to extract thread information
-fn extract_threads(crash_json: &Value) -> Result<Vec<Thread>>
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpsException {
+    #[serde(rename = "type")]
+    pub exception_type: Option<String>,
+    pub signal: Option<String>,
+    pub codes: Option<String>,
+    pub subtype: Option<String>,
+}
 
-// Helper to extract device/app context
-fn extract_contexts(crash_json: &Value) -> Result<BTreeMap<String, Context>>
+#[derive(Debug, Deserialize)]
+pub struct IpsThread {
+    pub id: Option<u64>,
+    pub name: Option<String>,
+    pub crashed: Option<bool>,
+    pub frames: Option<Vec<IpsFrame>>,
+}
 
-// Helper to extract binary images (for symbolication)
-fn extract_debug_images(crash_json: &Value) -> Result<Vec<DebugImage>>
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpsFrame {
+    pub image_offset: Option<u64>,
+    pub image_index: Option<usize>,
+    pub symbol: Option<String>,
+    pub symbol_location: Option<u64>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct IpsImage {
+    pub uuid: Option<String>,
+    pub name: Option<String>,
+    pub arch: Option<String>,
+    pub base: Option<u64>,
+}
 ```
 
-**IPS JSON Structure to Parse**:
+**Key Function**:
 
-Based on Apple's documentation, key fields include:
+```rust
+/// Parse an .ips crash report and convert it to a Sentry Event
+pub fn parse_ips_crash_report(content: &str) -> Result<Event<'static>> {
+    // Deserialize JSON using serde
+    let ips: IpsCrashReport = serde_json::from_str(content)?;
+    
+    // Convert to Sentry Event
+    let mut event = Event {
+        platform: Cow::Borrowed("cocoa"),
+        level: Level::Error,
+        ..Default::default()
+    };
+    
+    // Extract exception, threads, debug images, and contexts
+    // See conversion logic below
+    
+    Ok(event)
+}
+```
+
+**IPS JSON Structure** (based on Apple's documentation):
+
+All fields in the IPS format should be treated as optional, since crash reports may vary in completeness:
 
 - `exception` → Maps to Sentry `Exception`
   - `type`: Exception type (e.g., "EXC_BAD_ACCESS")
@@ -127,119 +187,142 @@ Create a `sentry::protocol::Event` with:
 - `sdk`: SDK info (mark as sentry-cli)
 
 **Error Handling**:
-- Invalid JSON → Return error with helpful message
-- Missing required fields → Use sensible defaults where possible
-- Malformed stack traces → Skip frames that can't be parsed
+- Invalid JSON → serde_json will return descriptive error with line/column
+- Missing fields → All fields are `Option<T>`, so missing data is handled gracefully
+- Malformed stack traces → Skip frames that can't be converted properly
 
 ### Step 2: Create the Command Module
 
 **File**: `src/commands/send_apple_crash.rs`
 
-**Command Definition**:
+**Command Definition using Clap Derive**:
 
 ```rust
-pub fn make_command(command: Command) -> Command {
-    command
-        .about("Send Apple crash reports to Sentry.")
-        .long_about(
-            "Send Apple crash reports (.ips) to Sentry.{n}{n}\
-             This command parses Apple crash report files in .ips (JSON) format \
-             and sends them to Sentry as error events. Sentry will automatically \
-             symbolicate the crash reports if matching debug symbols (dSYMs) have \
-             been uploaded.{n}{n}\
-             Due to network errors, rate limits or sampling the event is not guaranteed to \
-             actually arrive. Check debug output for transmission errors by passing --log-level=\
-             debug or setting `SENTRY_LOG_LEVEL=debug`.",
-        )
-        .arg(
-            Arg::new("path")
-                .value_name("PATH")
-                .required(true)
-                .help("The path or glob to .ips file(s) to send as crash events."),
-        )
-        .arg(
-            Arg::new("release")
-                .value_name("RELEASE")
-                .long("release")
-                .short('r')
-                .help("Optional release identifier to associate with the crash."),
-        )
-        .arg(
-            Arg::new("environment")
-                .value_name("ENVIRONMENT")
-                .long("env")
-                .short('E')
-                .help("Optional environment name (e.g., production, staging)."),
-        )
-        .arg(
-            Arg::new("dist")
-                .value_name("DISTRIBUTION")
-                .long("dist")
-                .short('d')
-                .value_parser(validate_distribution)
-                .help("Optional distribution identifier."),
-        )
+use anyhow::{Context, Result};
+use clap::Args;
+use log::info;
+use sentry::types::Uuid;
+use sentry::{apply_defaults, Client, ClientOptions, Envelope};
+use std::borrow::Cow;
+use std::fs;
+use std::path::PathBuf;
+
+use crate::api::envelopes_api::EnvelopesApi;
+use crate::constants::USER_AGENT;
+use crate::utils::apple_crash::parse_ips_crash_report;
+use crate::utils::args::validate_distribution;
+
+/// Arguments for send-apple-crash command
+#[derive(Args)]
+#[command(about = "Send Apple crash reports to Sentry")]
+#[command(long_about = "Send Apple crash reports (.ips) to Sentry.\n\n\
+    This command parses Apple crash report files in .ips (JSON) format \
+    and sends them to Sentry as error events. Sentry will automatically \
+    symbolicate the crash reports if matching debug symbols (dSYMs) have \
+    been uploaded.\n\n\
+    Due to network errors, rate limits or sampling the event is not guaranteed to \
+    actually arrive. Check debug output for transmission errors by passing --log-level=\
+    debug or setting SENTRY_LOG_LEVEL=debug.")]
+pub(super) struct SendAppleCrashArgs {
+    #[arg(value_name = "PATH")]
+    #[arg(help = "Path to one or more .ips files to send as crash events")]
+    #[arg(required = true)]
+    paths: Vec<PathBuf>,
+
+    #[arg(short = 'r', long = "release")]
+    #[arg(help = "Optional release identifier to associate with the crash")]
+    release: Option<String>,
+
+    #[arg(short = 'E', long = "env")]
+    #[arg(help = "Optional environment name (e.g., production, staging)")]
+    environment: Option<String>,
+
+    #[arg(short = 'd', long = "dist")]
+    #[arg(value_parser = validate_distribution)]
+    #[arg(help = "Optional distribution identifier")]
+    dist: Option<String>,
 }
-```
 
-**Execution Logic**:
-
-```rust
-pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = matches.get_one::<String>("path").unwrap();
-    
-    // Collect paths using glob (supports wildcards like *.ips)
-    let collected_paths: Vec<PathBuf> = glob_with(path, MatchOptions::new())
-        .context("Invalid glob pattern")?
-        .flatten()
-        .collect();
-
-    if collected_paths.is_empty() {
-        warn!("Did not match any .ips files for pattern: {path}");
-        return Ok(());
-    }
-
-    // Process each crash file
-    for path in collected_paths {
+pub(super) fn execute(args: SendAppleCrashArgs) -> Result<()> {
+    // Process each crash file path
+    for path in args.paths {
         let content = fs::read_to_string(&path)
-            .context(format!("Failed to read crash file: {}", path.display()))?;
+            .with_context(|| format!("Failed to read crash file: {}", path.display()))?;
         
         // Parse the .ips file into a Sentry event
         let mut event = parse_ips_crash_report(&content)
-            .context(format!("Failed to parse crash file: {}", path.display()))?;
+            .with_context(|| format!("Failed to parse crash file: {}", path.display()))?;
         
         // Override with CLI arguments if provided
-        if let Some(release) = matches.get_one::<String>("release") {
+        if let Some(release) = &args.release {
             event.release = Some(Cow::Owned(release.clone()));
         }
-        if let Some(environment) = matches.get_one::<String>("environment") {
+        if let Some(environment) = &args.environment {
             event.environment = Some(Cow::Owned(environment.clone()));
         }
-        if let Some(dist) = matches.get_one::<String>("dist") {
+        if let Some(dist) = &args.dist {
             event.dist = Some(Cow::Owned(dist.clone()));
         }
         
         // Send the event
         let event_id = send_raw_event(event)?;
         println!("Crash from file {} dispatched: {}", path.display(), event_id);
+        info!("Crash event {} sent successfully", event_id);
     }
 
     Ok(())
 }
 
-// Reuse the send_raw_event function from send_event module
-// or implement a similar version here
-fn send_raw_event(event: Event<'static>) -> Result<Uuid> {
+/// Send a Sentry event via envelope
+fn send_raw_event(event: sentry::protocol::Event<'static>) -> Result<Uuid> {
     let client = Client::from_config(apply_defaults(ClientOptions {
         user_agent: USER_AGENT.into(),
         ..Default::default()
     }));
     let event = client
         .prepare_event(event, None)
-        .ok_or(anyhow!("Event dropped during preparation"))?;
+        .ok_or_else(|| anyhow::anyhow!("Event dropped during preparation"))?;
     let event_id = event.event_id;
     EnvelopesApi::try_new()?.send_envelope(event)?;
     Ok(event_id)
+}
+```
+
+**Integration with Command System**:
+
+The command needs to be registered in the derive parser. In `src/commands/derive_parser.rs`, add:
+
+```rust
+use super::send_apple_crash::SendAppleCrashArgs;
+
+// Add to SentryCLICommand enum:
+#[derive(Subcommand)]
+pub(super) enum SentryCLICommand {
+    // ... existing commands ...
+    SendAppleCrash(SendAppleCrashArgs),
+}
+```
+
+**make_command and execute functions**:
+
+For compatibility with the existing command registration system, also add these functions:
+
+```rust
+use clap::Command;
+
+pub(super) fn make_command(command: Command) -> Command {
+    SendAppleCrashArgs::augment_args(command)
+}
+
+pub(super) fn execute(_matches: &clap::ArgMatches) -> Result<()> {
+    use crate::commands::derive_parser::{SentryCLI, SentryCLICommand};
+    use clap::Parser;
+    
+    let SentryCLICommand::SendAppleCrash(args) = SentryCLI::parse().command else {
+        unreachable!("expected send-apple-crash subcommand");
+    };
+    
+    execute(args)
 }
 ```
 
@@ -255,6 +338,24 @@ mod send_apple_crash;
 
 // Add to each_subcommand! macro
 $mac!(send_apple_crash);
+```
+
+**File**: `src/commands/derive_parser.rs`
+
+Add the command to the derive parser:
+
+```rust
+use super::send_apple_crash::SendAppleCrashArgs;
+
+// Add to SentryCLICommand enum:
+#[derive(Subcommand)]
+pub(super) enum SentryCLICommand {
+    // ... existing commands ...
+    Logs(LogsArgs),
+    SendMetric(SendMetricArgs),
+    DartSymbolMap(DartSymbolMapArgs),
+    SendAppleCrash(SendAppleCrashArgs),  // Add this line
+}
 ```
 
 ### Step 4: Add Dependency Declarations
@@ -361,9 +462,9 @@ $ sentry-cli send-apple-crash tests/integration/_fixtures/crash_simple.ips
 Crash from file tests/integration/_fixtures/crash_simple.ips dispatched: [..]
 ```
 
-3. **`send_apple_crash-glob.trycmd`**: Test glob pattern
+3. **`send_apple_crash-multiple.trycmd`**: Test multiple files
 ```
-$ sentry-cli send-apple-crash "tests/integration/_fixtures/crash_*.ips"
+$ sentry-cli send-apple-crash tests/integration/_fixtures/crash_simple.ips tests/integration/_fixtures/crash_complete.ips
 ? success
 Crash from file tests/integration/_fixtures/crash_simple.ips dispatched: [..]
 Crash from file tests/integration/_fixtures/crash_complete.ips dispatched: [..]
@@ -469,11 +570,11 @@ DebugImage::Apple(AppleDebugImage {
 
 ### Error Handling Strategy
 
-1. **File Not Found**: Return clear error with file path
-2. **Invalid JSON**: Return JSON parsing error with line/column
-3. **Missing Required Fields**: Continue parsing with warnings, use defaults
+1. **File Not Found**: Return clear error with file path using `with_context()`
+2. **Invalid JSON**: serde_json provides descriptive error with line/column
+3. **Missing Fields**: All IPS struct fields are `Option<T>`, handled gracefully
 4. **Network Errors**: Propagate from EnvelopesApi with context
-5. **No Files Matched**: Warn but don't error (consistent with send-event)
+5. **Empty File List**: Error immediately if no paths provided (clap handles this)
 
 ## 🧪 Testing Strategy
 
@@ -488,9 +589,9 @@ mod tests {
 
     #[test]
     fn test_parse_minimal_crash() {
-        let json = r#"{"exception": {"type": "EXC_BAD_ACCESS"}, ...}"#;
+        let json = r#"{"exception": {"type": "EXC_BAD_ACCESS"}}"#;
         let event = parse_ips_crash_report(json).unwrap();
-        assert_eq!(event.platform, "cocoa");
+        assert_eq!(event.platform, Cow::Borrowed("cocoa"));
     }
 
     #[test]
@@ -500,13 +601,19 @@ mod tests {
     }
 
     #[test]
-    fn test_extract_threads() {
-        // Test thread parsing logic
+    fn test_deserialize_ips_report() {
+        let json = r#"{"incident": "test", "bundleID": "com.example.app"}"#;
+        let ips: IpsCrashReport = serde_json::from_str(json).unwrap();
+        assert_eq!(ips.incident.unwrap(), "test");
+        assert_eq!(ips.bundle_id.unwrap(), "com.example.app");
     }
 
     #[test]
-    fn test_extract_debug_images() {
-        // Test debug image conversion
+    fn test_parse_with_missing_fields() {
+        // serde handles missing optional fields
+        let json = r#"{}"#;
+        let event = parse_ips_crash_report(json).unwrap();
+        assert_eq!(event.platform, Cow::Borrowed("cocoa"));
     }
 }
 ```
@@ -580,25 +687,35 @@ No new dependencies needed.
 **Cons**: May not symbolicate properly, less flexible for Sentry processing
 **Decision**: Parse into Event structure (Approach A) as specified
 
-### Alternative 4: Support both .ips and .crash formats initially
+### Alternative 4: Support glob patterns for file selection
+**Pros**: Convenient for batch uploads with wildcards
+**Cons**: More complex, users can use shell globs instead
+**Decision**: Keep it simple initially, accept multiple file paths directly
+
+### Alternative 5: Manual JSON parsing vs serde deserialization
+**Pros of manual**: More control, custom error messages
+**Cons of manual**: More code, harder to maintain, error-prone
+**Decision**: Use serde for simpler, safer, more maintainable code
+
+### Alternative 6: Support both .ips and .crash formats initially
 **Pros**: Broader compatibility
 **Cons**: More complex parsing, .crash format is legacy
 **Decision**: Start with .ips only, can add .crash later if needed
 
-### Alternative 5: Require all metadata fields
+### Alternative 7: Require all metadata fields
 **Pros**: Ensures complete data
 **Cons**: Many .ips files may have minimal data
-**Decision**: Make metadata optional, use sensible defaults
+**Decision**: Make all fields optional, handle missing data gracefully
 
 ## 📊 Success Criteria
 
-1. ✅ Command successfully parses valid .ips files
+1. ✅ Command successfully parses valid .ips files using serde
 2. ✅ Events appear in Sentry UI
 3. ✅ Stack traces are symbolicated when dSYMs available
-4. ✅ Glob patterns work for batch uploads
+4. ✅ Multiple file paths work for batch uploads
 5. ✅ Clear error messages for invalid inputs
 6. ✅ All integration tests pass
-7. ✅ Code follows existing sentry-cli patterns
+7. ✅ Code follows existing sentry-cli patterns (clap derive syntax)
 8. ✅ `cargo fmt` and `cargo clippy` pass with no warnings
 
 ## 🔗 References
@@ -610,13 +727,15 @@ No new dependencies needed.
 
 ## 📝 Notes for Implementation
 
-1. **Code Style**: Follow existing patterns in `send_event.rs` and `send_envelope.rs`
-2. **Error Messages**: Make them actionable and user-friendly
-3. **Logging**: Use `log::debug!` for verbose info, `log::warn!` for skipped data
-4. **Platform**: Set `platform` to "cocoa" for proper Sentry processing
-5. **SDK Info**: Use `get_sdk_info()` from `utils::event` to mark events as from sentry-cli
-6. **Type Inference**: Prefer compiler inference, avoid explicit type annotations unless necessary
-7. **Formatting**: Always run `cargo fmt --all` before committing
+1. **Code Style**: Follow existing patterns in `logs/list.rs` for clap derive syntax
+2. **Serde**: Use `#[serde(rename_all = "camelCase")]` to match IPS JSON field naming
+3. **Optional Fields**: Make all IPS struct fields `Option<T>` since crash reports vary
+4. **Error Messages**: Make them actionable and user-friendly with `.with_context()`
+5. **Logging**: Use `log::debug!` for verbose info, `log::info!` for success messages
+6. **Platform**: Set `platform` to "cocoa" for proper Sentry processing
+7. **SDK Info**: Use `get_sdk_info()` from `utils::event` to mark events as from sentry-cli
+8. **Type Inference**: Prefer compiler inference, avoid explicit type annotations unless necessary
+9. **Formatting**: Always run `cargo fmt --all` before committing
 
 ## 🎯 Final Checklist
 
