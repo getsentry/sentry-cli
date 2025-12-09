@@ -1,14 +1,14 @@
 ```
 $ sentry-cli send-apple-crash --help
 ? success
-Send Apple crash reports to Sentry.
+Send Apple crash reports (.ips) to Sentry.
 
-This command parses Apple crash report files in .ips (JSON) format and sends them to Sentry as
-error events. Sentry will automatically symbolicate the crash reports if matching debug symbols
-(dSYMs) have been uploaded.
+This command parses Apple crash report files in .ips (JSON) format and sends them to Sentry as error
+events. Sentry will automatically symbolicate the crash reports if matching debug symbols (dSYMs)
+have been uploaded.
 
-Due to network errors, rate limits or sampling the event is not guaranteed to actually arrive.
-Check debug output for transmission errors by passing --log-level=debug or setting
+Due to network errors, rate limits or sampling the event is not guaranteed to actually arrive. Check
+debug output for transmission errors by passing --log-level=debug or setting
 `SENTRY_LOG_LEVEL=debug`.
 
 Usage: sentry-cli[EXE] send-apple-crash [OPTIONS] <PATH>...
@@ -18,24 +18,24 @@ Arguments:
           Path to one or more .ips files to send as crash events
 
 Options:
-      --header <KEY:VALUE>
-          Custom headers that should be attached to all requests
-          in key:value format.
-
   -r, --release <RELEASE>
           Optional release identifier to associate with the crash
-
-      --auth-token <AUTH_TOKEN>
-          Use the given Sentry auth token.
 
   -E, --env <ENVIRONMENT>
           Optional environment name (e.g., production, staging)
 
-      --log-level <LOG_LEVEL>
-          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
 
   -d, --dist <DISTRIBUTION>
           Optional distribution identifier
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently

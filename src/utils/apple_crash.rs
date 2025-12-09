@@ -17,14 +17,6 @@ use symbolic::common::DebugId;
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpsCrashReport {
-    #[allow(dead_code)]
-    pub incident: Option<String>,
-    #[allow(dead_code)]
-    pub crash_reporter_key: Option<String>,
-    #[allow(dead_code)]
-    pub os_version: Option<String>,
-    #[allow(dead_code)]
-    pub bundle_id: Option<String>,
     pub app_version: Option<String>,
     pub exception: Option<IpsException>,
     pub threads: Option<Vec<IpsThread>>,
@@ -55,8 +47,6 @@ pub struct IpsFrame {
     pub image_offset: Option<u64>,
     pub image_index: Option<usize>,
     pub symbol: Option<String>,
-    #[allow(dead_code)]
-    pub symbol_location: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -256,10 +246,9 @@ mod tests {
 
     #[test]
     fn test_deserialize_ips_report() {
-        let json = r#"{"incident": "test", "bundleID": "com.example.app"}"#;
+        let json = r#"{"appVersion": "1.0.0", "bundleID": "com.example.app"}"#;
         let ips: IpsCrashReport = serde_json::from_str(json).unwrap();
-        assert_eq!(ips.incident.unwrap(), "test");
-        assert_eq!(ips.bundle_id.unwrap(), "com.example.app");
+        assert_eq!(ips.app_version.unwrap(), "1.0.0");
     }
 
     #[test]

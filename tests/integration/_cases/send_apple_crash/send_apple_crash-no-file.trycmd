@@ -1,9 +1,12 @@
 ```
 $ sentry-cli send-apple-crash nonexistent.ips
 ? failed
-Error: Failed to read crash file: nonexistent.ips
+error: Failed to read crash file: nonexistent.ips
 
 Caused by:
     No such file or directory (os error 2)
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
 
 ```
