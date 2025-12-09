@@ -37,6 +37,7 @@ mod projects;
 mod react_native;
 mod releases;
 mod repos;
+mod send_apple_crash;
 mod send_envelope;
 mod send_event;
 mod send_metric;
@@ -67,6 +68,7 @@ macro_rules! each_subcommand {
         $mac!(react_native);
         $mac!(releases);
         $mac!(repos);
+        $mac!(send_apple_crash);
         $mac!(send_event);
         $mac!(send_envelope);
         $mac!(send_metric);

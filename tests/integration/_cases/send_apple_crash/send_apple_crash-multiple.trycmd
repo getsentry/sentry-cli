@@ -1,0 +1,7 @@
+```
+$ sentry-cli send-apple-crash tests/integration/_fixtures/crash_simple.ips tests/integration/_fixtures/crash_complete.ips
+? success
+Crash from file tests/integration/_fixtures/crash_simple.ips dispatched: [..]
+Crash from file tests/integration/_fixtures/crash_complete.ips dispatched: [..]
+
+```

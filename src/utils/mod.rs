@@ -1,6 +1,7 @@
 //! Various utility functionality.
 pub mod android;
 pub mod appcenter;
+pub mod apple_crash;
 pub mod args;
 pub mod auth_token;
 pub mod build;
