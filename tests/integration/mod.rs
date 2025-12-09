@@ -16,6 +16,7 @@ mod projects;
 #[cfg(target_os = "macos")]
 mod react_native;
 mod releases;
+mod send_apple_crash;
 mod send_envelope;
 mod send_event;
 mod send_metric;

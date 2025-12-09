@@ -4,6 +4,7 @@ use clap::{command, ArgAction::SetTrue, Parser, Subcommand};
 
 use super::dart_symbol_map::DartSymbolMapArgs;
 use super::logs::LogsArgs;
+use super::send_apple_crash::SendAppleCrashArgs;
 use super::send_metric::SendMetricArgs;
 
 #[derive(Parser)]
@@ -37,4 +38,5 @@ pub(super) enum SentryCLICommand {
     Logs(LogsArgs),
     SendMetric(SendMetricArgs),
     DartSymbolMap(DartSymbolMapArgs),
+    SendAppleCrash(SendAppleCrashArgs),
 }

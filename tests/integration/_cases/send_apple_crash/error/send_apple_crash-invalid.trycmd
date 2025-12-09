@@ -1,0 +1,12 @@
+```
+$ sentry-cli send-apple-crash tests/integration/_fixtures/crash_invalid.json
+? failed
+error: Failed to parse crash file: tests/integration/_fixtures/crash_invalid.json
+
+Caused by:
+    EOF while parsing an object at line 2 column 0
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

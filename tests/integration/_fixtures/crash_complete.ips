@@ -1,0 +1,61 @@
+{
+  "incident": "B2C3D4E5-5678-9012-ABCD-EF0123456789",
+  "crashReporterKey": "device-key-complete",
+  "osVersion": "iOS 17.2 (21C52)",
+  "bundleId": "io.sentry.testapp",
+  "appVersion": "2.5.1",
+  "exception": {
+    "type": "EXC_CRASH",
+    "signal": "SIGABRT",
+    "codes": "0x0000000000000000, 0x0000000000000000",
+    "subtype": "App crashed"
+  },
+  "threads": [
+    {
+      "id": 0,
+      "name": "main",
+      "crashed": true,
+      "frames": [
+        {
+          "imageOffset": 8192,
+          "imageIndex": 0,
+          "symbol": "crashFunction",
+          "symbolLocation": 16
+        },
+        {
+          "imageOffset": 4096,
+          "imageIndex": 0,
+          "symbol": "main",
+          "symbolLocation": 0
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "background-thread",
+      "crashed": false,
+      "frames": [
+        {
+          "imageOffset": 12288,
+          "imageIndex": 1,
+          "symbol": "libsystem_pthread.dylib",
+          "symbolLocation": 32
+        }
+      ]
+    }
+  ],
+  "usedImages": [
+    {
+      "uuid": "AAAABBBB-1111-2222-3333-444455556666",
+      "name": "TestApp",
+      "arch": "arm64",
+      "base": 4294967296
+    },
+    {
+      "uuid": "CCCCDDDD-7777-8888-9999-000011112222",
+      "name": "libsystem_pthread.dylib",
+      "arch": "arm64",
+      "base": 8589934592
+    }
+  ]
+}
