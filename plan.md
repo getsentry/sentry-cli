@@ -2,11 +2,11 @@
 
 ## 📋 Overview
 
-This plan details the implementation of a new `send-crash` command for sentry-cli that allows users to manually upload Apple crash reports in `.ips` (JSON) format to Sentry. This addresses the use case where users receive crash reports directly (e.g., from App Store Review rejections or corporate environments with restricted network access) and want to leverage Sentry's symbolication capabilities.
+This plan details the implementation of a new `send-apple-crash` command for sentry-cli that allows users to manually upload Apple crash reports in `.ips` (JSON) format to Sentry. This addresses the use case where users receive crash reports directly (e.g., from App Store Review rejections or corporate environments with restricted network access) and want to leverage Sentry's symbolication capabilities.
 
 ## 🎯 Goals
 
-1. Create a new `send-crash` command that accepts `.ips` files
+1. Create a new `send-apple-crash` command that accepts `.ips` files
 2. Parse the `.ips` JSON format into a Sentry Event structure
 3. Send the event to Sentry via an envelope (similar to `send-event`)
 4. Let Sentry's backend handle symbolication (no local symbolication)
@@ -33,7 +33,7 @@ This plan details the implementation of a new `send-crash` command for sentry-cl
 
 ### Command Flow
 ```
-User runs: sentry-cli send-crash crash.ips
+User runs: sentry-cli send-apple-crash crash.ips
     ↓
 Parse .ips JSON file
     ↓
@@ -47,10 +47,10 @@ Report success/failure
 ```
 
 ### Key Components
-1. **Command Module**: `src/commands/send_crash.rs`
+1. **Command Module**: `src/commands/send_apple_crash.rs`
 2. **Parser Module**: `src/utils/apple_crash.rs` (new utility)
 3. **API Integration**: Use existing `EnvelopesApi`
-4. **Tests**: Integration tests in `tests/integration/send_crash.rs`
+4. **Tests**: Integration tests in `tests/integration/send_apple_crash.rs`
 
 ## 📝 Detailed Implementation Steps
 
@@ -133,7 +133,7 @@ Create a `sentry::protocol::Event` with:
 
 ### Step 2: Create the Command Module
 
-**File**: `src/commands/send_crash.rs`
+**File**: `src/commands/send_apple_crash.rs`
 
 **Command Definition**:
 
@@ -251,10 +251,10 @@ Add the module and register it:
 
 ```rust
 // Add to module declarations
-mod send_crash;
+mod send_apple_crash;
 
 // Add to each_subcommand! macro
-$mac!(send_crash);
+$mac!(send_apple_crash);
 ```
 
 ### Step 4: Add Dependency Declarations
@@ -323,70 +323,70 @@ Example minimal crash fixture structure:
 
 ### Step 6: Create Integration Tests
 
-**File**: `tests/integration/send_crash.rs`
+**File**: `tests/integration/send_apple_crash.rs`
 
 ```rust
 use crate::integration::{MockEndpointBuilder, TestManager};
 
 #[test]
-fn command_send_crash() {
+fn command_send_apple_crash() {
     TestManager::new()
         .mock_endpoint(MockEndpointBuilder::new("POST", "/api/1337/envelope/"))
-        .register_trycmd_test("send_crash/*.trycmd");
+        .register_trycmd_test("send_apple_crash/*.trycmd");
 }
 
 #[test]
-fn command_send_crash_invalid() {
+fn command_send_apple_crash_invalid() {
     // Tests for error cases
     TestManager::new()
-        .register_trycmd_test("send_crash/error/*.trycmd");
+        .register_trycmd_test("send_apple_crash/error/*.trycmd");
 }
 ```
 
-**Directory**: `tests/integration/_cases/send_crash/`
+**Directory**: `tests/integration/_cases/send_apple_crash/`
 
 Create `.trycmd` test files:
 
-1. **`send_crash-help.trycmd`**: Test help output
+1. **`send_apple_crash-help.trycmd`**: Test help output
 ```
-$ sentry-cli send-crash --help
+$ sentry-cli send-apple-crash --help
 ? success
 ...
 ```
 
-2. **`send_crash-file.trycmd`**: Test basic crash upload
+2. **`send_apple_crash-file.trycmd`**: Test basic crash upload
 ```
-$ sentry-cli send-crash tests/integration/_fixtures/crash_simple.ips
+$ sentry-cli send-apple-crash tests/integration/_fixtures/crash_simple.ips
 ? success
 Crash from file tests/integration/_fixtures/crash_simple.ips dispatched: [..]
 ```
 
-3. **`send_crash-glob.trycmd`**: Test glob pattern
+3. **`send_apple_crash-glob.trycmd`**: Test glob pattern
 ```
-$ sentry-cli send-crash "tests/integration/_fixtures/crash_*.ips"
+$ sentry-cli send-apple-crash "tests/integration/_fixtures/crash_*.ips"
 ? success
 Crash from file tests/integration/_fixtures/crash_simple.ips dispatched: [..]
 Crash from file tests/integration/_fixtures/crash_complete.ips dispatched: [..]
 ```
 
-4. **`send_crash-with-release.trycmd`**: Test with release flag
+4. **`send_apple_crash-with-release.trycmd`**: Test with release flag
 ```
-$ sentry-cli send-crash --release 1.2.3 tests/integration/_fixtures/crash_simple.ips
+$ sentry-cli send-apple-crash --release 1.2.3 tests/integration/_fixtures/crash_simple.ips
 ? success
 Crash from file tests/integration/_fixtures/crash_simple.ips dispatched: [..]
 ```
 
-5. **`error/send_crash-invalid.trycmd`**: Test invalid JSON
+5. **`error/send_apple_crash-invalid.trycmd`**: Test invalid JSON
 ```
-$ sentry-cli send-crash tests/integration/_fixtures/crash_invalid.json
+$ sentry-cli send-apple-crash tests/integration/_fixtures/crash_invalid.json
 ? failed
 Error: Failed to parse crash file: tests/integration/_fixtures/crash_invalid.json
 ...
 ```
 
-6. **`error/send_crash-no-file.trycmd`**: Test missing file
+6. **`error/send_apple_crash-no-file.trycmd`**: Test missing file
 ```
-$ sentry-cli send-crash nonexistent.ips
+$ sentry-cli send-apple-crash nonexistent.ips
 ? failed
 ...
 ```
@@ -398,7 +398,7 @@ $ sentry-cli send-crash nonexistent.ips
 Add the test module:
 
 ```rust
-mod send_crash;
+mod send_apple_crash;
 ```
 
 ## 🔍 Implementation Details
@@ -519,7 +519,7 @@ Test the full command flow with `.trycmd` files (see Step 6)
 
 1. Get real `.ips` file from Xcode or App Store Connect
 2. Upload dSYMs for that crash to Sentry project
-3. Run: `sentry-cli send-crash --release X.Y.Z path/to/crash.ips`
+3. Run: `sentry-cli send-apple-crash --release X.Y.Z path/to/crash.ips`
 4. Verify in Sentry UI:
    - Event appears
    - Stack traces are symbolicated
@@ -568,7 +568,7 @@ No new dependencies needed.
 ### Alternative 1: Extend send-event instead of new command
 **Pros**: Fewer commands, reuses existing code
 **Cons**: Less discoverable, different file format from JSON events
-**Decision**: New command is clearer and more discoverable
+**Decision**: New command (`send-apple-crash`) is clearer and more discoverable
 
 ### Alternative 2: Support local symbolication
 **Pros**: Symbolicates before sending, works offline
@@ -629,6 +629,6 @@ Before considering the implementation complete:
 - [ ] `cargo clippy --workspace` passes with no warnings
 - [ ] Manual testing completed with real .ips file
 - [ ] Code follows Rust development guidelines from `.cursor/rules/`
-- [ ] Commit message follows Sentry format: `feat(cli): Add send-crash command for Apple crash reports`
+- [ ] Commit message follows Sentry format: `feat(cli): Add send-apple-crash command for Apple crash reports`
 - [ ] Error handling is comprehensive and user-friendly
 - [ ] Documentation strings are clear and helpful
